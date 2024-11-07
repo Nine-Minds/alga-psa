@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
+import { TextArea } from "@/components/ui/TextArea";
 import { addContact } from '@/lib/actions/contact-actions/contactActions';
 import { CompanyPicker } from '@/components/companies/CompanyPicker';
 import { ICompany } from '@/interfaces/company.interfaces';
@@ -32,6 +33,8 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isInactive, setIsInactive] = useState(false);
+  const [role, setRole] = useState('');
+  const [notes, setNotes] = useState('');
 
   // Set initial company ID when the component mounts or when selectedCompanyId changes
   useEffect(() => {
@@ -48,6 +51,8 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
       setPhoneNumber('');
       setCompanyId(null);
       setIsInactive(false);
+      setRole('');
+      setNotes('');
     }
   }, [isOpen, selectedCompanyId]);
 
@@ -64,6 +69,8 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
         phone_number: phoneNumber,
         company_id: companyId || undefined,
         is_inactive: isInactive,
+        role: role,
+        notes: notes,
       });
       onContactAdded(newContact);
       onClose();
@@ -80,6 +87,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            <div>
               <Label htmlFor="fullName">Full Name</Label>
               <Input
                 id="fullName"
@@ -107,6 +115,24 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
               />
             </div>
             <div>
+              <Label htmlFor="role">Role</Label>
+              <Input
+                id="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="e.g., Manager, Developer, etc."
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <TextArea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add any additional notes about the contact..."
+              />
+            </div>
+            <div>
               <Label>Company (Optional)</Label>
               <CompanyPicker
                 companies={companies}
@@ -117,7 +143,8 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
               />
-           <div className="flex items-center justify-between py-2">
+            </div>
+            <div className="flex items-center justify-between py-2">
               <div className="flex items-center space-x-2">
                 <Label htmlFor="inactive-switch">Status</Label>
                 <span className="text-sm text-gray-500">

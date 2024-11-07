@@ -6,10 +6,12 @@ export interface IContact extends TenantEntity, ITaggable {
   company_id: string | null;
   phone_number: string;
   email: string;
+  role: string;
   date_of_birth?: string;
   created_at: string;
   updated_at: string;
   is_inactive: boolean;
+  notes?: string;
 }
 
 export interface ICSVColumnMapping {
@@ -57,4 +59,6 @@ export type MappableField =
   | 'email'
   | 'date_of_birth'
   | 'company_name'
+  | 'role'
+  | 'notes'
   | 'tags';

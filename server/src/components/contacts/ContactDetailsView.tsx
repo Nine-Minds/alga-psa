@@ -157,10 +157,17 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             value={getCompanyName(contact.company_id!)}
             onClick={() => handleCompanyClick()}
           />
+          <TableRow label="Role" value={contact.role || 'Not set'} />
           <TableRow label="Date of Birth" value={formatDateForDisplay(contact.date_of_birth)} />
           <TableRow label="Status" value={contact.is_inactive ? 'Inactive' : 'Active'} />
           <TableRow label="Created At" value={new Date(contact.created_at).toLocaleString()} />
           <TableRow label="Updated At" value={new Date(contact.updated_at).toLocaleString()} />
+          {contact.notes && (
+            <tr>
+              <td className="py-2 font-semibold align-top">Notes:</td>
+              <td className="py-2 whitespace-pre-wrap">{contact.notes}</td>
+            </tr>
+          )}
           <tr>
             <td className="py-2 font-semibold">Tags:</td>
             <td className="py-2">

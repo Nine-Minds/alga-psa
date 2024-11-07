@@ -210,7 +210,7 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
-  }
+    }
     if (!contactData.contact_name_id) {
       throw new Error('Contact ID is required for updating');
     }
@@ -218,7 +218,8 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
     // Define valid fields
     const validFields: (keyof IContact)[] = [
       'contact_name_id', 'full_name', 'company_id', 'phone_number', 
-      'email', 'date_of_birth', 'created_at', 'updated_at', 'is_inactive'
+      'email', 'date_of_birth', 'created_at', 'updated_at', 'is_inactive',
+      'role', 'notes'
     ];
 
     // Filter and create updateData
@@ -276,7 +277,7 @@ export async function exportContactsToCSV(
   companies: ICompany[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
-  const fields = ['full_name', 'email', 'phone_number', 'company_name', 'tags'];
+  const fields = ['full_name', 'email', 'phone_number', 'company_name', 'role', 'notes', 'tags'];
   
   const data = contacts.map((contact): Record<string, string> => {
     const company = companies.find(c => c.company_id === contact.company_id);
@@ -285,6 +286,8 @@ export async function exportContactsToCSV(
       email: contact.email,
       phone_number: contact.phone_number,
       company_name: company ? company.company_name : '',
+      role: contact.role || '',
+      notes: contact.notes || '',
       tags: (contactTags[contact.contact_name_id] || [])
         .map((tag: ITag): string => tag.tag_text)
         .join(', ')
@@ -338,7 +341,9 @@ export async function importContactsFromCSV(
             ...contactData,
             tenant: existingContact.tenant,
             updated_at: new Date().toISOString(),
-            date_of_birth: contactData.date_of_birth || undefined
+            date_of_birth: contactData.date_of_birth || undefined,
+            role: contactData.role || existingContact.role,
+            notes: contactData.notes || existingContact.notes
           };
 
           [savedContact] = await trx('contacts')
@@ -361,6 +366,8 @@ export async function importContactsFromCSV(
             company_id: contactData.company_id,
             is_inactive: contactData.is_inactive || false,
             date_of_birth: contactData.date_of_birth,
+            role: contactData.role || '',
+            notes: contactData.notes || '',
             tenant: tenant,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()

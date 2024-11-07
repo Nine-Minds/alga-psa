@@ -27,7 +27,9 @@ const CONTACT_FIELDS = {
   phone_number: 'Phone Number',
   company_name: 'Company',
   tags: 'Tags',
-  date_of_birth: 'Date of Birth'
+  date_of_birth: 'Date of Birth',
+  role: 'Role',
+  notes: 'Notes'
 } as const;
 
 interface ImportOptionsProps {
@@ -112,6 +114,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         else if (headerLower.includes('company')) contactField = 'company_name';
         else if (headerLower.includes('tag')) contactField = 'tags';
         else if (headerLower.includes('birth')) contactField = 'date_of_birth';
+        else if (headerLower.includes('role')) contactField = 'role';
+        else if (headerLower.includes('note')) contactField = 'notes';
 
         return {
           csvHeader: header,
@@ -210,6 +214,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         phone_number: record.phone_number,
         company_id: company?.company_id || null,
         date_of_birth: record.date_of_birth || undefined,
+        role: record.role,
+        notes: record.notes,
         is_inactive: false
       };
     });
@@ -262,7 +268,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           phone_number: result.data.phone_number || '',
           company_name: result.data.company_name || '',
           tags: result.data.tags || '',
-          date_of_birth: result.data.date_of_birth || ''
+          date_of_birth: result.data.date_of_birth || '',
+          role: result.data.role || '',
+          notes: result.data.notes || ''
         };
         return data;
       });
@@ -567,7 +575,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               phone_number: result.data.phone_number || '',
               company_name: result.data.company_name || '',
               tags: result.data.tags || '',
-              date_of_birth: result.data.date_of_birth || ''
+              date_of_birth: result.data.date_of_birth || '',
+              role: result.data.role || '',
+              notes: result.data.notes || ''
             }));
           processImport(validData);
         }}

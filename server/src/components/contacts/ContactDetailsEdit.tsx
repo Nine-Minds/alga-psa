@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { IContact } from '@/interfaces/contact.interfaces';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { TextArea } from '@/components/ui/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact } from '@/lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds, findAllTagsByType } from '@/lib/actions/tagActions';
@@ -90,6 +91,12 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             value={contact.phone_number} 
             onChange={(value) => handleInputChange('phone_number', value)} 
           />
+          <TableRow 
+            label="Role" 
+            value={contact.role || ''} 
+            onChange={(value) => handleInputChange('role', value)} 
+            placeholder="e.g., Manager, Developer, etc."
+          />
           <tr>
             <td className="py-2 font-semibold">Company:</td>
             <td className="py-2">
@@ -116,6 +123,16 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
             onChange={(value) => handleInputChange('is_inactive', value === 'Inactive')} 
             options={['Active', 'Inactive']}
           />
+          <tr>
+            <td className="py-2 font-semibold">Notes:</td>
+            <td className="py-2">
+              <TextArea
+                value={contact.notes || ''}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                placeholder="Add any additional notes about the contact..."
+              />
+            </td>
+          </tr>
           <tr>
             <td className="py-2 font-semibold">Tags:</td>
             <td className="py-2">
@@ -144,9 +161,10 @@ interface TableRowProps {
   onChange: (value: string) => void;
   type?: string;
   options?: string[];
+  placeholder?: string;
 }
 
-const TableRow: React.FC<TableRowProps> = ({ label, value, onChange, type = "text", options }) => (
+const TableRow: React.FC<TableRowProps> = ({ label, value, onChange, type = "text", options, placeholder }) => (
   <tr>
     <td className="py-2 font-semibold">{label}:</td>
     <td className="py-2">
@@ -166,6 +184,7 @@ const TableRow: React.FC<TableRowProps> = ({ label, value, onChange, type = "tex
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full"
+          placeholder={placeholder}
         />
       )}
     </td>
