@@ -134,8 +134,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({ initialTicket }) => {
         setAvailableAgents(users);
 
         const userMapData = users.reduce((acc, user) => {
-          acc[user.user_id] = { 
-            user_id: user.user_id, 
+          acc[user.user_id] = {
+            user_id: user.user_id,
             first_name: user.first_name || '', 
             last_name: user.last_name || '',
             email: user.email // Include email in the userMap
@@ -145,14 +145,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({ initialTicket }) => {
         setUserMap(userMapData);
 
         const statuses = await getTicketStatuses();
-        setStatusOptions(statuses.map((status): { value: string; label: string } => ({ 
-          value: status.status_id!, 
-          label: status.name ?? "" 
+        setStatusOptions(statuses.map((status): { value: string; label: string } => ({
+          value: status.status_id!,
+          label: status.name ?? ""
         })));
 
-        setAgentOptions(users.map((agent): { value: string; label: string } => ({ 
-          value: agent.user_id, 
-          label: `${agent.first_name} ${agent.last_name}` 
+        setAgentOptions(users.map((agent): { value: string; label: string } => ({
+          value: agent.user_id,
+          label: `${agent.first_name} ${agent.last_name}`
         })));
 
         const channels = await getAllChannels();
@@ -271,7 +271,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({ initialTicket }) => {
     }
   };
 
-  const handleSelectChange = async (field: keyof ITicket, newValue: string) => {
+  const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
     setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
 
     try {
@@ -353,7 +353,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({ initialTicket }) => {
       const updatedCommentData = await findCommentById(currentComment.comment_id!);
       if (updatedCommentData) {
         setConversations(prevConversations =>
-          prevConversations.map((conv):IComment =>
+          prevConversations.map((conv): IComment =>
             conv.comment_id === updatedCommentData.comment_id ? updatedCommentData : conv
           )
         );

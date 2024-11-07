@@ -15,8 +15,8 @@ NODE_ENV=${NODE_ENV:-production}
 
 version="0.0.0"
 commit="abc123"
-date="13-08-2023"
-author="Ivan D Gomez J"
+date="03-11-2024"
+author="NineMinds"
 
 # Function to print colored text
 print_color() {

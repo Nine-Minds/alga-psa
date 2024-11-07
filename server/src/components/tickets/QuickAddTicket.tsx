@@ -17,7 +17,7 @@ import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { useSession } from 'next-auth/react';
-import { Select } from '../ui/Select';
+import { Select, SelectOption } from '../ui/Select';
 
 interface QuickAddTicketProps {
     open: boolean;
@@ -300,7 +300,7 @@ export function QuickAddTicket({ open, onOpenChange, onTicketAdded, prefilledCom
                             <Select
                                 value={contactId || ''}
                                 onChange={(value) => setContactId(value || null)}
-                                options={contacts.map(contact => ({
+                                options={contacts.map((contact):SelectOption => ({
                                     value: contact.contact_name_id,
                                     label: contact.full_name
                                 }))}
@@ -313,7 +313,7 @@ export function QuickAddTicket({ open, onOpenChange, onTicketAdded, prefilledCom
                         <Select
                             value={assignedTo}
                             onChange={setAssignedTo}
-                            options={users.map(user => ({
+                            options={users.map((user):SelectOption => ({
                                 value: user.user_id,
                                 label: `${user.first_name} ${user.last_name}`
                             }))}
@@ -341,7 +341,7 @@ export function QuickAddTicket({ open, onOpenChange, onTicketAdded, prefilledCom
                         <Select
                             value={statusId}
                             onChange={setStatusId}
-                            options={statuses.map(status => ({
+                            options={statuses.map((status):SelectOption => ({
                                 value: status.status_id!,
                                 label: status.name ?? ""
                             }))}
@@ -352,7 +352,7 @@ export function QuickAddTicket({ open, onOpenChange, onTicketAdded, prefilledCom
                         <Select
                             value={priorityId}
                             onChange={setPriorityId}
-                            options={priorities.map(priority => ({
+                            options={priorities.map((priority):SelectOption => ({
                                 value: priority.priority_id,
                                 label: priority.priority_name
                             }))}

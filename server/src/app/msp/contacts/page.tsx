@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import ContactModel from '@/lib/models/contact';
 import UserModel from '@/lib/models/user';
 import { User } from 'next-auth';
+import { IContact } from '@/interfaces';
 
 // Import Contacts component with ssr disabled
 const Contacts = dynamic(() => import('@/components/contacts/Contacts'), { ssr: false });
@@ -20,7 +21,7 @@ export default async function ContactsPage() {
 
   // Filter out any duplicate contacts based on contact_name_id
   const uniqueContacts = Array.from(
-    new Map(contacts.map(contact => [contact.contact_name_id, contact])).values()
+    new Map(contacts.map((contact): [string, IContact] => [contact.contact_name_id, contact])).values()
   );
 
   return (
