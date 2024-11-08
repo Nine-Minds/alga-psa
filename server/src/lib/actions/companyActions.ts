@@ -359,7 +359,8 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
     'preferred_payment_method',
     'auto_invoice',
     'invoice_delivery_method',
-    'tax_region'
+    'tax_region',
+    'notes' 
   ];
 
   return unparseCSV(companies, fields);
@@ -464,6 +465,7 @@ export async function importCompaniesFromCSV(
             tax_region: companyData.tax_region || '',
             tax_id_number: companyData.tax_id_number || '',
             tax_exemption_certificate: companyData.tax_exemption_certificate || '',
+            notes: companyData.notes || '', // Added notes field
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };

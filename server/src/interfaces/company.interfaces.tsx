@@ -12,6 +12,7 @@ export interface ICompany extends TenantEntity {
   is_inactive: boolean;
   client_type?: string;
   tax_id_number?: string; 
+  notes?: string;
   properties?: {
     industry?: string;
     company_size?: string;

@@ -85,6 +85,8 @@ const Companies: React.FC = () => {
         address: data.address || '',
         is_inactive: data.is_inactive || false,
         is_tax_exempt: data.is_tax_exempt || false,
+        notes: data.notes,
+        client_type: data.client_type || 'company',
         tenant: data.tenant!
       };      
       await createCompany(newCompanyData);

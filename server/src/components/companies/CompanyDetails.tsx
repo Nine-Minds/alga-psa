@@ -23,12 +23,13 @@ import { ArrowLeft } from 'lucide-react';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { useRouter, usePathname } from 'next/navigation';
+import { TextArea } from '@/components/ui/TextArea';
 
 interface CompanyDetailsProps {
   company: ICompany;
   documents?: IDocument[];
   contacts?: IContact[];
-  isInDrawer?: boolean; // Prop to indicate if component is rendered in a drawer
+  isInDrawer?: boolean;
 }
 
 const TextDetailItem: React.FC<{ 
@@ -54,6 +55,38 @@ const TextDetailItem: React.FC<{
         onBlur={handleBlur}
         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600"
       />
+    </div>
+  );
+};
+
+const NotesDetailItem: React.FC<{ 
+  value: string; 
+  onEdit: (value: string) => void;
+  onSave: () => void;
+}> = ({ value, onEdit, onSave }) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setLocalValue(e.target.value);
+    onEdit(e.target.value);
+  };
+  
+  return (
+    <div className="space-y-4">
+      <Text as="label" size="2" className="text-gray-700 font-medium">Notes</Text>
+      <TextArea
+        value={localValue}
+        onChange={handleChange}
+        placeholder="Add notes about this company..."
+      />
+      <div className="flex justify-end">
+        <Button 
+          onClick={onSave}
+          className="bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+        >
+          Save Notes
+        </Button>
+      </div>
     </div>
   );
 };
@@ -332,10 +365,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     {
       label: "Notes",
       content: (
-        <TextDetailItem 
-          label="Notes" 
-          value={editedCompany.properties?.notes ?? ""} 
-          onEdit={(value) => handleFieldChange('properties.notes', value)}
+        <NotesDetailItem 
+          value={editedCompany.notes ?? ""}
+          onEdit={(value) => handleFieldChange('notes', value)}
+          onSave={handleSave}
         />
       )
     },
