@@ -6,32 +6,39 @@ services:
       POSTGRES_PASSWORD: abcd1234!
       POSTGRES_DB: postgres
     ports:
-      - 5432:5432
+      - 5433:5432
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+    networks:
+      - test-network
 
   setup:
-    build: ../setup
-    command: ./entrypoint.sh
+    build:
+      context: ..
+      dockerfile: setup/Dockerfile
+    command: bash -c "./entrypoint.sh && exit"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: postgres
-      DB_USER: postgres
-      DB_PASSWORD: abcd1234!
-      DB_NAME_HOCUSPOCUS: hocuspocus
-      DB_USER_HOCUSPOCUS: hocuspocus_user
-      DB_PASSWORD_HOCUSPOCUS: abcd1234!
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: abcd1234!
       DB_NAME_SERVER: server
       DB_USER_SERVER: server_user
       DB_PASSWORD_SERVER: abcd1234!
-      DB_PASSWORD_SUPERUSER: abcd1234!
-      APP_NAME: sebastian
       APP_ENV: development
       DB_TYPE: postgres
+      NODE_OPTIONS: --experimental-vm-modules
+      KNEXFILE: /app/knexfile.cjs
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

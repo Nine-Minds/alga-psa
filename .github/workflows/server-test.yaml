@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
     - uses: actions/checkout@v3
 
     - name: Set up Docker Compose
@@ -25,23 +24,35 @@ jobs:
       run: |
         echo "Waiting for setup to complete..."
         attempt=1
-        max_attempts=20
+        max_attempts=60  # Increased for complex migrations
         while true; do
-          # Check if any container matching *setup* is still running
-          setup_status=$(docker ps --filter "name=setup" --format "{{.Names}}")
-
-          if [ -z "$setup_status" ]; then
-            echo "Setup has completed."
+          # Check container logs for completion message
+          if docker-compose -f .github/docker-compose.yaml logs setup | grep "PROCESS FINISHED" > /dev/null; then
+            echo "Setup has completed successfully."
             break
           fi
           
+          # Check for container exit
+          if ! docker-compose -f .github/docker-compose.yaml ps | grep -q "setup.*Up"; then
+            # Container exited, check if it was successful
+            if docker-compose -f .github/docker-compose.yaml logs setup | grep "PROCESS FINISHED" > /dev/null; then
+              echo "Setup completed and exited successfully."
+              break
+            else
+              echo "Setup container exited without completion message. Showing logs:"
+              docker-compose -f .github/docker-compose.yaml logs
+              exit 1
+            fi
+          fi
+          
           if [ $attempt -ge $max_attempts ]; then
-            echo "Setup did not complete within the expected time. Failing the workflow."
+            echo "Setup did not complete within the expected time. Showing logs:"
+            docker-compose -f .github/docker-compose.yaml logs
             exit 1
           fi
           
           echo "Attempt $attempt of $max_attempts: Setup still running. Waiting..."
-          sleep 5
+          sleep 10
           attempt=$((attempt+1))
         done
 
@@ -51,20 +62,20 @@ jobs:
         sudo apt-get install -y postgresql-client
         echo "Attempting to connect to PostgreSQL..."
         count=0
-        max_attempts=50
+        max_attempts=60
         while [ $count -lt $max_attempts ]; do
-          if PGPASSWORD=abcd1234! pg_isready -h 127.0.0.1 -U postgres -d postgres > /dev/null 2>&1; then
-            echo "Connection attempt successful."
+          if PGPASSWORD=abcd1234! pg_isready -h 127.0.0.1 -p 5433 -d server -U server_user > /dev/null 2>&1; then
+            echo "Connection to server database successful."
             break
-          else
-            echo "Connection attempt failed. Retrying in 2 seconds..."
-            sleep 2
-            count=$((count + 1))
           fi
+          echo "Connection attempt failed. Retrying in 3 seconds..."
+          sleep 3
+          count=$((count + 1))
         done
         
         if [ $count -eq $max_attempts ]; then
           echo "Failed to connect after $max_attempts attempts."
+          docker-compose -f .github/docker-compose.yaml logs
           exit 1
         fi
 
@@ -82,6 +93,15 @@ jobs:
       run: |
         cd server
         npm test
+      env:
+        DB_USER_SERVER: server_user
+        DB_PASSWORD_SERVER: abcd1234!
+        DB_NAME_SERVER: server
+        DB_HOST: 127.0.0.1
+        DB_PORT: 5433
+        APP_ENV: development
+        DB_TYPE: postgres
+        NODE_OPTIONS: --experimental-vm-modules
 
     - name: Build
       run: |
@@ -89,8 +109,16 @@ jobs:
         npm run build
       env:
         NODE_ENV: production
-        DB_USER_SERVER: postgres
+        DB_USER_SERVER: server_user
         DB_PASSWORD_SERVER: abcd1234!
         DB_NAME_SERVER: server
         DB_HOST: 127.0.0.1
-        DB_PORT: 5432
+        DB_PORT: 5433
+        APP_ENV: development
+        DB_TYPE: postgres
+        NODE_OPTIONS: --experimental-vm-modules
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker-compose -f .github/docker-compose.yaml down -v

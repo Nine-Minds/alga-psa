@@ -18,12 +18,10 @@ replace_placeholders() {
         send_log trace "sed -i 's/{$key}/$value/g' $script_dir/$dest_file"
         echo ""
 
-        #sed -i.bak "s/{$key}/$value/g" "$script_dir/$dest_file" && rm -f "$script_dir/$dest_file".bak
         sed -i "s/{$key}/$value/g" "$script_dir/$dest_file"
     done
     send_log info "** All configurations was set **"
 }
-
 
 check_database_connection() {
     send_log info "** Starting to check database connection and query execution **"
@@ -31,11 +29,10 @@ check_database_connection() {
     local max_attempts=100
 
     while [ $count -lt $max_attempts ]; do
-        if PGPASSWORD=$DB_PASSWORD_SUPERUSER pg_isready -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" > /dev/null 2>&1; then
+        if PGPASSWORD=$DB_PASSWORD_ADMIN pg_isready -h "$DB_HOST" -p "$DB_PORT" -d postgres -U "$DB_USER_ADMIN" > /dev/null 2>&1; then
             send_log info "Database connection established"
-            PGPASSWORD=$DB_PASSWORD_SUPERUSER psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c "SELECT 1"
             # Attempt to execute a simple query
-            if PGPASSWORD=$DB_PASSWORD_SUPERUSER psql -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -c "SELECT 1" > /dev/null 2>&1; then
+            if PGPASSWORD=$DB_PASSWORD_ADMIN psql -h "$DB_HOST" -p "$DB_PORT" -d postgres -U "$DB_USER_ADMIN" -c "SELECT 1" > /dev/null 2>&1; then
                 send_log info "Successfully executed a test query"
                 return 0
             else
@@ -52,19 +49,21 @@ check_database_connection() {
     exit 1
 }
 
-
 setup_db(){
     send_log info "** Starting to setup database [ $DB_TYPE ]**"
     case "$DB_TYPE" in
         "postgres")
+            # Check database connection first
+            check_database_connection
+            
             # Run create_database.js
             send_log info "Running database creation script..."
             node /app/server/setup/create_database.js
 
             # Run migrations
             send_log info "Running database migrations..."
-            cd /app && npx knex migrate:latest
-            npx knex seed:run
+            cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
+            NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
 
             send_log info " ** Database setup completed **"
             ;;
@@ -75,8 +74,8 @@ setup_db(){
 
             # Run migrations
             send_log info "Running database migrations..."
-            cd /app && npx knex migrate:latest
-            npx knex seed:run
+            cd /app && NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE migrate:latest
+            NODE_OPTIONS="--experimental-vm-modules" npx knex --knexfile $KNEXFILE seed:run
 
             send_log info " ** Database setup completed **"
             ;;
@@ -85,7 +84,6 @@ setup_db(){
             exit 1
     esac
 }
-
 
 installed_client(){
     send_log info "** Starting to install client for $DB_TYPE **"
@@ -107,30 +105,8 @@ installed_client(){
     esac
 }
 
-
-
-
-
-# Path to init.sql and setup.sql
-SETUP_SQL="setup.sql"
-#SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SCRIPT_DIR=""
-
-
-
-# process_files $SCRIPT_DIR/database/postgres $SCRIPT_DIR/$SETUP_SQL
-# send_log info "$>>>>> SETUP.SQL ALREADY CREATED  <<<<<"
-
-
-# replace_placeholders "$SETUP_SQL" "$SCRIPT_DIR"
-# send_log info ">>>>> SETUP.SQL UPDATED USING ENV <<<<<"
-
 installed_client
 send_log info ">>>>> CLIENT INSTALLED [ $DB_TYPE  ] <<<<<"
-
-
-# check_database_connection
-# send_log info ">>>>> DATABASE IS READY TO GET CONNECTION  <<<<<"
 
 setup_db
 
