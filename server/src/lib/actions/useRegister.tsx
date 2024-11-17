@@ -43,7 +43,8 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
         hashed_password: userInfo.password,
         created_at: new Date(),
         roles: [superadminRole],
-        is_inactive: false
+        is_inactive: false,
+        user_type: userInfo.user_type
       };
       await User.insert(newUser);
       return {
@@ -97,6 +98,7 @@ export async function recoverPassword(email: string): Promise<boolean> {
     email: email,
     password: '',
     companyName: '',
+    user_type: 'client'
   });
 
   if (EMAIL_ENABLE) {
@@ -142,6 +144,7 @@ export async function registerUser({ username, email, password, companyName }: I
     email: email,
     password: hashedPassword,
     companyName: companyName,
+    user_type: 'client'
   });
 
   if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
@@ -180,7 +183,8 @@ export async function registerUser({ username, email, password, companyName }: I
         hashed_password: hashedPassword,
         created_at: new Date(),
         roles: [superadminRole],
-        is_inactive: false
+        is_inactive: false,
+        user_type: 'msp'
       };
       await User.insert(newUser);
       logger.info(`User [ ${email} ] registered successfully`);

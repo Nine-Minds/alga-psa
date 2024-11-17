@@ -29,8 +29,6 @@ export default function Register() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
 
-
-
   const router = useRouter();
   const [formData, setFormData] = useState({
     companyName: '',
@@ -86,7 +84,8 @@ export default function Register() {
         username: formData.userName,
         email: formData.email,
         password: formData.password,
-        companyName: formData.companyName
+        companyName: formData.companyName,
+        user_type: 'msp'
       });
       if (wasSuccess) {
         router.push(`/auth/check_email?email=${formData.email}&type=register`);

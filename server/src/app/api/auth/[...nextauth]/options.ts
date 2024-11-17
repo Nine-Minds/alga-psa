@@ -22,6 +22,7 @@ interface ExtendedUser {
     image?: string;
     proToken: string;
     tenant?: string;
+    user_type: string;
 }
 
 export const options: NextAuthOptions = {
@@ -44,7 +45,8 @@ export const options: NextAuthOptions = {
                     username: user.username,
                     image: profile.picture,
                     proToken: '',
-                    tenant: user.tenant
+                    tenant: user.tenant,
+                    user_type: user.user_type
                 };
             },
         }),
@@ -88,7 +90,8 @@ export const options: NextAuthOptions = {
                         image: user.image || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: '',
-                        tenant: user.tenant
+                        tenant: user.tenant,
+                        user_type: user.user_type
                     };
                 } catch (error) {
                     logger.warn("Error authorizing email", credentials?.email, error);
@@ -109,7 +112,8 @@ export const options: NextAuthOptions = {
                     image: profile.picture,
                     username: profile.preferred_username,
                     proToken: '',
-                    tenant: profile.tenant // Assuming Keycloak provides tenant information
+                    tenant: profile.tenant,
+                    user_type: profile.user_type
                 }
             },
         }),
@@ -170,7 +174,8 @@ export const options: NextAuthOptions = {
                         image: user.image || '/image/avatar-purple-big.png',
                         name: `${user.first_name} ${user.last_name}`,
                         proToken: tokenData.access_token,
-                        tenant: user.tenant
+                        tenant: user.tenant,
+                        user_type: user.user_type
                     };
                 } catch (error) {
                     logger.error("Failed to authenticate with Keycloak:", error);
@@ -211,6 +216,7 @@ export const options: NextAuthOptions = {
                 name: validatedUser.first_name + " " + validatedUser.last_name,
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
+                user_type: validatedUser.user_type
             };
         },
         async session({ session, token }) {

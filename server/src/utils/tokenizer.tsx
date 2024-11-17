@@ -31,7 +31,8 @@ export function getInfoFromToken(token: string): TokenResponse{
                 username: decoded.username,
                 email: decoded.email,
                 password: decoded.password,
-                companyName: decoded.companyName
+                companyName: decoded.companyName,
+                user_type: decoded.user_type
             }
         };
     } catch (err) {

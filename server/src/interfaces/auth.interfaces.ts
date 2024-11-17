@@ -15,6 +15,7 @@ export interface IUser {
     is_google_user?: boolean;
     is_inactive: boolean;
     tenant: string;
+    user_type: string;
 }
 
 export interface IUserWithRoles extends IUser {
@@ -76,6 +77,7 @@ export interface IUserRegister {
     email: string;
     password: string;
     companyName: string;
+    user_type: string;
 }
 
 export interface IUserAuthenticated {

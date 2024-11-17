@@ -249,3 +249,108 @@ export async function setUserPreference(userId: string, settingName: string, set
     throw new Error('Failed to set user preference');
   }
 }
+
+export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; companyId?: string }> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    // Check if the email exists in contacts table
+    const contact = await db('contacts')
+      .where({ 
+        email: email,
+        tenant: tenant || undefined
+      })
+      .select('contact_name_id', 'company_id', 'is_inactive')
+      .first();
+
+    if (!contact) {
+      return { exists: false, isActive: false };
+    }
+
+    return {
+      exists: true,
+      isActive: !contact.is_inactive,
+      companyId: contact.company_id || undefined
+    };
+  } catch (error) {
+    console.error('Failed to verify contact email:', error);
+    throw new Error('Failed to verify contact email');
+  }
+}
+
+export async function registerClientUser(
+  email: string,
+  password: string,
+  companyName: string,
+  tenant: string
+): Promise<IUser | { message: string }> {
+  try {
+    const {knex: db} = await createTenantKnex();
+
+    // Check if user already exists
+    const existingUser = await db('users')
+      .where({ email })
+      .first();
+
+    if (existingUser) {
+      return { message: 'User with this email already exists' };
+    }
+
+    // Create tenant record first
+    await db('tenants').insert({
+      tenant_id: tenant,
+      tenant_name: companyName,
+      created_at: new Date(),
+      is_inactive: false
+    });
+
+    // Create the user with client user type
+    const [user] = await db('users')
+      .insert({
+        email,
+        username: email,
+        hashed_password: hashPassword(password),
+        tenant,
+        user_type: 'client',
+        is_inactive: false,
+        created_at: new Date()
+      })
+      .returning('*');
+
+    // Get the default client role
+    const [clientRole] = await db('roles')
+      .where({ role_name: 'client', tenant })
+      .returning('*');
+
+    if (!clientRole) {
+      // Create default client role if it doesn't exist
+      const [newRole] = await db('roles')
+        .insert({
+          role_name: 'client',
+          description: 'Default client user role',
+          tenant
+        })
+        .returning('*');
+
+      // Assign the new role to the user
+      await db('user_roles').insert({
+        user_id: user.user_id,
+        role_id: newRole.role_id,
+        tenant
+      });
+    } else {
+      // Assign existing client role to the user
+      await db('user_roles').insert({
+        user_id: user.user_id,
+        role_id: clientRole.role_id,
+        tenant
+      });
+    }
+
+    return user;
+  } catch (error) {
+    console.error('Error registering client user:', error);
+    return { message: 'Failed to register user' };
+  }
+}
+

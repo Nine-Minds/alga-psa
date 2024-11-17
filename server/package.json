@@ -9,5 +9,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4"
   }
 }

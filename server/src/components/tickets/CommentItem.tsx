@@ -27,7 +27,7 @@ interface CommentItemProps {
   isEditing: boolean;
   currentComment: IComment | null;
   ticketId: string;
-  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; }>;
+  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
   contacts: IContact[];
   companyId?: string;
   onContentChange: (content: string) => void;
@@ -180,7 +180,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   roles: [],
                   created_at: new Date(),
                   two_factor_enabled: false,
-                  is_google_user: false
+                  is_google_user: false,
+                  user_type: user.user_type
                 }))}
               />
             ) : (
