@@ -1,4 +1,4 @@
-Certainly! I'd be happy to help you design a new **customer portal** for your open-source MSP PSA (Managed Service Provider Professional Services Automation) application. This portal will allow your MSP clients to log in and manage their accounts, interact with support, and access necessary information. Below is a detailed plan covering required features, authentication mechanisms, and integration with your existing codebase.
+This portal will allow your MSP clients to log in and manage their accounts, interact with support, and access necessary information. Below is a detailed plan covering required features, authentication mechanisms, and integration with your existing codebase.
 
 ---
 
