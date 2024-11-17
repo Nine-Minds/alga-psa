@@ -5,9 +5,9 @@ import { NextAuthOptions } from "next-auth";
 
 import { verifyAuthenticator } from "@/utils/authenticator/authenticator";
 import { authenticateUser } from "@/lib/actions/auth";
-import { getKeycloakToken } from '@/utils/keycloak';
-import { decodeToken } from '@/utils/tokenizer';
-import User from '@/lib/models/user';
+import { getKeycloakToken } from "@/utils/keycloak";
+import { decodeToken } from "@/utils/tokenizer";
+import User from "@/lib/models/user";
 import logger from "@/utils/logger";
 import "@/types/next-auth";
 
@@ -202,6 +202,7 @@ export const options: NextAuthOptions = {
                 token.image = extendedUser.image;
                 token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
+                token.user_type = extendedUser.user_type;
             }
 
             // On subsequent requests, validate the token
@@ -234,6 +235,7 @@ export const options: NextAuthOptions = {
                 session.user.image = token.image as string;
                 session.user.proToken = token.proToken as string;
                 session.user.tenant = token.tenant as string;
+                session.user.user_type = token.user_type as string;
             }
             logger.trace("Session Object:", session);
             return session;
