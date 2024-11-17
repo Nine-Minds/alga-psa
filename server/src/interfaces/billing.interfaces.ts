@@ -55,7 +55,7 @@ export interface IDiscount extends TenantEntity {
   discount_name: string;
   discount_type: 'percentage' | 'fixed';
   value: number;
-  amount?: number; // Calculated discount amount
+  amount?: number;
 }
 
 export interface IAdjustment extends TenantEntity {
@@ -80,6 +80,9 @@ export interface ICompanyBillingPlan extends TenantEntity {
   end_date: ISO8601String | null;
   is_active: boolean;
   custom_rate?: number;
+  // Added fields from join with billing_plans
+  plan_name?: string;
+  billing_frequency?: string;
 }
 
 export interface ICompanyBillingCycle extends TenantEntity {
@@ -88,32 +91,31 @@ export interface ICompanyBillingCycle extends TenantEntity {
 }
 
 export interface IServiceCategory extends TenantEntity {
-    category_id: string;
-    category_name: string;
-    description?: string;
+  category_id: string;
+  category_name: string;
+  description?: string;
 }
 
-// Updated to use ServiceType union type
 export type ServiceType = 'Fixed' | 'Time' | 'Usage';
 
 export interface IService extends TenantEntity {
-    service_id: string;
-    service_name: string;
-    service_type: ServiceType; // Updated to use ServiceType union type
-    default_rate: number;
-    category_id: string;
-    unit_of_measure: string;    
-    is_taxable?: boolean;
-    tax_region?: string;    
+  service_id: string;
+  service_name: string;
+  service_type: ServiceType;
+  default_rate: number;
+  category_id: string;
+  unit_of_measure: string;    
+  is_taxable?: boolean;
+  tax_region?: string;    
 }
 
 export interface IBillingPlan extends TenantEntity {
-    plan_id?: string;
-    plan_name: string;
-    billing_frequency: string;
-    is_custom: boolean;
-    service_category?: string;
-    plan_type: 'fixed' | 'time-based' | 'usage-based' | 'bucket';
+  plan_id?: string;
+  plan_name: string;
+  billing_frequency: string;
+  is_custom: boolean;
+  service_category?: string;
+  plan_type: 'fixed' | 'time-based' | 'usage-based' | 'bucket';
 }
 
 export interface IPlanService extends TenantEntity {
@@ -140,6 +142,19 @@ export interface IBucketUsage extends TenantEntity {
   hours_used: number;
   overage_hours: number;
   service_catalog_id: string;
+}
+
+export interface PaymentMethod extends TenantEntity {
+  payment_method_id: string;
+  company_id: string;
+  type: 'credit_card' | 'bank_account';
+  last4: string;
+  exp_month?: string;
+  exp_year?: string;
+  is_default: boolean;
+  is_deleted: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface IBucketCharge extends IBillingCharge, TenantEntity {

@@ -2,6 +2,9 @@ import { ReactNode } from 'react';
 import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { options } from '../api/auth/[...nextauth]/options';
+import { DropdownMenu } from '@radix-ui/themes';
+import { UserCircle, LogOut, Settings } from 'lucide-react';
+import Image from 'next/image';
 
 interface CustomerPortalLayoutProps {
   children: ReactNode;
@@ -22,7 +25,13 @@ export default async function CustomerPortalLayout({ children }: CustomerPortalL
           <div className="flex justify-between h-16">
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
-                {/* Logo can be added here */}
+                <Image
+                  src="/images/avatar-purple-background.png"
+                  alt="Logo"
+                  width={50}
+                  height={50}
+                  className="rounded-full mr-4"
+                />
                 <span className="text-xl font-semibold">Customer Portal</span>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -54,15 +63,32 @@ export default async function CustomerPortalLayout({ children }: CustomerPortalL
             </div>
             <div className="flex items-center">
               <div className="ml-3 relative">
-                <div className="flex items-center space-x-3">
-                  <span className="text-sm text-gray-700">{session.user.email}</span>
-                  <a
-                    href="/api/auth/signout?callbackUrl=/auth/signin"
-                    className="text-sm text-gray-700 hover:text-gray-900"
-                  >
-                    Sign out
-                  </a>
-                </div>
+                <DropdownMenu.Root>
+                  <DropdownMenu.Trigger>
+                    <button className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900 focus:outline-none">
+                      <UserCircle className="w-5 h-5" />
+                      <span>{session.user.email}</span>
+                    </button>
+                  </DropdownMenu.Trigger>
+                  <DropdownMenu.Content align="end" className="mt-1 w-48">
+                    <DropdownMenu.Item className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <a href="/customer-portal/account" className="flex items-center w-full">
+                        <Settings className="w-4 h-4 mr-2" />
+                        Account Settings
+                      </a>
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Separator />
+                    <DropdownMenu.Item className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <a
+                        href="/api/auth/signout?callbackUrl=/auth/signin"
+                        className="flex items-center w-full text-red-600 hover:text-red-700"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign out
+                      </a>
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Root>
               </div>
             </div>
           </div>
