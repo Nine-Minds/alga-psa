@@ -3,18 +3,32 @@
 import React, { useState, useEffect } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
 import { ITicket, ITicketListItem, ITicketListFilters } from '@/interfaces/ticket.interfaces';
+import { IProject } from '@/interfaces/project.interfaces';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { ProjectStatus, updateTaskWithChecklist, addTaskToPhase, getTaskChecklistItems, moveTaskToPhase, deleteTask, addTicketLinkAction, getTaskTicketLinksAction, deleteTaskTicketLinkAction } from '@/lib/actions/projectActions';
+import { 
+  ProjectStatus, 
+  updateTaskWithChecklist, 
+  addTaskToPhase, 
+  getTaskChecklistItems, 
+  moveTaskToPhase, 
+  deleteTask, 
+  addTicketLinkAction, 
+  getTaskTicketLinksAction, 
+  deleteTaskTicketLinkAction,
+  getProjectPhases,
+  getProjectTaskStatuses 
+} from '@/lib/actions/projectActions';
 import { getTicketsForList, getTicketById } from '@/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/Button';
 import { TextArea } from '@/components/ui/TextArea';
 import EditableText from '@/components/ui/EditableText';
-import { ListChecks, Link, Plus, ExternalLink, Trash2 } from 'lucide-react';
+import { ListChecks, Link, Plus, ExternalLink, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 import UserPicker from '@/components/ui/UserPicker';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import CustomSelect from '@/components/ui/CustomSelect';
+import HierarchicalSelect from '@/components/ui/HierarchicalSelect';
 import { Input } from '@/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import { QuickAddTicket } from '@/components/tickets/QuickAddTicket';
@@ -31,6 +45,7 @@ interface TaskFormProps {
   defaultStatus?: ProjectStatus;
   users: IUserWithRoles[];
   mode: 'create' | 'edit';
+  projects?: IProject[];
 }
 
 export default function TaskForm({
@@ -42,22 +57,20 @@ export default function TaskForm({
   projectStatuses,
   defaultStatus,
   users,
-  mode
+  mode,
+  projects
 }: TaskFormProps): JSX.Element {
   const { openDrawer } = useDrawer();
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
   const [description, setDescription] = useState(task?.description || '');
-  const [selectedStatus, setSelectedStatus] = useState<string>(
-    task?.project_status_mapping_id || 
-    defaultStatus?.project_status_mapping_id || 
-    projectStatuses[0]?.project_status_mapping_id
-  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checklistItems, setChecklistItems] = useState<Omit<ITaskChecklistItem, 'tenant'>[]>(task?.checklist_items || []);
   const [isEditingChecklist, setIsEditingChecklist] = useState(false);
   const [assignedUser, setAssignedUser] = useState<string>(task?.assigned_to || '');
-  const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
+  const [selectedProject, setSelectedProject] = useState<IProject | null>(null);
+  const [availablePhases, setAvailablePhases] = useState<IProjectPhase[]>(phases || []);
+  const [availableStatuses, setAvailableStatuses] = useState<ProjectStatus[]>(projectStatuses);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showTicketDialog, setShowTicketDialog] = useState(false);
@@ -69,38 +82,87 @@ export default function TaskForm({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [estimatedHours, setEstimatedHours] = useState<number>(Number(task?.estimated_hours) || 0);
   const [actualHours, setActualHours] = useState<number>(Number(task?.actual_hours) || 0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
+  const [expandedPhases, setExpandedPhases] = useState<Record<string, boolean>>({});
+  const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
+
+  const [selectedStatus, setSelectedStatus] = useState<string>(
+    task?.project_status_mapping_id || 
+    defaultStatus?.project_status_mapping_id || 
+    projectStatuses[0]?.project_status_mapping_id
+  );
 
   useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    setError(null);
+
     const fetchInitialData = async () => {
       try {
         const user = await getCurrentUser();
-        if (user) {
+        if (!user) {
+          throw new Error('No user found');
+        }
+        
+        if (isMounted) {
           setCurrentUserId(user.user_id);
           const filters: ITicketListFilters = {
             channelFilterState: 'all'
           };
           const tickets = await getTicketsForList(user, filters);
-          setAvailableTickets(tickets);
+          if (isMounted) {
+            setAvailableTickets(tickets);
+          }
         }
 
-        if (task?.task_id) {
+        if (task?.task_id && isMounted) {
           const [existingChecklistItems, links] = await Promise.all([
             getTaskChecklistItems(task.task_id),
             getTaskTicketLinksAction(task.task_id)
           ]);
-          setChecklistItems(existingChecklistItems);
-          setTaskTicketLinks(links);
+          if (isMounted) {
+            setChecklistItems(existingChecklistItems);
+            setTaskTicketLinks(links);
+          }
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
+        if (isMounted) {
+          setError(error instanceof Error ? error.message : 'Failed to load initial data');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
+
     fetchInitialData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [task]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (taskName.trim() === '') return;
+    
+    if (taskName.trim() === '') {
+      toast.error('Task name is required');
+      return;
+    }
+
+    if (estimatedHours < 0) {
+      toast.error('Estimated hours cannot be negative');
+      return;
+    }
+
+    if (actualHours < 0) {
+      toast.error('Actual hours cannot be negative');
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -108,7 +170,6 @@ export default function TaskForm({
       let resultTask: IProjectTask | null = null;
 
       if (mode === 'edit' && task) {
-        // Edit mode
         const taskData = {
           ...task,
           task_name: taskName,
@@ -121,7 +182,6 @@ export default function TaskForm({
         };
         resultTask = await updateTaskWithChecklist(task.task_id, taskData);
       } else {
-        // Create mode
         const taskData = {
           task_name: taskName,
           project_status_mapping_id: selectedStatus,
@@ -136,7 +196,6 @@ export default function TaskForm({
 
         resultTask = await addTaskToPhase(phase.phase_id, taskData, checklistItems);
         
-        // Link any tickets that were added during creation
         if (resultTask && taskTicketLinks.length > 0) {
           const linkErrors: string[] = [];
           
@@ -165,11 +224,43 @@ export default function TaskForm({
     }
   };
 
+  const handleProjectChange = async (projectId: string) => {
+    try {
+      const newProject = projects?.find(p => p.project_id === projectId);
+      if (newProject && newProject.project_id !== phase.project_id) {
+        setSelectedProject(newProject);
+        
+        const [projectPhases, projectStatuses] = await Promise.all([
+          getProjectPhases(projectId),
+          getProjectTaskStatuses(projectId)
+        ]);
+        
+        setAvailablePhases(projectPhases);
+        setAvailableStatuses(projectStatuses);
+        
+        if (projectPhases.length > 0) {
+          setSelectedPhase(projectPhases[0]);
+          setShowMoveConfirmation(true);
+        }
+        if (projectStatuses.length > 0) {
+          setSelectedStatus(projectStatuses[0].project_status_mapping_id);
+        }
+
+        // Expand the selected project's phases
+        setExpandedProjects(prev => ({
+          ...prev,
+          [projectId]: true
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching project data:', error);
+      toast.error('Failed to load project data');
+    }
+  };
+
   const handlePhaseChange = (phaseId: string) => {
-    if (!phases) return;
-    
-    const newPhase = phases.find(p => p.phase_id === phaseId);
-    if (newPhase && newPhase.phase_id !== phase.phase_id) {
+    const newPhase = availablePhases.find(p => p.phase_id === phaseId);
+    if (newPhase && newPhase.phase_id !== selectedPhase.phase_id) {
       setSelectedPhase(newPhase);
       setShowMoveConfirmation(true);
     }
@@ -180,7 +271,12 @@ export default function TaskForm({
     
     setIsSubmitting(true);
     try {
-      const movedTask = await moveTaskToPhase(task.task_id, selectedPhase.phase_id);
+      const movedTask = await moveTaskToPhase(
+        task.task_id,
+        selectedPhase.phase_id,
+        selectedProject?.project_id,
+        selectedStatus
+      );
       
       if (movedTask) {
         const taskData = {
@@ -193,7 +289,10 @@ export default function TaskForm({
         onSubmit(updatedTask);
       }
       
-      toast.success(`Task moved to ${selectedPhase.phase_name}`);
+      const successMessage = selectedProject
+        ? `Task moved to ${selectedProject.project_name}, ${selectedPhase.phase_name}`
+        : `Task moved to ${selectedPhase.phase_name}`;
+      toast.success(successMessage);
       onClose();
     } catch (error) {
       console.error('Error moving task:', error);
@@ -265,7 +364,6 @@ export default function TaskForm({
         const links = await getTaskTicketLinksAction(task.task_id);
         setTaskTicketLinks(links);
       } else {
-        // For new tasks, store the link temporarily
         const selectedTicketDetails = availableTickets.find(t => t.ticket_id === selectedTicket);
         if (selectedTicketDetails) {
           const tempLink: IProjectTicketLinkWithDetails = {
@@ -302,13 +400,10 @@ export default function TaskForm({
     }
     try {
       if (task?.task_id) {
-        // For existing tasks, create permanent link
         await addTicketLinkAction(phase.project_id, task.task_id, ticket.ticket_id);
         const links = await getTaskTicketLinksAction(task.task_id);
         setTaskTicketLinks(links);
       } else {
-        // For new tasks:
-        // 1. Fetch updated tickets list to get full ticket details
         const user = await getCurrentUser();
         if (!user) {
           toast.error('No user session found');
@@ -320,14 +415,12 @@ export default function TaskForm({
         const updatedTickets = await getTicketsForList(user, filters);
         setAvailableTickets(updatedTickets);
 
-        // 2. Find the newly created ticket in the updated list
         const newTicketDetails = updatedTickets.find(t => t.ticket_id === ticket.ticket_id);
         if (!newTicketDetails) {
           toast.error('Failed to load ticket details');
           return;
         }
 
-        // 3. Create temporary link with the full ticket details
         const tempLink: IProjectTicketLinkWithDetails = {
           link_id: `temp-${Date.now()}`,
           task_id: tempTaskId,
@@ -382,7 +475,6 @@ export default function TaskForm({
         const links = await getTaskTicketLinksAction(task.task_id);
         setTaskTicketLinks(links);
       } else {
-        // For new tasks, just remove from state
         setTaskTicketLinks(taskTicketLinks.filter(link => link.link_id !== linkId));
       }
       toast.success('Ticket link removed');
@@ -414,10 +506,212 @@ export default function TaskForm({
     setShowDeleteConfirm(false);
   };
 
-  const phaseOptions = phases?.map((p): { value: string; label: string } => ({
-    value: p.phase_id,
-    label: p.phase_name
-  })) || [];
+const generateMoveToOptions = () => {
+  const options = [];
+
+  // Add current project first
+  const currentProject = projects?.find(p => p.project_id === phase.project_id);
+  if (currentProject) {
+    // Project header
+    options.push({
+      value: `project_header_${currentProject.project_id}`,
+      label: (
+        <div className="flex items-center space-x-1 font-semibold" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="p-1 hover:bg-gray-100 rounded"
+            onClick={() => {
+              setExpandedProjects(prev => ({
+                ...prev,
+                [currentProject.project_id]: !prev[currentProject.project_id]
+              }));
+            }}
+          >
+            {expandedProjects[currentProject.project_id] ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          <span 
+            onClick={() => handleProjectChange(currentProject.project_id)}
+            className="cursor-pointer hover:text-purple-600"
+          >
+            {currentProject.project_name}
+          </span>
+        </div>
+      ),
+      isHeader: true
+    });
+
+    // If project is expanded, show phases
+    if (expandedProjects[currentProject.project_id]) {
+      (phases || []).forEach(p => {
+        // Phase header
+        options.push({
+          value: `phase_header_${p.phase_id}`,
+          label: (
+            <div className="flex items-center space-x-1 ml-4" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="p-1 hover:bg-gray-100 rounded"
+                onClick={() => {
+                  setExpandedPhases(prev => ({
+                    ...prev,
+                    [p.phase_id]: !prev[p.phase_id]
+                  }));
+                }}
+              >
+                {expandedPhases[p.phase_id] ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              <span 
+                onClick={() => handlePhaseChange(p.phase_id)}
+                className="cursor-pointer hover:text-purple-600"
+              >
+                {p.phase_name}
+              </span>
+            </div>
+          ),
+          isHeader: true
+        });
+
+        // If phase is expanded, show statuses
+        if (expandedPhases[p.phase_id]) {
+          projectStatuses.forEach(status => {
+            options.push({
+              value: `${p.phase_id}_${status.project_status_mapping_id}`,
+              label: <span className="ml-12">{status.custom_name || status.name}</span>
+            });
+          });
+        }
+      });
+    }
+  }
+
+  // Add other projects
+  projects?.filter(p => p.project_id !== phase.project_id).forEach(p => {
+    // Project header
+    options.push({
+      value: `project_header_${p.project_id}`,
+      label: (
+        <div className="flex items-center space-x-1 font-semibold mt-2" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="p-1 hover:bg-gray-100 rounded"
+            onClick={() => {
+              setExpandedProjects(prev => ({
+                ...prev,
+                [p.project_id]: !prev[p.project_id]
+              }));
+            }}
+          >
+            {expandedProjects[p.project_id] ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          <span 
+            onClick={() => handleProjectChange(p.project_id)}
+            className="cursor-pointer hover:text-purple-600"
+          >
+            {p.project_name}
+          </span>
+        </div>
+      ),
+      isHeader: true
+    });
+
+    // If project is expanded and it's the selected project, show its phases
+    if (expandedProjects[p.project_id] && selectedProject?.project_id === p.project_id) {
+      availablePhases.forEach(p => {
+        // Phase header
+        options.push({
+          value: `phase_header_${p.phase_id}`,
+          label: (
+            <div className="flex items-center space-x-1 ml-4" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="p-1 hover:bg-gray-100 rounded"
+                onClick={() => {
+                  setExpandedPhases(prev => ({
+                    ...prev,
+                    [p.phase_id]: !prev[p.phase_id]
+                  }));
+                }}
+              >
+                {expandedPhases[p.phase_id] ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+              <span 
+                onClick={() => handlePhaseChange(p.phase_id)}
+                className="cursor-pointer hover:text-purple-600"
+              >
+                {p.phase_name}
+              </span>
+            </div>
+          ),
+          isHeader: true
+        });
+
+        // If phase is expanded, show statuses
+        if (expandedPhases[p.phase_id]) {
+          availableStatuses.forEach(status => {
+            options.push({
+              value: `${p.phase_id}_${status.project_status_mapping_id}`,
+              label: <span className="ml-12">{status.custom_name || status.name}</span>
+            });
+          });
+        }
+      });
+    }
+  });
+
+  return options;
+};
+
+  const renderSelectedValue = (value: string, options: any[]) => {
+    const [phaseId, statusId] = value.split('_');
+    if (!statusId) return 'Select destination...';
+  
+    // Find the current phase and status
+    const currentPhase = phases?.find(p => p.phase_id === phaseId) || 
+                        availablePhases.find(p => p.phase_id === phaseId);
+    const currentStatus = projectStatuses.find(s => s.project_status_mapping_id === statusId) ||
+                         availableStatuses.find(s => s.project_status_mapping_id === statusId);
+    
+    if (!currentPhase || !currentStatus) return 'Select destination...';
+  
+    // Find the project that owns this phase
+    const phaseProject = selectedProject || 
+                        projects?.find(p => p.project_id === currentPhase.project_id) || 
+                        projects?.find(p => p.project_id === phase.project_id);
+  
+    if (!phaseProject) return `${currentPhase.phase_name} / ${currentStatus.custom_name || currentStatus.name}`;
+  
+    // Return the full hierarchy
+    return `${phaseProject.project_name} / ${currentPhase.phase_name} / ${currentStatus.custom_name || currentStatus.name}`;
+  };
+  
+  const handleMoveToChange = (value: string) => {
+    if (value.startsWith('project_header_') || value.startsWith('phase_header_')) {
+      return; // These are just headers, ignore selection
+    }
+
+    // Handle phase and status selection
+    const [phaseId, statusId] = value.split('_');
+    handlePhaseChange(phaseId);
+    if (statusId) {
+      setSelectedStatus(statusId);
+    }
+  };
 
   const statusOptions = projectStatuses.map((status): { value: string; label: string } => ({
     value: status.project_status_mapping_id,
@@ -441,126 +735,138 @@ export default function TaskForm({
               {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
             </Dialog.Title>
             <form onSubmit={handleSubmit} className="flex flex-col">
-              <div className="space-y-4">
-                <EditableText
-                  value={taskName}
-                  onChange={setTaskName}
-                  placeholder="Title..."
-                  className="w-full text-lg font-semibold"
-                />
-
-                {mode === 'edit' && phases && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Phase</label>
-                    <CustomSelect
-                      value={selectedPhase.phase_id}
-                      onValueChange={handlePhaseChange}
-                      options={phaseOptions}
-                      className="w-full"
-                    />
-                  </div>
-                )}
-
-                <TextArea
-                  value={description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                  placeholder="Description"
-                  className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  rows={3}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estimated Hours
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={estimatedHours}
-                      onChange={(e) => setEstimatedHours(Number(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Actual Hours
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={actualHours}
-                      onChange={(e) => setActualHours(Number(e.target.value))}
-                      className="w-full"
-                    />
-                  </div>
+              {error && (
+                <div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+                  {error}
                 </div>
-
-                <CustomSelect
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
-                  options={statusOptions}
-                  placeholder="Select status"
-                  className="w-full"
-                />
-
-                <UserPicker
-                  label="Assigned To"
-                  value={assignedUser}
-                  onValueChange={setAssignedUser}
-                  size="sm"
-                  users={users}
-                />
-
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className='font-semibold'>Checklist</h3>
-                  <button 
-                    onClick={toggleEditChecklist} 
-                    className="text-gray-500 hover:text-gray-700"
-                    type="button"
-                  >
-                    <ListChecks className="h-5 w-5" />
-                  </button>
+              )}
+              {isLoading ? (
+                <div className="flex justify-center items-center p-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
                 </div>
+              ) : (
+                <div className="space-y-4">
+                  <EditableText
+                    value={taskName}
+                    onChange={setTaskName}
+                    placeholder="Title..."
+                    className="w-full text-lg font-semibold"
+                  />
 
-                <div className="flex flex-col space-y-2">
-                  {checklistItems.map((item, index): JSX.Element => (
-                    <div key={index} className="flex items-center space-x-2">
-                      {isEditingChecklist ? (
-                        <>
-                          <input
-                            type="checkbox"
-                            checked={item.completed}
-                            onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
-                            className="mr-2"
-                          />
-                          <Input
-                            value={item.item_name}
-                            onChange={(e) => updateChecklistItem(index, 'item_name', e.target.value)}
-                            placeholder="Checklist item"
-                            className="flex-grow"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeChecklistItem(index)}
-                            className="text-red-500"
-                          >
-                            Remove
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <input
-                            type="checkbox"
-                            checked={item.completed}
-                            onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
-                            className="mr-2"
-                          />
-                          <span className={item.completed ? 'line-through text-gray-500' : ''}>
-                            {item.item_name}
-                          </span>
+                  {mode === 'edit' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Move To</label>
+                      <HierarchicalSelect
+                        value={`${selectedPhase.phase_id}_${selectedStatus}`}
+                        onValueChange={handleMoveToChange}
+                        options={generateMoveToOptions()}
+                        className="w-full"
+                        renderSelectedValue={renderSelectedValue}
+                        placeholder="Select destination..."
+                      />
+                    </div>
+                  )}
+
+                  <TextArea
+                    value={description}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                    placeholder="Description"
+                    className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    rows={3}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Estimated Hours
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={estimatedHours}
+                        onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Actual Hours
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        value={actualHours}
+                        onChange={(e) => setActualHours(Number(e.target.value))}
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+
+                  <CustomSelect
+                    value={selectedStatus}
+                    onValueChange={setSelectedStatus}
+                    options={statusOptions}
+                    placeholder="Select status"
+                    className="w-full"
+                  />
+
+                  <UserPicker
+                    label="Assigned To"
+                    value={assignedUser}
+                    onValueChange={setAssignedUser}
+                    size="sm"
+                    users={users}
+                  />
+
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className='font-semibold'>Checklist</h3>
+                    <button 
+                      onClick={toggleEditChecklist} 
+                      className="text-gray-500 hover:text-gray-700"
+                      type="button"
+                    >
+                      <ListChecks className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    {checklistItems.map((item, index): JSX.Element => (
+                      <div key={index} className="flex items-center space-x-2">
+                        {isEditingChecklist ? (
+                          <>
+                            <input
+                              type="checkbox"
+                              checked={item.completed}
+                              onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <Input
+                              value={item.item_name}
+                              onChange={(e) => updateChecklistItem(index, 'item_name', e.target.value)}
+                              placeholder="Checklist item"
+                              className="flex-grow"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeChecklistItem(index)}
+                              className="text-red-500"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="checkbox"
+                              checked={item.completed}
+                              onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
+                              className="mr-2"
+                            />
+                            <span className={item.completed ? 'line-through text-gray-500' : ''}>
+                              {item.item_name}
+                              </span>
                         </>
                       )}
                     </div>
@@ -648,7 +954,8 @@ export default function TaskForm({
                     {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                   </Button>
                 </div>
-              </div>
+                </div>
+              )}
             </form>
           </Dialog.Content>
         </Dialog.Portal>
@@ -683,7 +990,9 @@ export default function TaskForm({
           }}
           onConfirm={handleMoveConfirm}
           title="Move Task"
-          message={`Are you sure you want to move task "${taskName}" to phase "${selectedPhase.phase_name}"?`}
+          message={selectedProject 
+            ? `Are you sure you want to move task "${taskName}" to project "${selectedProject.project_name}", phase "${selectedPhase.phase_name}"?`
+            : `Are you sure you want to move task "${taskName}" to phase "${selectedPhase.phase_name}"?`}
           confirmLabel="Move"
           cancelLabel="Cancel"
         />

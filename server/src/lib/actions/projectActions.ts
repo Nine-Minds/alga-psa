@@ -17,6 +17,7 @@ import {
     updateChecklistItemSchema,
     projectPhaseSchema 
 } from '../schemas/project.schemas';
+import { createTenantKnex } from '@/lib/db';
 
 // Define a new type that combines IStatus or IStandardStatus with additional properties
 export type ProjectStatus = {
@@ -63,6 +64,20 @@ export async function getProjectPhase(phaseId: string): Promise<IProjectPhase | 
     }
 }
 
+export async function getProjectPhases(projectId: string): Promise<IProjectPhase[]> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+        await checkPermission(currentUser, 'project', 'read');
+        return await ProjectModel.getPhases(projectId);
+    } catch (error) {
+        console.error('Error fetching project phases:', error);
+        throw error;
+    }
+}
+
 export async function updatePhase(phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> {
     try {
         const currentUser = await getCurrentUser();
@@ -98,7 +113,12 @@ export async function deletePhase(phaseId: string): Promise<void> {
     }
 }
 
-export async function moveTaskToPhase(taskId: string, newPhaseId: string): Promise<IProjectTask> {
+export async function moveTaskToPhase(
+    taskId: string, 
+    newPhaseId: string,
+    newProjectId?: string,
+    newStatusId?: string
+): Promise<IProjectTask> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -122,7 +142,18 @@ export async function moveTaskToPhase(taskId: string, newPhaseId: string): Promi
         // Generate new WBS code for the task using the proper method
         const newWbsCode = await ProjectModel.generateNextWbsCode(newPhase.wbs_code);
 
-        // Update task with new phase and WBS code, only passing necessary fields
+        // If moving to a different project, update ticket links
+        if (newProjectId && newProjectId !== newPhase.project_id) {
+            const {knex: db} = await createTenantKnex();
+            await db('project_ticket_links')
+                .where('task_id', taskId)
+                .update({
+                    project_id: newProjectId,
+                    updated_at: db.fn.now()
+                });
+        }
+
+        // Update task with new phase and WBS code
         const updatedTask = await ProjectModel.updateTask(taskId, {
             phase_id: newPhaseId,
             wbs_code: newWbsCode,
@@ -132,7 +163,7 @@ export async function moveTaskToPhase(taskId: string, newPhaseId: string): Promi
             assigned_to: existingTask.assigned_to,
             estimated_hours: existingTask.estimated_hours,
             actual_hours: existingTask.actual_hours,
-            project_status_mapping_id: existingTask.project_status_mapping_id,
+            project_status_mapping_id: newStatusId || existingTask.project_status_mapping_id,
             due_date: existingTask.due_date
         });
 

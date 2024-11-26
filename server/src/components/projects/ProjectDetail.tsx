@@ -7,7 +7,7 @@ import { useDrawer } from '@/context/DrawerContext';
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
-import { updateTaskStatus, getProjectTaskStatuses, updatePhase, moveTaskToPhase, updateTaskWithChecklist, deletePhase, getTaskChecklistItems, ProjectStatus } from '@/lib/actions/projectActions';
+import { updateTaskStatus, getProjectTaskStatuses, updatePhase, moveTaskToPhase, updateTaskWithChecklist, deletePhase, getTaskChecklistItems, ProjectStatus, getProjects } from '@/lib/actions/projectActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
@@ -57,6 +57,21 @@ export default function ProjectDetail({
     phaseId: string;
     phaseName: string;
   } | null>(null);
+
+  const [allProjects, setAllProjects] = useState<IProject[]>([]);
+
+  useEffect(() => {
+    const loadAllProjects = async () => {
+      try {
+        const projects = await getProjects();
+        setAllProjects(projects);
+      } catch (error) {
+        console.error('Error loading projects:', error);
+        toast.error('Failed to load projects');
+      }
+    };
+    loadAllProjects();
+  }, []);
 
   useEffect(() => {
     const loadChecklistItems = async () => {
@@ -456,7 +471,7 @@ export default function ProjectDetail({
         </div>
       </div>
 
-      {/* Modal components remain the same */}
+      {/* Update the TaskEdit component to include project prop */}
       {(showQuickAdd && (currentPhase || selectedPhase)) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-6 rounded-lg shadow-lg relative">
@@ -472,6 +487,8 @@ export default function ProjectDetail({
                 task={selectedTask}
                 phase={currentPhase || selectedPhase!}
                 phases={projectPhases}
+                project={project}
+                projects={allProjects}
                 onClose={handleCloseQuickAdd}
                 onTaskUpdated={handleTaskUpdated}
                 projectStatuses={projectStatuses}

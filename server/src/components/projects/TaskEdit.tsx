@@ -1,24 +1,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectPhase, IProjectTask } from '@/interfaces/project.interfaces';
+import { IProject, IProjectPhase, IProjectTask } from '@/interfaces/project.interfaces';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { getProjectTaskStatuses, ProjectStatus } from '@/lib/actions/projectActions';
 import TaskForm from './TaskForm';
 
 interface TaskEditProps {
   task: IProjectTask;
-  phase: IProjectPhase;  // Added this prop
+  phase: IProjectPhase;
   phases?: IProjectPhase[];
+  project: IProject;
+  projects?: IProject[];
   onClose: () => void;
   onTaskUpdated: (updatedTask: IProjectTask | null) => void;
-  projectStatuses?: ProjectStatus[];  // Made optional since we fetch it
+  projectStatuses?: ProjectStatus[];
   users: IUserWithRoles[];
 }
 
 export default function TaskEdit({ 
   task, 
-  phase,  // Added this prop
+  phase,
+  project,
+  projects,
   onClose, 
   onTaskUpdated,
   phases,
@@ -52,6 +56,7 @@ export default function TaskEdit({
       defaultStatus={statuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
       users={users}
       mode="edit"
+      projects={projects || [project]} // Pass both projects and current project
     />
   );
 }
