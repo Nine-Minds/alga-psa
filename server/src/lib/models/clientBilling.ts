@@ -72,7 +72,7 @@ class CompanyBillingPlan {
             .where('company_id', companyId)
             .select('credit_balance')
             .first();
-        return company?.credit_balance || 0;
+        return Math.ceil(company?.credit_balance) || 0;
     }
 
     static async createTransaction(transaction: Omit<ITransaction, 'transaction_id' | 'created_at'>): Promise<ITransaction> {
