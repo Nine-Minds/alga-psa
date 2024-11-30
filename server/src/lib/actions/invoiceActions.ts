@@ -112,12 +112,6 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   let totalTax = 0;
   const due_date = await getDueDate(companyId, endDate);
 
-  // Calculate initial total amount
-  const initialTotal = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
-  
-  // Get available credit
-  const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
-
   const invoice: Omit<IInvoice, 'invoice_id'> = {
     tenant,
     company_id: companyId,
@@ -130,7 +124,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     invoice_number: await generateInvoiceNumber(),
     billing_period_start: startDate,
     billing_period_end: endDate,
-    credit_applied: Math.min(availableCredit, initialTotal)
+    credit_applied: 0 // Will be calculated after taxes
   };
 
   const createdInvoice = await knex.transaction(async (trx) => {
@@ -227,7 +221,11 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   }
 
   const totalAmount = subtotal + totalTax;
-  const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - invoice.credit_applied);
+  
+  // Get available credit and calculate how much to apply
+  const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
+  const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
+  const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - creditToApply);
 
   await knex('invoices')
     .where({ invoice_id: createdInvoice.invoice_id })
@@ -235,11 +233,11 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       subtotal: Math.ceil(subtotal),
       tax: Math.ceil(totalTax),
       total_amount: Math.ceil(finalTotalAmount),
-      credit_applied: Math.ceil(invoice.credit_applied)
+      credit_applied: Math.ceil(creditToApply)
     });
 
   // If credit was applied, create a transaction and update company credit balance
-  if (invoice.credit_applied > 0) {
+  if (creditToApply > 0) {
     const currentBalance = await knex('transactions')
       .where({ company_id: companyId })
       .orderBy('created_at', 'desc')
@@ -249,13 +247,13 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     await CompanyBillingPlan.createTransaction({
       company_id: companyId,
       invoice_id: createdInvoice.invoice_id,
-      amount: -invoice.credit_applied,
+      amount: -creditToApply,
       type: 'credit_application',
       description: `Applied credit to invoice ${invoice.invoice_number}`,
-      balance_after: currentBalance - invoice.credit_applied
+      balance_after: currentBalance - creditToApply
     });
 
-    await CompanyBillingPlan.updateCompanyCredit(companyId, -invoice.credit_applied);
+    await CompanyBillingPlan.updateCompanyCredit(companyId, -creditToApply);
   }
 
   return { 
