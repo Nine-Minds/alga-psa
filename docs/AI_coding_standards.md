@@ -33,9 +33,13 @@ information about the database can be found in the `/server/src/lib/db` folder.
 
 Migrations and seeds are using the Knex.js library.
 
-Always use commands like "npx knex migrate:make <name>" to create a new migration. Do the same for seeds.
+Always use commands like "cd server && npx knex migrate:make <name> --knexfile knexfile.cjs" to create a new migration. Do the same for seeds.
+
+The knexfile is located in the /server/knexfile.cjs file and is used to configure the database connection.
 
 Use createTenantKnex() from the /server/src/lib/db/index.ts file to create a database connection and return the tenant as a string.
+
+Migrations should have a .cjs extension and should be located in the /server/migrations folder.
 
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.

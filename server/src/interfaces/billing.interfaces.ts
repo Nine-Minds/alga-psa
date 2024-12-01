@@ -23,6 +23,7 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'time';
+  entryId: string; // Added field for source time entry ID
 }
 
 export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
@@ -32,6 +33,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'usage';
+  usageId: string; // Added field for source usage record ID
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket';
@@ -86,8 +88,13 @@ export interface ICompanyBillingPlan extends TenantEntity {
 }
 
 export interface ICompanyBillingCycle extends TenantEntity {
+  billing_cycle_id?: string;
   company_id: string;
   billing_cycle: string;
+  effective_date: ISO8601String;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+  tenant: string;
 }
 
 export interface IServiceCategory extends TenantEntity {
@@ -165,6 +172,8 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   service_catalog_id: string;
 }
 
+export type BillingCycleType = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+
 export type TransactionType = 
   | 'credit_application'
   | 'credit_issuance'
@@ -190,6 +199,10 @@ export type TransactionType =
   | 'billing_cycle_adjustment'
   | 'currency_adjustment'
   | 'tax_adjustment';
+
+export interface IBillingCycleInvoiceRequest {
+  billing_cycle_id: string;
+}
 
 export interface ITransaction extends TenantEntity {
   transaction_id: string;

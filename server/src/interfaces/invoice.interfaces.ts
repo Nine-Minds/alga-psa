@@ -11,10 +11,9 @@ export interface IInvoice extends TenantEntity {
   total_amount: number;
   status: InvoiceStatus;
   invoice_number: string;
-  billing_period_start: ISO8601String;
-  billing_period_end: ISO8601String;
   finalized_at?: Date | ISO8601String;
   credit_applied: number;
+  billing_cycle_id?: string;
 }
 
 export interface IInvoiceItem extends TenantEntity {
@@ -211,6 +210,7 @@ export interface ICreditAllocation extends TenantEntity {
 
 export interface InvoiceViewModel {
   invoice_number: string;
+  company_id: string;
   company: {
     name: string;
     logo: string;
@@ -227,6 +227,7 @@ export interface InvoiceViewModel {
   subtotal: number;
   tax: number;
   total: number;
+  total_amount: number;
   invoice_items: IInvoiceItem[];
   custom_fields?: Record<string, any>;
   finalized_at?: Date;

@@ -3,7 +3,7 @@
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
 import { IInvoiceTemplate, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel, IInvoiceItem } from '@/interfaces/invoice.interfaces';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge } from '@/interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from '@/interfaces/billing.interfaces';
 import { IInvoice } from '@/interfaces/invoice.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
 import { getServerSession } from "next-auth/next";
@@ -49,21 +49,30 @@ function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
 }
 
-export async function generateInvoice(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<InvoiceViewModel> {
+export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const parsedStartDate = parseISO(startDate);
-  const parsedEndDate = parseISO(endDate);
-
-  if (!isBefore(parsedStartDate, parsedEndDate)) {
-    throw new Error('Invalid billing period: start date must be before end date');
+  // Get billing cycle details
+  const { knex } = await createTenantKnex();
+  const billingCycle = await knex('company_billing_cycles')
+    .where({ billing_cycle_id })
+    .first();
+    
+  if (!billingCycle) {
+    throw new Error('Invalid billing cycle');
   }
 
+  const { company_id, effective_date } = billingCycle;
+
+  // Calculate cycle dates based on effective_date and billing cycle
+  const cycleStart = new Date(effective_date).toISOString().replace('.000', '');
+  const cycleEnd = (await getNextBillingDate(company_id, effective_date)).replace('.000', '');
+
   const billingEngine = new BillingEngine();
-  const billingResult = await billingEngine.calculateBilling(companyId, startDate, endDate);
+  const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 
   if (billingResult.charges.length === 0) {
     throw new Error('No active billing plans for this period');
@@ -75,11 +84,11 @@ export async function generateInvoice(companyId: string, startDate: ISO8601Strin
     }
   }
 
-  const createdInvoice = await createInvoice(billingResult, companyId, startDate, endDate);
+  const createdInvoice = await createInvoice(billingResult, company_id, cycleStart, cycleEnd, billing_cycle_id);
   const fullInvoice = await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
 
-  const nextBillingStartDate = await getNextBillingDate(companyId, endDate);
-  await billingEngine.rolloverUnapprovedTime(companyId, endDate, nextBillingStartDate);
+  const nextBillingStartDate = await getNextBillingDate(company_id, cycleEnd);
+  await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingStartDate);
 
   return fullInvoice;
 }
@@ -96,7 +105,7 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
   return charge.rate;
 }
 
-async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<IInvoice> {
+async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies').where({ company_id: companyId }).first() as ICompany;
   if (!company) {
@@ -122,9 +131,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     total_amount: 0,
     status: 'draft',
     invoice_number: await generateInvoiceNumber(),
-    billing_period_start: startDate,
-    billing_period_end: endDate,
-    credit_applied: 0 // Will be calculated after taxes
+    credit_applied: 0,
+    billing_cycle_id: billing_cycle_id
   };
 
   const createdInvoice = await knex.transaction(async (trx) => {
@@ -151,8 +159,79 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       balance_after: currentBalance + newInvoice.total_amount
     });
 
-    // If discounts were applied, record those transactions
+    // Process each charge and create invoice items
+    for (const charge of billingResult.charges) {
+      const { netAmount, taxCalculationResult } = await calculateChargeDetails(charge, companyId, endDate, taxService);
+
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: newInvoice.invoice_id,
+        service_id: charge.serviceId,
+        description: isBucketCharge(charge) ? `${charge.serviceName} (Overage)` : charge.serviceName,
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        net_amount: netAmount,
+        tax_amount: taxCalculationResult.taxAmount,
+        tax_region: charge.tax_region,
+        tax_rate: taxCalculationResult.taxRate,
+        total_price: netAmount + taxCalculationResult.taxAmount,
+        tenant
+      };
+
+      await trx('invoice_items').insert(invoiceItem);
+
+      // Link time entries with the invoice and mark as invoiced
+      if (isTimeBasedCharge(charge)) {
+        await trx('invoice_time_entries').insert({
+          invoice_time_entry_id: uuidv4(),
+          invoice_id: newInvoice.invoice_id,
+          entry_id: charge.entryId,
+          tenant
+        });
+
+        await trx('time_entries')
+          .where({ entry_id: charge.entryId })
+          .update({ invoiced: true });
+      }
+
+      // Link usage records with the invoice and mark as invoiced
+      if (isUsageBasedCharge(charge)) {
+        await trx('invoice_usage_records').insert({
+          invoice_usage_record_id: uuidv4(),
+          invoice_id: newInvoice.invoice_id,
+          usage_id: charge.usageId,
+          tenant
+        });
+
+        await trx('usage_tracking')
+          .where({ usage_id: charge.usageId })
+          .update({ invoiced: true });
+      }
+
+      subtotal += netAmount;
+      totalTax += taxCalculationResult.taxAmount;
+    }
+
+    // Handle discounts
     for (const discount of billingResult.discounts) {
+      const netAmount = Math.round(-(discount.amount || 0));
+      const taxCalculationResult = await taxService.calculateTax(companyId, netAmount, endDate);
+
+      const discountInvoiceItem = {
+        item_id: uuidv4(),
+        description: discount.discount_name,
+        quantity: 1,
+        unit_price: netAmount,
+        net_amount: netAmount,
+        tax_amount: taxCalculationResult.taxAmount,
+        tax_rate: taxCalculationResult.taxRate,
+        total_price: netAmount + taxCalculationResult.taxAmount,
+      };
+      await createInvoiceItem(newInvoice.invoice_id, discountInvoiceItem);
+
+      subtotal += netAmount;
+      totalTax += taxCalculationResult.taxAmount;
+
       const currentBalance = await trx('transactions')
         .where({ company_id: companyId })
         .orderBy('created_at', 'desc')
@@ -174,96 +253,72 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       });
     }
 
+    const totalAmount = subtotal + totalTax;
+    
+    // Get available credit and calculate how much to apply
+    const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
+    const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
+    const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - creditToApply);
+
+    await trx('invoices')
+      .where({ invoice_id: newInvoice.invoice_id })
+      .update({
+        subtotal: Math.ceil(subtotal),
+        tax: Math.ceil(totalTax),
+        total_amount: Math.ceil(finalTotalAmount),
+        credit_applied: Math.ceil(creditToApply)
+      });
+
+    // If credit was applied, create a transaction and update company credit balance
+    if (creditToApply > 0) {
+      const currentBalance = await trx('transactions')
+        .where({ company_id: companyId })
+        .orderBy('created_at', 'desc')
+        .first()
+        .then(lastTx => lastTx?.balance_after || 0);
+
+      await CompanyBillingPlan.createTransaction({
+        company_id: companyId,
+        invoice_id: newInvoice.invoice_id,
+        amount: -creditToApply,
+        type: 'credit_application',
+        description: `Applied credit to invoice ${invoice.invoice_number}`,
+        balance_after: currentBalance - creditToApply
+      });
+
+      await CompanyBillingPlan.updateCompanyCredit(companyId, -creditToApply);
+    }
+
     return newInvoice;
   });
 
-  for (const charge of billingResult.charges) {
-    const { netAmount, taxCalculationResult } = await calculateChargeDetails(charge, companyId, endDate, taxService);
-
-    const invoiceItem = {
-      item_id: uuidv4(),
-      service_id: charge.serviceId,
-      description: isBucketCharge(charge) ? `${charge.serviceName} (Overage)` : charge.serviceName,
-      quantity: getChargeQuantity(charge),
-      unit_price: getChargeUnitPrice(charge),
-      net_amount: netAmount,
-      tax_amount: taxCalculationResult.taxAmount,
-      tax_region: charge.tax_region,
-      tax_rate: taxCalculationResult.taxRate,
-      total_price: netAmount + taxCalculationResult.taxAmount,
-    };
-
-    await createInvoiceItem(createdInvoice.invoice_id, invoiceItem);
-
-    subtotal += netAmount;
-    totalTax += taxCalculationResult.taxAmount;
-  }
-
-  // Handle discounts
-  for (const discount of billingResult.discounts) {
-    const netAmount = -Math.ceil(discount.amount || 0);
-    const taxCalculationResult = await taxService.calculateTax(companyId, netAmount, endDate);
-
-    const discountInvoiceItem = {
-      item_id: uuidv4(),
-      description: discount.discount_name,
-      quantity: 1,
-      unit_price: netAmount,
-      net_amount: netAmount,
-      tax_amount: taxCalculationResult.taxAmount,
-      tax_rate: taxCalculationResult.taxRate,
-      total_price: netAmount + taxCalculationResult.taxAmount,
-    };
-    await createInvoiceItem(createdInvoice.invoice_id, discountInvoiceItem);
-
-    subtotal += netAmount;
-    totalTax += taxCalculationResult.taxAmount;
-  }
-
-  const totalAmount = subtotal + totalTax;
-  
-  // Get available credit and calculate how much to apply
-  const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
-  const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
-  const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - creditToApply);
-
-  await knex('invoices')
-    .where({ invoice_id: createdInvoice.invoice_id })
-    .update({
-      subtotal: Math.ceil(subtotal),
-      tax: Math.ceil(totalTax),
-      total_amount: Math.ceil(finalTotalAmount),
-      credit_applied: Math.ceil(creditToApply)
-    });
-
-  // If credit was applied, create a transaction and update company credit balance
-  if (creditToApply > 0) {
-    const currentBalance = await knex('transactions')
-      .where({ company_id: companyId })
-      .orderBy('created_at', 'desc')
-      .first()
-      .then(lastTx => lastTx?.balance_after || 0);
-
-    await CompanyBillingPlan.createTransaction({
-      company_id: companyId,
-      invoice_id: createdInvoice.invoice_id,
-      amount: -creditToApply,
-      type: 'credit_application',
-      description: `Applied credit to invoice ${invoice.invoice_number}`,
-      balance_after: currentBalance - creditToApply
-    });
-
-    await CompanyBillingPlan.updateCompanyCredit(companyId, -creditToApply);
-  }
-
-  return { 
-    ...createdInvoice, 
-    subtotal: Math.ceil(subtotal), 
-    tax: Math.ceil(totalTax), 
-    total_amount: finalTotalAmount,
-    credit_applied: invoice.credit_applied
+  const viewModel: InvoiceViewModel = {
+    invoice_id: createdInvoice.invoice_id,
+    invoice_number: createdInvoice.invoice_number,
+    company_id: companyId,
+    company: {
+      name: company.company_name,
+      logo: '',
+      address: company.address || ''
+    },
+    contact: {
+      name: '',  // TODO: Add contact info
+      address: ''
+    },
+    invoice_date: createdInvoice.invoice_date,
+    due_date: createdInvoice.due_date,
+    status: createdInvoice.status,
+    subtotal: Math.ceil(subtotal),
+    tax: Math.ceil(totalTax),
+    total: createdInvoice.total_amount,
+    total_amount: createdInvoice.total_amount,
+    invoice_items: await knex('invoice_items').where({ invoice_id: createdInvoice.invoice_id }),
+    credit_applied: invoice.credit_applied,
   };
+
+  return viewModel;
 }
+
 
 async function calculateChargeDetails(
   charge: IBillingCharge,
@@ -284,18 +339,6 @@ async function calculateChargeDetails(
   return { netAmount, taxCalculationResult };
 }
 
-async function createInvoiceItem(invoiceId: string, item: Omit<IInvoiceItem, 'invoice_id' | 'tenant'>): Promise<void> {
-  const { knex, tenant } = await createTenantKnex();
-  await knex('invoice_items').insert({
-    ...item,
-    invoice_id: invoiceId,
-    tenant,
-    net_amount: Math.ceil(item.net_amount),
-    tax_amount: Math.ceil(item.tax_amount),
-    total_price: Math.ceil(item.total_price),
-    unit_price: Math.ceil(item.unit_price)
-  });
-}
 
 export async function generateInvoiceNumber(): Promise<string> {
   const { knex } = await createTenantKnex();
@@ -332,30 +375,32 @@ async function getNextBillingDate(companyId: string, currentEndDate: ISO8601Stri
     .select('billing_cycle')
     .first();
 
-  const billingCycle = company?.billing_cycle || 'monthly';
-  const nextDate = new Date(currentEndDate);
+  const billingCycle = (company?.billing_cycle || 'monthly') as BillingCycleType;
+  const currentUTC = new Date(currentEndDate);
+  currentUTC.setUTCHours(0, 0, 0, 0);
+  const nextDate = new Date(currentUTC);
 
   switch (billingCycle) {
     case 'weekly':
-      nextDate.setDate(nextDate.getDate() + 7);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 7);
       break;
     case 'bi-weekly':
-      nextDate.setDate(nextDate.getDate() + 14);
+      nextDate.setUTCDate(nextDate.getUTCDate() + 14);
       break;
     case 'monthly':
-      nextDate.setMonth(nextDate.getMonth() + 1);
+      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
       break;
     case 'quarterly':
-      nextDate.setMonth(nextDate.getMonth() + 3);
+      nextDate.setUTCMonth(nextDate.getUTCMonth() + 3);
       break;
     case 'semi-annually':
-      nextDate.setMonth(nextDate.getMonth() + 6);
+      nextDate.setUTCMonth(nextDate.getUTCMonth() + 6);
       break;
     case 'annually':
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1);
       break;
     default:
-      nextDate.setMonth(nextDate.getMonth() + 1);
+      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
   }
 
   return nextDate.toISOString();

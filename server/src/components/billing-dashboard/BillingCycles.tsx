@@ -7,10 +7,10 @@ import { Tooltip } from '@/components/ui/Tooltip';
 import { Info } from 'lucide-react';
 import { getAllBillingCycles, updateBillingCycle } from '@/lib/actions/billingCycleActions';
 import { getAllCompanies } from '@/lib/actions/companyActions';
-import { ICompany } from '@/interfaces';
+import { BillingCycleType, ICompany } from '@/interfaces';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 
-const BILLING_CYCLE_OPTIONS = [
+const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },
   { value: 'bi-weekly', label: 'Bi-Weekly' },
   { value: 'monthly', label: 'Monthly' },
@@ -47,7 +47,7 @@ const BillingCycles: React.FC = () => {
     }
   };
 
-  const handleBillingCycleChange = async (companyId: string, cycle: string) => {
+  const handleBillingCycleChange = async (companyId: string, cycle: BillingCycleType) => {
     if (!cycle) return;
     
     // Optimistic update
@@ -80,7 +80,7 @@ const BillingCycles: React.FC = () => {
       render: (value) => (
         <CustomSelect
           options={BILLING_CYCLE_OPTIONS}
-          onValueChange={(selectedValue) => handleBillingCycleChange(value as string, selectedValue)}
+          onValueChange={(selectedValue) => handleBillingCycleChange(value as string, selectedValue as BillingCycleType)}
           value={billingCycles[value as string] || ''}
           placeholder="Select billing cycle..."
         />

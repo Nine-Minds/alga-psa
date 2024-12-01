@@ -73,7 +73,7 @@ export class TaxService {
       return this.calculateThresholdBasedTax(thresholds, netAmount);
     }
 
-    const taxAmount = (netAmount * taxRate.tax_percentage) / 100;
+    const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
     return { taxAmount, taxRate: taxRate.tax_percentage };
   }
 
@@ -98,7 +98,7 @@ export class TaxService {
 
       console.log(`Taxable amount for this threshold: ${taxableAmount}`);
 
-      const thresholdTax = (taxableAmount * threshold.rate) / 100;
+      const thresholdTax = Math.ceil((taxableAmount * threshold.rate) / 100);
       console.log(`Tax amount for this threshold: ${thresholdTax}`);
 
       taxAmount += thresholdTax;
@@ -129,7 +129,7 @@ export class TaxService {
       return 0; // No tax during holiday
     }
 
-    return (amount * component.rate) / 100;
+    return Math.ceil((amount * component.rate) / 100);
   }
 
   private isComponentApplicable(component: ITaxComponent, date: ISO8601String): boolean {

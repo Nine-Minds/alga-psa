@@ -207,6 +207,7 @@ export default class Invoice {
     // Construct and return the InvoiceViewModel
     return {
       invoice_number: invoice.invoice_number,
+      company_id: invoice.company_id,
       company: {
         name: company.company_name,
         logo: company.logo || '',
@@ -222,6 +223,7 @@ export default class Invoice {
       subtotal: invoice.subtotal,
       tax: invoice.tax,
       total: totalAmount,
+      total_amount: totalAmount,
       invoice_id: invoice.invoice_id,
       invoice_items: invoice_items.map((item): IInvoiceItem => ({
         description: item.description,
@@ -236,6 +238,7 @@ export default class Invoice {
       })),
       custom_fields: invoice.custom_fields,
       finalized_at: invoice.finalized_at,
+      credit_applied: invoice.credit_applied || 0
     };
   }
 

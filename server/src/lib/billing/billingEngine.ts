@@ -13,7 +13,8 @@ import {
   IUsageBasedCharge,
   ITimeBasedCharge,
   IFixedPriceCharge,
-  ICompanyBillingCycle
+  ICompanyBillingCycle,
+  BillingCycleType
 } from '@/interfaces/billing.interfaces';
 import {
   differenceInCalendarDays,
@@ -49,18 +50,44 @@ export class BillingEngine {
     }
   }
 
-  async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<IBillingResult> {
+  private async hasExistingInvoiceForCycle(companyId: string, billingCycleId: string): Promise<boolean> {
+    const existingInvoice = await this.knex('invoices')
+      .where({
+        company_id: companyId,
+        billing_cycle_id: billingCycleId
+      })
+      .first();
+    return !!existingInvoice;
+  }
+
+  async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult> {
     await this.initKnex();
     console.log(`Calculating billing for company ${companyId} from ${startDate} to ${endDate}`);
-    const billingPeriod: IBillingPeriod = { startDate, endDate };
+    
+    // Check for existing invoice in this billing cycle
+    const hasExistingInvoice = await this.hasExistingInvoiceForCycle(companyId, billingCycleId);
+    if (hasExistingInvoice) {
+      // Return zero-amount billing result if already invoiced
+      return {
+        charges: [],
+        totalAmount: 0,
+        discounts: [],
+        adjustments: [],
+        finalAmount: 0
+      };
+    }
 
-    const { companyBillingPlans, billingCycle } = await this.getCompanyBillingPlansAndCycle(companyId, billingPeriod);
+    // Validate that the billing period doesn't cross a cycle change
+    await this.validateBillingPeriod(companyId, startDate, endDate);
+    
+    const billingPeriod: IBillingPeriod = { startDate, endDate };
+    const { companyBillingPlans, billingCycle: cycle } = await this.getCompanyBillingPlansAndCycle(companyId, billingPeriod);
     if (companyBillingPlans.length === 0) {
       throw new Error(`No active billing plans found for company ${companyId} in the given period`);
     }
 
     console.log(`Found ${companyBillingPlans.length} active billing plan(s) for company ${companyId}`);
-    console.log(`Billing cycle: ${billingCycle}`);
+    console.log(`Billing cycle: ${cycle}`);
 
     let totalCharges: IBillingCharge[] = [];
 
@@ -81,7 +108,7 @@ export class BillingEngine {
       console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
 
       // Only prorate fixed price charges
-      const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, billingCycle);
+      const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, cycle);
 
       console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
 
@@ -134,6 +161,7 @@ export class BillingEngine {
 
   private async getCompanyBillingPlansAndCycle(companyId: string, billingPeriod: IBillingPeriod): Promise<{ companyBillingPlans: ICompanyBillingPlan[], billingCycle: string }> {
     await this.initKnex();
+    const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
     const companyBillingPlans = await this.knex('company_billing_plans')
       .where({ company_id: companyId, is_active: true })
       .where('start_date', '<=', billingPeriod.endDate)
@@ -147,18 +175,74 @@ export class BillingEngine {
       plan.end_date = plan.end_date ? plan.end_date.toISOString() : null;
     });
 
-    const billingCycle = await this.getBillingCycle(companyId);
-
     return { companyBillingPlans, billingCycle };
   }
 
-  private async getBillingCycle(companyId: string): Promise<string> {
+  private async getBillingCycle(companyId: string, date: ISO8601String = new Date().toISOString()): Promise<string> {
     await this.initKnex();
     const result = await this.knex('company_billing_cycles')
       .where({ company_id: companyId })
+      .where('effective_date', '<=', date)
+      .orderBy('effective_date', 'desc')
       .first() as ICompanyBillingCycle | undefined;
 
-    return result ? result.billing_cycle : 'monthly'; // Default to monthly if not set
+    if (!result) {
+      // Check again for existing cycle to handle race conditions
+      const existingCycle = await this.knex('company_billing_cycles')
+        .where({ company_id: companyId })
+        .first();
+
+      if (existingCycle) {
+        return existingCycle.billing_cycle;
+      }
+
+      // Insert default monthly cycle if none exists
+      const company = await this.knex('companies').where({ company_id: companyId }).first();
+      if (!company) {
+        throw new Error(`Company ${companyId} not found`);
+      }
+
+      try {
+        const defaultCycle: Partial<ICompanyBillingCycle> = {
+          company_id: companyId,
+          billing_cycle: 'monthly',
+          effective_date: '2023-01-01T00:00:00Z',
+          tenant: company.tenant
+        };
+        
+        await this.knex('company_billing_cycles').insert(defaultCycle);
+      } catch (error) {
+        // If insert fails due to race condition, get the existing record
+        const cycle = await this.knex('company_billing_cycles')
+          .where({ company_id: companyId })
+          .first();
+        return cycle.billing_cycle;
+      }
+      return 'monthly' as BillingCycleType;
+    }
+
+    return result.billing_cycle as BillingCycleType;
+  }
+
+  private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<void> {
+    const cycles = await this.knex('company_billing_cycles')
+      .where({ company_id: companyId })
+      .where('effective_date', '<=', endDate)
+      .orderBy('effective_date', 'asc');
+
+    let currentCycle = null;
+    for (const cycle of cycles) {
+      if (cycle.effective_date <= startDate) {
+        currentCycle = cycle;
+      } else if (cycle.effective_date > startDate && cycle.effective_date < endDate) {
+        throw new Error('Invoice period cannot span billing cycle change');
+      }
+    }
+
+    if (!currentCycle) {
+      // If no cycle found, create default monthly cycle
+      await this.getBillingCycle(companyId, startDate);
+    }
   }
 
   private async calculateFixedPriceCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IFixedPriceCharge[]> {
@@ -220,6 +304,7 @@ export class BillingEngine {
       .andWhere('plan_services.plan_id', companyBillingPlan.plan_id)
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
       .where('time_entries.end_time', '<=', billingPeriod.endDate)
+      .where('time_entries.invoiced', false)
       .where(function (this: Knex.QueryBuilder) {
         this.where(function (this: Knex.QueryBuilder) {
           this.where('time_entries.work_item_type', '=', 'project_task')
@@ -245,23 +330,22 @@ export class BillingEngine {
 
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
       const duration = differenceInHours(entry.end_time, entry.start_time);
-      const rate = entry.custom_rate || entry.default_rate;
+      const rate = Math.ceil(entry.custom_rate || entry.default_rate);
       return {
         serviceId: entry.service_id,
         serviceName: entry.service_name,
-        // workItemName: entry.work_item_name,
         userId: entry.user_id,
         duration,
         rate,
-        total: duration * rate,
+        total: Math.round(duration * rate),
         type: 'time',
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: entry.tax_region || entry.company_tax_region, // Use the time entry's tax region if available, otherwise use the company's
+        tax_region: entry.tax_region || entry.company_tax_region,
+        entryId: entry.entry_id // Include the time entry ID
       };
     });
 
-    // No proration applied here
     return timeBasedCharges;
   }
 
@@ -273,6 +357,7 @@ export class BillingEngine {
         this.on('service_catalog.service_id', '=', 'plan_services.service_id')
       })
       .where('usage_tracking.company_id', companyId)
+      .where('usage_tracking.invoiced', false)
       .whereBetween('usage_tracking.usage_date', [billingPeriod.startDate, billingPeriod.endDate])
       .where('service_catalog.category_id', companyBillingPlan.service_category)
       .where('plan_services.plan_id', companyBillingPlan.plan_id)
@@ -282,15 +367,15 @@ export class BillingEngine {
       serviceId: record.service_id,
       serviceName: record.service_name,
       quantity: record.quantity,
-      rate: record.custom_rate || record.default_rate,
-      total: record.quantity * (record.custom_rate || record.default_rate),
-      tax_region: record.tax_region || record.company_tax_region, // Use the usage record's tax region if available, otherwise use the company's
+      rate: Math.ceil(record.custom_rate || record.default_rate),
+      total: Math.ceil(record.quantity * (record.custom_rate || record.default_rate)),
+      tax_region: record.tax_region || record.company_tax_region,
       type: 'usage',
       tax_amount: 0,
-      tax_rate: 0
+      tax_rate: 0,
+      usageId: record.usage_id // Include the usage record ID
     }));
 
-    // No proration applied here
     return usageBasedCharges;
   }
 
@@ -326,19 +411,23 @@ export class BillingEngine {
     const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
 
 
+    const overageRate = Math.ceil(bucketPlan.overage_rate);
+    const total = Math.ceil(bucketUsage.overage_hours * overageRate);
+    const taxAmount = Math.ceil((taxRate / 100) * total);
+
     const charge: IBucketCharge = {
       type: 'bucket',
       service_catalog_id: bucketUsage.service_catalog_id,
       serviceName: service ? service.service_name : 'Bucket Plan Hours',
-      rate: bucketPlan.overage_rate,
-      total: bucketUsage.overage_hours * bucketPlan.overage_rate,
+      rate: overageRate,
+      total: total,
       hoursUsed: bucketUsage.hours_used,
       overageHours: bucketUsage.overage_hours,
-      overageRate: bucketPlan.overage_rate,
+      overageRate: overageRate,
       tax_rate: taxRate,
       tax_region: taxRegion,
       serviceId: bucketUsage.service_catalog_id,
-      tax_amount: Math.ceil(taxRate * bucketUsage.overage_hours * bucketPlan.overage_rate)
+      tax_amount: taxAmount
     };
 
     console.log('Calculated bucket charge:', charge);
@@ -388,7 +477,10 @@ export class BillingEngine {
     console.log('Getting days between dates:');
     console.log('End date:', billingPeriod.endDate);
     console.log('Start date:', effectiveStart);
-    const actualDays = differenceInCalendarDays(billingPeriod.endDate, effectiveStart); // DAYLIGHT SAVINGS TIME WARNING
+    const actualDays = differenceInCalendarDays(
+      new Date(billingPeriod.endDate), 
+      new Date(effectiveStart)
+    ); // DAYLIGHT SAVINGS TIME WARNING
     console.log(`Actual days in plan period: ${actualDays}`);
     console.log(`Cycle length: ${cycleLength}`);
 
@@ -396,10 +488,10 @@ export class BillingEngine {
     console.log(`Proration factor: ${prorationFactor.toFixed(4)} (${actualDays} / ${cycleLength})`);
 
     return charges.map((charge):IBillingCharge => {
-      const proratedTotal = charge.total * prorationFactor;
+      const proratedTotal = Math.ceil(Math.ceil(charge.total) * prorationFactor);
       console.log(`Prorating charge: ${charge.serviceName}`);
-      console.log(`  Original total: $${charge.total.toFixed(2)}`);
-      console.log(`  Prorated total: $${proratedTotal.toFixed(2)}`);
+      console.log(`  Original total: $${(charge.total/100).toFixed(2)}`);
+      console.log(`  Prorated total: $${(proratedTotal/100).toFixed(2)}`);
       return {
         ...charge,
         total: proratedTotal

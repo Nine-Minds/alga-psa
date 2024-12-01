@@ -1,4 +1,4 @@
-import { TenantEntity } from './index';
+import { BillingCycleType, TenantEntity } from './index';
 
 export interface ICompany extends TenantEntity {
   company_id: string;
@@ -35,7 +35,7 @@ export interface ICompany extends TenantEntity {
     logo?: string;
   };
   payment_terms?: string;
-  billing_cycle?: string;
+  billing_cycle: BillingCycleType;
   credit_limit?: number;
   preferred_payment_method?: string;
   auto_invoice?: boolean;

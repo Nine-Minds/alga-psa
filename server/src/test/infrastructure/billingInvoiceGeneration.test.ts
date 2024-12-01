@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } 
 import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
 import { v4 as uuidv4 } from 'uuid';
 import knex from 'knex';
-import { parse, addDays, parseISO } from 'date-fns';
+import { parse, addDays, parseISO, differenceInCalendarDays } from 'date-fns';
 import { TextEncoder } from 'util';
 import dotenv from 'dotenv';
 import { ICompanyTaxSettings, ITaxRate, ICompanyTaxRate } from '@/interfaces/tax.interfaces';
@@ -106,6 +106,16 @@ class TestDataFactory {
   }
 
   static async assignPlanToCompany(db: knex.Knex, tenantId: string, companyId: string, planId: string, startDate = '2023-01-01'): Promise<void> {
+    // Create billing cycle first
+    const billingCycleId = uuidv4();
+    await db('company_billing_cycles').insert({
+      billing_cycle_id: billingCycleId,
+      company_id: companyId,
+      billing_cycle: 'monthly',
+      effective_date: startDate,
+      tenant: tenantId
+    });
+
     await db('company_billing_plans').insert({
       company_billing_plan_id: uuidv4(),
       company_id: companyId,
@@ -224,7 +234,11 @@ describe('Billing Invoice Generation', () => {
       await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
 
       // Act
-      const result = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const result = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Assert
       expect(result).toMatchObject({
@@ -286,7 +300,11 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Act
-      const result = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const result = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Assert
       expect(result).toMatchObject({
@@ -365,7 +383,11 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Act
-      const result = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const result = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Assert
       expect(result).toMatchObject({
@@ -430,9 +452,13 @@ describe('Billing Invoice Generation', () => {
       ]);
 
       // Act
-      const result = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
 
-      // Assert
+      const result = await generateInvoice(billingCycle.billing_cycle_id);
+
+      // Assert 
       expect(result).toMatchObject({
         subtotal: 800,
         status: 'draft'
@@ -501,7 +527,11 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Act
-      const result = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const result = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Assert
       expect(result).toMatchObject({
@@ -546,7 +576,11 @@ describe('Billing Invoice Generation', () => {
 
       await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
 
-      const invoice = await generateInvoice(context.companyId, '2023-01-01T00:00:00Z', '2023-02-01T00:00:00Z');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const invoice = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Act
       const finalizedInvoice = await finalizeInvoice(invoice.invoice_id);
@@ -560,23 +594,148 @@ describe('Billing Invoice Generation', () => {
     });
   });
 
+  describe('Company Billing Cycle Changes', () => {
+  //   it('should track billing cycle changes over time', async () => {
+  //     // Arrange
+  //     const initialDate = '2023-01-01T00:00:00Z';
+  //     const changeDate = '2023-02-01T00:00:00Z';
+      
+  //     // Create initial monthly cycle
+  //     await db('company_billing_cycles').insert({
+  //       company_id: context.companyId,
+  //       billing_cycle: 'monthly',
+  //       effective_date: initialDate,
+  //       tenant: context.tenantId
+  //     });
+
+  //     // Act
+  //     // Add new quarterly cycle
+  //     await db('company_billing_cycles').insert({
+  //       company_id: context.companyId,
+  //       billing_cycle: 'quarterly',
+  //       effective_date: changeDate,
+  //       tenant: context.tenantId
+  //     });
+
+  //     // Assert
+  //     const cycles = await db('company_billing_cycles')
+  //       .where({ company_id: context.companyId })
+  //       .orderBy('effective_date', 'asc');
+
+  //     expect(cycles).toHaveLength(2);
+  //     expect(cycles[0]).toMatchObject({
+  //       billing_cycle: 'monthly',
+  //       effective_date: expect.any(Date)
+  //     });
+  //     expect(cycles[1]).toMatchObject({
+  //       billing_cycle: 'quarterly',
+  //       effective_date: expect.any(Date)
+  //     });
+  //   });
+
+    it('should use correct billing cycle based on invoice date', async () => {
+      // Arrange
+      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
+        name: 'Test Plan',
+        type: 'Fixed'
+      });
+
+      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+
+      // Create and assign service to plan
+      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
+        name: 'Test Service',
+        type: 'Fixed',
+        rate: 1000
+      });
+
+      await db('plan_services').insert({
+        plan_id: planId,
+        service_id: serviceId,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      // Clean up any existing billing cycles
+      await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .delete();
+
+      // Set up billing cycle history
+      await db('company_billing_cycles').insert([
+        {
+          company_id: context.companyId,
+          billing_cycle: 'monthly',
+          effective_date: '2023-01-01T00:00:00Z',
+          tenant: context.tenantId
+        },
+        {
+          company_id: context.companyId,
+          billing_cycle: 'quarterly',
+          effective_date: '2023-02-01T00:00:00Z',
+          tenant: context.tenantId
+        }
+      ]);
+
+      // Act & Assert
+      // Should use monthly cycle
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const januaryInvoice = await generateInvoice(billingCycle.billing_cycle_id);
+      
+      // Verify January invoice used monthly cycle
+      const savedJanuaryInvoice = await db('invoices')
+        .where('invoice_id', januaryInvoice.invoice_id)
+        .first();
+      expect(savedJanuaryInvoice.billing_cycle_id).toBe(billingCycle.billing_cycle_id);
+
+      // Should use quarterly cycle
+      // Get quarterly cycle
+      const quarterlyBillingCycle = await db('company_billing_cycles')
+        .where({ 
+          company_id: context.companyId,
+          billing_cycle: 'quarterly',
+          effective_date: '2023-02-01T00:00:00Z'
+        })
+        .first();
+
+      const quarterlyInvoice = await generateInvoice(quarterlyBillingCycle.billing_cycle_id);
+      
+      // Verify quarterly invoice used quarterly cycle
+      const savedQuarterlyInvoice = await db('invoices')
+        .where('invoice_id', quarterlyInvoice.invoice_id)
+        .first();
+      expect(savedQuarterlyInvoice.billing_cycle_id).toBe(quarterlyBillingCycle.billing_cycle_id);
+    });
+  });
+
   describe('Error Handling', () => {
     it('should handle invalid billing period dates', async () => {
-      await expect(generateInvoice(
-        context.companyId,
-        '2023-02-01T00:00:00Z',
-        '2023-01-01T00:00:00Z'
-      )).rejects.toThrow('Invalid billing period: start date must be before end date');
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      await expect(generateInvoice('123e4567-e89b-12d3-a456-426614174000')).rejects.toThrow('Invalid billing cycle');
     });
 
     it('should handle missing billing plans', async () => {
       const newCompanyId = await TestDataFactory.createCompany(db, context.tenantId, 'Company Without Plans');
       
-      await expect(generateInvoice(
-        newCompanyId,
-        '2023-01-01T00:00:00Z',
-        '2023-02-01T00:00:00Z'
-      )).rejects.toThrow(`No active billing plans found for company ${newCompanyId} in the given period`);
+      // Create billing cycle for new company
+      await db('company_billing_cycles').insert({
+        company_id: newCompanyId,
+        billing_cycle: 'monthly',
+        effective_date: '2023-01-01T00:00:00Z',
+        tenant: context.tenantId
+      });
+
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: newCompanyId })
+        .first();
+
+      await expect(generateInvoice(billingCycle.billing_cycle_id)).rejects.toThrow(`No active billing plans found for company ${newCompanyId} in the given period`);
     });
 
     it('should handle undefined service rates', async () => {
@@ -599,11 +758,52 @@ describe('Billing Invoice Generation', () => {
 
       await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
 
-      await expect(generateInvoice(
-        context.companyId,
-        '2023-01-01T00:00:00Z',
-        '2023-02-01T00:00:00Z'
-      )).rejects.toThrow();
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      await expect(generateInvoice(billingCycle.billing_cycle_id)).rejects.toThrow();
+    });
+
+    it('should throw error when regenerating for same period', async () => {
+      // Arrange
+      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
+        name: 'Standard Fixed Plan',
+        type: 'Fixed'
+      });
+
+      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
+        name: 'Monthly Service',
+        type: 'Fixed',
+        rate: 10000
+      });
+
+      await db('plan_services').insert({
+        plan_id: planId,
+        service_id: serviceId,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+
+      // Generate first invoice
+      const billingCycle = await db('company_billing_cycles')
+        .where({ company_id: context.companyId })
+        .first();
+
+      const firstInvoice = await generateInvoice(billingCycle.billing_cycle_id);
+
+      // Assert first invoice is correct
+      expect(firstInvoice).toMatchObject({
+        subtotal: 10000,
+        status: 'draft'
+      });
+
+      // Attempt to generate second invoice for same period
+      await expect(generateInvoice(billingCycle.billing_cycle_id))
+        .rejects
+        .toThrow('No active billing plans for this period');
     });
   });
 });
