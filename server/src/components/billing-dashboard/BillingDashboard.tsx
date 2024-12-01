@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { ITimePeriod, IService } from '@/interfaces';
 
-// Import all the components including the new TaxRates component
+// Import all the components including the new GenerateInvoices component
 import Overview from './Overview';
 import BillingPlans from './BillingPlans';
 import TimePeriods from './TimePeriods';
@@ -14,6 +14,7 @@ import ServiceCatalog from './ServiceCatalog';
 import Reports from './Reports';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
+import GenerateInvoices from './GenerateInvoices';
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriod[];
@@ -31,6 +32,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'plans',
     'time-periods',
     'invoices',
+    'generate-invoices',
     'invoice-templates',
     'billing-cycles',
     'reports',
@@ -49,13 +51,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       )}
       <Tabs.Root defaultValue="overview" className="w-full">
         <Tabs.List className="flex border-b mb-4">
-          {tabs.map((tab):JSX.Element => (
+          {tabs.map((tab): JSX.Element => (
             <Tabs.Trigger
               key={tab}
               value={tab}
               className="px-4 py-2 focus:outline-none transition-colors data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 text-gray-500 hover:text-gray-700"
             >
-              {tab.split('-').map((word):string => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              {tab.split('-').map((word): string => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
@@ -74,6 +76,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="invoices">
           <Invoices />
+        </Tabs.Content>
+
+        <Tabs.Content value="generate-invoices">
+          <GenerateInvoices />
         </Tabs.Content>
 
         <Tabs.Content value="invoice-templates">
