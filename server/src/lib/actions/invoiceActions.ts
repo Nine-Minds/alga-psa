@@ -3,7 +3,7 @@
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
 import { IInvoiceTemplate, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel, IInvoiceItem } from '@/interfaces/invoice.interfaces';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from '@/interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { IInvoice } from '@/interfaces/invoice.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
 import { getServerSession } from "next-auth/next";
@@ -47,6 +47,49 @@ function isUsageBasedCharge(charge: IBillingCharge): charge is IUsageBasedCharge
 
 function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
+}
+
+export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & { company_name: string; total_unbilled: number; period_start_date: ISO8601String; period_end_date: ISO8601String })[]> {
+  const { knex } = await createTenantKnex();
+  const currentDate = new Date().toISOString();
+
+  // Get billing cycles that are past their end date and don't have invoices
+  const availablePeriods = await knex('company_billing_cycles as cbc')
+    .join('companies as c', 'c.company_id', 'cbc.company_id')
+    .leftJoin('invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id')
+    .whereNotNull('cbc.period_end_date')
+    .where('cbc.period_end_date', '<=', currentDate)
+    .whereNull('i.invoice_id')
+    .select(
+      'cbc.company_id',
+      'c.company_name',
+      'cbc.billing_cycle_id',
+      'cbc.billing_cycle',
+      'cbc.period_start_date',
+      'cbc.period_end_date',
+      'cbc.effective_date',
+      'cbc.tenant'
+    );
+
+  // For each period, calculate the total unbilled amount
+  const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & { company_name: string; total_unbilled: number; period_start_date: ISO8601String; period_end_date: ISO8601String }> => {
+    const billingEngine = new BillingEngine();
+    const billingResult = await billingEngine.calculateBilling(
+      period.company_id,
+      period.period_start_date,
+      period.period_end_date,
+      period.billing_cycle_id
+    );
+
+    const total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
+
+    return {
+      ...period,
+      total_unbilled
+    };
+  }));
+
+  return periodsWithTotals;
 }
 
 export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
