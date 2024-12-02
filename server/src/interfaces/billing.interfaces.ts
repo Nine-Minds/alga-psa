@@ -92,6 +92,8 @@ export interface ICompanyBillingCycle extends TenantEntity {
   company_id: string;
   billing_cycle: string;
   effective_date: ISO8601String;
+  period_start_date: ISO8601String;
+  period_end_date: ISO8601String; // Exclusive - equals start of next period
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
   tenant: string;

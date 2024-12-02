@@ -11,8 +11,6 @@ import { ISO8601String } from '@/types/types.d';
 type BillingPeriodWithExtras = ICompanyBillingCycle & {
   company_name: string;
   total_unbilled: number;
-  period_start_date: ISO8601String;
-  period_end_date: ISO8601String;
 };
 
 const GenerateInvoices: React.FC = () => {

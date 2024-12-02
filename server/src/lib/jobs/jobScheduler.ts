@@ -1,5 +1,5 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
-import knexfile from '../db/knexfile';
+import { getAdminConnection } from '../db/admin';
 
 export interface JobFilter {
   state?: 'completed' | 'failed' | 'active' | 'expired';
@@ -38,30 +38,41 @@ interface PgBossJobData {
 }
 
 export class JobScheduler {
-  private static instance: JobScheduler;
+  private static instance: JobScheduler | null = null;
   private boss: PgBoss;
   private handlers: Map<string, (data: Record<string, unknown>) => Promise<void>> = new Map();
 
-  private constructor() {
-    const env = process.env.APP_ENV || 'development';
-    const connectionString = knexfile[env].connection as string;
-
-    this.boss = new PgBoss({
-      connectionString,
-      retryLimit: 3,
-      retryBackoff: true,
-    });
-
-    this.boss.on('error', error => {
-      console.error('Job scheduler error:', error);
-    });
-
-    void this.boss.start();
+  private constructor(boss: PgBoss) {
+    this.boss = boss;
   }
 
-  public static getInstance(): JobScheduler {
+  public static async getInstance(): Promise<JobScheduler> {
     if (!JobScheduler.instance) {
-      JobScheduler.instance = new JobScheduler();
+      try {
+        const adminKnex = await getAdminConnection();
+        const config = adminKnex.client.config.connection;
+        
+        // Construct proper connection string
+        const connectionString = typeof config === 'string' ? config :
+          `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+        
+        const boss = new PgBoss({
+          connectionString: connectionString,
+          retryLimit: 3,
+          retryBackoff: true,
+        });
+
+        boss.on('error', error => {
+          console.error('Job scheduler error:', error);
+        });
+
+        await boss.start();
+        
+        JobScheduler.instance = new JobScheduler(boss);
+      } catch (error) {
+        console.error('Failed to initialize job scheduler:', error);
+        throw new Error('Failed to initialize job scheduler');
+      }
     }
     return JobScheduler.instance;
   }
@@ -70,8 +81,7 @@ export class JobScheduler {
     jobName: string,
     data: T
   ): Promise<string | null> {
-    const jobId = await this.boss.send(jobName, data);
-    return jobId;
+    return await this.boss.send(jobName, data);
   }
 
   public async scheduleScheduledJob<T extends Record<string, unknown>>(
@@ -79,8 +89,7 @@ export class JobScheduler {
     runAt: Date,
     data: T
   ): Promise<string | null> {
-    const jobId = await this.boss.send(jobName, data, { startAfter: runAt });
-    return jobId;
+    return await this.boss.send(jobName, data, { startAfter: runAt });
   }
 
   public async scheduleRecurringJob<T extends Record<string, unknown>>(
@@ -88,8 +97,23 @@ export class JobScheduler {
     interval: string,
     data: T
   ): Promise<string | null> {
-    const jobId = await this.boss.send(jobName, data, { startAfter: interval });
-    return jobId;
+    // Convert cron expression to pg-boss interval
+    let pgBossInterval: string;
+    
+    if (interval.includes('*')) {
+      // Simple conversion for daily jobs
+      pgBossInterval = '24 hours';
+    } else {
+      // For other intervals, use as-is
+      pgBossInterval = interval;
+    }
+    
+    return await this.boss.send(jobName, data, { 
+      startAfter: pgBossInterval,
+      retryLimit: 3,
+      retryBackoff: true,
+      singletonKey: jobName
+    });
   }
 
   public registerJobHandler<T extends Record<string, unknown>>(
@@ -97,7 +121,6 @@ export class JobScheduler {
     handler: (data: T) => Promise<void>
   ): void {
     this.handlers.set(jobName, handler as (data: Record<string, unknown>) => Promise<void>);
-    
     void this.boss.work<T>(jobName, async (jobs) => {
       const handler = this.handlers.get(jobName);
       if (handler) {

@@ -303,7 +303,7 @@ export class BillingEngine {
       .join('plan_services', 'service_catalog.service_id', 'plan_services.service_id')
       .andWhere('plan_services.plan_id', companyBillingPlan.plan_id)
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
-      .where('time_entries.end_time', '<=', billingPeriod.endDate)
+      .where('time_entries.end_time', '<', billingPeriod.endDate)
       .where('time_entries.invoiced', false)
       .where(function (this: Knex.QueryBuilder) {
         this.where(function (this: Knex.QueryBuilder) {
@@ -358,7 +358,8 @@ export class BillingEngine {
       })
       .where('usage_tracking.company_id', companyId)
       .where('usage_tracking.invoiced', false)
-      .whereBetween('usage_tracking.usage_date', [billingPeriod.startDate, billingPeriod.endDate])
+      .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
+      .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
       .where('service_catalog.category_id', companyBillingPlan.service_category)
       .where('plan_services.plan_id', companyBillingPlan.plan_id)
       .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'plan_services.custom_rate');
@@ -541,7 +542,7 @@ export class BillingEngine {
       .andWhere('discounts.start_date', '<=', endDate)
       .andWhere(function (this: Knex.QueryBuilder) {
         this.whereNull('discounts.end_date')
-          .orWhere('discounts.end_date', '>=', startDate);
+          .orWhere('discounts.end_date', '>', startDate);
       })
       .select('discounts.*');
 
