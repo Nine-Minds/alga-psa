@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from '@/lib/actions/dashboard';
+import { DashboardActions } from '@/components/dashboard/DashboardActions';
 
 export default async function Dashboard() {
   try {
@@ -30,9 +30,9 @@ export default async function Dashboard() {
                 {metrics.openTickets}
               </div>
               <div className="mt-3">
-                <Button variant="link" className="p-0" asChild>
-                  <a href="/client-portal/tickets">View all tickets →</a>
-                </Button>
+                <a href="/client-portal/tickets" className="text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] text-sm">
+                  View all tickets →
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -46,9 +46,9 @@ export default async function Dashboard() {
                 {metrics.pendingInvoices}
               </div>
               <div className="mt-3">
-                <Button variant="link" className="p-0" asChild>
-                  <a href="/client-portal/billing">View billing →</a>
-                </Button>
+                <a href="/client-portal/billing" className="text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] text-sm">
+                  View billing →
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -62,9 +62,9 @@ export default async function Dashboard() {
                 {metrics.activeAssets}
               </div>
               <div className="mt-3">
-                <Button variant="link" className="p-0" asChild>
-                  <a href="/client-portal/assets">View assets →</a>
-                </Button>
+                <a href="/client-portal/assets" className="text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] text-sm">
+                  View assets →
+                </a>
               </div>
             </CardContent>
           </Card>
@@ -123,14 +123,7 @@ export default async function Dashboard() {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Button asChild>
-                <a href="/client-portal/tickets/new">Create Support Ticket</a>
-              </Button>
-              <Button variant="soft" asChild>
-                <a href="/client-portal/billing/invoices">View Latest Invoice</a>
-              </Button>
-            </div>
+            <DashboardActions />
           </CardContent>
         </Card>
       </div>

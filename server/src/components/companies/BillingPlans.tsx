@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import PlanPickerDialog from './PlanPickerDialog';
 import { ICompanyBillingPlan, IBillingPlan, IServiceCategory } from '@/interfaces/billing.interfaces';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
@@ -10,9 +11,10 @@ interface BillingPlansProps {
     companyBillingPlans: ICompanyBillingPlan[];
     billingPlans: IBillingPlan[];
     serviceCategories: IServiceCategory[];
+    companyId: string;
     onEdit: (billing: ICompanyBillingPlan) => void;
     onDelete: (companyBillingPlanId: string) => void;
-    onAdd: () => void;
+    onAdd: (selectedPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant">) => Promise<void>;
     onCompanyPlanChange: (companyBillingPlanId: string, planId: string) => void;
     formatDateForDisplay: (date: string | Date | null) => string;
 }
@@ -25,8 +27,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
     onDelete,
     onAdd,
     onCompanyPlanChange,
-    formatDateForDisplay
+    formatDateForDisplay,
+    companyId
 }) => {
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const columns: ColumnDefinition<ICompanyBillingPlan>[] = [
         {
             title: 'Plan',
@@ -104,7 +108,12 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                     Billing Plans
                 </h3>
                 <Button
-                    onClick={onAdd}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDialogOpen(true);
+                    }}
+                    type="button"
                     size="default"
                     className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] flex items-center gap-2"
                 >
@@ -118,6 +127,23 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                     columns={columns}
                 />
             </div>
+            <PlanPickerDialog
+                isOpen={isDialogOpen}
+                onClose={() => setIsDialogOpen(false)}
+                onSelect={(plan, serviceCategory, startDate) => {
+                    const newBillingPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant"> = {
+                        company_id: companyId,
+                        plan_id: plan.plan_id!,
+                        service_category: serviceCategory,
+                        start_date: startDate,
+                        end_date: null,
+                        is_active: true
+                    };
+                    onAdd(newBillingPlan);
+                }}
+                availablePlans={billingPlans}
+                serviceCategories={serviceCategories}
+            />
         </div>
     );
 };

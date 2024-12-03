@@ -18,7 +18,6 @@ import BillingConfigForm from './BillingConfigForm';
 import ServiceCatalog from './ServiceCatalog';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
-import { BillingCycle } from '@/lib/actions/account';
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -45,17 +44,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
     const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [isAddingNewPlan, setIsAddingNewPlan] = useState(false);
     const [companyBillingPlans, setCompanyBillingPlans] = useState<CompanyBillingPlanWithStringDates[]>([]);
     const [editingBillingPlan, setEditingBillingPlan] = useState<CompanyBillingPlanWithStringDates | null>(null);
-    const [newBillingPlan, setNewBillingPlan] = useState<Omit<CompanyBillingPlanWithStringDates, 'company_billing_plan_id' | 'tenant'>>({
-        company_id: company.company_id,
-        plan_id: '',
-        service_category: '',
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: null,
-        is_active: true
-    });
 
     const [services, setServices] = useState<IService[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
@@ -143,14 +133,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         }
     };
 
-    const handleAddBillingPlan = async () => {
+    const handleAddBillingPlan = async (newBillingPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant">) => {
         try {
-            const billingToAdd: Omit<ICompanyBillingPlan, 'company_billing_plan_id' | 'tenant'> = {
-                ...newBillingPlan,
-                start_date: newBillingPlan.start_date || '',
-                end_date: newBillingPlan.end_date || null
-            };
-            await addCompanyBillingPlan(billingToAdd);
+            await addCompanyBillingPlan(newBillingPlan);
             const updatedBillingPlans = await getCompanyBillingPlan(company.company_id);
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
@@ -158,7 +143,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
-            setIsAddingNewPlan(false);
         } catch (error) {
             setErrorMessage('Failed to add billing plan. Please try again.');
         }
@@ -310,7 +294,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 serviceCategories={serviceCategories}
                 onEdit={handleUpdateService}
                 onDelete={handleDeleteService}
-                onAdd={() => setIsAddingNewPlan(true)}
+                onAdd={handleAddService}
             />
 
             <CompanyTaxRates
@@ -326,9 +310,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 companyBillingPlans={companyBillingPlans}
                 billingPlans={billingPlans}
                 serviceCategories={serviceCategories}
+                companyId={company.company_id}
                 onEdit={handleEditBillingPlan}
                 onDelete={handleRemoveBillingPlan}
-                onAdd={() => setIsAddingNewPlan(true)}
+                onAdd={handleAddBillingPlan}
                 onCompanyPlanChange={handleCompanyPlanChange}
                 formatDateForDisplay={formatDateForDisplay}
             />

@@ -189,7 +189,9 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   ];
 
   const handleBillingPlanClick = (plan: IBillingPlan) => {
-    setSelectedPlan(plan.plan_id!);
+    if (plan.plan_id) {
+      setSelectedPlan(plan.plan_id);
+    }
   };
 
   return (
@@ -199,7 +201,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
           <QuickAddBillingPlan onPlanAdded={fetchBillingPlans} />
           <DataTable
-            data={billingPlans}
+            data={billingPlans.filter(plan => plan.plan_id !== undefined)}
             columns={billingPlanColumns}
             pagination={false}
             onRowClick={handleBillingPlanClick}

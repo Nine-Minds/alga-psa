@@ -1,43 +1,82 @@
 import { Knex } from 'knex';
-import { ICompanyBillingCycle, BillingCycleType } from '@/interfaces/billing.interfaces';
+import { ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
-import { addWeeks, addMonths, parseISO } from 'date-fns';
+import { 
+  addWeeks, 
+  addMonths, 
+  parseISO, 
+  startOfDay,
+  startOfMonth,
+  startOfYear,
+  getMonth,
+  getDate,
+  setMonth,
+  subWeeks,
+  formatISO
+} from 'date-fns';
 import { ISO8601String } from '@/types/types.d';
 
-function getNextCycleDate(currentDate: Date, billingCycle: string): { 
-  effectiveDate: Date;
-  periodStart: Date;
-  periodEnd: Date;
+function getNextCycleDate(currentDate: ISO8601String, billingCycle: string): { 
+  effectiveDate: ISO8601String;
+  periodStart: ISO8601String;
+  periodEnd: ISO8601String;
 } {
-  const effectiveDate = new Date(currentDate);
-  effectiveDate.setHours(0, 0, 0, 0);
+  // Validate that input date is UTC midnight
+  const dateObj = parseISO(currentDate);
+  if (
+    dateObj.getUTCHours() !== 0 || 
+    dateObj.getUTCMinutes() !== 0 || 
+    dateObj.getUTCSeconds() !== 0 ||
+    dateObj.getUTCMilliseconds() !== 0
+  ) {
+    throw new Error(`Input date must be UTC midnight. Got: ${currentDate}`);
+  }
+
+  // Validate ISO8601 format
+  if (!currentDate.endsWith('Z')) {
+    throw new Error(`Input date must be UTC ISO8601 format ending with Z. Got: ${currentDate}`);
+  }
+
+  console.log('getNextCycleDate input:', {
+    currentDate,
+    billingCycle
+  });
+  const parsedDate = parseISO(currentDate);
+  const effectiveDate = parsedDate.toISOString().split('T')[0] + 'T00:00:00Z';
   
-  let periodEnd: Date;
+  console.log('effectiveDate after UTC reset:', effectiveDate);
+  
+  let periodEnd: ISO8601String;
   
   switch (billingCycle) {
     case 'weekly':
-      periodEnd = addWeeks(effectiveDate, 1);
+      periodEnd = formatISO(addWeeks(parseISO(effectiveDate), 1));
       break;
     case 'bi-weekly':
-      periodEnd = addWeeks(effectiveDate, 2);
+      periodEnd = formatISO(addWeeks(parseISO(effectiveDate), 2));
       break;
     case 'monthly':
-      periodEnd = addMonths(effectiveDate, 1);
+      periodEnd = formatISO(addMonths(parseISO(effectiveDate), 1));
       break;
     case 'quarterly':
-      periodEnd = addMonths(effectiveDate, 3);
+      periodEnd = formatISO(addMonths(parseISO(effectiveDate), 3));
       break;
     case 'semi-annually':
-      periodEnd = addMonths(effectiveDate, 6);
+      periodEnd = formatISO(addMonths(parseISO(effectiveDate), 6));
       break;
     case 'annually':
-      periodEnd = addMonths(effectiveDate, 12);
+      periodEnd = formatISO(addMonths(parseISO(effectiveDate), 12));
       break;
     default:
-      periodEnd = addMonths(effectiveDate, 1);
+      periodEnd = formatISO(addMonths(parseISO(effectiveDate), 1));
   }
 
-  // No subtraction of milliseconds - end date is exclusive
+  console.log('Period calculation:', {
+    effectiveDate,
+    periodEnd,
+    billingCycle
+  });
+
   return {
     effectiveDate,
     periodStart: effectiveDate,
@@ -45,67 +84,95 @@ function getNextCycleDate(currentDate: Date, billingCycle: string): {
   };
 }
 
-function getStartOfCurrentCycle(date: Date, billingCycle: string): {
-  effectiveDate: Date;
-  periodStart: Date;
-  periodEnd: Date;
+function getStartOfCurrentCycle(date: ISO8601String, billingCycle: string): {
+  effectiveDate: ISO8601String;
+  periodStart: ISO8601String;
+  periodEnd: ISO8601String;
 } {
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  let cycleStart: Date;
+  // Validate that input date is UTC midnight
+  const parsedDate = parseISO(date);
+  if (
+    parsedDate.getUTCHours() !== 0 || 
+    parsedDate.getUTCMinutes() !== 0 || 
+    parsedDate.getUTCSeconds() !== 0 ||
+    parsedDate.getUTCMilliseconds() !== 0
+  ) {
+    throw new Error(`Input date must be UTC midnight. Got: ${date}`);
+  }
+
+  // Validate ISO8601 format
+  if (!date.endsWith('Z')) {
+    throw new Error(`Input date must be UTC ISO8601 format ending with Z. Got: ${date}`);
+  }
+  
+  let cycleStart: ISO8601String;
 
   switch (billingCycle) {
     case 'weekly': {
-      const day = startOfDay.getDay();
-      cycleStart = new Date(startOfDay.setDate(startOfDay.getDate() - day));
+      const startOfWeek = startOfDay(parsedDate);
+      cycleStart = startOfWeek.toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'bi-weekly': {
-      const day = startOfDay.getDay();
-      const date = startOfDay.getDate();
-      const weekStart = new Date(startOfDay.setDate(date - day));
-      const weekOfMonth = Math.ceil(weekStart.getDate() / 7);
+      const startOfWeek = startOfDay(parsedDate);
+      const weekOfMonth = Math.ceil(getDate(startOfWeek) / 7);
       const weeksToSubtract = weekOfMonth % 2 === 0 ? 1 : 0;
-      cycleStart = new Date(weekStart.setDate(weekStart.getDate() - (7 * weeksToSubtract)));
+      cycleStart = subWeeks(startOfWeek, weeksToSubtract).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'monthly':
-      cycleStart = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+      cycleStart = startOfMonth(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     case 'quarterly': {
-      const currentQuarter = Math.floor(startOfDay.getMonth() / 3);
-      cycleStart = new Date(startOfDay.getFullYear(), currentQuarter * 3, 1);
+      const currentQuarter = Math.floor(getMonth(parsedDate) / 3);
+      cycleStart = startOfMonth(setMonth(parsedDate, currentQuarter * 3)).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'semi-annually': {
-      const isSecondHalf = startOfDay.getMonth() >= 6;
-      cycleStart = new Date(startOfDay.getFullYear(), isSecondHalf ? 6 : 0, 1);
+      const isSecondHalf = getMonth(parsedDate) >= 6;
+      cycleStart = startOfMonth(setMonth(parsedDate, isSecondHalf ? 6 : 0)).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'annually':
-      cycleStart = new Date(startOfDay.getFullYear(), 0, 1);
+      cycleStart = startOfYear(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     default:
-      cycleStart = new Date(startOfDay.getFullYear(), startOfDay.getMonth(), 1);
+      cycleStart = startOfMonth(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
   }
 
   const nextCycle = getNextCycleDate(cycleStart, billingCycle);
   return {
     effectiveDate: cycleStart,
     periodStart: cycleStart,
-    periodEnd: nextCycle.periodEnd // This is exclusive - equals start of next period
+    periodEnd: nextCycle.periodEnd
   };
 }
 
 async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycle> & { 
   effective_date: ISO8601String 
 }) {
-  const cycleDates = getNextCycleDate(new Date(cycle.effective_date), cycle.billing_cycle!);
+  // Validate that input date is UTC midnight
+  const dateObj = parseISO(cycle.effective_date);
+  if (
+    dateObj.getUTCHours() !== 0 || 
+    dateObj.getUTCMinutes() !== 0 || 
+    dateObj.getUTCSeconds() !== 0 ||
+    dateObj.getUTCMilliseconds() !== 0
+  ) {
+    throw new Error(`Input date must be UTC midnight. Got: ${cycle.effective_date}`);
+  }
+
+  // Validate ISO8601 format
+  if (!cycle.effective_date.endsWith('Z')) {
+    throw new Error(`Input date must be UTC ISO8601 format ending with Z. Got: ${cycle.effective_date}`);
+  }
+
+  const cycleDates = getNextCycleDate(cycle.effective_date, cycle.billing_cycle!);
   
   const fullCycle: Partial<ICompanyBillingCycle> = {
     ...cycle,
-    period_start_date: cycleDates.periodStart.toISOString(),
-    period_end_date: cycleDates.periodEnd.toISOString()
+    period_start_date: cycleDates.periodStart,
+    period_end_date: cycleDates.periodEnd
   };
 
   try {
@@ -113,6 +180,7 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
     console.log(`Created billing cycle for company ${cycle.company_id} from ${fullCycle.period_start_date} to ${fullCycle.period_end_date}`);
   } catch (error) {
     console.error(`Error creating billing cycle: ${error}`);
+    throw error;
   }
 }
 
@@ -122,45 +190,73 @@ export async function createCompanyBillingCycles(knex: Knex, company: ICompany) 
     .orderBy('effective_date', 'desc')
     .first() as ICompanyBillingCycle;
 
-  const now = new Date();
+  const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
   
   if (!lastCycle) {
     const initialCycle = getStartOfCurrentCycle(now, company.billing_cycle);
     await createBillingCycle(knex, {
       company_id: company.company_id,
       billing_cycle: company.billing_cycle,
-      effective_date: initialCycle.effectiveDate.toISOString(),
+      effective_date: initialCycle.effectiveDate,
       tenant: company.tenant
     });
     
-    let currentDate = initialCycle.effectiveDate;
-    while (currentDate < now) {
-      const nextCycle = getNextCycleDate(currentDate, company.billing_cycle);
-      currentDate = nextCycle.effectiveDate;
-      if (currentDate <= now) {
-        await createBillingCycle(knex, {
-          company_id: company.company_id,
-          billing_cycle: company.billing_cycle,
-          effective_date: currentDate.toISOString(),
-          tenant: company.tenant
-        });
+    let currentCycle = initialCycle;
+    let iterations = 0;
+    const MAX_ITERATIONS = 100; // Safety limit
+    
+    while (parseISO(currentCycle.periodEnd) < parseISO(now) && iterations < MAX_ITERATIONS) {
+      const nextCycle = getNextCycleDate(currentCycle.periodEnd, company.billing_cycle);
+      const previousEnd = currentCycle.periodEnd;
+      
+      if (parseISO(nextCycle.periodEnd) <= parseISO(previousEnd)) {
+        const error = new Error('Period end date not advancing properly: '+ JSON.stringify({
+          previousEnd,
+          nextEnd: nextCycle.periodEnd,
+          billingCycle: company.billing_cycle
+        }));
+        console.error(error);
+        throw error;
       }
+      
+      iterations++;
+      await createBillingCycle(knex, {
+        company_id: company.company_id,
+        billing_cycle: company.billing_cycle,
+        effective_date: nextCycle.effectiveDate,
+        tenant: company.tenant
+      });
+      currentCycle = nextCycle;
     }
     return;
   }
 
-  let currentDate = parseISO(lastCycle.effective_date);
-  while (currentDate < now) {
-    const nextCycle = getNextCycleDate(currentDate, company.billing_cycle);
-    currentDate = nextCycle.effectiveDate;
-    if (currentDate <= now) {
-      await createBillingCycle(knex, {
-        company_id: company.company_id,
-        billing_cycle: company.billing_cycle,
-        effective_date: currentDate.toISOString(),
-        tenant: company.tenant
-      });
+  let currentCycle = getNextCycleDate(lastCycle.effective_date, company.billing_cycle);
+  let iterations = 0;
+  const MAX_ITERATIONS = 100; // Safety limit
+  
+  while (parseISO(currentCycle.periodEnd) < parseISO(now) && iterations < MAX_ITERATIONS) {
+    const nextCycle = getNextCycleDate(currentCycle.periodEnd, company.billing_cycle);
+    const previousEnd = currentCycle.periodEnd;
+    
+    if (parseISO(nextCycle.periodEnd) <= parseISO(previousEnd)) {
+      const error = new Error('Period end date not advancing properly: '+ JSON.stringify({
+        previousEnd,
+        nextEnd: nextCycle.periodEnd,
+        billingCycle: company.billing_cycle
+      }));
+      console.error(error);
+      throw error;
     }
+    
+    iterations++;
+    await createBillingCycle(knex, {
+      company_id: company.company_id,
+      billing_cycle: company.billing_cycle,
+      effective_date: nextCycle.effectiveDate,
+      tenant: company.tenant
+    });
+    currentCycle = nextCycle;
   }
 }
 

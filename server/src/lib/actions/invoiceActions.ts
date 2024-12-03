@@ -49,47 +49,85 @@ function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
 }
 
-export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & { company_name: string; total_unbilled: number; period_start_date: ISO8601String; period_end_date: ISO8601String })[]> {
+export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & { 
+  company_name: string; 
+  total_unbilled: number; 
+  period_start_date: ISO8601String; 
+  period_end_date: ISO8601String;
+  can_generate: boolean;
+})[]> {
+  console.log('Starting getAvailableBillingPeriods');
   const { knex } = await createTenantKnex();
   const currentDate = new Date().toISOString();
+  console.log(`Current date: ${currentDate}`);
 
-  // Get billing cycles that are past their end date and don't have invoices
-  const availablePeriods = await knex('company_billing_cycles as cbc')
-    .join('companies as c', 'c.company_id', 'cbc.company_id')
-    .leftJoin('invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id')
-    .whereNotNull('cbc.period_end_date')
-    .where('cbc.period_end_date', '<=', currentDate)
-    .whereNull('i.invoice_id')
-    .select(
-      'cbc.company_id',
-      'c.company_name',
-      'cbc.billing_cycle_id',
-      'cbc.billing_cycle',
-      'cbc.period_start_date',
-      'cbc.period_end_date',
-      'cbc.effective_date',
-      'cbc.tenant'
-    );
+  try {
+    // Get all billing cycles that don't have invoices
+    console.log('Querying for available billing periods');
+    const availablePeriods = await knex('company_billing_cycles as cbc')
+      .join('companies as c', 'c.company_id', 'cbc.company_id')
+      .leftJoin('invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id')
+      .whereNotNull('cbc.period_end_date')
+      .whereNull('i.invoice_id')
+      .select(
+        'cbc.company_id',
+        'c.company_name',
+        'cbc.billing_cycle_id',
+        'cbc.billing_cycle',
+        'cbc.period_start_date',
+        'cbc.period_end_date',
+        'cbc.effective_date',
+        'cbc.tenant'
+      );
 
-  // For each period, calculate the total unbilled amount
-  const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & { company_name: string; total_unbilled: number; period_start_date: ISO8601String; period_end_date: ISO8601String }> => {
-    const billingEngine = new BillingEngine();
-    const billingResult = await billingEngine.calculateBilling(
-      period.company_id,
-      period.period_start_date,
-      period.period_end_date,
-      period.billing_cycle_id
-    );
+    console.log(`Found ${availablePeriods.length} available billing periods`);
 
-    const total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
+    const currentDate = new Date().toISOString();
 
-    return {
-      ...period,
-      total_unbilled
-    };
-  }));
+    // For each period, calculate the total unbilled amount
+    console.log('Calculating unbilled amounts for each period');
+    const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & { 
+      company_name: string; 
+      total_unbilled: number; 
+      period_start_date: ISO8601String; 
+      period_end_date: ISO8601String;
+      can_generate: boolean;
+    }> => {
+      console.log(`Processing period for company: ${period.company_name} (${period.company_id})`);
+      console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
 
-  return periodsWithTotals;
+      const billingEngine = new BillingEngine();
+      let total_unbilled = 0;
+      try {
+        const billingResult = await billingEngine.calculateBilling(
+          period.company_id,
+          period.period_start_date,
+          period.period_end_date,
+          period.billing_cycle_id
+        );
+        total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
+      } catch (error) {
+        console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
+      }
+      console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
+
+      // A period can be generated if its end date is in the past
+      const can_generate = new Date(period.period_end_date) <= new Date(currentDate);
+
+      return {
+        ...period,
+        total_unbilled,
+        can_generate
+      };
+    }));
+
+    console.log(`Successfully processed ${periodsWithTotals.length} billing periods`);
+    return periodsWithTotals;
+
+  } catch (error) {
+    console.error('Error in getAvailableBillingPeriods:', error);
+    throw error;
+  }
 }
 
 export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
@@ -103,7 +141,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   const billingCycle = await knex('company_billing_cycles')
     .where({ billing_cycle_id })
     .first();
-    
+
   if (!billingCycle) {
     throw new Error('Invalid billing cycle');
   }
@@ -299,7 +337,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     }
 
     const totalAmount = subtotal + totalTax;
-    
+
     // Get available credit and calculate how much to apply
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
@@ -454,7 +492,7 @@ async function getNextBillingDate(companyId: string, currentEndDate: ISO8601Stri
 export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
   try {
     const invoices = await Invoice.getAll();
-    const fullInvoices = await Promise.all(invoices.map(async (invoice):Promise<InvoiceViewModel> => {
+    const fullInvoices = await Promise.all(invoices.map(async (invoice): Promise<InvoiceViewModel> => {
       return await Invoice.getFullInvoiceById(invoice.invoice_id);
     }));
     return fullInvoices;
@@ -489,7 +527,7 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
   const templates = await Invoice.getTemplates();
-  return templates.map((template):IInvoiceTemplate => ({
+  return templates.map((template): IInvoiceTemplate => ({
     ...template,
     parsed: template.dsl ? parseInvoiceTemplate(template.dsl) : null
   }));

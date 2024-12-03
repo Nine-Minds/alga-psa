@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 
 export interface BaseColumnDefinition<T> {
-  title: string;
+  title: string | ReactNode;
   dataIndex: string | string[];
 }
 
