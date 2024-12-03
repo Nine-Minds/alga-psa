@@ -434,6 +434,19 @@ export async function generateInvoiceNumber(): Promise<string> {
   return `INV-${newNumber.toString().padStart(6, '0')}`;
 }
 
+function getPaymentTermDays(paymentTerms: string): number {
+  switch (paymentTerms) {
+    case 'net_30':
+      return 30;
+    case 'net_15':
+      return 15;
+    case 'due_on_receipt':
+      return 0;
+    default:
+      return 30; // Default to 30 days if unknown payment term
+  }
+}
+
 async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex } = await createTenantKnex();
   const company = await knex('companies')
@@ -441,8 +454,10 @@ async function getDueDate(companyId: string, billingEndDate: ISO8601String): Pro
     .select('payment_terms')
     .first();
 
-  const paymentTerms = company?.payment_terms || 30;
-  const dueDate = addDays(billingEndDate, paymentTerms);
+  const paymentTerms = company?.payment_terms || 'net_30';
+  const days = getPaymentTermDays(paymentTerms);
+  console.log('paymentTerms', paymentTerms, 'days', days);
+  const dueDate = addDays(billingEndDate, days);
   return dueDate.toISOString();
 }
 
