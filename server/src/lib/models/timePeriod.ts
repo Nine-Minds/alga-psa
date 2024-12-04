@@ -18,7 +18,7 @@ export class TimePeriod {
       .select('*')
       .orderBy('start_date', 'desc');
 
-    return timePeriods.map(period => ({
+    return timePeriods.map((period): ITimePeriod => ({
       ...period,
       start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
       end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
