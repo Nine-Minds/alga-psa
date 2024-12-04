@@ -14,7 +14,9 @@ import { ArrowLeftIcon } from '@radix-ui/react-icons';
 import { fetchTimeSheetComments, addCommentToTimeSheet } from '@/lib/actions/timeSheetActions';
 import { TextArea } from '../ui/TextArea';
 import { useTenant } from '@/components/TenantProvider';
+import { fromZonedTime } from 'date-fns-tz';
 import { formatISO, parseISO } from 'date-fns';
+import { time } from 'console';
 
 interface TimeSheetProps {
     timeSheet: ITimeSheet;
@@ -175,6 +177,8 @@ export function TimeSheet({
             if (initialWorkItem && !workItems.some(item => item.work_item_id === initialWorkItem.work_item_id)) {
                 workItems = [...workItems, initialWorkItem];
             }
+
+            console.log('workItems', workItems);
 
             const fetchedWorkItemsByType = workItems.reduce((acc: Record<string, IWorkItem[]>, item: IWorkItem) => {
                 if (!acc[item.type]) {
@@ -374,10 +378,25 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
         setIsAddWorkItemDialogOpen(false);
     };
 
+    const start_month = new Date(timeSheet.time_period?.start_date || new Date()).getUTCMonth() + 1;
+    const start_day = new Date(timeSheet.time_period?.start_date || new Date()).getUTCDate();
+    const start_year = new Date(timeSheet.time_period?.start_date || new Date()).getUTCFullYear();
+
+    const end_month = new Date(timeSheet.time_period?.end_date || new Date()).getUTCMonth() + 1;
+    const end_day = new Date(timeSheet.time_period?.end_date || new Date()).getUTCDate();
+    const end_year = new Date(timeSheet.time_period?.end_date || new Date()).getUTCFullYear();    
+
     const dates = getDatesInPeriod({
-        start_date: timeSheet.time_period ? parseISO(timeSheet.time_period.start_date as unknown as string) : new Date(),
-        end_date: timeSheet.time_period ? parseISO(timeSheet.time_period.end_date as unknown as string) : new Date()
+        start_date: timeSheet.time_period ? new Date(start_year, start_month-1, start_day) : new Date(),
+        end_date: timeSheet.time_period ? new Date(end_year, end_month-1, end_day) : new Date()
     });
+
+    // const dates:string[] = []
+    // for (const date of localDates) {
+    //     dates.push(date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + String(date.getUTCDate()).padStart(2, '0') + 'T00:00:00.000Z');
+    // }
+
+    console.log('dates', dates);
 
     const handleCellClick = (workItem: IWorkItem, date: Date, entries: ITimeEntryWithWorkItemString[]) => {
         let startTime = new Date(date);
@@ -590,7 +609,7 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
                                     Work Item
                                 </th>
                                 {dates.map((date): JSX.Element => (
-                                    <th key={formatISO(date)} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
+                                    <th key={date.toLocaleDateString()} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
                                         {date.toLocaleDateString()}
                                     </th>
                                 ))}

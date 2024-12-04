@@ -18,12 +18,40 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [timePeriods, setTimePeriods] = useState<ITimePeriod[]>(initialTimePeriods);
   const [settings, setSettings] = useState<ITimePeriodSettings | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriod | null>(null);
+  const [mode, setMode] = useState<'create' | 'edit'>('create');
 
   const handleTimePeriodCreated = (newPeriod: ITimePeriod) => {
-    setTimePeriods([...timePeriods, newPeriod]);
+    if (mode === 'edit') {
+      setTimePeriods(timePeriods.map((p):ITimePeriod => 
+        p.period_id === newPeriod.period_id ? newPeriod : p
+      ));
+    } else {
+      setTimePeriods([...timePeriods, newPeriod]);
+    }
+  };
+
+  const handleTimePeriodDeleted = () => {
+    if (selectedPeriod) {
+      setTimePeriods(timePeriods.filter(p => p.period_id !== selectedPeriod.period_id));
+    }
+  };
+
+  const handleEdit = (period: ITimePeriod) => {
+    setSelectedPeriod(period);
+    setMode('edit');
+    setIsFormOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsFormOpen(false);
+    setSelectedPeriod(null);
+    setMode('create');
   };
 
   useEffect(() => {
+    console.log('initial time periods', initialTimePeriods);
+
     async function fetchSettings() {
       const timePeriodSettings = await getTimePeriodSettings();
       // Assuming we only have one active setting
@@ -34,20 +62,31 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
 
   // Function to format ISO8601 string to a readable date string
   const formatDate = (isoString: ISO8601String): string => {
-    return format(parseISO(isoString), 'PPP'); // 'PPP' gives format like "April 29, 2023"
+    // Parse as UTC and format in UTC
+    return isoString.slice(0, 10);
   };
 
   return (
     <>
-      <Button className="mb-4" onClick={() => setIsFormOpen(true)}>
+      <Button 
+        className="mb-4" 
+        onClick={() => {
+          setMode('create');
+          setSelectedPeriod(null);
+          setIsFormOpen(true);
+        }}
+      >
         Create New Time Period
       </Button>
       <TimePeriodForm
         isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        onClose={handleClose}
         onTimePeriodCreated={handleTimePeriodCreated}
+        onTimePeriodDeleted={handleTimePeriodDeleted}
         settings={settings}
         existingTimePeriods={timePeriods}
+        selectedPeriod={selectedPeriod}
+        mode={mode}
       />
       <Card>
         <CardHeader>
@@ -66,10 +105,17 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
             <TableBody>
               {timePeriods.map((period): JSX.Element => (
                 <TableRow key={period.period_id}>
-                  <TableCell>{formatDate(period.start_date)}</TableCell>
-                  <TableCell>{formatDate(period.end_date)}</TableCell>
+                  <TableCell>{period.start_date.slice(0, 10)}</TableCell>
+                  <TableCell>{period.end_date.slice(0, 10)}</TableCell>
                   <TableCell>
-                    <Button variant="outline" size="sm">Edit</Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(period)}
+                      className="mr-2"
+                    >
+                      Edit
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

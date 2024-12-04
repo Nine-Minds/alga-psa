@@ -24,7 +24,7 @@ const getStatusDisplay = (status: TimeSheetStatus): { text: string; color: strin
 };
 
 export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodListProps) {
-  
+  console.log('timePeriods', timePeriods);
   return (
     <div className="space-y-4 w-full">
       <h2 className="text-2xl font-bold mb-4">Select a Time Period</h2>
@@ -43,8 +43,8 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             const { text: statusText, color: statusColor } = getStatusDisplay(period.timeSheetStatus);
             return (
               <Table.Row key={period.period_id}>
-                <Table.Cell>{parseISO(period.start_date).toLocaleDateString()}</Table.Cell>
-                <Table.Cell>{parseISO(period.end_date).toLocaleDateString()}</Table.Cell>
+                <Table.Cell>{period.start_date.slice(0, 10)}</Table.Cell>
+                <Table.Cell>{period.end_date.slice(0, 10)}</Table.Cell>
                 <Table.Cell>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${statusColor}-100 text-${statusColor}-800`}>
                     {statusText}

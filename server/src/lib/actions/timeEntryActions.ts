@@ -399,8 +399,8 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
 
   return periods.map((period): ITimePeriodWithStatus => ({
     ...period,
-    start_date: formatISO(period.start_date),
-    end_date: formatISO(period.end_date),
+    start_date: period.start_date.toISOString().split('.')[0] + 'Z',
+    end_date: period.end_date.toISOString().split('.')[0] + 'Z',
     timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus
   }));
 }

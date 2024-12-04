@@ -6,7 +6,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
-import { createTimePeriod } from '@/lib/actions/timePeriodsActions';
+import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@/lib/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { ISO8601String } from '@/types/types.d';
@@ -16,24 +16,40 @@ interface TimePeriodFormProps {
     isOpen: boolean;
     onClose: () => void;
     onTimePeriodCreated: (newPeriod: ITimePeriod) => void;
+    onTimePeriodDeleted?: () => void;
     settings: ITimePeriodSettings | null;
     existingTimePeriods: ITimePeriod[];
+    selectedPeriod?: ITimePeriod | null;
+    mode?: 'create' | 'edit';
 }
 
 const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
     isOpen,
     onClose,
     onTimePeriodCreated,
+    onTimePeriodDeleted,
     settings,
     existingTimePeriods,
+    selectedPeriod,
+    mode = 'create'
 }) => {
     const [startDate, setStartDate] = useState<ISO8601String>('');
     const [endDate, setEndDate] = useState<ISO8601String>('');
     const [error, setError] = useState<string | null>(null);
     const [override, setOverride] = useState<boolean>(false);
+    const [noEndDate, setNoEndDate] = useState<boolean>(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     useEffect(() => {
-        if (settings) {
+        if (mode === 'edit' && selectedPeriod) {
+            setStartDate(selectedPeriod.start_date);
+            setEndDate(selectedPeriod.end_date);
+            setStartDateInput(formatDateForInput(selectedPeriod.start_date));
+            setEndDateInput(formatDateForInput(selectedPeriod.end_date));
+            setError(null);
+        } else if (settings) {
+            setStartDateInput('');
+            setEndDateInput('');
             let newStartDate: Date;
             if (existingTimePeriods.length > 0) {
                 // Calculate the next period based on settings and existing periods
@@ -52,8 +68,14 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
 
             const newEndDate = calculateEndDate(newStartDate, settings);
 
-            setStartDate(format(newStartDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"));
-            setEndDate(format(newEndDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"));
+            // Format dates as ISO8601 strings
+            const startISO = format(newStartDate, "yyyy-MM-dd'T'00:00:00.000'Z'");
+            const endISO = format(newEndDate, "yyyy-MM-dd'T'00:00:00.000'Z'");
+
+            setStartDate(startISO as ISO8601String);
+            setEndDate(endISO as ISO8601String);
+            setStartDateInput(format(newStartDate, 'yyyy-MM-dd'));
+            setEndDateInput(format(newEndDate, 'yyyy-MM-dd'));
             setError(null);
         } else {
             setStartDate('');
@@ -108,39 +130,89 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
         return addDays(end, -1); // Adjust to make the end date inclusive
     }
 
-    const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = e.target.value ? format(parseISO(e.target.value), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '';
-        setStartDate(newDate);
-        if (settings && !override) {
-            const newEndDate = calculateEndDate(parseISO(newDate), settings);
-            setEndDate(format(newEndDate, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx"));
+    const formatDateForInput = (isoString: string) => {
+        if (!isoString) return '';
+        try {
+            return format(parseISO(isoString), 'yyyy-MM-dd');
+        } catch (err) {
+            return '';
         }
     };
 
+    const parseInputToISO = (inputValue: string): ISO8601String | '' => {
+        if (!inputValue) return '';
+        try {
+            // First try parsing as is
+            let date = parseISO(inputValue);
+            if (isNaN(date.getTime())) {
+                // If that fails, try adding time component
+                date = parseISO(inputValue + 'T00:00:00.000Z');
+            }
+            if (isNaN(date.getTime())) {
+                return '';
+            }
+            return format(date, "yyyy-MM-dd'T'00:00:00.000'Z'") as ISO8601String;
+        } catch (err) {
+            return '';
+        }
+    };
+
+    const [startDateInput, setStartDateInput] = useState('');
+    const [endDateInput, setEndDateInput] = useState('');
+
+    const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setStartDateInput(e.target.value);
+    };
+
     const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newDate = e.target.value ? format(parseISO(e.target.value), "yyyy-MM-dd'T'HH:mm:ss.SSSxxx") : '';
-        setEndDate(newDate);
+        setEndDateInput(e.target.value);
+    };
+
+    const handleStartDateBlur = () => {
+        const newStartDate = parseInputToISO(startDateInput);
+        setStartDate(newStartDate);
+        
+        if (settings && !override && newStartDate) {
+            try {
+                const newEndDate = calculateEndDate(parseISO(newStartDate), settings);
+                const endDateStr = format(newEndDate, "yyyy-MM-dd'T'00:00:00.000'Z'");
+                setEndDate(endDateStr as ISO8601String);
+                setEndDateInput(format(newEndDate, 'yyyy-MM-dd'));
+            } catch (err) {
+                setEndDate('');
+                setEndDateInput('');
+            }
+        }
+    };
+
+    const handleEndDateBlur = () => {
+        const newEndDate = parseInputToISO(endDateInput);
+        setEndDate(newEndDate);
     };
 
     const handleSubmit = async () => {
         if (!settings) {
-            setError('Cannot create a time period without settings.');
+            setError('Cannot manage time period without settings.');
             return;
         }
 
         try {
             // Client-side validations
-            if (!startDate || !endDate) {
-                setError('Both start date and end date must be provided.');
+            if (!startDate) {
+                setError('Start date must be provided.');
                 return;
             }
 
-            if (!isBefore(parseISO(startDate), parseISO(endDate))) {
+            if (endDate && !isBefore(parseISO(startDate), parseISO(endDate))) {
                 setError('Start date must be before end date.');
                 return;
             }
 
+            // Skip overlap check for the current period in edit mode
             const overlappingPeriod = existingTimePeriods.find((period) => {
+                if (mode === 'edit' && selectedPeriod && period.period_id === selectedPeriod.period_id) {
+                    return false;
+                }
                 const existingStart = parseISO(period.start_date);
                 const existingEnd = parseISO(period.end_date);
                 const newStart = parseISO(startDate);
@@ -153,16 +225,26 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
             });
 
             if (overlappingPeriod) {
-                setError('The new time period overlaps with an existing period.');
+                setError('The time period overlaps with an existing period.');
                 return;
             }
 
-            const newPeriod = await createTimePeriod({
-                start_date: startDate,
-                end_date: endDate
-            });
+            let updatedPeriod;
+            if (mode === 'edit' && selectedPeriod?.period_id) {
+                // Update existing period
+                updatedPeriod = await updateTimePeriod(selectedPeriod.period_id, {
+                    start_date: startDate,
+                    end_date: endDate
+                });
+            } else {
+                // Create new period
+                updatedPeriod = await createTimePeriod({
+                    start_date: startDate,
+                    end_date: endDate
+                });
+            }
 
-            onTimePeriodCreated(newPeriod);
+            onTimePeriodCreated(updatedPeriod);
             onClose();
         } catch (err: unknown) {
             if (err instanceof Error) {
@@ -180,7 +262,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
     }
 
     return (
-        <Dialog isOpen={isOpen} onClose={onClose} title="Create New Time Period">
+        <Dialog isOpen={isOpen} onClose={onClose} title={mode === 'create' ? "Create New Time Period" : "Edit Time Period"}>
             <div className="p-4">
                 {error && <div className="text-red-600 mb-2">{error}</div>}
                 {settings ? (
@@ -203,27 +285,95 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                             <Input
                                 type="date"
                                 id="startDate"
-                                value={startDate ? format(parseISO(startDate), 'yyyy-MM-dd') : ''}
+                                value={startDateInput}
                                 onChange={handleStartDateChange}
+                                onBlur={handleStartDateBlur}
                                 readOnly={!override}
                             />
                         </div>
                         <div className="mb-4">
-                            <Label htmlFor="endDate">End Date</Label>
-                            <Input
-                                type="date"
-                                id="endDate"
-                                value={endDate ? format(parseISO(endDate), 'yyyy-MM-dd') : ''}
-                                onChange={handleEndDateChange}
-                                readOnly={!override}
-                            />
+                            <div className="mb-2">
+                                <Checkbox
+                                    label="No End Date"
+                                    checked={noEndDate}
+                                    onChange={(e) => {
+                                        setNoEndDate(e.target.checked);
+                                        if (e.target.checked) {
+                                            setEndDate('');
+                                        }
+                                    }}
+                                />
+                            </div>
+                            {!noEndDate && (
+                                <>
+                                    <Label htmlFor="endDate">End Date</Label>
+                                    <Input
+                                        type="date"
+                                        id="endDate"
+                                        value={endDateInput}
+                                        onChange={handleEndDateChange}
+                                        onBlur={handleEndDateBlur}
+                                        readOnly={!override}
+                                        placeholder=""
+                                    />
+                                </>
+                            )}
                         </div>
-                        <div className="flex justify-end">
-                            <Button variant="outline" onClick={onClose} className="mr-2">
-                                Cancel
-                            </Button>
-                            <Button onClick={handleSubmit}>Create</Button>
+                        <div className="flex justify-between">
+                            {mode === 'edit' && selectedPeriod && (
+                                <Button 
+                                    variant="destructive" 
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                >
+                                    Delete Period
+                                </Button>
+                            )}
+                            <div className="flex ml-auto">
+                                <Button variant="outline" onClick={onClose} className="mr-2">
+                                    Cancel
+                                </Button>
+                                <Button onClick={handleSubmit}>
+                                    {mode === 'create' ? 'Create' : 'Save'}
+                                </Button>
+                            </div>
                         </div>
+
+                        {/* Delete Confirmation Dialog */}
+                        <Dialog
+                            isOpen={showDeleteConfirm}
+                            onClose={() => setShowDeleteConfirm(false)}
+                            title="Confirm Delete"
+                        >
+                            <div className="p-4">
+                                <p className="mb-4">Are you sure you want to delete this time period? This action cannot be undone.</p>
+                                <div className="flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        className="mr-2"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={async () => {
+                                            try {
+                                                if (selectedPeriod?.period_id) {
+                                                    await deleteTimePeriod(selectedPeriod.period_id);
+                                                    setShowDeleteConfirm(false);
+                                                    onTimePeriodDeleted?.();
+                                                    onClose();
+                                                }
+                                            } catch (err) {
+                                                setError(err instanceof Error ? err.message : 'Failed to delete time period');
+                                            }
+                                        }}
+                                    >
+                                        Delete
+                                    </Button>
+                                </div>
+                            </div>
+                        </Dialog>
                     </>
                 ) : (
                     <div className="text-center">

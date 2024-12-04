@@ -35,6 +35,13 @@ export async function createTimePeriod(
   timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>
 ): Promise<ITimePeriod> {
   console.log('Starting createTimePeriod function with data:', timePeriodData);
+  console.log('start_date type:', typeof timePeriodData.start_date);
+  console.log('end_date type:', typeof timePeriodData.end_date);
+  console.log('start_date value:', timePeriodData.start_date);
+  console.log('end_date value:', timePeriodData.end_date);
+  console.log('start_date constructor:', timePeriodData.start_date?.constructor?.name);
+  console.log('end_date constructor:', timePeriodData.end_date?.constructor?.name);
+
   try {
     console.log('Fetching active time period settings...');
     const settings = await TimePeriodSettings.getActiveSettings();
@@ -53,9 +60,21 @@ export async function createTimePeriod(
     console.log('No overlapping periods found.');
 
     console.log('Creating new time period...');
+    console.log('Data being sent to create:', {
+      ...timePeriodData,
+      start_date: timePeriodData.start_date,
+      end_date: timePeriodData.end_date
+    });
+
     const timePeriod = await TimePeriod.create(timePeriodData);
+    console.log('Time period created, before validation:', timePeriod);
+    console.log('Time period start_date type:', typeof timePeriod.start_date);
+    console.log('Time period end_date type:', typeof timePeriod.end_date);
+    console.log('Time period start_date constructor:', timePeriod.start_date?.constructor?.name);
+    console.log('Time period end_date constructor:', timePeriod.end_date?.constructor?.name);
+
     const validatedPeriod = validateData(timePeriodSchema, timePeriod);
-    console.log('New time period created:', validatedPeriod);
+    console.log('Time period after validation:', validatedPeriod);
     console.log('Revalidating path: /msp/time-entry');
     revalidatePath('/msp/time-entry');
 
@@ -69,13 +88,22 @@ export async function createTimePeriod(
 
 export async function fetchAllTimePeriods(): Promise<ITimePeriod[]> {
   try {
+    console.log('Fetching all time periods...');
+    
     const timePeriods = await TimePeriod.getAll();
     
-    const periods = timePeriods.map((period: ITimePeriod):ITimePeriod => ({
-      ...period,
-      start_date: formatISO(period.start_date),
-      end_date: formatISO(period.end_date)
-    }));
+    const periods = timePeriods.map((period: ITimePeriod): ITimePeriod => {
+      const startDate = new Date(period.start_date);
+      const endDate = new Date(period.end_date);
+
+      return {
+        ...period,
+        start_date: `${startDate.getUTCFullYear()}-${String(startDate.getUTCMonth() + 1).padStart(2, '0')}-${String(startDate.getUTCDate()).padStart(2, '0')}T00:00:00.000Z`,
+        end_date: `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, '0')}-${String(endDate.getUTCDate()).padStart(2, '0')}T00:00:00.000Z`
+      };
+    });
+
+    console.log('periods', periods);
 
     return validateArray(timePeriodSchema, periods);
   } catch (error) {
@@ -399,6 +427,64 @@ function alignToNearestMidnight(dateStr: ISO8601String): ISO8601String {
   const nearestMidnight = hoursToPreviousMidnight <= hoursToNextMidnight ? previousMidnight : nextMidnight;
   
   return format(nearestMidnight, "yyyy-MM-dd'T'HH:mm:ss'Z'") as ISO8601String;
+}
+
+export async function deleteTimePeriod(periodId: string): Promise<void> {
+  try {
+    // Check if period exists and has no associated time records
+    const period = await TimePeriod.findById(periodId);
+    if (!period) {
+      throw new Error('Time period not found');
+    }
+
+    const isEditable = await TimePeriod.isEditable(periodId);
+    if (!isEditable) {
+      throw new Error('Cannot delete time period with associated time sheets');
+    }
+
+    await TimePeriod.delete(periodId);
+    revalidatePath('/msp/time-entry');
+  } catch (error) {
+    console.error('Error deleting time period:', error);
+    throw error;
+  }
+}
+
+export async function updateTimePeriod(
+  periodId: string,
+  updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
+): Promise<ITimePeriod> {
+  try {
+    // Check if period exists and has no associated time records
+    const period = await TimePeriod.findById(periodId);
+    if (!period) {
+      throw new Error('Time period not found');
+    }
+
+    const isEditable = await TimePeriod.isEditable(periodId);
+    if (!isEditable) {
+      throw new Error('Cannot update time period with associated time sheets');
+    }
+
+    // Check for overlapping periods
+    if (updates.start_date || updates.end_date) {
+      const startDate = updates.start_date || period.start_date;
+      const endDate = updates.end_date || period.end_date;
+      const overlappingPeriod = await TimePeriod.findOverlapping(startDate, endDate, periodId);
+      if (overlappingPeriod) {
+        throw new Error('Cannot update time period: overlaps with existing period');
+      }
+    }
+
+    const updatedPeriod = await TimePeriod.update(periodId, updates);
+    const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
+    
+    revalidatePath('/msp/time-entry');
+    return validatedPeriod;
+  } catch (error) {
+    console.error('Error updating time period:', error);
+    throw error;
+  }
 }
 
 export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod[]> {

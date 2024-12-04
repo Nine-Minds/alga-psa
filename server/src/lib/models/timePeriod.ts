@@ -18,7 +18,11 @@ export class TimePeriod {
       .select('*')
       .orderBy('start_date', 'desc');
 
-    return timePeriods;
+    return timePeriods.map(period => ({
+      ...period,
+      start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
+      end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
+    }));
   }  
 
   static async create(timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>): Promise<ITimePeriod> {
@@ -27,7 +31,12 @@ export class TimePeriod {
       .insert({...timePeriodData, tenant: tenant!})
       .returning('*');
 
-    return newPeriod;
+    // Convert dates to ISO strings
+    return {
+      ...newPeriod,
+      start_date: new Date(newPeriod.start_date).toISOString().split('.')[0] + 'Z',
+      end_date: new Date(newPeriod.end_date).toISOString().split('.')[0] + 'Z'
+    };
   }
 
   static async findByDate(date: ISO8601String): Promise<ITimePeriod | null> {
@@ -40,18 +49,73 @@ export class TimePeriod {
     return period || null;
   }
 
-  static async findOverlapping(startDate: ISO8601String, endDate: ISO8601String): Promise<ITimePeriod | null> {
+  static async findOverlapping(
+    startDate: ISO8601String, 
+    endDate: ISO8601String,
+    excludePeriodId?: string
+  ): Promise<ITimePeriod | null> {
     const {knex: db} = await createTenantKnex();
-    const overlappingPeriod = await db<ITimePeriod>('time_periods')
+    const query = db<ITimePeriod>('time_periods')
       .where((qb) => {
         qb.whereBetween('start_date', [startDate, endDate])
           .orWhereBetween('end_date', [startDate, endDate])
           .orWhere((inner) => {
             inner.where('start_date', '<', startDate).andWhere('end_date', '>', endDate);
           });
-      })
-      .first();
+      });
 
-    return overlappingPeriod || null;
-  }  
+    if (excludePeriodId) {
+      query.whereNot('period_id', excludePeriodId);
+    }
+
+    return await query.first() || null;
+  }
+
+  static async findById(periodId: string): Promise<ITimePeriod | null> {
+    const {knex: db} = await createTenantKnex();
+    const period = await db<ITimePeriod>('time_periods')
+      .where('period_id', periodId)
+      .first();
+    
+    return period || null;
+  }
+
+  static async hasTimeSheets(periodId: string): Promise<boolean> {
+    const {knex: db} = await createTenantKnex();
+    const count = await db('time_sheets')
+      .where('period_id', periodId)
+      .count('id as count')
+      .first();
+    
+    return count ? Number(count.count) > 0 : false;
+  }
+
+  static async isEditable(periodId: string): Promise<boolean> {
+    const hasSheets = await this.hasTimeSheets(periodId);
+    return !hasSheets;
+  }
+
+  static async update(
+    periodId: string, 
+    updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
+  ): Promise<ITimePeriod> {
+    const {knex: db} = await createTenantKnex();
+    const [updatedPeriod] = await db<ITimePeriod>('time_periods')
+      .where('period_id', periodId)
+      .update(updates)
+      .returning('*');
+
+    return {
+      ...updatedPeriod,
+      start_date: new Date(updatedPeriod.start_date).toISOString().split('.')[0] + 'Z',
+      end_date: new Date(updatedPeriod.end_date).toISOString().split('.')[0] + 'Z'
+    };
+  }
+
+  static async delete(periodId: string): Promise<void> {
+    const {knex: db} = await createTenantKnex();
+    await db('time_periods')
+      .where('period_id', periodId)
+      .delete();
+  }
 }
