@@ -6,7 +6,7 @@ import { TimePeriodSettings } from '../models/timePeriodSettings';
 import { v4 as uuidv4 } from 'uuid';
 import { ISO8601String } from '../../types/types.d';
 import { ITimePeriod, ITimePeriodSettings } from '../../interfaces/timeEntry.interfaces';
-import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions } from 'date-fns';
+import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '../utils/validation';
 import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet.schemas';
@@ -474,5 +474,50 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
   } catch (error) {
     console.error('Error generating and saving time periods:', error);
     throw new Error('Failed to generate and save time periods');
+  }
+}
+
+export async function createNextTimePeriod(settings: ITimePeriodSettings, daysThreshold: number = 5): Promise<ITimePeriod | null> {
+  try {
+    // Get all existing time periods
+    const existingPeriods = await fetchAllTimePeriods();
+    
+    if (!existingPeriods.length) {
+      throw new Error('No existing time periods found');
+    }
+
+    // Sort periods by end_date in descending order and get the latest one
+    const lastPeriod = existingPeriods.sort((a, b) =>
+      parseISO(b.end_date).getTime() - parseISO(a.end_date).getTime()
+    )[0];
+
+    // Use the end date of the last period as the start date for the new period
+    const newStartDate = lastPeriod.end_date;
+
+    // Check if we're within the threshold days of the new period
+    const currentDate = new Date();
+    const startDateObj = parseISO(newStartDate);
+    const daysUntilStart = differenceInDays(startDateObj, currentDate);
+
+    // Only create the period if we're within the threshold
+    if (daysUntilStart > daysThreshold) {
+      console.log(`Not creating new period: ${daysUntilStart} days until start date exceeds threshold of ${daysThreshold} days`);
+      return null;
+    }
+
+    // Calculate the end date based on the settings
+    const endDateObj = getEndOfPeriod(newStartDate, settings);
+    const newEndDate = formatUtcDateNoTime(endDateObj);
+
+    // Create the new time period
+    const newPeriod = await createTimePeriod({
+      start_date: newStartDate,
+      end_date: newEndDate
+    });
+
+    return newPeriod;
+  } catch (error) {
+    console.error('Error creating next time period:', error);
+    throw error;
   }
 }

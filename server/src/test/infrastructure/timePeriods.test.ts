@@ -4,7 +4,7 @@ import knex from 'knex';
 import dotenv from 'dotenv';
 import path from 'path';
 import { ITimePeriodSettings, ITimePeriod } from '../../interfaces/timeEntry.interfaces';
-import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods } from '../../lib/actions/timePeriodsActions';
+import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '../../lib/actions/timePeriodsActions';
 import { TimePeriodSettings } from '../../lib/models/timePeriodSettings';
 import { ISO8601String } from '../../types/types.d';
 
@@ -99,6 +99,9 @@ describe('Time Periods Infrastructure', () => {
     await db('time_sheets').where('tenant', tenantId).del();
     await db('time_periods').where('tenant', tenantId).del();
     await db('time_period_settings').where('tenant_id', tenantId).del();
+
+    // Reset all mocks
+    vi.clearAllMocks();
   });
 
   it('should create a time period based on settings', async () => {
@@ -381,6 +384,92 @@ describe('Time Periods Infrastructure', () => {
     expect(aprFirstPeriod).toMatchObject({
       start_date: '2023-04-01T00:00:00Z',
       end_date: '2023-04-15T00:00:00Z',
+    });
+  });
+
+  describe('createNextTimePeriod', () => {
+    beforeEach(async () => {
+      // Clean up test data
+      await db('time_entries').where('tenant', tenantId).del();
+      await db('time_sheets').where('tenant', tenantId).del();
+      await db('time_periods').where('tenant', tenantId).del();
+      await db('time_period_settings').where('tenant_id', tenantId).del();
+
+      // Mock the current date to a fixed value for consistent testing
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2024-01-15T00:00:00.000Z'));
+    });
+
+    afterEach(async () => {
+      // Reset all mocks
+      vi.useRealTimers();
+    });
+
+    it('should create next period when within threshold days', async () => {
+      // Arrange
+      const setting: ITimePeriodSettings = {
+        time_period_settings_id: uuidv4(),
+        start_day: 1,
+        frequency: 7,
+        frequency_unit: 'day',
+        is_active: true,
+        effective_from: '2024-01-01T00:00:00.000Z',
+        effective_to: undefined,
+        created_at: new Date().toISOString() as ISO8601String,
+        updated_at: new Date().toISOString() as ISO8601String,
+        tenant_id: tenantId,
+        end_day: undefined
+      };
+
+      // Create initial period
+      const initialPeriod: Omit<ITimePeriod, 'period_id'> = {
+        start_date: '2024-01-15T00:00:00.000Z',
+        end_date: '2024-01-22T00:00:00.000Z',
+        tenant: tenantId,
+      };
+      await createTimePeriod(initialPeriod);
+
+      // Act
+      const result = await createNextTimePeriod(setting, 7);
+
+      // Assert
+      expect(result).not.toBeNull();
+      expect(result).toMatchObject({
+        start_date: '2024-01-22T00:00:00Z',
+        end_date: '2024-01-29T00:00:00Z',
+        tenant: tenantId,
+      });
+    });
+
+    it('should not create next period when outside threshold days', async () => {
+      // Arrange
+      const setting: ITimePeriodSettings = {
+        time_period_settings_id: uuidv4(),
+        start_day: 1,
+        frequency: 7,
+        frequency_unit: 'day',
+        is_active: true,
+        effective_from: '2024-01-01T00:00:00.000Z',
+        effective_to: undefined,
+        created_at: new Date().toISOString() as ISO8601String,
+        updated_at: new Date().toISOString() as ISO8601String,
+        tenant_id: tenantId,
+        end_day: undefined
+      };
+
+      // Create initial period that ends far in the future
+      const initialPeriod: Omit<ITimePeriod, 'period_id'> = {
+        start_date: '2024-01-15T00:00:00.000Z',
+        end_date: '2024-02-15T00:00:00.000Z',
+        tenant: tenantId,
+      };
+      await createTimePeriod(initialPeriod);
+
+      // Act
+      const result = await createNextTimePeriod(setting, 5);
+
+      // Assert
+      expect(result).toBeNull();
     });
   });
 });
