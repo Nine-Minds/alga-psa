@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
+import { Checkbox } from '@/components/ui/Checkbox';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { ITimePeriodSettings } from '@/interfaces/timeEntry.interfaces';
 import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '@/lib/actions/time-period-settings-actions/timePeriodSettingsActions';
@@ -11,6 +12,8 @@ import { ISO8601String } from '@/types/types.d';
 import { formatISO, parseISO } from 'date-fns';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
+
+const END_OF_PERIOD = 0;
 
 const monthNames = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -40,7 +43,7 @@ const TimePeriodSettings: React.FC = () => {
   const [showNewSettingForm, setShowNewSettingForm] = useState<boolean>(false);
   const [newSetting, setNewSetting] = useState<Partial<ITimePeriodSettings> & { frequency_unit: FrequencyUnit }>({
     start_day: 1,
-    end_day: 31,
+    end_day: END_OF_PERIOD,
     frequency: 1,
     frequency_unit: defaultFrequencyUnit,
     is_active: true,
@@ -69,7 +72,7 @@ const TimePeriodSettings: React.FC = () => {
       setSettings([...settings, createdSetting]);
       setNewSetting({
         start_day: 1,
-        end_day: 31,
+        end_day: END_OF_PERIOD,
         frequency: 1,
         frequency_unit: defaultFrequencyUnit,
         is_active: true,
@@ -145,9 +148,28 @@ interface NewTimePeriodSettingFormProps {
 }
 
 const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ newSetting, setNewSetting, onAdd, onCancel }) => {
+  const [useEndOfPeriod, setUseEndOfPeriod] = useState<boolean>(newSetting.end_day === END_OF_PERIOD);
+  const [useEndOfMonthForYear, setUseEndOfMonthForYear] = useState<boolean>(newSetting.end_day_of_month === END_OF_PERIOD);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setNewSetting({ ...newSetting, [name]: parseInt(value, 10) });
+  };
+
+  const handleEndOfPeriodChange = (checked: boolean) => {
+    setUseEndOfPeriod(checked);
+    setNewSetting({ 
+      ...newSetting, 
+      end_day: checked ? END_OF_PERIOD : 31 
+    });
+  };
+
+  const handleEndOfMonthForYearChange = (checked: boolean) => {
+    setUseEndOfMonthForYear(checked);
+    setNewSetting({ 
+      ...newSetting, 
+      end_day_of_month: checked ? END_OF_PERIOD : 31 
+    });
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
@@ -159,84 +181,136 @@ const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ new
   };
 
   return (
-    <div className="border p-4 rounded-md">
-      <Label htmlFor="frequency">Frequency</Label>
-      <Input
-        id="frequency"
-        name="frequency"
-        type="number"
-        min={1}
-        value={newSetting.frequency}
-        onChange={handleInputChange}
-      />
-      <CustomSelect
-        label="Frequency Unit"
-        value={newSetting.frequency_unit}
-        onValueChange={handleSelectChange('frequency_unit')}
-        options={frequencyUnitOptions}
-      />
+    <div className="border p-4 rounded-md space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="frequency">Frequency</Label>
+        <Input
+          id="frequency"
+          name="frequency"
+          type="number"
+          min={1}
+          value={newSetting.frequency}
+          onChange={handleInputChange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Frequency Unit</Label>
+        <CustomSelect
+          value={newSetting.frequency_unit}
+          onValueChange={handleSelectChange('frequency_unit')}
+          options={frequencyUnitOptions}
+        />
+      </div>
+
       {(newSetting.frequency_unit === 'week' || newSetting.frequency_unit === 'month') && (
         <>
-          <Label htmlFor="start_day">Start Day</Label>
-          <Input
-            id="start_day"
-            name="start_day"
-            type="number"
-            min={1}
-            max={newSetting.frequency_unit === 'week' ? 7 : 31}
-            value={newSetting.start_day}
-            onChange={handleInputChange}
-          />
-          <Label htmlFor="end_day">End Day</Label>
-          <Input
-            id="end_day"
-            name="end_day"
-            type="number"
-            min={1}
-            max={newSetting.frequency_unit === 'week' ? 7 : 31}
-            value={newSetting.end_day || ''}
-            onChange={handleInputChange}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="start_day">Start Day</Label>
+            <Input
+              id="start_day"
+              name="start_day"
+              type="number"
+              min={1}
+              max={newSetting.frequency_unit === 'week' ? 7 : 31}
+              value={newSetting.start_day}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="use_end_of_period"
+                checked={useEndOfPeriod}
+                onChange={(event) => handleEndOfPeriodChange(event.target.checked)}
+              />
+              <Label htmlFor="use_end_of_period">End of {newSetting.frequency_unit}</Label>
+            </div>
+
+            {!useEndOfPeriod && (
+              <div className="space-y-2">
+                <Label htmlFor="end_day">End Day</Label>
+                <Input
+                  id="end_day"
+                  name="end_day"
+                  type="number"
+                  min={1}
+                  max={newSetting.frequency_unit === 'week' ? 7 : 31}
+                  value={newSetting.end_day === END_OF_PERIOD ? '' : newSetting.end_day}
+                  onChange={handleInputChange}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
+
       {newSetting.frequency_unit === 'year' && (
         <>
-          <CustomSelect
-            label="Start Month"
-            value={(newSetting.start_month || 1).toString()}
-            onValueChange={handleSelectChange('start_month')}
-            options={monthOptions}
-          />
-          <Label htmlFor="start_day_of_month">Start Day of Month</Label>
-          <Input
-            id="start_day_of_month"
-            name="start_day_of_month"
-            type="number"
-            min={1}
-            max={31}
-            value={newSetting.start_day_of_month}
-            onChange={handleInputChange}
-          />
-          <CustomSelect
-            label="End Month"
-            value={(newSetting.end_month || 12).toString()}
-            onValueChange={handleSelectChange('end_month')}
-            options={monthOptions}
-          />
-          <Label htmlFor="end_day_of_month">End Day of Month</Label>
-          <Input
-            id="end_day_of_month"
-            name="end_day_of_month"
-            type="number"
-            min={1}
-            max={31}
-            value={newSetting.end_day_of_month}
-            onChange={handleInputChange}
-          />
+          <div className="space-y-2">
+            <Label>Start Month</Label>
+            <CustomSelect
+              value={(newSetting.start_month || 1).toString()}
+              onValueChange={handleSelectChange('start_month')}
+              options={monthOptions}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="start_day_of_month">Start Day of Month</Label>
+            <Input
+              id="start_day_of_month"
+              name="start_day_of_month"
+              type="number"
+              min={1}
+              max={31}
+              value={newSetting.start_day_of_month}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>End Month</Label>
+            <CustomSelect
+              value={(newSetting.end_month || 12).toString()}
+              onValueChange={handleSelectChange('end_month')}
+              options={monthOptions}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="use_end_of_month_for_year"
+                checked={useEndOfMonthForYear}
+                onChange={(event) => handleEndOfMonthForYearChange(event.target.checked)}
+              />
+              <Label htmlFor="use_end_of_month_for_year">End of month</Label>
+            </div>
+
+            {!useEndOfMonthForYear && (
+              <div className="space-y-2">
+                <Label htmlFor="end_day_of_month">End Day of Month</Label>
+                <Input
+                  id="end_day_of_month"
+                  name="end_day_of_month"
+                  type="number"
+                  min={1}
+                  max={31}
+                  value={newSetting.end_day_of_month === END_OF_PERIOD ? '' : newSetting.end_day_of_month}
+                  onChange={handleInputChange}
+                />
+              </div>
+            )}
+          </div>
         </>
       )}
-      <Button onClick={onAdd}>Add Time Period Setting</Button>
-      <Button onClick={onCancel} variant="outline">Cancel</Button>
+
+      <div className="space-x-2">
+        <Button onClick={onAdd}>Add Time Period Setting</Button>
+        <Button onClick={onCancel} variant="outline">Cancel</Button>
+      </div>
     </div>
   );
 };
@@ -253,10 +327,28 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
     frequency_unit: setting.frequency_unit as FrequencyUnit || defaultFrequencyUnit
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [useEndOfPeriod, setUseEndOfPeriod] = useState<boolean>(setting.end_day === END_OF_PERIOD);
+  const [useEndOfMonthForYear, setUseEndOfMonthForYear] = useState<boolean>(setting.end_day_of_month === END_OF_PERIOD);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditedSetting({ ...editedSetting, [name]: parseInt(value, 10) });
+  };
+
+  const handleEndOfPeriodChange = (checked: boolean) => {
+    setUseEndOfPeriod(checked);
+    setEditedSetting({ 
+      ...editedSetting, 
+      end_day: checked ? END_OF_PERIOD : 31 
+    });
+  };
+
+  const handleEndOfMonthForYearChange = (checked: boolean) => {
+    setUseEndOfMonthForYear(checked);
+    setEditedSetting({ 
+      ...editedSetting, 
+      end_day_of_month: checked ? END_OF_PERIOD : 31 
+    });
   };
 
   const handleSelectChange = (name: string) => (value: string) => {
@@ -272,87 +364,148 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
     setIsEditing(false);
   };
 
+  const formatEndDay = (day: number | undefined, frequencyUnit: string): string => {
+    if (day === END_OF_PERIOD) {
+      return `End of ${frequencyUnit}`;
+    }
+    return day?.toString() || 'Not set';
+  };
+
   return (
     <div className="border p-4 rounded-md">
       {isEditing ? (
         <>
-          <Label htmlFor="frequency">Frequency</Label>
-          <Input
-            id="frequency"
-            name="frequency"
-            type="number"
-            min={1}
-            value={editedSetting.frequency}
-            onChange={handleInputChange}
-          />
-          <CustomSelect
-            label="Frequency Unit"
-            value={editedSetting.frequency_unit}
-            onValueChange={handleSelectChange('frequency_unit')}
-            options={frequencyUnitOptions}
-          />
-          {(editedSetting.frequency_unit === 'week' || editedSetting.frequency_unit === 'month') && (
-            <>
-              <Label htmlFor="start_day">Start Day</Label>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="frequency">Frequency</Label>
               <Input
-                id="start_day"
-                name="start_day"
+                id="frequency"
+                name="frequency"
                 type="number"
                 min={1}
-                max={editedSetting.frequency_unit === 'week' ? 7 : 31}
-                value={editedSetting.start_day}
+                value={editedSetting.frequency}
                 onChange={handleInputChange}
               />
-              <Label htmlFor="end_day">End Day</Label>
-              <Input
-                id="end_day"
-                name="end_day"
-                type="number"
-                min={1}
-                max={editedSetting.frequency_unit === 'week' ? 7 : 31}
-                value={editedSetting.end_day}
-                onChange={handleInputChange}
-              />
-            </>
-          )}
-          {editedSetting.frequency_unit === 'year' && (
-            <>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Frequency Unit</Label>
               <CustomSelect
-                label="Start Month"
-                value={(editedSetting.start_month || 1).toString()}
-                onValueChange={handleSelectChange('start_month')}
-                options={monthOptions}
+                value={editedSetting.frequency_unit}
+                onValueChange={handleSelectChange('frequency_unit')}
+                options={frequencyUnitOptions}
               />
-              <Label htmlFor="start_day_of_month">Start Day of Month</Label>
-              <Input
-                id="start_day_of_month"
-                name="start_day_of_month"
-                type="number"
-                min={1}
-                max={31}
-                value={editedSetting.start_day_of_month}
-                onChange={handleInputChange}
-              />
-              <CustomSelect
-                label="End Month"
-                value={(editedSetting.end_month || 12).toString()}
-                onValueChange={handleSelectChange('end_month')}
-                options={monthOptions}
-              />
-              <Label htmlFor="end_day_of_month">End Day of Month</Label>
-              <Input
-                id="end_day_of_month"
-                name="end_day_of_month"
-                type="number"
-                min={1}
-                max={31}
-                value={editedSetting.end_day_of_month}
-                onChange={handleInputChange}
-              />
-            </>
-          )}
-          <Button onClick={handleSave}>Save</Button>
-          <Button onClick={() => setIsEditing(false)} variant="outline">Cancel</Button>
+            </div>
+
+            {(editedSetting.frequency_unit === 'week' || editedSetting.frequency_unit === 'month') && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="start_day">Start Day</Label>
+                  <Input
+                    id="start_day"
+                    name="start_day"
+                    type="number"
+                    min={1}
+                    max={editedSetting.frequency_unit === 'week' ? 7 : 31}
+                    value={editedSetting.start_day}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="use_end_of_period_edit"
+                      checked={useEndOfPeriod}
+                      onChange={(event) => handleEndOfPeriodChange(event.target.checked)}
+                    />
+                    <Label htmlFor="use_end_of_period_edit">End of {editedSetting.frequency_unit}</Label>
+                  </div>
+
+                  {!useEndOfPeriod && (
+                    <div className="space-y-2">
+                      <Label htmlFor="end_day">End Day</Label>
+                      <Input
+                        id="end_day"
+                        name="end_day"
+                        type="number"
+                        min={1}
+                        max={editedSetting.frequency_unit === 'week' ? 7 : 31}
+                        value={editedSetting.end_day === END_OF_PERIOD ? '' : editedSetting.end_day}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {editedSetting.frequency_unit === 'year' && (
+              <>
+                <div className="space-y-2">
+                  <Label>Start Month</Label>
+                  <CustomSelect
+                    value={(editedSetting.start_month || 1).toString()}
+                    onValueChange={handleSelectChange('start_month')}
+                    options={monthOptions}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="start_day_of_month">Start Day of Month</Label>
+                  <Input
+                    id="start_day_of_month"
+                    name="start_day_of_month"
+                    type="number"
+                    min={1}
+                    max={31}
+                    value={editedSetting.start_day_of_month}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>End Month</Label>
+                  <CustomSelect
+                    value={(editedSetting.end_month || 12).toString()}
+                    onValueChange={handleSelectChange('end_month')}
+                    options={monthOptions}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="use_end_of_month_for_year_edit"
+                      checked={useEndOfMonthForYear}
+                      onChange={(event) => handleEndOfMonthForYearChange(event.target.checked)}
+                    />
+                    <Label htmlFor="use_end_of_month_for_year_edit">End of month</Label>
+                  </div>
+
+                  {!useEndOfMonthForYear && (
+                    <div className="space-y-2">
+                      <Label htmlFor="end_day_of_month">End Day of Month</Label>
+                      <Input
+                        id="end_day_of_month"
+                        name="end_day_of_month"
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={editedSetting.end_day_of_month === END_OF_PERIOD ? '' : editedSetting.end_day_of_month}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div className="space-x-2">
+              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={() => setIsEditing(false)} variant="outline">Cancel</Button>
+            </div>
+          </div>
         </>
       ) : (
         <>
@@ -360,19 +513,25 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
           {(setting.frequency_unit === 'week' || setting.frequency_unit === 'month') && (
             <>
               <p>Start Day: {setting.start_day}</p>
-              <p>End Day: {setting.end_day || 'End of period'}</p>
+              <p>End Day: {formatEndDay(setting.end_day, setting.frequency_unit)}</p>
             </>
           )}
           {setting.frequency_unit === 'year' && (
             <>
               <p>Start: {getMonthName(setting.start_month || 1)} {setting.start_day_of_month}</p>
-              <p>End: {getMonthName(setting.end_month || 12)} {setting.end_day_of_month}</p>
+              <p>End: {getMonthName(setting.end_month || 12)} {
+                setting.end_day_of_month === END_OF_PERIOD ? 
+                'End of month' : 
+                setting.end_day_of_month
+              }</p>
             </>
           )}
           <p>Effective From: {parseISO(setting.effective_from).toLocaleString()}</p>
           <p>Effective To: {setting.effective_to ? parseISO(setting.effective_to).toLocaleString() : 'No end'}</p>
-          <Button onClick={() => setIsEditing(true)}>Edit</Button>
-          <Button onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">Delete</Button>
+          <div className="space-x-2 mt-2">
+            <Button onClick={() => setIsEditing(true)}>Edit</Button>
+            <Button onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">Delete</Button>
+          </div>
         </>
       )}
     </div>

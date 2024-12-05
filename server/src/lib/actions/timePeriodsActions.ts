@@ -6,10 +6,15 @@ import { TimePeriodSettings } from '../models/timePeriodSettings';
 import { v4 as uuidv4 } from 'uuid';
 import { ISO8601String } from '../../types/types.d';
 import { ITimePeriod, ITimePeriodSettings } from '../../interfaces/timeEntry.interfaces';
-import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions } from 'date-fns';
+import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '../utils/validation';
 import { timePeriodSchema, timePeriodSettingsSchema } from '../schemas/timeSheet.schemas';
+import { formatUtcDateNoTime } from '../utils/dateTimeUtils';
+import { parse } from 'path';
+
+// Special value to indicate end of period
+const END_OF_PERIOD = 0;
 
 export async function getLatestTimePeriod(): Promise<ITimePeriod | null> {
   try {
@@ -89,17 +94,17 @@ export async function createTimePeriod(
 export async function fetchAllTimePeriods(): Promise<ITimePeriod[]> {
   try {
     console.log('Fetching all time periods...');
-    
+
     const timePeriods = await TimePeriod.getAll();
-    
+
     const periods = timePeriods.map((period: ITimePeriod): ITimePeriod => {
       const startDate = new Date(period.start_date);
       const endDate = new Date(period.end_date);
 
       return {
         ...period,
-        start_date: `${startDate.getUTCFullYear()}-${String(startDate.getUTCMonth() + 1).padStart(2, '0')}-${String(startDate.getUTCDate()).padStart(2, '0')}T00:00:00.000Z`,
-        end_date: `${endDate.getUTCFullYear()}-${String(endDate.getUTCMonth() + 1).padStart(2, '0')}-${String(endDate.getUTCDate()).padStart(2, '0')}T00:00:00.000Z`
+        start_date: formatUtcDateNoTime(startDate),
+        end_date: formatUtcDateNoTime(endDate)
       };
     });
 
@@ -122,7 +127,7 @@ function getCurrentDateISO(): ISO8601String {
   const minutes = String(now.getUTCMinutes()).padStart(2, '0');
   const seconds = String(now.getUTCSeconds()).padStart(2, '0');
   const milliseconds = String(now.getUTCMilliseconds()).padStart(3, '0');
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}Z`;
 }
 
@@ -134,6 +139,79 @@ export async function getCurrentTimePeriod(): Promise<ITimePeriod | null> {
   } catch (error) {
     console.error('Error fetching current time period:', error)
     throw new Error('Failed to fetch current time period')
+  }
+}
+
+// Helper function to get the end of a period based on frequency unit
+function getEndOfPeriod(startDate: ISO8601String, setting: ITimePeriodSettings): Date {
+  const frequency = setting.frequency || 1;
+  const startDateObj = parseISO(startDate);
+
+  // Special handling for frequency = 0 (end of period)
+  if (frequency === END_OF_PERIOD) {
+    switch (setting.frequency_unit) {
+      case 'week': {
+        // End of week (Sunday) + 1 day
+        const daysUntilEndOfWeek = 7 - startDateObj.getUTCDay();
+        return addDays(startDateObj, daysUntilEndOfWeek + 1);
+      }
+
+      case 'month': {
+        // End of month + 1 day
+        const nextMonth = new Date(startDateObj);
+        nextMonth.setUTCMonth(startDateObj.getUTCMonth() + 1, 1);
+        return nextMonth;
+      }
+      case 'year': {
+        const nextYear = new Date(startDateObj);
+        nextYear.setUTCFullYear(startDateObj.getUTCFullYear() + 1, 0, 1);
+        return nextYear;
+      }
+
+      default: // day
+        return addDays(startDateObj, 1);
+    }
+  }
+
+  // Regular frequency handling
+  switch (setting.frequency_unit) {
+    case 'week':
+      return addDays(startDateObj, 7 * frequency);
+
+    case 'month': {
+      let year = startDateObj.getUTCFullYear();
+      let month = startDateObj.getUTCMonth() + frequency;
+
+      if (setting.end_day && setting.end_day !== END_OF_PERIOD) {
+        const endDateObj = new Date(startDate);
+        endDateObj.setUTCFullYear(year);
+        endDateObj.setUTCMonth(month-1);
+        endDateObj.setUTCDate(setting.end_day!);
+        return endDateObj;
+      }
+
+      if (month >= 12) {
+        const additionalYears = Math.floor(month / 12);
+        year += additionalYears;
+        month = month % 12;
+      }
+
+      const endDateObj = new Date(startDate);
+      endDateObj.setUTCFullYear(year);
+      endDateObj.setUTCMonth(month);
+      endDateObj.setUTCDate(1);
+
+      return endDateObj;
+    }
+
+    case 'year': {
+      const nextPeriodStart = new Date(startDate);
+      nextPeriodStart.setUTCFullYear(startDateObj.getUTCFullYear() + frequency);
+      return nextPeriodStart;
+    }
+
+    default: // day
+      return addDays(startDateObj, frequency);
   }
 }
 
@@ -164,153 +242,39 @@ export async function generateTimePeriods(
       }
     }
 
-    let finished = false;
     while (currentDateStr < endDateStr) {
       if (setting.effective_to && currentDateStr > setting.effective_to) {
         break;
       }
 
-      let periodStartStr = currentDateStr;
-      let periodEndStr: ISO8601String;
+      const currentDateObj = parseISO(currentDateStr);
+      const periodStartDate = formatUtcDateNoTime(currentDateObj);
+      const periodEndDateObj = getEndOfPeriod(periodStartDate, setting);
+      const periodEndStr = formatUtcDateNoTime(periodEndDateObj);
 
-      const frequency = setting.frequency || 1; // default to 1 if undefined
-
-      switch (setting.frequency_unit) {
-        case 'day':
-          periodEndStr = addDaysToISOString(periodStartStr, frequency - 1);
-          break;
-
-        case 'week':
-          periodEndStr = addDaysToISOString(periodStartStr, (frequency * 7) - 1);
-          if (setting.end_day !== undefined) {
-            periodEndStr = alignToWeekday(periodEndStr, setting.end_day);
-            if (periodEndStr < periodStartStr) {
-              periodEndStr = addDaysToISOString(periodEndStr, 7);
-            }
-          }
-          break;
-
-        case 'month':
-          periodEndStr = addMonthsToISOString(periodStartStr, frequency);
-          // periodEndStr = addDaysToISOString(periodEndStr, -1);
-          if (setting.end_day !== undefined && setting.end_day > 0) {
-            periodEndStr = alignToMonthDay(periodStartStr, setting.end_day);            
-            if (periodEndStr < periodStartStr) {
-              periodEndStr = addMonthsToISOString(periodEndStr, 1);
-            }
-
-            if (periodStartStr > endDateStr) {
-              finished = true;
-              break;
-            }
-            if (periodEndStr > endDateStr) {
-              finished = true;
-              break;
-            }
-            if (setting.effective_to && periodStartStr > setting.effective_to) {
-              finished = true;
-              break;
-            }
-            if (setting.effective_to && periodEndStr > setting.effective_to) {
-              finished = true;
-              break;
-            }
-
-            const newPeriod: ITimePeriod = {
-              period_id: uuidv4(),
-              start_date: alignToNearestMidnight(periodStartStr),
-              end_date: alignToNearestMidnight(periodEndStr),
-              tenant: setting.tenant_id,
-            };
-            periods.push(newPeriod);
-      
-            // Move currentDate forward
-            currentDateStr = getFirstDayOfNextMonth(periodStartStr, frequency);
-            continue;
-          } else {
-            periodEndStr = getFirstDayOfNextMonth(periodStartStr, frequency);
-            periodEndStr = format(toZonedTime(periodEndStr, 'UTC'), "yyyy-MM-01'T'00:00:00'Z'") as ISO8601String;
-            if (periodStartStr > endDateStr) {
-              break;
-            }
-            if (periodEndStr > endDateStr) {
-              break;
-            }
-            if (setting.effective_to && periodStartStr > setting.effective_to) {
-              break;
-            }
-            if (setting.effective_to && periodEndStr > setting.effective_to) {
-              break;
-            }
-      
-            const newPeriod: ITimePeriod = {
-              period_id: uuidv4(),
-              start_date: alignToNearestMidnight(periodStartStr),
-              end_date: alignToNearestMidnight(periodEndStr),
-              tenant: setting.tenant_id,
-            };
-            periods.push(newPeriod);            
-            periodEndStr = addMonthsToISOString(periodStartStr, 1);
-            // finished = true;
-            break;
-          }
-          break;
-
-        case 'year': {
-          if (
-            setting.start_month === undefined ||
-            setting.start_day_of_month === undefined ||
-            setting.end_month === undefined ||
-            setting.end_day_of_month === undefined
-          ) {
-            throw new Error('start_month, start_day_of_month, end_month, end_day_of_month are required for yearly frequency.');
-          }
-
-          const startYear = parseInt(periodStartStr.substring(0, 4));
-          periodStartStr = `${startYear}-${String(setting.start_month).padStart(2, '0')}-${String(setting.start_day_of_month).padStart(2, '0')}T00:00:00.000Z`;
-
-          let endYear = startYear + frequency;
-          periodEndStr = `${endYear}-${String(setting.end_month).padStart(2, '0')}-${String(setting.end_day_of_month).padStart(2, '0')}T23:59:59.999Z`;
-          
-          if (periodEndStr < periodStartStr) {
-            endYear++;
-            periodEndStr = `${endYear}-${String(setting.end_month).padStart(2, '0')}-${String(setting.end_day_of_month).padStart(2, '0')}T23:59:59.999Z`;
-          }
-          
-          periodEndStr = adjustEndDateForMonth(periodEndStr);
-          break;
-        }
-
-        default:
-          throw new Error(`Unsupported frequency_unit: ${setting.frequency_unit}`);
-      }
-
-      if (finished) {
+      if (periodEndStr >= endDateStr) {
         break;
       }
 
-      if (periodStartStr > endDateStr) {
-        break;
-      }
-      if (periodEndStr > endDateStr) {
-        break;
-      }
-      if (setting.effective_to && periodStartStr > setting.effective_to) {
-        break;
-      }
-      if (setting.effective_to && periodEndStr > setting.effective_to) {
+      if (setting.effective_to && periodEndStr >= setting.effective_to) {
         break;
       }
 
       const newPeriod: ITimePeriod = {
         period_id: uuidv4(),
-        start_date: alignToNearestMidnight(periodStartStr),
-        end_date: alignToNearestMidnight(periodEndStr),
+        start_date: periodStartDate,
+        end_date: periodEndStr,
         tenant: setting.tenant_id,
       };
       periods.push(newPeriod);
 
-      // Move currentDate forward
+      if (setting.end_day !== END_OF_PERIOD) {
+        // if the end day is not END_OF_PERIOD, we need to adjust the current date to the end of the period
+        // and continue to the next period, the other portion of the current period will be handled in the next iteration of the parent loop
+        currentDateStr = formatUtcDateNoTime(getEndOfPeriod(periodEndStr, {...setting, end_day: END_OF_PERIOD})); 
+        continue;
+      }
+
       currentDateStr = periodEndStr;
     }
   }
@@ -368,7 +332,7 @@ function adjustEndDateForMonth(dateStr: ISO8601String): ISO8601String {
 function addDaysToISOString(dateStr: ISO8601String, days: number): ISO8601String {
   const [datePart, timePart] = dateStr.split('T');
   const [year, month, day] = datePart.split('-').map(Number);
-  
+
   let newYear = year;
   let newMonth = month;
   let newDay = day + days;
@@ -390,7 +354,7 @@ function addDaysToISOString(dateStr: ISO8601String, days: number): ISO8601String
     }
     newDay += getDaysInMonth(`${newYear}-${String(newMonth).padStart(2, '0')}-01T00:00:00Z`);
   }
-  
+
   return `${newYear}-${String(newMonth).padStart(2, '0')}-${String(newDay).padStart(2, '0')}T${timePart}`;
 }
 
@@ -420,12 +384,12 @@ function alignToNearestMidnight(dateStr: ISO8601String): ISO8601String {
   const parsedDate = parseISO(dateStr);
   const previousMidnight = startOfDay(parsedDate);
   const nextMidnight = addDays(previousMidnight, 1);
-  
+
   const hoursToPreviousMidnight = differenceInHours(parsedDate, previousMidnight);
   const hoursToNextMidnight = differenceInHours(nextMidnight, parsedDate);
-  
+
   const nearestMidnight = hoursToPreviousMidnight <= hoursToNextMidnight ? previousMidnight : nextMidnight;
-  
+
   return format(nearestMidnight, "yyyy-MM-dd'T'HH:mm:ss'Z'") as ISO8601String;
 }
 
@@ -478,7 +442,7 @@ export async function updateTimePeriod(
 
     const updatedPeriod = await TimePeriod.update(periodId, updates);
     const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
-    
+
     revalidatePath('/msp/time-entry');
     return validatedPeriod;
   } catch (error) {

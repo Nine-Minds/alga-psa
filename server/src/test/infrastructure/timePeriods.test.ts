@@ -44,8 +44,8 @@ beforeAll(async () => {
     connection: process.env.DATABASE_URL || {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
-      user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || 'postgres',
+      user: process.env.DB_USER_ADMIN || 'app_user',
+      password: process.env.DB_PASSWORD_ADMIN || 'postgres',
       database: process.env.DB_NAME_SERVER || 'test_database'
     },
     migrations: {
@@ -130,8 +130,8 @@ describe('Time Periods Infrastructure', () => {
 
     // Assert
     expect(result).toMatchObject({
-      start_date: parseISO('2023-01-01T00:00:00.000Z'),
-      end_date: parseISO('2023-01-07T00:00:00.000Z'),
+      start_date: '2023-01-01T00:00:00Z',
+      end_date: '2023-01-07T00:00:00Z',
       tenant: tenantId,
     });
 
@@ -170,20 +170,20 @@ describe('Time Periods Infrastructure', () => {
     });
 
     // Assert
-    expect(result).toHaveLength(5);
+    expect(result).toHaveLength(4);
     expect(result[0]).toMatchObject({
-      start_date: parseISO('2023-01-01T00:00:00.000Z'),
-      end_date: parseISO('2023-01-07T00:00:00.000Z'),
+      start_date: '2023-01-01T00:00:00Z',
+      end_date:'2023-01-08T00:00:00Z',
       tenant: tenantId,
     });
-    expect(result[3]).toMatchObject({
-      start_date: parseISO('2023-01-19T00:00:00.000Z'),
-      end_date: parseISO('2023-01-25T00:00:00.000Z'),
+    expect(result[1]).toMatchObject({
+      start_date: '2023-01-08T00:00:00Z',
+      end_date: '2023-01-15T00:00:00Z',
       tenant: tenantId,
     });
-    expect(result[4]).toMatchObject({
-      start_date: parseISO('2023-01-25T00:00:00.000Z'),
-      end_date: parseISO('2023-01-31T00:00:00.000Z'),
+    expect(result[2]).toMatchObject({
+      start_date: '2023-01-15T00:00:00Z',
+      end_date: '2023-01-22T00:00:00Z',
       tenant: tenantId,
     });    
   });
@@ -230,18 +230,18 @@ describe('Time Periods Infrastructure', () => {
     // Assert
     // expect(result).toHaveLength(3);
     expect(result[0]).toMatchObject({
-      start_date: parseISO('2023-01-01T00:00:00.000Z'),
-      end_date: parseISO('2023-01-14T00:00:00.000Z'),
+      start_date: '2023-01-01T00:00:00Z',
+      end_date: '2023-01-15T00:00:00Z',
       tenant: tenantId,
     });
     expect(result[1]).toMatchObject({
-      start_date: parseISO('2023-01-14T00:00:00.000Z'),
-      end_date: parseISO('2023-01-27T00:00:00.000Z'),
+      start_date: '2023-01-15T00:00:00Z',
+      end_date: '2023-01-29T00:00:00Z',
       tenant: tenantId,
     });  
     expect(result[2]).toMatchObject({
-      start_date: parseISO('2023-02-01T00:00:00.000Z'),
-      end_date: parseISO('2023-03-01T00:00:00.000Z'),
+      start_date: '2023-02-01T00:00:00Z',
+      end_date: '2023-03-01T00:00:00Z',
       tenant: tenantId,
     });
   });
@@ -332,7 +332,7 @@ describe('Time Periods Infrastructure', () => {
       },
       {
         time_period_settings_id: uuidv4(),
-        start_day: 16,
+        start_day: 15,
         end_day: 0, // Treat 0 as end of month
         frequency: 1,
         frequency_unit: 'month',

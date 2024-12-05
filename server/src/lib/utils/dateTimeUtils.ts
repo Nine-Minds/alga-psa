@@ -24,6 +24,14 @@ export function formatDateOnly(date: Date, formatString: string = 'yyyy-MM-dd'):
   return format(date, formatString);
 }
 
+// Function to format UTC date as string with no time (00:00:00Z)
+export function formatUtcDateNoTime(date: Date): string {
+  return date.getUTCFullYear() + '-' + 
+         String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + 
+         String(date.getUTCDate()).padStart(2, '0') + 
+         'T00:00:00Z';
+}
+
 // Function to get user's timezone
 export function getUserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
