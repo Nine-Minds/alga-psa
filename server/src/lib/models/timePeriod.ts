@@ -57,11 +57,15 @@ export class TimePeriod {
     const {knex: db} = await createTenantKnex();
     const query = db<ITimePeriod>('time_periods')
       .where((qb) => {
-        qb.whereBetween('start_date', [startDate, endDate])
-          .orWhereBetween('end_date', [startDate, endDate])
-          .orWhere((inner) => {
-            inner.where('start_date', '<', startDate).andWhere('end_date', '>', endDate);
-          });
+        qb.where((inner) => {
+          inner.where('start_date', '>=', startDate).andWhere('start_date', '<', endDate);
+        })
+        .orWhere((inner) => {
+          inner.where('end_date', '>', startDate).andWhere('end_date', '<=', endDate);
+        })
+        .orWhere((inner) => {
+          inner.where('start_date', '<', startDate).andWhere('end_date', '>', endDate);
+        });
       });
 
     if (excludePeriodId) {
