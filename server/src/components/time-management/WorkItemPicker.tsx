@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '../ui/Input';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
+import { IWorkItem, IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
 import { searchWorkItems } from '@/lib/actions/workItemActions';
 
 interface WorkItemPickerProps {
@@ -11,7 +11,7 @@ interface WorkItemPickerProps {
   initialWorkItemType?: 'ticket' | 'project_task' | 'non_billable_category';
 }
 
-interface WorkItemWithStatus extends IWorkItem {
+interface WorkItemWithStatus extends Omit<IExtendedWorkItem, "tenant"> {
   status: string;
 }
 
@@ -39,17 +39,21 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
       const existingIds = new Set(existingWorkItems.map((item): string => item.work_item_id));
       const filteredItems = result.items.filter(item => !existingIds.has(item.work_item_id));
       
-      const itemsWithStatus = filteredItems.map((item: IWorkItem): WorkItemWithStatus => ({ 
-        ...item, 
-        status: 'Active' 
+      const itemsWithStatus = filteredItems.map((item): WorkItemWithStatus => ({ 
+        work_item_id: item.work_item_id,
+        type: item.type,
+        name: item.name,
+        description: item.description,
+        is_billable: item.is_billable,
+        ticket_number: item.ticket_number,
+        title: item.title,
+        project_name: item.project_name,
+        phase_name: item.phase_name,
+        task_name: item.task_name,
+        status: 'Active'
       }));
 
-      if (page === 1) {
-        setWorkItems(itemsWithStatus);
-      } else {
-        setWorkItems(prev => [...prev, ...itemsWithStatus]);
-      }
-      
+      setWorkItems(itemsWithStatus);
       setTotal(result.total);
       setHasMore(result.total > page * pageSize);
     } catch (error) {
@@ -76,12 +80,57 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
     debouncedSearch(searchTerm);
   }, [searchTerm, debouncedSearch]);
 
-  const handleLoadMore = () => {
-    if (!isSearching && hasMore) {
-      const nextPage = currentPage + 1;
-      setCurrentPage(nextPage);
-      loadWorkItems(searchTerm, nextPage);
+  const handlePageChange = (newPage: number) => {
+    if (!isSearching && newPage >= 1 && newPage <= Math.ceil(total / pageSize)) {
+      setCurrentPage(newPage);
+      loadWorkItems(searchTerm, newPage);
     }
+  };
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  const renderWorkItemContent = (item: WorkItemWithStatus) => {
+    if (item.type === 'ticket') {
+      return (
+        <>
+          <div className="font-medium text-[rgb(var(--color-text-900))]">
+            {item.ticket_number} - {item.title}
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))]">
+              Ticket
+            </span>
+            {item.is_billable && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))]">
+                Billable
+              </span>
+            )}
+          </div>
+        </>
+      );
+    } else if (item.type === 'project_task') {
+      return (
+        <>
+          <div className="font-medium text-[rgb(var(--color-text-900))]">
+            {item.project_name}
+          </div>
+          <div className="text-sm text-[rgb(var(--color-text-600))]">
+            {item.phase_name} → {item.task_name}
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))]">
+              Project Task
+            </span>
+            {item.is_billable && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))]">
+                Billable
+              </span>
+            )}
+          </div>
+        </>
+      );
+    }
+    return null;
   };
 
   return (
@@ -129,34 +178,29 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
                       onClick={() => onSelect(item)}
                     >
                       <div className="px-4 py-3">
-                        <div className="font-medium text-[rgb(var(--color-text-900))]">{item.name}</div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-900))]">
-                            {item.type === 'ticket' ? 'Ticket' : 'Project Task'}
-                          </span>
-                          {item.is_billable && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[rgb(var(--color-accent-100))] text-[rgb(var(--color-accent-900))]">
-                              Billable
-                            </span>
-                          )}
-                        </div>
-                        {item.description && (
-                          <div className="text-sm text-[rgb(var(--color-text-600))] mt-1 line-clamp-1">
-                            {item.description}
-                          </div>
-                        )}
+                        {renderWorkItemContent(item)}
                       </div>
                     </li>
                   ))}
                 </ul>
-                {hasMore && (
-                  <div className="p-2 border-t border-[rgb(var(--color-border-200))]">
+                {totalPages > 1 && (
+                  <div className="p-2 border-t border-[rgb(var(--color-border-200))] flex items-center justify-between">
                     <button
-                      onClick={handleLoadMore}
-                      className="w-full px-4 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] rounded-md transition-colors duration-150"
-                      disabled={isSearching}
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      className="px-3 py-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={currentPage === 1 || isSearching}
                     >
-                      {isSearching ? 'Loading...' : `Load More (${workItems.length} of ${total})`}
+                      Previous
+                    </button>
+                    <span className="text-sm text-[rgb(var(--color-text-600))]">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      className="px-3 py-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!hasMore || isSearching}
+                    >
+                      Next
                     </button>
                   </div>
                 )}

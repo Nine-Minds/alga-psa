@@ -9,3 +9,14 @@ export interface IWorkItem extends TenantEntity {
   description: string;
   is_billable: boolean;
 }
+
+export interface IExtendedWorkItem extends IWorkItem {
+  // Ticket specific fields
+  ticket_number?: string;
+  title?: string;
+  
+  // Project task specific fields
+  project_name?: string;
+  phase_name?: string;
+  task_name?: string;
+}
