@@ -45,13 +45,10 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                 )}
               </div>
             ) : (
-              <Link
-                href={item.href || '#'}
-                className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
-              >
+              <a href={item.href || '#'} className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}>
                 <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
                 {sidebarOpen && <span className="truncate">{item.name}</span>}
-              </Link>
+              </a>
             )}
             {item.subItems && openSubmenu === item.name && sidebarOpen && (
               <ul className="ml-4 mt-2 space-y-1">
