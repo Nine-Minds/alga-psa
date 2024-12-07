@@ -118,9 +118,9 @@ export const DataTable = <T extends object>({
                   hover:bg-blue-50 transition-colors cursor-pointer
                 `}
               >
-                {row.getVisibleCells().map((cell):JSX.Element => (
+                {row.getVisibleCells().map((cell, cellIndex):JSX.Element => (
                   <td 
-                    key={cell.id} 
+                    key={`${row.index}-${cellIndex}`}
                     className="px-6 py-4 whitespace-nowrap text-[14px] text-[rgb(var(--color-text-700))]"
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}

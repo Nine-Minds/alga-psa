@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { IContact } from '@/interfaces/contact.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
 import { ITag } from '@/interfaces/tag.interfaces';
@@ -436,20 +436,22 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     },
   ];
 
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = contact.full_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' ||
-      (filterStatus === 'active' && !contact.is_inactive) ||
-      (filterStatus === 'inactive' && contact.is_inactive);
-    
-    const matchesTags = selectedTags.length === 0 || (
-      contactTagsRef.current[contact.contact_name_id]?.some(tag =>
-        selectedTags.includes(tag.tag_text)
-      )
-    );
+  const filteredContacts = useMemo(() => {
+    return contacts.filter(contact => {
+      const matchesSearch = contact.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' ||
+        (filterStatus === 'active' && !contact.is_inactive) ||
+        (filterStatus === 'inactive' && contact.is_inactive);
+      
+      const matchesTags = selectedTags.length === 0 || (
+        contactTagsRef.current[contact.contact_name_id]?.some(tag =>
+          selectedTags.includes(tag.tag_text)
+        )
+      );
 
-    return matchesSearch && matchesStatus && matchesTags;
-  });
+      return matchesSearch && matchesStatus && matchesTags;
+    });
+  }, [contacts, searchTerm, filterStatus, selectedTags]);
 
   return (
     <div className="p-6">
@@ -518,8 +520,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       <DataTable
         data={filteredContacts.map((contact): IContact & { id: string } => ({
           ...contact,
-          // Create a truly unique identifier using contact_name_id and timestamp
-          id: `${contact.contact_name_id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+          // Create a truly unique identifier using contact_name_id
+          id: contact.contact_name_id
         }))}
         columns={columns}
         pagination={true}
