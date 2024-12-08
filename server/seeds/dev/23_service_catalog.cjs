@@ -46,6 +46,26 @@ exports.seed = function (knex) {
                     default_rate: 5000.00,
                     unit_of_measure: 'Month',
                     category_id: knex('service_categories').where({ tenant: '11111111-1111-1111-1111-111111111111', category_name: 'Security Services' }).select('category_id').first()
+                },
+                {
+                    tenant: '11111111-1111-1111-1111-111111111111',
+                    service_name: 'Basic Support',
+                    description: 'Standard support package',
+                    service_type: 'Time',
+                    default_rate: 100.00,
+                    unit_of_measure: 'Hour',
+                    tax_region: 'US-NY',
+                    category_id: knex('service_categories').where({ tenant: '11111111-1111-1111-1111-111111111111', category_name: 'Support Services' }).select('category_id').first()
+                },
+                {
+                    tenant: '11111111-1111-1111-1111-111111111111',
+                    service_name: 'Premium Support',
+                    description: 'Premium support package with priority response',
+                    service_type: 'Time',
+                    default_rate: 150.00,
+                    unit_of_measure: 'Hour',
+                    tax_region: 'US-NY',
+                    category_id: knex('service_categories').where({ tenant: '11111111-1111-1111-1111-111111111111', category_name: 'Support Services' }).select('category_id').first()
                 }
             ]);
         });

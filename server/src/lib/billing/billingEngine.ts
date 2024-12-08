@@ -258,7 +258,6 @@ export class BillingEngine {
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
         'service_catalog.service_type': 'Fixed',
         'billing_plans.plan_type': 'Fixed' 
-        // 'service_catalog.category_id': companyBillingPlan.service_category // TODO - add this back in when we have categories
       })
       .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
 
@@ -272,7 +271,8 @@ export class BillingEngine {
         total: (service.custom_rate || service.default_rate) * service.quantity,
         type: 'fixed',
         tax_amount: 0,
-        tax_rate: 0
+        tax_rate: 0,
+        tax_region: service.tax_region || company.tax_region // Add this line to set the tax_region
       };
   
       if (!company.is_tax_exempt && service.is_taxable !== false) {
@@ -342,7 +342,7 @@ export class BillingEngine {
         tax_amount: 0,
         tax_rate: 0,
         tax_region: entry.tax_region || entry.company_tax_region,
-        entryId: entry.entry_id // Include the time entry ID
+        entryId: entry.entry_id
       };
     });
 
@@ -374,7 +374,7 @@ export class BillingEngine {
       type: 'usage',
       tax_amount: 0,
       tax_rate: 0,
-      usageId: record.usage_id // Include the usage record ID
+      usageId: record.usage_id
     }));
 
     return usageBasedCharges;
@@ -411,7 +411,6 @@ export class BillingEngine {
     const taxRegion = service.tax_region || company.tax_region;
     const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
 
-
     const overageRate = Math.ceil(bucketPlan.overage_rate);
     const total = Math.ceil(bucketUsage.overage_hours * overageRate);
     const taxAmount = Math.ceil((taxRate / 100) * total);
@@ -444,7 +443,6 @@ export class BillingEngine {
     // Use the later of plan start and period start
     const effectiveStart = [planStartDate, billingPeriod.startDate].reduce((a, b) => a > b ? a : b);
     console.log('Effective start:', effectiveStart);
-
 
     let cycleLength: number;
     switch (billingCycle) {

@@ -49,10 +49,10 @@ function isBucketCharge(charge: IBillingCharge): charge is IBucketCharge {
   return charge.type === 'bucket';
 }
 
-export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & { 
-  company_name: string; 
-  total_unbilled: number; 
-  period_start_date: ISO8601String; 
+export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & {
+  company_name: string;
+  total_unbilled: number;
+  period_start_date: ISO8601String;
   period_end_date: ISO8601String;
   can_generate: boolean;
 })[]> {
@@ -86,10 +86,10 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
     // For each period, calculate the total unbilled amount
     console.log('Calculating unbilled amounts for each period');
-    const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & { 
-      company_name: string; 
-      total_unbilled: number; 
-      period_start_date: ISO8601String; 
+    const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & {
+      company_name: string;
+      total_unbilled: number;
+      period_start_date: ISO8601String;
       period_end_date: ISO8601String;
       can_generate: boolean;
     }> => {
@@ -367,7 +367,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         type: 'credit_application',
         description: `Applied credit to invoice ${invoice.invoice_number}`,
         balance_after: currentBalance - creditToApply
-      });
+      }, trx);
 
       await CompanyBillingPlan.updateCompanyCredit(companyId, -creditToApply);
     }

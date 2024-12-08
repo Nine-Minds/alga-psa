@@ -4,6 +4,7 @@ export interface ICompany extends TenantEntity {
   company_id: string;
   company_name: string;
   phone_no: string;
+  credit_balance: number;
   email: string;
   url: string;
   address: string;
