@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { BillingCycleSchema } from './billing.schema';
 
 export const CompanyPropertiesSchema = z.object({
   industry: z.string().optional(),
@@ -40,7 +39,7 @@ export const CompanySchema = z.object({
   notes: z.string().optional(),
   properties: CompanyPropertiesSchema,
   payment_terms: z.string().optional(),
-  billing_cycle: BillingCycleSchema,
+  billing_cycle: z.string(),
   credit_limit: z.number().optional(),
   preferred_payment_method: z.string().optional(),
   auto_invoice: z.boolean().default(false),

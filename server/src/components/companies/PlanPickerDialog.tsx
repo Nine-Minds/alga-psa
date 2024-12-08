@@ -72,7 +72,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                 options={[
                                     { value: 'none', label: 'None' },
                                     ...serviceCategories.map((category): { value: string; label: string } => ({
-                                        value: category.category_id,
+                                        value: category.category_id || 'None',
                                         label: category.category_name
                                     }))
                                 ]}

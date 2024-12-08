@@ -100,7 +100,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
   }
 
   const categoryOptions = categories.map((cat): { value: string; label: string } => ({ 
-    value: cat.category_id, 
+    value: cat.category_id || 'None', 
     label: cat.category_name 
   }))
 
@@ -163,7 +163,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
               <CustomSelect
                 options={categoryOptions}
                 onValueChange={(value) => setServiceData({ ...serviceData, category_id: value })}
-                value={serviceData.category_id}
+                value={serviceData.category_id || 'None'}
                 placeholder="Select category..."
                 className="w-full"
               />
@@ -181,7 +181,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
               <label htmlFor="taxRegion" className="block text-sm font-medium text-gray-700">Tax Region</label>
               <Input
                 id="taxRegion"
-                value={serviceData.tax_region}
+                value={serviceData.tax_region || ''}
                 onChange={(e) => setServiceData({ ...serviceData, tax_region: e.target.value })}
                 placeholder="Tax Region"
               />

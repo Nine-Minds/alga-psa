@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import CustomSelect from '../ui/CustomSelect';
-import { SelectOption } from '@/interfaces/billing.interfaces';
+import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 
 interface LineItemProps {
   item: {

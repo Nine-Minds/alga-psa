@@ -161,6 +161,7 @@ export class AssetModel {
                 invoice_delivery_method: company.invoice_delivery_method,
                 tax_region: company.tax_region,
                 tax_exemption_certificate: company.tax_exemption_certificate,
+                credit_balance: 0,
                 tenant
             };
 

@@ -27,7 +27,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSubmit }) => {
       industry: '',
       company_size: '',
       annual_revenue: ''
-    }
+    },
+    credit_balance: 0
   });
 
   const handleSubmit = (e: React.FormEvent) => {

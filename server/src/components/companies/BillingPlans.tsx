@@ -57,7 +57,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                     options={[
                         { value: 'unassigned', label: 'Select category' },
                         ...serviceCategories.map((category): { value: string; label: string } => ({
-                            value: category.category_id,
+                            value: category.category_id || 'None',
                             label: category.category_name
                         }))
                     ]}
