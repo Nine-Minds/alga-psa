@@ -100,7 +100,7 @@ export interface ICompanyBillingCycle extends TenantEntity {
 }
 
 export interface IServiceCategory extends TenantEntity {
-  category_id: string;
+  category_id: string | null;
   category_name: string;
   description?: string;
 }
@@ -112,10 +112,10 @@ export interface IService extends TenantEntity {
   service_name: string;
   service_type: ServiceType;
   default_rate: number;
-  category_id: string;
+  category_id: string | null;
   unit_of_measure: string;    
   is_taxable?: boolean;
-  tax_region?: string;    
+  tax_region?: string | null;    
 }
 
 export interface IBillingPlan extends TenantEntity {

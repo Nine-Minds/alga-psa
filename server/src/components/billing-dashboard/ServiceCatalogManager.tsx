@@ -189,7 +189,7 @@ const ServiceCatalogManager: React.FC = () => {
             />
             <CustomSelect
               options={categories.map((cat): { value: string; label: string } => ({
-                value: cat.category_id,
+                value: cat.category_id || 'None',
                 label: cat.category_name
               }))}
               onValueChange={(value) => setEditingService({ ...editingService!, category_id: value })}

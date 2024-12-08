@@ -1,146 +1,102 @@
 'use client'
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
-import { getAvailableBillingPeriods, generateInvoice } from '@/lib/actions/invoiceActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { canCreateNextBillingCycle, createNextBillingCycle } from '@/lib/actions/billingCycleActions';
-import { ISO8601String } from '@/types/types.d';
 
-type BillingPeriodWithExtras = ICompanyBillingCycle & {
-  company_name: string;
-  can_generate: boolean;
-};
+import React, { useState, useEffect } from 'react';
+import { Card } from '../ui/Card';
+import CustomSelect from '../ui/CustomSelect';
+import { ICompanyBillingCycle, IService } from '../../interfaces/billing.interfaces';
+import { ICompany } from '../../interfaces';
+import { getAvailableBillingPeriods } from '../../lib/actions/invoiceActions';
+import { getAllCompanies } from '../../lib/actions/companyActions';
+import { getServices } from '../../lib/actions/serviceActions';
+import AutomaticInvoices from './AutomaticInvoices';
+import PrepaymentInvoices from './PrepaymentInvoices';
+import ManualInvoices from './ManualInvoices';
+
+type InvoiceType = 'automatic' | 'manual' | 'prepayment';
+
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
+interface Service {
+  service_id: string;
+  service_name: string;
+  rate: number;
+}
+
+const invoiceTypeOptions: SelectOption[] = [
+  { value: 'automatic', label: 'Automatic Invoices' },
+  { value: 'manual', label: 'Manual Invoices' },
+  { value: 'prepayment', label: 'Prepayment & Credit Memos' }
+];
 
 const GenerateInvoices: React.FC = () => {
-  const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [periods, setPeriods] = useState<BillingPeriodWithExtras[]>([]);
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
-  const [canCreateCycle, setCanCreateCycle] = useState<{[key: string]: boolean}>({});
-  const [isCreatingCycle, setIsCreatingCycle] = useState(false);
-  const [companies, setCompanies] = useState<{[key: string]: string}>({});
-  const [companyFilter, setCompanyFilter] = useState<string>('');
+  const [periods, setPeriods] = useState<(ICompanyBillingCycle & {
+    company_name: string;
+    can_generate: boolean;
+  })[]>([]);
+  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
 
   useEffect(() => {
-    loadBillingPeriods();
+    loadData();
   }, []);
 
-  const filteredPeriods = useMemo(() => 
-    periods.filter(period => 
-      period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
-    ),
-    [periods, companyFilter]
-  );
-
-  // Load companies and check if they can create cycles
-  useEffect(() => {
-    const loadCompaniesAndCheck = async () => {
-      console.log('Starting checkCanCreateCycles');
-      
-      try {
-        // Get all companies regardless of periods
-        const companyList = await getAllCompanies();
-        
-        // Store company names mapped by ID
-        const companyMap = companyList.reduce((acc, company) => ({
-          ...acc,
-          [company.company_id]: company.company_name
-        }), {});
-        setCompanies(companyMap);
-        
-        if (periods.length === 0) {
-          // If no periods exist, all companies can create cycles
-          companyList.forEach(company => {
-            setCanCreateCycle(prev => ({...prev, [company.company_id]: true}));
-          });
-          return;
-        }
-
-        // Otherwise check each company individually
-        const existingCompanyIds = new Set(periods.map((p):string => p.company_id));      
-        console.log('Existing Company IDs:', Array.from(existingCompanyIds));
-
-        for (const companyId of Object.keys(companyMap)) {
-          try {
-            // Companies without periods can create them
-            if (!existingCompanyIds.has(companyId)) {
-              setCanCreateCycle(prev => ({...prev, [companyId]: true}));
-              continue;
-            }
-            
-            // Check if existing companies can create next cycle
-            const canCreate = await canCreateNextBillingCycle(companyId);
-            console.log('Can create cycle for company', companyId, ':', canCreate);
-            setCanCreateCycle(prev => ({...prev, [companyId]: canCreate}));
-          } catch (err) {
-            console.error('Error checking if can create cycle:', err);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching companies:', err);
-      }
-      
-      console.log('Finished checkCanCreateCycles');
-    };
-
-    loadCompaniesAndCheck();
-  }, [periods.length]); // Only run when periods array length changes
-
-  const loadBillingPeriods = async () => {
+  const loadData = async () => {
     try {
-      const availablePeriods = await getAvailableBillingPeriods();
-      setPeriods(availablePeriods);
+      const [periodsData, companiesData, servicesData] = await Promise.all([
+        getAvailableBillingPeriods(),
+        getAllCompanies(),
+        getServices()
+      ]);
+
+      setPeriods(periodsData);
+      setCompanies(companiesData);
+      // Transform IService to Service, using default_rate as rate
+      setServices(servicesData.map((service): Service => ({
+        service_id: service.service_id,
+        service_name: service.service_name,
+        rate: service.default_rate || 0
+      })));
     } catch (err) {
-      setError('Failed to load billing periods');
-      console.error('Error loading billing periods:', err);
+      setError('Failed to load data');
+      console.error('Error loading data:', err);
     }
   };
 
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      const validIds = filteredPeriods
-        .filter(p => p.can_generate)
-        .map((p): string | undefined => p.billing_cycle_id)
-        .filter((id): id is string => id !== undefined);
-      setSelectedPeriods(new Set(validIds));
-    } else {
-      setSelectedPeriods(new Set());
-    }
+  const handleGenerateSuccess = () => {
+    loadData();
   };
 
-  const handleSelectPeriod = (billingCycleId: string | undefined, event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!billingCycleId) return;
-    
-    const newSelected = new Set(selectedPeriods);
-    if (event.target.checked) {
-      newSelected.add(billingCycleId);
-    } else {
-      newSelected.delete(billingCycleId);
-    }
-    setSelectedPeriods(newSelected);
-  };
-
-  const handleGenerateInvoices = async () => {
-    setIsGenerating(true);
-    setError(null);
-    try {
-      for (const billingCycleId of selectedPeriods) {
-        await generateInvoice(billingCycleId);
-      }
-      
-      // Clear selections and reload periods after successful generation
-      setSelectedPeriods(new Set());
-      await loadBillingPeriods();
-    } catch (err) {
-      setError('Error generating invoices');
-      console.error('Error generating invoices:', err);
-    } finally {
-      setIsGenerating(false);
+  const renderContent = () => {
+    switch (invoiceType) {
+      case 'automatic':
+        return (
+          <AutomaticInvoices
+            periods={periods}
+            onGenerateSuccess={handleGenerateSuccess}
+          />
+        );
+      case 'manual':
+        return (
+          <ManualInvoices
+            companies={companies}
+            services={services}
+            onGenerateSuccess={handleGenerateSuccess}
+          />
+        );
+      case 'prepayment':
+        return (
+          <PrepaymentInvoices
+            companies={companies}
+            onGenerateSuccess={handleGenerateSuccess}
+          />
+        );
+      default:
+        return null;
     }
   };
 
@@ -148,24 +104,13 @@ const GenerateInvoices: React.FC = () => {
     <div className="space-y-4">
       <Card>
         <div className="p-4">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Ready to Invoice Billing Periods</h2>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                placeholder="Filter companies..."
-                className="px-3 py-2 border rounded-md"
-                value={companyFilter}
-                onChange={(e) => setCompanyFilter(e.target.value)}
-              />
-              <Button
-                onClick={handleGenerateInvoices}
-                disabled={selectedPeriods.size === 0 || isGenerating}
-                className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
-              >
-                {isGenerating ? 'Generating...' : `Generate Selected Invoices (${selectedPeriods.size})`}
-              </Button>
-            </div>
+          <div className="mb-6">
+            <CustomSelect
+              value={invoiceType}
+              onValueChange={(value: string) => setInvoiceType(value as InvoiceType)}
+              options={invoiceTypeOptions}
+              className="w-full md:w-64"
+            />
           </div>
 
           {error && (
@@ -174,104 +119,7 @@ const GenerateInvoices: React.FC = () => {
             </div>
           )}
 
-          <DataTable
-            data={filteredPeriods}
-            columns={[
-              {
-                title: (
-                  <Checkbox
-                    id="select-all"
-                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter(p => p.can_generate).length}
-                    onChange={handleSelectAll}
-                    disabled={!filteredPeriods.some(p => p.can_generate)}
-                  />
-                ),
-                dataIndex: 'billing_cycle_id',
-                render: (_, record) => record.can_generate ? (
-                  <Checkbox
-                    id={`select-${record.billing_cycle_id}`}
-                    checked={selectedPeriods.has(record.billing_cycle_id || '')}
-                    onChange={(event) => handleSelectPeriod(record.billing_cycle_id, event)}
-                  />
-                ) : null
-              },
-              {
-                title: 'Company',
-                dataIndex: 'company_name'
-              },
-              {
-                title: 'Billing Cycle',
-                dataIndex: 'billing_cycle'
-              },
-              {
-                title: 'Period Start',
-                dataIndex: 'period_start_date',
-                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
-              },
-              {
-                title: 'Period End',
-                dataIndex: 'period_end_date',
-                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
-              },
-              {
-                title: 'Status',
-                dataIndex: 'can_generate',
-                render: (canGenerate: boolean) => !canGenerate ? (
-                  <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-                    Period Active
-                  </span>
-                ) : null
-              }
-            ]}
-            pagination={false}
-          />
-
-          {(filteredPeriods.length === 0 || Object.values(canCreateCycle).some(can => can)) && (
-            <div className="mt-4">
-              <div className="space-y-4">
-                {filteredPeriods.length === 0 && companyFilter && (
-                  <p className="text-gray-500 text-center">No companies match your filter</p>
-                )}
-                {Object.values(canCreateCycle).some(can => can) && (
-                  <div className="space-y-3">
-                    {Object.entries(canCreateCycle)
-                      .filter(([companyId]) => 
-                        companies[companyId]?.toLowerCase().includes(companyFilter.toLowerCase())
-                      )
-                      .map(([companyId, canCreate]): JSX.Element | boolean => {
-                        return canCreate && (
-                          <div key={companyId} className="flex flex-col space-y-2 p-4 border rounded-lg bg-gray-50">
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <h3 className="font-medium text-left">{companies[companyId]}</h3>
-                                <p className="text-sm text-gray-600">Ready to create next billing cycle</p>
-                              </div>
-                              <Button
-                                onClick={async () => {
-                                  setIsCreatingCycle(true);
-                                  try {
-                                    await createNextBillingCycle(companyId);
-                                    await loadBillingPeriods();
-                                  } catch (err) {
-                                    setError('Failed to create billing cycle');
-                                    console.error(err);
-                                  } finally {
-                                    setIsCreatingCycle(false);
-                                  }
-                                }}
-                                disabled={isCreatingCycle}
-                              >
-                                {isCreatingCycle ? 'Creating...' : 'Create Next Cycle'}
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+          {renderContent()}
         </div>
       </Card>
     </div>

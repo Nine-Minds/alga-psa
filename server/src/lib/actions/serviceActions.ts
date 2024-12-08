@@ -3,11 +3,13 @@
 import { revalidatePath } from 'next/cache'
 import Service from '@/lib/models/service'
 import { IService } from '@/interfaces/billing.interfaces'
+import { validateArray } from '@/lib/utils/validation'
+import { serviceSchema } from '@/lib/models/service'
 
 export async function getServices(): Promise<IService[]> {
     try {
         const services = await Service.getAll()
-        return services
+        return validateArray(serviceSchema, services)
     } catch (error) {
         console.error('Error fetching services:', error)
         throw new Error('Failed to fetch services')
