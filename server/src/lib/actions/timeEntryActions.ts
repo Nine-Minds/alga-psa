@@ -453,7 +453,6 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
   };
 }
 
-// add comprehensive logging to fetchCompanyTaxRateForTicket AI!
 export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<string | undefined> {
   console.log(`Fetching tax rate for work item ${workItemId} of type ${workItemType}`);
   

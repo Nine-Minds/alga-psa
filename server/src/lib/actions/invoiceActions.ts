@@ -541,7 +541,7 @@ export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTe
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-  const templates = await Invoice.getTemplates();
+  const templates = await Invoice.getAllTemplates();
   return templates.map((template): IInvoiceTemplate => ({
     ...template,
     parsed: template.dsl ? parseInvoiceTemplate(template.dsl) : null
@@ -549,6 +549,17 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
 }
 
 export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tenant'>): Promise<IInvoiceTemplate> {
+  if (template.isStandard) {
+    throw new Error('Cannot modify standard templates');
+  }
+
+  // Remove template_id if cloning
+  if (template.isClone) {
+    delete template.template_id;
+    delete template.isStandard;
+    delete template.isClone;
+  }
+  
   const savedTemplate = await Invoice.saveTemplate({
     ...template
   });

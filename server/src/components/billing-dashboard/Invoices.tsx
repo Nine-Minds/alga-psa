@@ -1,6 +1,7 @@
 // server/src/components/billing-dashboard/Invoices.tsx
 'use client'
 import React, { useState, useEffect } from 'react';
+import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { fetchAllInvoices, getInvoiceTemplates } from '@/lib/actions/invoiceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
 import TemplateRenderer from './TemplateRenderer';
@@ -88,16 +89,24 @@ const Invoices: React.FC = () => {
         onRowClick={handleInvoiceSelect}
       />
 
-      {selectedInvoice && templates.length > 0 && (
+      {selectedInvoice && (
         <div className="mt-8">
           <h3 className="text-xl font-semibold mb-4">Select Template</h3>
           <CustomSelect
-            options={templates.map((template): { value: string; label: string } => ({
+            options={templates.map((template): { value: string; label: JSX.Element } => ({
               value: template.template_id,
-              label: template.name
+              label: (
+                <div className="flex items-center gap-2">
+                  {template.isStandard ? (
+                    <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
+                  ) : (
+                    <><GearIcon className="w-4 h-4" /> {template.name}</>
+                  )}
+                </div>
+              )
             }))}
             onValueChange={handleTemplateSelect}
-            value={selectedTemplate?.template_id || templates[0].template_id}
+            value={selectedTemplate?.template_id}
             placeholder="Select invoice template..."
           />
         </div>

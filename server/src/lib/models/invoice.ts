@@ -108,8 +108,28 @@ export default class Invoice {
   }
 
   static async getTemplates(): Promise<IInvoiceTemplate[]> {
+    const { knex, tenant } = await createTenantKnex();
+    return knex('invoice_templates').where({ tenant }).select('*');
+  }
+
+  static async getStandardTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
-    return knex('invoice_templates').select('*');
+    return knex('standard_invoice_templates')
+      .select('template_id', 'name', 'version', 'dsl')
+      .orderBy('name');
+  }
+
+  static async getAllTemplates(): Promise<IInvoiceTemplate[]> {
+    const { knex, tenant } = await createTenantKnex();
+    const [tenantTemplates, standardTemplates] = await Promise.all([
+      knex('invoice_templates').where({ tenant }).select('*'),
+      this.getStandardTemplates()
+    ]);
+
+    return [
+      ...standardTemplates.map((t): IInvoiceTemplate => ({ ...t, isStandard: true })),
+      ...tenantTemplates.map((t): IInvoiceTemplate => ({ ...t, isStandard: false }))
+    ];
   }
 
   private static async getTemplateSection(templateId: string, sectionType: string): Promise<LayoutSection> {
@@ -145,7 +165,7 @@ export default class Invoice {
     return savedTemplate;
   }
 
-  static async getCustomFields(tenantId: string): Promise<ICustomField[]> {
+  static async getCustomFields(_tenantId: string): Promise<ICustomField[]> {
     const { knex } = await createTenantKnex();
     return knex('custom_fields');
   }

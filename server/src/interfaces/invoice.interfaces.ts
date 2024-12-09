@@ -58,6 +58,8 @@ export interface IInvoiceTemplate extends TenantEntity {
       sections: Section[];
       globals: GlobalCalculation[];
   };
+  isStandard?: boolean;
+  isClone?: boolean;
 }
 
 export interface GlobalCalculation {

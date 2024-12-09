@@ -2,16 +2,34 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { getInvoiceTemplates } from '@/lib/actions/invoiceActions';
+import { getInvoiceTemplates, saveInvoiceTemplate } from '@/lib/actions/invoiceActions';
 import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
 import InvoiceTemplateManager from './InvoiceTemplateManager';
-import TemplateSelector from './TemplateSelector';
-import TemplateRenderer from './TemplateRenderer';
+import CustomSelect from '../ui/CustomSelect';
+import { FileTextIcon } from 'lucide-react';
+import { GearIcon } from '@radix-ui/react-icons';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<IInvoiceTemplate | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const handleCloneTemplate = async (template: IInvoiceTemplate) => {
+    try {
+      const clonedTemplate = {
+        ...template,
+        name: `${template.name} (Copy)`,
+        isClone: true
+      };
+      const savedTemplate = await saveInvoiceTemplate(clonedTemplate);
+      await fetchTemplates();
+      setSelectedTemplate(savedTemplate);
+      setError(null);
+    } catch (error) {
+      console.error('Error cloning template:', error);
+      setError('Failed to clone template');
+    }
+  };
 
   useEffect(() => {
     fetchTemplates();
@@ -32,9 +50,6 @@ const InvoiceTemplates: React.FC = () => {
     setSelectedTemplate(template);
   };
 
-  const handleTemplatesUpdate = (updatedTemplates: IInvoiceTemplate[]) => {
-    setInvoiceTemplates(updatedTemplates);
-  };
 
   return (
     <Card>
@@ -48,11 +63,43 @@ const InvoiceTemplates: React.FC = () => {
           </div>
         )}
         <div className="space-y-4">
-          <InvoiceTemplateManager
-            templates={invoiceTemplates}
-            onTemplateSelect={handleTemplateSelect}
-            selectedTemplate={selectedTemplate}
-          />
+          <div className="flex gap-4 items-center">
+            <div className="w-[400px]">
+              <CustomSelect
+                options={invoiceTemplates.map((template): { value: string; label: JSX.Element } => ({
+                  value: template.template_id,
+                  label: (
+                    <div className="flex items-center gap-2">
+                      {template.isStandard ? (
+                        <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
+                      ) : (
+                        <><GearIcon className="w-4 h-4" /> {template.name}</>
+                      )}
+                    </div>
+                  )
+                }))}
+                onValueChange={(value) => handleTemplateSelect(invoiceTemplates.find(t => t.template_id === value)!)}
+                value={selectedTemplate?.template_id || ''}
+                placeholder="Select invoice template..."
+              />
+            </div>
+            {selectedTemplate?.isStandard && (
+              <Button
+                onClick={() => handleCloneTemplate(selectedTemplate)}
+                variant="outline"
+                size="sm"
+              >
+                Clone Template
+              </Button>
+            )}
+          </div>
+          {selectedTemplate && (
+            <InvoiceTemplateManager
+              templates={invoiceTemplates}
+              onTemplateSelect={handleTemplateSelect}
+              selectedTemplate={selectedTemplate}
+            />
+          )}
           <Button onClick={fetchTemplates}>Refresh Templates</Button>
         </div>
       </CardContent>

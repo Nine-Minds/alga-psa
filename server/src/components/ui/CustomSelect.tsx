@@ -4,7 +4,7 @@ import * as RadixSelect from '@radix-ui/react-select';
 
 export interface SelectOption {
   value: string;
-  label: string;
+  label: string | JSX.Element;
 }
 
 export interface StyleProps {
