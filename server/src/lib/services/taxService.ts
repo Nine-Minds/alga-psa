@@ -2,6 +2,7 @@
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday, ITaxCalculationResult } from '../../interfaces/tax.interfaces';
 import CompanyTaxSettings from '../models/companyTaxSettings';
 import { ISO8601String } from '../../types/types.d';
+import { createTenantKnex } from '../db';
 
 export class TaxService {
   constructor() {
@@ -9,6 +10,19 @@ export class TaxService {
 
   async calculateTax(companyId: string, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     console.log(`Calculating tax for company ${companyId}, net amount ${netAmount}, date ${date}`);
+
+    const { knex } = await createTenantKnex();
+    
+    // Check if company is tax exempt
+    const company = await knex('companies')
+      .where({ company_id: companyId })
+      .select('is_tax_exempt')
+      .first();
+
+    if (company?.is_tax_exempt) {
+      console.log(`Company ${companyId} is tax exempt. Returning zero tax.`);
+      return { taxAmount: 0, taxRate: 0 };
+    }
 
     const taxSettings = await this.getCompanyTaxSettings(companyId);
     console.log(`Tax settings retrieved for company ${companyId}:`, taxSettings);
