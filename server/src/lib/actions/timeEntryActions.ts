@@ -453,6 +453,52 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
   };
 }
 
+// add comprehensive logging to fetchCompanyTaxRateForTicket AI!
+export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<string | undefined> {
+  console.log(`Fetching tax rate for work item ${workItemId} of type ${workItemType}`);
+  
+  const {knex: db} = await createTenantKnex();
+
+  try {
+    let query;
+    
+    if (workItemType === 'ticket') {
+      query = db('tickets')
+        .where('tickets.ticket_id', workItemId)
+        .join('companies', 'tickets.company_id', 'companies.company_id');
+    } else if (workItemType === 'project_task') {
+      query = db('project_tasks')
+        .where('project_tasks.task_id', workItemId)
+        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+        .join('projects', 'project_phases.project_id', 'projects.project_id')
+        .join('companies', 'projects.company_id', 'companies.company_id');
+    } else {
+      console.log(`Unsupported work item type: ${workItemType}`);
+      return undefined;
+    }
+
+    query = query
+      .join('company_tax_rates', 'companies.company_id', 'company_tax_rates.company_id')
+      .join('tax_rates', 'company_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id')
+      .select('tax_rates.region');
+
+    console.log('Executing query:', query.toString());
+
+    const result = await query.first();
+    
+    if (result) {
+      console.log(`Found tax region: ${result.region}`);
+      return result.region;
+    } else {
+      console.log('No tax region found');
+      return undefined;
+    }
+  } catch (error) {
+    console.error('Error fetching tax rate:', error);
+    return undefined;
+  }
+}
+
 export async function fetchServicesForTimeEntry(): Promise<{ id: string; name: string; type: string; is_taxable: boolean }[]> {
   const {knex: db} = await createTenantKnex();
 

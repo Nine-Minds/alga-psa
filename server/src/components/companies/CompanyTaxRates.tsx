@@ -32,7 +32,6 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
     onRemove
 }) => {
     const tableData: TaxRateTableData[] = companyTaxRates
-        .filter(companyTaxRate => companyTaxRate.company_tax_rate_id)
         .map((companyTaxRate): TaxRateTableData => {
             const taxRate = taxRates.find(tr => tr.tax_rate_id === companyTaxRate.tax_rate_id);
             return {

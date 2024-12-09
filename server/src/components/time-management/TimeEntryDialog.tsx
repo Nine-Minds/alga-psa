@@ -9,7 +9,7 @@ import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { BsClock } from 'react-icons/bs';
-import { fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
+import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
 import { formatISO, parseISO, setHours, setMinutes, addMinutes } from 'date-fns';
 import { Switch } from '../ui/Switch';
 
@@ -74,17 +74,34 @@ export function TimeEntryDialog({
   }, []);
 
   useEffect(() => {
-    let newEntries: Omit<ITimeEntry, 'tenant'>[] = [];
+    const initializeEntries = async () => {
+      let defaultTaxRegionFromCompany: string | undefined;
+      
+      // Fetch company tax rate if this is a ticket
+      if (workItem.type === 'ticket' || workItem.type === 'project_task') {
+        try {
+          defaultTaxRegionFromCompany = await fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type);
+        } catch (error) {
+          console.error('Error fetching company tax rate:', error);
+        }
+      }
 
-    if (existingEntries && existingEntries.length > 0) {
-      newEntries = existingEntries.map(({ tenant, ...rest }): Omit<ITimeEntry, 'tenant'> => ({
-        ...rest,
-        start_time: formatISO(parseISO(rest.start_time)),
-        end_time: formatISO(parseISO(rest.end_time)),
-        created_at: formatISO(parseISO(rest.created_at)),
-        updated_at: formatISO(parseISO(rest.updated_at))
-      }));
-    }
+      let newEntries: Omit<ITimeEntry, 'tenant'>[] = [];
+
+      if (existingEntries && existingEntries.length > 0) {
+        newEntries = existingEntries.map(({ tenant, ...rest }): Omit<ITimeEntry, 'tenant'> => {
+          // If entry has no tax region but we have a default, use it
+          const taxRegion = rest.tax_region || defaultTaxRegion || defaultTaxRegionFromCompany;
+          return {
+            ...rest,
+            start_time: formatISO(parseISO(rest.start_time)),
+            end_time: formatISO(parseISO(rest.end_time)),
+            created_at: formatISO(parseISO(rest.created_at)),
+            updated_at: formatISO(parseISO(rest.updated_at)),
+            tax_region: taxRegion
+          };
+        });
+      }
 
     if (defaultStartTime && defaultEndTime) {
       const newEntry: Omit<ITimeEntry, 'tenant'> = {
@@ -100,7 +117,7 @@ export function TimeEntryDialog({
         updated_at: formatISO(new Date()),
         approval_status: 'DRAFT',
         service_id: '',
-        tax_region: defaultTaxRegion || ''
+        tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || ''
       };
 
       newEntries.push(newEntry);
@@ -127,7 +144,10 @@ export function TimeEntryDialog({
 
     setEntries(newEntries);
     setIsBillable(newEntries.map((entry): boolean => entry.billable_duration > 0));
-  }, [existingEntries, defaultStartTime, defaultEndTime, workItem, date, defaultTaxRegion]);
+  };
+
+  initializeEntries();
+}, [existingEntries, defaultStartTime, defaultEndTime, workItem, date, defaultTaxRegion]);
 
   useEffect(() => {
     if (isOpen && lastNoteInputRef.current && shouldFocusNotes) {
@@ -235,15 +255,28 @@ export function TimeEntryDialog({
     }
   };
 
-  const handleServiceChange = (index: number, value: string) => {
+  const handleServiceChange = async (index: number, value: string) => {
     if (isEditable) {
       const newEntries = [...entries];
       newEntries[index].service_id = value;
-      // Clear tax region if the new service is not taxable
       const selectedService = services.find(s => s.id === value);
-      if (!selectedService?.is_taxable) {
+      
+      if (selectedService?.is_taxable) {
+        // Try to get default tax region for tickets and project tasks
+        if (workItem.type === 'ticket' || workItem.type === 'project_task') {
+          try {
+            const defaultTaxRegion = await fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type);
+            if (defaultTaxRegion) {
+              newEntries[index].tax_region = defaultTaxRegion;
+            }
+          } catch (error) {
+            console.error('Error fetching default tax region:', error);
+          }
+        }
+      } else {
         newEntries[index].tax_region = '';
       }
+      
       setEntries(newEntries);
     }
   };
@@ -369,7 +402,7 @@ export function TimeEntryDialog({
                       disabled={!isEditable || !services.find(s => s.id === selectedEntry.service_id)?.is_taxable}
                       className="mt-1 w-full"
                       options={taxRegions.map((region): SelectOption => ({
-                        value: region.id,
+                        value: region.name,
                         label: region.name
                       }))}
                       placeholder="Select a tax region"
