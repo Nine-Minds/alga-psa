@@ -1,5 +1,6 @@
 'use client'
 import React, { useState } from 'react';
+import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { LineItem } from './LineItem';
@@ -128,11 +129,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
     setError(null);
 
     try {
-      // TODO: Implement manual invoice generation
-      // await generateManualInvoice({
-      //   companyId: selectedCompany,
-      //   items: items
-      // });
+      await generateManualInvoice({
+        companyId: selectedCompany,
+        items: items
+      });
       
       // Clear form
       setSelectedCompany('');
