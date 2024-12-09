@@ -9,6 +9,7 @@ interface SearchOptions {
   sortOrder?: 'asc' | 'desc';
   page?: number;
   pageSize?: number;
+  includeInactive?: boolean;
 }
 
 interface SearchResult {
@@ -43,6 +44,11 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
       .join('project_phases as pp', 'pt.phase_id', 'pp.phase_id')
       .join('projects as p', 'pp.project_id', 'p.project_id')
       .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
+      .modify((queryBuilder) => {
+        if (!options.includeInactive) {
+          queryBuilder.where('p.is_inactive', false);
+        }
+      })
       .select(
         'pt.task_id as work_item_id',
         'pt.task_name as name',

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '../ui/Input';
+import { SwitchWithLabel } from '../ui/SwitchWithLabel';
 import { IWorkItem, IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
 import { searchWorkItems } from '@/lib/actions/workItemActions';
 
@@ -22,6 +23,7 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
+  const [includeInactive, setIncludeInactive] = useState(false);
   const pageSize = 20;
 
   const loadWorkItems = useCallback(async (term: string, page: number) => {
@@ -32,7 +34,8 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
         page,
         pageSize,
         sortBy: 'name',
-        sortOrder: 'asc'
+        sortOrder: 'asc',
+        includeInactive
       });
       
       // Filter out items that are already on the timesheet
@@ -61,7 +64,7 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
     } finally {
       setIsSearching(false);
     }
-  }, [existingWorkItems]);
+  }, [existingWorkItems, includeInactive]);
 
   // Load initial items when component mounts
   useEffect(() => {
@@ -162,6 +165,18 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[rgb(var(--color-primary-500))]"></div>
             </div>
           )}
+        </div>
+        <div className="mt-2 flex items-center">
+          <SwitchWithLabel
+            label="Include inactive projects"
+            checked={includeInactive}
+            onCheckedChange={(checked) => {
+              setIncludeInactive(checked);
+              setCurrentPage(1);
+              loadWorkItems(searchTerm, 1);
+            }}
+            className="text-sm text-[rgb(var(--color-text-600))]"
+          />
         </div>
       </div>
 
