@@ -68,6 +68,11 @@ export const menuItems: MenuItem[] = [
     name: 'Technician Dispatch',
     icon: RadixIcons.PersonIcon,
     href: '/msp/technician-dispatch'
+  },
+  {
+    name: 'Workflows',
+    icon: RadixIcons.ArrowRightIcon,
+    href: '/msp/workflows'
   }
 ];
 

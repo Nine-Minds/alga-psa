@@ -32,6 +32,11 @@ Lucide icons can (and should) be used from the `lucide` package.
 
 We use server actions that are located in the `/server/src/lib/actions` folder.
 
+# ee folder
+The ee folder contains the server code for the enterprise edition of the application. It is a parallel structure 
+containing its own migrations that are overlaid on top of the base server migrations. ee specific database changes
+should be made in the migrations in the ee folder.
+
 # Database
 server migrations are stored in the `/server/migrations` folder.
 seeds are stored in the `/server/seeds` folder.

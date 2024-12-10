@@ -1,0 +1,32 @@
+.container {
+  padding: 10px;
+  background: #2a2a3c;
+  display: flex;
+  align-items: center;
+}
+
+.input {
+  margin-right: 10px;
+  padding: 5px;
+  background: #3a3a4c;
+  border: 1px solid #4a4a5e;
+  border-radius: 3px;
+  color: #ffffff;
+}
+
+.button {
+  padding: 5px 10px;
+  background: #00ffff;
+  border: none;
+  border-radius: 3px;
+  color: #2a2a3c;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #00cccc;
+}
+
+.button:active {
+  background: #009999;
+}

@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package alga_flow;
+
+// System-wide types
+message SystemTypes {
+  message String {
+    string value = 1;
+  }
+
+  message Integer {
+    int32 value = 1;
+  }
+
+  message Float {
+    float value = 1;
+  }
+
+  message Boolean {
+    bool value = 1;
+  }
+}
+
+// Define a generic Template message
+message Template {
+  string template = 1;
+  oneof type {
+    SystemTypes.String string_type = 2;
+    SystemTypes.Integer integer_type = 3;
+    SystemTypes.Float float_type = 4;
+    SystemTypes.Boolean boolean_type = 5;
+  }
+}
+
+message ProtoNodeTypes {
+  message Office365ReceiverNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    Template client_id = 3;
+    Template client_secret = 4;
+    Template tenant_id = 5;
+    Template user_email = 6;
+  }
+
+  message ThinkingNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    Template thinking_process = 3;
+  }
+
+  message ActionNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    Template action = 3;
+  }
+
+  message ClassifierNodeData {
+    string label = 1;
+    Template source = 2;
+    repeated TypedOutput outputs = 3;
+    Template thinking_process = 4;
+    repeated Template classifications = 5;
+  }
+
+  message TicketCreatorNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    Template ticket_title = 3;
+    Template ticket_description = 4;
+    Template ticket_board = 5;
+    Template ticket_priority = 6;
+  }
+
+  message DecisionNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    map<string, Condition> conditions = 3;
+    Template default_output = 4;
+  }
+
+  message SelectorNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    repeated Input inputs = 3;
+    Template default_input = 4;
+  }
+
+  message SpecialOperationNodeData {
+    string label = 1;
+    repeated TypedOutput outputs = 2;
+    repeated Input inputs = 3;
+  }  
+
+  message TypedOutput {
+    string id = 1;
+    string label = 2;
+    string type = 3;
+  }
+
+  message Input {
+    string id = 1;
+    string label = 2;
+  }
+
+  message Condition {
+    enum ConditionType {
+      EQUALS = 0;
+      THRESHOLD = 1;
+      REGEX = 2;
+    }
+    ConditionType type = 1;
+    Template value = 2;
+  }
+}
+
+message ProtoNodeDataTypes {
+  message Email {
+    string subject = 1;
+    string body = 2;
+    string from = 3;
+    repeated string to = 4;
+    string received_at = 5;
+    map<string, string> headers = 6;
+  }
+}

@@ -86,7 +86,7 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
             setRightSidebarOpen={setRightSidebarOpen}
             handleThemeMode={handleThemeMode}
           />
-          <main className="flex-1 overflow-hidden flex pt-5 px-6">
+          <main className="flex-1 overflow-hidden flex pt-2 px-3">
             <Body>{children}</Body>
             <RightSidebar
               isOpen={rightSidebarOpen}
