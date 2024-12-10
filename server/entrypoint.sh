@@ -13,9 +13,9 @@ NODE_ENV=${NODE_ENV:-production}
 # done
 
 
-version="0.0.4"
+version="0.0.5"
 commit="abc123"
-date="19-11-2024"
+date="10-12-2024"
 author="NineMinds"
 
 # Function to print colored text
