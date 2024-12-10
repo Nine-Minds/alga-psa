@@ -300,22 +300,48 @@ export function TimeSheet({
     }, [timeSheet.id, workItemsByType, groupedTimeEntries, localWorkItems]);
 
 const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
-    timeEntry.time_sheet_id = timeSheet.id;
-    await onSaveTimeEntry(timeEntry);
+    try {
+        timeEntry.time_sheet_id = timeSheet.id;
+        await onSaveTimeEntry(timeEntry);
 
-    // If this is the first time entry saved, merge localWorkItems into workItemsByType
-    if (localWorkItems.length > 0) {
-        setWorkItemsByType(prevWorkItemsByType => {
-            const updatedWorkItemsByType = { ...prevWorkItemsByType };
-            localWorkItems.forEach(item => {
-                if (!updatedWorkItemsByType[item.type]) {
-                    updatedWorkItemsByType[item.type] = [];
-                }
-                updatedWorkItemsByType[item.type].push(item);
+        // Refresh data after successful save
+        const [fetchedTimeEntries, fetchedWorkItems] = await Promise.all([
+            fetchTimeEntriesForTimeSheet(timeSheet.id),
+            fetchWorkItemsForTimeSheet(timeSheet.id)
+        ]);
+
+        // Update workItems state
+        const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IWorkItem[]>, item: IWorkItem) => {
+            if (!acc[item.type]) {
+                acc[item.type] = [];
+            }
+            acc[item.type].push(item);
+            return acc;
+        }, {});
+        setWorkItemsByType(fetchedWorkItemsByType);
+
+        // Update time entries state
+        const grouped = fetchedTimeEntries.reduce((acc: Record<string, ITimeEntryWithWorkItemString[]>, entry: ITimeEntryWithWorkItem) => {
+            const key = `${entry.work_item_id}`;
+            if (!acc[key]) {
+                acc[key] = [];
+            }
+            acc[key].push({
+                ...entry,
+                start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+                end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
             });
-            return updatedWorkItemsByType;
-        });
-        setLocalWorkItems([]); // Clear localWorkItems
+            return acc;
+        }, {});
+        setGroupedTimeEntries(grouped);
+
+        // Clear local work items after successful save
+        if (localWorkItems.length > 0) {
+            setLocalWorkItems([]);
+        }
+    } catch (error) {
+        console.error('Error saving time entry:', error);
+        throw error; // Re-throw to be handled by the dialog
     }
 
     const localworkItemsByType = workItemsByType;
@@ -386,23 +412,25 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
     const end_day = new Date(timeSheet.time_period?.end_date || new Date()).getUTCDate();
     const end_year = new Date(timeSheet.time_period?.end_date || new Date()).getUTCFullYear();    
 
-    const dates = getDatesInPeriod({
+    const dates = React.useMemo(() => getDatesInPeriod({
         start_date: timeSheet.time_period ? new Date(start_year, start_month-1, start_day) : new Date(),
         end_date: timeSheet.time_period ? new Date(end_year, end_month-1, end_day) : new Date()
-    });
-
-    // const dates:string[] = []
-    // for (const date of localDates) {
-    //     dates.push(date.getUTCFullYear() + '-' + String(date.getUTCMonth() + 1).padStart(2, '0') + '-' + String(date.getUTCDate()).padStart(2, '0') + 'T00:00:00.000Z');
-    // }
-
-    console.log('dates', dates);
+    }), [timeSheet.time_period, start_year, start_month, start_day, end_year, end_month, end_day]);
 
     const handleCellClick = (workItem: IWorkItem, date: Date, entries: ITimeEntryWithWorkItemString[]) => {
         let startTime = new Date(date);
-        let endTime = new Date(date);
+        startTime.setHours(8, 0, 0, 0);
+        let endTime = new Date(startTime);
+        endTime.setHours(9, 0, 0, 0);
 
-        if (initialDuration && initialWorkItem && workItem.work_item_id === initialWorkItem.work_item_id) {
+        // If there are existing entries for this day, use the last entry's end time as the start time
+        if (entries.length > 0) {
+            const sortedEntries = [...entries].sort((a, b) => 
+                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
+            );
+            startTime = parseISO(sortedEntries[0].end_time);
+            endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // Add 1 hour
+        } else if (initialDuration && initialWorkItem && workItem.work_item_id === initialWorkItem.work_item_id) {
             endTime = new Date(); // Use current time as end time
 
             // Convert seconds to milliseconds and round up to the nearest minute
@@ -729,6 +757,30 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
                         isEditable={isEditable}
                         defaultEndTime={selectedCell.defaultEndTime ? parseISO(selectedCell.defaultEndTime) : undefined}
                         defaultStartTime={selectedCell.defaultStartTime ? parseISO(selectedCell.defaultStartTime) : undefined}
+                        timeSheetId={timeSheet.id}
+                        onTimeEntriesUpdate={(entries) => {
+                            const grouped = entries.reduce((acc, entry) => {
+                              const key = `${entry.work_item_id}`;
+                              if (!acc[key]) {
+                                acc[key] = [];
+                              }
+                              acc[key].push(entry);
+                              return acc;
+                            }, {} as Record<string, ITimeEntryWithWorkItemString[]>);
+                            setGroupedTimeEntries(grouped);
+                            
+                            // Update selectedCell if it exists
+                            if (selectedCell) {
+                              const updatedEntries = entries.filter(entry => 
+                                entry.work_item_id === selectedCell.workItem.work_item_id &&
+                                parseISO(entry.start_time).toDateString() === parseISO(selectedCell.date).toDateString()
+                              );
+                              setSelectedCell(prev => prev ? {
+                                ...prev,
+                                entries: updatedEntries
+                              } : null);
+                            }
+                          }}
                     />
                 )}
 

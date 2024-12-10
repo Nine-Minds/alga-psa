@@ -498,6 +498,23 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
   }
 }
 
+export async function deleteTimeEntry(entryId: string): Promise<void> {
+  const {knex: db} = await createTenantKnex();
+  const session = await getServerSession(options);
+  if (!session?.user?.id) {
+    throw new Error("User not authenticated");
+  }
+
+  try {
+    await db('time_entries')
+      .where({ entry_id: entryId })
+      .delete();
+  } catch (error) {
+    console.error('Error deleting time entry:', error);
+    throw new Error('Failed to delete time entry');
+  }
+}
+
 export async function fetchServicesForTimeEntry(): Promise<{ id: string; name: string; type: string; is_taxable: boolean }[]> {
   const {knex: db} = await createTenantKnex();
 

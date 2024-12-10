@@ -41,8 +41,8 @@ export const DialogTitle: React.FC<{ children: ReactNode }> = ({ children }) => 
   <RadixDialog.Title className="text-xl font-semibold mb-2">{children}</RadixDialog.Title>
 );
 
-export const DialogContent: React.FC<{ children: ReactNode }> = ({ children }) => (
-  <div className={`mt-2`}>{children}</div>
+export const DialogContent: React.FC<{ children: ReactNode, className?: string }> = ({ children, className }) => (
+  <div className={`mt-2 ${className || ''}`}>{children}</div>
 );
 
 export const DialogFooter: React.FC<{ children: ReactNode }> = ({ children }) => (

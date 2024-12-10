@@ -1,22 +1,36 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
+import { Pencil, Trash2, MinusCircle, XCircle } from 'lucide-react';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { TaxRegion } from '@/types/types.d';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet } from '@/lib/actions/timeEntryActions';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+
+interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
+  isNew?: boolean;
+  isDirty?: boolean;
+}
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { BsClock } from 'react-icons/bs';
 import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
 import { formatISO, parseISO, setHours, setMinutes, addMinutes } from 'date-fns';
 import { Switch } from '../ui/Switch';
 
+// Update ITimeEntryWithWorkItem interface to use string types for dates
+interface ITimeEntryWithWorkItemString extends Omit<ITimeEntryWithWorkItem, 'start_time' | 'end_time'> {
+  start_time: string;
+  end_time: string;
+}
+
 interface TimeEntryDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (timeEntry: Omit<ITimeEntry, 'tenant'>) => void;
+  onSave: (timeEntry: Omit<ITimeEntry, 'tenant'>) => Promise<void>;
   workItem: Omit<IWorkItem, 'tenant'>;
   date: Date;
   existingEntries?: ITimeEntryWithWorkItem[];
@@ -25,6 +39,8 @@ interface TimeEntryDialogProps {
   defaultStartTime?: Date;
   defaultEndTime?: Date;
   defaultTaxRegion?: string;
+  timeSheetId: string;
+  onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
 }
 
 interface Service {
@@ -41,14 +57,16 @@ export function TimeEntryDialog({
   workItem,
   date,
   existingEntries,
-  timePeriod,
+  timePeriod: _timePeriod,
   isEditable,
   defaultStartTime,
   defaultEndTime,
   defaultTaxRegion,
+  timeSheetId,
+  onTimeEntriesUpdate,
 }: TimeEntryDialogProps) {
-  const [entries, setEntries] = useState<Omit<ITimeEntry, 'tenant'>[]>([]);
-  const [selectedEntryIndex, setSelectedEntryIndex] = useState(0);
+  const [entries, setEntries] = useState<(ITimeEntryWithNew & { tempId?: string })[]>([]);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const lastNoteInputRef = useRef<HTMLInputElement>(null);
   const [totalDurations, setTotalDurations] = useState<number[]>([]);
@@ -56,9 +74,11 @@ export function TimeEntryDialog({
   const [timeInputs, setTimeInputs] = useState<{ [key: string]: string }>({});
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);
   const [isBillable, setIsBillable] = useState<boolean[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
+      setIsLoading(true);
       try {
         const [fetchedServices, fetchedTaxRegions] = await Promise.all([
           fetchServicesForTimeEntry(),
@@ -68,10 +88,14 @@ export function TimeEntryDialog({
         setTaxRegions(fetchedTaxRegions);
       } catch (error) {
         console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadData();
-  }, []);
+    if (isOpen) {
+      loadData();
+    }
+  }, [isOpen]); // Only reload when dialog opens
 
   useEffect(() => {
     const initializeEntries = async () => {
@@ -89,7 +113,7 @@ export function TimeEntryDialog({
       let newEntries: Omit<ITimeEntry, 'tenant'>[] = [];
 
       if (existingEntries && existingEntries.length > 0) {
-        newEntries = existingEntries.map(({ tenant, ...rest }): Omit<ITimeEntry, 'tenant'> => {
+        newEntries = existingEntries.map(({ tenant: _tenant, ...rest }): Omit<ITimeEntry, 'tenant'> => {
           // If entry has no tax region but we have a default, use it
           const taxRegion = rest.tax_region || defaultTaxRegion || defaultTaxRegionFromCompany;
           return {
@@ -101,33 +125,35 @@ export function TimeEntryDialog({
             tax_region: taxRegion
           };
         });
+      } else if (defaultStartTime && defaultEndTime) {
+        const newEntry: Omit<ITimeEntry, 'tenant'> = {
+          work_item_id: workItem.work_item_id,
+          start_time: formatISO(defaultStartTime),
+          end_time: formatISO(defaultEndTime),
+          billable_duration: calculateDuration(defaultStartTime, defaultEndTime),
+          work_item_type: workItem.type,
+          notes: '',
+          entry_id: '',
+          user_id: '',
+          created_at: formatISO(new Date()),
+          updated_at: formatISO(new Date()),
+          approval_status: 'DRAFT',
+          service_id: '',
+          tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || ''
+        };
+        newEntries.push(newEntry);
       }
 
-    if (defaultStartTime && defaultEndTime) {
-      const newEntry: Omit<ITimeEntry, 'tenant'> = {
+      if (newEntries.length === 0) {
+      const defaultStartTime = new Date(date);
+      defaultStartTime.setHours(8, 0, 0, 0);
+      const defaultEndTime = new Date(defaultStartTime);
+      defaultEndTime.setHours(9, 0, 0, 0);
+
+      const emptyEntry: Omit<ITimeEntry, 'tenant'> = {
         work_item_id: workItem.work_item_id,
         start_time: formatISO(defaultStartTime),
         end_time: formatISO(defaultEndTime),
-        billable_duration: calculateDuration(defaultStartTime, defaultEndTime),
-        work_item_type: workItem.type,
-        notes: '',
-        entry_id: '',
-        user_id: '',
-        created_at: formatISO(new Date()),
-        updated_at: formatISO(new Date()),
-        approval_status: 'DRAFT',
-        service_id: '',
-        tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || ''
-      };
-
-      newEntries.push(newEntry);
-    }
-
-    if (newEntries.length === 0) {
-      const emptyEntry: Omit<ITimeEntry, 'tenant'> = {
-        work_item_id: workItem.work_item_id,
-        start_time: formatISO(new Date(date)),
-        end_time: formatISO(new Date(date)),
         billable_duration: 0,
         work_item_type: workItem.type,
         notes: '',
@@ -142,8 +168,19 @@ export function TimeEntryDialog({
       newEntries.push(emptyEntry);
     }
 
-    setEntries(newEntries);
+    // Sort entries by start time
+    const sortedEntries = [...newEntries].sort((a, b) => 
+      parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
+    );
+    console.log('Initializing entries:', { sortedEntries });
+    setEntries(sortedEntries);
     setIsBillable(newEntries.map((entry): boolean => entry.billable_duration > 0));
+    // Only show edit UI if this is a new entry with no existing entries
+    if (newEntries.length === 1 && !existingEntries?.length) {
+      setEditingIndex(0);
+    } else {
+      setEditingIndex(null);
+    }
   };
 
   initializeEntries();
@@ -160,15 +197,34 @@ export function TimeEntryDialog({
     const newTotalDurations = entries.map((entry): number =>
       calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time))
     );
-    setTotalDurations(newTotalDurations);
-  }, [entries]);
+    // Only update if durations actually changed
+    if (JSON.stringify(newTotalDurations) !== JSON.stringify(totalDurations)) {
+      setTotalDurations(newTotalDurations);
+    }
+  }, [entries, totalDurations]);
 
   const handleAddEntry = () => {
     if (isEditable) {
-      const newEntry: Omit<ITimeEntry, 'tenant'> = {
+      // Get default start time based on last entry's end time or 8am
+      let defaultStartTime = new Date(date);
+      if (entries.length > 0) {
+        // Use the end time of the last entry
+        const lastEntry = entries[entries.length - 1];
+        defaultStartTime = parseISO(lastEntry.end_time);
+      } else {
+        // For first entry, set to 8am
+        defaultStartTime.setHours(8, 0, 0, 0);
+      }
+
+      // Set end time to start time + 1 hour by default
+      const defaultEndTime = new Date(defaultStartTime);
+      defaultEndTime.setHours(defaultEndTime.getHours() + 1);
+
+      // Mark this as a new entry by setting a temporary flag
+      const newEntry: ITimeEntryWithNew & { tempId?: string } = {
         work_item_id: workItem.work_item_id,
-        start_time: formatISO(new Date(date)),
-        end_time: formatISO(new Date(date)),
+        start_time: formatISO(defaultStartTime),
+        end_time: formatISO(defaultEndTime),
         billable_duration: 0,
         work_item_type: workItem.type,
         notes: '',
@@ -178,11 +234,15 @@ export function TimeEntryDialog({
         updated_at: formatISO(new Date()),
         approval_status: 'DRAFT',
         service_id: '',
-        tax_region: defaultTaxRegion || ''
+        tax_region: defaultTaxRegion || '',
+        isNew: true,
+        tempId: crypto.randomUUID()
       };
+      const newIndex = entries.length;
+      console.log('Adding new entry:', { newEntry });
       setEntries([...entries, newEntry]);
       setIsBillable([...isBillable, false]);
-      setSelectedEntryIndex(entries.length);
+      setEditingIndex(newIndex);
       setShouldFocusNotes(true);
       setTimeout(() => {
         if (lastNoteInputRef.current) {
@@ -192,28 +252,105 @@ export function TimeEntryDialog({
     }
   };
 
-  const handleSave = () => {
-    if (isEditable) {
-      // Filter out empty entries (entries without a service_id)
-      const filledEntries = entries.filter(entry => entry.service_id);
+  const handleSaveEntry = async (index: number) => {
+    if (!isEditable || !timeSheetId) return;
 
-      // Validate only the filled entries
-      const allFilledEntriesValid = filledEntries.every(entry => {
-        const selectedService = services.find(s => s.id === entry.service_id);
-        // Only require tax region if the service is taxable
-        if (selectedService?.is_taxable && !entry.tax_region) {
-          alert('Please select a tax region for taxable services');
-          return false;
-        }
-        return validateTimeEntry(entry);
-      });
+    const entry = entries[index];
+    if (!entry.service_id) {
+      alert('Please select a service');
+      return;
+    }
 
-      if (allFilledEntriesValid) {
-        filledEntries.forEach(entry => {
-          onSave(entry);
-        });
+    const selectedService = services.find(s => s.id === entry.service_id);
+    if (selectedService?.is_taxable && !entry.tax_region) {
+      alert('Please select a tax region for taxable services');
+      return;
+    }
+
+    if (!validateTimeEntry(entry)) {
+      return;
+    }
+
+    try {
+      await onSave(entry);
+      
+      // After successful save, fetch fresh data
+      const [fetchedTimeEntries] = await Promise.all([
+        fetchTimeEntriesForTimeSheet(timeSheetId),
+        fetchWorkItemsForTimeSheet(timeSheetId)
+      ]);
+
+      // Convert fetched entries to the correct format
+      const updatedEntries = fetchedTimeEntries
+        .filter((entry): boolean => entry.work_item_id === workItem.work_item_id)
+        .map((entry): ITimeEntryWithWorkItemString => ({
+          ...entry,
+          start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+          end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+        }));
+
+      // Update local entries state with fresh data, but only if changed
+      const newEntries = updatedEntries.map((entry): ITimeEntryWithNew => ({
+        ...entry,
+        isDirty: false,
+        isNew: false,
+        work_item_id: entry.work_item_id,
+        work_item_type: entry.work_item_type,
+        start_time: entry.start_time,
+        end_time: entry.end_time,
+        billable_duration: entry.billable_duration,
+        notes: entry.notes,
+        entry_id: entry.entry_id,
+        user_id: entry.user_id,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+        approval_status: entry.approval_status,
+        service_id: entry.service_id,
+        tax_region: entry.tax_region
+      }));
+      
+      // Sort entries by start time before updating state
+      const sortedEntries = [...newEntries].sort((a, b) => 
+        parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
+      );
+      if (JSON.stringify(sortedEntries) !== JSON.stringify(entries)) {
+        console.log('Updating entries after save:', { sortedEntries });
+        setEntries(sortedEntries);
+      }
+
+      // Notify parent of all updated entries
+      if (onTimeEntriesUpdate) {
+        onTimeEntriesUpdate(fetchedTimeEntries.map((entry): ITimeEntryWithWorkItemString => ({
+          ...entry,
+          start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+          end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+        })));
+      }
+      
+      // Update timeInputs to reflect the saved times
+      setTimeInputs(prev => ({
+        ...prev,
+        [`start-${index}`]: formatTimeForInput(parseISO(entry.start_time)),
+        [`end-${index}`]: formatTimeForInput(parseISO(entry.end_time))
+      }));
+      
+      setEditingIndex(null);
+    } catch (error) {
+      console.error('Error saving time entry:', error);
+      alert('Failed to save time entry. Please try again.');
+    }
+  };
+
+  const handleClose = () => {
+    // Check if there are any unsaved changes
+    const hasUnsavedChanges = entries.some(entry => entry.isDirty);
+    
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
         onClose();
       }
+    } else {
+      onClose();
     }
   };
 
@@ -228,6 +365,8 @@ export function TimeEntryDialog({
         newEntries[index].billable_duration = duration;
       }
 
+      newEntries[index].isDirty = true;
+      console.log('Updating start time:', { index, newStartTime, newEntries });
       setEntries(newEntries);
     }
   };
@@ -243,6 +382,7 @@ export function TimeEntryDialog({
         newEntries[index].billable_duration = duration;
       }
 
+      console.log('Updating end time:', { index, newEndTime, newEntries });
       setEntries(newEntries);
     }
   };
@@ -251,6 +391,7 @@ export function TimeEntryDialog({
     if (isEditable) {
       const newEntries = [...entries];
       newEntries[index].tax_region = value;
+      console.log('Updating tax region:', { index, value, newEntries });
       setEntries(newEntries);
     }
   };
@@ -276,7 +417,7 @@ export function TimeEntryDialog({
       } else {
         newEntries[index].tax_region = '';
       }
-      
+      console.log('Updating service:', { index, value, newEntries });
       setEntries(newEntries);
     }
   };
@@ -297,6 +438,7 @@ export function TimeEntryDialog({
         newEntries[index].billable_duration = 0;
       }
 
+      console.log('Updating billable status:', { index, checked, newEntries });
       setEntries(newEntries);
       setIsBillable(newIsBillable);
     }
@@ -315,6 +457,7 @@ export function TimeEntryDialog({
         newEntries[index].billable_duration = hours * 60 + minutes;
       }
 
+      console.log('Updating duration:', { index, hours, minutes, newEntries });
       setEntries(newEntries);
 
       // Update time input to match new end time
@@ -326,63 +469,117 @@ export function TimeEntryDialog({
   };
 
 
-  const selectedEntry = entries[selectedEntryIndex];
-  const totalDuration = totalDurations[selectedEntryIndex] || 0;
+  const selectedEntry = editingIndex !== null ? entries[editingIndex] : null;
+  const totalDuration = editingIndex !== null ? totalDurations[editingIndex] || 0 : 0;
   const durationHours = Math.floor(totalDuration / 60);
   const durationMinutes = totalDuration % 60;
 
+  const handleDeleteEntry = async (index: number) => {
+    const entry = entries[index];
+    // Only show confirmation for existing entries
+    if (!entry.entry_id || window.confirm('Are you sure you want to delete this time entry?')) {
+      try {
+        if (entry.entry_id) {
+          // Delete from database if it's an existing entry
+          await deleteTimeEntry(entry.entry_id);
+        }
+        
+        // Remove from local state
+        const newEntries = [...entries];
+        newEntries.splice(index, 1);
+        console.log('Removing entry:', { index, entry, newEntries });
+        setEntries(newEntries);
+        setEditingIndex(null);
+        
+        if (onTimeEntriesUpdate) {
+          // Fetch fresh data after deletion
+          const fetchedTimeEntries = await fetchTimeEntriesForTimeSheet(timeSheetId);
+          onTimeEntriesUpdate(fetchedTimeEntries.map((entry): ITimeEntryWithWorkItemString => ({
+            ...entry,
+            start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
+            end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
+          })));
+        }
+      } catch (error) {
+        console.error('Error deleting time entry:', error);
+        alert('Failed to delete time entry. Please try again.');
+      }
+    }
+  };
+
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl">
-          <div className="flex justify-between items-center mb-4">
-            <Dialog.Title className="text-lg font-semibold">
-              Edit Time Entries for {workItem.name}
-            </Dialog.Title>
-            <Dialog.Close asChild>
-              <button
-                className="text-gray-400 hover:text-gray-500"
-                type="button"
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </Dialog.Close>
-          </div>
-
-          <div className="mb-4">
-            <div className="flex items-center space-x-4">
-              <CustomSelect
-                value={selectedEntryIndex.toString()}
-                onValueChange={(value) => setSelectedEntryIndex(parseInt(value))}
-                className="w-64"
-                options={entries.map((entry, index): SelectOption => ({
-                  value: index.toString(),
-                  label: `Entry ${index + 1}${entry.service_id ? ` - ${services.find(s => s.id === entry.service_id)?.name || ''}` : ''}`
-                }))}
-              />
-              {isEditable && (
-                <Button 
-                  onClick={handleAddEntry}
-                  variant="default"
-                  className='mb-4'
-                >
-                  Add Entry
-                </Button>
-              )}
+    <Dialog isOpen={isOpen} onClose={handleClose} title={`Edit Time Entries for ${workItem.name}`}>
+      <DialogContent className="w-full max-w-4xl">
+        <div>
+          {isLoading && existingEntries?.length ? (
+              <div className="space-y-4">
+              {[1, 2].map((i):JSX.Element => (
+                <div key={`skeleton-${i}`} className="border p-4 rounded">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
-
-          {selectedEntry && (
-            <div className="space-y-6 my-4">
-              <div className="border p-4 rounded space-y-4">
+          ) : (
+            <div className="space-y-4">
+              {entries.map((entry, index): JSX.Element => (
+                <div key={entry.entry_id || entry.tempId || `entry-${index}`}>
+                  {editingIndex === index ? (
+                    <div className="border p-4 rounded">
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            {entry.isDirty && (
+                              <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
+                            )}
+                            <Button
+                              onClick={() => handleSaveEntry(index)}
+                              variant="default"
+                              size="sm"
+                              className="mr-2"
+                            >
+                              Save
+                            </Button>
+                          </div>
+                          <div className="flex space-x-2">
+                            <Button
+                              onClick={() => setEditingIndex(null)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-10 w-10"
+                              title="Collapse entry"
+                            >
+                              <MinusCircle className="h-6 w-6" />
+                            </Button>
+                            <Button
+                              onClick={() => handleDeleteEntry(index)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-10 w-10 text-red-500 hover:text-red-600"
+                              title="Delete entry"
+                            >
+                              <XCircle className="h-6 w-6" />
+                            </Button>
+                          </div>
+                        </div>
+         
+                        <div className="border p-4 rounded space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Service <span className="text-red-500">*</span></label>
                     <CustomSelect
-                      value={selectedEntry.service_id || ''}
-                      onValueChange={(value) => handleServiceChange(selectedEntryIndex, value)}
+                      value={selectedEntry!.service_id || ''}
+                      onValueChange={(value) => handleServiceChange(editingIndex!, value)}
                       disabled={!isEditable}
                       className="mt-1 w-full"
                       options={services.map((service): SelectOption => ({
@@ -394,12 +591,12 @@ export function TimeEntryDialog({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Tax Region {services.find(s => s.id === selectedEntry.service_id)?.is_taxable && <span className="text-red-500">*</span>}
+                      Tax Region {services.find(s => s.id === selectedEntry!.service_id)?.is_taxable && <span className="text-red-500">*</span>}
                     </label>
                     <CustomSelect
-                      value={selectedEntry.tax_region || ''}
-                      onValueChange={(value) => handleTaxRegionChange(selectedEntryIndex, value)}
-                      disabled={!isEditable || !services.find(s => s.id === selectedEntry.service_id)?.is_taxable}
+                      value={selectedEntry!.tax_region || ''}
+                      onValueChange={(value) => handleTaxRegionChange(editingIndex!, value)}
+                      disabled={!isEditable || !services.find(s => s.id === selectedEntry!.service_id)?.is_taxable}
                       className="mt-1 w-full"
                       options={taxRegions.map((region): SelectOption => ({
                         value: region.name,
@@ -415,22 +612,32 @@ export function TimeEntryDialog({
                     <label className="block text-sm font-medium text-gray-700">Start Time</label>
                     <Input
                       type="time"
-                      value={timeInputs[`start-${selectedEntryIndex}`] || formatTimeForInput(parseISO(selectedEntry.start_time))}
+                      value={timeInputs[`start-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.start_time))}
                       onChange={(e) => {
                         if (isEditable) {
                           setTimeInputs(prev => ({
                             ...prev,
-                            [`start-${selectedEntryIndex}`]: e.target.value
+                            [`start-${editingIndex}`]: e.target.value
                           }));
                         }
                       }}
                       onBlur={(e) => {
                         if (isEditable && e.target.value) {
-                          const newStartTime = parseTimeToDate(e.target.value, parseISO(selectedEntry.start_time));
-                          handleStartTimeChange(selectedEntryIndex, newStartTime);
+                          const newStartTime = parseTimeToDate(e.target.value, parseISO(selectedEntry!.start_time));
+                          // Don't allow start time after end time
+                          if (newStartTime >= parseISO(selectedEntry!.end_time)) {
+                            alert('Start time cannot be after end time');
+                            // Reset to previous valid value
+                            setTimeInputs(prev => ({
+                              ...prev,
+                              [`start-${editingIndex}`]: formatTimeForInput(parseISO(selectedEntry!.start_time))
+                            }));
+                            return;
+                          }
+                          handleStartTimeChange(editingIndex!, newStartTime);
                           setTimeInputs(prev => ({
                             ...prev,
-                            [`start-${selectedEntryIndex}`]: formatTimeForInput(newStartTime)
+                            [`start-${editingIndex}`]: formatTimeForInput(newStartTime)
                           }));
                         }
                       }}
@@ -442,22 +649,32 @@ export function TimeEntryDialog({
                     <label className="block text-sm font-medium text-gray-700">End Time</label>
                     <Input
                       type="time"
-                      value={timeInputs[`end-${selectedEntryIndex}`] || formatTimeForInput(parseISO(selectedEntry.end_time))}
+                      value={timeInputs[`end-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.end_time))}
                       onChange={(e) => {
                         if (isEditable) {
                           setTimeInputs(prev => ({
                             ...prev,
-                            [`end-${selectedEntryIndex}`]: e.target.value
+                            [`end-${editingIndex}`]: e.target.value
                           }));
                         }
                       }}
                       onBlur={(e) => {
                         if (isEditable && e.target.value) {
-                          const newEndTime = parseTimeToDate(e.target.value, parseISO(selectedEntry.end_time));
-                          handleEndTimeChange(selectedEntryIndex, newEndTime);
+                          const newEndTime = parseTimeToDate(e.target.value, parseISO(selectedEntry!.end_time));
+                          // Don't allow end time before start time
+                          if (newEndTime <= parseISO(selectedEntry!.start_time)) {
+                            alert('End time cannot be before start time');
+                            // Reset to previous valid value
+                            setTimeInputs(prev => ({
+                              ...prev,
+                              [`end-${editingIndex}`]: formatTimeForInput(parseISO(selectedEntry!.end_time))
+                            }));
+                            return;
+                          }
+                          handleEndTimeChange(editingIndex!, newEndTime);
                           setTimeInputs(prev => ({
                             ...prev,
-                            [`end-${selectedEntryIndex}`]: formatTimeForInput(newEndTime)
+                            [`end-${editingIndex}`]: formatTimeForInput(newEndTime)
                           }));
                         }
                       }}
@@ -477,7 +694,7 @@ export function TimeEntryDialog({
                         value={durationHours}
                         onChange={(e) => {
                           const hours = Math.max(0, parseInt(e.target.value) || 0);
-                          handleDurationChange(selectedEntryIndex, hours, durationMinutes);
+                          handleDurationChange(editingIndex!, hours, durationMinutes);
                         }}
                         placeholder="Hours"
                         disabled={!isEditable}
@@ -491,7 +708,7 @@ export function TimeEntryDialog({
                         value={durationMinutes}
                         onChange={(e) => {
                           const minutes = Math.max(0, Math.min(59, parseInt(e.target.value) || 0));
-                          handleDurationChange(selectedEntryIndex, durationHours, minutes);
+                          handleDurationChange(editingIndex!, durationHours, minutes);
                         }}
                         placeholder="Minutes"
                         disabled={!isEditable}
@@ -504,11 +721,11 @@ export function TimeEntryDialog({
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-gray-700">
-                        {isBillable[selectedEntryIndex] ? 'Billable' : 'Non-billable'}
+                        {isBillable[editingIndex!] ? 'Billable' : 'Non-billable'}
                       </span>
                       <Switch
-                        checked={isBillable[selectedEntryIndex]}
-                        onCheckedChange={(checked) => handleBillableToggle(selectedEntryIndex, checked)}
+                        checked={isBillable[editingIndex!]}
+                        onCheckedChange={(checked) => handleBillableToggle(editingIndex!, checked)}
                         className="data-[state=checked]:bg-primary-500"
                       />
                     </div>
@@ -518,11 +735,12 @@ export function TimeEntryDialog({
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Notes</label>
                   <Input
-                    value={selectedEntry.notes}
+                    value={selectedEntry!.notes}
                     onChange={(e) => {
                       if (isEditable) {
                         const newEntries = [...entries];
-                        newEntries[selectedEntryIndex].notes = e.target.value;
+                        newEntries[editingIndex!].notes = e.target.value;
+                        console.log('Updating notes:', { index: editingIndex, notes: e.target.value, newEntries });
                         setEntries(newEntries);
                       }
                     }}
@@ -532,29 +750,72 @@ export function TimeEntryDialog({
                     className="mt-1 w-full"
                   />
                 </div>
-              </div>
+              </div>                  </div>
+                    </div>
+                  ) : (
+                    <div className="border p-4 rounded hover:bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <BsClock className="text-gray-400" />
+                          <span>{formatTimeForInput(parseISO(entry.start_time))} - {formatTimeForInput(parseISO(entry.end_time))}</span>
+                        </div>
+                        <span className="text-gray-600">|</span>
+                        <span>{services.find(s => s.id === entry.service_id)?.name || 'No service selected'}</span>
+                        {entry.notes && (
+                          <>
+                            <span className="text-gray-600">|</span>
+                            <span className="text-gray-600 truncate max-w-[200px]">{entry.notes}</span>
+                          </>
+                        )}
+                      </div>
+                      {isEditable && (
+                        <div className="flex space-x-2">
+                          <Button
+                            onClick={() => setEditingIndex(index)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => handleDeleteEntry(index)}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {isEditable && (
+                <Button 
+                  onClick={() => {
+                    handleAddEntry();
+                    setEditingIndex(entries.length);
+                  }}
+                  variant="default"
+                  className="w-full"
+                >
+                  Add Entry
+                </Button>
+              )}
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button 
-              onClick={onClose}
-              variant="outline"
-            >
-              Cancel
+          <DialogFooter>
+            <Button onClick={handleClose} variant="outline">
+              Close
             </Button>
-            {isEditable && (
-              <Button 
-                onClick={handleSave}
-                variant="default"
-              >
-                Save All
-              </Button>
-            )}
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+          </DialogFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
