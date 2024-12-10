@@ -5,7 +5,7 @@ import { Pencil, Trash2, MinusCircle, XCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TaxRegion } from '@/types/types.d';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
-import { deleteTimeEntry, fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet } from '@/lib/actions/timeEntryActions';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '@/lib/actions/timeEntryActions';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
@@ -39,7 +39,7 @@ interface TimeEntryDialogProps {
   defaultStartTime?: Date;
   defaultEndTime?: Date;
   defaultTaxRegion?: string;
-  timeSheetId: string;
+  timeSheetId?: string;
   onTimeEntriesUpdate?: (entries: ITimeEntryWithWorkItemString[]) => void;
 }
 
@@ -73,7 +73,6 @@ export function TimeEntryDialog({
   const [taxRegions, setTaxRegions] = useState<TaxRegion[]>([]);
   const [timeInputs, setTimeInputs] = useState<{ [key: string]: string }>({});
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);
-  const [isBillable, setIsBillable] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -126,11 +125,12 @@ export function TimeEntryDialog({
           };
         });
       } else if (defaultStartTime && defaultEndTime) {
+        const duration = calculateDuration(defaultStartTime, defaultEndTime);
         const newEntry: Omit<ITimeEntry, 'tenant'> = {
           work_item_id: workItem.work_item_id,
           start_time: formatISO(defaultStartTime),
           end_time: formatISO(defaultEndTime),
-          billable_duration: calculateDuration(defaultStartTime, defaultEndTime),
+          billable_duration: duration, // Set initial billable duration equal to total duration
           work_item_type: workItem.type,
           notes: '',
           entry_id: '',
@@ -145,46 +145,48 @@ export function TimeEntryDialog({
       }
 
       if (newEntries.length === 0) {
-      const defaultStartTime = new Date(date);
-      defaultStartTime.setHours(8, 0, 0, 0);
-      const defaultEndTime = new Date(defaultStartTime);
-      defaultEndTime.setHours(9, 0, 0, 0);
+        const defaultStartTime = new Date(date);
+        defaultStartTime.setHours(8, 0, 0, 0);
+        const defaultEndTime = new Date(defaultStartTime);
+        defaultEndTime.setHours(9, 0, 0, 0);
+        const duration = calculateDuration(defaultStartTime, defaultEndTime);
 
-      const emptyEntry: Omit<ITimeEntry, 'tenant'> = {
-        work_item_id: workItem.work_item_id,
-        start_time: formatISO(defaultStartTime),
-        end_time: formatISO(defaultEndTime),
-        billable_duration: 0,
-        work_item_type: workItem.type,
-        notes: '',
-        entry_id: '',
-        user_id: '',
-        created_at: formatISO(new Date()),
-        updated_at: formatISO(new Date()),
-        approval_status: 'DRAFT',
-        service_id: '',
-        tax_region: defaultTaxRegion || ''
-      };
-      newEntries.push(emptyEntry);
-    }
+        const emptyEntry: Omit<ITimeEntry, 'tenant'> = {
+          work_item_id: workItem.work_item_id,
+          start_time: formatISO(defaultStartTime),
+          end_time: formatISO(defaultEndTime),
+          billable_duration: duration, // Set initial billable duration equal to total duration
+          work_item_type: workItem.type,
+          notes: '',
+          entry_id: '',
+          user_id: '',
+          created_at: formatISO(new Date()),
+          updated_at: formatISO(new Date()),
+          approval_status: 'DRAFT',
+          service_id: '',
+          tax_region: defaultTaxRegion || ''
+        };
+        newEntries.push(emptyEntry);
+      }
 
-    // Sort entries by start time
-    const sortedEntries = [...newEntries].sort((a, b) => 
-      parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
-    );
-    console.log('Initializing entries:', { sortedEntries });
-    setEntries(sortedEntries);
-    setIsBillable(newEntries.map((entry): boolean => entry.billable_duration > 0));
-    // Only show edit UI if this is a new entry with no existing entries
-    if (newEntries.length === 1 && !existingEntries?.length) {
-      setEditingIndex(0);
-    } else {
-      setEditingIndex(null);
-    }
-  };
+      // Sort entries by start time
+      const sortedEntries = [...newEntries].sort((a, b): number => 
+        parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
+      );
+      console.log('Initializing entries:', { sortedEntries });
+      setEntries(sortedEntries);
+      
+      
+      // Only show edit UI if this is a new entry with no existing entries
+      if (newEntries.length === 1 && !existingEntries?.length) {
+        setEditingIndex(0);
+      } else {
+        setEditingIndex(null);
+      }
+    };
 
-  initializeEntries();
-}, [existingEntries, defaultStartTime, defaultEndTime, workItem, date, defaultTaxRegion]);
+    initializeEntries();
+  }, [existingEntries, defaultStartTime, defaultEndTime, workItem, date, defaultTaxRegion]);
 
   useEffect(() => {
     if (isOpen && lastNoteInputRef.current && shouldFocusNotes) {
@@ -219,13 +221,14 @@ export function TimeEntryDialog({
       // Set end time to start time + 1 hour by default
       const defaultEndTime = new Date(defaultStartTime);
       defaultEndTime.setHours(defaultEndTime.getHours() + 1);
+      const duration = calculateDuration(defaultStartTime, defaultEndTime);
 
       // Mark this as a new entry by setting a temporary flag
       const newEntry: ITimeEntryWithNew & { tempId?: string } = {
         work_item_id: workItem.work_item_id,
         start_time: formatISO(defaultStartTime),
         end_time: formatISO(defaultEndTime),
-        billable_duration: 0,
+        billable_duration: duration, // Set initial billable duration equal to total duration
         work_item_type: workItem.type,
         notes: '',
         entry_id: '',
@@ -238,17 +241,10 @@ export function TimeEntryDialog({
         isNew: true,
         tempId: crypto.randomUUID()
       };
-      const newIndex = entries.length;
+
       console.log('Adding new entry:', { newEntry });
       setEntries([...entries, newEntry]);
-      setIsBillable([...isBillable, false]);
-      setEditingIndex(newIndex);
       setShouldFocusNotes(true);
-      setTimeout(() => {
-        if (lastNoteInputRef.current) {
-          lastNoteInputRef.current.focus();
-        }
-      }, 0);
     }
   };
 
@@ -271,14 +267,26 @@ export function TimeEntryDialog({
       return;
     }
 
+    // Calculate duration
+    const duration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
+    
+    // Prepare entry with existing billable duration
+    const entryToSave = {
+      ...entry,
+      billable_duration: entry.billable_duration
+    };
+
+    console.log('Saving entry:', {
+      duration,
+      billable_duration: entryToSave.billable_duration,
+      entry: entryToSave
+    });
+
     try {
-      await onSave(entry);
+      await onSave(entryToSave);
       
-      // After successful save, fetch fresh data
-      const [fetchedTimeEntries] = await Promise.all([
-        fetchTimeEntriesForTimeSheet(timeSheetId),
-        fetchWorkItemsForTimeSheet(timeSheetId)
-      ]);
+      // After successful save, fetch fresh data if we have a timesheet ID
+      const fetchedTimeEntries = timeSheetId ? await fetchTimeEntriesForTimeSheet(timeSheetId) : [];
 
       // Convert fetched entries to the correct format
       const updatedEntries = fetchedTimeEntries
@@ -289,34 +297,23 @@ export function TimeEntryDialog({
           end_time: typeof entry.end_time === 'string' ? entry.end_time : formatISO(entry.end_time)
         }));
 
-      // Update local entries state with fresh data, but only if changed
+      // Update local entries state with fresh data
       const newEntries = updatedEntries.map((entry): ITimeEntryWithNew => ({
         ...entry,
         isDirty: false,
-        isNew: false,
-        work_item_id: entry.work_item_id,
-        work_item_type: entry.work_item_type,
-        start_time: entry.start_time,
-        end_time: entry.end_time,
-        billable_duration: entry.billable_duration,
-        notes: entry.notes,
-        entry_id: entry.entry_id,
-        user_id: entry.user_id,
-        created_at: entry.created_at,
-        updated_at: entry.updated_at,
-        approval_status: entry.approval_status,
-        service_id: entry.service_id,
-        tax_region: entry.tax_region
+        isNew: false
       }));
       
       // Sort entries by start time before updating state
       const sortedEntries = [...newEntries].sort((a, b) => 
         parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
       );
-      if (JSON.stringify(sortedEntries) !== JSON.stringify(entries)) {
-        console.log('Updating entries after save:', { sortedEntries });
-        setEntries(sortedEntries);
-      }
+
+      console.log('Updating state after save:', {
+        sortedEntries
+      });
+
+      setEntries(sortedEntries);
 
       // Notify parent of all updated entries
       if (onTimeEntriesUpdate) {
@@ -360,8 +357,8 @@ export function TimeEntryDialog({
       newEntries[index].start_time = formatISO(newStartTime);
       const duration = calculateDuration(newStartTime, parseISO(newEntries[index].end_time));
 
-      // Update billable duration if entry is billable
-      if (isBillable[index]) {
+      // Update billable duration if entry is currently billable
+      if (newEntries[index].billable_duration > 0) {
         newEntries[index].billable_duration = duration;
       }
 
@@ -378,7 +375,7 @@ export function TimeEntryDialog({
       const duration = calculateDuration(parseISO(newEntries[index].start_time), newEndTime);
 
       // Update billable duration if entry is billable
-      if (isBillable[index]) {
+      if (newEntries[index].billable_duration > 0) {
         newEntries[index].billable_duration = duration;
       }
 
@@ -425,22 +422,25 @@ export function TimeEntryDialog({
   const handleBillableToggle = (index: number, checked: boolean) => {
     if (isEditable) {
       const newEntries = [...entries];
-      const newIsBillable = [...isBillable];
-      newIsBillable[index] = checked;
+      const entry = newEntries[index];
+      const duration = calculateDuration(
+        parseISO(entry.start_time),
+        parseISO(entry.end_time)
+      );
+      
+      // Set billable_duration based on toggle
+      entry.billable_duration = checked ? duration : 0;
+      entry.isDirty = true;
 
-      // Update billable duration based on toggle
-      if (checked) {
-        newEntries[index].billable_duration = calculateDuration(
-          parseISO(newEntries[index].start_time),
-          parseISO(newEntries[index].end_time)
-        );
-      } else {
-        newEntries[index].billable_duration = 0;
-      }
+      console.log('Updating billable status:', { 
+        index, 
+        checked, 
+        duration,
+        billable_duration: entry.billable_duration,
+        entry
+      });
 
-      console.log('Updating billable status:', { index, checked, newEntries });
       setEntries(newEntries);
-      setIsBillable(newIsBillable);
     }
   };
 
@@ -453,7 +453,7 @@ export function TimeEntryDialog({
       newEntries[index].end_time = formatISO(newEndTime);
 
       // Update billable duration if entry is billable
-      if (isBillable[index]) {
+      if (newEntries[index].billable_duration > 0) {
         newEntries[index].billable_duration = hours * 60 + minutes;
       }
 
@@ -467,7 +467,6 @@ export function TimeEntryDialog({
       }));
     }
   };
-
 
   const selectedEntry = editingIndex !== null ? entries[editingIndex] : null;
   const totalDuration = editingIndex !== null ? totalDurations[editingIndex] || 0 : 0;
@@ -491,8 +490,8 @@ export function TimeEntryDialog({
         setEntries(newEntries);
         setEditingIndex(null);
         
-        if (onTimeEntriesUpdate) {
-          // Fetch fresh data after deletion
+        if (onTimeEntriesUpdate && timeSheetId) {
+          // Fetch fresh data after deletion if we have a timesheet ID
           const fetchedTimeEntries = await fetchTimeEntriesForTimeSheet(timeSheetId);
           onTimeEntriesUpdate(fetchedTimeEntries.map((entry): ITimeEntryWithWorkItemString => ({
             ...entry,
@@ -513,7 +512,7 @@ export function TimeEntryDialog({
         <div>
           {isLoading && existingEntries?.length ? (
               <div className="space-y-4">
-              {[1, 2].map((i):JSX.Element => (
+              {[1, 2].map((i: number): JSX.Element => (
                 <div key={`skeleton-${i}`} className="border p-4 rounded">
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -721,10 +720,10 @@ export function TimeEntryDialog({
                   <div className="flex items-center justify-between mt-4">
                     <div className="flex items-center space-x-2">
                       <span className="text-sm font-medium text-gray-700">
-                        {isBillable[editingIndex!] ? 'Billable' : 'Non-billable'}
+                        {selectedEntry!.billable_duration > 0 ? 'Billable' : 'Non-billable'}
                       </span>
                       <Switch
-                        checked={isBillable[editingIndex!]}
+                        checked={selectedEntry!.billable_duration > 0}
                         onCheckedChange={(checked) => handleBillableToggle(editingIndex!, checked)}
                         className="data-[state=checked]:bg-primary-500"
                       />

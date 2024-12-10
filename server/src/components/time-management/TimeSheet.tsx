@@ -132,6 +132,7 @@ export function TimeSheet({
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [newComment, setNewComment] = useState('');
     const [isAddingComment, setIsAddingComment] = useState(false);
+    const [isBillable, setIsBillable] = useState<boolean[]>([]);
 
     const [selectedCell, setSelectedCell] = useState<{
         workItem: IWorkItem;
@@ -422,6 +423,7 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
         startTime.setHours(8, 0, 0, 0);
         let endTime = new Date(startTime);
         endTime.setHours(9, 0, 0, 0);
+
 
         // If there are existing entries for this day, use the last entry's end time as the start time
         if (entries.length > 0) {

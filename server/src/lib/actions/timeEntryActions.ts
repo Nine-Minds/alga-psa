@@ -236,12 +236,18 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
   if (entry_id) {
     // Update existing entry
+    console.log('Updating time entry:', {
+      entry_id,
+      billable_duration: validatedTimeEntry.billable_duration,
+      entryData
+    });
     resultingEntry = await db<ITimeEntry>('time_entries')
       .where({ entry_id: entry_id })
       .update({
         ...entryData,
         updated_at: db.fn.now()
       }).returning('*');
+    console.log('Updated time entry result:', resultingEntry);
   } else {
     // log the entry data
     console.log(`Saving new time entry: ${JSON.stringify(entryData)}`);
