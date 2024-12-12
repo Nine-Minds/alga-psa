@@ -4,28 +4,35 @@
 import { useState, useEffect } from 'react';
 import { TimeSheet } from './TimeSheet';
 import { TimePeriodList } from './TimePeriodList';
+import { SkeletonTimeSheet } from './SkeletonTimeSheet';
 import { ITimeSheet, ITimePeriodWithStatus, ITimeEntry } from '@/interfaces/timeEntry.interfaces';
-import { IUser } from '@/interfaces';
+import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { fetchTimePeriods, fetchOrCreateTimeSheet, saveTimeEntry } from '@/lib/actions/timeEntryActions';
 import { useTeamAuth } from '@/hooks/useTeamAuth';
 
 
 interface TimeTrackingProps {
-  currentUser: IUser;
+  currentUser: IUserWithRoles;
   isManager: boolean;
 }
 
 export default function TimeTracking({ currentUser, isManager }: TimeTrackingProps) {
   const [timePeriods, setTimePeriods] = useState<ITimePeriodWithStatus[]>([]);
   const [selectedTimeSheet, setSelectedTimeSheet] = useState<ITimeSheet | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     loadTimePeriods();
   }, [currentUser.user_id]);
 
   const loadTimePeriods = async () => {
-    const periods = await fetchTimePeriods(currentUser.user_id);
-    setTimePeriods(periods);
+    try {
+      const periods = await fetchTimePeriods(currentUser.user_id);
+      setTimePeriods(periods);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSelectTimePeriod = async (timePeriod: ITimePeriodWithStatus) => {
@@ -72,6 +79,10 @@ export default function TimeTracking({ currentUser, isManager }: TimeTrackingPro
         onBack={handleBack}
       />
     );
+  }
+
+  if (isLoading) {
+    return <SkeletonTimeSheet />;
   }
 
   return <TimePeriodList timePeriods={timePeriods} onSelectTimePeriod={handleSelectTimePeriod} />;

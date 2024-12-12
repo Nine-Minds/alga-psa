@@ -275,11 +275,8 @@ export function TimeEntryDialog({
     // Calculate duration
     const duration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
     
-    // Prepare entry with existing billable duration
-    const entryToSave = {
-      ...entry,
-      billable_duration: entry.billable_duration
-    };
+    // Prepare entry for saving by removing UI-only properties
+    const { isNew, isDirty, tempId, ...entryToSave } = entry;
 
     console.log('Saving entry:', {
       duration,
