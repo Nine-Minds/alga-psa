@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react';
-import { Pencil, Trash2, MinusCircle, XCircle } from 'lucide-react';
+import { Pencil, Trash2, MinusCircle, XCircle, Plus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { TaxRegion } from '@/types/types.d';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
@@ -14,6 +14,7 @@ import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '@/interfaces/ti
 interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
+  tempId?: string;
 }
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { BsClock } from 'react-icons/bs';
@@ -126,7 +127,7 @@ export function TimeEntryDialog({
         });
       } else if (defaultStartTime && defaultEndTime) {
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
-        const newEntry: Omit<ITimeEntry, 'tenant'> = {
+        const newEntry: ITimeEntryWithNew = {
           work_item_id: workItem.work_item_id,
           start_time: formatISO(defaultStartTime),
           end_time: formatISO(defaultEndTime),
@@ -139,7 +140,9 @@ export function TimeEntryDialog({
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
           service_id: '',
-          tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || ''
+          tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || '',
+          isNew: true,
+          tempId: crypto.randomUUID()
         };
         newEntries.push(newEntry);
       }
@@ -151,7 +154,7 @@ export function TimeEntryDialog({
         defaultEndTime.setHours(9, 0, 0, 0);
         const duration = calculateDuration(defaultStartTime, defaultEndTime);
 
-        const emptyEntry: Omit<ITimeEntry, 'tenant'> = {
+        const emptyEntry: ITimeEntryWithNew = {
           work_item_id: workItem.work_item_id,
           start_time: formatISO(defaultStartTime),
           end_time: formatISO(defaultEndTime),
@@ -164,7 +167,9 @@ export function TimeEntryDialog({
           updated_at: formatISO(new Date()),
           approval_status: 'DRAFT',
           service_id: '',
-          tax_region: defaultTaxRegion || ''
+          tax_region: defaultTaxRegion || '',
+          isNew: true,
+          tempId: crypto.randomUUID()
         };
         newEntries.push(emptyEntry);
       }
@@ -536,30 +541,24 @@ export function TimeEntryDialog({
                   {editingIndex === index ? (
                     <div className="border p-4 rounded">
                       <div className="space-y-6">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-end items-center">
                           <div className="flex items-center">
                             {entry.isDirty && (
                               <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
                             )}
-                            <Button
-                              onClick={() => handleSaveEntry(index)}
-                              variant="default"
-                              size="sm"
-                              className="mr-2"
-                            >
-                              Save
-                            </Button>
                           </div>
                           <div className="flex space-x-2">
-                            <Button
-                              onClick={() => setEditingIndex(null)}
-                              variant="ghost"
-                              size="sm"
-                              className="h-10 w-10"
-                              title="Collapse entry"
-                            >
-                              <MinusCircle className="h-6 w-6" />
-                            </Button>
+                            {!entry.isNew && (
+                              <Button
+                                onClick={() => setEditingIndex(null)}
+                                variant="ghost"
+                                size="sm"
+                                className="h-10 w-10"
+                                title="Collapse entry"
+                              >
+                                <MinusCircle className="h-6 w-6" />
+                              </Button>
+                            )}
                             <Button
                               onClick={() => handleDeleteEntry(index)}
                               variant="ghost"
@@ -749,6 +748,17 @@ export function TimeEntryDialog({
                     className="mt-1 w-full"
                   />
                 </div>
+
+                <div className="flex justify-end mt-4">
+                  <Button
+                    onClick={() => handleSaveEntry(index)}
+                    variant="default"
+                    size="default"
+                    className="w-32"
+                  >
+                    Save
+                  </Button>
+                </div>
               </div>                  </div>
                     </div>
                   ) : (
@@ -798,9 +808,11 @@ export function TimeEntryDialog({
                     handleAddEntry();
                     setEditingIndex(entries.length);
                   }}
-                  variant="default"
-                  className="w-full"
+                  variant="outline"
+                  className="w-full flex items-center justify-center gap-2"
+                  disabled={editingIndex !== null && entries[editingIndex]?.isNew}
                 >
+                  <Plus className="h-4 w-4" />
                   Add Entry
                 </Button>
               )}
