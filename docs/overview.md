@@ -38,6 +38,24 @@ This document provides a high-level architectural overview of the open-source MS
 
 **II. Technical Architecture and File Paths:**
 
+* **Docker Configuration:**
+  * Base configuration in `docker-compose.yaml`:
+    - Defines common services (server, postgres, redis, etc.)
+    - Sets up shared environment variables
+    - Configures networking
+  * Enterprise Edition configuration in `ee/setup/docker-compose.yaml`:
+    - Extends base services
+    - Adds EE-specific overrides
+    - Configures EE-specific environment variables
+  * Running different editions:
+    ```bash
+    # Community Edition
+    docker compose -f docker-compose.yaml up
+    
+    # Enterprise Edition
+    docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
+    ```
+
 * **Frontend:**
   * Next.js application located in `server/src/pages` and `server/src/components`.
   * **Workflows UI:** Workflow-related UI components for the Enterprise Edition are located in `ee/server/src/components/flow`. These include the workflow editor and associated components.

@@ -22,13 +22,13 @@ x-common-config: &common-config
 
     # ---- DATABASE ----
     DB_TYPE: ${DB_TYPE}
-    DB_HOST: ${DB_HOST:-postgres}
+    DB_HOST: postgres
     DB_PORT: ${DB_PORT:-5432}
-    DB_NAME_SERVER: ${DB_NAME_SERVER}
-    DB_USER_SERVER: ${DB_USER_SERVER}
-    DB_USER_ADMIN: ${DB_NAME_SERVER}
-    DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER}
-    DB_PASSWORD_ADMIN: ${DB_PASSWORD_ADMIN}
+    DB_NAME_SERVER: ${DB_NAME_SERVER:-postgres}
+    DB_USER_SERVER: ${DB_USER_SERVER:-postgres}
+    DB_USER_ADMIN: ${DB_USER_SERVER:-postgres}
+    DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER:-abcd1234!}
+    DB_PASSWORD_ADMIN: ${DB_PASSWORD_SERVER:-abcd1234!}
 
     # ---- LOGGING ----
     LOG_LEVEL: ${LOG_LEVEL}
@@ -91,8 +91,9 @@ services:
   server:
     <<: *common-config
     networks:
-      - ${NETWORK_NAME:-app-network}
+      - app-network
 
 networks:
   app-network:
-    external: ${USE_EXTERNAL_NETWORK:-true}
+    name: ${PROJECT_NAME}_app-network
+    external: true

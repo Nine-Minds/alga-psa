@@ -7,6 +7,7 @@ This project uses a monorepo structure to integrate the enterprise edition (EE) 
 ```
 /
 ├── package.json          # Root package.json with all dependencies
+├── docker-compose.yaml   # Base docker-compose configuration
 ├── server/              # Community Edition
 │   ├── package.json     # CE package.json (minimal, uses workspace)
 │   ├── tsconfig.json    # Base TypeScript config
@@ -22,6 +23,32 @@ This project uses a monorepo structure to integrate the enterprise edition (EE) 
             ├── components/
             ├── lib/
             └── services/
+```
+
+## Docker Compose Configuration
+
+The project uses a layered docker-compose configuration to support both CE and EE deployments:
+
+1. **Base Configuration** (`docker-compose.yaml`):
+   - Contains common service definitions
+   - Defines shared environment variables including EDITION
+   - Sets up base networking
+
+2. **EE Configuration** (`ee/setup/docker-compose.yaml`):
+   - Extends services from base configuration
+   - Sets EDITION=enterprise
+   - Uses EE-specific Dockerfile and configurations
+
+### Running CE Version
+```bash
+# From project root
+EDITION=community docker compose -f docker-compose.yaml up
+```
+
+### Running EE Version
+```bash
+# From project root
+EDITION=enterprise docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
 ```
 
 ## Workspace Setup
@@ -211,6 +238,15 @@ npm run dev  # Runs with EE features enabled
 ```bash
 npm run build      # CE build
 npm run build:ee   # EE build
+```
+
+3. Run with Docker Compose:
+```bash
+# Community Edition
+EDITION=community docker compose -f docker-compose.yaml up
+
+# Enterprise Edition
+EDITION=enterprise docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
 ```
 
 Remember to:

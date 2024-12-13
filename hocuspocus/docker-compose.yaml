@@ -31,8 +31,8 @@ services:
   hocuspocus:
     <<: *common-config
     networks:
-      - ${NETWORK_NAME:-app-network}
+      - app-network
 
 networks:
   app-network:
-    external: ${USE_EXTERNAL_NETWORK:-true}
+    name: ${APP_NAME:-sebastian}_app-network

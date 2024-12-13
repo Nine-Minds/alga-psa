@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "node --loader ts-node/esm src/scripts/validateEnvStartup.js",
     "dev": "NEXT_PUBLIC_EDITION=enterprise next dev",
-    "build": "next build",
+    "build": "NEXT_PUBLIC_EDITION=enterprise next build",
     "start": "next start",
     "lint": "next lint"
   },

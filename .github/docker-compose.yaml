@@ -20,12 +20,13 @@ services:
     build:
       context: ..
       dockerfile: setup/Dockerfile
-    command: bash -c "./entrypoint.sh && exit"
+    command: bash -c "npm install pg-boss && node /app/server/setup/create_database.js && PGPASSWORD=${DB_PASSWORD_ADMIN} psql -h postgres -U postgres -d postgres -c 'CREATE DATABASE server;' && PGPASSWORD=${DB_PASSWORD_ADMIN} psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' && npx knex migrate:latest --knexfile /app/knexfile.cjs && npx knex seed:run --knexfile /app/knexfile.cjs && exit"
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER_ADMIN: postgres
       DB_PASSWORD_ADMIN: abcd1234!
+      DB_PASSWORD_SUPERUSER: abcd1234!
       DB_NAME_SERVER: server
       DB_USER_SERVER: server_user
       DB_PASSWORD_SERVER: abcd1234!

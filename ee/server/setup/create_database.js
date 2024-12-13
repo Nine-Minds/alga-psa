@@ -1,18 +1,33 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
-const { Client } = require('pg');
+import pg from 'pg';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
+import ini from 'ini';
+import fs from 'fs';
 
-require('dotenv').config('.env.localtest');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const { Client } = pg;
+
+dotenv.config();
+
+// Read config.ini and interpolate environment variables
+const configContent = fs.readFileSync('/app/config.ini', 'utf-8');
+const interpolatedContent = configContent.replace(/\${([^}]+)}/g, (match, p1) => process.env[p1] || match);
+const config = ini.parse(interpolatedContent);
 
 const MAX_RETRIES = 5;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 async function createDatabase(retryCount = 0) {
   const client = new Client({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT,
-    user: process.env.DB_USER_ADMIN,
-    password: process.env.DB_PASSWORD_ADMIN,
+    host: config.database.host,
+    port: config.database.port,
+    user: config.database.admin_user,
+    password: config.database.admin_password,
     database: 'postgres' // Connect to the default postgres database
   });
 
@@ -22,38 +37,41 @@ async function createDatabase(retryCount = 0) {
     // Check if the database already exists
     const dbCheckResult = await client.query(
       "SELECT 1 FROM pg_database WHERE datname = $1",
-      [process.env.DB_NAME_SERVER]
+      [config.database.name]
     );
 
     if (dbCheckResult.rows.length > 0) {
-      console.log(`Database ${process.env.DB_NAME_SERVER} already exists. Skipping creation.`);
+      console.log(`Database ${config.database.name} already exists. Skipping creation.`);
     } else {
       // Create database if it doesn't exist
-      await client.query(`CREATE DATABASE ${process.env.DB_NAME_SERVER}`);
-      console.log(`Database ${process.env.DB_NAME_SERVER} created successfully.`);
+      await client.query(`CREATE DATABASE ${config.database.name}`);
+      console.log(`Database ${config.database.name} created successfully.`);
     }
 
     // Check if the user already exists
     const userCheckResult = await client.query(
       "SELECT 1 FROM pg_roles WHERE rolname = $1",
-      [process.env.DB_USER_SERVER]
+      [config.database.user]
     );
 
     if (userCheckResult.rows.length > 0) {
-      console.log(`User ${process.env.DB_USER_SERVER} already exists. Skipping creation.`);
+      console.log(`User ${config.database.user} already exists. Skipping creation.`);
     } else {
       // Create the user
-      await client.query(`CREATE USER ${process.env.DB_USER_SERVER} WITH PASSWORD '${process.env.DB_PASSWORD_SERVER}'`);
-      console.log(`User ${process.env.DB_USER_SERVER} created successfully.`);
+      await client.query(`CREATE USER ${config.database.user} WITH PASSWORD '${config.database.password}'`);
+      console.log(`User ${config.database.user} created successfully.`);
     }
+
+    // Close connection to postgres database
+    await client.end();
 
     // Connect to the newly created database to create extensions
     const appDb = new Client({
-      user: process.env.DB_USER_ADMIN,
-      password: process.env.DB_PASSWORD_ADMIN,
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      database: process.env.DB_NAME_SERVER
+      host: config.database.host,
+      port: config.database.port,
+      user: config.database.admin_user,
+      password: config.database.admin_password,
+      database: config.database.name
     });
 
     await appDb.connect();
@@ -67,8 +85,8 @@ async function createDatabase(retryCount = 0) {
     console.log('Database extensions created successfully');
 
     // Set environment and grant privileges
-    await client.query(`ALTER DATABASE ${process.env.DB_NAME_SERVER} SET app.environment = '${process.env.APP_ENV}'`);
-    await client.query(`GRANT ALL PRIVILEGES ON DATABASE ${process.env.DB_NAME_SERVER} TO ${process.env.DB_USER_SERVER}`);
+    await appDb.query(`ALTER DATABASE ${config.database.name} SET app.environment = '${config.app.environment}'`);
+    await appDb.query(`GRANT ALL PRIVILEGES ON DATABASE ${config.database.name} TO ${config.database.user}`);
     
     console.log('Enterprise database setup completed successfully');
 
@@ -85,8 +103,6 @@ async function createDatabase(retryCount = 0) {
       console.error('Max retries reached. Database setup failed.');
       process.exit(1);
     }
-  } finally {
-    await client.end();
   }
 }
 

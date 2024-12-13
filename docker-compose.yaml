@@ -1,4 +1,5 @@
-# Define environment variables at the top level
+version: '3.8'
+
 x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
@@ -6,7 +7,8 @@ x-environment: &shared-environment
   APP_ENV: ${APP_ENV:-development}
   NODE_ENV: ${APP_ENV:-development}
   HOST: ${HOST}
-  VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED}
+  VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
+  EDITION: ${EDITION:-community}
 
   # ---- REDIS ----
   REDIS_HOST: ${REDIS_HOST:-redis}
@@ -15,22 +17,26 @@ x-environment: &shared-environment
 
   # ---- DATABASE ----
   DB_TYPE: ${DB_TYPE}
-  DB_HOST: ${DB_HOST:-postgres}
+  DB_HOST: postgres
   DB_PORT: ${DB_PORT:-5432}
-  DB_USER: postgres
-  DB_NAME: postgres
-  DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
-  DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
-  DB_PASSWORD_HOCUSPOCUS: ${DB_PASSWORD_HOCUSPOCUS:-sebastian123}
-  DB_NAME_SERVER: ${DB_NAME_SERVER:-server}
-  DB_USER_SERVER: ${DB_USER_SERVER:-server_user}
-  DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER:-sebastian123}
-  POSTGRES_PASSWORD: ${DB_PASSWORD_SUPERUSER:-abcd1234!}
+  DB_USER: ${DB_USER_SERVER:-postgres}
+  DB_NAME: ${DB_NAME_SERVER:-postgres}
+  DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-postgres}
+  DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-postgres}
+  DB_PASSWORD_HOCUSPOCUS: ${DB_PASSWORD_SERVER:-abcd1234!}
+  DB_NAME_SERVER: ${DB_NAME_SERVER:-postgres}
+  DB_USER_SERVER: ${DB_USER_SERVER:-postgres}
+  DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER:-abcd1234!}
+  POSTGRES_USER: postgres
+  POSTGRES_PASSWORD: abcd1234!
+  DB_USER_ADMIN: postgres
+  DB_PASSWORD_ADMIN: abcd1234!
+  DB_PASSWORD_SUPERUSER: abcd1234!
 
   # ---- LOGGING ----
-  LOG_LEVEL: ${LOG_LEVEL}
-  LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON}
-  LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+  LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
   LOG_ENABLED_FILE_LOGGING: ${LOG_ENABLED_FILE_LOGGING}
   LOG_DIR_PATH: ${LOG_DIR_PATH}
   LOG_ENABLED_EXTERNAL_LOGGING: ${LOG_ENABLED_EXTERNAL_LOGGING}
@@ -45,11 +51,11 @@ x-environment: &shared-environment
   HOCUSPOCUS_URL: ${HOCUSPOCUS_URL}
 
   # ---- EMAIL ----
-  EMAIL_ENABLE: ${EMAIL_ENABLE}
-  EMAIL_FROM: ${EMAIL_FROM}
+  EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+  EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
   EMAIL_HOST: ${EMAIL_HOST}
-  EMAIL_PORT: ${EMAIL_PORT}
-  EMAIL_USERNAME: ${EMAIL_USERNAME}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
   EMAIL_PASSWORD: ${EMAIL_PASSWORD}
 
   # ---- CRYPTO ----
@@ -64,14 +70,13 @@ x-environment: &shared-environment
   TOKEN_EXPIRES: ${TOKEN_EXPIRES}
 
   # ---- AUTH ----
-  NEXTAUTH_URL: ${NEXTAUTH_URL}
+  NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
   NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-  NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES}
+  NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
 
   # ---- GOOGLE AUTH ----
   GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
   GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
-
 
   # ---- DEPLOY INFO  ----
   PROJECT_NAME: ${PROJECT_NAME}
@@ -80,13 +85,12 @@ x-environment: &shared-environment
   EXPOSE_REDIS_PORT: ${EXPOSE_REDIS_PORT:-6379}
   EXPOSE_SERVER_PORT: ${EXPOSE_SERVER_PORT:-3000}
 
-
 services:
   server:
     extends:
       file: ./server/docker-compose.yaml
       service: server
-    container_name: ${PROJECT_NAME}_server
+    container_name: ${APP_NAME:-sebastian}_server
     networks:
       - app-network
     environment:
@@ -95,11 +99,26 @@ services:
       hocuspocus:
         condition: service_started
 
+  setup:
+    build:
+      context: .
+      dockerfile: setup/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_setup
+    networks:
+      - app-network
+    environment:
+      <<: *shared-environment
+      NODE_OPTIONS: --experimental-vm-modules
+    command: bash -c "node /app/server/setup/create_database.js && PGPASSWORD=${DB_PASSWORD_ADMIN} psql -h postgres -U postgres -d postgres -c 'CREATE DATABASE server;' && npx knex migrate:latest && npx knex seed:run && exit"
+    depends_on:
+      postgres:
+        condition: service_started
+
   hocuspocus:
     extends:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
-    container_name: ${PROJECT_NAME}_hocuspocus
+    container_name: ${APP_NAME:-sebastian}_hocuspocus
     networks:
       - app-network
     environment:
@@ -107,14 +126,10 @@ services:
     depends_on:
       redis:
         condition: service_started
-      # setup:
-      #   condition: service_completed_successfully
 
   postgres:
     image: ankane/pgvector:latest
-    container_name: ${PROJECT_NAME}_postgres
-    # volumes:
-    #   - ./volumes/postgres:/var/lib/postgresql/data
+    container_name: ${APP_NAME:-sebastian}_postgres
     networks:
       - app-network
     environment:
@@ -122,29 +137,10 @@ services:
     ports:
       - "${EXPOSE_DB_PORT:-5432}:5432"
 
-  setup:
-    extends:
-      file: ./setup/docker-compose.yaml
-      service: setup
-    container_name: ${PROJECT_NAME}_setup
-    networks:
-      - app-network
-    environment:
-      <<: *shared-environment
-    depends_on:
-      postgres:
-        condition: service_started
-    # healthcheck:
-    #   test: ["CMD-SHELL", "PGPASSWORD=${DB_PASSWORD_SUPERUSER} pg_isready -h $DB_HOST -p $DB_PORT -U $DB_USER"]
-    #   interval: 10s
-    #   retries: 5
-    #   start_period: 30s
-    #   timeout: 10s
-
   redis:
     image: 'redis:latest'
-    container_name: ${PROJECT_NAME}_redis
-    command: sh -c 'redis-server --save 20 1 --requirepass $$REDIS_PASSWORD --loglevel debug'
+    container_name: ${APP_NAME:-sebastian}_redis
+    command: redis-server --save 20 1 --loglevel debug
     networks:
       - app-network
     environment:
@@ -154,4 +150,5 @@ services:
 
 networks:
   app-network:
+    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge

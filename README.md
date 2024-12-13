@@ -71,12 +71,22 @@ pnpm dev
 
 ### Docker Deployment
 
-Use our Makefile for easy deployment:
+Choose between Community Edition (CE) or Enterprise Edition (EE) deployment:
 
+#### Community Edition
 ```bash
-# Production mode
-make sebastian-docker-run
+# From project root
+docker compose -f docker-compose.yaml up
+```
 
+#### Enterprise Edition
+```bash
+# From project root
+docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
+```
+
+For development mode or specific services:
+```bash
 # Development mode
 make sebastian-docker-dev
 
@@ -91,7 +101,10 @@ make server-docker-run
 
 ```
 sebastian/
-├── docker-compose.yaml
+├── docker-compose.yaml     # Base docker configuration
+├── ee/
+│   └── setup/
+│       └── docker-compose.yaml  # EE-specific configuration
 ├── helm/                  # Kubernetes configurations
 ├── hocuspocus/           # Real-time collaboration server
 └── server/

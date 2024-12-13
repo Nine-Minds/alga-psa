@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  server:
+    extends:
+      file: docker-compose.yaml
+      service: server
+    build:
+      context: .
+      dockerfile: ee/server/Dockerfile
+    environment:
+      EDITION: enterprise
+      DB_NAME: server
+      PGBOSS_DATABASE: server
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: sebastian123
+      DATABASE_URL: postgresql://app_user:sebastian123@postgres:5432/server
+    develop:
+      watch:
+        - action: sync
+          path: ./src
+          target: /app/src
+          ignore:
+            - node_modules
+        - action: rebuild
+          path: package.json
+
+  setup:
+    extends:
+      file: docker-compose.yaml
+      service: setup
+    build:
+      context: .
+      dockerfile: ee/server/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_setup_ee
+    networks:
+      - app-network
+    environment:
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      EDITION: enterprise
+      NODE_OPTIONS: --experimental-vm-modules
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: sebastian123
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: abcd1234!
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: abcd1234!
+      DB_PASSWORD_SUPERUSER: abcd1234!
+      DB_NAME: server
+      PGBOSS_DATABASE: server
+      DATABASE_URL: postgresql://app_user:sebastian123@postgres:5432/server
+    volumes:
+      - ./ee/setup/config.ini:/app/config.ini
+    depends_on:
+      postgres:
+        condition: service_started
+    command: bash -c "npm install pg-boss && node /app/server/setup/create_database.js && PGPASSWORD=abcd1234! psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' && npx knex migrate:latest --knexfile knexfile.cjs && npx knex seed:run --knexfile knexfile.cjs && exit"
+
+  postgres:
+    extends:
+      file: docker-compose.yaml
+      service: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: abcd1234!
+      DB_PASSWORD_SUPERUSER: abcd1234!
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: ${APP_NAME:-sebastian}_app-network
+    driver: bridge
