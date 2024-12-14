@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  server:
+    extends:
+      file: ./server/docker-compose.yaml
+      service: server
+    container_name: ${APP_NAME:-sebastian}_server_ee
+    build:
+      context: .
+      dockerfile: ee/server/Dockerfile
+    environment:
+      EDITION: enterprise
+      DB_NAME: server
+      PGBOSS_DATABASE: server
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+      LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@postgres:5432/server && /app/entrypoint.sh"]
+    secrets:
+      - db_password_server
+      - db_password_hocuspocus
+      - postgres_password
+      - redis_password
+      - email_password
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+      - google_oauth_client_id
+      - google_oauth_client_secret
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      hocuspocus:
+        condition: service_started
+        required: false
+
+  setup:
+    build:
+      context: .
+      dockerfile: ee/server/Dockerfile
+    container_name: ${APP_NAME:-sebastian}_setup_ee
+    environment:
+      EDITION: enterprise
+      NODE_OPTIONS: --experimental-vm-modules
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+      LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      EMAIL_ENABLE: ${EMAIL_ENABLE:-false}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@example.com}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+    volumes:
+      - ./ee/setup/entrypoint.sh:/app/setup/entrypoint.sh
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/postgres_password
+        read_only: true
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+    secrets:
+      - postgres_password
+      - db_password_server
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
+    entrypoint: ["/app/setup/entrypoint.sh"]
+
+  hocuspocus:
+    extends:
+      file: ./hocuspocus/docker-compose.yaml
+      service: hocuspocus
+    container_name: ${APP_NAME:-sebastian}_hocuspocus_ee
+    build:
+      context: .
+      dockerfile: hocuspocus/Dockerfile
+    environment:
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+    secrets:
+      - db_password_hocuspocus
+      - redis_password
+    networks:
+      - app-network
+    depends_on:
+      redis:
+        condition: service_started
+
+  postgres:
+    extends:
+      file: docker-compose.base.yaml
+      service: postgres
+    environment:
+      POSTGRES_DB: server
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+    secrets:
+      - postgres_password
+
+  redis:
+    extends:
+      file: docker-compose.base.yaml
+      service: redis
+
+networks:
+  app-network:
+    name: ${APP_NAME:-sebastian}_app-network
+    driver: bridge

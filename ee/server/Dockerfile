@@ -6,19 +6,23 @@ RUN apt-get update && apt-get install -y \
     imagemagick \
     ghostscript \
     postgresql-client \
+    redis-tools \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory to /app
+# Set the working directory to /app and create ee directory
 WORKDIR /app
+RUN mkdir -p /app/ee
 
 # Copy the current directory contents into the container at /app
 COPY ./server /app/server
 COPY ./ee/server/setup /app/server/setup
 COPY ./ee/server/src /app/src
 COPY ./package.json /app
-COPY ./ee/setup/config.ini /app/config.ini
-COPY ./ee/server/knexfile.cjs /app/knexfile.cjs
 COPY ./server/entrypoint.sh /app/entrypoint.sh
+COPY ./ee/server/run-migrations.cjs /app/ee/server/run-migrations.cjs
+COPY ./ee/server/run-seeds.cjs /app/ee/server/run-seeds.cjs
+COPY ./ee/server/knexfile.cjs /app/ee/server/knexfile.cjs
 
 # Create migrations directory and copy both CE and EE migrations
 RUN mkdir -p /app/migrations

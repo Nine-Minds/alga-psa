@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
 require('dotenv').config();
+const fs = require('fs');
 
 const DatabaseType = {
   postgres: 'postgres'
@@ -8,6 +9,7 @@ const DatabaseType = {
 
 const externals = {
   [DatabaseType.postgres]: 'pg'
+  // Add more alternatives as needed
 };
 
 const isValidDbType = (type) => {
@@ -42,9 +44,54 @@ const createConnectionWithTenant = (config, tenant) => {
   };
 };
 
-// Base configuration for all environments
-const baseConfig = {
+// Read database passwords from secret files
+const getPostgresPassword = () => {
+  try {
+    return fs.readFileSync('/run/secrets/postgres_password', 'utf8').trim();
+  } catch (error) {
+    console.error('Error reading postgres password:', error.message);
+    process.exit(1);
+  }
+};
+
+const getAppUserPassword = () => {
+  try {
+    return fs.readFileSync('/run/secrets/db_password_server', 'utf8').trim();
+  } catch (error) {
+    console.error('Error reading server password:', error.message);
+    process.exit(1);
+  }
+};
+
+// Base configuration for migrations (uses postgres user)
+const migrationConfig = {
   client: 'pg',
+  connection: {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: 'postgres',
+    password: getPostgresPassword(),
+    database: process.env.DB_NAME_SERVER,
+  },
+  pool: {
+    min: 2,
+    max: 20,
+  },
+  migrations: {
+    directory: "./migrations"
+  }
+};
+
+// Base configuration for application (uses app_user)
+const appConfig = {
+  client: 'pg',
+  connection: {
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    user: process.env.DB_USER_SERVER || 'app_user',
+    password: getAppUserPassword(),
+    database: process.env.DB_NAME_SERVER,
+  },
   pool: {
     min: 2,
     max: 20,
@@ -53,51 +100,49 @@ const baseConfig = {
 
 const knexfile = {
   development: {
-    ...baseConfig,
-    connection: {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      user: process.env.DB_USER_ADMIN,
-      password: process.env.DB_PASSWORD_ADMIN,
-      database: process.env.DB_NAME_SERVER,
-    },
-    migrations: {
-      directory: process.env.KNEX_MIGRATIONS_DIR || './migrations',
-      loadExtensions: ['.cjs']
-    },
+    // Development uses app_user for normal operations
+    ...appConfig,
+    // But keeps postgres user connection for migrations
+    migrations: migrationConfig.migrations,
     seeds: {
-      directory: "./seeds/dev"
+      directory: "./seeds/dev",
+      loadExtensions: ['.cjs', '.js']
     }
+  },
+  test: {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: process.env.DB_PORT || '5432',
+      user: process.env.DB_USER_SERVER || 'app_user',
+      password: process.env.DB_PASSWORD_SERVER || 'test_password',
+      database: process.env.DB_NAME_SERVER || 'sebastian_test',
+    },
+    pool: {
+      min: 2,
+      max: 20,
+    },
+    migrations: migrationConfig.migrations,
   },
   production: {
-    ...baseConfig,
-    connection: {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      user: process.env.DB_USER_ADMIN,
-      password: process.env.DB_PASSWORD_ADMIN,
-      database: process.env.DB_NAME_SERVER,
-    },
-    migrations: {
-      directory: process.env.KNEX_MIGRATIONS_DIR || './migrations',
-      loadExtensions: ['.cjs']
-    }
+    // Production uses app_user for normal operations
+    ...appConfig,
+    // But keeps postgres user connection for migrations
+    migrations: migrationConfig.migrations,
   },
   local: {
-    ...baseConfig,
     client: 'postgresql',
     connection: {
       host: 'localhost',
       port: '5432',
-      user: 'postgres',
-      password: 'abcd1234!',
-      database: 'postgres',
+      user: process.env.DB_USER_SERVER || 'app_user',
+      password: process.env.DB_PASSWORD_SERVER || 'abcd1234!',
+      database: process.env.DB_NAME_SERVER || 'server',
     },
-    migrations: {
-      directory: process.env.KNEX_MIGRATIONS_DIR || './migrations',
-      loadExtensions: ['.cjs']
-    }
+    migrations: migrationConfig.migrations,
   },
+  // Special config just for running migrations (uses postgres user)
+  migration: migrationConfig
 };
 
 module.exports = {

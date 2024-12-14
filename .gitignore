@@ -80,3 +80,4 @@ cli
 .aider*
 
 prod.config.ini
+secrets/

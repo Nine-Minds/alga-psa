@@ -1,5 +1,5 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
-import { getAdminConnection } from '../db/admin';
+import { postgresConnection } from '../db/knexfile';
 
 export interface JobFilter {
   state?: 'completed' | 'failed' | 'active' | 'expired';
@@ -49,12 +49,12 @@ export class JobScheduler {
   public static async getInstance(): Promise<JobScheduler> {
     if (!JobScheduler.instance) {
       try {
-        const adminKnex = await getAdminConnection();
-        const config = adminKnex.client.config.connection;
+        // Use postgres admin credentials with development environment
+        const env = process.env.APP_ENV || 'development';
+        const { host, port, user, password, database } = postgresConnection;
         
-        // Construct proper connection string
-        const connectionString = typeof config === 'string' ? config :
-          `postgres://${config.user}:${config.password}@${config.host}:${config.port}/${config.database}`;
+        // Construct connection string using postgres admin credentials
+        const connectionString = `postgres://${user}:${password}@${host}:${port}/${database}?application_name=pgboss_${env}`;
         
         const boss = new PgBoss({
           connectionString: connectionString,

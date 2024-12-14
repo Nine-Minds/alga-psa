@@ -13,9 +13,17 @@ services:
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
-      DB_USER_SERVER: app_user
-      DB_PASSWORD_SERVER: sebastian123
-      DATABASE_URL: postgresql://app_user:sebastian123@postgres:5432/server
+      DB_USER_SERVER: postgres
+      DB_USER: postgres
+    volumes:
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/postgres_password
+        read_only: true
+    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://postgres:$$(cat /run/secrets/postgres_password)@postgres:5432/server && /app/entrypoint.sh"]
+    secrets:
+      - postgres_password
+      - db_password_server
     develop:
       watch:
         - action: sync
@@ -46,22 +54,23 @@ services:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME_SERVER: server
-      DB_USER_SERVER: app_user
-      DB_PASSWORD_SERVER: sebastian123
-      DB_USER_ADMIN: postgres
-      DB_PASSWORD_ADMIN: abcd1234!
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: abcd1234!
-      DB_PASSWORD_SUPERUSER: abcd1234!
+      DB_USER_SERVER: postgres
+      DB_USER: postgres
       DB_NAME: server
       PGBOSS_DATABASE: server
-      DATABASE_URL: postgresql://app_user:sebastian123@postgres:5432/server
     volumes:
       - ./ee/setup/config.ini:/app/config.ini
+      - type: bind
+        source: ./secrets/postgres_password
+        target: /run/secrets/postgres_password
+        read_only: true
+    secrets:
+      - postgres_password
+      - db_password_server
     depends_on:
       postgres:
         condition: service_started
-    command: bash -c "npm install pg-boss && node /app/server/setup/create_database.js && PGPASSWORD=abcd1234! psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' && npx knex migrate:latest --knexfile knexfile.cjs && npx knex seed:run --knexfile knexfile.cjs && exit"
+    entrypoint: ["/app/entrypoint.sh"]
 
   postgres:
     extends:
@@ -69,8 +78,10 @@ services:
       service: postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: abcd1234!
-      DB_PASSWORD_SUPERUSER: abcd1234!
+      POSTGRES_DB: server
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
     networks:
       - app-network
 
@@ -78,3 +89,9 @@ networks:
   app-network:
     name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password
+  db_password_server:
+    file: ./secrets/db_password_server

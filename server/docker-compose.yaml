@@ -1,9 +1,8 @@
 x-common-config: &common-config
   build:
-    context: ..
-    dockerfile: server/Dockerfile
+    context: .
+    dockerfile: Dockerfile
   container_name: server
-  command:  ./entrypoint.sh
   ports:
     - "${EXPOSE_SERVER_PORT:-3000}:3000"
   environment:
@@ -18,17 +17,13 @@ x-common-config: &common-config
     # ---- REDIS ----
     REDIS_HOST: ${REDIS_HOST:-redis}
     REDIS_PORT: ${REDIS_PORT:-6379}
-    REDIS_PASSWORD: ${REDIS_PASSWORD}
 
     # ---- DATABASE ----
     DB_TYPE: ${DB_TYPE}
     DB_HOST: postgres
     DB_PORT: ${DB_PORT:-5432}
-    DB_NAME_SERVER: ${DB_NAME_SERVER:-postgres}
-    DB_USER_SERVER: ${DB_USER_SERVER:-postgres}
-    DB_USER_ADMIN: ${DB_USER_SERVER:-postgres}
-    DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER:-abcd1234!}
-    DB_PASSWORD_ADMIN: ${DB_PASSWORD_SERVER:-abcd1234!}
+    DB_NAME_SERVER: ${DB_NAME_SERVER:-server}
+    DB_USER_SERVER: postgres
 
     # ---- LOGGING ----
     LOG_LEVEL: ${LOG_LEVEL}
@@ -52,27 +47,19 @@ x-common-config: &common-config
     EMAIL_HOST: ${EMAIL_HOST}
     EMAIL_PORT: ${EMAIL_PORT}
     EMAIL_USERNAME: ${EMAIL_USERNAME}
-    EMAIL_PASSWORD: ${EMAIL_PASSWORD}
 
     # ---- CRYPTO ----
-    CRYPTO_KEY: ${KEY}
     CRYPTO_SALT_BYTES: ${SALT_BYTES}
     CRYPTO_ITERATION: ${ITERATION}
     CRYPTO_KEY_LENGTH: ${KEY_LENGTH}
     CRYPTO_ALGORITHM: ${ALGORITHM}
 
     # ---- TOKEN ----
-    TOKEN_SECRET_KEY: ${SECRET_KEY}
     TOKEN_EXPIRES: ${TOKEN_EXPIRES}
 
     # ---- AUTH ----
     NEXTAUTH_URL: ${NEXTAUTH_URL}
-    NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES}
-
-    # ---- GOOGLE AUTH ----
-    GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
-    GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET}
 
     # ---- DEPLOY INFO  ----
     EXPOSE_SERVER_PORT: ${EXPOSE_SERVER_PORT}
@@ -86,6 +73,16 @@ x-common-config: &common-config
           - node_modules
       - action: rebuild
         path: package.json
+  secrets:
+    - postgres_password
+    - db_password_server
+    - redis_password
+    - email_password
+    - crypto_key
+    - token_secret_key
+    - nextauth_secret
+    - google_oauth_client_id
+    - google_oauth_client_secret
 
 services:
   server:

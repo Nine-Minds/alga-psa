@@ -1,8 +1,8 @@
 import { TKnexfile } from '@/types';
 import { Knex } from 'knex';
-import {  } from 'pg-types';
 import { setTypeParser } from 'pg-types';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 type Function = (err: Error | null, connection: Knex.Client) => void;
 
@@ -20,10 +20,41 @@ if (process.env.NODE_ENV === 'test') {
 setTypeParser(20, parseFloat);
 setTypeParser(1114, str => new Date(str + 'Z'));
 
+const getPassword = (secretPath: string, envVar: string): string => {
+  try {
+    return fs.readFileSync(secretPath, 'utf8').trim();
+  } catch (error) {
+    if (process.env[envVar]) {
+      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
+      return process.env[envVar];
+    }
+    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using empty string`);
+    return '';
+  }
+};
+
+const getDbPassword = () => getPassword('/run/secrets/db_password_server', 'DB_PASSWORD_SERVER');
+const getPostgresPassword = () => getPassword('/run/secrets/postgres_password', 'POSTGRES_PASSWORD');
+
+// Special connection config for postgres user (needed for job scheduler)
+export const postgresConnection = {
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  user: 'postgres',
+  password: getPostgresPassword(),
+  database: process.env.DB_NAME_SERVER
+};
+
 const knexfile: TKnexfile = {
   development: {
     client: 'pg',
-    connection: `pg://${process.env.DB_USER_SERVER}:${process.env.DB_PASSWORD_SERVER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME_SERVER}`,
+    connection: {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      user: process.env.DB_USER_SERVER,
+      password: getDbPassword(),
+      database: process.env.DB_NAME_SERVER
+    },
     pool: {
       min: 0,
       max: 20,
@@ -36,7 +67,13 @@ const knexfile: TKnexfile = {
   },
   production: {
     client: 'pg',
-    connection: `pg://${process.env.DB_USER_SERVER}:${process.env.DB_PASSWORD_SERVER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME_SERVER}`,
+    connection: {
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      user: process.env.DB_USER_SERVER,
+      password: getDbPassword(),
+      database: process.env.DB_NAME_SERVER
+    },
     pool: {
       min: 0,
       max: 20,
@@ -49,7 +86,13 @@ const knexfile: TKnexfile = {
   },
   local: {
     client: 'postgresql',
-    connection: 'postgresql://postgres:abcd1234!@localhost:5432/postgres',
+    connection: {
+      host: 'localhost',
+      port: 5432,
+      user: 'postgres',
+      password: getPassword('/run/secrets/postgres_password', 'POSTGRES_PASSWORD'),
+      database: 'postgres'
+    },
     pool: {
       min: 0,
       max: 20,

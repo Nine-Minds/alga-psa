@@ -42,69 +42,83 @@ Watch our 10-minute getting started guide to quickly understand the system's cor
 - **Authentication**: NextAuth.js
 - **UI Components**: Radix-based component library
 
-## Getting Started
+## Documentation
+
+### Setup & Configuration
+- [Complete Setup Guide](docs/setup_guide.md) - Step-by-step setup instructions
+- [Configuration Guide](docs/configuration_guide.md) - Detailed configuration options
+- [Development Guide](docs/development_guide.md) - Development workflow and best practices
+
+### Architecture & Components
+- [Docker Compose Structure](docs/docker_compose.md) - Container orchestration
+- [Secrets Management](docs/secrets_management.md) - Secure credentials handling
+- [Configuration Standards](docs/configuration_standards.md) - Coding and config standards
+- [Entrypoint Scripts](docs/entrypoint_scripts.md) - Service initialization
+
+### Features & Modules
+- [Architecture Overview](docs/overview.md)
+- [Billing System](docs/billing.md)
+- [International Tax Support](docs/international_tax_support.md)
+- [Asset Management](docs/asset_management.md)
+- [Time Entry Guide](docs/time_entry.md)
+
+## Quick Start
 
 ### Prerequisites
-- Docker Compose v2
-- Node.js
-- PostgreSQL
+- Docker Engine 24.0.0 or later
+- Docker Compose v2.20.0 or later
+- Git
 
-### Initial Setup
+### Community Edition Setup
 
-1. Create and initialize the database:
+1. Clone and prepare:
 ```bash
-node setup/create_database.js
-npx knex --knexfile knexfile.cjs migrate:latest --env development
-npx knex seed:run --knexfile knexfile.cjs --env development
+git clone https://github.com/your-org/alga-psa.git
+cd alga-psa
+mkdir -p secrets
 ```
 
-2. Start the development server:
+2. Set up secrets (see [Secrets Management](docs/secrets_management.md))
+
+3. Configure environment:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+cp .env.example .env
 ```
 
-3. Access the application at [http://localhost:3000](http://localhost:3000)
-
-### Docker Deployment
-
-Choose between Community Edition (CE) or Enterprise Edition (EE) deployment:
-
-#### Community Edition
+4. Launch services:
 ```bash
-# From project root
-docker compose -f docker-compose.yaml up
+# Development
+docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up
+
+# Production
+docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d
 ```
 
-#### Enterprise Edition
+### Enterprise Edition Setup
+
+1. Follow steps 1-3 from CE setup
+
+2. Launch with EE configuration:
 ```bash
-# From project root
-docker compose -f docker-compose.yaml -f ee/setup/docker-compose.yaml up
+# Development
+docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
+
+# Production
+docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.prod.yaml up -d
 ```
 
-For development mode or specific services:
-```bash
-# Development mode
-make sebastian-docker-dev
-
-# Run Hocuspocus (real-time collaboration)
-make hocuspocus-docker-run
-
-# Run server only
-make server-docker-run
-```
+For detailed setup instructions, see the [Complete Setup Guide](docs/setup_guide.md).
 
 ## Project Structure
 
 ```
-sebastian/
+alga-psa/
 ├── docker-compose.yaml     # Base docker configuration
-├── ee/
+├── docker-compose.ce.yaml  # Community Edition config
+├── docker-compose.ee.yaml  # Enterprise Edition config
+├── ee/                    # Enterprise Edition
 │   └── setup/
-│       └── docker-compose.yaml  # EE-specific configuration
+│       └── docker-compose.yaml
 ├── helm/                  # Kubernetes configurations
 ├── hocuspocus/           # Real-time collaboration server
 └── server/
@@ -129,15 +143,6 @@ npm run test
 # Run specific tests
 npm run test -- path/to/test/file.test.ts
 ```
-
-## Documentation
-
-- [Architecture Overview](docs/overview.md)
-- [Getting Started Guide](docs/getting-started.md)
-- [Billing System](docs/billing.md)
-- [International Tax Support](docs/international_tax_support.md)
-- [Asset Management](docs/asset_management.md)
-- [Time Entry Guide](docs/time_entry.md)
 
 ## License
 

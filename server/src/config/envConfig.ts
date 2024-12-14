@@ -46,13 +46,14 @@ const dbSchema = z.object({
   DB_PORT: z.preprocess(coerceNumber, z.number().int().positive()),
   DB_NAME_HOCUSPOCUS: z.string().default('hocuspocus'),
   DB_USER_HOCUSPOCUS: z.string().default('hocuspocus_user'),
-  DB_PASSWORD_HOCUSPOCUS: z.string().optional(),
+  DB_PASSWORD_HOCUSPOCUS: z.string().optional(), // Optional since using Docker secrets
   DB_NAME_SERVER: z.string(),
   DB_USER_SERVER: z.string(),
   DB_USER_ADMIN: z.string(),
-  DB_PASSWORD_SERVER: z.string(),
-  DB_PASSWORD_ADMIN: z.string(),
-  DB_PASSWORD_SUPERUSER: z.string(),
+  // Make password fields optional since they're managed via Docker secrets
+  DB_PASSWORD_SERVER: z.string().optional(),
+  DB_PASSWORD_ADMIN: z.string().optional(),
+  DB_PASSWORD_SUPERUSER: z.string().optional(),
 });
 
 // Storage Schema

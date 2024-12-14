@@ -4,37 +4,40 @@ x-common-config: &common-config
     dockerfile: setup/Dockerfile
   container_name: setup
   command: "/app/entrypoint.sh"
-  #command: ["sh", "-c", "while true; do echo 'Waiting'; sleep 5; done"]
   environment:
     DB_HOST: ${DB_HOST}
     DB_PORT: ${DB_PORT}
     DB_NAME: ${DB_NAME}
-    DB_USER: ${DB_USER}
-    DB_PASSWORD: ${DB_PASSWORD_SUPERUSER}
-
-    DB_USER_ADMIN: ${DB_USER_ADMIN}
-    DB_PASSWORD_ADMIN: ${DB_PASSWORD_ADMIN}
-
+    DB_USER: postgres
+    
     DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS}
     DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS}
-    DB_PASSWORD_HOCUSPOCUS: ${DB_PASSWORD_HOCUSPOCUS}
     DB_NAME_SERVER: ${DB_NAME_SERVER}
-    DB_USER_SERVER: ${DB_USER_SERVER}
-    DB_PASSWORD_SERVER: ${DB_PASSWORD_SERVER}
-    DB_PASSWORD_SUPERUSER: ${DB_PASSWORD_SUPERUSER}
+    DB_USER_SERVER: postgres
     APP_NAME: ${APP_NAME}
     APP_ENV: ${APP_ENV}
     DB_TYPE: ${DB_TYPE}
+    POSTGRES_USER: postgres
 
 services:
   setup:
     <<: *common-config
     networks:
       - ${NETWORK_NAME:-app-network}
-    # volumes:
-    #   - ./.env:/app/.env  # Mount .env file for database configuration
-    #   - ./server/seeds/dev:/app/seeds/dev
-    #   - ./server/migrations:/app/migrations
+    volumes:
+      - type: bind
+        source: ../secrets/postgres_password
+        target: /run/secrets/postgres_password
+        read_only: true
+    secrets:
+      - postgres_password
+      - db_password_server
+
+secrets:
+  postgres_password:
+    file: ../secrets/postgres_password
+  db_password_server:
+    file: ../secrets/db_password_server
 
 networks:
   app-network:

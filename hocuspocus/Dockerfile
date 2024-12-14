@@ -1,21 +1,30 @@
 FROM node:22.5.1 AS builder
 
-WORKDIR /app
+WORKDIR /app/hocuspocus
 
-COPY package.json ./
+COPY hocuspocus/package.json ./
 RUN npm install --only=production
-
 
 FROM node:22.5.1-slim
 
-WORKDIR /app
+# Install required system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    redis-tools \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app/hocuspocus
 
 # Create a non-root user
 RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
 # Copy built node modules and source files
-COPY --from=builder /app/node_modules ./node_modules
-COPY . .
+COPY --from=builder /app/hocuspocus/node_modules ./node_modules
+COPY hocuspocus/ ./
+
+# Set up entrypoint script
+RUN chmod +x ./entrypoint.sh
 
 # Set ownership to the non-root user
 RUN chown -R nodejs:nodejs /app
@@ -24,4 +33,4 @@ USER nodejs
 
 EXPOSE 1234
 
-CMD ["node", "server.js"]
+ENTRYPOINT ["./entrypoint.sh"]

@@ -1,44 +1,40 @@
 FROM node:latest
 
-WORKDIR /app
+WORKDIR /app/setup
 
-# Install database clients using apt
+# Install database clients and utilities
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     default-mysql-client \
-    sqlite3
+    sqlite3 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy necessary files
-COPY setup/bash/log.sh /app/log.sh
-COPY setup/bash/entrypoint.sh /app/entrypoint.sh
-COPY server/package.json /app/package.json
-COPY server/setup/create_database.js /app/server/setup/create_database.js
-COPY server/knexfile.cjs /app/knexfile.cjs
+# Copy setup files
+COPY setup/entrypoint.sh ./
+COPY setup/config.ini ./config.ini
 
-# Copy migrations and seeds
-COPY server/migrations /app/migrations
-COPY server/seeds /app/seeds
+# Copy server files
+COPY server/package.json /app/server/
+COPY server/package-lock.json /app/server/
+COPY server/setup/create_database.js /app/server/setup/
+COPY server/knexfile.cjs /app/server/
+COPY server/migrations /app/server/migrations
+COPY server/seeds /app/server/seeds
 
-# Make scripts executable
-RUN chmod +x /app/entrypoint.sh /app/log.sh
+# Make entrypoint script executable
+RUN chmod +x ./entrypoint.sh
 
 # Install dependencies
+WORKDIR /app/server
 RUN npm install
 RUN npm install -g knex
 RUN npm install pg knex dotenv
 
-# Create .env file with database configuration
-RUN echo "DB_HOST=postgres\n\
-DB_PORT=5432\n\
-DB_USER_ADMIN=postgres\n\
-DB_PASSWORD_ADMIN=abcd1234!\n\
-DB_NAME_SERVER=server\n\
-DB_USER_SERVER=server_user\n\
-DB_PASSWORD_SERVER=abcd1234!\n\
-APP_ENV=development\n\
-DB_TYPE=postgres" > /app/.env
-
 # Add type:module to package.json for ES modules support
 RUN node -e "const pkg=require('./package.json'); pkg.type='module'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2))"
 
-WORKDIR /app
+WORKDIR /app/setup
+
+# Set the entrypoint script
+ENTRYPOINT ["./entrypoint.sh"]

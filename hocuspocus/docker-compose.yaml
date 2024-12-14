@@ -14,7 +14,7 @@ x-common-config: &common-config
     DB_NAME: ${DB_NAME_HOCUSPOCUS}
     DB_USER: ${DB_USER_HOCUSPOCUS}
     DB_PASSWORD: ${DB_PASSWORD_HOCUSPOCUS}
-    NODE_ENV: ${APP_EN:-production}
+    NODE_ENV: ${APP_ENV:-production}
     HOCUSPOCUS_PORT: ${HOCUSPOCUS_PORT}
     EXPOSE_HOCUSPOCUS_PORT: ${EXPOSE_HOCUSPOCUS_PORT:-1234}
   develop:
@@ -22,8 +22,6 @@ x-common-config: &common-config
       - action: sync
         path: .
         target: /app
-        # ingore:
-        #   - node_modules
       - action: rebuild
         path: package.json
 
