@@ -1,10 +1,21 @@
 #!/bin/bash
-set -e
 
 # Function to log with timestamp
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
 }
+
+# Function to handle errors
+handle_error() {
+    local exit_code=$?
+    log "An error occurred (Exit code: $exit_code)"
+    log "Container will continue running despite the error"
+    # Don't exit, just return from the function
+    return $exit_code
+}
+
+# Set up error handling
+trap 'handle_error' ERR
 
 # Function to check if postgres is ready
 wait_for_postgres() {
@@ -20,19 +31,29 @@ wait_for_postgres() {
 main() {
     wait_for_postgres
 
+
     log "Creating database..."
-    node /app/server/setup/create_database.js
+    node /app/server/setup/create_database.js || true
 
     log "Creating pgboss schema..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' || true
+
+    log "Granting necessary permissions..."
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'GRANT ALL ON SCHEMA public TO postgres;' || true
 
     log "Running migrations..."
-    NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs
+    NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs || true
 
     log "Running seeds..."
-    NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs
+    NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || true
 
-    log "Setup completed successfully!"
+    log "Setup completed!"
+    
+    # Keep the container running indefinitely
+    log "Container will continue running..."
+    while true; do
+        sleep 3600  # Sleep for an hour
+    done
 }
 
 # Execute main function

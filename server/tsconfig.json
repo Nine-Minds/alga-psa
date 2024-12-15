@@ -24,7 +24,10 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@ee/*": ["../ee/server/src/*"]
+      "@ee/*": [
+        "../ee/server/src/*",
+        "./src/empty/*"
+      ]
     },
     "baseUrl": "."
   },
@@ -32,8 +35,15 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
-, "../ee/server/src/interfaces/chat.interface.tsx", "../ee/server/src/interfaces/message.interface.ts", "../ee/server/src/models/chat.ts", "../ee/server/src/models/message.ts", "migrations/20241125124900_add_credit_system.cjs", "migrations/20241130113000_add_tenant_to_billing_cycles.cjs", "migrations/20241130113200_add_pk_to_billing_cycles.cjs"  ],
+    ".next/types/**/*.ts",
+    "../ee/server/src/interfaces/chat.interface.tsx",
+    "../ee/server/src/interfaces/message.interface.ts",
+    "../ee/server/src/models/chat.ts",
+    "../ee/server/src/models/message.ts",
+    "migrations/20241125124900_add_credit_system.cjs",
+    "migrations/20241130113000_add_tenant_to_billing_cycles.cjs",
+    "migrations/20241130113200_add_pk_to_billing_cycles.cjs"
+  ],
   "exclude": [
     "node_modules"
   ]

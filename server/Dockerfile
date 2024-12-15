@@ -28,8 +28,11 @@ WORKDIR /app/server
 # Copy the server directory contents
 COPY server/ ./
 
+# Copy entrypoint script
+COPY server/entrypoint.sh /app/entrypoint.sh
+
 # Make entrypoint script executable
-RUN chmod +x ./entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Remove any existing .env file to prevent conflicts
 RUN rm -f ./.env

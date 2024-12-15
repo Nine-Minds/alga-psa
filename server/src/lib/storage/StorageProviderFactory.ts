@@ -1,35 +1,80 @@
-import { StorageProviderInterface } from './providers/StorageProvider';
+import { StorageProviderInterface, StorageError } from './providers/StorageProvider';
 import { LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
 import { getStorageConfig } from '../../config/storage';
-import { S3StorageProvider } from '@ee/lib/storage/providers/S3StorageProvider';
 import { LocalStorageProvider } from './providers/LocalStorageProvider';
-
+// Type-only import for S3 provider
+import type { S3StorageProvider } from '@ee/lib/storage/providers/S3StorageProvider';
 export class StorageProviderFactory {
+    private static isEnterprise = process.env.EDITION === 'enterprise';
     private static provider: StorageProviderInterface | null = null;
 
-    static createProvider(): StorageProviderInterface {
+    static async createProvider(): Promise<StorageProviderInterface> {
+        console.log('StorageProviderFactory: Starting provider creation');
+        
         // Singleton pattern - return existing provider if already created
         if (this.provider) {
+            console.log('StorageProviderFactory: Returning existing provider instance');
             return this.provider;
         }
 
+        console.log('StorageProviderFactory: Loading storage configuration');
         const config = getStorageConfig();
+        console.log('StorageProviderFactory: Config loaded:', {
+            defaultProvider: config.defaultProvider,
+            availableProviders: Object.keys(config.providers),
+            isEnterprise: this.isEnterprise
+        });
         
         switch (config.defaultProvider) {
             case 'local': {
+                console.log('StorageProviderFactory: Initializing local storage provider');
                 const localConfig = config.providers.local as LocalProviderConfig;
+                console.log('StorageProviderFactory: Local config:', {
+                    type: localConfig.type,
+                    basePath: localConfig.basePath
+                });
                 this.provider = new LocalStorageProvider(localConfig);
+                console.log('StorageProviderFactory: Local provider initialized successfully');
                 break;
             }
             case 's3': {
+                console.log('StorageProviderFactory: S3 provider requested');
+                if (!this.isEnterprise) {
+                    console.error('StorageProviderFactory: Cannot use S3 in Community Edition');
+                    throw new Error('S3 storage provider is only available in Enterprise Edition');
+                }
                 const s3Config = config.providers.s3 as S3ProviderConfig;
-                this.provider = new S3StorageProvider(s3Config);
+                console.log('StorageProviderFactory: S3 config:', {
+                    region: s3Config.region,
+                    bucket: s3Config.bucket,
+                    endpoint: s3Config.endpoint || 'default'
+                });
+                console.log('StorageProviderFactory: Creating S3StorageProvider');
+                // Use global to access the provider constructor at runtime
+                const S3Provider = (global as any).S3StorageProvider;
+                if (!S3Provider) {
+                    throw new StorageError(
+                        'S3StorageProvider not available',
+                        'PROVIDER_NOT_FOUND',
+                        's3',
+                        'exists',
+                        false
+                    );
+                }
+                this.provider = new S3Provider(s3Config);
+                console.log('StorageProviderFactory: S3 provider initialized successfully');
                 break;
             }
             default:
+                console.error('StorageProviderFactory: Unsupported provider type:', config.defaultProvider);
                 throw new Error(`Unsupported storage provider type: ${config.defaultProvider}`);
         }
 
+        if (!this.provider) {
+            throw new Error('Failed to initialize storage provider');
+        }
+        
+        console.log('StorageProviderFactory: Provider creation completed successfully');
         return this.provider;
     }
 

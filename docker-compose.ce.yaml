@@ -95,7 +95,14 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
     volumes:
-      - ./setup/config.ini:/app/setup/config.ini
+      - type: bind
+        source: ./setup/config.ini
+        target: /app/setup/config.ini
+        read_only: true
+      - type: bind
+        source: ./setup/entrypoint.sh
+        target: /app/setup/entrypoint.sh
+        read_only: true
       - type: bind
         source: ./secrets/postgres_password
         target: /run/secrets/postgres_password
@@ -112,7 +119,7 @@ services:
     depends_on:
       postgres:
         condition: service_started
-    entrypoint: ["/bin/sh", "-c", "npm install pg-boss && node /app/server/setup/create_database.js && PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' && NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs && NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs && exit"]
+    entrypoint: ["/app/setup/entrypoint.sh"]
 
   hocuspocus:
     extends:

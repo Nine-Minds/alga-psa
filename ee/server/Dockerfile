@@ -17,7 +17,8 @@ RUN mkdir -p /app/ee
 # Copy the current directory contents into the container at /app
 COPY ./server /app/server
 COPY ./ee/server/setup /app/server/setup
-COPY ./ee/server/src /app/src
+RUN mkdir -p /app/ee/server/src/app
+COPY ./ee/server/src /app/ee/server/src
 COPY ./package.json /app
 COPY ./server/entrypoint.sh /app/entrypoint.sh
 COPY ./ee/server/run-migrations.cjs /app/ee/server/run-migrations.cjs

@@ -3,13 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import dynamic from 'next/dynamic';
-
-// Dynamically import DnDFlow with SSR disabled since it uses browser APIs
-const DnDFlow = dynamic(
-  () => import('@ee/components/flow/DnDFlow'),
-  { ssr: false }
-);
+import { DynamicWorkflowComponent } from '@/lib/workflow/WorkflowComponentLoader';
 
 export default function WorkflowsPage() {
   const router = useRouter();
@@ -32,7 +26,7 @@ export default function WorkflowsPage() {
 
   return (
     <div className="h-full">
-      <DnDFlow />
+      <DynamicWorkflowComponent />
     </div>
   );
 }

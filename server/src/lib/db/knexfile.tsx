@@ -1,4 +1,3 @@
-import { TKnexfile } from '@/types';
 import { Knex } from 'knex';
 import { setTypeParser } from 'pg-types';
 import dotenv from 'dotenv';
@@ -26,7 +25,7 @@ const getPassword = (secretPath: string, envVar: string): string => {
   } catch (error) {
     if (process.env[envVar]) {
       console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      return process.env[envVar];
+      return process.env[envVar] || '';
     }
     console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using empty string`);
     return '';
@@ -38,22 +37,36 @@ const getPostgresPassword = () => getPassword('/run/secrets/postgres_password', 
 
 // Special connection config for postgres user (needed for job scheduler)
 export const postgresConnection = {
-  host: process.env.DB_HOST,
-  port: Number(process.env.DB_PORT),
+  host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT) || 5432,
   user: 'postgres',
   password: getPostgresPassword(),
-  database: process.env.DB_NAME_SERVER
-};
+  database: process.env.DB_NAME_SERVER || 'postgres'
+} satisfies Knex.PgConnectionConfig;
 
-const knexfile: TKnexfile = {
+interface CustomKnexConfig extends Knex.Config {
+  connection: Knex.PgConnectionConfig;
+  pool?: {
+    min?: number;
+    max?: number;
+    idleTimeoutMillis?: number;
+    reapIntervalMillis?: number;
+    createTimeoutMillis?: number;
+    destroyTimeoutMillis?: number;
+  };
+  afterCreate?: (conn: any, done: Function) => void;
+  afterRelease?: (conn: any, done: Function) => void;
+}
+
+const knexfile: Record<string, CustomKnexConfig> = {
   development: {
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER_SERVER,
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER_SERVER || 'postgres',
       password: getDbPassword(),
-      database: process.env.DB_NAME_SERVER
+      database: process.env.DB_NAME_SERVER || 'postgres'
     },
     pool: {
       min: 0,
@@ -61,18 +74,17 @@ const knexfile: TKnexfile = {
       idleTimeoutMillis: 1000,
       reapIntervalMillis: 1000,
       createTimeoutMillis: 30000,
-      // acquireConnectionTimeout: 60000,
       destroyTimeoutMillis: 5000
-    }, 
+    }
   },
   production: {
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER_SERVER,
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      user: process.env.DB_USER_SERVER || 'postgres',
       password: getDbPassword(),
-      database: process.env.DB_NAME_SERVER
+      database: process.env.DB_NAME_SERVER || 'postgres'
     },
     pool: {
       min: 0,
@@ -80,9 +92,8 @@ const knexfile: TKnexfile = {
       idleTimeoutMillis: 1000,
       reapIntervalMillis: 1000,
       createTimeoutMillis: 30000,
-      // acquireConnectionTimeout: 60000,
       destroyTimeoutMillis: 5000
-    },  
+    }
   },
   local: {
     client: 'postgresql',
@@ -99,28 +110,26 @@ const knexfile: TKnexfile = {
       idleTimeoutMillis: 1000,
       reapIntervalMillis: 1000,
       createTimeoutMillis: 30000,
-      // acquireConnectionTimeout: 60000,
       destroyTimeoutMillis: 5000
     }
   }
 };
 
-export const getKnexConfigWithTenant = (tenant: string) => {
+export const getKnexConfigWithTenant = (tenant: string): CustomKnexConfig => {
   const env = process.env.APP_ENV || 'development';
-  const config = knexfile[env] as Knex.Config;
-  config.asyncStackTraces = true;
+  const config = { ...knexfile[env] };
   
   return {
     ...config,
+    asyncStackTraces: true,
     wrapIdentifier: (value: string, origImpl: (value: string) => string) => {
       return origImpl(value);
     },
     postProcessResponse: (result: Record<string, unknown>[] | unknown) => {
-      // Add any post-processing logic if necessary
       return result;
     },
     acquireConnectionTimeout: 60000,
-    afterCreate: (conn: Knex.Client, done: Function) => {
+    afterCreate: (conn: any, done: Function) => {
       conn.on('error', (err: Error) => {
         console.error('Database connection error:', err);
       });
@@ -128,7 +137,7 @@ export const getKnexConfigWithTenant = (tenant: string) => {
         done(err, conn);
       });
     },
-    afterRelease: (conn: Knex.Client, done: Function) => {
+    afterRelease: (conn: any, done: Function) => {
       conn.query('SELECT 1', (err: Error) => {
         if (err) {
           done(err, conn);
@@ -137,7 +146,7 @@ export const getKnexConfigWithTenant = (tenant: string) => {
         }
       });
     }
-  } as Knex.Config;
+  };
 };
 
 export default knexfile;

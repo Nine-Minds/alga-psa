@@ -29,7 +29,11 @@ RUN chmod +x ./entrypoint.sh
 WORKDIR /app/server
 RUN npm install
 RUN npm install -g knex
-RUN npm install pg knex dotenv
+RUN npm install pg knex dotenv pg-boss
+
+# Install pg-boss in setup directory
+WORKDIR /app/setup
+RUN npm init -y && npm install pg-boss
 
 # Add type:module to package.json for ES modules support
 RUN node -e "const pkg=require('./package.json'); pkg.type='module'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2))"
