@@ -1,5 +1,5 @@
 import { isEnterprise } from '@/lib/features';
-import { IPolicy, ICondition } from '@/interfaces/auth.interfaces';
+import { IPolicy } from '@/interfaces/auth.interfaces';
 
 // Re-export EE components conditionally
 export const PolicyManagement = async () => {
@@ -7,7 +7,8 @@ export const PolicyManagement = async () => {
     const { default: EEPolicyManagement } = await import('@ee/components/settings/policy/PolicyManagement');
     return EEPolicyManagement;
   }
-  const { default: CEPolicyManagement } = await import('@/components/settings/policy/PolicyManagement');
+  // Import from our empty implementation
+  const { default: CEPolicyManagement } = await import('../../empty/components/settings/policy/PolicyManagement');
   return CEPolicyManagement;
 };
 

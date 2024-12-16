@@ -210,29 +210,6 @@ async function createDatabase(retryCount = 0) {
     await dbClient.query(`GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO ${process.env.DB_USER_SERVER}`);
     await dbClient.query(`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON SEQUENCES TO ${process.env.DB_USER_SERVER}`);
 
-    // Enable RLS on all tables
-    await dbClient.query(`
-      DO $$
-      DECLARE
-        r RECORD;
-      BEGIN
-        FOR r IN (SELECT tablename FROM pg_tables WHERE schemaname = 'public')
-        LOOP
-          EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', r.tablename);
-        END LOOP;
-      END $$;
-    `);
-
-    // Create tenant_id function for RLS
-    await dbClient.query(`
-      CREATE OR REPLACE FUNCTION current_tenant_id()
-      RETURNS TEXT AS $$
-      BEGIN
-        RETURN current_setting('app.current_tenant', TRUE);
-      END;
-      $$ LANGUAGE plpgsql;
-    `);
-
     console.log('Database setup completed successfully');
     await dbClient.end();
   } catch (error) {

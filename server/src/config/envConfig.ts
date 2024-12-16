@@ -96,7 +96,7 @@ const emailSchema = z.object({
 
 // Crypto Schema
 const cryptoSchema = z.object({
-  ALGA_AUTH_KEY: z.string(),
+  ALGA_AUTH_KEY: z.string().optional(), // Optional since using Docker secrets
   SALT_BYTES: z.preprocess(coerceNumber, z.number().int().positive()).default(12),
   ITERATIONS: z.preprocess(coerceNumber, z.number().int().positive()).default(10000),
   KEY_LENGTH: z.preprocess(coerceNumber, z.number().int().positive()).default(64),
@@ -105,14 +105,14 @@ const cryptoSchema = z.object({
 
 // Token Schema
 const tokenSchema = z.object({
-  SECRET_KEY: z.string(),
+  SECRET_KEY: z.string().optional(), // Optional since using Docker secrets
   TOKEN_EXPIRES: z.string().default('1h'),
 });
 
 // Auth Schema
 const authSchema = z.object({
   NEXTAUTH_URL: z.string().url().default('http://localhost:3000'),
-  NEXTAUTH_SECRET: z.string(),
+  NEXTAUTH_SECRET: z.string().optional(), // Required as environment variable
   NEXTAUTH_SESSION_EXPIRES: z.preprocess(coerceNumber, z.number().int().positive()).default(86400),
 });
 

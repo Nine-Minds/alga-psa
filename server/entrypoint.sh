@@ -178,12 +178,18 @@ start_app() {
     # Set up application database connection using app_user
     export DATABASE_URL="postgresql://$DB_USER_SERVER:$(cat /run/secrets/db_password_server)@postgres:5432/server"
     
+    # Set NEXTAUTH_SECRET from Docker secret if not already set
+    # if [ -z "$NEXTAUTH_SECRET" ]; then
+    log "Setting NEXTAUTH_SECRET from secret file..."
+    export NEXTAUTH_SECRET=$(cat /run/secrets/nextauth_secret)
+    # fi
+    
     if [ "$NODE_ENV" = "development" ]; then
         log "Starting server in development mode..."
         npm run dev
     else
         log "Starting server in production mode..."
-        npm start
+        npm run build && npm start
     fi
 }
 

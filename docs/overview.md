@@ -90,6 +90,69 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Deployment:** Dockerfile for the server is at `server/Dockerfile`. Kubernetes configurations are in the `helm` directory.
 
+* **Enterprise vs Community Edition Implementation:**
+  * The application uses a module aliasing system to handle features that differ between Enterprise Edition (EE) and Community Edition (CE):
+    ```typescript
+    // Configuration in next.config.mjs
+    config.resolve.alias['@ee'] = process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+      ? path.join(__dirname, '../ee/server/src')
+      : path.join(__dirname, 'src/empty')
+    ```
+  
+  * **Empty Implementations Pattern:**
+    * Located in `server/src/empty/` directory
+    * Mirrors the EE directory structure
+    * Provides CE-appropriate fallbacks for enterprise features
+    * Example structure:
+      ```
+      server/src/empty/
+      ├── components/
+      │   └── flow/
+      │       └── DnDFlow.tsx      # Empty workflow editor component
+      ├── services/
+      │   └── chatStreamService.ts # Empty chat service
+      └── lib/
+          └── storage/
+              └── providers/
+                  └── S3StorageProvider.ts # Empty storage provider
+      ```
+    
+  * **Implementation Strategies:**
+    * UI Components: Display "Enterprise Feature" messages with upgrade information
+    * Services: Return appropriate HTTP responses (e.g., 403 Forbidden) with upgrade messages
+    * Storage Providers: Throw clear enterprise-only errors
+    * Example:
+      ```typescript
+      // CE implementation of an enterprise feature
+      export class ChatStreamService {
+        static async handleChatStream(req: NextRequest) {
+          return new Response(
+            JSON.stringify({ 
+              error: 'Chat streaming is only available in Enterprise Edition' 
+            }), 
+            { status: 403 }
+          );
+        }
+      }
+      ```
+
+  * **Type Safety:**
+    * TypeScript paths configuration ensures proper type checking:
+      ```json
+      {
+        "compilerOptions": {
+          "paths": {
+            "@ee/*": [
+              "../ee/server/src/*",
+              "./src/empty/*"
+            ]
+          }
+        }
+      }
+      ```
+    * Empty implementations maintain the same interfaces as their EE counterparts
+    * This ensures type safety across both editions
+
 **III. Key Design Considerations:**
 
 * **Multi-Tenancy:** Enforced through database schema and row-level security.

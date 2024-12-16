@@ -27,10 +27,20 @@ wait_for_postgres() {
     log "PostgreSQL is up and running!"
 }
 
+# Function to check if seeds have been run
+check_seeds_status() {
+    local has_seeds
+    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
+    if [ "$has_seeds" = "t" ]; then
+        return 0  # Seeds have been run
+    else
+        return 1  # Seeds haven't been run
+    fi
+}
+
 # Main setup process
 main() {
     wait_for_postgres
-
 
     log "Creating database..."
     node /app/server/setup/create_database.js || true
@@ -44,8 +54,14 @@ main() {
     log "Running migrations..."
     NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs || true
 
-    log "Running seeds..."
-    NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || true
+    # Check if seeds need to be run
+    if ! check_seeds_status; then
+        log "Running seeds..."
+        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || true
+        log "Seeds completed!"
+    else
+        log "Seeds have already been run, skipping..."
+    fi
 
     log "Setup completed!"
     

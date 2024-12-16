@@ -33,6 +33,13 @@ let envContent = fs.readFileSync(envPath, 'utf8');
 // Check for missing required secure keys and generate them
 let hasNewKeys = false;
 Object.entries(requiredSecureKeys).forEach(([key, generator]) => {
+  // Skip if the key exists as an environment variable
+  if (process.env[key]) {
+    console.log(`Using existing environment variable for ${key}`);
+    return;
+  }
+
+  // Check if key exists in .env file
   if (!envContent.includes(`${key}=`)) {
     const value = generator();
     const newLine = `${key}=${value}\n`;

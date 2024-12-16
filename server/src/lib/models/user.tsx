@@ -56,6 +56,7 @@ const User = {
         .select('*')
         .orderBy('created_at', 'asc')
         .first();
+      console.log('oldest user ', oldestUser);
       return oldestUser;
     } catch (error) {
       logger.error('Error finding oldest user:', error);
