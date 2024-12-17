@@ -106,20 +106,18 @@ async function createDatabase(retryCount = 0) {
     process.exit(1);
   }
 
+  import { getSecret } from '../lib/utils/getSecret.js';
+
   // Read passwords from secret files
-  let postgresPassword;
-  try {
-    postgresPassword = fs.readFileSync('/run/secrets/postgres_password', 'utf8').trim();
-  } catch (error) {
-    console.error('Error reading postgres password:', error.message);
+  const postgresPassword = getSecret('postgres_password', 'POSTGRES_PASSWORD');
+  if (!postgresPassword) {
+    console.error('Error: No postgres password available');
     process.exit(1);
   }
 
-  let serverPassword;
-  try {
-    serverPassword = fs.readFileSync('/run/secrets/db_password_server', 'utf8').trim();
-  } catch (error) {
-    console.error('Error reading server password:', error.message);
+  const serverPassword = getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+  if (!serverPassword) {
+    console.error('Error: No server password available');
     process.exit(1);
   }
 

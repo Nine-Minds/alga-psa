@@ -19,21 +19,10 @@ if (process.env.NODE_ENV === 'test') {
 setTypeParser(20, parseFloat);
 setTypeParser(1114, str => new Date(str + 'Z'));
 
-const getPassword = (secretPath: string, envVar: string): string => {
-  try {
-    return fs.readFileSync(secretPath, 'utf8').trim();
-  } catch (error) {
-    if (process.env[envVar]) {
-      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      return process.env[envVar] || '';
-    }
-    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using empty string`);
-    return '';
-  }
-};
+import { getSecret } from '../utils/getSecret';
 
-const getDbPassword = () => getPassword('/run/secrets/db_password_server', 'DB_PASSWORD_SERVER');
-const getPostgresPassword = () => getPassword('/run/secrets/postgres_password', 'POSTGRES_PASSWORD');
+const getDbPassword = () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+const getPostgresPassword = () => getSecret('postgres_password', 'POSTGRES_PASSWORD');
 
 // Special connection config for postgres user (needed for job scheduler)
 export const postgresConnection = {
@@ -101,7 +90,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: 'localhost',
       port: 5432,
       user: 'postgres',
-      password: getPassword('/run/secrets/postgres_password', 'POSTGRES_PASSWORD'),
+      password: getSecret('postgres_password', 'POSTGRES_PASSWORD'),
       database: 'postgres'
     },
     pool: {
