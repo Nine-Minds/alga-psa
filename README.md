@@ -2,12 +2,6 @@
 
 A comprehensive Professional Services Automation platform designed for Managed Service Providers (MSPs). This open-source solution helps MSPs streamline operations, manage client relationships, track time and billing, and improve service delivery.
 
-## Quick Start Video Guide
-
-[![Getting Started with MSP PSA](https://img.youtube.com/vi/e0Y57qy5HFA/0.jpg)](https://youtu.be/e0Y57qy5HFA)
-
-Watch our 10-minute getting started guide to quickly understand the system's core features and setup process.
-
 ## Features
 
 ### Core Functionality
@@ -42,6 +36,15 @@ Watch our 10-minute getting started guide to quickly understand the system's cor
 - **Authentication**: NextAuth.js
 - **UI Components**: Radix-based component library
 
+## Getting Started
+
+For detailed setup instructions, please refer to our [Complete Setup Guide](docs/setup_guide.md). The guide covers:
+- Prerequisites and system requirements
+- Installation steps for both Community and Enterprise editions
+- Environment configuration
+- Security setup
+- Verification steps
+
 ## Documentation
 
 ### Setup & Configuration
@@ -61,53 +64,6 @@ Watch our 10-minute getting started guide to quickly understand the system's cor
 - [International Tax Support](docs/international_tax_support.md)
 - [Asset Management](docs/asset_management.md)
 - [Time Entry Guide](docs/time_entry.md)
-
-## Quick Start
-
-### Prerequisites
-- Docker Engine 24.0.0 or later
-- Docker Compose v2.20.0 or later
-- Git
-
-### Community Edition Setup
-
-1. Clone and prepare:
-```bash
-git clone https://github.com/your-org/alga-psa.git
-cd alga-psa
-mkdir -p secrets
-```
-
-2. Set up secrets (see [Secrets Management](docs/secrets_management.md))
-
-3. Configure environment:
-```bash
-cp .env.example .env
-```
-
-4. Launch services:
-```bash
-# Development
-docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up
-
-# Production
-docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d
-```
-
-### Enterprise Edition Setup
-
-1. Follow steps 1-3 from CE setup
-
-2. Launch with EE configuration:
-```bash
-# Development
-docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
-
-# Production
-docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.prod.yaml up -d
-```
-
-For detailed setup instructions, see the [Complete Setup Guide](docs/setup_guide.md).
 
 ## Project Structure
 

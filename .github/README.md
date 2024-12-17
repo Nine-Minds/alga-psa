@@ -2,12 +2,6 @@
 
 A comprehensive Professional Services Automation platform designed for Managed Service Providers (MSPs). This open-source solution helps MSPs streamline operations, manage client relationships, track time and billing, and improve service delivery.
 
-## Quick Start Video Guide
-
-[![Getting Started with MSP PSA](https://img.youtube.com/vi/e0Y57qy5HFA/0.jpg)](https://youtu.be/e0Y57qy5HFA)
-
-Watch our 10-minute getting started guide to quickly understand the system's core features and setup process.
-
 ## Features
 
 ### Core Functionality
@@ -44,54 +38,43 @@ Watch our 10-minute getting started guide to quickly understand the system's cor
 
 ## Getting Started
 
-### Prerequisites
-- Docker Compose v2
-- Node.js
-- PostgreSQL
+For detailed setup instructions, please refer to our [Complete Setup Guide](docs/setup_guide.md). The guide covers:
+- Prerequisites and system requirements
+- Installation steps for both Community and Enterprise editions
+- Environment configuration
+- Security setup
+- Verification steps
 
-### Initial Setup
+## Documentation
 
-1. Create and initialize the database:
-```bash
-node setup/create_database.js
-npx knex --knexfile knexfile.cjs migrate:latest --env development
-npx knex seed:run --knexfile knexfile.cjs --env development
-```
+### Setup & Configuration
+- [Complete Setup Guide](docs/setup_guide.md) - Step-by-step setup instructions
+- [Configuration Guide](docs/configuration_guide.md) - Detailed configuration options
+- [Development Guide](docs/development_guide.md) - Development workflow and best practices
 
-2. Start the development server:
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-```
+### Architecture & Components
+- [Docker Compose Structure](docs/docker_compose.md) - Container orchestration
+- [Secrets Management](docs/secrets_management.md) - Secure credentials handling
+- [Configuration Standards](docs/configuration_standards.md) - Coding and config standards
+- [Entrypoint Scripts](docs/entrypoint_scripts.md) - Service initialization
 
-3. Access the application at [http://localhost:3000](http://localhost:3000)
-
-### Docker Deployment
-
-Use our Makefile for easy deployment:
-
-```bash
-# Production mode
-make sebastian-docker-run
-
-# Development mode
-make sebastian-docker-dev
-
-# Run Hocuspocus (real-time collaboration)
-make hocuspocus-docker-run
-
-# Run server only
-make server-docker-run
-```
+### Features & Modules
+- [Architecture Overview](docs/overview.md)
+- [Billing System](docs/billing.md)
+- [International Tax Support](docs/international_tax_support.md)
+- [Asset Management](docs/asset_management.md)
+- [Time Entry Guide](docs/time_entry.md)
 
 ## Project Structure
 
 ```
-sebastian/
-├── docker-compose.yaml
+alga-psa/
+├── docker-compose.yaml     # Base docker configuration
+├── docker-compose.ce.yaml  # Community Edition config
+├── docker-compose.ee.yaml  # Enterprise Edition config
+├── ee/                    # Enterprise Edition
+│   └── setup/
+│       └── docker-compose.yaml
 ├── helm/                  # Kubernetes configurations
 ├── hocuspocus/           # Real-time collaboration server
 └── server/
@@ -116,15 +99,6 @@ npm run test
 # Run specific tests
 npm run test -- path/to/test/file.test.ts
 ```
-
-## Documentation
-
-- [Architecture Overview](docs/overview.md)
-- [Getting Started Guide](docs/getting-started.md)
-- [Billing System](docs/billing.md)
-- [International Tax Support](docs/international_tax_support.md)
-- [Asset Management](docs/asset_management.md)
-- [Time Entry Guide](docs/time_entry.md)
 
 ## License
 

@@ -6,6 +6,7 @@ import { createCompanyBillingCycles } from '@/lib/billing/createBillingCycles';
 import { getConnection } from '@/lib/db/db';
 import { createNextTimePeriod } from './timePeriodsActions';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
+import env from '@/config/envConfig';
 
 let isFunctionExecuted = false;
 
@@ -14,6 +15,83 @@ export async function initializeApp() {
         return;
     }
     isFunctionExecuted = true;
+
+    // Log environment configuration on startup
+    logger.info('Starting application with the following configuration:');
+    
+    // App Configuration
+    logger.info('Application Configuration:', {
+        VERSION: env.VERSION,
+        APP_NAME: env.APP_NAME,
+        HOST: env.HOST,
+        APP_HOST: env.APP_HOST,
+        APP_ENV: env.APP_ENV,
+        VERIFY_EMAIL_ENABLED: env.VERIFY_EMAIL_ENABLED
+    });
+
+    // Database Configuration
+    logger.info('Database Configuration:', {
+        DB_TYPE: env.DB_TYPE,
+        DB_HOST: env.DB_HOST,
+        DB_PORT: env.DB_PORT,
+        DB_NAME_HOCUSPOCUS: env.DB_NAME_HOCUSPOCUS,
+        DB_USER_HOCUSPOCUS: env.DB_USER_HOCUSPOCUS,
+        DB_NAME_SERVER: env.DB_NAME_SERVER,
+        DB_USER_SERVER: env.DB_USER_SERVER,
+        DB_USER_ADMIN: env.DB_USER_ADMIN,
+        // Passwords intentionally omitted for security
+    });
+
+    // Redis Configuration
+    logger.info('Redis Configuration:', {
+        REDIS_HOST: env.REDIS_HOST,
+        REDIS_PORT: env.REDIS_PORT,
+        // Password intentionally omitted for security
+    });
+
+    // Storage Configuration
+    logger.info('Storage Configuration:', {
+        STORAGE_LOCAL_BASE_PATH: env.STORAGE_LOCAL_BASE_PATH,
+        STORAGE_LOCAL_MAX_FILE_SIZE: env.STORAGE_LOCAL_MAX_FILE_SIZE,
+        STORAGE_LOCAL_ALLOWED_MIME_TYPES: env.STORAGE_LOCAL_ALLOWED_MIME_TYPES,
+        STORAGE_LOCAL_RETENTION_DAYS: env.STORAGE_LOCAL_RETENTION_DAYS
+    });
+
+    // Logging Configuration
+    logger.info('Logging Configuration:', {
+        LOG_LEVEL: env.LOG_LEVEL,
+        LOG_IS_FORMAT_JSON: env.LOG_IS_FORMAT_JSON,
+        LOG_IS_FULL_DETAILS: env.LOG_IS_FULL_DETAILS,
+        LOG_ENABLE_FILE_LOGGING: env.LOG_ENABLE_FILE_LOGGING,
+        LOG_DIR_PATH: env.LOG_DIR_PATH,
+        LOG_ENABLE_EXTERNAL_LOGGING: env.LOG_ENABLE_EXTERNAL_LOGGING,
+        LOG_EXTERNAL_HTTP_HOST: env.LOG_EXTERNAL_HTTP_HOST,
+        LOG_EXTERNAL_HTTP_PORT: env.LOG_EXTERNAL_HTTP_PORT,
+        LOG_EXTERNAL_HTTP_PATH: env.LOG_EXTERNAL_HTTP_PATH,
+        LOG_EXTERNAL_THTTP_LEVEL: env.LOG_EXTERNAL_THTTP_LEVEL
+    });
+
+    // Hocuspocus Configuration
+    logger.info('Hocuspocus Configuration:', {
+        HOCUSPOCUS_PORT: env.HOCUSPOCUS_PORT
+    });
+
+    // Email Configuration
+    logger.info('Email Configuration:', {
+        EMAIL_ENABLE: env.EMAIL_ENABLE,
+        EMAIL_FROM: env.EMAIL_FROM,
+        EMAIL_HOST: env.EMAIL_HOST,
+        EMAIL_PORT: env.EMAIL_PORT,
+        EMAIL_USERNAME: env.EMAIL_USERNAME,
+        // Password intentionally omitted for security
+    });
+
+    // Auth Configuration
+    logger.info('Auth Configuration:', {
+        NEXTAUTH_URL: env.NEXTAUTH_URL,
+        NEXTAUTH_SESSION_EXPIRES: env.NEXTAUTH_SESSION_EXPIRES,
+        // Secrets intentionally omitted for security
+    });
 
     // Initialize job scheduler and register jobs
     const jobScheduler = await JobScheduler.getInstance();
