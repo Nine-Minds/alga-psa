@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Popup from './Popup';
-import { Template } from '../../generated/workflow';
+import { Template } from '../../services/flow/types/workflowTypes';
 
 interface InputFieldSelectorProps {
   value: Template;

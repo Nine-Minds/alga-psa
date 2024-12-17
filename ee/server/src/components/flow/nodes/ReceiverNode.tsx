@@ -2,9 +2,9 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
-import { ProtoNodeTypes_Office365ReceiverNodeData } from '../../../generated/workflow';
+import { Office365ReceiverNodeData } from '../../../services/flow/types/workflowTypes';
 
-const ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365ReceiverNodeData>) => {
+const ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData>) => {
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;

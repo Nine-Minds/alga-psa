@@ -11,7 +11,6 @@ if (process.env.NODE_ENV === 'test') {
   const result = dotenv.config({
     path: '.env.localtest'
   });
-  console.log(result);
   if (result.parsed?.DB_NAME_SERVER) {
     process.env.DB_NAME_SERVER = result.parsed.DB_NAME_SERVER;
   }
@@ -23,7 +22,7 @@ setTypeParser(1114, str => new Date(str + 'Z'));
 import { getSecret } from '../utils/getSecret';
 
 const getDbPassword = () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
-const getPostgresPassword = () => getSecret('postgres_password', 'POSTGRES_PASSWORD');
+const getPostgresPassword = () => getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
 
 // Special connection config for postgres user (needed for job scheduler)
 export const postgresConnection = {
@@ -54,7 +53,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
-      user: 'app_user',
+      user: process.env.DB_USER_SERVER || 'app_user',
       password: process.env.DB_PASSWORD_SERVER || getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
     },
@@ -75,24 +74,6 @@ const knexfile: Record<string, CustomKnexConfig> = {
       user: 'app_user',
       password: process.env.DB_PASSWORD_SERVER || getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
-    },
-    pool: {
-      min: 0,
-      max: 20,
-      idleTimeoutMillis: 1000,
-      reapIntervalMillis: 1000,
-      createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000
-    }
-  },
-  local: {
-    client: 'postgresql',
-    connection: {
-      host: 'localhost',
-      port: 5432,
-      user: 'postgres',
-      password: getSecret('postgres_password', 'POSTGRES_PASSWORD'),
-      database: 'postgres'
     },
     pool: {
       min: 0,

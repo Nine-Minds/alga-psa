@@ -3,6 +3,26 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+import path from 'path';
+
+// Calculate secrets directory path once at module load
+const DOCKER_SECRETS_PATH = '/run/secrets';
+const LOCAL_SECRETS_PATH = '../secrets';
+const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
+
+function getSecret(secretName, envVar, defaultValue = '') {
+  const secretPath = path.join(SECRETS_PATH, secretName);
+  try {
+    return fs.readFileSync(secretPath, 'utf8').trim();
+  } catch (error) {
+    if (process.env[envVar]) {
+      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
+      return process.env[envVar] || defaultValue;
+    }
+    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
+    return defaultValue;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -105,8 +125,6 @@ async function createDatabase(retryCount = 0) {
     console.error('Configuration validation failed:', error.message);
     process.exit(1);
   }
-
-  import { getSecret } from '../lib/utils/getSecret.js';
 
   // Read passwords from secret files
   const postgresPassword = getSecret('postgres_password', 'POSTGRES_PASSWORD');

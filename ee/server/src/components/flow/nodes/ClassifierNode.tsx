@@ -4,25 +4,25 @@ import React, { memo, useState, useEffect } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
 import InputFieldSelector from '../InputFieldSelector';
-import { ProtoNodeTypes_ClassifierNodeData, Template } from '../../../generated/workflow';
+import { ClassifierNodeData, Template } from '../../../services/flow/types/workflowTypes';
 
 interface ClassifierNodeProps {
   id: string;
-  data: ProtoNodeTypes_ClassifierNodeData;
+  data: ClassifierNodeData;
 }
 
-const ClassifierNode = ({ data, id }: NodeProps<ProtoNodeTypes_ClassifierNodeData>) => {
+const ClassifierNode = ({ data, id }: NodeProps<ClassifierNodeData>) => {
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
 
   const [newClassification, setNewClassification] = useState('');
 
-  const [nodeData, setNodeData] = useState<ProtoNodeTypes_ClassifierNodeData>({
+  const [nodeData, setNodeData] = useState<ClassifierNodeData>({
     label: '🏷️ Classifier',
     outputs: [],
-    source: { template: '' },
-    thinkingProcess: { template: '' },
+    source: { template: '', type: { value: '' } },
+    thinkingProcess: { template: '', type: { value: '' } },
     classifications: [],
   });
 
@@ -40,7 +40,7 @@ const ClassifierNode = ({ data, id }: NodeProps<ProtoNodeTypes_ClassifierNodeDat
 
     const newClassifications = [
       ...nodeData.classifications,
-      { template: newClassification.trim() } as Template
+      { template: newClassification.trim(), type: { value: '' } } as Template
     ];
 
     setNodeData(prev => ({
@@ -68,7 +68,7 @@ const ClassifierNode = ({ data, id }: NodeProps<ProtoNodeTypes_ClassifierNodeDat
 
   const handleInputChange = (name: string, value: string) => {
     setNodeData(prev => {
-      const updatedData = { ...prev, [name]: { template: value } };
+      const updatedData = { ...prev, [name]: { template: value, type: { value: '' } } };
       return updatedData;
     });
     
@@ -79,7 +79,7 @@ const ClassifierNode = ({ data, id }: NodeProps<ProtoNodeTypes_ClassifierNodeDat
             ...node,
             data: {
               ...node.data,
-              [name]: { template: value },
+              [name]: { template: value, type: { value: '' } },
             },
           };
         }
@@ -120,7 +120,7 @@ const ClassifierNode = ({ data, id }: NodeProps<ProtoNodeTypes_ClassifierNodeDat
       <div style={styles.field}>
         <label htmlFor="source" style={styles.label}>Source:</label>
         <InputFieldSelector
-          value={nodeData.source || { template: '' }}
+          value={nodeData.source || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('source', value)}
           inputType="Email"
         />

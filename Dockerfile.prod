@@ -1,4 +1,6 @@
-FROM node:20.9-alpine AS server
+FROM node:20.9-alpine
+
+# TODO - remove duplication between this image and the others built during the compose build
 
 # Install required system dependencies
 RUN apk add --no-cache \
@@ -28,7 +30,9 @@ WORKDIR /app/server
 # Copy the server directory contents
 COPY server/ ./
 
-# Copy entrypoint script
+RUN npm run build
+
+# Copy entrypoint script from project root
 COPY server/entrypoint.sh /app/entrypoint.sh
 
 # Make entrypoint script executable

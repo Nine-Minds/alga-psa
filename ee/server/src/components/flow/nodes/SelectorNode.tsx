@@ -2,15 +2,15 @@ import React, { memo, useCallback } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
 import { v4 as uuidv4 } from 'uuid';
-import { ProtoNodeTypes_SelectorNodeData, ProtoNodeTypes_Input, Template } from '../../../generated/workflow';
+import { SelectorNodeData, Input, Template } from '../../../services/flow/types/workflowTypes';
 
-const SelectorNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_SelectorNodeData>) => {
+const SelectorNode = memo(({ data, id }: NodeProps<SelectorNodeData>) => {
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
 
   const addInput = useCallback(() => {
-    const newInput: ProtoNodeTypes_Input = {
+    const newInput: Input = {
       id: uuidv4(),
       label: `Input ${data.inputs.length + 1}`,
     };
@@ -67,7 +67,7 @@ const SelectorNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_SelectorNodeDa
           type="text"
           value={data.defaultInput?.template || ''}
           onChange={(e) => {
-            const newDefaultInput: Template = { template: e.target.value };
+            const newDefaultInput: Template = { template: e.target.value, type: { value: '' } };
             setNodes(nds =>
               nds.map(node => node.id === id ? { ...node, data: { ...node.data, defaultInput: newDefaultInput } } : node)
             );

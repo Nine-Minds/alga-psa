@@ -2,19 +2,19 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
-import { ProtoNodeTypes_Office365ReceiverNodeData, Template } from '../../../generated/workflow';
+import { Office365ReceiverNodeData, Template } from '../../../services/flow/types/workflowTypes';
 import InputFieldSelector from '../InputFieldSelector';
 
-const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365ReceiverNodeData>) => {
+const Office365ReceiverNode = ({ data, id }: NodeProps<Office365ReceiverNodeData>) => {
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
 
-  const [nodeData, setNodeData] = useState<ProtoNodeTypes_Office365ReceiverNodeData>({
-    clientId: { template: '' },
-    clientSecret: { template: '' },
-    tenantId: { template: '' },
-    userEmail: { template: '' },
+  const [nodeData, setNodeData] = useState<Office365ReceiverNodeData>({
+    clientId: { template: '', type: { value: '' } },
+    clientSecret: { template: '', type: { value: '' } },
+    tenantId: { template: '', type: { value: '' } },
+    userEmail: { template: '', type: { value: '' } },
     label: '📩 Office 365 Receiver',
     outputs: [],
   });
@@ -29,7 +29,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365R
   }, [data]);
 
   const handleInputChange = (name: string, value: string) => {    
-    const newTemplate: Template = { template: value };
+    const newTemplate: Template = { template: value, type: { value: '' } };
     setNodeData(prev => ({ ...prev, [name]: newTemplate }));
     
     setNodes(nds =>
@@ -69,7 +69,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365R
           Client ID:
         </label>
         <InputFieldSelector
-          value={nodeData.clientId || { template: '' }}
+          value={nodeData.clientId || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('clientId', value)}
           inputType="Email"
         />        
@@ -79,7 +79,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365R
           Client Secret:
         </label>
         <InputFieldSelector
-          value={nodeData.clientSecret || { template: '' }}
+          value={nodeData.clientSecret || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('clientSecret', value)}
           inputType="Email"
         />
@@ -89,7 +89,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365R
           Tenant ID:
         </label>
         <InputFieldSelector
-          value={nodeData.tenantId || { template: '' }}
+          value={nodeData.tenantId || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('tenantId', value)}
           inputType="Email"
         />
@@ -99,7 +99,7 @@ const Office365ReceiverNode = ({ data, id }: NodeProps<ProtoNodeTypes_Office365R
           User Email:
         </label>
         <InputFieldSelector
-          value={nodeData.userEmail || { template: '' }}
+          value={nodeData.userEmail || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('userEmail', value)}
           inputType="Email"
         />

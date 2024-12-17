@@ -15,8 +15,7 @@ This document provides a comprehensive overview of the Workflow System integrate
 - [III. Technical Implementation](#iii-technical-implementation)
   - [A. Frontend Components](#a-frontend-components)
   - [B. Backend Services](#b-backend-services)
-  - [C. Protobuf Integration](#c-protobuf-integration)
-  - [D. Database Structure](#d-database-structure)
+  - [C. Database Structure](#c-database-structure)
 - [IV. Key Functionalities](#iv-key-functionalities)
   - [A. Workflow Designer](#a-workflow-designer)
   - [B. Node Types](#b-node-types)
@@ -46,7 +45,6 @@ The Workflow System is built as a modular component within the MSP PSA applicati
 - **Workflow Designer UI:** A drag-and-drop graphical interface for creating workflows.
 - **Node Components:** Predefined nodes representing actions, triggers, and logic operators.
 - **Workflow Engine:** Executes workflows based on defined logic and triggers.
-- **Protobuf Definitions:** Protocol Buffers used for defining node data structures and communication.
 - **Database Migrations:** Database schema changes specific to the Workflow System.
 - **Enterprise Edition (`ee`) Folder:** Contains code specific to the Enterprise features.
 
@@ -85,27 +83,8 @@ The backend is responsible for processing workflow data, executing workflows, an
 - **Key Technologies:**
   - **Node.js and Express.js:** Server-side runtime and routing.
   - **Knex.js:** SQL query builder for database interactions.
-  - **Protobuf.js:** For Protocol Buffers serialization.
 
-### C. Protobuf Integration
-
-Protocol Buffers (Protobuf) are used to define structured data for nodes and workflows.
-
-- **File Paths:**
-  - Protobuf definitions: `ee/server/protos/workflow.proto`
-  - Generated code: `ee/server/src/generated/workflow.ts` (Generated using `ts-proto`)
-
-- **Generation Command:**
-  ```bash
-  protoc \
-    --plugin=./node_modules/.bin/protoc-gen-ts_proto \
-    --ts_proto_out=ee/server/src/generated \
-    --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false \
-    --proto_path=ee/server/protos \
-    workflow.proto
-  ```
-
-### D. Database Structure
+### C. Database Structure
 
 The Workflow System introduces new database tables and migrations.
 
@@ -157,8 +136,8 @@ Predefined nodes represent various actions, triggers, and logic operators:
   - The `Office365ReceiverNode` allows the system to subscribe to Office 365 email notifications.
   - Enables automated processing of incoming emails.
 
-- **Protobuf and Messaging:**
-  - Uses protobuf definitions for consistent data structures.
+- **Messaging System:**
+  - Uses TypeScript interfaces for consistent data structures.
   - Messaging system for communication between the UI and worker processes (`workerCommunication.ts`).
 
 ---
@@ -171,7 +150,7 @@ Predefined nodes represent various actions, triggers, and logic operators:
 
 - **Data Validation:**
   - Input data and templates are validated to prevent injection attacks.
-  - Use of Protobuf ensures structured and expected data formats.
+  - Strong TypeScript types ensure structured and expected data formats.
 
 - **Sensitive Information:**
   - Secure handling of credentials and API keys (e.g., in `Office365ReceiverNode`).
@@ -215,15 +194,11 @@ The Workflow System significantly enhances the MSP PSA application's capabilitie
   - Workflow Actions: `ee/server/src/lib/actions/workflow.ts`
   - Workflow Services: `ee/server/src/services/flow/`
 
-- **Protobuf Definitions:**
-  - Protos: `ee/server/protos/workflow.proto`
-  - Generated Code: `ee/server/src/generated/workflow.ts`
-
 - **Database Migrations:**
   - EE Migrations: `ee/server/migrations/`
 
 - **Configuration Files:**
-  - Protobuf Generation Command in `package.json`
+  - TypeScript Configuration in `tsconfig.json`
 
 ---
 
@@ -234,8 +209,6 @@ The Workflow System significantly enhances the MSP PSA application's capabilitie
 ```
 ee/
 ├── server/
-│   ├── protos/
-│   │   └── workflow.proto
 │   ├── migrations/
 │   │   └── ... (EE-specific migrations)
 │   ├── src/
@@ -247,8 +220,6 @@ ee/
 │   │   │       │   ├── DecisionNode.tsx
 │   │   │       │   └── ... (Other node components)
 │   │   │       └── ... (Other flow components)
-│   │   ├── generated/
-│   │   │   └── workflow.ts (Generated from protobuf)
 │   │   ├── lib/
 │   │   │   └── actions/
 │   │   │       └── workflow.ts
@@ -258,46 +229,7 @@ ee/
 │   │           ├── workflowExecutionGraph.ts
 │   │           ├── workerCommunication.ts
 │   │           └── ... (Other services and utilities)
-│   └── package.json (Includes protobuf generation script)
-```
-
-## Appendix B: Protobuf Definition (Simplified)
-
-```proto
-syntax = "proto3";
-
-package workflow;
-
-// Node Data Types
-message NodeData {
-  // Different node types with their specific fields
-  oneof node_type {
-    ActionNode action_node = 1;
-    DecisionNode decision_node = 2;
-    // ... other node types
-  }
-}
-
-message ActionNode {
-  string action = 1;
-}
-
-message DecisionNode {
-  map<string, Condition> conditions = 1;
-  string default_output = 2;
-}
-
-message Condition {
-  enum ConditionType {
-    EQUALS = 0;
-    THRESHOLD = 1;
-    REGEX = 2;
-  }
-  ConditionType type = 1;
-  string value = 2;
-}
-
-// ... other messages
+│   └── package.json
 ```
 
 ---

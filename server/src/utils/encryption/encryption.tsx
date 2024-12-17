@@ -1,7 +1,8 @@
 import crypto from 'crypto';
+import { getSecret } from '../../lib/utils/getSecret';
 
 export function hashPassword(password: string) {
-  const key = process.env.ALGA_AUTH_KEY || 'defaultKey';
+  const key = getSecret('alga_auth_key', 'ALGA_AUTH_KEY', 'defaultKey');
   const saltBytes= Number(process.env.SALT_BYTES) || 12;
   const iterations = Number(process.env.ITERATIONS) || 1000;
   const keyLength = Number(process.env.KEY_LENGTH) ||64;
@@ -13,7 +14,7 @@ export function hashPassword(password: string) {
 }
 
 export function verifyPassword(password: string, storedHash: string): boolean {
-  const key = process.env.ALGA_AUTH_KEY || 'defaultKey';
+  const key = getSecret('alga_auth_key', 'ALGA_AUTH_KEY', 'defaultKey');
   const iterations = Number(process.env.ITERATIONS) || 1000;
   const keyLength = Number(process.env.KEY_LENGTH) ||64;
   const digest = process.env.ALGORITHM || 'sha512';

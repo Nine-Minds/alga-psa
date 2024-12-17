@@ -20,7 +20,7 @@ spec:
         - name: migrate
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
           workingDir: /app
-          command: ["npx", "knex", "--knexfile", "knexfile.cjs", "migrate:latest", "--env", "development", "--debug"]
+          command: ["npx", "knex", "--knexfile", "/app/server/knexfile.cjs", "migrate:latest", "--env", "development", "--debug"]
           env:
             {{- if .Values.db.enabled }}
             - name: DB_HOST
@@ -37,12 +37,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: DB_PASSWORD_SUPERUSER
+                  key: DB_PASSWORD_SERVER
             - name: DB_PASSWORD_ADMIN
               valueFrom:
                 secretKeyRef:
                   name: db-credentials
-                  key: DB_PASSWORD_SUPERUSER                  
+                  key: DB_PASSWORD_SUPERUSER               
             {{- else }}
             - name: DB_HOST
               value: "{{ .Values.config.db.host }}.{{ .Values.namespace }}.svc.cluster.local"
@@ -55,4 +55,3 @@ spec:
             - name: DB_PASSWORD_SERVER
               value: "{{ .Values.config.db.password }}"
             {{- end }}
-            # Add any other necessary environment variables

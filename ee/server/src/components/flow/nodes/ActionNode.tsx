@@ -2,9 +2,9 @@
 import React, { memo } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
-import { ProtoNodeTypes_ActionNodeData } from '../../../generated/workflow';
+import { ActionNodeData } from '../../../services/flow/types/workflowTypes';
 
-const ActionNode = ({ data, id }: NodeProps<ProtoNodeTypes_ActionNodeData>) => {
+const ActionNode = ({ data, id }: NodeProps<ActionNodeData>) => {
   const { getNode } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;

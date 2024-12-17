@@ -1,5 +1,14 @@
 import { Node as ReactFlowNode, NodeProps as ReactFlowNodeProps } from 'reactflow';
-import * as Proto from '../../../generated/workflow';
+import {
+  Office365ReceiverNodeData,
+  ThinkingNodeData,
+  ActionNodeData,
+  ClassifierNodeData,
+  SpecialOperationNodeData,
+  SelectorNodeData,
+  DecisionNodeData,
+  TicketCreatorNodeData
+} from './workflowTypes';
 
 export interface PickerOption {
   id: string;
@@ -23,14 +32,14 @@ export type NodeTypes =
   | 'selector';
 
 export type ProtoNodeData = 
-  | Proto.ProtoNodeTypes_Office365ReceiverNodeData
-  | Proto.ProtoNodeTypes_ThinkingNodeData
-  | Proto.ProtoNodeTypes_ActionNodeData
-  | Proto.ProtoNodeTypes_ClassifierNodeData
-  | Proto.ProtoNodeTypes_SpecialOperationNodeData
-  | Proto.ProtoNodeTypes_SelectorNodeData
-  | Proto.ProtoNodeTypes_DecisionNodeData
-  | Proto.ProtoNodeTypes_TicketCreatorNodeData;
+  | Office365ReceiverNodeData
+  | ThinkingNodeData
+  | ActionNodeData
+  | ClassifierNodeData
+  | SpecialOperationNodeData
+  | SelectorNodeData
+  | DecisionNodeData
+  | TicketCreatorNodeData;
 
 export interface CustomNode extends ReactFlowNode {
   type: NodeTypes;

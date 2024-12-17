@@ -92,6 +92,8 @@ secrets:
     file: ./secrets/google_oauth_client_id
   google_oauth_client_secret:
     file: ./secrets/google_oauth_client_secret
+  alga_auth_key:
+    file: ./secrets/alga_auth_key
 
 services:
   server:
@@ -120,6 +122,7 @@ services:
       - nextauth_secret
       - google_oauth_client_id
       - google_oauth_client_secret
+      - alga_auth_key
     depends_on:
       postgres:
         condition: service_started

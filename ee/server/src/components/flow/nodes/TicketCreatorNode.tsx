@@ -2,7 +2,7 @@
 import React, { memo, useState, useEffect } from 'react';
 import { Handle, NodeProps, Position, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
-import { ProtoNodeTypes_TicketCreatorNodeData, Template } from '../../../generated/workflow';
+import { TicketCreatorNodeData, Template } from '../../../services/flow/types/workflowTypes';
 import InputFieldSelector from '../InputFieldSelector';
 import TextAreaFieldSelector from '../TextAreaFieldSelector';
 import ComboBoxFieldSelector from '../ComboBoxFieldSelector';
@@ -21,18 +21,18 @@ const priorityOptions = [
   { id: 'urgent', label: 'Urgent' },
 ];
 
-const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorNodeData>) => {
+const TicketCreatorNode = ({ data, id }: NodeProps<TicketCreatorNodeData>) => {
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
 
-  const [nodeData, setNodeData] = useState<ProtoNodeTypes_TicketCreatorNodeData>({
+  const [nodeData, setNodeData] = useState<TicketCreatorNodeData>({
     label: '🎫 Ticket Creator',
     outputs: [],
-    ticketTitle: { template: '' },
-    ticketDescription: { template: '' },
-    ticketBoard: { template: '' },
-    ticketPriority: { template: '' },
+    ticketTitle: { template: '', type: { value: '' } },
+    ticketDescription: { template: '', type: { value: '' } },
+    ticketBoard: { template: '', type: { value: '' } },
+    ticketPriority: { template: '', type: { value: '' } },
   });
 
   useEffect(() => {
@@ -45,7 +45,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorN
   }, [data]);
 
   const handleInputChange = (name: string, value: string) => {
-    const newTemplate: Template = { template: value };
+    const newTemplate: Template = { template: value, type: { value: '' } };
     setNodeData(prev => ({
       ...prev,
       [name]: newTemplate,
@@ -75,7 +75,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorN
       <div style={styles.field}>
         <label htmlFor="ticketTitle" style={styles.label}>Ticket Title:</label>
         <InputFieldSelector
-          value={nodeData.ticketTitle || { template: '' }}
+          value={nodeData.ticketTitle || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketTitle', value)}
           inputType="Email"
         />
@@ -83,7 +83,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorN
       <div style={styles.field}>
         <label htmlFor="ticketDescription" style={styles.label}>Ticket Description:</label>
         <TextAreaFieldSelector
-          value={nodeData.ticketDescription || { template: '' }}
+          value={nodeData.ticketDescription || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketDescription', value)}
           inputType="Email"
           rows={3}
@@ -92,7 +92,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorN
       <div style={styles.field}>
         <label htmlFor="ticketBoard" style={styles.label}>Board:</label>
         <ComboBoxFieldSelector
-          value={nodeData.ticketBoard || { template: '' }}
+          value={nodeData.ticketBoard || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketBoard', value)}
           options={boardOptions}
           inputType="Email"
@@ -102,7 +102,7 @@ const TicketCreatorNode = ({ data, id }: NodeProps<ProtoNodeTypes_TicketCreatorN
       <div style={styles.field}>
         <label htmlFor="ticketPriority" style={styles.label}>Priority:</label>
         <ComboBoxFieldSelector
-          value={nodeData.ticketPriority || { template: '' }}
+          value={nodeData.ticketPriority || { template: '', type: { value: '' } }}
           onChange={(value) => handleInputChange('ticketPriority', value)}
           options={priorityOptions}
           inputType="Email"
