@@ -29,6 +29,8 @@ COPY ./ee/server/knexfile.cjs /app/ee/server/knexfile.cjs
 RUN mkdir -p /app/migrations
 COPY ./server/migrations/* /app/migrations/
 COPY ./ee/server/migrations/* /app/migrations/
+COPY ./server/migrations/* /app/server/migrations/
+COPY ./ee/server/migrations/* /app/server/migrations/
 
 # Create seeds directory and copy seeds
 RUN mkdir -p /app/seeds/dev

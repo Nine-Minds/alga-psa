@@ -43,6 +43,12 @@ Redis Secret:
 echo "your-secure-password" > secrets/redis_password
 ```
 
+Authentication Secret:
+```bash
+# Authentication key for password hashing
+echo "your-32-char-min-key" > secrets/alga_auth_key
+```
+
 Security Secrets:
 ```bash
 echo "your-32-char-min-key" > secrets/crypto_key
@@ -206,6 +212,11 @@ docker compose logs [service-name]
 - Check redis host/port configuration
 - Ensure Redis container is running
 
+### Authentication Issues
+- Verify alga_auth_key secret exists and is properly configured
+- Ensure authentication key is at least 32 characters long
+- Check permissions on alga_auth_key secret file
+
 ### Hocuspocus Issues
 - Check REQUIRE_HOCUSPOCUS setting
 - Verify service availability if required
@@ -226,6 +237,7 @@ docker compose logs [service-name]
 ✓ Production environment uses HTTPS
 ✓ Database passwords are strong and unique
 ✓ Redis password is configured
+✓ Authentication key (alga_auth_key) is properly configured
 ✓ Encryption keys are at least 32 characters
 ✓ RLS policies properly configured
 ✓ Database users have appropriate permissions

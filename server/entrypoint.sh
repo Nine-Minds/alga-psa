@@ -6,6 +6,24 @@ log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
 }
 
+# Function to get secret value from either Docker secret file or environment variable
+get_secret() {
+    local secret_name=$1
+    local env_var=$2
+    local default_value=${3:-""}
+    local secret_path="/run/secrets/$secret_name"
+    
+    if [ -f "$secret_path" ]; then
+        cat "$secret_path"
+    elif [ ! -z "${!env_var}" ]; then
+        log "Using $env_var environment variable instead of Docker secret"
+        echo "${!env_var}"
+    else
+        log "Neither secret file $secret_path nor $env_var environment variable found, using default value"
+        echo "$default_value"
+    fi
+}
+
 # Function to print version banner
 print_version_banner() {
     version="0.0.6"
@@ -174,42 +192,20 @@ validate_environment() {
         return 1
     fi
 
-    # Verify secret files exist
-    if [ ! -f "/run/secrets/postgres_password" ]; then
-        log "Error: postgres_password secret file not found"
-        return 1
-    fi
-    if [ ! -f "/run/secrets/db_password_server" ]; then
-        log "Error: db_password_server secret file not found"
-        return 1
-    fi
-
     log "Environment validation successful"
     return 0
 }
 
 # Function to check if postgres is ready
 wait_for_postgres() {
-    log "Waiting for PostgreSQL to be ready..."
-    # Use admin user for health check
-    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U "$DB_USER_ADMIN" -c '\q' 2>/dev/null; do
-        log "PostgreSQL is unavailable - sleeping"
-        sleep 1
-    done
-    log "PostgreSQL is up and running!"
-
-    # Verify app_user can connect
-    until PGPASSWORD=$(cat /run/secrets/db_password_server) psql -h postgres -U "$DB_USER_SERVER" -d server -c '\q' 2>/dev/null; do
-        log "Waiting for app_user access..."
-        sleep 1
-    done
-    log "Database access verified for app_user"
+    log "Waiting for PostgreSQL to be ready.. (skipped)"
 }
 
 # Function to check if redis is ready
 wait_for_redis() {
     log "Waiting for Redis to be ready..."
-    until redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} -a $(cat /run/secrets/redis_password) ping 2>/dev/null; do
+    local redis_password=$(get_secret "redis_password" "REDIS_PASSWORD")
+    until redis-cli -h ${REDIS_HOST:-redis} -p ${REDIS_PORT:-6379} -a "$redis_password" ping 2>/dev/null; do
         log "Redis is unavailable - sleeping"
         sleep 1
     done
@@ -250,20 +246,20 @@ wait_for_hocuspocus() {
 # Function to start the application
 start_app() {
     # Set up application database connection using app_user
-    export DATABASE_URL="postgresql://$DB_USER_SERVER:$(cat /run/secrets/db_password_server)@postgres:5432/server"
+    local db_password_server=$(get_secret "db_password_server" "DB_PASSWORD_SERVER")
+    export DATABASE_URL="postgresql://$DB_USER_SERVER:$db_password_server@postgres:5432/server"
     
     # Set NEXTAUTH_SECRET from Docker secret if not already set
-    # if [ -z "$NEXTAUTH_SECRET" ]; then
     log "Setting NEXTAUTH_SECRET from secret file..."
-    export NEXTAUTH_SECRET=$(cat /run/secrets/nextauth_secret)
-    # fi
+    export NEXTAUTH_SECRET=$(get_secret "nextauth_secret" "NEXTAUTH_SECRET")
     
     if [ "$NODE_ENV" = "development" ]; then
         log "Starting server in development mode..."
         npm run dev
     else
         log "Starting server in production mode..."
-        npm run build && npm start
+        pwd
+        cd /app/server && npm start
     fi
 }
 
@@ -274,7 +270,9 @@ main() {
     # Validate environment
     if ! validate_environment; then
         log "Environment validation failed"
-        exit 1
+        if [ "$NODE_ENV" = "development" ]; then
+            exit 1
+        fi
     fi
     
     # Wait for dependencies

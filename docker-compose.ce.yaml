@@ -54,6 +54,7 @@ services:
       - nextauth_secret
       - google_oauth_client_id
       - google_oauth_client_secret
+      - alga_auth_key
     networks:
       - app-network
     depends_on:

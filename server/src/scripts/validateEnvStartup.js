@@ -13,7 +13,6 @@ const generateSecureKey = () => randomBytes(32).toString('hex');
 const generateBase64Key = () => randomBytes(32).toString('base64');
 
 const requiredSecureKeys = {
-  ALGA_AUTH_KEY: generateSecureKey,
   SECRET_KEY: generateSecureKey,
   NEXTAUTH_SECRET: generateBase64Key
 };

@@ -17,10 +17,7 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
       throw new Error(`Invalid environment: ${environment}`);
     }
 
-    console.log('environmentConfig ', environmentConfig);
-
     const poolConfig: PoolConfig = environmentConfig.pool as PoolConfig || {};
-
 
     const tenantConfig = {
       ...environmentConfig,

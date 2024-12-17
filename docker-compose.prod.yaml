@@ -5,6 +5,9 @@ services:
     environment:
       NODE_ENV: production
       APP_ENV: production
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
 
   setup:
     environment:

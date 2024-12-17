@@ -2,6 +2,35 @@
 /* eslint-disable no-undef */
 require('dotenv').config();
 const fs = require('fs');
+const path = require('path');
+
+// Calculate secrets directory path once at module load
+const DOCKER_SECRETS_PATH = '/run/secrets';
+const LOCAL_SECRETS_PATH = '../secrets';
+const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
+
+/**
+ * Gets a secret value from either a Docker secret file or environment variable
+ * @param secretName - Name of the secret (e.g. 'postgres_password')
+ * @param envVar - Name of the fallback environment variable
+ * @param defaultValue - Optional default value if neither source exists
+ * @returns The secret value as a string
+ */
+function getSecret(secretName, envVar, defaultValue = '') {
+  const secretPath = path.join(SECRETS_PATH, secretName);
+  try {
+    return fs.readFileSync(secretPath, 'utf8').trim();
+  } catch (error) {
+    if (process.env[envVar]) {
+      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
+      const envVal = process.env[envVar] || defaultValue;
+      console.log(`Using ${envVar} environment variable: ${envVal}`);
+      return envVal;
+    }
+    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
+    return defaultValue;
+  }
+}
 
 const DatabaseType = {
   postgres: 'postgres'
@@ -44,33 +73,14 @@ const createConnectionWithTenant = (config, tenant) => {
   };
 };
 
-// Read database passwords from secret files
-const getPostgresPassword = () => {
-  try {
-    return fs.readFileSync('/run/secrets/postgres_password', 'utf8').trim();
-  } catch (error) {
-    console.error('Error reading postgres password:', error.message);
-    process.exit(1);
-  }
-};
-
-const getAppUserPassword = () => {
-  try {
-    return fs.readFileSync('/run/secrets/db_password_server', 'utf8').trim();
-  } catch (error) {
-    console.error('Error reading server password:', error.message);
-    process.exit(1);
-  }
-};
-
 // Base configuration for migrations (uses postgres user)
 const migrationConfig = {
   client: 'pg',
   connection: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    user: 'postgres',
-    password: getPostgresPassword(),
+    user: process.env.DB_USER_ADMIN || 'postgres',
+    password: getSecret('postgres_password', 'DB_PASSWORD_ADMIN'),
     database: process.env.DB_NAME_SERVER,
   },
   pool: {
@@ -92,8 +102,8 @@ const appConfig = {
   connection: {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    user: process.env.DB_USER_SERVER || 'app_user',
-    password: getAppUserPassword(),
+    user: process.env.DB_USER_ADMIN || 'postgres',
+    password: getSecret('db_password_server', 'DB_PASSWORD_ADMIN'),
     database: process.env.DB_NAME_SERVER,
   },
   pool: {
@@ -118,8 +128,8 @@ const knexfile = {
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: process.env.DB_PORT || '5432',
-      user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || 'test_password',
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'test_password'),
       database: process.env.DB_NAME_SERVER || 'sebastian_test',
     },
     pool: {
@@ -139,8 +149,8 @@ const knexfile = {
     connection: {
       host: 'localhost',
       port: '5432',
-      user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || 'abcd1234!',
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'abcd1234!'),
       database: process.env.DB_NAME_SERVER || 'server',
     },
     migrations: migrationConfig.migrations,

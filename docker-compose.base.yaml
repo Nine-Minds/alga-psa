@@ -86,6 +86,8 @@ secrets:
     file: ./secrets/google_oauth_client_id
   google_oauth_client_secret:
     file: ./secrets/google_oauth_client_secret
+  alga_auth_key:
+    file: ./secrets/alga_auth_key
 
 services:
   postgres:
