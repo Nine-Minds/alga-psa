@@ -33,15 +33,16 @@ import SelectorNode from './nodes/SelectorNode';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import {
-  ProtoNodeTypes_ThinkingNodeData,
-  ProtoNodeTypes_ActionNodeData,
-  ProtoNodeTypes_Office365ReceiverNodeData,
-  ProtoNodeTypes_ClassifierNodeData,
-  ProtoNodeTypes_TicketCreatorNodeData,
-  ProtoNodeTypes_DecisionNodeData,
-  ProtoNodeTypes_SelectorNodeData,
-  Template
-} from '../../generated/workflow';
+  ThinkingNodeData,
+  ActionNodeData,
+  Office365ReceiverNodeData,
+  ClassifierNodeData,
+  TicketCreatorNodeData,
+  DecisionNodeData,
+  SelectorNodeData,
+  Template,
+  ConditionType
+} from '../../services/flow/types/workflowTypes';
 
 interface WorkflowNode {
   id: string;
@@ -109,18 +110,23 @@ const nodeTypes: ReactFlowNodeTypes = {
   selector: SelectorNode,
 };
 
+const createTemplate = (value: string): Template => ({
+  template: value,
+  type: { value: '' }
+});
+
 const initialNodes: CustomNode[] = [
   {
     id: uuidv4(),
     type: 'office365Receiver',
     data: {
       label: '📩 Office 365 Receiver',
-      clientId: { template: '' },
-      clientSecret: { template: '' },
-      tenantId: { template: '' },
-      userEmail: { template: '' },
+      clientId: createTemplate(''),
+      clientSecret: createTemplate(''),
+      tenantId: createTemplate(''),
+      userEmail: createTemplate(''),
       outputs: [],
-    } as ProtoNodeTypes_Office365ReceiverNodeData,
+    } as Office365ReceiverNodeData,
     position: { x: 0, y: 50 },
   },
 ];
@@ -133,8 +139,6 @@ function convertToNodeProperties(type: NodeTypes, props: Array<{ id: number, key
     acc[prop.key] = prop.value ?? '';
     return acc;
   }, {} as Record<string, string>);
-
-  const createTemplate = (value: string): Template => ({ template: value });
 
   switch (type) {
     case 'office365Receiver':
@@ -159,12 +163,12 @@ function convertToNodeProperties(type: NodeTypes, props: Array<{ id: number, key
           JSON.parse(propsObject.classifications).map((c: string) => createTemplate(c)) : [],
       };
     case 'decision':
-      const conditions: Record<string, { type: number; value: Template }> = {};
+      const conditions: Record<string, { type: ConditionType; value: Template }> = {};
       const conditionsObj = propsObject.conditions ? JSON.parse(propsObject.conditions) : {};
       for (const [key, value] of Object.entries(conditionsObj)) {
         if (typeof value === 'object' && value !== null && 'type' in value && 'value' in value) {
           conditions[key] = {
-            type: Number(value.type) || 0,
+            type: value.type as ConditionType,
             value: createTemplate(String(value.value) || ''),
           };
         }
@@ -318,61 +322,59 @@ const DnDFlow: React.FC<DndFlowProps> = ({ initialWorkflowVersion }) => {
   );
 
   const createNodeData = (type: NodeTypes): any => {
-    const template = { template: '' };
-    
     switch (type) {
       case 'thinking':
         return {
           label: '🤔 Thinking',
           outputs: [],
-          thinkingProcess: template,
-        } as ProtoNodeTypes_ThinkingNodeData;
+          thinkingProcess: createTemplate(''),
+        } as ThinkingNodeData;
       case 'action':
         return {
           label: '⚡ Action',
           outputs: [],
-          action: template,
-        } as ProtoNodeTypes_ActionNodeData;
+          action: createTemplate(''),
+        } as ActionNodeData;
       case 'classifier':
         return {
           label: '🏷️ Classifier',
           outputs: [],
-          source: template,
-          thinkingProcess: template,
+          source: createTemplate(''),
+          thinkingProcess: createTemplate(''),
           classifications: [],
-        } as ProtoNodeTypes_ClassifierNodeData;
+        } as ClassifierNodeData;
       case 'ticketCreator':
         return {
           label: '🎫 Ticket Creator',
           outputs: [],
-          ticketTitle: template,
-          ticketDescription: template,
-          ticketBoard: template,
-          ticketPriority: template,
-        } as ProtoNodeTypes_TicketCreatorNodeData;
+          ticketTitle: createTemplate(''),
+          ticketDescription: createTemplate(''),
+          ticketBoard: createTemplate(''),
+          ticketPriority: createTemplate(''),
+        } as TicketCreatorNodeData;
       case 'office365Receiver':
         return {
           label: '📩 Office 365 Receiver',
           outputs: [],
-          clientId: template,
-          clientSecret: template,
-          tenantId: template,
-          userEmail: template,
-        } as ProtoNodeTypes_Office365ReceiverNodeData;
+          clientId: createTemplate(''),
+          clientSecret: createTemplate(''),
+          tenantId: createTemplate(''),
+          userEmail: createTemplate(''),
+        } as Office365ReceiverNodeData;
       case 'decision':
         return {
           label: '🔀 Decision',
           outputs: [],
           conditions: {},
-          defaultOutput: template,
-        } as ProtoNodeTypes_DecisionNodeData;
+          defaultOutput: createTemplate(''),
+        } as DecisionNodeData;
       case 'selector':
         return {
           label: '📋 Selector',
           outputs: [],
           inputs: [],
-          defaultInput: template,
-        } as ProtoNodeTypes_SelectorNodeData;
+          defaultInput: createTemplate(''),
+        } as SelectorNodeData;
       default:
         throw new Error(`Unsupported node type: ${type}`);
     }

@@ -4,24 +4,24 @@ import React, { memo, useState, useEffect } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 import DeleteButton from '../DeleteButton';
 import Picker from '../Picker';
-import { ProtoNodeTypes_DecisionNodeData, ProtoNodeTypes_Condition_ConditionType } from '../../../generated/workflow';
+import { DecisionNodeData, ConditionType } from '../../../services/flow/types/workflowTypes';
 import { PickerOption } from '../../../services/flow/types/nodes';
 
 const conditionOptions: PickerOption[] = [
-  { id: ProtoNodeTypes_Condition_ConditionType.EQUALS.toString(), label: 'Equals' },
-  { id: ProtoNodeTypes_Condition_ConditionType.THRESHOLD.toString(), label: 'Threshold' },
-  { id: ProtoNodeTypes_Condition_ConditionType.REGEX.toString(), label: 'Regex' },
+  { id: ConditionType.EQUALS, label: 'Equals' },
+  { id: ConditionType.THRESHOLD, label: 'Threshold' },
+  { id: ConditionType.REGEX, label: 'Regex' },
 ];
 
-const DecisionNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_DecisionNodeData>) => {
+const DecisionNode = memo(({ data, id }: NodeProps<DecisionNodeData>) => {
   const { getNode, setNodes } = useReactFlow();
   const node = getNode(id);
   const isSelected = node?.selected ?? false;
 
-  const [nodeData, setNodeData] = useState<ProtoNodeTypes_DecisionNodeData>({
+  const [nodeData, setNodeData] = useState<DecisionNodeData>({
     label: 'Decision',
     conditions: {},
-    defaultOutput: { template: '' },
+    defaultOutput: { template: '', type: { value: '' } },
     outputs: [],
   });
 
@@ -58,7 +58,7 @@ const DecisionNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_DecisionNodeDa
       ...nodeData.conditions,
       [outputKey]: {
         ...nodeData.conditions[outputKey],
-        [field]: field === 'type' ? parseInt(value, 10) : { template: value },
+        [field]: field === 'type' ? value as ConditionType : { template: value, type: { value: '' } },
       },
     };
     handleInputChange('conditions', updatedConditions);
@@ -69,8 +69,8 @@ const DecisionNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_DecisionNodeDa
     const updatedConditions = {
       ...nodeData.conditions,
       [newOutputKey]: { 
-        type: ProtoNodeTypes_Condition_ConditionType.EQUALS,
-        value: { template: '' }
+        type: ConditionType.EQUALS,
+        value: { template: '', type: { value: '' } }
       },
     };
     handleInputChange('conditions', updatedConditions);
@@ -97,7 +97,7 @@ const DecisionNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_DecisionNodeDa
           <label className="block text-sm font-medium text-gray-300">Condition {index + 1}</label>
           <Picker
             label="Type"
-            value={condition.type?.toString() ?? '0'}
+            value={condition.type ?? ConditionType.EQUALS}
             options={conditionOptions}
             onChange={(value) => handleConditionChange(outputKey, 'type', value)}
           />
@@ -131,7 +131,7 @@ const DecisionNode = memo(({ data, id }: NodeProps<ProtoNodeTypes_DecisionNodeDa
         <input
           type="text"
           value={nodeData.defaultOutput?.template ?? ''}
-          onChange={(e) => handleInputChange('defaultOutput', { template: e.target.value })}
+          onChange={(e) => handleInputChange('defaultOutput', { template: e.target.value, type: { value: '' } })}
           className="mt-1 focus:ring-[#00ffff] focus:border-[#00ffff] block w-full shadow-sm sm:text-sm border-[#4a4a5e] rounded-md bg-[#3a3a4c] text-white"
           placeholder="Default output"
           style={inputStyle}

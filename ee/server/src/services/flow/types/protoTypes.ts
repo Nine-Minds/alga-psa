@@ -1,50 +1,33 @@
-import { 
-  SystemTypes,
-  SystemTypes_String,
-  SystemTypes_Integer,
-  SystemTypes_Float,
-  SystemTypes_Boolean,
-  ProtoNodeTypes,
-  ProtoNodeTypes_TypedOutput,
-  ProtoNodeTypes_Input,
-  Template
-} from '../../../generated/workflow';
-
-export { 
-  SystemTypes,
-  ProtoNodeTypes,
+import {
+  SystemString,
+  SystemInteger,
+  SystemFloat,
+  SystemBoolean,
+  SystemType,
+  TypedOutput,
+  Input,
   Template,
-  ProtoNodeTypes_TypedOutput,
-  ProtoNodeTypes_Input
+  createSystemType,
+  createOutput,
+  createInput
+} from './workflowTypes';
+
+// Re-export types
+export type { 
+  SystemString,
+  SystemInteger,
+  SystemFloat,
+  SystemBoolean,
+  TypedOutput,
+  Input,
+  Template
 };
 
-// Helper type for intrinsic types
-export type IntrinsicType = 
-  | SystemTypes_String
-  | SystemTypes_Integer
-  | SystemTypes_Float
-  | SystemTypes_Boolean;
+// Helper type for system types
+export type IntrinsicType = SystemType;
 
-// Helper function to create intrinsic types
-export function createIntrinsicType(type: 'String' | 'Integer' | 'Float' | 'Boolean', value: string | number | boolean): IntrinsicType {
-  switch (type) {
-    case 'String':
-      return SystemTypes_String.create({ value: String(value) });
-    case 'Integer':
-      return SystemTypes_Integer.create({ value: Number(value) });
-    case 'Float':
-      return SystemTypes_Float.create({ value: Number(value) });
-    case 'Boolean':
-      return SystemTypes_Boolean.create({ value: Boolean(value) });
-  }
-}
+// Helper function to create system types
+export const createIntrinsicType = createSystemType;
 
-// Helper function to create an Output
-export function createOutput(id: string, label: string, type: string): ProtoNodeTypes_TypedOutput {
-  return ProtoNodeTypes_TypedOutput.create({ id, label, type });
-}
-
-// Helper function to create an Input
-export function createInput(id: string, label: string): ProtoNodeTypes_Input {
-  return ProtoNodeTypes_Input.create({ id, label });
-}
+// Helper functions re-exported
+export { createOutput, createInput };
