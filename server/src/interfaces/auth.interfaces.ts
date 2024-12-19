@@ -16,7 +16,9 @@ export interface IUser {
     is_inactive: boolean;
     tenant: string;
     user_type: string;
-    contact_id?: string; // Add this line
+    contact_id?: string;
+    phone?: string;
+    timezone?: string;
 }
 
 export interface IUserWithRoles extends IUser {

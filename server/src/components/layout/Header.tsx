@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { signOut } from "next-auth/react";
-import { QuestionMarkCircledIcon, SunIcon, MoonIcon, ExitIcon, ChevronRightIcon, HomeIcon } from '@radix-ui/react-icons';
+import { QuestionMarkCircledIcon, SunIcon, MoonIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import type { IUserWithRoles } from '@/types';
@@ -12,6 +12,7 @@ import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { Link } from '@radix-ui/themes';
 import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -52,6 +53,7 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
   const { themeStatus, setThemeStatus } = useTheme();
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
+  const router = useRouter();
   
   useEffect(() => {
     const fetchUserData = async () => {
@@ -169,6 +171,13 @@ const Header: React.FC<HeaderProps> = ({
             >
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
+                onSelect={() => router.push('/msp/profile')}
+              >
+                <PersonIcon className="mr-2 h-3.5 w-3.5" />
+                <span>Profile</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                 onSelect={handleSignOut}
               >
                 <ExitIcon className="mr-2 h-3.5 w-3.5" />
@@ -178,6 +187,7 @@ const Header: React.FC<HeaderProps> = ({
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+
     </header>
   );
 }

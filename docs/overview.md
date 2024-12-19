@@ -14,6 +14,58 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Documents:** Provides a centralized document repository. Core logic is in `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`, with components located under `server/src/components/documents`.
 
+* **Event Bus System:** Asynchronous event processing system using Redis pub/sub:
+  * Core components:
+    - Redis-based pub/sub messaging
+    - Type-safe event definitions using Zod
+    - Multi-tenant event isolation
+    - Automatic reconnection handling
+    - Comprehensive error handling and logging
+  * Key files:
+    - `server/src/lib/eventBus/index.ts`: Core event bus implementation
+    - `server/src/lib/eventBus/events.ts`: Event type definitions and schemas
+    - `server/src/lib/eventBus/subscribers/`: Event subscribers
+    - `server/src/config/redisConfig.ts`: Redis configuration
+  * Features:
+    - Tenant-isolated event channels
+    - Type-safe event publishing and handling
+    - Automatic Redis reconnection with exponential backoff
+    - Event validation using Zod schemas
+    - Detailed event logging and monitoring
+
+* **Email Notifications:** Comprehensive notification system with template management and tenant customization, integrated with the event bus system. Core components:
+  * Database-driven templates:
+    - `system_email_templates`: System-wide default templates (read-only)
+    - `tenant_email_templates`: Tenant-specific customizations with RLS
+    - Template inheritance: Tenant templates can be cloned from system templates
+  * Configuration and preferences:
+    - Global settings per tenant (enable/disable, rate limits)
+    - User-level notification preferences
+    - Hierarchical category and subtype system:
+      * System-wide categories (e.g., Tickets, Invoices)
+      * Subtypes within each category (e.g., Ticket Created, Invoice Overdue)
+      * Category-based control: Disabling a category automatically disables its subtypes
+  * Features:
+    - HTML and plain text email formats
+    - Handlebars templating for dynamic content
+    - Template versioning and inheritance
+    - Rate limiting and throttling
+    - Detailed audit logging
+    - Asynchronous email processing through event bus
+    - Reliable email delivery with Redis-backed queuing
+  * Default notification types:
+    - Tickets (created, updated, closed)
+    - Invoices (generated, payment, overdue)
+    - Projects (created, tasks, milestones)
+    - Time Entries (submitted, approved, rejected)
+  * Key files:
+    - `server/src/lib/notifications/email.ts`: Core notification service
+    - `server/src/lib/notifications/emailService.ts`: SMTP integration
+    - `server/src/lib/models/notification.ts`: Type definitions
+    - `server/src/components/settings/notifications/EmailTemplates.tsx`: Template management UI
+    - `server/src/components/settings/notifications/NotificationCategories.tsx`: Category/subtype management UI
+    - `server/src/components/settings/notifications/NotificationSettings.tsx`: Global settings UI
+
 * **Interactions:** Tracks client interactions. See `server/src/lib/models/interactions.ts` and components under `server/src/components/interactions`.
 
 * **Projects:** Manages projects and tasks. Key files include `server/src/lib/models/project.ts` and components under `server/src/components/projects`.

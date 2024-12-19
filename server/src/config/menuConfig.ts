@@ -82,6 +82,7 @@ export const bottomMenuItems: MenuItem[] = [
     icon: RadixIcons.GearIcon,
     subItems: [
       { name: 'General', icon: RadixIcons.MixerHorizontalIcon, href: '/msp/settings' },
+      { name: 'Profile', icon: RadixIcons.PersonIcon, href: '/msp/profile' },
       {
         name: 'Security',
         href: '/msp/security-settings',

@@ -4,6 +4,7 @@
 - If you would like to search for the contents to files, offer to use the run command and grep command to search for the contents.
 - Do not proceed to updating files until you have enough context to do so.
 
+
 # UI coding standards
 
 Prefer radix components over other libraries

@@ -8,6 +8,7 @@ import { getConnection } from '@/lib/db/db';
 import { createNextTimePeriod } from './timePeriodsActions';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
 import env from '@/config/envConfig';
+import { initializeEventBus } from '../eventBus/initialize';
 
 let isFunctionExecuted = false;
 
@@ -16,6 +17,15 @@ export async function initializeApp() {
         return;
     }
     isFunctionExecuted = true;
+
+    // Initialize event bus first
+    try {
+        await initializeEventBus();
+        logger.info('Event bus initialized successfully');
+    } catch (error) {
+        logger.error('Failed to initialize event bus:', error);
+        throw error;
+    }
 
     // Log environment configuration on startup
     logger.info('Starting application with the following configuration:');

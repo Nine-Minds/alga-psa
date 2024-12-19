@@ -9,11 +9,31 @@ const __dirname = path.dirname(__filename);
 
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ['knex'],
+    serverComponentsExternalPackages: [
+      'knex',
+      'handlebars',
+      'fs',
+      'path',
+      'crypto',
+      'fs/promises',
+      'stream',
+      'stream/promises',
+      'util',
+      'url',
+      'querystring'
+    ],
   },
   webpack: (config, { isServer }) => {
     // Disable webpack cache
     config.cache = false;
+    
+    // Handle Handlebars module
+    if (isServer) {
+      config.module.rules.push({
+        test: /node_modules\/handlebars\/lib\/.*\.js$/,
+        loader: 'null-loader'
+      });
+    }
     
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -33,6 +53,11 @@ const nextConfig = {
         ...config.resolve.fallback,
         fs: false,
         path: false,
+        crypto: false,
+        stream: false,
+        util: false,
+        url: false,
+        querystring: false,
       }
     };
     

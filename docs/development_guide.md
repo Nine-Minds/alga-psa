@@ -206,16 +206,158 @@ docker compose exec postgres psql -U psa_user psa_db
 docker compose logs postgres
 ```
 
-### 3. Redis Debugging
+### 3. Event Bus and Redis Debugging
 
 1. Redis CLI:
 ```bash
 docker compose exec redis redis-cli
 ```
 
-2. Monitor commands:
+2. Monitor all Redis events:
 ```bash
 docker compose exec redis redis-cli monitor
+```
+
+3. Monitor specific event channels:
+```bash
+# Monitor all email notifications for a tenant
+docker compose exec redis redis-cli psubscribe "alga-psa:event:tenant:*:EMAIL_NOTIFICATION"
+
+# Monitor all events for a specific tenant
+docker compose exec redis redis-cli psubscribe "alga-psa:event:tenant:your-tenant-id:*"
+```
+
+4. View event bus subscribers:
+```bash
+docker compose exec redis redis-cli pubsub channels "alga-psa:event:*"
+```
+
+5. Debug event bus configuration:
+```bash
+# Check Redis connection
+docker compose exec redis redis-cli ping
+
+# View event bus channels
+docker compose exec redis redis-cli pubsub channels
+
+# Check channel subscribers
+docker compose exec redis redis-cli pubsub numsub channel_name
+```
+
+## Event Bus System
+
+### 1. Configuration
+
+The event bus system uses Redis for pub/sub messaging. Configure through environment variables:
+
+```env
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+REDIS_PREFIX=alga-psa:
+REDIS_EVENT_CHANNEL_PREFIX=event:
+REDIS_RECONNECT_RETRIES=10
+REDIS_RECONNECT_INITIAL_DELAY=100
+REDIS_RECONNECT_MAX_DELAY=3000
+```
+
+### 2. Working with Events
+
+1. Create new event types:
+```typescript
+// In server/src/lib/eventBus/events.ts
+export const EventTypeEnum = z.enum([
+  'YOUR_NEW_EVENT',
+  // ... other events
+]);
+
+export const YourEventPayloadSchema = z.object({
+  // Define your event payload schema
+});
+
+// Add to EventPayloadSchemas
+export const EventPayloadSchemas = {
+  YOUR_NEW_EVENT: YourEventPayloadSchema,
+  // ... other schemas
+};
+```
+
+2. Create event subscriber:
+```typescript
+// In server/src/lib/eventBus/subscribers/yourSubscriber.ts
+import { eventBus } from '../index';
+import { YourEvent, EventType } from '../events';
+
+async function handleYourEvent(event: YourEvent): Promise<void> {
+  // Handle the event
+}
+
+export async function registerYourSubscriber(tenantId: string): Promise<void> {
+  await eventBus.subscribe(
+    tenantId,
+    'YOUR_NEW_EVENT' as EventType,
+    handleYourEvent as any
+  );
+}
+```
+
+3. Publish events:
+```typescript
+import { eventBus } from 'lib/eventBus';
+
+await eventBus.publish({
+  tenantId: 'tenant-id',
+  eventType: 'YOUR_NEW_EVENT',
+  payload: {
+    // Your event data
+  },
+});
+```
+
+### 3. Testing Events
+
+1. Create event bus mocks:
+```typescript
+// In your test file
+jest.mock('lib/eventBus', () => ({
+  eventBus: {
+    publish: jest.fn(),
+    subscribe: jest.fn(),
+  },
+}));
+```
+
+2. Test event publishing:
+```typescript
+test('should publish event', async () => {
+  const event = {
+    tenantId: 'test-tenant',
+    eventType: 'YOUR_NEW_EVENT',
+    payload: { /* ... */ },
+  };
+  
+  await yourFunction();
+  
+  expect(eventBus.publish).toHaveBeenCalledWith(
+    expect.objectContaining(event)
+  );
+});
+```
+
+3. Test event handling:
+```typescript
+test('should handle event', async () => {
+  const event = {
+    id: 'test-id',
+    tenantId: 'test-tenant',
+    eventType: 'YOUR_NEW_EVENT',
+    timestamp: new Date().toISOString(),
+    payload: { /* ... */ },
+  };
+  
+  await handleYourEvent(event);
+  
+  // Assert expected behavior
+});
 ```
 
 ## Performance Optimization
