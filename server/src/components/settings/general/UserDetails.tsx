@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@/interfaces/auth.interfaces';
-import { findUserById, updateUser, changeOwnPassword, adminChangeUserPassword, getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@/lib/actions/policyActions';
 import { useDrawer } from '@/context/DrawerContext';
 import { Text, Flex } from '@radix-ui/themes';
@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/Switch';
 import { Card } from '@/components/ui/Card';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
+import PasswordChangeForm from './PasswordChangeForm';
 
 interface UserDetailsProps {
   userId: string;
@@ -29,20 +30,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
 
-  // Password change states
+  // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [adminNewPassword, setAdminNewPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showAdminNewPassword, setShowAdminNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserDetails();
@@ -148,36 +143,6 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         console.error('Error updating user:', err);
         setError('Failed to update user. Please try again.');
       }
-    }
-  };
-
-  const handleChangeOwnPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
-
-    if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
-      return;
-    }
-
-    try {
-      const result = await changeOwnPassword(currentPassword, newPassword);
-      if (result.success) {
-        setPasswordSuccess('Password changed successfully');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setPasswordError(result.error || 'Failed to change password');
-      }
-    } catch (err) {
-      setPasswordError('An error occurred while changing password');
     }
   };
 
@@ -335,94 +300,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         </div>
 
       {/* Password Change Section */}
-      {isOwnProfile && (
-        <Card className="p-4 mt-4">
-          <Text size="3" weight="medium" className="mb-4">Change Your Password</Text>
-          <form onSubmit={handleChangeOwnPassword} className="space-y-4">
-            <div>
-                <Text as="label" size="2" weight="medium" className="mb-2 block">
-                  Current Password
-                </Text>
-                <div className="relative">
-                  <Input
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOpenIcon className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <EyeClosedIcon className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <Text as="label" size="2" weight="medium" className="mb-2 block">
-                  New Password
-                </Text>
-                <div className="relative">
-                  <Input
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showNewPassword ? (
-                      <EyeOpenIcon className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <EyeClosedIcon className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <Text as="label" size="2" weight="medium" className="mb-2 block">
-                  Confirm New Password
-                </Text>
-                <div className="relative">
-                  <Input
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full pr-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOpenIcon className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <EyeClosedIcon className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              <Button type="submit" variant="default">
-                Change Password
-              </Button>
-            </form>
-          </Card>
-        )}
-
-      {/* Admin Password Change Section */}
-      {isAdmin && !isOwnProfile && (
+      {isOwnProfile ? (
+        <PasswordChangeForm />
+      ) : isAdmin && (
         <Card className="p-4 mt-4">
           <Text size="3" weight="medium" className="mb-4">Set User Password (Admin)</Text>
           <form onSubmit={handleAdminChangePassword} className="space-y-4">

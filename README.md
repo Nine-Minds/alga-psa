@@ -6,6 +6,8 @@ A comprehensive Professional Services Automation platform designed for Managed S
 
 ### Core Functionality
 - **Asset Management**: Track and manage client assets, maintenance schedules, and relationships
+- **Event Bus System**: Redis-based pub/sub messaging for asynchronous processing and system events
+- **Email Notifications**: Templated email notifications for tickets, invoices, and project updates, powered by the event bus
 - **Billing & Invoicing**: Flexible billing cycles, international tax support, and automated invoicing
 - **Client Management**: Comprehensive client profiles and relationship tracking
 - **Document Management**: Centralized document repository with version control
@@ -32,6 +34,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 - **Frontend**: Next.js application
 - **Backend**: Node.js server
 - **Database**: PostgreSQL with row-level security
+- **Event Processing**: Redis-based event bus with Zod schema validation
 - **Real-time Collaboration**: Hocuspocus integration
 - **Authentication**: NextAuth.js
 - **UI Components**: Radix-based component library

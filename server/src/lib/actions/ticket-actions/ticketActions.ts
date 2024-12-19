@@ -19,6 +19,12 @@ import {
 import { z } from 'zod';
 import { validateData } from '@/lib/utils/validation';
 import { AssetAssociationModel } from '@/models/asset';
+import { getEventBus } from '../../../lib/eventBus';
+import { 
+  TicketCreatedEvent,
+  TicketUpdatedEvent,
+  TicketClosedEvent
+} from '../../../lib/eventBus/events';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -102,6 +108,16 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
                 entity_type: 'ticket',
                 relationship_type: 'affected'
             }, user.user_id);
+
+            // Publish ticket created event
+            await getEventBus().publish({
+                eventType: 'TICKET_CREATED',
+                payload: {
+                    tenantId: tenant,
+                    ticketId: newTicket.ticket_id,
+                    userId: user.user_id,
+                }
+            });
 
             return convertDates(newTicket);
         });
@@ -211,6 +227,16 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         });
       }
 
+      // Publish ticket created event
+      await getEventBus().publish({
+        eventType: 'TICKET_CREATED',
+        payload: {
+          tenantId: tenant,
+          ticketId: newTicket.ticket_id,
+          userId: user.user_id,
+        }
+      });
+
       return convertDates(newTicket);
     });
 
@@ -270,6 +296,15 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       throw new Error('Tenant not found');
     }
 
+    // Get current ticket state before update
+    const currentTicket = await db('tickets')
+      .where({ ticket_id: id, tenant: tenant })
+      .first();
+
+    if (!currentTicket) {
+      throw new Error('Ticket not found');
+    }
+
     // Clean up the data before update
     const updateData = { ...validatedData };
 
@@ -283,10 +318,6 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 
     // If updating category or subcategory, ensure they are compatible
     if ('subcategory_id' in updateData || 'category_id' in updateData) {
-      const currentTicket = await db('tickets')
-        .where({ ticket_id: id, tenant: tenant })
-        .first();
-
       const newSubcategoryId = updateData.subcategory_id;
       const newCategoryId = updateData.category_id || currentTicket?.category_id;
 
@@ -302,6 +333,11 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       }
     }
 
+    // Get the status before and after update to check for closure
+    const oldStatus = await db('statuses')
+      .where({ status_id: currentTicket.status_id, tenant })
+      .first();
+    
     const [updatedTicket] = await db('tickets')
       .where({ ticket_id: id, tenant: tenant })
       .update(updateData)
@@ -309,6 +345,38 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
+    }
+
+    // Get the new status if it was updated
+    const newStatus = updateData.status_id ? 
+      await db('statuses')
+        .where({ status_id: updateData.status_id, tenant })
+        .first() :
+      oldStatus;
+
+    // Publish appropriate event based on the update
+    if (newStatus?.is_closed && !oldStatus?.is_closed) {
+      // Ticket was closed
+      await getEventBus().publish({
+        eventType: 'TICKET_CLOSED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: updateData
+        }
+      });
+    } else {
+      // Regular update
+      await getEventBus().publish({
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          tenantId: tenant,
+          ticketId: id,
+          userId: user.user_id,
+          changes: updateData
+        }
+      });
     }
 
     return 'success';

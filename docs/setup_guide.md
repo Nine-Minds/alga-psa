@@ -90,10 +90,11 @@ LOG_IS_FORMAT_JSON=false
 LOG_IS_FULL_DETAILS=false
 
 # Email Configuration
-EMAIL_ENABLE=false
+EMAIL_ENABLE=false  # Set to "true" to enable email notifications
 EMAIL_FROM=noreply@example.com  # Must be valid email
-EMAIL_PORT=587  # Must be > 0
-EMAIL_USERNAME=noreply@example.com  # Must be valid email
+EMAIL_HOST=smtp.gmail.com  # SMTP server hostname
+EMAIL_PORT=587  # SMTP port (587 for TLS, 465 for SSL)
+EMAIL_USERNAME=noreply@example.com  # SMTP username
 
 # Authentication Configuration
 NEXTAUTH_URL=http://localhost:3000  # Must be valid URL
@@ -245,7 +246,30 @@ docker compose logs [service-name]
 
 ## Next Steps
 
-1. Configure email settings for notifications
+1. Configure email notifications:
+   - Set environment variables:
+     ```bash
+     EMAIL_ENABLE=true
+     EMAIL_HOST=smtp.example.com
+     EMAIL_PORT=587  # or 465 for SSL
+     EMAIL_USERNAME=noreply@example.com
+     EMAIL_PASSWORD=your-secure-password
+     EMAIL_FROM=noreply@example.com
+     ```
+   - Run migrations to set up notification tables:
+     ```bash
+     cd server && npx knex migrate:latest
+     ```
+   - Seed default templates and categories:
+     ```bash
+     cd server && npx knex seed:run
+     ```
+   - Features available after setup:
+     * System-wide default templates
+     * Tenant-specific template customization
+     * User notification preferences
+     * Rate limiting and audit logging
+     * Categories: Tickets, Invoices, Projects, Time Entries
 2. Set up OAuth if using Google authentication
 3. Configure SSL/TLS for production
 4. Set up backup procedures

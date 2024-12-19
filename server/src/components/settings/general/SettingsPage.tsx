@@ -1,22 +1,23 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { useState } from 'react';
+import React from 'react';
 import CustomTabs, { TabContent } from "@/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Switch } from "@/components/ui/Switch";
 import { Label } from "@/components/ui/Label";
 import TicketingSettings from './TicketingSettings';
 import UserManagement from './UserManagement';
 import TeamManagement from './TeamManagement';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import TimePeriodSettings from '../billing/TimePeriodSettings';
+import NotificationsTab from './NotificationsTab';
+import { useRouter } from 'next/navigation';
 
 const SettingsPage = (): JSX.Element =>  {
-  const [companyName, setCompanyName] = useState('Your MSP Company');
-  const [emailNotifications, setEmailNotifications] = useState(true);
+  const router = useRouter();
+  const [companyName, setCompanyName] = React.useState('Your MSP Company');
 
   const tabContent: TabContent[] = [
     {
@@ -39,6 +40,22 @@ const SettingsPage = (): JSX.Element =>  {
               </div>
               <Button>Save Changes</Button>
             </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Profile",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>Manage your personal profile and preferences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/profile')}>
+              Go to Profile Settings
+            </Button>
           </CardContent>
         </Card>
       ),
@@ -71,25 +88,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Notifications",
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notification Settings</CardTitle>
-            <CardDescription>Configure how you receive notifications</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="email-notifications"
-                checked={emailNotifications}
-                onCheckedChange={setEmailNotifications}
-              />
-              <Label htmlFor="email-notifications">Email Notifications</Label>
-            </div>
-            {/* Add more notification settings */}
-          </CardContent>
-        </Card>
-      ),
+      content: <NotificationsTab />,
     },
     {
       label: "Time Entry",
@@ -101,7 +100,6 @@ const SettingsPage = (): JSX.Element =>  {
           </CardHeader>
           <CardContent>
             <TimePeriodSettings />
-            {/* Add more billing management components */}
           </CardContent>
         </Card>
       ),
