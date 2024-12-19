@@ -3,6 +3,26 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+import path from 'path';
+
+// Calculate secrets directory path once at module load
+const DOCKER_SECRETS_PATH = '/run/secrets';
+const LOCAL_SECRETS_PATH = '../secrets';
+const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
+
+function getSecret(secretName, envVar, defaultValue = '') {
+  const secretPath = path.join(SECRETS_PATH, secretName);
+  try {
+    return fs.readFileSync(secretPath, 'utf8').trim();
+  } catch (error) {
+    if (process.env[envVar]) {
+      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
+      return process.env[envVar] || defaultValue;
+    }
+    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
+    return defaultValue;
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -37,10 +57,12 @@ function validateConfig() {
  * This is a non-fatal operation - if it fails, we log the error but continue
  */
 async function setupHocuspocusDatabase(client, postgresPassword) {
-  if (!process.env.DB_NAME_HOCUSPOCUS || !process.env.DB_USER_HOCUSPOCUS) {
-    console.log('Skipping Hocuspocus setup - environment variables not configured');
-    return;
-  }
+  // Default to 'hocuspocus' if environment variables are not set
+  process.env.DB_NAME_HOCUSPOCUS = process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus';
+  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus';
+
+  // Get hocuspocus password from secrets or env var
+  const hocuspocusPassword = getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
 
   try {
     // Check if database exists
@@ -75,8 +97,11 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
 
     if (userCheckResult.rows.length > 0) {
       console.log(`User ${process.env.DB_USER_HOCUSPOCUS} already exists`);
+      // Update password for existing user
+      await hocuspocusClient.query(`ALTER USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${hocuspocusPassword}'`);
+      console.log(`Updated password for user ${process.env.DB_USER_HOCUSPOCUS}`);
     } else {
-      await hocuspocusClient.query(`CREATE USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${postgresPassword}'`);
+      await hocuspocusClient.query(`CREATE USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${hocuspocusPassword}'`);
       console.log(`User ${process.env.DB_USER_HOCUSPOCUS} created successfully`);
     }
 
@@ -104,8 +129,6 @@ async function createDatabase(retryCount = 0) {
     console.error('Configuration validation failed:', error.message);
     process.exit(1);
   }
-
-  import { getSecret } from '../lib/utils/getSecret.js';
 
   // Read passwords from secret files
   const postgresPassword = getSecret('postgres_password', 'POSTGRES_PASSWORD');

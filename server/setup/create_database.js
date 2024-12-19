@@ -58,10 +58,12 @@ function validateConfig() {
  * This is a non-fatal operation - if it fails, we log the error but continue
  */
 async function setupHocuspocusDatabase(client, postgresPassword) {
-  if (!process.env.DB_NAME_HOCUSPOCUS || !process.env.DB_USER_HOCUSPOCUS) {
-    console.log('Skipping Hocuspocus setup - environment variables not configured');
-    return;
-  }
+  // Default to 'hocuspocus' if environment variables are not set
+  process.env.DB_NAME_HOCUSPOCUS = process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus';
+  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus';
+
+  // Get hocuspocus password from secrets or env var
+  const hocuspocusPassword = getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
 
   try {
     // Check if database exists
@@ -96,8 +98,11 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
 
     if (userCheckResult.rows.length > 0) {
       console.log(`User ${process.env.DB_USER_HOCUSPOCUS} already exists`);
+      // Update password for existing user
+      await hocuspocusClient.query(`ALTER USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${hocuspocusPassword}'`);
+      console.log(`Updated password for user ${process.env.DB_USER_HOCUSPOCUS}`);
     } else {
-      await hocuspocusClient.query(`CREATE USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${postgresPassword}'`);
+      await hocuspocusClient.query(`CREATE USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${hocuspocusPassword}'`);
       console.log(`User ${process.env.DB_USER_HOCUSPOCUS} created successfully`);
     }
 
