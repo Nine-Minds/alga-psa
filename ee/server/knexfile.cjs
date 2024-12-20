@@ -9,6 +9,7 @@ const DOCKER_SECRETS_PATH = '/run/secrets';
 const LOCAL_SECRETS_PATH = '../secrets';
 const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
 
+
 function getSecret(secretName, envVar, defaultValue = '') {
   const secretPath = path.join(SECRETS_PATH, secretName);
   try {
@@ -145,6 +146,8 @@ const knexfile = {
   // Special config just for running migrations (uses postgres user)
   migration: migrationConfig
 };
+
+console.log('/server/knexfile', knexfile);
 
 module.exports = {
   ...knexfile,

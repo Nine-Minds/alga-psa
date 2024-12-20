@@ -24,12 +24,14 @@ import { getSecret } from '../utils/getSecret';
 const getDbPassword = () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
 const getPostgresPassword = () => getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
 
+console.log('DB_PASSWORD_SERVER', getDbPassword());
+
 // Special connection config for postgres user (needed for job scheduler)
 export const postgresConnection = {
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
   user: process.env.DB_USER_ADMIN || 'postgres',
-  password: process.env.DB_PASSWORD_ADMIN || getPostgresPassword(),
+  password: getPostgresPassword(),
   database: process.env.DB_NAME_SERVER || 'server'
 } satisfies Knex.PgConnectionConfig;
 
@@ -54,7 +56,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || getDbPassword(),
+      password: getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -72,7 +74,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || getDbPassword(),
+      password: getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -119,5 +121,7 @@ export const getKnexConfigWithTenant = (tenant: string): CustomKnexConfig => {
     }
   };
 };
+
+console.log('lib/db/knexfile', knexfile);
 
 export default knexfile;

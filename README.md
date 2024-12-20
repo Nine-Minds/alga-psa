@@ -6,6 +6,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 
 ### Core Functionality
 - **Asset Management**: Track and manage client assets, maintenance schedules, and relationships
+- **Email Notifications**: Templated email notifications for tickets, invoices, and project updates
 - **Billing & Invoicing**: Flexible billing cycles, international tax support, and automated invoicing
 - **Client Management**: Comprehensive client profiles and relationship tracking
 - **Document Management**: Centralized document repository with version control

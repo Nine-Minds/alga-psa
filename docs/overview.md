@@ -14,6 +14,15 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Documents:** Provides a centralized document repository. Core logic is in `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`, with components located under `server/src/components/documents`.
 
+* **Email Notifications:** Handles system notifications through templated emails. Core functionality in `server/src/lib/notifications/email.ts`, with templates under `server/src/lib/notifications/templates/`. Supports:
+  * HTML and plain text email formats
+  * Handlebars templating system
+  * Template caching for performance
+  * Notification types:
+    - Ticket creation and updates
+    - Invoice notifications
+    - Project updates
+
 * **Interactions:** Tracks client interactions. See `server/src/lib/models/interactions.ts` and components under `server/src/components/interactions`.
 
 * **Projects:** Manages projects and tasks. Key files include `server/src/lib/models/project.ts` and components under `server/src/components/projects`.

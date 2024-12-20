@@ -19,6 +19,7 @@ import {
 import { z } from 'zod';
 import { validateData } from '@/lib/utils/validation';
 import { AssetAssociationModel } from '@/models/asset';
+import { sendTicketCreatedEmail } from '@/lib/notifications/email';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {
@@ -102,6 +103,25 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
                 entity_type: 'ticket',
                 relationship_type: 'affected'
             }, user.user_id);
+
+            // Get company email for notification
+            const company = await trx('companies')
+                .where({ company_id: validatedData.company_id, tenant })
+                .first();
+
+            if (company?.email) {
+                // Send email notification
+                await sendTicketCreatedEmail(
+                    newTicket.ticket_id,
+                    company.email,
+                    {
+                        title: newTicket.title,
+                        description: validatedData.description || '',
+                        priority: 'High', // You might want to fetch the actual priority name
+                        status: 'New' // You might want to fetch the actual status name
+                    }
+                );
+            }
 
             return convertDates(newTicket);
         });
@@ -209,6 +229,33 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
           is_resolution: false,
           is_initial_description: true
         });
+      }
+
+      // Get company email and priority/status names for notification
+      const [company, priority, status] = await Promise.all([
+        trx('companies')
+          .where({ company_id: validatedData.company_id, tenant })
+          .first(),
+        trx('priorities')
+          .where({ priority_id: validatedData.priority_id, tenant })
+          .first(),
+        trx('statuses')
+          .where({ status_id: validatedData.status_id, tenant })
+          .first()
+      ]);
+
+      if (company?.email) {
+        // Send email notification
+        await sendTicketCreatedEmail(
+          newTicket.ticket_id,
+          company.email,
+          {
+            title: newTicket.title,
+            description: validatedData.description || '',
+            priority: priority?.priority_name || 'Unknown',
+            status: status?.name || 'Unknown'
+          }
+        );
       }
 
       return convertDates(newTicket);

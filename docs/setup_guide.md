@@ -90,10 +90,11 @@ LOG_IS_FORMAT_JSON=false
 LOG_IS_FULL_DETAILS=false
 
 # Email Configuration
-EMAIL_ENABLE=false
+EMAIL_ENABLE=false  # Set to "true" to enable email notifications
 EMAIL_FROM=noreply@example.com  # Must be valid email
-EMAIL_PORT=587  # Must be > 0
-EMAIL_USERNAME=noreply@example.com  # Must be valid email
+EMAIL_HOST=smtp.gmail.com  # SMTP server hostname
+EMAIL_PORT=587  # SMTP port (587 for TLS, 465 for SSL)
+EMAIL_USERNAME=noreply@example.com  # SMTP username
 
 # Authentication Configuration
 NEXTAUTH_URL=http://localhost:3000  # Must be valid URL
@@ -245,7 +246,16 @@ docker compose logs [service-name]
 
 ## Next Steps
 
-1. Configure email settings for notifications
+1. Configure email settings:
+   - Set EMAIL_ENABLE=true in your environment
+   - Configure SMTP settings (EMAIL_HOST, EMAIL_PORT)
+   - Set up email credentials (EMAIL_USERNAME and email_password)
+   - Test email functionality by creating a ticket or invoice
+   - Email templates are located in server/src/lib/notifications/templates/
+     * base.hbs: Base template with consistent styling
+     * ticket-created.hbs: New ticket notifications
+     * invoice.hbs: Invoice notifications
+     * project-update.hbs: Project update notifications
 2. Set up OAuth if using Google authentication
 3. Configure SSL/TLS for production
 4. Set up backup procedures
