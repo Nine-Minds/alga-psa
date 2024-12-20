@@ -159,6 +159,8 @@ const knexfile = {
   migration: migrationConfig
 };
 
+console.log(migrationConfig);
+
 module.exports = {
   ...knexfile,
   createConnectionWithTenant,

@@ -7,12 +7,12 @@ exports.up = function(knex) {
     // Global notification settings
     .createTable('notification_settings', table => {
       table.increments('id').primary();
-      table.string('tenant').notNullable();
+      table.uuid('tenant').notNullable();
       table.boolean('is_enabled').notNullable().defaultTo(true);
       table.integer('rate_limit_per_minute').notNullable().defaultTo(60);
       table.timestamps(true, true);
       
-      table.foreign('tenant').references('tenants.id').onDelete('CASCADE');
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
     })
 
     // System-wide default email templates (no RLS)
@@ -32,7 +32,7 @@ exports.up = function(knex) {
     // Tenant-specific email templates (with RLS)
     .createTable('tenant_email_templates', table => {
       table.increments('id').primary();
-      table.string('tenant').notNullable();
+      table.uuid('tenant').notNullable();
       table.string('name').notNullable();
       table.text('subject').notNullable();
       table.text('html_content').notNullable();
@@ -45,28 +45,28 @@ exports.up = function(knex) {
         .onDelete('SET NULL');
       table.timestamps(true, true);
 
-      table.foreign('tenant').references('tenants.id').onDelete('CASCADE');
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
       table.unique(['tenant', 'name', 'version']);
     })
     .raw(`
       ALTER TABLE tenant_email_templates ENABLE ROW LEVEL SECURITY;
       
       CREATE POLICY tenant_isolation_policy ON tenant_email_templates
-        USING (tenant = current_setting('app.tenant')::text)
-        WITH CHECK (tenant = current_setting('app.tenant')::text);
+        USING (tenant = current_setting('app.tenant')::uuid)
+        WITH CHECK (tenant = current_setting('app.tenant')::uuid);
     `)
 
     // Notification categories
     .createTable('notification_categories', table => {
       table.increments('id').primary();
-      table.string('tenant').notNullable();
+      table.uuid('tenant').notNullable();
       table.string('name').notNullable();
       table.string('description');
       table.boolean('is_enabled').notNullable().defaultTo(true);
       table.boolean('is_default_enabled').notNullable().defaultTo(true);
       table.timestamps(true, true);
 
-      table.foreign('tenant').references('tenants.id').onDelete('CASCADE');
+      table.foreign('tenant').references('tenant').inTable('tenants').onDelete('CASCADE');
       table.unique(['tenant', 'name']);
     })
 
@@ -80,30 +80,31 @@ exports.up = function(knex) {
       table.boolean('is_default_enabled').notNullable().defaultTo(true);
       table.timestamps(true, true);
 
-      table.foreign('category_id').references('notification_categories.id').onDelete('CASCADE');
+      table.foreign('category_id').references('id').inTable('notification_categories').onDelete('CASCADE');
       table.unique(['category_id', 'name']);
     })
 
     // User notification preferences
     .createTable('user_notification_preferences', table => {
       table.increments('id').primary();
-      table.integer('user_id').notNullable();
+      table.uuid('tenant').notNullable();
+      table.uuid('user_id').notNullable();
       table.integer('subtype_id').notNullable();
       table.boolean('is_enabled').notNullable().defaultTo(true);
       table.string('email_address'); // Optional alternate email
       table.enum('frequency', ['realtime', 'daily', 'weekly']).notNullable().defaultTo('realtime');
       table.timestamps(true, true);
 
-      table.foreign('user_id').references('users.id').onDelete('CASCADE');
-      table.foreign('subtype_id').references('notification_subtypes.id').onDelete('CASCADE');
-      table.unique(['user_id', 'subtype_id']);
+      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
+      table.foreign('subtype_id').references('id').inTable('notification_subtypes').onDelete('CASCADE');
+      table.unique(['tenant', 'user_id', 'subtype_id']);
     })
 
     // Notification logs
     .createTable('notification_logs', table => {
       table.increments('id').primary();
-      table.string('tenant').notNullable();
-      table.integer('user_id').notNullable();
+      table.uuid('tenant').notNullable();
+      table.uuid('user_id').notNullable();
       table.integer('subtype_id').notNullable();
       table.string('email_address').notNullable();
       table.text('subject').notNullable();
@@ -111,9 +112,8 @@ exports.up = function(knex) {
       table.text('error_message');
       table.timestamps(true, true);
 
-      table.foreign('tenant').references('tenants.id').onDelete('CASCADE');
-      table.foreign('user_id').references('users.id').onDelete('CASCADE');
-      table.foreign('subtype_id').references('notification_subtypes.id').onDelete('CASCADE');
+      table.foreign(['tenant', 'user_id']).references(['tenant', 'user_id']).inTable('users').onDelete('CASCADE');
+      table.foreign('subtype_id').references('id').inTable('notification_subtypes').onDelete('CASCADE');
     });
 };
 
