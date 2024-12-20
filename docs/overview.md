@@ -14,14 +14,29 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Documents:** Provides a centralized document repository. Core logic is in `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`, with components located under `server/src/components/documents`.
 
-* **Email Notifications:** Handles system notifications through templated emails. Core functionality in `server/src/lib/notifications/email.ts`, with templates under `server/src/lib/notifications/templates/`. Supports:
-  * HTML and plain text email formats
-  * Handlebars templating system
-  * Template caching for performance
-  * Notification types:
-    - Ticket creation and updates
-    - Invoice notifications
-    - Project updates
+* **Email Notifications:** Comprehensive notification system with template management and tenant customization. Core components:
+  * Database-driven templates:
+    - `system_email_templates`: System-wide default templates
+    - `tenant_email_templates`: Tenant-specific customizations with RLS
+  * Configuration and preferences:
+    - Global settings per tenant (enable/disable, rate limits)
+    - User-level notification preferences
+    - Category and subtype management
+  * Features:
+    - HTML and plain text email formats
+    - Handlebars templating for dynamic content
+    - Template versioning and inheritance
+    - Rate limiting and throttling
+    - Detailed audit logging
+  * Default notification types:
+    - Tickets (created, updated, closed)
+    - Invoices (generated, payment, overdue)
+    - Projects (created, tasks, milestones)
+    - Time Entries (submitted, approved, rejected)
+  * Key files:
+    - `server/src/lib/notifications/email.ts`: Core notification service
+    - `server/src/lib/notifications/emailService.ts`: SMTP integration
+    - `server/src/lib/models/notification.ts`: Type definitions
 
 * **Interactions:** Tracks client interactions. See `server/src/lib/models/interactions.ts` and components under `server/src/components/interactions`.
 

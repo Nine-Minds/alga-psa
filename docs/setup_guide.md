@@ -246,16 +246,30 @@ docker compose logs [service-name]
 
 ## Next Steps
 
-1. Configure email settings:
-   - Set EMAIL_ENABLE=true in your environment
-   - Configure SMTP settings (EMAIL_HOST, EMAIL_PORT)
-   - Set up email credentials (EMAIL_USERNAME and email_password)
-   - Test email functionality by creating a ticket or invoice
-   - Email templates are located in server/src/lib/notifications/templates/
-     * base.hbs: Base template with consistent styling
-     * ticket-created.hbs: New ticket notifications
-     * invoice.hbs: Invoice notifications
-     * project-update.hbs: Project update notifications
+1. Configure email notifications:
+   - Set environment variables:
+     ```bash
+     EMAIL_ENABLE=true
+     EMAIL_HOST=smtp.example.com
+     EMAIL_PORT=587  # or 465 for SSL
+     EMAIL_USERNAME=noreply@example.com
+     EMAIL_PASSWORD=your-secure-password
+     EMAIL_FROM=noreply@example.com
+     ```
+   - Run migrations to set up notification tables:
+     ```bash
+     cd server && npx knex migrate:latest
+     ```
+   - Seed default templates and categories:
+     ```bash
+     cd server && npx knex seed:run
+     ```
+   - Features available after setup:
+     * System-wide default templates
+     * Tenant-specific template customization
+     * User notification preferences
+     * Rate limiting and audit logging
+     * Categories: Tickets, Invoices, Projects, Time Entries
 2. Set up OAuth if using Google authentication
 3. Configure SSL/TLS for production
 4. Set up backup procedures
