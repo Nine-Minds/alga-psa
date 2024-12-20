@@ -1,12 +1,10 @@
-import { ISO8601String } from '../../types/types.d';
-
 export interface NotificationSettings {
   id: number;
   tenant: string;
   is_enabled: boolean;
   rate_limit_per_minute: number;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SystemEmailTemplate {
@@ -17,44 +15,44 @@ export interface SystemEmailTemplate {
   text_content: string;
   version: number;
   is_active: boolean;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface TenantEmailTemplate {
   id: number;
   tenant: string;
-  system_template_id?: number;
   name: string;
   subject: string;
   html_content: string;
   text_content: string;
   version: number;
   is_active: boolean;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  system_template_id: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationCategory {
   id: number;
   tenant: string;
   name: string;
-  description?: string;
+  description: string | null;
   is_enabled: boolean;
   is_default_enabled: boolean;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationSubtype {
   id: number;
   category_id: number;
   name: string;
-  description?: string;
+  description: string | null;
   is_enabled: boolean;
   is_default_enabled: boolean;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface UserNotificationPreference {
@@ -62,10 +60,10 @@ export interface UserNotificationPreference {
   user_id: number;
   subtype_id: number;
   is_enabled: boolean;
-  email_address?: string;
+  email_address: string | null;
   frequency: 'realtime' | 'daily' | 'weekly';
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationLog {
@@ -76,59 +74,22 @@ export interface NotificationLog {
   email_address: string;
   subject: string;
   status: 'sent' | 'failed' | 'bounced';
-  error_message?: string;
-  created_at: ISO8601String;
-  updated_at: ISO8601String;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface NotificationService {
-  // Global settings
   getSettings(tenant: string): Promise<NotificationSettings>;
   updateSettings(tenant: string, settings: Partial<NotificationSettings>): Promise<NotificationSettings>;
-  
-  // Template management
   getSystemTemplate(name: string): Promise<SystemEmailTemplate>;
   getTenantTemplate(tenant: string, name: string): Promise<TenantEmailTemplate | null>;
-  createTenantTemplate(
-    tenant: string, 
-    template: Omit<TenantEmailTemplate, 'id' | 'created_at' | 'updated_at'>
-  ): Promise<TenantEmailTemplate>;
-  updateTenantTemplate(
-    tenant: string,
-    id: number, 
-    template: Partial<TenantEmailTemplate>
-  ): Promise<TenantEmailTemplate>;
+  createTenantTemplate(tenant: string, template: Omit<TenantEmailTemplate, 'id' | 'created_at' | 'updated_at'>): Promise<TenantEmailTemplate>;
+  updateTenantTemplate(tenant: string, id: number, template: Partial<TenantEmailTemplate>): Promise<TenantEmailTemplate>;
   getEffectiveTemplate(tenant: string, name: string): Promise<SystemEmailTemplate | TenantEmailTemplate>;
-  
-  // Category management
   getCategories(tenant: string): Promise<NotificationCategory[]>;
   getCategoryWithSubtypes(tenant: string, categoryId: number): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }>;
   updateCategory(tenant: string, id: number, category: Partial<NotificationCategory>): Promise<NotificationCategory>;
-  
-  // User preferences
   getUserPreferences(tenant: string, userId: number): Promise<UserNotificationPreference[]>;
-  updateUserPreference(
-    tenant: string,
-    userId: number,
-    preference: Partial<UserNotificationPreference>
-  ): Promise<UserNotificationPreference>;
-  
-  // Notification sending
-  sendNotification(params: {
-    tenant: string;
-    userId: number;
-    subtypeId: number;
-    emailAddress: string;
-    templateName: string;
-    data: Record<string, any>;
-  }): Promise<void>;
-  
-  // Logging
-  getLogs(tenant: string, filters: {
-    userId?: number;
-    subtypeId?: number;
-    status?: 'sent' | 'failed' | 'bounced';
-    startDate?: ISO8601String;
-    endDate?: ISO8601String;
-  }): Promise<NotificationLog[]>;
+  updateUserPreference(tenant: string, userId: number, preference: Partial<UserNotificationPreference>): Promise<UserNotificationPreference>;
 }
