@@ -14,11 +14,11 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Documents:** Provides a centralized document repository. Core logic is in `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`, with components located under `server/src/components/documents`.
 
-* **Event Bus System:** Asynchronous event processing system using Redis pub/sub:
+* **Event Bus System:** Asynchronous event processing system using Redis streams:
   * Core components:
-    - Redis-based pub/sub messaging
+    - Redis-based event streaming
     - Type-safe event definitions using Zod
-    - Multi-tenant event isolation
+    - Multi-tenant event isolation through payloads
     - Automatic reconnection handling
     - Comprehensive error handling and logging
   * Key files:
@@ -27,7 +27,8 @@ This document provides a high-level architectural overview of the open-source MS
     - `server/src/lib/eventBus/subscribers/`: Event subscribers
     - `server/src/config/redisConfig.ts`: Redis configuration
   * Features:
-    - Tenant-isolated event channels
+    - Simple event type based channels
+    - Tenant isolation through event payloads
     - Type-safe event publishing and handling
     - Automatic Redis reconnection with exponential backoff
     - Event validation using Zod schemas

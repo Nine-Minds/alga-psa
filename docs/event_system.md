@@ -1,6 +1,6 @@
 # Event System Architecture
 
-The event system provides a Redis-based pub/sub mechanism for handling asynchronous events across the application. It supports multi-tenant isolation while maintaining a simple and efficient subscription model.
+The event system provides a Redis-based streaming mechanism for handling asynchronous events across the application. It supports multi-tenant isolation while maintaining a simple and efficient subscription model.
 
 ## Event Structure
 
@@ -218,7 +218,7 @@ The event system includes comprehensive error handling:
 ## Implementation Details
 
 The event system is implemented using:
-- Redis for pub/sub messaging
+- Redis for event streaming
 - Zod for schema validation
 - TypeScript for type safety
 - Knex.js for database operations

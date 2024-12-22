@@ -218,13 +218,13 @@ docker compose exec redis redis-cli
 docker compose exec redis redis-cli monitor
 ```
 
-3. Monitor specific event channels:
+3. Monitor event streams:
 ```bash
-# Monitor all email notifications for a tenant
-docker compose exec redis redis-cli psubscribe "alga-psa:event:tenant:*:EMAIL_NOTIFICATION"
+# Monitor all events
+docker compose exec redis redis-cli psubscribe "alga-psa:event:*"
 
-# Monitor all events for a specific tenant
-docker compose exec redis redis-cli psubscribe "alga-psa:event:tenant:your-tenant-id:*"
+# Monitor specific event type
+docker compose exec redis redis-cli psubscribe "alga-psa:event:TICKET_UPDATED"
 ```
 
 4. View event bus subscribers:
@@ -248,13 +248,13 @@ docker compose exec redis redis-cli pubsub numsub channel_name
 
 ### 1. Configuration
 
-The event bus system uses Redis for pub/sub messaging. Configure through environment variables:
+The event bus system uses Redis for event streaming. Configure through environment variables:
 
 ```env
 # Redis Configuration
 REDIS_URL=redis://localhost:6379
 REDIS_PREFIX=alga-psa:
-REDIS_EVENT_CHANNEL_PREFIX=event:
+REDIS_EVENT_PREFIX=event:
 REDIS_RECONNECT_RETRIES=10
 REDIS_RECONNECT_INITIAL_DELAY=100
 REDIS_RECONNECT_MAX_DELAY=3000
@@ -270,8 +270,9 @@ export const EventTypeEnum = z.enum([
   // ... other events
 ]);
 
-export const YourEventPayloadSchema = z.object({
+export const YourEventPayloadSchema = BasePayloadSchema.extend({
   // Define your event payload schema
+  // BasePayloadSchema already includes tenantId
 });
 
 // Add to EventPayloadSchemas
@@ -288,14 +289,14 @@ import { eventBus } from '../index';
 import { YourEvent, EventType } from '../events';
 
 async function handleYourEvent(event: YourEvent): Promise<void> {
+  const { tenantId } = event.payload;
   // Handle the event
 }
 
-export async function registerYourSubscriber(tenantId: string): Promise<void> {
+export async function registerYourSubscriber(): Promise<void> {
   await eventBus.subscribe(
-    tenantId,
-    'YOUR_NEW_EVENT' as EventType,
-    handleYourEvent as any
+    'YOUR_NEW_EVENT',
+    handleYourEvent
   );
 }
 ```
@@ -305,9 +306,9 @@ export async function registerYourSubscriber(tenantId: string): Promise<void> {
 import { eventBus } from 'lib/eventBus';
 
 await eventBus.publish({
-  tenantId: 'tenant-id',
   eventType: 'YOUR_NEW_EVENT',
   payload: {
+    tenantId: 'tenant-id',
     // Your event data
   },
 });
@@ -330,9 +331,11 @@ jest.mock('lib/eventBus', () => ({
 ```typescript
 test('should publish event', async () => {
   const event = {
-    tenantId: 'test-tenant',
     eventType: 'YOUR_NEW_EVENT',
-    payload: { /* ... */ },
+    payload: {
+      tenantId: 'test-tenant',
+      // ... other payload data
+    },
   };
   
   await yourFunction();
@@ -348,10 +351,12 @@ test('should publish event', async () => {
 test('should handle event', async () => {
   const event = {
     id: 'test-id',
-    tenantId: 'test-tenant',
     eventType: 'YOUR_NEW_EVENT',
     timestamp: new Date().toISOString(),
-    payload: { /* ... */ },
+    payload: {
+      tenantId: 'test-tenant',
+      // ... other payload data
+    },
   };
   
   await handleYourEvent(event);
