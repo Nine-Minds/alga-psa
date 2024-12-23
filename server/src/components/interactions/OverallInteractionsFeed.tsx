@@ -2,10 +2,11 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
 import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { getRecentInteractions, getInteractionTypes } from '@/lib/actions/interactionActions';
+import { getRecentInteractions } from '@/lib/actions/interactionActions';
+import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
 import { useDrawer } from '@/context/DrawerContext';
 import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@/components/ui/CustomSelect';
@@ -19,19 +20,20 @@ interface OverallInteractionsFeedProps {
 }
 
 const InteractionIcon = ({ type }: { type: string }) => {
-  switch (type.toLowerCase()) {
+  const lowerType = type.toLowerCase();
+  switch (lowerType) {
     case 'call': return <Phone className="text-gray-500" />;
     case 'email': return <Mail className="text-gray-500" />;
     case 'meeting': return <Calendar className="text-gray-500" />;
     case 'note': return <FileText className="text-gray-500" />;
     case 'task': return <CheckSquare className="text-gray-500" />;
-    default: return null;
+    default: return <FileText className="text-gray-500" />; // Default to note icon
   }
 };
 
 const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
-  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedContact, setSelectedContact] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
@@ -48,8 +50,17 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
 
   const fetchInteractionTypes = async () => {
     try {
-      const types = await getInteractionTypes();
-      setInteractionTypes(types);
+      const types = await getAllInteractionTypes();
+      // Sort to ensure system types appear first
+      const sortedTypes = types.sort((a, b) => {
+        // If both are system types or both are tenant types, sort by name
+        if (('created_at' in a) === ('created_at' in b)) {
+          return a.type_name.localeCompare(b.type_name);
+        }
+        // System types ('created_at' exists) come first
+        return 'created_at' in a ? -1 : 1;
+      });
+      setInteractionTypes(sortedTypes);
     } catch (error) {
       console.error('Error fetching interaction types:', error);
     }
@@ -63,6 +74,18 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
       console.error('Error fetching interactions:', error);
     }
   }, []);
+
+  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
+    if ('created_at' in type) {
+      // It's a system type
+      return `${type.type_name} (System)`;
+    }
+    if (type.system_type_id) {
+      // It's a tenant type that inherits from a system type
+      return `${type.type_name} (Custom)`;
+    }
+    return type.type_name;
+  };
 
   const filteredInteractions = useMemo(() => {
     return interactions.filter(interaction =>
@@ -133,7 +156,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
                 { value: '', label: 'All Types' },
                 ...interactionTypes.map((type): { value: string; label: string } => ({
                   value: type.type_id,
-                  label: type.type_name
+                  label: getTypeLabel(type)
                 }))
               ]}
               value={interactionTypeId}

@@ -16,8 +16,17 @@ export interface IInteraction extends TenantEntity {
   duration: number | null;
 }
 
+export interface ISystemInteractionType {
+  type_id: string;
+  type_name: string;
+  icon?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export interface IInteractionType extends TenantEntity {
   type_id: string;
   type_name: string;
   icon?: string;
+  system_type_id?: string;
 }

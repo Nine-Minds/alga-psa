@@ -11,7 +11,7 @@ class InteractionModel {
       const query = db('interactions')
         .select(
           'interactions.interaction_id',
-          'interaction_types.type_name',
+          db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
           'interactions.interaction_date',
           'interactions.description',
           'interactions.contact_name_id',
@@ -23,7 +23,11 @@ class InteractionModel {
           'interactions.ticket_id',
           'interactions.duration'
         )
-        .join('interaction_types', 'interactions.type_id', 'interaction_types.type_id')
+        .leftJoin('interaction_types as it', function() {
+          this.on('interactions.type_id', '=', 'it.type_id')
+            .andOn('interactions.tenant', '=', 'it.tenant');
+        })
+        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
         .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
         .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
         .leftJoin('users', 'interactions.user_id', 'users.user_id')
@@ -63,7 +67,7 @@ class InteractionModel {
         .select(
           'interactions.interaction_id',
           'interactions.type_id',
-          'interaction_types.type_name',
+          db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
           'interactions.contact_name_id',
           'contacts.full_name as contact_name',
           'interactions.company_id',
@@ -75,7 +79,11 @@ class InteractionModel {
           'interactions.interaction_date',
           'interactions.duration'
         )
-        .join('interaction_types', 'interactions.type_id', 'interaction_types.type_id')
+        .leftJoin('interaction_types as it', function() {
+          this.on('interactions.type_id', '=', 'it.type_id')
+            .andOn('interactions.tenant', '=', 'it.tenant');
+        })
+        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
         .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
         .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
         .leftJoin('users', 'interactions.user_id', 'users.user_id');
@@ -129,7 +137,13 @@ class InteractionModel {
 
       console.log('New interaction after insert:', newInteraction);
 
-      return newInteraction;
+      // Get the full interaction details including type name
+      const fullInteraction = await this.getById(newInteraction.interaction_id);
+      if (!fullInteraction) {
+        throw new Error('Failed to fetch created interaction');
+      }
+
+      return fullInteraction;
     } catch (error) {
       console.error('Error adding interaction:', error);
       throw error;
@@ -159,7 +173,13 @@ class InteractionModel {
         .update(updateData)
         .returning('*');
 
-      return updatedInteraction;
+      // Get the full interaction details including type name
+      const fullInteraction = await this.getById(updatedInteraction.interaction_id);
+      if (!fullInteraction) {
+        throw new Error('Failed to fetch updated interaction');
+      }
+
+      return fullInteraction;
     } catch (error) {
       console.error('Error updating interaction:', error);
       throw error;
@@ -173,12 +193,16 @@ class InteractionModel {
       const result = await db('interactions')
         .select(
           'interactions.*',
-          'interaction_types.type_name',
+          db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
           'contacts.full_name as contact_name',
           'companies.company_name',
           'users.username as user_name'
         )
-        .join('interaction_types', 'interactions.type_id', 'interaction_types.type_id')
+        .leftJoin('interaction_types as it', function() {
+          this.on('interactions.type_id', '=', 'it.type_id')
+            .andOn('interactions.tenant', '=', 'it.tenant');
+        })
+        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
         .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
         .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
         .leftJoin('users', 'interactions.user_id', 'users.user_id')
