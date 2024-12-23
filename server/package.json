@@ -16,9 +16,10 @@
     "@types/redis": "^4.0.10",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "cmdk": "^1.0.4",
     "nodemailer": "^6.9.16",
     "redis": "^4.7.0",
-    "tailwind-merge": "^2.5.4",
+    "tailwind-merge": "^2.6.0",
     "vitest": "^2.1.5"
   },
   "devDependencies": {

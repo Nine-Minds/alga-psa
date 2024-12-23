@@ -19,7 +19,8 @@ import TaxSettingsForm from '@/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@/interfaces/interaction.interfaces';
 import { useDrawer } from '@/context/DrawerContext';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Globe } from 'lucide-react';
+import TimezonePicker from '@/components/ui/TimezonePicker';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -83,7 +84,7 @@ const NotesDetailItem: React.FC<{
       <div className="flex justify-end">
         <Button 
           onClick={onSave}
-          className="bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
         >
           Save Notes
         </Button>
@@ -286,13 +287,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <Flex gap="4" justify="end" align="center" className="pt-6">
             <Button 
               onClick={handleSave} 
-              className="bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               Save Changes
             </Button>
             <Button 
               onClick={() => setIsQuickAddTicketOpen(true)} 
-              className="bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               Add Ticket
             </Button>
@@ -348,7 +349,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     {
       label: "Additional Info",
       content: (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
           <TextDetailItem 
             label="Tax ID" 
             value={editedCompany.properties?.tax_id ?? ""} 
@@ -364,16 +366,29 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             value={editedCompany.properties?.parent_company_name ?? ""} 
             onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
           />
-          <TextDetailItem 
-            label="Timezone" 
-            value={editedCompany.properties?.timezone ?? ""} 
-            onEdit={(value) => handleFieldChange('properties.timezone', value)}
-          />
+          <div className="space-y-2">
+            <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+            <TimezonePicker
+              value={editedCompany.timezone ?? ""}
+              onValueChange={(value) => handleFieldChange('timezone', value)}
+            />
+          </div>
           <TextDetailItem 
             label="Last Contact Date" 
             value={editedCompany.properties?.last_contact_date ?? ""} 
             onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
           />
+          </div>
+          
+          <Flex gap="4" justify="end" align="center">
+            <Button 
+              onClick={handleSave} 
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+              disabled={!hasUnsavedChanges}
+            >
+              Save Changes
+            </Button>
+          </Flex>
         </div>
       )
     },

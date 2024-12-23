@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
-import CustomSelect from '@/components/ui/CustomSelect';
+import TimezonePicker from '@/components/ui/TimezonePicker';
 import { getCurrentUser, updateUser } from '@/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@/lib/models/notification';
@@ -217,14 +217,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
           </div>
           <div>
             <Label htmlFor="timezone">Time Zone</Label>
-            <CustomSelect
-              label="Time Zone"
+            <TimezonePicker
               value={timezone}
               onValueChange={setTimezone}
-              options={Intl.supportedValuesOf('timeZone').map(tz => ({
-                label: tz,
-                value: tz
-              }))}
             />
           </div>
         </CardContent>
