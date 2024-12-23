@@ -16,7 +16,7 @@ export interface StyleProps {
 
 interface CustomSelectProps {
   options: SelectOption[];
-  value: string;
+  value?: string | null;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
@@ -35,6 +35,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   customStyles,
   label,
 }): JSX.Element => {
+  // Ensure value is never undefined/null/empty string for Radix
+  const safeValue = value || options[0]?.value || 'placeholder';
   const selectedOption = options.find(option => option.value === value);
 
   return (
@@ -45,7 +47,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         </label>
       )}
       <RadixSelect.Root 
-        value={value} 
+        value={safeValue}
         onValueChange={onValueChange} 
         disabled={disabled}
       >
@@ -66,7 +68,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             placeholder={placeholder}
             className="flex-1 text-left"
           >
-            {selectedOption?.label}
+            {selectedOption?.label || placeholder}
           </RadixSelect.Value>
           <RadixSelect.Icon>
             <ChevronDown className="w-4 h-4 text-gray-500" />
@@ -91,6 +93,21 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             </RadixSelect.ScrollUpButton>
             
             <RadixSelect.Viewport className="p-1">
+              {/* Add a placeholder option if needed */}
+              {!options.some(opt => opt.value === 'placeholder') && (
+                <RadixSelect.Item
+                  value="placeholder"
+                  className={`
+                    relative flex items-center px-3 py-2 text-sm rounded text-gray-500
+                    cursor-pointer bg-white hover:bg-gray-100 focus:bg-gray-100
+                    focus:outline-none select-none whitespace-nowrap
+                    data-[highlighted]:bg-gray-100
+                    ${customStyles?.item || ''}
+                  `}
+                >
+                  <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+                </RadixSelect.Item>
+              )}
               {options.map((option): JSX.Element => (
                 <RadixSelect.Item
                   key={option.value}

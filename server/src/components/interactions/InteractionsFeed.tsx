@@ -3,11 +3,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
-import { IInteraction, IInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
 import { QuickAddInteraction } from './QuickAddInteraction';
-import { getInteractionsForEntity, getInteractionTypes } from '@/lib/actions/interactionActions';
+import { getInteractionsForEntity, getInteractionById } from '@/lib/actions/interactionActions';
+import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
 import { useDrawer } from '@/context/DrawerContext';
-import { getInteractionById } from '@/lib/actions/interactionActions';
 import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Input } from '@/components/ui/Input';
@@ -23,20 +23,21 @@ interface InteractionsFeedProps {
 }
 
 const InteractionIcon = ({ type }: { type: string }) => {
-  switch (type) {
+  const lowerType = type.toLowerCase();
+  switch (lowerType) {
     case 'call': return <Phone className="text-gray-500" />;
     case 'email': return <Mail className="text-gray-500" />;
     case 'meeting': return <Calendar className="text-gray-500" />;
     case 'note': return <FileText className="text-gray-500" />;
     case 'task': return <CheckSquare className="text-gray-500" />;
-    default: return null;
+    default: return <FileText className="text-gray-500" />; // Default to note icon
   }
 };
 
 const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityType, companyId, interactions, setInteractions }) => {
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
   const [selectedType, setSelectedType] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
@@ -54,8 +55,33 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
   };
 
   const fetchInteractionTypes = async () => {
-    const types = await getInteractionTypes();
-    setInteractionTypes(types);
+    try {
+      const types = await getAllInteractionTypes();
+      // Sort to ensure system types appear first
+      const sortedTypes = types.sort((a, b) => {
+        // If both are system types or both are tenant types, sort by name
+        if (('created_at' in a) === ('created_at' in b)) {
+          return a.type_name.localeCompare(b.type_name);
+        }
+        // System types ('created_at' exists) come first
+        return 'created_at' in a ? -1 : 1;
+      });
+      setInteractionTypes(sortedTypes);
+    } catch (error) {
+      console.error('Error fetching interaction types:', error);
+    }
+  };
+
+  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
+    if ('created_at' in type) {
+      // It's a system type
+      return `${type.type_name} (System)`;
+    }
+    if (type.system_type_id) {
+      // It's a tenant type that inherits from a system type
+      return `${type.type_name} (Custom)`;
+    }
+    return type.type_name;
   };
 
   const filteredInteractions = useMemo(() => {
@@ -164,7 +190,13 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
-              options={[{ value: '', label: 'All Types' }, ...interactionTypes.map((type): { value: string; label: string } => ({ value: type.type_id, label: type.type_name }))]}
+              options={[
+                { value: '', label: 'All Types' },
+                ...interactionTypes.map((type): { value: string; label: string } => ({
+                  value: type.type_id,
+                  label: getTypeLabel(type)
+                }))
+              ]}
               value={selectedType}
               onValueChange={setSelectedType}
               placeholder="Interaction Type"

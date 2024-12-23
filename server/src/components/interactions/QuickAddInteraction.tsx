@@ -6,9 +6,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/Button';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Input } from '@/components/ui/Input';
-import { addInteraction, getInteractionTypes, getInteractionById } from '@/lib/actions/interactionActions';
-import { IInteraction, IInteractionType } from '@/interfaces/interaction.interfaces';
-import { useTenant } from '../TenantProvider';
+import { addInteraction, getInteractionById } from '@/lib/actions/interactionActions';
+import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
+import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
+import { useTenant } from '@/components/TenantProvider';
 import { useSession } from 'next-auth/react';
 
 interface QuickAddInteractionProps {
@@ -31,15 +32,24 @@ export function QuickAddInteraction({
   const [description, setDescription] = useState('');
   const [typeId, setTypeId] = useState('');
   const [duration, setDuration] = useState('');
-  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
+  const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
   const tenant = useTenant()!;
   const { data: session } = useSession();
 
   useEffect(() => {
     const fetchInteractionTypes = async () => {
       try {
-        const types = await getInteractionTypes();
-        setInteractionTypes(types);
+        const types = await getAllInteractionTypes();
+        // Sort to ensure system types appear first
+        const sortedTypes = types.sort((a, b) => {
+          // If both are system types or both are tenant types, sort by name
+          if (('created_at' in a) === ('created_at' in b)) {
+            return a.type_name.localeCompare(b.type_name);
+          }
+          // System types ('created_at' exists) come first
+          return 'created_at' in a ? -1 : 1;
+        });
+        setInteractionTypes(sortedTypes);
       } catch (error) {
         console.error('Error fetching interaction types:', error);
       }
@@ -91,6 +101,18 @@ export function QuickAddInteraction({
     }
   };
 
+  const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
+    if ('created_at' in type) {
+      // It's a system type
+      return `${type.type_name} (System)`;
+    }
+    if (type.system_type_id) {
+      // It's a tenant type that inherits from a system type
+      return `${type.type_name} (Custom)`;
+    }
+    return type.type_name;
+  };
+
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
@@ -101,7 +123,7 @@ export function QuickAddInteraction({
             <CustomSelect
               options={interactionTypes.map((type): { value: string; label: string } => ({ 
                 value: type.type_id, 
-                label: type.type_name 
+                label: getTypeLabel(type)
               }))}
               value={typeId}
               onValueChange={setTypeId}

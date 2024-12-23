@@ -2,11 +2,11 @@
 
 'use server'
 
-import { IInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
 import { createTenantKnex } from '@/lib/db';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 
-export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
+export async function getAllInteractionTypes(): Promise<(IInteractionType | ISystemInteractionType)[]> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -14,16 +14,54 @@ export async function getAllInteractionTypes(): Promise<IInteractionType[]> {
     }
 
     const {knex: db} = await createTenantKnex();
-    return await db('interaction_types')
+    
+    // Get system interaction types
+    const systemTypes = await db('system_interaction_types')
+      .select('*')
+      .orderBy('type_name');
+
+    // Get tenant-specific interaction types
+    const tenantTypes = await db('interaction_types')
       .where({ tenant: currentUser.tenant })
-      .select('*');
+      .select('*')
+      .orderBy('type_name');
+
+    // Combine both types, with system types first
+    return [...systemTypes, ...tenantTypes];
   } catch (error) {
     console.error('Error fetching interaction types:', error);
     throw new Error('Failed to fetch interaction types');
   }
 }
 
-export async function createInteractionType(interactionType: Omit<IInteractionType, 'type_id' | 'tenant'>): Promise<IInteractionType> {
+export async function getSystemInteractionTypes(): Promise<ISystemInteractionType[]> {
+  try {
+    const {knex: db} = await createTenantKnex();
+    return await db('system_interaction_types')
+      .select('*')
+      .orderBy('type_name');
+  } catch (error) {
+    console.error('Error fetching system interaction types:', error);
+    throw new Error('Failed to fetch system interaction types');
+  }
+}
+
+export async function getSystemInteractionTypeById(typeId: string): Promise<ISystemInteractionType | null> {
+  try {
+    const {knex: db} = await createTenantKnex();
+    const type = await db('system_interaction_types')
+      .where({ type_id: typeId })
+      .first();
+    return type || null;
+  } catch (error) {
+    console.error('Error fetching system interaction type:', error);
+    throw new Error('Failed to fetch system interaction type');
+  }
+}
+
+export async function createInteractionType(
+  interactionType: Omit<IInteractionType, 'type_id' | 'tenant'> & { system_type_id?: string }
+): Promise<IInteractionType> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -31,10 +69,23 @@ export async function createInteractionType(interactionType: Omit<IInteractionTy
     }
 
     const {knex: db} = await createTenantKnex();
-    const [newType] = await db('interaction_types').insert({
-      ...interactionType,
-      tenant: currentUser.tenant
-    }).returning('*');
+    // If system_type_id is provided, verify it exists
+    if (interactionType.system_type_id) {
+      const systemType = await db('system_interaction_types')
+        .where({ type_id: interactionType.system_type_id })
+        .first();
+      
+      if (!systemType) {
+        throw new Error('Invalid system interaction type');
+      }
+    }
+
+    const [newType] = await db('interaction_types')
+      .insert({
+        ...interactionType,
+        tenant: currentUser.tenant
+      })
+      .returning('*');
     return newType;
   } catch (error) {
     console.error('Error creating interaction type:', error);
@@ -42,7 +93,10 @@ export async function createInteractionType(interactionType: Omit<IInteractionTy
   }
 }
 
-export async function updateInteractionType(typeId: string, data: Partial<IInteractionType>): Promise<IInteractionType> {
+export async function updateInteractionType(
+  typeId: string, 
+  data: Partial<Omit<IInteractionType, 'type_id' | 'tenant' | 'system_type_id'>>
+): Promise<IInteractionType> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -50,14 +104,23 @@ export async function updateInteractionType(typeId: string, data: Partial<IInter
     }
 
     const {knex: db} = await createTenantKnex();
+    // Check if this is a system-inherited type
+    const existingType = await db('interaction_types')
+      .where({ type_id: typeId, tenant: currentUser.tenant })
+      .first();
+
+    if (!existingType) {
+      throw new Error('Interaction type not found or not authorized');
+    }
+
+    if (existingType.system_type_id) {
+      throw new Error('Cannot modify a system-inherited interaction type');
+    }
+
     const [updatedType] = await db('interaction_types')
       .where({ type_id: typeId, tenant: currentUser.tenant })
       .update(data)
       .returning('*');
-
-    if (!updatedType) {
-      throw new Error('Interaction type not found or not authorized');
-    }
 
     return updatedType;
   } catch (error) {
@@ -75,7 +138,20 @@ export async function deleteInteractionType(typeId: string): Promise<void> {
 
     const {knex: db} = await createTenantKnex();
 
-    // Check for existing records using this interaction type
+    // Check if this is a system-inherited type
+    const typeToDelete = await db('interaction_types')
+      .where({ type_id: typeId, tenant: currentUser.tenant })
+      .first();
+
+    if (!typeToDelete) {
+      throw new Error('Interaction type not found or not authorized');
+    }
+
+    if (typeToDelete.system_type_id) {
+      throw new Error('Cannot delete a system-inherited interaction type');
+    }
+
+    // Check for existing records
     const existingRecords = await db('interactions')
       .where({ 
         type_id: typeId,
@@ -108,11 +184,17 @@ export async function getInteractionTypeById(typeId: string): Promise<IInteracti
     }
 
     const {knex: db} = await createTenantKnex();
-    const [type] = await db('interaction_types')
+    const type = await db('interaction_types')
       .where({ type_id: typeId, tenant: currentUser.tenant })
-      .select('*');
+      .first();
 
-    return type || null;
+    if (!type) {
+      // If not found in tenant types, check system types
+      const systemType = await getSystemInteractionTypeById(typeId);
+      return systemType;
+    }
+
+    return type;
   } catch (error) {
     console.error('Error fetching interaction type:', error);
     throw new Error('Failed to fetch interaction type');
