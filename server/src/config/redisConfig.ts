@@ -5,6 +5,7 @@ import logger from '../utils/logger';
 function getRedisUrl(): string {
   const host = process.env.REDIS_HOST || 'localhost';
   const port = process.env.REDIS_PORT || '6379';
+  // URL without password - password will be added separately in client config
   return `redis://${host}:${port}`;
 }
 

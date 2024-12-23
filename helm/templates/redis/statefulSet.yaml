@@ -20,7 +20,7 @@ spec:
       containers:
       - name: redis
         image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
-        command: ["sh", "-c", "mkdir -p /etc/redis && echo requirepass ${REDIS_PASSWORD} > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
+        command: ["sh", "-c", "mkdir -p /etc/redis && printf \"requirepass ${REDIS_PASSWORD}\nsave ''\n\" > /etc/redis/redis.conf && redis-server /etc/redis/redis.conf"]
         imagePullPolicy: Always
         ports:
         - containerPort: {{ .Values.redis.service.port }}

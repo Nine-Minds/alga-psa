@@ -15,9 +15,13 @@ import {
 const createRedisClient = () => {
   const config = getRedisConfig();
   const password = getSecret('redis_password', 'REDIS_PASSWORD');
+  if (!password) {
+    logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
+  }
+  
   const client = createClient({
     url: config.url,
-    ...(password ? { password } : {}),
+    password: password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
