@@ -12,7 +12,21 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Contacts:** Manages contact information. See `server/src/lib/models/contact.tsx` and components under `server/src/components/contacts`.
 
-* **Documents:** Provides a centralized document repository. Core logic is in `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`, with components located under `server/src/components/documents`.
+* **Documents:** Provides a centralized document repository with separated content storage:
+  * Core Components:
+    - Document metadata management
+    - Separate content storage for improved performance
+    - Multi-tenant document isolation
+    - File storage integration
+  * Key Files:
+    - `server/src/models/document.tsx` and `server/src/lib/models/document.tsx`: Core document logic
+    - `server/src/components/documents`: UI components
+    - `server/migrations/20241224011610_create_document_content.cjs`: Document content table
+  * Features:
+    - 1-to-1 relationship between documents and content
+    - Tenant isolation through RLS policies
+    - Efficient metadata querying
+    - Large text content separation
 
 * **Event Bus System:** Asynchronous event processing system using Redis streams:
   * Core components:

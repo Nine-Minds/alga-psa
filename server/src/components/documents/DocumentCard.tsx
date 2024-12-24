@@ -1,10 +1,16 @@
 "use client";
 import { useState } from 'react';
-import { IDocument } from '@/interfaces';
+import { IDocument, IDocumentContent } from '@/interfaces/document.interface';
 import TextEditor from '@/components/editor/TextEditor';
 import { updateDocument } from '@/lib/actions/document-actions/documentActions';
+import { updateDocumentContent } from '@/lib/actions/document-actions/documentContentActions';
 
-const DocumentCard = ({ document }: { document: IDocument }) => {
+interface DocumentCardProps {
+    document: IDocument;
+    documentContent?: IDocumentContent;
+}
+
+const DocumentCard = ({ document, documentContent }: DocumentCardProps) => {
     const roomName = "document-room-" + document.document_id;
 
     const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -20,11 +26,19 @@ const DocumentCard = ({ document }: { document: IDocument }) => {
     }
 
     // Save document content
-    const handleSubmit = async (content: string) => {
+    const handleSubmit = async (contentText: string) => {
         try {
             if (document.document_id && document) {
-                // Update existing document
-                await updateDocument(document.document_id, { content });
+                // Update document with edited_by field
+                await updateDocument(document.document_id, {
+                    edited_by: document.user_id
+                });
+
+                // Update document content separately
+                await updateDocumentContent(document.document_id, {
+                    content: contentText,
+                    updated_by_id: document.user_id
+                });
 
                 alert('Document saved successfully');
                 window.location.reload();
@@ -64,7 +78,7 @@ const DocumentCard = ({ document }: { document: IDocument }) => {
                     <TextEditor
                         key={"document-" + document.document_id}
                         roomName={roomName}
-                        initialContent={document.content}
+                        initialContent={documentContent?.content}
                         handleSubmit={handleSubmit}
                     />
                 </div>

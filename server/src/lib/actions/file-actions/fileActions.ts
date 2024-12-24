@@ -19,9 +19,9 @@ export async function uploadFile(
             throw new Error('No file provided');
         }
 
-        const uploaded_by = formData.get('uploaded_by') as string;
+        const uploaded_by_id = formData.get('uploaded_by_id') as string;
 
-        if (!uploaded_by) {
+        if (!uploaded_by_id) {
             throw new Error('Missing required fields');
         }
 
@@ -38,7 +38,7 @@ export async function uploadFile(
         // Upload file using StorageService
         const fileRecord = await StorageService.uploadFile(tenant, buffer, file.name, {
             mime_type: file.type,
-            uploaded_by,
+            uploaded_by_id,
         });
 
         return { success: true, file: fileRecord };
@@ -73,7 +73,7 @@ export async function downloadFile(
 
 export async function deleteFile(
     file_id: string,
-    deleted_by: string
+    deleted_by_id: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const { tenant } = await createTenantKnex();
@@ -81,7 +81,7 @@ export async function deleteFile(
             throw new Error('No tenant found');
         }
 
-        await StorageService.deleteFile(tenant, file_id, deleted_by);
+        await StorageService.deleteFile(tenant, file_id, deleted_by_id);
         return { success: true };
     } catch (error) {
         console.error('Delete file error:', error);

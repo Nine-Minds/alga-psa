@@ -54,6 +54,21 @@ Enterprise Edition:
 - file_stores: File metadata storage
 - file_references: Entity relationships
 - provider_events: Provider operation monitoring
+- document_content: Large text content storage for documents
+
+### Content Storage
+The system provides two approaches for storing document content:
+1. File Storage:
+   - Binary files (PDFs, images, etc.)
+   - Managed through storage providers
+   - File metadata tracking
+   
+2. Text Content Storage:
+   - Large text content stored in document_content table
+   - 1-to-1 relationship with documents
+   - Tenant isolation through RLS
+   - Efficient querying and updates
+   - Separation from core document metadata
 
 ### Models
 - StorageProviderModel: Provider management

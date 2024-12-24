@@ -16,10 +16,9 @@ export interface IDocument extends TenantEntity {
     edited_by?: string;
     entered_at?: Date;
     updated_at?: Date;
-    content: string;
 
     // Storage-related fields
-    file_id?: string;  // Reference to file_stores table
+    file_id?: string;  // Reference to external_files table
     storage_path?: string;  // Path within the storage provider
     mime_type?: string;  // MIME type of the stored file
     file_size?: number;  // Size of the file in bytes
@@ -81,5 +80,22 @@ export interface PreviewResponse {
     pageCount?: number;
 }
 
-// Document input type for creating new documents
+// Document content stored in separate table
+export interface IDocumentContent extends TenantEntity {
+    id: string;
+    document_id: string;
+    content: string;
+    created_by_id: string;
+    updated_by_id: string;
+    created_at: Date;
+    updated_at: Date;
+}
+
 export type DocumentInput = Omit<IDocument, 'document_id'>;
+export type DocumentContentInput = Omit<IDocumentContent, 'id'>;
+
+// Input type for updating document content
+export interface UpdateDocumentContentInput {
+    content: string;
+    updated_by_id: string;
+}

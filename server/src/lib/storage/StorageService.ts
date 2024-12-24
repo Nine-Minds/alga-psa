@@ -31,7 +31,7 @@ export class StorageService {
         originalName: string,
         options: {
             mime_type?: string;
-            uploaded_by: string;
+            uploaded_by_id: string;
         }
     ) {
         try {
@@ -58,7 +58,7 @@ export class StorageService {
                 mime_type: uploadResult.mime_type,
                 file_size: uploadResult.size,
                 storage_path: uploadResult.path,
-                uploaded_by: options.uploaded_by
+                uploaded_by_id: options.uploaded_by_id
             });
 
             return fileRecord;
@@ -100,7 +100,7 @@ export class StorageService {
         }
     }
 
-    static async deleteFile(tenant: string, file_id: string, deleted_by: string): Promise<void> {
+    static async deleteFile(tenant: string, file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
             const fileRecord = await FileStoreModel.findById(file_id);
@@ -118,7 +118,7 @@ export class StorageService {
             await provider.delete(fileRecord.storage_path);
 
             // Soft delete file record
-            await FileStoreModel.softDelete(file_id, deleted_by);
+            await FileStoreModel.softDelete(file_id, deleted_by_id);
         } catch (error) {
             if (error instanceof StorageError) {
                 throw error;
