@@ -78,12 +78,12 @@ export interface FileStore {
     mime_type: string;
     file_size: number;
     storage_path: string;
-    uploaded_by: string;
+    uploaded_by_id: string;
     created_at: string;
     updated_at: string;
     is_deleted: boolean;
     deleted_at?: string;
-    deleted_by?: string;
+    deleted_by_id?: string;
 }
 
 export interface FileUploadRequest {

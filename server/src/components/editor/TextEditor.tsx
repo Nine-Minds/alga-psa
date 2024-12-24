@@ -1,99 +1,192 @@
-// server/src/components/editor/TextEditor.tsx
-'use client'
+'use client';
 
-import React, { useEffect, useMemo } from 'react';
-import { useEditor, EditorContent, Editor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import Underline from '@tiptap/extension-underline';
-import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
-import Toolbar from '../../components/editor/Toolbar';
-import { createYjsProvider } from '../../components/editor/yjs-config';
-import DOMPurify from 'dompurify';
-import TurndownService from 'turndown';
-import styles from './TextEditor.module.css';
+import { useEffect, useMemo, useState, MutableRefObject, use } from 'react';
+import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import { BlockNoteView, lightDefaultTheme } from '@blocknote/mantine';
+import '@blocknote/core/fonts/inter.css';
+import '@blocknote/mantine/style.css';
+import { getBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
+import { Card } from '@/components/ui/Card';
 
-type TextEditorProps = {
-  roomName?: string,
-  initialContent?: string,
-  onContentChange?: (content: string) => void,
-  handleSubmit?: (content: string) => Promise<void>,
-  children?: React.ReactNode,
-  editorRef?: React.MutableRefObject<Editor | null>;
+interface TextEditorProps {
+  roomName?: string;
+  initialContent?: string | Block[];
+  onContentChange?: (blocks: Block[]) => void;
+  children?: React.ReactNode;
+  editorRef?: MutableRefObject<BlockNoteEditor | null>;
+  documentId?: string;
 }
 
-const TextEditor: React.FC<TextEditorProps> = ({ 
-  roomName, 
-  initialContent, 
-  onContentChange, 
-  handleSubmit, 
+// Default block for empty content using proper BlockNote types
+const DEFAULT_BLOCK: PartialBlock[] = [{
+  type: "paragraph",
+  content: [{
+    type: "text",
+    text: "",
+    styles: {}
+  }],
+  props: {
+    textAlignment: "left",
+    backgroundColor: "default",
+    textColor: "default"
+  }
+}];
+
+export default function TextEditor({ 
+  initialContent: propInitialContent,
+  onContentChange,
   children,
-  editorRef
-}) => {
-  roomName = roomName || ("default-room-" + Math.random().toString(36).substring(7));
+  editorRef,
+  documentId
+}: TextEditorProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [initialContent, setInitialContent] = useState<PartialBlock[] | undefined | 'loading'>('loading');
 
-  const { ydoc, provider } = useMemo((() => createYjsProvider(roomName)), [roomName]);
-
-  const turndownService = new TurndownService();
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        history: false,
-      }),
-      Underline,
-      Collaboration.configure({
-        document: ydoc,
-      }),
-      CollaborationCursor.configure({
-        provider: provider,
-        user: {
-          name: 'John Doe',
-          color: '#40cff9',
-        },
-      }),
-    ],
-    editorProps: {
-      attributes: {
-        class: 'p-5',
-      },
-    },
-    immediatelyRender: false,
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      const sanitizedHtml = DOMPurify.sanitize(html);
-      const markdown = turndownService.turndown(sanitizedHtml);
-      if (onContentChange) {
-        onContentChange(markdown);
+  // Load document content if documentId is provided
+  useEffect(() => {
+    const loadContent = async () => {
+      try {
+        if (documentId) {
+          const content = await getBlockContent(documentId);
+          if (content?.block_data) {
+            try {
+              // Parse the JSON string into blocks if it's a string
+              const parsed = typeof content.block_data === 'string' 
+                ? JSON.parse(content.block_data)
+                : content.block_data;
+              // If parsed is an object with a blocks property, use that
+              const blocks = parsed.blocks || parsed;
+              setInitialContent(Array.isArray(blocks) && blocks.length > 0 ? blocks : DEFAULT_BLOCK);
+            } catch (parseError) {
+              console.error('Error parsing block data:', parseError);
+              setError('Failed to parse document content');
+              setInitialContent(DEFAULT_BLOCK);
+            }
+          } else {
+            setInitialContent(DEFAULT_BLOCK);
+          }
+        } else if (propInitialContent) {
+          // Handle initial content based on its type
+          if (typeof propInitialContent === 'string') {
+            try {
+              // Try to parse if it's a JSON string
+              const parsed = JSON.parse(propInitialContent);
+              // If parsed is an object with a blocks property, use that
+              const blocks = parsed.blocks || parsed;
+              setInitialContent(Array.isArray(blocks) && blocks.length > 0 ? blocks : DEFAULT_BLOCK);
+            } catch {
+              // If parsing fails, create a default block with the string content
+              setInitialContent([{
+                type: "paragraph",
+                content: [{
+                  type: "text",
+                  text: propInitialContent,
+                  styles: {}
+                }],
+                props: {
+                  textAlignment: "left",
+                  backgroundColor: "default",
+                  textColor: "default"
+                }
+              }]);
+            }
+          } else {
+            // If it's already blocks, use directly or fallback to default
+            setInitialContent(propInitialContent.length > 0 ? propInitialContent : DEFAULT_BLOCK);
+          }
+        } else {
+          // No content provided, start with default block
+          setInitialContent(DEFAULT_BLOCK);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load document content');
+        setInitialContent(DEFAULT_BLOCK);
       }
-    },
-    onCreate: ({ editor }) => {
-      if (editor.isEmpty && initialContent) {
-        editor.commands.setContent(initialContent);
-      }
-    },
-    onDestroy: () => {
-      provider.destroy()
-    }
-  });
+    };
 
+    loadContent();
+  }, [documentId, propInitialContent]);
+
+  useEffect(() => {
+      // Use setTimeout to ensure state updates after render
+      setTimeout(() => {
+        if (initialContent === 'loading') {
+          return undefined;
+        }        
+        const newEditor = BlockNoteEditor.create({ 
+              initialContent: initialContent || DEFAULT_BLOCK
+            });
+        
+        setEditor(newEditor);
+        setLoading(false);
+      }, 10);
+  }, [initialContent]);
+
+  // Creates a new editor instance
+  const [loading, setLoading] = useState(true);
+  const [editor, setEditor] = useState<BlockNoteEditor | undefined>(undefined);
+
+  // const editor = useMemo(() => {
+  //   if (initialContent === 'loading') {
+  //     return undefined;
+  //   }
+  //   const newEditor = BlockNoteEditor.create({ 
+  //     initialContent: initialContent || DEFAULT_BLOCK
+  //   });
+
+  //   return newEditor;
+  // }, [initialContent]);
+
+  // Set editor reference if provided
   useEffect(() => {
     if (editorRef && editor) {
       editorRef.current = editor;
     }
   }, [editor, editorRef]);
 
-  if (!editor) {
-    return null;
+  if (error) {
+    return (
+      <Card className="p-4">
+        <div className="text-red-500">Error: {error}</div>
+      </Card>
+    );
+  }
+
+  if (editor === undefined || loading) {
+    return (
+      <Card className="p-4">
+        <div className="flex justify-center items-center h-64">
+          Loading...
+        </div>
+      </Card>
+    );
   }
 
   return (
-    <div className={`${styles['editor']} w-full px-4`}>
+    <Card className="p-4">
       {children}
-      <EditorContent className={styles.noBorder} style={{ whiteSpace: "pre-line" }} editor={editor} />
-      <Toolbar editor={editor} content={editor.getHTML()} onSubmit={handleSubmit} />
-    </div>
+      
+      <BlockNoteView 
+        editor={editor}
+        theme={{
+          ...lightDefaultTheme,
+          colors: {
+            ...lightDefaultTheme.colors,
+            editor: {
+              text: '#000000',
+              background: '#ffffff'
+            }
+          }
+        }}
+        onChange={() => {
+          if (onContentChange) {
+            // Get the current blocks and pass them back
+            const blocks = editor.document;
+            // Let Documents.tsx handle the wrapping with formatBlocksForStorage
+            onContentChange(blocks);
+          }
+        }}
+      />
+    </Card>
   );
-};
-
-export default TextEditor;
+}

@@ -6,10 +6,9 @@ const Document = {
     getAll: async (): Promise<IDocument[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const documents = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('*')
                 .whereRaw('tenant = ?', [tenant]);
-            return documents;
         } catch (error) {
             logger.error('Error getting all documents:', error);
             throw error;
@@ -19,11 +18,10 @@ const Document = {
     get: async (document_id: string): Promise<IDocument | undefined> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const document = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('*')
                 .whereRaw('document_id = ? AND tenant = ?', [document_id, tenant])
                 .first();
-            return document;
         } catch (error) {
             logger.error(`Error getting document with id ${document_id}:`, error);
             throw error;
@@ -32,7 +30,7 @@ const Document = {
 
     insert: async (document: IDocument): Promise<Pick<IDocument, "document_id">> => {
         try {
-            const {knex: db} = await createTenantKnex();
+            const {knex: db, tenant} = await createTenantKnex();
             const [document_id] = await db<IDocument>('documents')
                 .insert(document)
                 .returning('document_id');
@@ -70,7 +68,7 @@ const Document = {
     getByTicketId: async (ticket_id: string): Promise<IDocument[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const documents = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('documents.*')
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
@@ -81,7 +79,6 @@ const Document = {
                     document_associations.entity_id = ? AND
                     document_associations.entity_type = ?
                 `, [tenant, ticket_id, 'ticket']);
-            return documents;
         } catch (error) {
             logger.error(`Error getting documents with ticket_id ${ticket_id}:`, error);
             throw error;
@@ -91,7 +88,7 @@ const Document = {
     getByCompanyId: async (company_id: string): Promise<IDocument[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const documents = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('documents.*')
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
@@ -102,7 +99,6 @@ const Document = {
                     document_associations.entity_id = ? AND
                     document_associations.entity_type = ?
                 `, [tenant, company_id, 'company']);
-            return documents;
         } catch (error) {
             logger.error(`Error getting documents with company_id ${company_id}:`, error);
             throw error;
@@ -112,7 +108,7 @@ const Document = {
     getByContactNameId: async (contact_name_id: string): Promise<IDocument[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const documents = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('documents.*')
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
@@ -123,7 +119,6 @@ const Document = {
                     document_associations.entity_id = ? AND
                     document_associations.entity_type = ?
                 `, [tenant, contact_name_id, 'contact']);
-            return documents;
         } catch (error) {
             logger.error(`Error getting documents with contact_name_id ${contact_name_id}:`, error);
             throw error;
@@ -133,7 +128,7 @@ const Document = {
     getByScheduleId: async (schedule_id: string): Promise<IDocument[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const documents = await db<IDocument>('documents')
+            return await db<IDocument>('documents')
                 .select('documents.*')
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
@@ -144,7 +139,6 @@ const Document = {
                     document_associations.entity_id = ? AND
                     document_associations.entity_type = ?
                 `, [tenant, schedule_id, 'schedule']);
-            return documents;
         } catch (error) {
             logger.error(`Error getting documents with schedule_id ${schedule_id}:`, error);
             throw error;

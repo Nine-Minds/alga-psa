@@ -1,6 +1,7 @@
 // components/CommentItem.tsx
 'use client'
 import React, { useMemo, useState } from 'react';
+import { Block } from '@blocknote/core';
 import TextEditor from '@/components/editor/TextEditor';
 import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
@@ -133,7 +134,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
     onSave(updates);
   };
 
-  const handleContentChange = (content: string) => {
+  const handleContentChange = (blocks: Block[]) => {
+    // Convert blocks to string representation for storage
+    const content = blocks.map(block => block.content).join('\n');
     setEditedContent(content);
     onContentChange(content);
   };

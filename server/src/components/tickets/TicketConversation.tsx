@@ -1,5 +1,6 @@
 // server/src/components/tickets/TicketConversation.tsx
 import React, { useState, useRef, useEffect } from 'react';
+import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IComment, ITicket } from '@/interfaces';
 import { IContact } from '@/interfaces/contact.interfaces';
 import TextEditor from '@/components/editor/TextEditor';
@@ -8,9 +9,15 @@ import CustomTabs from '@/components/ui/CustomTabs';
 import Documents from '@/components/documents/Documents';
 import styles from './TicketDetails.module.css';
 import { Button } from '@/components/ui/Button';
-import { Editor } from '@tiptap/react';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import { getContactByContactNameId, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
+
+// Default block for empty content using proper BlockNote types
+const DEFAULT_BLOCK: PartialBlock[] = [{
+  id: "1",
+  type: "paragraph",
+  content: "Enter your comment here...",
+}];
 
 // Match the exact type expected by CommentItem
 type UserInfo = {
@@ -62,7 +69,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onContentChange,
 }) => {
   const [editorKey, setEditorKey] = useState(0);
-  const editorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<BlockNoteEditor | null>(null);
   const [contactMap, setContactMap] = useState<Record<string, IContact>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -127,7 +134,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleAddNewComment = async () => {
     await onAddNewComment();
     if (editorRef.current) {
-      editorRef.current.commands.setContent('');
+      editorRef.current.replaceBlocks(editorRef.current.document, DEFAULT_BLOCK);
     }
     setEditorKey(prev => prev + 1);
   };
@@ -150,6 +157,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     return conversation.author_type === 'contact' && 
            conversation.contact_id !== undefined && 
            loadingContacts[conversation.contact_id] === true;
+  };
+
+  const handleNewCommentContentChange = (blocks: Block[]) => {
+    // Convert blocks to string representation for storage
+    const content = blocks.map(block => block.content).join('\n');
+    onNewCommentContentChange(content);
   };
 
   const renderComments = (comments: IComment[]) => {
@@ -241,11 +254,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 key={editorKey}
                 roomName={`ticket-${ticket.ticket_id}`}
                 initialContent=""
-                onContentChange={onNewCommentContentChange}
-                handleSubmit={(content) => {
-                  console.log('Submitted:', content);
-                  return Promise.resolve();
-                }}
+                onContentChange={handleNewCommentContentChange}
                 editorRef={editorRef}
               >
                 {renderButtonBar()}
