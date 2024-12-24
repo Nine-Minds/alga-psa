@@ -22,6 +22,8 @@ export interface DocumentStorageCardProps {
     onDisassociate?: (document: IDocument) => void;
     hideActions?: boolean;
     showDisassociate?: boolean;
+    onClick?: () => void;
+    isContentDocument?: boolean;
 }
 
 export default function DocumentStorageCard({ 
@@ -29,7 +31,9 @@ export default function DocumentStorageCard({
     onDelete,
     onDisassociate,
     hideActions = false,
-    showDisassociate = false
+    showDisassociate = false,
+    onClick,
+    isContentDocument = false
 }: DocumentStorageCardProps): JSX.Element {
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
@@ -110,7 +114,14 @@ export default function DocumentStorageCard({
     };
 
     return (
-        <div className="bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))]">
+        <div 
+            className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${
+                isContentDocument ? 'cursor-pointer' : ''
+            }`}
+            onClick={isContentDocument && onClick ? onClick : undefined}
+            role={isContentDocument ? "button" : undefined}
+            tabIndex={isContentDocument ? 0 : undefined}
+        >
             <div className="flex-1">
                 <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0 mr-2">

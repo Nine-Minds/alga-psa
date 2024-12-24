@@ -1,14 +1,35 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { IDocument } from '@/interfaces/document.interface';
+import { useState, useEffect, useRef } from 'react';
+import { IDocument, IDocumentContent } from '@/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
 import { Button } from '@/components/ui/Button';
-import { getDocumentsByEntity, deleteDocument, removeDocumentAssociations } from '@/lib/actions/document-actions/documentActions';
-import { Plus, Link } from 'lucide-react';
+import Drawer from '@/components/ui/Drawer';
+import { Input } from '@/components/ui/Input';
+import TextEditor from '@/components/editor/TextEditor';
+import { Editor } from '@tiptap/react';
+import { 
+    getDocumentsByEntity, 
+    deleteDocument, 
+    removeDocumentAssociations 
+} from '@/lib/actions/document-actions/documentActions';
+import { 
+    getDocumentContent, 
+    createContentDocument,
+    updateDocumentContent 
+} from '@/lib/actions/document-actions/documentContentActions';
+import { Plus, Link, FileText } from 'lucide-react';
+import { marked, MarkedOptions } from 'marked';
+
+// Configure marked options
+const markedOptions: MarkedOptions = {
+    async: false,
+    breaks: true,
+    gfm: true
+};
 
 interface DocumentsProps {
     documents: IDocument[];
@@ -33,10 +54,110 @@ const Documents = ({
     const [showUpload, setShowUpload] = useState(false);
     const [showSelector, setShowSelector] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedDocument, setSelectedDocument] = useState<IDocument | null>(null);
+    const [documentContent, setDocumentContent] = useState<IDocumentContent | null>(null);
+    const [parsedContent, setParsedContent] = useState<string>('');
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const [newDocumentName, setNewDocumentName] = useState('');
+    const [isEditing, setIsEditing] = useState(false);
+    const editorRef = useRef<Editor | null>(null);
+
+    // Parse markdown content when documentContent changes
+    useEffect(() => {
+        if (documentContent) {
+            const parsed = marked.parse(documentContent.content, markedOptions) as string;
+            setParsedContent(parsed);
+        } else {
+            setParsedContent('');
+        }
+    }, [documentContent]);
+
+    // Handle document click for content viewing
+    const handleDocumentClick = async (document: IDocument) => {
+        try {
+            // Only handle documents without file_id (content documents)
+            if (!document.file_id) {
+                setSelectedDocument(document);
+                const content = await getDocumentContent(document.document_id);
+                setDocumentContent(content);
+                setIsEditing(false);
+                setIsDrawerOpen(true);
+            }
+        } catch (error) {
+            console.error('Error fetching document content:', error);
+            setError('Failed to load document content');
+        }
+    };
+
+    // Handle creating a new document
+    const handleCreateDocument = async () => {
+        setIsCreatingNew(true);
+        setNewDocumentName('');
+        setDocumentContent(null);
+        setSelectedDocument(null);
+        setIsEditing(true);
+        setIsDrawerOpen(true);
+    };
+
+    // Handle saving a new document
+    const handleSaveNewDocument = async () => {
+        try {
+            if (!newDocumentName.trim()) {
+                setError('Document name is required');
+                return;
+            }
+
+            const content = editorRef.current?.getHTML() || '';
+            const result = await createContentDocument(
+                newDocumentName,
+                userId,
+                content,
+                entityId,
+                entityType
+            );
+
+            // Refresh documents list
+            if (entityId && entityType) {
+                const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
+                setDocuments(updatedDocuments);
+            }
+
+            if (onDocumentCreated) {
+                await onDocumentCreated();
+            }
+
+            setIsCreatingNew(false);
+            setIsDrawerOpen(false);
+        } catch (error) {
+            console.error('Error creating document:', error);
+            setError('Failed to create document');
+        }
+    };
+
+    // Handle saving document changes
+    const handleSaveChanges = async () => {
+        try {
+            if (!selectedDocument) return;
+
+            const content = editorRef.current?.getHTML() || '';
+            await updateDocumentContent(selectedDocument.document_id, {
+                content,
+                updated_by_id: userId
+            });
+
+            // Refresh content
+            const updatedContent = await getDocumentContent(selectedDocument.document_id);
+            setDocumentContent(updatedContent);
+            setIsEditing(false);
+        } catch (error) {
+            console.error('Error saving document:', error);
+            setError('Failed to save document');
+        }
+    };
 
     // Update documents when initialDocuments changes
     useEffect(() => {
-        console.log('Documents received:', initialDocuments); // Debug log
         if (Array.isArray(initialDocuments)) {
             setDocuments(initialDocuments);
             setError(null);
@@ -113,13 +234,21 @@ const Documents = ({
         <div className="w-full space-y-4">
             <div className="flex justify-between items-center">
                 <div className="flex space-x-2">
+                    {/* Create new document button */}
+                    <Button
+                        onClick={handleCreateDocument}
+                        className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                    >
+                        <FileText className="w-4 h-4 mr-2" />
+                        New Document
+                    </Button>
                     {/* Upload new document button */}
                     <Button
                         onClick={() => setShowUpload(true)}
                         className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
                     >
                         <Plus className="w-4 h-4 mr-2" />
-                        New Document
+                        Upload File
                     </Button>
                     {/* Select existing documents button - only show if entityId and entityType are provided */}
                     {entityId && entityType && (
@@ -175,19 +304,18 @@ const Documents = ({
             {/* Documents Grid */}
             {!isLoading && documents && documents.length > 0 ? (
                 <div className={`grid ${gridColumnsClass} gap-4`}>
-                    {documents.map((document): JSX.Element => {
-                        console.log('Rendering document:', document); // Debug log
-                        return (
-                            <div key={document.document_id} className="h-full">
-                                <DocumentStorageCard
-                                    document={document}
-                                    onDelete={() => handleDelete(document)}
-                                    onDisassociate={entityId && entityType ? () => handleDisassociate(document) : undefined}
-                                    showDisassociate={Boolean(entityId && entityType)}
-                                />
-                            </div>
-                        );
-                    })}
+                    {documents.map((document): JSX.Element => (
+                        <div key={document.document_id} className="h-full">
+                            <DocumentStorageCard
+                                document={document}
+                                onDelete={() => handleDelete(document)}
+                                onDisassociate={entityId && entityType ? () => handleDisassociate(document) : undefined}
+                                showDisassociate={Boolean(entityId && entityType)}
+                                onClick={() => handleDocumentClick(document)}
+                                isContentDocument={!document.file_id}
+                            />
+                        </div>
+                    ))}
                 </div>
             ) : !isLoading && (
                 <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
@@ -201,6 +329,99 @@ const Documents = ({
                     <DocumentsPagination />
                 </div>
             )}
+
+            {/* Content Drawer */}
+            <Drawer
+                isOpen={isDrawerOpen}
+                onClose={() => {
+                    setIsDrawerOpen(false);
+                    setSelectedDocument(null);
+                    setDocumentContent(null);
+                    setIsCreatingNew(false);
+                    setIsEditing(false);
+                }}
+            >
+                <div className="p-6">
+                    {isCreatingNew ? (
+                        <div className="space-y-4">
+                            <Input
+                                type="text"
+                                placeholder="Document Name"
+                                value={newDocumentName}
+                                onChange={(e) => setNewDocumentName(e.target.value)}
+                            />
+                            <TextEditor
+                                editorRef={editorRef}
+                                initialContent=""
+                            >
+                                <div className="flex justify-end space-x-2 mb-4">
+                                    <Button
+                                        onClick={() => {
+                                            setIsDrawerOpen(false);
+                                            setIsCreatingNew(false);
+                                        }}
+                                        variant="outline"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleSaveNewDocument}
+                                        className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                                    >
+                                        Save
+                                    </Button>
+                                </div>
+                            </TextEditor>
+                        </div>
+                    ) : selectedDocument && (
+                        <div className="space-y-4">
+                            <h2 className="text-lg font-semibold">{selectedDocument.document_name}</h2>
+                            {isEditing ? (
+                                <div>
+                                    <TextEditor
+                                        editorRef={editorRef}
+                                        initialContent={documentContent?.content || ''}
+                                    >
+                                        <div className="flex justify-end space-x-2 mb-4">
+                                            <Button
+                                                onClick={() => setIsEditing(false)}
+                                                variant="outline"
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                onClick={handleSaveChanges}
+                                                className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                                            >
+                                                Save
+                                            </Button>
+                                        </div>
+                                    </TextEditor>
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="flex justify-end mb-4">
+                                        <Button
+                                            onClick={() => setIsEditing(true)}
+                                            className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                                        >
+                                            Edit
+                                        </Button>
+                                    </div>
+                                    {documentContent ? (
+                                        <div 
+                                            className="prose max-w-none"
+                                            dangerouslySetInnerHTML={{ __html: parsedContent }}
+                                        />
+                                    ) : (
+                                        <p className="text-gray-500">No content available</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </Drawer>
         </div>
     );
 };
