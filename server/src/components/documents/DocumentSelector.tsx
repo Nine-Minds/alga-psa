@@ -13,7 +13,9 @@ import { Text } from '@radix-ui/themes';
 interface DocumentSelectorProps {
     entityId: string;
     entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
-    onDocumentsSelected: () => Promise<void>;
+    onDocumentSelected?: (document: IDocument) => Promise<void>;
+    onDocumentsSelected?: () => Promise<void>;
+    singleSelect?: boolean;
     isOpen: boolean;
     onClose: () => void;
 }
@@ -21,7 +23,9 @@ interface DocumentSelectorProps {
 export default function DocumentSelector({
     entityId,
     entityType,
+    onDocumentSelected,
     onDocumentsSelected,
+    singleSelect = false,
     isOpen,
     onClose
 }: DocumentSelectorProps): JSX.Element {
@@ -75,6 +79,9 @@ export default function DocumentSelector({
         if (newSelection.has(documentId)) {
             newSelection.delete(documentId);
         } else {
+            if (singleSelect) {
+                newSelection.clear();
+            }
             newSelection.add(documentId);
         }
         setSelectedDocuments(newSelection);
@@ -86,19 +93,28 @@ export default function DocumentSelector({
             setIsSaving(true);
             setError(null);
 
-            // Create associations for selected documents
-            await createDocumentAssociations(
-                entityId,
-                entityType,
-                Array.from(selectedDocuments)
-            );
+            const selectedIds = Array.from(selectedDocuments);
+            if (selectedIds.length === 0) return;
 
-            // Notify parent component and close dialog
-            await onDocumentsSelected();
+            if (singleSelect && onDocumentSelected) {
+                const selectedDoc = documents.find(d => d.document_id === selectedIds[0]);
+                if (selectedDoc) {
+                    await onDocumentSelected(selectedDoc);
+                }
+            } else if (onDocumentsSelected) {
+                // Create associations for selected documents
+                await createDocumentAssociations(
+                    entityId,
+                    entityType,
+                    selectedIds
+                );
+                await onDocumentsSelected();
+            }
+
             onClose();
         } catch (error) {
-            console.error('Error saving document associations:', error);
-            setError('Failed to save document associations');
+            console.error('Error saving document selection:', error);
+            setError('Failed to save document selection');
         } finally {
             setIsSaving(false);
         }
@@ -191,7 +207,7 @@ export default function DocumentSelector({
                                             Saving...
                                         </>
                                     ) : (
-                                        'Associate Selected'
+                                        singleSelect ? 'Select Document' : 'Associate Selected'
                                     )}
                                 </Button>
                             </div>

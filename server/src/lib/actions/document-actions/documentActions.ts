@@ -24,467 +24,26 @@ import { v4 as uuidv4 } from 'uuid';
 import { getStorageConfig } from '../../../config/storage';
 import { deleteFile } from '../file-actions/fileActions';
 import { NextResponse } from 'next/server';
-
-export async function createDocumentAssociations(
-  entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
-  document_ids: string[]
-): Promise<{ success: boolean }> {
-  try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    // Create associations for all selected documents
-    const associations = document_ids.map((document_id): IDocumentAssociationInput => ({
-      document_id,
-      entity_id,
-      entity_type,
-      tenant
-    }));
-
-    await Promise.all(
-      associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-        DocumentAssociation.create(association)
-      )
-    );
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error creating document associations:', error);
-    throw new Error('Failed to create document associations');
-  }
-}
-
-// Get documents by entity using the new association table
-export async function getDocumentsByEntity(entity_id: string, entity_type: string) {
-  try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    console.log('Getting documents for entity:', { entity_id, entity_type }); // Debug log
-
-    let query = knex('documents')
-      .select(
-        'documents.*',
-        'users.first_name',
-        'users.last_name',
-        knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-        knex.raw(`
-          COALESCE(dt.type_name, sdt.type_name) as type_name,
-          COALESCE(dt.icon, sdt.icon) as type_icon
-        `)
-      )
-      .join('document_associations', function() {
-        this.on('documents.document_id', '=', 'document_associations.document_id')
-            .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('users', function() {
-        this.on('documents.created_by', '=', 'users.user_id')
-            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('document_types as dt', function() {
-        this.on('documents.type_id', '=', 'dt.type_id')
-            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-      .where('documents.tenant', tenant);
-
-    // If fetching company documents, also include documents from associated contacts
-    if (entity_type === 'company') {
-      query = query.where(function() {
-        // Get documents directly associated with the company
-        this.where(function() {
-          this.where('document_associations.entity_id', entity_id)
-              .andWhere('document_associations.entity_type', 'company');
-        })
-        // OR get documents from contacts associated with this company
-        .orWhere(function() {
-          this.whereIn('document_associations.entity_id', function() {
-            this.select('contact_name_id')
-                .from('contact_names')
-                .where('company_id', entity_id)
-                .andWhere('tenant', tenant);
-          })
-          .andWhere('document_associations.entity_type', 'contact');
-        });
-      });
-    } else {
-      // For other entity types, just get directly associated documents
-      query = query
-        .where('document_associations.entity_id', entity_id)
-        .andWhere('document_associations.entity_type', entity_type);
-    }
-
-    const documents = await query
-      .orderBy('documents.entered_at', 'desc')
-      .distinct('documents.*');
-
-    console.log('Raw documents from database:', documents); // Debug log
-
-    // Process the documents
-    const processedDocuments = documents.map((doc): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        content: doc.content || '',
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        createdByFullName: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at
-      };
-
-      console.log('Processed document:', processedDoc); // Debug log
-      return processedDoc;
-    });
-
-    return processedDocuments;
-  } catch (error) {
-    console.error('Error fetching documents by entity:', error);
-    throw new Error('Failed to fetch documents');
-  }
-}
-
-// Get document download URL
-export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
-    return `/api/documents/download/${file_id}`;
-}
-
-// Download document
-export async function downloadDocument(file_id: string) {
-    try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('No tenant found');
-        }
-
-        // Get document by file_id
-        const document = await knex('documents')
-            .where({ file_id, tenant })
-            .first();
-
-        if (!document) {
-            throw new Error('Document not found');
-        }
-
-        // Download file from storage
-        const result = await StorageService.downloadFile(tenant, file_id);
-        if (!result) {
-            throw new Error('File not found in storage');
-        }
-
-        const { buffer, metadata } = result;
-
-        // Set appropriate headers for file download
-        const headers = new Headers();
-        headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
-        headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
-        headers.set('Content-Length', buffer.length.toString());
-
-        return new NextResponse(buffer, {
-            status: 200,
-            headers
-        });
-    } catch (error) {
-        console.error('Error downloading document:', error);
-        throw error;
-    }
-}
-
-// Get all documents with optional filtering
-export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocument[]> {
-  try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    console.log('Getting documents with filters:', filters); // Debug log
-
-    // Start with a base query for documents
-    let query = knex('documents')
-      .select(
-        'documents.*',
-        'users.first_name',
-        'users.last_name',
-        knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
-        knex.raw(`
-          COALESCE(dt.type_name, sdt.type_name) as type_name,
-          COALESCE(dt.icon, sdt.icon) as type_icon
-        `)
-      )
-      .leftJoin('users', function() {
-        this.on('documents.created_by', '=', 'users.user_id')
-            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-      })
-      // Left join with document_types to get tenant-specific types
-      .leftJoin('document_types as dt', function() {
-        this.on('documents.type_id', '=', 'dt.type_id')
-            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-      })
-      // Left join with shared_document_types to get shared types
-      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-      .where('documents.tenant', tenant);
-
-    // Apply filters if provided
-    if (filters) {
-      if (filters.searchTerm) {
-        query = query.where('documents.document_name', 'ilike', `%${filters.searchTerm}%`);
-      }
-
-      if (filters.type) {
-        query = query.where(function() {
-          this.where('dt.type_name', 'like', `${filters.type}%`)
-              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-        });
-      }
-
-      // Exclude documents that are already associated with the specified entity
-      if (filters.excludeEntityId && filters.excludeEntityType) {
-        query = query.whereNotExists(function() {
-          this.select('*')
-              .from('document_associations')
-              .whereRaw('document_associations.document_id = documents.document_id')
-              .andWhere('document_associations.entity_id', filters.excludeEntityId)
-              .andWhere('document_associations.entity_type', filters.excludeEntityType)
-              .andWhere('document_associations.tenant', tenant);
-        });
-      }
-
-      // Only apply entity type filter if specified
-      if (filters.entityType) {
-        query = query
-          .leftJoin('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where('document_associations.entity_type', filters.entityType);
-      }
-    }
-
-    // Get the documents
-    const documents = await query
-      .orderBy('documents.entered_at', 'desc')
-      .distinct('documents.*');
-
-    console.log('Raw documents from database:', documents); // Debug log
-
-    // Process the documents
-    const processedDocuments = documents.map((doc): IDocument => {
-      const processedDoc = {
-        document_id: doc.document_id,
-        document_name: doc.document_name,
-        content: doc.content || '',
-        type_id: doc.type_id,
-        shared_type_id: doc.shared_type_id,
-        user_id: doc.created_by,
-        order_number: doc.order_number || 0,
-        created_by: doc.created_by,
-        tenant: doc.tenant,
-        file_id: doc.file_id,
-        storage_path: doc.storage_path,
-        mime_type: doc.mime_type,
-        file_size: doc.file_size,
-        createdByFullName: doc.created_by_full_name,
-        type_name: doc.type_name,
-        type_icon: doc.type_icon,
-        entered_at: doc.entered_at,
-        updated_at: doc.updated_at
-      };
-
-      console.log('Processed document:', processedDoc); // Debug log
-      return processedDoc;
-    });
-
-    return processedDocuments;
-  } catch (error) {
-    console.error('Error fetching documents:', error);
-    throw error;
-  }
-}
-
-// Upload new document
-export async function uploadDocument(
-  file: FormData,
-  options: {
-    userId: string;
-    companyId?: string;
-    ticketId?: string;
-    contactNameId?: string;
-    scheduleId?: string;
-    assetId?: string;
-  }
-) {
-  try {
-    const { tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-      // Extract file from FormData
-      const fileData = file.get('file') as File;
-      if (!fileData) {
-        throw new Error('No file provided');
-      }
-
-      // Validate first
-      await validateDocumentUpload(fileData);
-
-      const buffer = Buffer.from(await fileData.arrayBuffer());
-
-      // Upload file to storage
-      const uploadResult = await StorageService.uploadFile(tenant, buffer, fileData.name, {
-        mime_type: fileData.type,
-        uploaded_by: options.userId
-      });
-
-      // Get document type based on mime type
-      const { typeId, isShared } = await getDocumentTypeId(fileData.type);
-
-      // Create document record
-      const document: IDocument = {
-        document_id: uuidv4(),
-        document_name: fileData.name,
-        content: '',
-        type_id: isShared ? null : typeId,
-        shared_type_id: isShared ? typeId : undefined,
-        user_id: options.userId,
-        order_number: 0,
-        created_by: options.userId,
-        tenant,
-        file_id: uploadResult.file_id,
-        storage_path: uploadResult.storage_path,
-        mime_type: fileData.type,
-        file_size: fileData.size
-      };
-
-      const result = await Document.insert(document);
-      const documentWithId = { ...document, document_id: result.document_id };
-
-    // Create associations if any entity IDs are provided
-    const associations: IDocumentAssociationInput[] = [];
-
-    if (options.ticketId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.ticketId,
-        entity_type: 'ticket',
-        tenant
-      });
-    }
-
-    if (options.companyId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.companyId,
-        entity_type: 'company',
-        tenant
-      });
-    }
-
-    if (options.contactNameId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.contactNameId,
-        entity_type: 'contact',
-        tenant
-      });
-    }
-
-    if (options.scheduleId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.scheduleId,
-        entity_type: 'schedule',
-        tenant
-      });
-    }
-
-    if (options.assetId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.assetId,
-        entity_type: 'asset',
-        tenant
-      });
-    }
-
-    // Create all associations
-    if (associations.length > 0) {
-      await Promise.all(
-        associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
-          DocumentAssociation.create(association)
-        )
-      );
-    }
-
-    return {
-      success: true,
-      document: documentWithId
-    };
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to upload document'
-    };
-  }
-}
-
-// Update the type in the function signature
-export async function removeDocumentAssociations(
-  entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
-  document_ids?: string[]
-) {
-  try {
-    const { knex, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('No tenant found');
-    }
-
-    let query = knex('document_associations')
-      .where('entity_id', entity_id)
-      .andWhere('entity_type', entity_type)
-      .andWhere('tenant', tenant);
-
-    if (document_ids && document_ids.length > 0) {
-      query = query.whereIn('document_id', document_ids);
-    }
-
-    await query.delete();
-
-    return { success: true };
-  } catch (error) {
-    console.error('Error removing document associations:', error);
-    throw new Error('Failed to remove document associations');
-  }
-}
+import { deleteDocumentContent } from './documentContentActions';
+import { deleteBlockContent } from './documentBlockContentActions';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
   try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    const documentId = uuidv4();
     const new_document: IDocument = {
       ...data,
-      document_id: uuidv4()
+      document_id: documentId
     };
 
     console.log('Adding document:', new_document);
     const document = await Document.insert(new_document);
+
     return { _id: document.document_id };
   } catch (error) {
     console.error(error);
@@ -495,6 +54,11 @@ export async function addDocument(data: DocumentInput) {
 // Update document
 export async function updateDocument(documentId: string, data: Partial<IDocument>) {
   try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
     await Document.update(documentId, data);
   } catch (error) {
     console.error(error);
@@ -529,7 +93,13 @@ export async function deleteDocument(documentId: string, userId: string) {
       await cache.delete(document.file_id);
     }
 
-    // Delete all associations first
+    // Delete document content and block content
+    await Promise.all([
+      deleteDocumentContent(documentId),
+      deleteBlockContent(documentId)
+    ]);
+
+    // Delete all associations
     await DocumentAssociation.deleteByDocument(document.document_id);
 
     // Delete the document record
@@ -545,7 +115,16 @@ export async function deleteDocument(documentId: string, userId: string) {
 // Get single document
 export async function getDocument(documentId: string) {
   try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
     const document = await Document.get(documentId);
+    if (!document) {
+      return null;
+    }
+
     return document;
   } catch (error) {
     console.error(error);
@@ -763,6 +342,433 @@ export async function getDocumentPreview(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to preview file'
+    };
+  }
+}
+
+// Get document download URL
+export async function getDocumentDownloadUrl(file_id: string): Promise<string> {
+    return `/api/documents/download/${file_id}`;
+}
+
+// Download document
+export async function downloadDocument(file_id: string) {
+    try {
+        const { knex, tenant } = await createTenantKnex();
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        // Get document by file_id
+        const document = await knex('documents')
+            .where({ file_id, tenant })
+            .first();
+
+        if (!document) {
+            throw new Error('Document not found');
+        }
+
+        // Download file from storage
+        const result = await StorageService.downloadFile(tenant, file_id);
+        if (!result) {
+            throw new Error('File not found in storage');
+        }
+
+        const { buffer, metadata } = result;
+
+        // Set appropriate headers for file download
+        const headers = new Headers();
+        headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
+        headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
+        headers.set('Content-Length', buffer.length.toString());
+
+        return new NextResponse(buffer, {
+            status: 200,
+            headers
+        });
+    } catch (error) {
+        console.error('Error downloading document:', error);
+        throw error;
+    }
+}
+
+// Get documents by entity using the new association table
+export async function getDocumentsByEntity(entity_id: string, entity_type: string) {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    console.log('Getting documents for entity:', { entity_id, entity_type }); // Debug log
+
+    let query = knex('documents')
+      .select(
+        'documents.*',
+        'users.first_name',
+        'users.last_name',
+        knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+        knex.raw(`
+          COALESCE(dt.type_name, sdt.type_name) as type_name,
+          COALESCE(dt.icon, sdt.icon) as type_icon
+        `)
+      )
+      .join('document_associations', function() {
+        this.on('documents.document_id', '=', 'document_associations.document_id')
+            .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+      })
+      .leftJoin('users', function() {
+        this.on('documents.created_by', '=', 'users.user_id')
+            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+      })
+      .leftJoin('document_types as dt', function() {
+        this.on('documents.type_id', '=', 'dt.type_id')
+            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+      })
+      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+      .where('documents.tenant', tenant);
+
+      // Get documents directly associated with the entity
+      query = query
+        .where('document_associations.entity_id', entity_id)
+        .andWhere('document_associations.entity_type', entity_type);
+
+    const documents = await query
+      .orderBy('documents.entered_at', 'desc')
+      .distinct('documents.*');
+
+    console.log('Raw documents from database:', documents); // Debug log
+
+    // Process the documents
+    const processedDocuments = documents.map((doc): IDocument => {
+      const processedDoc = {
+        document_id: doc.document_id,
+        document_name: doc.document_name,
+        type_id: doc.type_id,
+        shared_type_id: doc.shared_type_id,
+        user_id: doc.created_by,
+        order_number: doc.order_number || 0,
+        created_by: doc.created_by,
+        tenant: doc.tenant,
+        file_id: doc.file_id,
+        storage_path: doc.storage_path,
+        mime_type: doc.mime_type,
+        file_size: doc.file_size,
+        createdByFullName: doc.created_by_full_name,
+        type_name: doc.type_name,
+        type_icon: doc.type_icon,
+        entered_at: doc.entered_at,
+        updated_at: doc.updated_at
+      };
+
+      console.log('Processed document:', processedDoc); // Debug log
+      return processedDoc;
+    });
+
+    return processedDocuments;
+  } catch (error) {
+    console.error('Error fetching documents by entity:', error);
+    throw new Error('Failed to fetch documents');
+  }
+}
+
+// Get all documents with optional filtering
+export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocument[]> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    console.log('Getting documents with filters:', filters); // Debug log
+
+    // Start with a base query for documents
+    let query = knex('documents')
+      .select(
+        'documents.*',
+        'users.first_name',
+        'users.last_name',
+        knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+        knex.raw(`
+          COALESCE(dt.type_name, sdt.type_name) as type_name,
+          COALESCE(dt.icon, sdt.icon) as type_icon
+        `)
+      )
+      .leftJoin('users', function() {
+        this.on('documents.created_by', '=', 'users.user_id')
+            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+      })
+      // Left join with document_types to get tenant-specific types
+      .leftJoin('document_types as dt', function() {
+        this.on('documents.type_id', '=', 'dt.type_id')
+            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+      })
+      // Left join with shared_document_types to get shared types
+      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+      .where('documents.tenant', tenant);
+
+    // Apply filters if provided
+    if (filters) {
+      if (filters.searchTerm) {
+        query = query.where('documents.document_name', 'ilike', `%${filters.searchTerm}%`);
+      }
+
+      if (filters.type) {
+        query = query.where(function() {
+          this.where('dt.type_name', 'like', `${filters.type}%`)
+              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+        });
+      }
+
+      // Exclude documents that are already associated with the specified entity
+      if (filters.excludeEntityId && filters.excludeEntityType) {
+        query = query.whereNotExists(function() {
+          this.select('*')
+              .from('document_associations')
+              .whereRaw('document_associations.document_id = documents.document_id')
+              .andWhere('document_associations.entity_id', filters.excludeEntityId)
+              .andWhere('document_associations.entity_type', filters.excludeEntityType)
+              .andWhere('document_associations.tenant', tenant);
+        });
+      }
+
+      // Only apply entity type filter if specified
+      if (filters.entityType) {
+        query = query
+          .leftJoin('document_associations', function() {
+            this.on('documents.document_id', '=', 'document_associations.document_id')
+                .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+          })
+          .where('document_associations.entity_type', filters.entityType);
+      }
+    }
+
+    // Get the documents
+    const documents = await query
+      .orderBy('documents.entered_at', 'desc')
+      .distinct('documents.*');
+
+    console.log('Raw documents from database:', documents); // Debug log
+
+    // Process the documents
+    const processedDocuments = documents.map((doc): IDocument => {
+      const processedDoc = {
+        document_id: doc.document_id,
+        document_name: doc.document_name,
+        type_id: doc.type_id,
+        shared_type_id: doc.shared_type_id,
+        user_id: doc.created_by,
+        order_number: doc.order_number || 0,
+        created_by: doc.created_by,
+        tenant: doc.tenant,
+        file_id: doc.file_id,
+        storage_path: doc.storage_path,
+        mime_type: doc.mime_type,
+        file_size: doc.file_size,
+        createdByFullName: doc.created_by_full_name,
+        type_name: doc.type_name,
+        type_icon: doc.type_icon,
+        entered_at: doc.entered_at,
+        updated_at: doc.updated_at
+      };
+
+      console.log('Processed document:', processedDoc); // Debug log
+      return processedDoc;
+    });
+
+    return processedDocuments;
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    throw error;
+  }
+}
+
+// Create document associations
+export async function createDocumentAssociations(
+  entity_id: string,
+  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
+  document_ids: string[]
+): Promise<{ success: boolean }> {
+  try {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    // Create associations for all selected documents
+    const associations = document_ids.map((document_id): IDocumentAssociationInput => ({
+      document_id,
+      entity_id,
+      entity_type,
+      tenant
+    }));
+
+    await Promise.all(
+      associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
+        DocumentAssociation.create(association)
+      )
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error creating document associations:', error);
+    throw new Error('Failed to create document associations');
+  }
+}
+
+// Remove document associations
+export async function removeDocumentAssociations(
+  entity_id: string,
+  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
+  document_ids?: string[]
+) {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    let query = knex('document_associations')
+      .where('entity_id', entity_id)
+      .andWhere('entity_type', entity_type)
+      .andWhere('tenant', tenant);
+
+    if (document_ids && document_ids.length > 0) {
+      query = query.whereIn('document_id', document_ids);
+    }
+
+    await query.delete();
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error removing document associations:', error);
+    throw new Error('Failed to remove document associations');
+  }
+}
+
+// Upload new document
+export async function uploadDocument(
+  file: FormData,
+  options: {
+    userId: string;
+    companyId?: string;
+    ticketId?: string;
+    contactNameId?: string;
+    scheduleId?: string;
+    assetId?: string;
+  }
+) {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+      // Extract file from FormData
+      const fileData = file.get('file') as File;
+      if (!fileData) {
+        throw new Error('No file provided');
+      }
+
+      // Validate first
+      await validateDocumentUpload(fileData);
+
+      const buffer = Buffer.from(await fileData.arrayBuffer());
+
+      // Upload file to storage
+      const uploadResult = await StorageService.uploadFile(tenant, buffer, fileData.name, {
+        mime_type: fileData.type,
+        uploaded_by_id: options.userId
+      });
+
+      // Get document type based on mime type
+      const { typeId, isShared } = await getDocumentTypeId(fileData.type);
+
+      // Create document record
+      const document: IDocument = {
+        document_id: uuidv4(),
+        document_name: fileData.name,
+        type_id: isShared ? null : typeId,
+        shared_type_id: isShared ? typeId : undefined,
+        user_id: options.userId,
+        order_number: 0,
+        created_by: options.userId,
+        tenant,
+        file_id: uploadResult.file_id,
+        storage_path: uploadResult.storage_path,
+        mime_type: fileData.type,
+        file_size: fileData.size
+      };
+
+      const result = await Document.insert(document);
+      const documentWithId = { ...document, document_id: result.document_id };
+
+    // Create associations if any entity IDs are provided
+    const associations: IDocumentAssociationInput[] = [];
+
+    if (options.ticketId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.ticketId,
+        entity_type: 'ticket',
+        tenant
+      });
+    }
+
+    if (options.companyId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.companyId,
+        entity_type: 'company',
+        tenant
+      });
+    }
+
+    if (options.contactNameId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.contactNameId,
+        entity_type: 'contact',
+        tenant
+      });
+    }
+
+    if (options.scheduleId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.scheduleId,
+        entity_type: 'schedule',
+        tenant
+      });
+    }
+
+    if (options.assetId) {
+      associations.push({
+        document_id: documentWithId.document_id,
+        entity_id: options.assetId,
+        entity_type: 'asset',
+        tenant
+      });
+    }
+
+    // Create all associations
+    if (associations.length > 0) {
+      await Promise.all(
+        associations.map((association): Promise<Pick<IDocumentAssociation, "association_id">> =>
+          DocumentAssociation.create(association)
+        )
+      );
+    }
+
+    return {
+      success: true,
+      document: documentWithId
+    };
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to upload document'
     };
   }
 }

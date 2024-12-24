@@ -14,6 +14,7 @@ export interface ICompany extends TenantEntity {
   client_type?: string;
   tax_id_number?: string; 
   notes?: string;
+  notes_document_id?: string | null;
   properties?: {
     industry?: string;
     company_size?: string;

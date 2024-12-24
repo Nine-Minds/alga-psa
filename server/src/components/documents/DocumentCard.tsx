@@ -1,12 +1,24 @@
 "use client";
 import { useState } from 'react';
-import { IDocument } from '@/interfaces';
+import { Block } from '@blocknote/core';
+import { IDocument } from '@/interfaces/document.interface';
 import TextEditor from '@/components/editor/TextEditor';
 import { updateDocument } from '@/lib/actions/document-actions/documentActions';
+import { updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
 
-const DocumentCard = ({ document }: { document: IDocument }) => {
+interface DocumentCardProps {
+    document: IDocument;
+    documentContent?: {
+        block_data: {
+            blocks: Block[];
+            version: number;
+            time: string;
+        };
+    };
+}
+
+const DocumentCard = ({ document, documentContent }: DocumentCardProps) => {
     const roomName = "document-room-" + document.document_id;
-
     const [isEditorOpen, setIsEditorOpen] = useState(false);
 
     // Turn date into Month Day, Year format
@@ -20,14 +32,23 @@ const DocumentCard = ({ document }: { document: IDocument }) => {
     }
 
     // Save document content
-    const handleSubmit = async (content: string) => {
+    const handleContentChange = async (blocks: Block[]) => {
         try {
             if (document.document_id && document) {
-                // Update existing document
-                await updateDocument(document.document_id, { content });
+                // Update document with edited_by field
+                await updateDocument(document.document_id, {
+                    edited_by: document.user_id
+                });
 
-                alert('Document saved successfully');
-                window.location.reload();
+                // Update document content with block format
+                await updateBlockContent(document.document_id, {
+                    block_data: {
+                        blocks,
+                        version: 1,
+                        time: new Date().toISOString()
+                    },
+                    user_id: document.user_id
+                });
             }
         } catch (error) {
             console.error('Error saving document:', error);
@@ -64,8 +85,8 @@ const DocumentCard = ({ document }: { document: IDocument }) => {
                     <TextEditor
                         key={"document-" + document.document_id}
                         roomName={roomName}
-                        initialContent={document.content}
-                        handleSubmit={handleSubmit}
+                        initialContent={documentContent?.block_data?.blocks || []}
+                        onContentChange={handleContentChange}
                     />
                 </div>
             }

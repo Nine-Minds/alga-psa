@@ -1,20 +1,18 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
+import React, { useState, useEffect, useRef } from 'react';
 import { ICompany } from '@/interfaces/company.interfaces';
 import { IDocument } from '@/interfaces/document.interface';
 import Documents from '@/components/documents/Documents';
 import { IContact } from '@/interfaces/contact.interfaces';
 import Contacts from '@/components/contacts/Contacts';
-import { Card, Flex, Text, Heading } from '@radix-ui/themes';
+import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { updateCompany } from '@/lib/actions/companyActions';
 import CustomTabs from '@/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from '@/components/ui/Button';
-import { ITicket } from '@/interfaces';
 import TaxSettingsForm from '@/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from '@/interfaces/interaction.interfaces';
@@ -24,8 +22,17 @@ import TimezonePicker from '@/components/ui/TimezonePicker';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { TextArea } from '@/components/ui/TextArea';
+
 import CompanyAssets from './CompanyAssets';
+import TextEditor from '@/components/editor/TextEditor';
+import { Block } from '@blocknote/core';
+import DocumentSelector from '@/components/documents/DocumentSelector';
+import { ITicket } from '@/interfaces';
+import { 
+  addDocument, 
+  createDocumentAssociations
+} from '@/lib/actions/document-actions/documentActions';
+import { updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
 
 interface CompanyDetailsProps {
   company: ICompany;
@@ -33,6 +40,30 @@ interface CompanyDetailsProps {
   contacts?: IContact[];
   isInDrawer?: boolean;
 }
+
+const SwitchDetailItem: React.FC<{ 
+  value: boolean; 
+  onEdit: (value: boolean) => void;
+}> = ({ value, onEdit }) => {
+  return (
+    <div className="flex items-center justify-between py-3">
+      <div>
+        <div className="text-gray-900 font-medium">Status</div>
+        <div className="text-sm text-gray-500">Set company status as active or inactive</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-700">
+          {value ? 'Inactive' : 'Active'}
+        </span>
+        <Switch
+          checked={value}
+          onCheckedChange={onEdit}
+          className="data-[state=checked]:bg-primary-500"
+        />
+      </div>
+    </div>
+  );
+};
 
 const TextDetailItem: React.FC<{ 
   label: string; 
@@ -61,62 +92,6 @@ const TextDetailItem: React.FC<{
   );
 };
 
-const NotesDetailItem: React.FC<{ 
-  value: string; 
-  onEdit: (value: string) => void;
-  onSave: () => void;
-}> = ({ value, onEdit, onSave }) => {
-  const [localValue, setLocalValue] = useState(value);
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setLocalValue(e.target.value);
-    onEdit(e.target.value);
-  };
-  
-  return (
-    <div className="space-y-4">
-      <Text as="label" size="2" className="text-gray-700 font-medium">Notes</Text>
-      <TextArea
-        value={localValue}
-        onChange={handleChange}
-        placeholder="Add notes about this company..."
-      />
-      <div className="flex justify-end">
-        <Button 
-          onClick={onSave}
-          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
-        >
-          Save Notes
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-const SwitchDetailItem: React.FC<{ 
-  value: boolean; 
-  onEdit: (value: boolean) => void;
-}> = ({ value, onEdit }) => {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div>
-        <div className="text-gray-900 font-medium">Status</div>
-        <div className="text-sm text-gray-500">Set company status as active or inactive</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">
-          {value ? 'Inactive' : 'Active'}
-        </span>
-        <Switch
-          checked={value}
-          onCheckedChange={onEdit}
-          className="data-[state=checked]:bg-primary-500"
-        />
-      </div>
-    </div>
-  );
-};
-
 const CompanyDetails: React.FC<CompanyDetailsProps> = ({ 
   company, 
   documents = [], 
@@ -128,12 +103,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
-
+  const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
+  const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
+  const [currentNoteBlocks, setCurrentNoteBlocks] = useState<Block[]>([]);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
   const drawer = useDrawer();
+
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -211,12 +188,79 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     });
   }
 
+  const handleCreateNewNoteDocument = async () => {
+    try {
+      if (!currentUser?.user_id) {
+        console.error('No user ID available');
+        return;
+      }
+
+      const documentInput = {
+        document_name: `${editedCompany.company_name} - Notes`,
+        user_id: currentUser.user_id,
+        created_by: currentUser.user_id,
+        type_id: null,
+        order_number: 0,
+        tenant: editedCompany.tenant
+      };
+
+      const result = await addDocument(documentInput);
+      if (result._id) {
+        // Create document association
+        await createDocumentAssociations(
+          company.company_id,
+          'company',
+          [result._id]
+        );
+        
+        // Initialize empty block content
+        await updateBlockContent(result._id, {
+          block_data: [{
+            type: "paragraph",
+            content: [{
+              type: "text",
+              text: "",
+              styles: {}
+            }],
+            props: {
+              textAlignment: "left",
+              backgroundColor: "default",
+              textColor: "default"
+            }
+          }],
+          user_id: currentUser.user_id
+        });
+        
+        // Update company with the new note document
+        await handleDocumentSelected({
+          document_id: result._id,
+          ...documentInput
+        } as IDocument);
+      }
+    } catch (error) {
+      console.error('Error creating new note document:', error);
+    }
+  };
+
   const handleDocumentCreated = async (): Promise<void> => {
     // Handle the newly created document if needed
     console.log('New document created');
   };
 
-  const handleTabChange = (tabValue: string) => {
+  const handleDocumentSelected = async (document: IDocument) => {
+    try {
+      await updateCompany(company.company_id, { notes_document_id: document.document_id });
+      setIsDocumentSelectorOpen(false);
+      setEditedCompany(prev => ({
+        ...prev,
+        notes_document_id: document.document_id
+      }));
+    } catch (error) {
+      console.error('Error updating company notes document:', error);
+    }
+  };
+
+  const handleTabChange = async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
     params.set('tab', tabValue);
     router.push(`${pathname}?${params.toString()}`);
@@ -395,11 +439,60 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     {
       label: "Notes",
       content: (
-        <NotesDetailItem 
-          value={editedCompany.notes ?? ""}
-          onEdit={(value) => handleFieldChange('notes', value)}
-          onSave={handleSave}
-        />
+        <div className="space-y-4">
+          {editedCompany.notes_document_id ? (
+            <>
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">
+                  {documents.find(d => d.document_id === editedCompany.notes_document_id)?.document_name || 'Notes'}
+                </h2>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        if (!currentUser?.user_id) {
+                          console.error('No user ID available');
+                          return;
+                        }
+                        await updateBlockContent(editedCompany.notes_document_id!, {
+                          block_data: currentNoteBlocks,
+                          user_id: currentUser.user_id
+                        });
+                        setHasUnsavedNoteChanges(false);
+                      } catch (error) {
+                        console.error('Error saving note:', error);
+                      }
+                    }}
+                    disabled={!hasUnsavedNoteChanges}
+                    className={`text-white transition-colors ${
+                      hasUnsavedNoteChanges 
+                        ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]" 
+                        : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
+                    }`}
+                  >
+                    Save Note
+                  </Button>
+                  <Button onClick={() => setIsDocumentSelectorOpen(true)}>Change Note Document</Button>
+                </div>
+              </div>
+              <TextEditor
+                documentId={editedCompany.notes_document_id}
+                onContentChange={(blocks: Block[]) => {
+                  setCurrentNoteBlocks(blocks);
+                  setHasUnsavedNoteChanges(true);
+                }}
+              />
+            </>
+          ) : (
+            <div className="space-y-4">
+              <p>No note document selected.</p>
+              <div className="flex gap-4">
+                <Button onClick={handleCreateNewNoteDocument}>Create New Note Document</Button>
+                <Button onClick={() => setIsDocumentSelectorOpen(true)}>Select Existing Document</Button>
+              </div>
+            </div>
+          )}
+        </div>
       )
     },
     {
@@ -454,6 +547,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           id: company.company_id,
           name: company.company_name
         }}
+      />
+
+      <DocumentSelector
+        isOpen={isDocumentSelectorOpen}
+        onClose={() => setIsDocumentSelectorOpen(false)}
+        entityId={company.company_id}
+        entityType="company"
+        singleSelect={true}
+        onDocumentSelected={handleDocumentSelected}
       />
     </div>
   );

@@ -54,6 +54,71 @@ Enterprise Edition:
 - file_stores: File metadata storage
 - file_references: Entity relationships
 - provider_events: Provider operation monitoring
+- document_content: Large text content storage for documents
+- document_block_content: Block-based JSON content storage for documents
+
+### Content Storage
+The system provides three approaches for storing document content:
+1. File Storage:
+   - Binary files (PDFs, images, etc.)
+   - Managed through storage providers
+   - File metadata tracking
+   
+2. Text Content Storage:
+   - Large text content stored in document_content table
+   - 1-to-1 relationship with documents
+   - Tenant isolation through RLS
+   - Efficient querying and updates
+   - Separation from core document metadata
+
+3. Block-Based Content Storage:
+   - Structured JSON content stored in document_block_content table
+   - 1-to-1 relationship with documents
+   - Tenant isolation through RLS
+   - Integration with BlockNote editor:
+     * Rich text editing capabilities
+     * Block-based content structure
+     * Standardized JSON format:
+       ```typescript
+       interface BlockContent {
+         blocks: Block[];     // BlockNote's native block format
+         version: number;     // Document format version (e.g., 1)
+         time: string;       // ISO timestamp of last update
+       }
+       ```
+   - Version-aware content storage:
+     * Optional version_id reference to document_versions
+     * Allows tracking block content changes across versions
+     * Supports reverting to previous versions
+     * Maintains version history without duplicating content
+     * Enables gradual adoption of versioning
+   - Enables future features like collaborative editing
+   - UI Components:
+     * TextEditor: Core editing component using BlockNote
+     * Documents: Container component managing document state and UI
+     * Supports manual save with validation
+     * Real-time content updates
+     * Error handling and validation
+     * Drawer-based editing interface
+
+4. Document Versioning:
+   - Version tracking through document_versions table
+   - Features:
+     * Unique version numbers per document
+     * Active version flagging
+     * Creation metadata (timestamp, user)
+     * Tenant isolation through RLS
+     * Composite foreign key to documents
+   - Integration with block content:
+     * Optional version references
+     * Flexible content organization
+     * Efficient storage without content duplication
+   - Benefits:
+     * Track document evolution
+     * Maintain version history
+     * Support content rollback
+     * Enable review workflows
+     * Facilitate auditing
 
 ### Models
 - StorageProviderModel: Provider management
