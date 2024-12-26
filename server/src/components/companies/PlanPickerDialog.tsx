@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { IBillingPlan, IServiceCategory } from '@/interfaces/billing.interfaces';
 import CustomSelect from '@/components/ui/CustomSelect';
 
 interface PlanPickerDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (plan: IBillingPlan, serviceCategory: string | undefined, startDate: string) => void;
+    onSelect: (plan: IBillingPlan, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
     availablePlans: IBillingPlan[];
     serviceCategories: IServiceCategory[];
 }
@@ -24,13 +25,16 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     const [startDate, setStartDate] = useState<string>(
         new Date().toISOString().split('T')[0]
     );
+    const [endDate, setEndDate] = useState<string | null>(null);
+    const [isOngoing, setIsOngoing] = useState(true);
 
     const handleSubmit = () => {
         if (selectedPlan) {
             onSelect(
                 selectedPlan, 
                 selectedCategory === 'none' ? undefined : selectedCategory,
-                startDate
+                startDate,
+                endDate
             );
             onClose();
         }
@@ -83,11 +87,33 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Start Date
                             </label>
-                            <input
+                            <Input
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                End Date
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="ongoing"
+                                    checked={isOngoing}
+                                    onChange={(e) => {
+                                        setIsOngoing(e.target.checked);
+                                        setEndDate(e.target.checked ? null : new Date().toISOString().split('T')[0]);
+                                    }}
+                                />
+                                <label htmlFor="ongoing">Ongoing</label>
+                            </div>
+                            <Input
+                                type="date"
+                                value={endDate || ''}
+                                onChange={(e) => setEndDate(e.target.value || null)}
+                                disabled={isOngoing}
                             />
                         </div>
                     </div>

@@ -72,9 +72,9 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
     }
 
     await db('company_billing_plans').insert({...newBilling, tenant});
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error adding company billing plan:', error);
-    throw new Error('Failed to add company billing plan');
+    throw new Error(error);
   }
 }
 

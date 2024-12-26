@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Button } from '@radix-ui/themes';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
@@ -23,6 +24,8 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
 }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState<string>('');
+    const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
     const handleStartEdit = (service: IService) => {
         setEditingId(service.service_id);
@@ -127,7 +130,10 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                             <Button 
                                 variant="ghost" 
                                 size="1" 
-                                onClick={() => onDelete(value!)}
+                                onClick={() => {
+                                  setServiceToDelete(value!);
+                                  setShowDeleteDialog(true);
+                                }}
                                 className="hover:bg-[rgb(var(--color-accent-50))]"
                             >
                                 <Trash2 className="h-4 w-4 text-[rgb(var(--color-accent-600))]" />
@@ -159,6 +165,20 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                     columns={columns}
                 />
             </div>
+            <ConfirmationDialog
+              isOpen={showDeleteDialog}
+              onClose={() => setShowDeleteDialog(false)}
+              onConfirm={() => {
+                if (serviceToDelete) {
+                  onDelete(serviceToDelete);
+                  setShowDeleteDialog(false);
+                  setServiceToDelete(null);
+                }
+              }}
+              title="Delete Service"
+              message="Are you sure you want to delete this service? This action cannot be undone."
+              confirmLabel="Delete"
+            />
         </div>
     );
 };

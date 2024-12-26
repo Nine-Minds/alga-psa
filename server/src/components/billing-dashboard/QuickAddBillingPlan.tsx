@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState } from 'react';
+import CustomSelect from '../ui/CustomSelect';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '../ui/Button';
 import { createBillingPlan } from '@/lib/actions/billingPlanAction';
@@ -16,7 +17,9 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
   const [open, setOpen] = useState(false)
   const [planName, setPlanName] = useState('')
   const [billingFrequency, setBillingFrequency] = useState('')
+  const [planType, setPlanType] = useState('Fixed')
   const [isCustom, setIsCustom] = useState(false);
+  const planTypes = ['Fixed', 'Hourly', 'Usage', 'Bucket'];
   const tenant = useTenant()!;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,7 +29,7 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
         plan_name: planName,
         billing_frequency: billingFrequency,
         is_custom: isCustom,
-        plan_type: 'fixed', // TODO: Replaced with actual value
+        plan_type: planType,
         tenant: tenant
       })
       onPlanAdded()
@@ -67,6 +70,15 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
               className="w-full p-2 border rounded mb-2"
               required
             />
+            <div className="mb-4">
+              <label className="block mb-2">Plan Type</label>
+              <CustomSelect
+                options={planTypes.map(type => ({ value: type, label: type }))}
+                onValueChange={setPlanType}
+                value={planType}
+                placeholder="Select plan type"
+              />
+            </div>
             <label className="flex items-center mb-4">
               <input
                 type="checkbox"

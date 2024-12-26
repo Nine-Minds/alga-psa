@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { AlertDialog } from '@radix-ui/themes';
 import { Button } from '@/components/ui/Button';
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { getCompanyBillingPlan, updateCompanyBillingPlan, addCompanyBillingPlan, removeCompanyBillingPlan, editCompanyBillingPlan } from '../../lib/actions/companyBillingPlanActions';
 import { getBillingPlans } from '../../lib/actions/billingPlanAction';
 import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
@@ -15,7 +16,6 @@ import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate } from '../
 import { ITaxRate, ICompanyTaxRate } from '../../interfaces/billing.interfaces';
 import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
 import BillingConfigForm from './BillingConfigForm';
-import ServiceCatalog from './ServiceCatalog';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
 
@@ -46,6 +46,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [companyBillingPlans, setCompanyBillingPlans] = useState<CompanyBillingPlanWithStringDates[]>([]);
     const [editingBillingPlan, setEditingBillingPlan] = useState<CompanyBillingPlanWithStringDates | null>(null);
+    const [billingPlanToDelete, setBillingPlanToDelete] = useState<string | null>(null);
 
     const [services, setServices] = useState<IService[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
@@ -143,14 +144,20 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
-        } catch (error) {
-            setErrorMessage('Failed to add billing plan. Please try again.');
+        } catch (error: any) {
+            setErrorMessage(error.message || 'Failed to add billing plan. Please try again.');
         }
     };
 
     const handleRemoveBillingPlan = async (companyBillingPlanId: string) => {
+        setBillingPlanToDelete(companyBillingPlanId);
+    };
+
+    const confirmRemoveBillingPlan = async () => {
+        if (!billingPlanToDelete) return;
+        
         try {
-            await removeCompanyBillingPlan(companyBillingPlanId);
+            await removeCompanyBillingPlan(billingPlanToDelete);
             const updatedBillingPlans = await getCompanyBillingPlan(company.company_id);
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
@@ -160,6 +167,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
         } catch (error) {
             setErrorMessage('Failed to remove billing plan. Please try again.');
+        } finally {
+            setBillingPlanToDelete(null);
         }
     };
 
@@ -289,14 +298,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 handleSwitchChange={handleSwitchChange}
             />
 
-            <ServiceCatalog
-                services={services}
-                serviceCategories={serviceCategories}
-                onEdit={handleUpdateService}
-                onDelete={handleDeleteService}
-                onAdd={handleAddService}
-            />
-
             <CompanyTaxRates
                 companyTaxRates={companyTaxRates}
                 taxRates={taxRates}
@@ -316,6 +317,74 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 onAdd={handleAddBillingPlan}
                 onCompanyPlanChange={handleCompanyPlanChange}
                 formatDateForDisplay={formatDateForDisplay}
+            />
+
+            {editingBillingPlan && (
+                <AlertDialog.Root open={!!editingBillingPlan}>
+                    <AlertDialog.Content>
+                        <AlertDialog.Title>Edit Billing Plan</AlertDialog.Title>
+                        <div className="space-y-4">
+                            <div>
+                                <label>Start Date</label>
+                                <input
+                                    type="date"
+                                    value={editingBillingPlan.start_date}
+                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
+                                        ...prev,
+                                        start_date: e.target.value
+                                    } : null)}
+                                    className="w-full p-2 border rounded"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    id="ongoing"
+                                    checked={!editingBillingPlan.end_date}
+                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
+                                        ...prev,
+                                        end_date: e.target.checked ? null : new Date().toISOString().split('T')[0]
+                                    } : null)}
+                                />
+                                <label htmlFor="ongoing">Ongoing</label>
+                            </div>
+                            <div>
+                                <label>End Date</label>
+                                <input
+                                    type="date"
+                                    value={editingBillingPlan.end_date || ''}
+                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
+                                        ...prev,
+                                        end_date: e.target.value || null
+                                    } : null)}
+                                    className="w-full p-2 border rounded"
+                                    disabled={!editingBillingPlan.end_date}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 mt-4">
+                            <Button
+                                variant="secondary"
+                                onClick={() => setEditingBillingPlan(null)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                onClick={handleSaveEditBillingPlan}
+                            >
+                                Save Changes
+                            </Button>
+                        </div>
+                    </AlertDialog.Content>
+                </AlertDialog.Root>
+            )}
+
+            <ConfirmationDialog
+                isOpen={!!billingPlanToDelete}
+                onClose={() => setBillingPlanToDelete(null)}
+                onConfirm={confirmRemoveBillingPlan}
+                title="Delete Billing Plan"
+                message="Are you sure you want to delete this billing plan?"
             />
 
             <div className="flex justify-end">

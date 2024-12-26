@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { getServices, updateService, deleteService } from '@/lib/actions/serviceActions';
 import { getServiceCategories } from '@/lib/actions/serviceCategoryActions';
 import { IService, IServiceCategory, ServiceType } from '@/interfaces/billing.interfaces';
@@ -28,6 +29,8 @@ const ServiceCatalogManager: React.FC = () => {
   const [editingService, setEditingService] = useState<IService | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServices();
@@ -75,13 +78,23 @@ const ServiceCatalogManager: React.FC = () => {
   };
 
   const handleDeleteService = async (serviceId: string) => {
+    setServiceToDelete(serviceId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteService = async () => {
+    if (!serviceToDelete) return;
+    
     try {
-      await deleteService(serviceId);
+      await deleteService(serviceToDelete);
       await fetchServices();
       setError(null);
     } catch (error) {
       console.error('Error deleting service:', error);
       setError('Failed to delete service');
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setServiceToDelete(null);
     }
   };
 
@@ -227,6 +240,15 @@ const ServiceCatalogManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteService}
+        title="Delete Service"
+        message="Are you sure you want to delete this service? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </>
   );
 };

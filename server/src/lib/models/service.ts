@@ -33,6 +33,8 @@ export const serviceSchema = z.object({
     .transform(val => val === undefined ? null : val)
 });
 
+export const createServiceSchema = serviceSchema.omit({ service_id: true });
+
 const Service = {
   getAll: async (): Promise<IService[]> => {
     const {knex: db, tenant} = await createTenantKnex();
@@ -103,8 +105,8 @@ const Service = {
   create: async (serviceData: Omit<IService, 'service_id' | 'tenant'>): Promise<IService> => {
     const {knex: db, tenant} = await createTenantKnex();
     
-    // Validate the input data
-    validateData(serviceSchema, serviceData);
+    // Validate the input data using creation schema
+    validateData(createServiceSchema, serviceData);
     
     const newService = {
       service_id: uuidv4(),
