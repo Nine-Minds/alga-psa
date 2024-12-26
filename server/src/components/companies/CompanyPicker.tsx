@@ -1,10 +1,9 @@
 // server/src/components/CompanyPicker.tsx
 
 import React, { useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Input } from '../ui/Input';
 import CustomSelect from '../ui/CustomSelect';
-import { ICompany } from '@/interfaces';
+import { ICompany } from '@/interfaces/company.interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
 
 interface CompanyPickerProps {
@@ -68,7 +67,8 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const handleSelect = (companyId: string) => {
+  const handleSelect = (companyId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     onSelect(companyId);
     setIsOpen(false);
   };
@@ -96,12 +96,12 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
         <ChevronDownIcon />
       </button>
       
-      {isOpen && createPortal(
+      {isOpen && (
         <div 
-          className={`fixed z-[100] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
+          className={`absolute z-[100] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
           style={{ 
-            top: (dropdownRef.current?.getBoundingClientRect().bottom ?? 0) + 4,
-            left: dropdownRef.current?.getBoundingClientRect().left ?? 0
+            top: '100%',
+            left: 0
           }}
           onMouseDown={(e) => e.stopPropagation()}
         >
@@ -148,10 +148,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
               <button
                 type="button"
                 key={company.company_id}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelect(company.company_id);
-                }}
+                onClick={(e) => handleSelect(company.company_id, e)}
                 className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
                   company.company_id === selectedCompanyId ? 'bg-blue-100' : ''
                 }`}
@@ -165,7 +162,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
             ))}
           </div>
         </div>
-      , document.body)}
+      )}
     </div>
   );
 };
