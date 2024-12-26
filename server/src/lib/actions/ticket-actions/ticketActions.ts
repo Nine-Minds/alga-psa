@@ -36,6 +36,18 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
   };
 }
 
+// Helper function to safely publish events
+async function safePublishEvent(eventType: string, payload: any) {
+  try {
+    await getEventBus().publish({
+      eventType,
+      payload
+    });
+  } catch (error) {
+    console.error(`Failed to publish ${eventType} event:`, error);
+  }
+}
+
 interface CreateTicketFromAssetData {
     title: string;
     description: string;
@@ -110,13 +122,10 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
             }, user.user_id);
 
             // Publish ticket created event
-            await getEventBus().publish({
-                eventType: 'TICKET_CREATED',
-                payload: {
-                    tenantId: tenant,
-                    ticketId: newTicket.ticket_id,
-                    userId: user.user_id,
-                }
+            await safePublishEvent('TICKET_CREATED', {
+                tenantId: tenant,
+                ticketId: newTicket.ticket_id,
+                userId: user.user_id,
             });
 
             return convertDates(newTicket);
@@ -228,13 +237,10 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       }
 
       // Publish ticket created event
-      await getEventBus().publish({
-        eventType: 'TICKET_CREATED',
-        payload: {
-          tenantId: tenant,
-          ticketId: newTicket.ticket_id,
-          userId: user.user_id,
-        }
+      await safePublishEvent('TICKET_CREATED', {
+        tenantId: tenant,
+        ticketId: newTicket.ticket_id,
+        userId: user.user_id,
       });
 
       return convertDates(newTicket);
@@ -354,30 +360,24 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         .first() :
       oldStatus;
 
-    // Publish appropriate event based on the update
-    if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      // Ticket was closed
-      await getEventBus().publish({
-        eventType: 'TICKET_CLOSED',
-        payload: {
+      // Publish appropriate event based on the update
+      if (newStatus?.is_closed && !oldStatus?.is_closed) {
+        // Ticket was closed
+        await safePublishEvent('TICKET_CLOSED', {
           tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
           changes: updateData
-        }
-      });
-    } else {
-      // Regular update
-      await getEventBus().publish({
-        eventType: 'TICKET_UPDATED',
-        payload: {
+        });
+      } else {
+        // Regular update
+        await safePublishEvent('TICKET_UPDATED', {
           tenantId: tenant,
           ticketId: id,
           userId: user.user_id,
           changes: updateData
-        }
-      });
-    }
+        });
+      }
 
     return 'success';
   } catch (error) {
