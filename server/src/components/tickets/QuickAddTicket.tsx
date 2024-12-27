@@ -211,9 +211,6 @@ export function QuickAddTicket({
             if (!statusId) throw new Error('Please select a status');
             if (!priorityId) throw new Error('Please select a priority');
             if (!companyId) throw new Error('Please select a company');
-            if (selectedCompanyType === 'company' && !contactId) {
-                throw new Error('Please select a contact for the company');
-            }
 
             const formData = new FormData();
             formData.append('title', title);

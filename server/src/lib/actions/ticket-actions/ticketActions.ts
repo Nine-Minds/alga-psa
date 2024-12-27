@@ -502,6 +502,54 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
   }
 }
 
+export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
+  if (!await hasPermission(user, 'ticket', 'delete')) {
+    throw new Error('Permission denied: Cannot delete ticket');
+  }
+
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Verify ticket exists and belongs to tenant
+    const ticket = await db('tickets')
+      .where({ ticket_id: ticketId, tenant })
+      .first();
+
+    if (!ticket) {
+      throw new Error('Ticket not found');
+    }
+
+    // Start transaction for atomic operations
+    await db.transaction(async (trx) => {
+      // Delete associated comments
+      await trx('comments')
+        .where({ ticket_id: ticketId, tenant })
+        .delete();
+
+      // Delete the ticket
+      await trx('tickets')
+        .where({ ticket_id: ticketId, tenant })
+        .delete();
+
+      // Publish ticket deleted event
+      await safePublishEvent('TICKET_DELETED', {
+        tenantId: tenant,
+        ticketId: ticketId,
+        userId: user.user_id
+      });
+    });
+
+    // Revalidate relevant paths
+    revalidatePath('/msp/tickets');
+  } catch (error) {
+    console.error('Failed to delete ticket:', error);
+    throw new Error('Failed to delete ticket');
+  }
+}
+
 export async function getTicketById(id: string, user: IUser): Promise<ITicket & { tenant: string; status_name: string; is_closed: boolean }> {
   if (!await hasPermission(user, 'ticket', 'read')) {
     throw new Error('Permission denied: Cannot view ticket');

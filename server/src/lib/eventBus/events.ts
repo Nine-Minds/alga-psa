@@ -5,6 +5,7 @@ export const EventTypeEnum = z.enum([
   'TICKET_CREATED',
   'TICKET_UPDATED',
   'TICKET_CLOSED',
+  'TICKET_DELETED',
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
   'PROJECT_CLOSED',
@@ -64,6 +65,7 @@ export const EventPayloadSchemas = {
   TICKET_CREATED: TicketEventPayloadSchema,
   TICKET_UPDATED: TicketEventPayloadSchema,
   TICKET_CLOSED: TicketEventPayloadSchema,
+  TICKET_DELETED: TicketEventPayloadSchema,
   PROJECT_CREATED: ProjectEventPayloadSchema,
   PROJECT_UPDATED: ProjectEventPayloadSchema,
   PROJECT_CLOSED: ProjectEventPayloadSchema,
@@ -90,6 +92,7 @@ export type BaseEvent = z.infer<typeof BaseEventSchema>;
 export type TicketCreatedEvent = z.infer<typeof EventSchemas.TICKET_CREATED>;
 export type TicketUpdatedEvent = z.infer<typeof EventSchemas.TICKET_UPDATED>;
 export type TicketClosedEvent = z.infer<typeof EventSchemas.TICKET_CLOSED>;
+export type TicketDeletedEvent = z.infer<typeof EventSchemas.TICKET_DELETED>;
 export type ProjectCreatedEvent = z.infer<typeof EventSchemas.PROJECT_CREATED>;
 export type ProjectUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_UPDATED>;
 export type ProjectClosedEvent = z.infer<typeof EventSchemas.PROJECT_CLOSED>;
@@ -109,4 +112,5 @@ export type Event =
   | TimeEntrySubmittedEvent
   | TimeEntryApprovedEvent
   | InvoiceGeneratedEvent
-  | InvoiceFinalizedEvent;
+  | InvoiceFinalizedEvent
+  | TicketDeletedEvent;

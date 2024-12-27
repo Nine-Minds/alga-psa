@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
 import { ITicket, ITicketListItem, ITicketCategory } from '@/interfaces/ticket.interfaces';
 import { IUser } from '@/interfaces/auth.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
@@ -12,20 +13,42 @@ import { Button } from '../ui/Button';
 import { getAllChannels } from '@/lib/actions/channel-actions/channelActions';
 import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
+import { getAllUsers, getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { getTicketCategories } from '@/lib/actions/ticketCategoryActions';
 import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
 import { IChannel } from '@/interfaces';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { getTicketsForList } from '@/lib/actions/ticket-actions/ticketActions';
+import { getTicketsForList, deleteTicket } from '@/lib/actions/ticket-actions/ticketActions';
+import { MoreHorizontal } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 interface TicketingDashboardProps {
   initialTickets: ITicketListItem[];
-  user: IUser;
 }
 
-// Define columns outside component to ensure stable references
+const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets }) => {
+  const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      await deleteTicket(ticketId, user);
+      let isSubscribed = true;
+      fetchTickets(isSubscribed);
+      return () => {
+        isSubscribed = false;
+      };
+    } catch (error) {
+      console.error('Failed to delete ticket:', error);
+    }
+  };
+
 const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
   {
     title: 'Ticket Number',
@@ -71,10 +94,36 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
     title: 'Created By',
     dataIndex: 'entered_by_name',
   },
+  {
+    title: 'Actions',
+    dataIndex: 'actions',
+    render: (value: string, record: ITicketListItem) => (
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <Button 
+            variant="ghost" 
+            className="h-8 w-8 p-0"
+          >
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenu.Trigger>
+        
+        <DropdownMenu.Content 
+          className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+        >
+          <DropdownMenu.Item
+            className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer outline-none"
+            onSelect={() => handleDeleteTicket(record.ticket_id as string)}
+          >
+            Delete
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
+    ),
+  }
 ];
 
-const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets, user }) => {
-  const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
   const [channels, setChannels] = useState<IChannel[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
@@ -106,6 +155,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets,
   const fetchTickets = useCallback(async (isSubscribed: boolean) => {
     setIsLoading(true);
     try {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('User not found');
+      }
+
       const tickets = await getTicketsForList(user, {
         channelId: selectedChannel || undefined,
         statusId: selectedStatus !== 'all' ? selectedStatus : undefined,
@@ -124,7 +178,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets,
         setIsLoading(false);
       }
     }
-  }, [user, selectedChannel, selectedStatus, selectedPriority, searchQuery, channelFilterState]);
+  }, [selectedChannel, selectedStatus, selectedPriority, searchQuery, channelFilterState]);
 
   // Add id to each ticket for DataTable keys
   const ticketsWithIds = useMemo(() => 
