@@ -174,6 +174,14 @@ You can monitor the initialization process through Docker logs:
 docker compose logs -f
 ```
 
+## Initial Login Credentials
+
+After successful initialization, the server logs will display a sample username and password that can be used for initial access:
+
+```bash
+docker compose logs -f
+```
+
 ## Verification
 
 1. Check service health:
