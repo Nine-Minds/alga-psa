@@ -36,7 +36,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   label,
 }): JSX.Element => {
   // Ensure value is never undefined/null/empty string for Radix
-  const safeValue = value || options[0]?.value || 'placeholder';
+  const safeValue = value || 'placeholder';
   const selectedOption = options.find(option => option.value === value);
 
   return (
