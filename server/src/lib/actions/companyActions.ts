@@ -3,6 +3,7 @@
 import { ICompany } from '@/interfaces/company.interfaces';
 import { createTenantKnex } from '@/lib/db';
 import { unparseCSV } from '@/lib/utils/csvParser';
+import { createDefaultTaxSettings } from './taxSettingsActions';
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {
   const { knex, tenant } = await createTenantKnex();
@@ -80,6 +81,9 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
   if (!createdCompany) {
     throw new Error('Failed to create company');
   }
+
+  // Create default tax settings for the new company
+  await createDefaultTaxSettings(createdCompany.company_id);
 
   return createdCompany;
 }
