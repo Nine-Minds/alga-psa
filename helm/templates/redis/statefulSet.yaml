@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         app: redis
+      annotations:
+        redis-password: "{{ .Values.config.redis.password }}"
     spec:
       containers:
       - name: redis
