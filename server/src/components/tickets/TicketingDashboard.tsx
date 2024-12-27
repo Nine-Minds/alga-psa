@@ -2,6 +2,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { ITicket, ITicketListItem, ITicketCategory } from '@/interfaces/ticket.interfaces';
@@ -30,22 +31,27 @@ interface TicketingDashboardProps {
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
 
-  const handleDeleteTicket = async (ticketId: string) => {
+  const handleDeleteTicket = (ticketId: string) => {
+    setTicketToDelete(ticketId);
+  };
+
+  const confirmDeleteTicket = async () => {
+    if (!ticketToDelete) return;
+    
     try {
       const user = await getCurrentUser();
       if (!user) {
         throw new Error('User not found');
       }
 
-      await deleteTicket(ticketId, user);
-      let isSubscribed = true;
-      fetchTickets(isSubscribed);
-      return () => {
-        isSubscribed = false;
-      };
+      await deleteTicket(ticketToDelete, user);
+      fetchTickets(true);
     } catch (error) {
       console.error('Failed to delete ticket:', error);
+    } finally {
+      setTicketToDelete(null);
     }
   };
 
@@ -328,6 +334,15 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
         open={isQuickAddOpen}
         onOpenChange={setIsQuickAddOpen}
         onTicketAdded={handleTicketAdded}
+      />
+      <ConfirmationDialog
+        isOpen={!!ticketToDelete}
+        onClose={() => setTicketToDelete(null)}
+        onConfirm={confirmDeleteTicket}
+        title="Delete Ticket"
+        message="Are you sure you want to delete this ticket? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
       />
     </div>
   );
