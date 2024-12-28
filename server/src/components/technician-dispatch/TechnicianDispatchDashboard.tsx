@@ -3,17 +3,17 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import TicketCard from './TicketCard';
 import TechnicianScheduleGrid from './TechnicianScheduleGrid';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
-import { WorkItemType, IWorkItem } from '@/interfaces/workItem.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
-import { searchWorkItems } from '@/lib/actions/workItemActions';
-import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry } from '@/lib/actions/scheduleActions';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
+import { WorkItemType, IWorkItem } from '../../interfaces/workItem.interfaces';
+import { IUser } from '../../interfaces/auth.interfaces';
+import { getAllUsers } from '../../lib/actions/user-actions/userActions';
+import { searchWorkItems } from '../../lib/actions/workItemActions';
+import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry } from '../../lib/actions/scheduleActions';
+import CustomSelect from '../../components/ui/CustomSelect';
 
-import { DragState } from '@/interfaces/drag.interfaces';
-import { HighlightedSlot } from '@/interfaces/schedule.interfaces';
-import { DropEvent } from '@/interfaces/event.interfaces';
+import { DragState } from '../../interfaces/drag.interfaces';
+import { HighlightedSlot } from '../../interfaces/schedule.interfaces';
+import { DropEvent } from '../../interfaces/event.interfaces';
 
 const TechnicianDispatchDashboard: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState('All');
@@ -147,7 +147,7 @@ const TechnicianDispatchDashboard: React.FC = () => {
     saveTimeoutRef.current = window.setTimeout(async () => {
       try {
         const result = await updateScheduleEntry(eventId, {
-          user_id: techId,
+          assigned_user_ids: [techId],
           scheduled_start: startTime,
           scheduled_end: endTime,
           updated_at: new Date()
@@ -163,14 +163,6 @@ const TechnicianDispatchDashboard: React.FC = () => {
     }, 500);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        window.clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
-
   const handleDrop = useCallback(async (dropEvent: DropEvent) => {
     if (dropEvent.type === 'workItem') {
       const workItem = workItems.find((w) => w.work_item_id === dropEvent.workItemId);
@@ -181,7 +173,7 @@ const TechnicianDispatchDashboard: React.FC = () => {
 
         const newEvent: Omit<IScheduleEntry, 'tenant' | 'entry_id' | 'created_at' | 'updated_at'> = {
           work_item_id: dropEvent.workItemId,
-          user_id: dropEvent.techId,
+          assigned_user_ids: [dropEvent.techId],
           scheduled_start: dropEvent.startTime,
           scheduled_end: endTime,
           status: 'Scheduled',
@@ -190,7 +182,7 @@ const TechnicianDispatchDashboard: React.FC = () => {
         };
 
         try {
-          const result = await addScheduleEntry(newEvent, { useCurrentUser: false });
+          const result = await addScheduleEntry(newEvent, { assignedUserIds: [dropEvent.techId] });
           if (result.success && result.entry) {
             setEvents((prevEvents) => [...prevEvents, result.entry]);
             setError(null);
@@ -212,7 +204,7 @@ const TechnicianDispatchDashboard: React.FC = () => {
         setEvents((prevEvents) =>
           prevEvents.map((e): Omit<IScheduleEntry, 'tenant'> =>
             e.entry_id === dropEvent.eventId
-              ? { ...e, user_id: dropEvent.techId, scheduled_start: dropEvent.startTime, scheduled_end: endTime }
+              ? { ...e, assigned_user_ids: [dropEvent.techId], scheduled_start: dropEvent.startTime, scheduled_end: endTime }
               : e
           )
         );

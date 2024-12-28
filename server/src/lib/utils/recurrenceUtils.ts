@@ -6,9 +6,8 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
     if (!entry.recurrence_pattern) {
       return [new Date(entry.scheduled_start)];
     }
-
     const pattern = entry.recurrence_pattern;
-    
+
     // Validate and normalize start date
     const dtstart = new Date(pattern.startDate);
     if (isNaN(dtstart.getTime())) {
@@ -34,13 +33,12 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       console.error('[generateOccurrences] Invalid frequency:', pattern.frequency);
       return [new Date(entry.scheduled_start)];
     }
-
     const rrule = new RRule({
       freq: RRule[freqKey] as Frequency,
       interval: pattern.interval,
       dtstart,
       until,
-      byweekday: pattern.daysOfWeek?.map((day):Weekday => {
+      byweekday: pattern.daysOfWeek?.map((day): Weekday => {
         const days = 'MO TU WE TH FR SA SU'.split(' ');
         if (day < 0 || day >= days.length) {
           console.warn('[generateOccurrences] Invalid day of week:', day);
@@ -53,6 +51,8 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       count: pattern.count
     });
 
+    console.log('[generateOccurrences] RRule:', rrule);
+
     // Normalize and validate range dates
     const rangeStart = new Date(start);
     if (isNaN(rangeStart.getTime())) {
@@ -60,6 +60,8 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       return [new Date(entry.scheduled_start)];
     }
     rangeStart.setHours(0, 0, 0, 0);
+    // subtract 1 second
+    rangeStart.setSeconds(rangeStart.getSeconds() - 1);
     
     const rangeEnd = new Date(end);
     if (isNaN(rangeEnd.getTime())) {
@@ -68,9 +70,14 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
     }
     rangeEnd.setHours(23, 59, 59, 999);
 
+    console.log('[generateOccurrences] Range start:', rangeStart.toISOString());
+    console.log('[generateOccurrences] Range end:', rangeEnd.toISOString());
+    console.log('[generateOccurrences] Entry start:', entry.scheduled_start);
+    console.log('[generateOccurrences] Entry end:', entry.scheduled_end);
+    console.log('[generateOccurrences] Entry recurrence pattern:', entry.recurrence_pattern);
+
     // Get the base occurrences using normalized dates
     const baseOccurrences = rrule.between(rangeStart, rangeEnd);
-    
     console.log('[generateOccurrences] Base occurrences:', {
       total: baseOccurrences.length,
       dates: baseOccurrences.map(d => d.toISOString()),
@@ -92,21 +99,18 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       startDate: masterStartDate.toISOString(),
       pattern: entry.recurrence_pattern
     });
-
     const occurrencesWithTime = baseOccurrences
       .filter(date => {
         // Compare dates without time
         const dateStr = date.toISOString().split('T')[0];
         const masterStr = masterStartDate.toISOString().split('T')[0];
         const shouldInclude = dateStr !== masterStr;
-        
         console.log('[generateOccurrences] Filtering occurrence:', {
           date: dateStr,
           masterDate: masterStr,
           included: shouldInclude,
           entryId: entry.entry_id
         });
-        
         return shouldInclude;
       })
       .map(date => {
@@ -148,7 +152,6 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
 
         // Convert to ISO date strings for comparison
         const exceptionDates = validExceptions.map(d => d.toISOString().split('T')[0]);
-        
         console.log('[generateOccurrences] Processing exceptions:', {
           totalExceptions: pattern.exceptions.length,
           validExceptions: validExceptions.length,

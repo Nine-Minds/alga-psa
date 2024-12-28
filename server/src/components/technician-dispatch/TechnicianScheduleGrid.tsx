@@ -1,6 +1,8 @@
+'use client';
+
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
+import { IUser } from '../../interfaces/auth.interfaces';
 import TimeHeader from './TimeHeader';
 import TechnicianRow from './TechnicianRow';
 
@@ -155,7 +157,7 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
 
     resizingRef.current = {
       eventId: event.entry_id,
-      techId: event.user_id,
+      techId: event.assigned_user_ids[0], // Use first assigned user
       startX: e.clientX,
       initialStart: new Date(event.scheduled_start),
       initialEnd: new Date(event.scheduled_end),
@@ -315,7 +317,7 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
       originalEnd: new Date(event.scheduled_end),
       currentStart: new Date(event.scheduled_start),
       currentEnd: new Date(event.scheduled_end),
-      currentTechId: event.user_id,
+      currentTechId: event.assigned_user_ids[0], // Use first assigned user
       clickOffset15MinIntervals
     };
 
@@ -411,7 +413,7 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
             ...event,
             scheduled_start: newStartTime,
             scheduled_end: newEndTime,
-            user_id: techId
+            assigned_user_ids: [techId] // Update to use assigned_user_ids
           };
         }
         return event;

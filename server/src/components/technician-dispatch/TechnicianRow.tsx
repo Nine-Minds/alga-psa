@@ -78,7 +78,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
       {events
         .filter(
           (event) =>
-            event.user_id === tech.user_id &&
+            event.assigned_user_ids.includes(tech.user_id) &&
             new Date(event.scheduled_start).toDateString() === selectedDate.toDateString()
         )
         .map((event): JSX.Element => {
@@ -88,7 +88,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
               ...event,
               scheduled_start: dragState.currentStart,
               scheduled_end: dragState.currentEnd,
-              user_id: dragState.currentTechId
+              assigned_user_ids: [dragState.currentTechId]
             }
             : event;
 
