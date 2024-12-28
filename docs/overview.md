@@ -104,7 +104,30 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Reporting and Analytics:** Reporting components are located under `server/src/components/Reports.tsx` and `server/src/components/billing-dashboard/Reports.tsx`.
 
-* **Scheduling:** Manages appointments and technician dispatch. See `server/src/lib/models/scheduleEntry.ts` and components under `server/src/components/time-management/ScheduleCalendar.tsx`.
+* **Scheduling:** Advanced scheduling system for managing appointments and technician dispatch:
+  * Core Components:
+    - Multi-agent assignment support
+    - Efficient recurring event handling
+    - Role-based access control
+    - Interactive calendar interface
+  * Key Files:
+    - `server/src/lib/models/scheduleEntry.ts`: Core scheduling logic
+    - `server/src/components/time-management/ScheduleCalendar.tsx`: Calendar UI
+    - `server/src/components/time-management/EntryPopup.tsx`: Entry management
+    - `server/migrations/20241227233407_create_schedule_entry_assignees.cjs`: Multi-agent support
+  * Features:
+    - Multiple technician assignments per entry
+    - Efficient recurring event storage
+    - On-demand virtual instance generation
+    - Exception handling for recurring series
+    - Drag-and-drop calendar interface
+    - Visual work item type distinction
+    - Real-time updates and conflict detection
+  * Performance Optimizations:
+    - Only master entries stored for recurrences
+    - Virtual instance calculation
+    - Efficient database indexing
+    - Optimized assignment queries
 
 * **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled in `server/src/pages/api/auth/[...nextauth]/route.ts`.
 

@@ -22,7 +22,8 @@ export interface HighlightedSlot {
 export interface IScheduleEntry extends TenantEntity {
   entry_id: string;
   work_item_id: string;
-  user_id: string;
+  /** Array of user IDs assigned to this schedule entry. Populated from schedule_entry_assignees table. */
+  assigned_user_ids: string[];  // Required since it's the only way to track assignments
   scheduled_start: Date;
   scheduled_end: Date;
   status: string;
@@ -32,8 +33,8 @@ export interface IScheduleEntry extends TenantEntity {
   work_item_type: WorkItemType;
   created_at: Date;
   updated_at: Date;
-  isRecurring?: boolean;
-  originalEntryId?: string;
+  is_recurring?: boolean;
+  original_entry_id?: string;
 }
 
 export interface IResource extends TenantEntity {

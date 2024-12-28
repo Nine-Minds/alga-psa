@@ -4,21 +4,36 @@ import React, { useState, useEffect } from 'react';
 import { DialogContent, DialogTitle } from '@radix-ui/react-dialog';
 import { Button } from '../ui/Button';
 import { format } from 'date-fns';
-import { IScheduleEntry, IRecurrencePattern } from '@/interfaces/schedule.interfaces';
+import { IScheduleEntry, IRecurrencePattern } from '../../interfaces/schedule.interfaces';
 import { WorkItemPicker } from './WorkItemPicker';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
-import { getWorkItemById } from '@/lib/actions/workItemActions';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { IWorkItem } from '../../interfaces/workItem.interfaces';
+import { getWorkItemById } from '../../lib/actions/workItemActions';
+import CustomSelect from '../ui/CustomSelect';
 import SelectedWorkItem from './SelectedWorkItem';
+import MultiUserPicker from '../ui/MultiUserPicker';
+import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 
 interface EntryPopupProps {
   event: IScheduleEntry | null;
   slot: any;
   onClose: () => void;
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'>) => void;
+  canAssignMultipleAgents: boolean;
+  users: IUserWithRoles[];
+  loading?: boolean;
+  error?: string | null;
 }
 
-const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave }) => {
+const EntryPopup: React.FC<EntryPopupProps> = ({ 
+  event, 
+  slot, 
+  onClose, 
+  onSave, 
+  canAssignMultipleAgents,
+  users,
+  loading = false,
+  error = null
+}) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>({
     entry_id: '',
     title: '',
@@ -28,9 +43,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave })
     created_at: new Date(),
     updated_at: new Date(),
     work_item_id: '',
-    user_id: '',
     status: '',
     work_item_type: 'project_task',
+    assigned_user_ids: [],
   });
   const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
@@ -42,6 +57,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave })
         ...event,
         scheduled_start: new Date(event.scheduled_start),
         scheduled_end: new Date(event.scheduled_end),
+        assigned_user_ids: event.assigned_user_ids,
       });
 
       // Load recurrence pattern if it exists
@@ -71,9 +87,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave })
         created_at: new Date(),
         updated_at: new Date(),
         work_item_id: '',
-        user_id: '',
         status: '',
         work_item_type: 'project_task',
+        assigned_user_ids: [],
       });
     }
   }, [event, slot]);
@@ -136,6 +152,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave })
     });
   };
 
+  const handleAssignedUsersChange = (userIds: string[]) => {
+    setEntryData(prev => ({
+      ...prev,
+      assigned_user_ids: userIds,
+    }));
+  };
+
   const handleSave = () => {
     const savedEntryData = {
       ...entryData,
@@ -174,6 +197,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({ event, slot, onClose, onSave })
             />
           )}
         </div>
+        {canAssignMultipleAgents && (
+          <div>
+            <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
+              Assigned Users
+            </label>
+            <MultiUserPicker
+              values={entryData.assigned_user_ids || []}
+              onValuesChange={handleAssignedUsersChange}
+              users={users}
+              loading={loading}
+              error={error}
+            />
+          </div>
+        )}
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Title

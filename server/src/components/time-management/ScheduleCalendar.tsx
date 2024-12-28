@@ -8,11 +8,14 @@ import moment from 'moment';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '../ui/Button';
 import EntryPopup from './EntryPopup';
-import { getCurrentUserScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@/lib/actions/scheduleActions';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { getCurrentUserScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '../../lib/actions/scheduleActions';
+import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
 import { produce } from 'immer';
 import { Dialog } from '@radix-ui/react-dialog';
-import { WorkItemType } from '@/interfaces/workItem.interfaces';
+import { WorkItemType } from '../../interfaces/workItem.interfaces';
+import { useUsers } from '../../hooks/useUsers';
+import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
+import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 
 const localizer = momentLocalizer(moment);
 
@@ -56,6 +59,25 @@ const ScheduleCalendar: React.FC = () => {
     </div>
   );
 
+  const { users, loading: usersLoading, error: usersError } = useUsers();
+  const [currentUserRoles, setCurrentUserRoles] = useState<string[]>([]);
+
+  // Fetch current user's roles on mount
+  useEffect(() => {
+    async function fetchUserRoles() {
+      const user = await getCurrentUser();
+      if (user?.roles) {
+        setCurrentUserRoles(user.roles.map(role => role.role_name));
+      }
+    }
+    fetchUserRoles();
+  }, []);
+
+  // Check if user can assign multiple agents
+  const canAssignMultipleAgents = currentUserRoles.some((role: string) => 
+    ['admin', 'manager'].includes(role.toLowerCase())
+  );
+
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -63,7 +85,7 @@ const ScheduleCalendar: React.FC = () => {
     const rangeEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
     const result = await getCurrentUserScheduleEntries(rangeStart, rangeEnd);
     if (result.success) {
-      setEvents(result.entries || []);
+      setEvents(result.entries);
     } else {
       setError(result.error || 'An unknown error occurred');
     }
@@ -93,17 +115,25 @@ const ScheduleCalendar: React.FC = () => {
   const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
     let updatedEntry;
     if (selectedEvent) {
-      const result = await updateScheduleEntry(selectedEvent.entry_id, {
+      // Ensure we're using the correct entry ID and maintaining virtual instance relationship
+      const entryToUpdate = {
         ...entryData,
-        recurrence_pattern: entryData.recurrence_pattern || null
-      });
+        recurrence_pattern: entryData.recurrence_pattern || null,
+        assigned_user_ids: entryData.assigned_user_ids,
+        // Only preserve original_entry_id if this is actually a virtual instance
+        ...(selectedEvent.entry_id.includes('_') ? { original_entry_id: selectedEvent.original_entry_id } : {})
+      };
+      
+      // Use the virtual instance's ID if it exists, otherwise use the master entry's ID
+      const entryId = selectedEvent.entry_id;
+      const result = await updateScheduleEntry(entryId, entryToUpdate);
       if (result.success && result.entry) {
         updatedEntry = result.entry;
       }
     } else {
       const result = await addScheduleEntry({
         ...entryData,
-        recurrence_pattern: entryData.recurrence_pattern || null
+        recurrence_pattern: entryData.recurrence_pattern || null,
       });
       if (result.success && result.entry) {
         updatedEntry = result.entry;
@@ -111,19 +141,42 @@ const ScheduleCalendar: React.FC = () => {
     }
 
     if (updatedEntry) {
-      setEvents(prevEvents => {
-        if (selectedEvent) {
-          return prevEvents.map((event):IScheduleEntry => 
-            event.entry_id === updatedEntry.entry_id ? updatedEntry : event
-          );
-        } else {
-          return [...prevEvents, updatedEntry];
-        }
-      });
+      // If this is a recurring entry, refresh all events to get updated virtual instances
+      if (updatedEntry.recurrence_pattern || (selectedEvent?.recurrence_pattern && !updatedEntry.recurrence_pattern)) {
+        await fetchEvents();
+      } else {
+        // For non-recurring entries, just update the local state
+        setEvents(prevEvents => {
+          if (selectedEvent) {
+            return prevEvents.map((event):IScheduleEntry => 
+              event.entry_id === updatedEntry.entry_id ? updatedEntry : event
+            );
+          } else {
+            return [...prevEvents, updatedEntry];
+          }
+        });
+      }
     }
 
     setShowEntryPopup(false);
     setSelectedEvent(null);
+  };
+
+  // Pass canAssignMultipleAgents to EntryPopup
+  const renderEntryPopup = () => {
+    if (!showEntryPopup) return null;
+    return (
+      <EntryPopup
+        event={selectedEvent}
+        slot={selectedSlot}
+        onClose={handleEntryPopupClose}
+        onSave={handleEntryPopupSave}
+        canAssignMultipleAgents={canAssignMultipleAgents}
+        users={usersLoading ? [] : (users || [])}
+        loading={usersLoading}
+        error={usersError}
+      />
+    );
   };
 
   const handleNavigate = useCallback((newDate: Date, view: View, action: NavigateAction) => {
@@ -165,15 +218,47 @@ const ScheduleCalendar: React.FC = () => {
   };
 
   const handleEventResize = async ({ event, start, end }: any) => {
-    const updatedEvent = { ...event, scheduled_start: start, scheduled_end: end };
+    const updatedEvent = { 
+      ...event, 
+      scheduled_start: start, 
+      scheduled_end: end,
+      assigned_user_ids: event.assigned_user_ids, // Preserve assigned users
+      // Only preserve original_entry_id if this is a virtual instance
+      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
+    };
+    
+    // Update locally first for immediate feedback
     updateEventLocally(updatedEvent);
-    await updateScheduleEntry(event.entry_id, updatedEvent);
+    
+    // Update in the database
+    const result = await updateScheduleEntry(event.entry_id, updatedEvent);
+    
+    // If this is a recurring entry or was a recurring entry, refresh all events
+    if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
+      await fetchEvents();
+    }
   };
 
   const handleEventDrop = async ({ event, start, end }: any) => {
-    const updatedEvent = { ...event, scheduled_start: start, scheduled_end: end };
+    const updatedEvent = { 
+      ...event, 
+      scheduled_start: start, 
+      scheduled_end: end,
+      assigned_user_ids: event.assigned_user_ids, // Preserve assigned users
+      // Only preserve original_entry_id if this is a virtual instance
+      ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
+    };
+    
+    // Update locally first for immediate feedback
     updateEventLocally(updatedEvent);
-    await updateScheduleEntry(event.entry_id, updatedEvent);
+    
+    // Update in the database
+    const result = await updateScheduleEntry(event.entry_id, updatedEvent);
+    
+    // If this is a recurring entry or was a recurring entry, refresh all events
+    if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
+      await fetchEvents();
+    }
   };
 
   const eventStyleGetter = (event: IScheduleEntry) => {
@@ -343,12 +428,7 @@ const ScheduleCalendar: React.FC = () => {
         />
       </div>
       <Dialog open={showEntryPopup} onOpenChange={setShowEntryPopup}>
-        <EntryPopup
-          event={selectedEvent}
-          slot={selectedSlot}
-          onClose={handleEntryPopupClose}
-          onSave={handleEntryPopupSave}
-        />
+        {renderEntryPopup()}
       </Dialog>
     </div>
   );

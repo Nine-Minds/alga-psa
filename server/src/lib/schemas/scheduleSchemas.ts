@@ -19,7 +19,7 @@ export const recurrencePatternSchema = z.object({
 export const scheduleEntrySchema = tenantSchema.extend({
   entry_id: z.string().optional(), // Optional for creation
   work_item_id: z.string(),
-  user_id: z.string(),
+  assigned_user_ids: z.array(z.string()).min(1), // At least one assigned user required
   scheduled_start: z.date(),
   scheduled_end: z.date(),
   status: z.string(),
@@ -33,14 +33,17 @@ export const scheduleEntrySchema = tenantSchema.extend({
   originalEntryId: z.string().optional()
 });
 
+// Input schema omits system-managed fields
 export const scheduleEntryInputSchema = scheduleEntrySchema.omit({
   entry_id: true,
   created_at: true,
   updated_at: true
 });
 
+// Update schema makes all fields optional
 export const scheduleEntryUpdateSchema = scheduleEntrySchema.partial();
 
+// Query schemas
 export const getScheduleEntriesSchema = z.object({
   start: z.date(),
   end: z.date()

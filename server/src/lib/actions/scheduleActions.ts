@@ -20,7 +20,8 @@ export async function getScheduleEntries(start: Date, end: Date): Promise<Schedu
 export async function getScheduleEntriesByUser(start: Date, end: Date, userId: string): Promise<ScheduleActionResult<IScheduleEntry[]>> {
   try {
     const entries = await ScheduleEntry.getAll(start, end);
-    const userEntries = entries.filter(entry => entry.user_id === userId);
+    // Filter entries where user is assigned
+    const userEntries = entries.filter(entry => entry.assigned_user_ids.includes(userId));
     return { success: true, entries: userEntries };
   } catch (error) {
     console.error('Error fetching user schedule entries:', error);
@@ -41,9 +42,36 @@ export async function getCurrentUserScheduleEntries(start: Date, end: Date): Pro
   }
 }
 
-export async function addScheduleEntry(entry: Omit<IScheduleEntry, 'entry_id' | 'created_at' | 'updated_at' | 'tenant'>, options?: { useCurrentUser?: boolean }) {
+export async function addScheduleEntry(
+  entry: Omit<IScheduleEntry, 'entry_id' | 'created_at' | 'updated_at' | 'tenant'>, 
+  options?: { 
+    assignedUserIds?: string[];
+  }
+) {
   try {
-    const createdEntry = await ScheduleEntry.create(entry, options);
+    // Validate work item ID if provided
+    if (entry.work_item_id === '') {
+      return { 
+        success: false, 
+        error: 'Work item ID cannot be empty. Please select a valid work item or remove the work item reference.' 
+      };
+    }
+
+    let assignedUserIds: string[];
+    
+    if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+      assignedUserIds = [user.user_id];
+    } else {
+      assignedUserIds = options.assignedUserIds;
+    }
+    
+    const createdEntry = await ScheduleEntry.create(entry, {
+      assignedUserIds
+    });
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
@@ -51,8 +79,12 @@ export async function addScheduleEntry(entry: Omit<IScheduleEntry, 'entry_id' | 
   }
 }
 
-export async function updateScheduleEntry(entry_id: string, entry: Partial<IScheduleEntry>) {
+export async function updateScheduleEntry(
+  entry_id: string, 
+  entry: Partial<IScheduleEntry>
+) {
   try {
+    // If no assigned_user_ids provided, keep existing assignments
     const updatedEntry = await ScheduleEntry.update(entry_id, entry);
     return { success: true, entry: updatedEntry };
   } catch (error) {
