@@ -1,7 +1,3 @@
-Below is a concise **Getting Started** guide that you can copy into your **`README.md`**. It assumes the final structure we discussed, with a Dockerized Node/Puppeteer server and a Next.js control panel.
-
----
-
 # Getting Started
 
 Welcome to the **AI-Driven Automation Tool**! This tool allows an AI (e.g., OpenAI GPT-4) to script and control a real web browser (via Puppeteer), stream its screen in real time, and optionally ask you for clarifications during the process.
@@ -36,7 +32,7 @@ In the `tools/ai-automation` directory:
 
 1. **Build the Docker image**:
    ```bash
-   docker build -t ai-automation .
+   docker build --platform linux/amd64 -t ai-automation .
    ```
 
 2. **Run the Docker container**:

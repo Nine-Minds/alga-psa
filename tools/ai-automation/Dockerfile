@@ -1,39 +1,46 @@
-FROM node:18-slim
+FROM node:18-bullseye-slim
 
-# Install dependencies for Puppeteer
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    fonts-liberation \
-    libasound2 \
-    libatk1.0-0 \
-    libc6 \
-    libdbus-1-3 \
-    libexpat1 \
-    libgtk-3-0 \
-    libnss3 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    libgbm-dev \
-    wget \
-    --no-install-recommends \
-  && rm -rf /var/lib/apt/lists/*
+# Environment variables
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROME_PATH=/usr/bin/chromium
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:99
 
+# Update package list and install essential dependencies
+RUN apt-get update -qq && \
+    apt-get install -qq -y --no-install-recommends \
+      ca-certificates \
+      gnupg2 \
+      apt-transport-https \
+      software-properties-common && \
+    apt-get update -qq
+
+# Install Chromium and dependencies
+RUN apt-get install -qq -y --no-install-recommends \
+      libgconf-2-4 \
+      libxss1 \
+      libxtst6 \
+      chromium \
+      chromium-sandbox \
+      xvfb \
+      fonts-ipafont-gothic \
+      fonts-wqy-zenhei && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create and switch to non-root user
+RUN useradd -m appuser
 WORKDIR /usr/src/app
 
-COPY package*.json ./
+# Copy package files and install dependencies
+COPY --chown=appuser:appuser package*.json ./
 RUN npm install
 
-COPY . .
+# Copy application files
+COPY --chown=appuser:appuser . .
 
-EXPOSE 4000
-CMD ["npm", "run", "dev"]
+USER appuser
+
+# Start Xvfb and run the app
+CMD Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 & \
+    npm run dev

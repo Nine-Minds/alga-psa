@@ -86,14 +86,41 @@ app.post('/api/node-script', (async (req: Request<{}, any, ScriptRequest>, res: 
 
 // Start server
 const PORT = process.env.PORT || 4000;
+// Handle process cleanup
+process.on('SIGTERM', async () => {
+  await puppeteerManager.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  await puppeteerManager.close();
+  process.exit(0);
+});
+
+// Initialize server
 (async () => {
   try {
-    await puppeteerManager.init();
+    // Ensure only one Puppeteer instance
+    // Initialize Puppeteer with retries
+    await puppeteerManager.init({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox'
+      ]
+    }, 5); // 5 retries with backoff
+
+    // Verify Puppeteer is initialized
+    if (!puppeteerManager.getPage()) {
+      throw new Error('Puppeteer failed to initialize');
+    }
+
     server.listen(PORT, () => {
       console.log(`Server with WebSocket listening on port ${PORT}`);
     });
   } catch (error) {
     console.error('Failed to initialize Puppeteer:', error);
+    await puppeteerManager.close();
     process.exit(1);
   }
 })();
