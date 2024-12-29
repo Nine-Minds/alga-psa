@@ -22,7 +22,13 @@ const createTool = (
 
 export const observeTool = createTool(
   'observe_browser',
-  'Retrieves the current state of the browser page (URL, title, HTML).'
+  'Retrieves information about elements matching a CSS selector on the current page, along with page URL and title.',
+  {
+    selector: {
+      type: "string",
+      description: "CSS selector to find elements on the page. If omitted, returns just page info without elements.",
+    }
+  }
 );
 
 export const scriptTool = createTool(
@@ -36,17 +42,5 @@ export const scriptTool = createTool(
   },
   ['code']
 );
-
-// export const nodeScriptTool = createTool(
-//   'execute_node_script',
-//   'Executes arbitrary Node.js code in the server context with access to Puppeteer.',
-//   {
-//     code: {
-//       type: "string",
-//       description: 'The Node.js code to run on the server with Puppeteer access.',
-//     },
-//   },
-//   ['code']
-// );
 
 export const tools = [observeTool, scriptTool]; //, nodeScriptTool];

@@ -134,7 +134,7 @@ export class ChatStreamService {
                   // tool_result: {
                     tool_use_id: tool.id,
                   // },
-                  content: [{ type: 'text', text: result }],
+                  content: [{ type: 'text', text: JSON.stringify(result) }],
                 }]
               });
 
