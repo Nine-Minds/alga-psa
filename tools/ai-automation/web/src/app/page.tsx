@@ -1,101 +1,247 @@
-import Image from "next/image";
+"use client";
+import React, { useEffect, useState, useRef } from 'react';
+import io from 'socket.io-client';
+import Image from 'next/image';
+import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radix-ui/themes';
+import { Theme } from '@radix-ui/themes';
+import { prompts } from '../tools/prompts';
 
-export default function Home() {
+export default function ControlPanel() {
+  interface ChatMessage {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }
+
+  const [imgSrc, setImgSrc] = useState('');
+  const [log, setLog] = useState<string[]>([]);
+  const [userMessage, setUserMessage] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Auto-scroll when messages update
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Styles for message formatting
+  const preStyle: React.CSSProperties = {
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word', // Using overflowWrap instead of wordWrap
+    background: 'var(--color-panel)',
+    padding: '8px',
+    borderRadius: '4px',
+    margin: '4px 0'
+  };
+
+  useEffect(() => {
+    setMessages([{
+      role: 'system',
+      content: prompts.chatInterface
+    }]);
+  }, []);
+
+  useEffect(() => {
+    const socket = io('http://localhost:4000');
+    socket.on('connect', () => console.log('WS connected'));
+    socket.on('screenshot', (data: string) => {
+      setImgSrc(`data:image/png;base64,${data}`);
+    });
+    socket.on('disconnect', () => console.log('WS disconnected'));
+    return () => { socket.disconnect(); };
+  }, []);
+
+  const sendMessageToAI = async () => {
+    if (!userMessage.trim()) return;
+    setIsGenerating(true);
+
+    // Add the user message
+    const newMessages: ChatMessage[] = [
+      ...messages,
+      { role: 'user', content: userMessage.trim() },
+    ];
+    setMessages(newMessages);
+    setUserMessage('');
+
+    try {
+      // Set up EventSource for SSE with the messages as query params
+      const queryParams = new URLSearchParams({
+        messages: JSON.stringify(newMessages)
+      });
+      const eventSource = new EventSource(`/api/ai?${queryParams.toString()}`);
+      let currentAssistantMessage = '';
+
+      // Handle incoming events
+      eventSource.onmessage = (event) => {
+        console.log('Received SSE message:', event);
+      };
+
+      eventSource.addEventListener('token', (event) => {
+        console.log('Received token:', event.data);
+        currentAssistantMessage += event.data;
+        setMessages(prev => {
+          const updated = [...prev];
+          const lastIndex = updated.length - 1;
+          if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
+            updated[lastIndex].content = currentAssistantMessage;
+          } else {
+            updated.push({
+              role: 'assistant',
+              content: currentAssistantMessage
+            });
+          }
+          return updated;
+        });
+      });
+
+      eventSource.addEventListener('tool_use', (event) => {
+        console.log('Tool use requested:', event.data);
+        setLog(prev => [...prev, `Tool Use Requested: ${event.data}`]);
+      });
+
+      eventSource.addEventListener('tool_result', (event) => {
+        console.log('Tool result:', event.data);
+        setLog(prev => [...prev, `Tool Result: ${event.data}`]);
+      });
+
+      // Handle errors
+      eventSource.onerror = () => {
+        // Only log and cleanup if we haven't received a done event
+        if (eventSource.readyState !== EventSource.CLOSED) {
+          console.error('SSE connection error');
+          eventSource.close();
+          setIsGenerating(false);
+        }
+      };
+
+      // Wait for the response to complete
+      await new Promise((resolve) => {
+        eventSource.addEventListener('done', () => {
+          console.log('Received done event, closing connection');
+          eventSource.close();
+          setIsGenerating(false);
+          resolve(null);
+        });
+      });
+    } catch (error) {
+      console.error('Error in AI processing:', error);
+      setLog(prev => [...prev, `Error: ${error instanceof Error ? error.message : String(error)}`]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Theme appearance="dark" accentColor="purple" grayColor="slate">
+      <Box p="8" style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
+        <Flex direction="column" gap="8" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <Text size="8" weight="bold">AI Automation Control Panel</Text>
+          
+          <Grid columns={{ initial: '1', lg: '3' }} gap="8">
+            {/* Sidebar */}
+            <Flex direction="column" gap="4" style={{ gridColumn: 'span 2' }}>
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Chat with AI</Text>
+                  <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
+                    <Flex direction="column" gap="2" p="2">
+                      {messages.map((msg, idx) => (
+                        <Box key={idx}>
+                          <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
+                            <strong>
+                              {msg.role === 'user'
+                                ? 'User'
+                                : msg.role === 'assistant'
+                                ? 'AI'
+                                : 'System'}
+                              :
+                            </strong>
+                          </Text>
+                          {msg.content.split('\n').map((line, lineIdx) => {
+                            if (line.includes('Function call:') || line.includes('Function response:')) {
+                              return (
+                                <pre key={lineIdx} style={preStyle}>
+                                  {line}
+                                  {line.includes('Function response:') ? '\n' : ''}
+                                </pre>
+                              );
+                            }
+                            return (
+                              <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
+                                {line}
+                              </pre>
+                            );
+                          })}
+                          <div ref={messagesEndRef} />
+                        </Box>
+                      ))}
+                    </Flex>
+                  </ScrollArea>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+                  <TextArea
+                    value={userMessage}
+                    onChange={(e) => setUserMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Type your message here..."
+                    style={{ backgroundColor: 'var(--color-panel)' }}
+                  />
+                  <Button 
+                    onClick={sendMessageToAI} 
+                    disabled={isGenerating}
+                    style={{ width: '100%' }}
+                  >
+                    {isGenerating ? 'Thinking...' : 'Send'}
+                  </Button>
+                </Flex>
+              </Card>
+            </Flex>
+
+            {/* Main Content */}
+            <Flex direction="column" gap="8" style={{ gridColumn: 'span 1' }}>
+              {/* Live Feed */}
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Live Browser Feed</Text>
+                  <Box style={{ position: 'relative', aspectRatio: '4/3', minHeight: '400px', backgroundColor: 'var(--color-panel)' }}>
+                    {imgSrc ? (
+                      <Image
+                        src={imgSrc}
+                        alt="Live Feed"
+                        fill
+                        style={{ objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <Flex align="center" justify="center" style={{ position: 'absolute', inset: 0 }}>
+                        <Text color="gray">Connecting to feed...</Text>
+                      </Flex>
+                    )}
+                  </Box>
+                </Flex>
+              </Card>
+
+              {/* Logs */}
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Activity Log</Text>
+                  <ScrollArea style={{ maxHeight: '400px' }}>
+                    <Flex direction="column" gap="2">
+                      {log.map((entry, i) => (
+                        <Box key={i} p="2" style={{ backgroundColor: 'var(--color-panel)' }}>
+                          <Text size="2">{entry}</Text>
+                        </Box>
+                      ))}
+                    </Flex>
+                  </ScrollArea>
+                </Flex>
+              </Card>
+            </Flex>
+          </Grid>
+        </Flex>
+      </Box>
+    </Theme>
   );
 }

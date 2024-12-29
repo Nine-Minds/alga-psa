@@ -1,11 +1,30 @@
 version: '3.8'
 
 services:
-  postgres:
-    image: ankane/pgvector:latest
+  ai-automation:
+    build:
+      context: ./tools/ai-automation
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-sebastian}_ai_automation
     environment:
-      POSTGRES_DB: ${DB_NAME_SERVER:-sebastian_test}
-      POSTGRES_USER: ${DB_USER_SERVER:-test_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD_SERVER:-test_password}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      DISPLAY: :99
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "4000:4000"
+    volumes:
+      - ./tools/ai-automation:/usr/src/app
+    security_opt:
+      - seccomp=unconfined
+    cap_add:
+      - SYS_ADMIN
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: ${APP_NAME:-sebastian}_app-network
+    driver: bridge
