@@ -6,11 +6,22 @@ import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radi
 import { Theme } from '@radix-ui/themes';
 
 export default function ControlPanel() {
+  interface ChatMessage {
+    role: 'system' | 'user' | 'assistant';
+    content: string;
+  }
+
   const [imgSrc, setImgSrc] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [scriptInput, setScriptInput] = useState('');
-  const [aiPrompt, setAiPrompt] = useState('');
+  const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: 'system',
+      content: 'You are a helpful assistant that generates Puppeteer scripts.'
+    }
+  ]);
 
   useEffect(() => {
     const socket = io('http://localhost:4000');
@@ -22,32 +33,47 @@ export default function ControlPanel() {
     return () => { socket.disconnect(); };
   }, []);
 
-  const generateScript = async () => {
+  const sendMessageToAI = async () => {
+    if (!userMessage.trim()) return;
+
+      const newMessages: ChatMessage[] = [
+        ...messages,
+        {
+          role: 'user' as const,
+          content: userMessage.trim(),
+        },
+      ];
+    setMessages(newMessages);
+    setUserMessage('');
     setIsGenerating(true);
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that generates Puppeteer scripts'
-            },
-            {
-              role: 'user',
-              content: aiPrompt
-            }
-          ]
-        })
+        body: JSON.stringify({ messages: newMessages }),
       });
-      const { reply } = await res.json();
-      const { code } = JSON.parse(reply);
-      setScriptInput(code);
-      setLog(prev => [...prev, `Generated script: ${code}`]);
+      const data = await res.json();
+      const aiReply = data.reply || '';
+
+      const updatedMessages: ChatMessage[] = [
+        ...newMessages,
+        { role: 'assistant' as const, content: aiReply },
+      ];
+      setMessages(updatedMessages);
+
+      try {
+        const parsed = JSON.parse(aiReply);
+        if (parsed.code) {
+          setScriptInput(parsed.code);
+          setLog(prev => [...prev, 'Extracted code from AI reply.']);
+        }
+      } catch {
+        console.warn('No valid JSON `code` found in AI response.');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      setLog(prev => [...prev, `Error: ${errorMessage}`]);
+      setLog(prev => [...prev, `Error from AI: ${errorMessage}`]);
     } finally {
       setIsGenerating(false);
     }
@@ -74,25 +100,36 @@ export default function ControlPanel() {
             <Flex direction="column" gap="4" style={{ gridColumn: 'span 1' }}>
               <Card>
                 <Flex direction="column" gap="4">
-                  <Text size="5" weight="bold">Controls</Text>
-                  
-                  <Flex direction="column" gap="3">
-                    <Text as="label" size="2" weight="medium">AI Prompt</Text>
-                    <TextArea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      rows={4}
-                      placeholder="Describe what you want to automate"
-                      style={{ backgroundColor: 'var(--color-panel)' }}
-                    />
-                    <Button 
-                      onClick={generateScript}
-                      disabled={isGenerating}
-                      style={{ width: '100%' }}
-                    >
-                      {isGenerating ? 'Generating...' : 'Generate Script'}
-                    </Button>
-                  </Flex>
+                  <Text size="5" weight="bold">Chat with AI</Text>
+                  <ScrollArea style={{ maxHeight: '300px', backgroundColor: 'var(--color-panel)' }}>
+                    <Flex direction="column" gap="2" p="2">
+                      {messages.map((msg, idx) => (
+                        <Box key={idx}>
+                          <Text color={msg.role === 'user' ? 'blue' : 'green'}>
+                            <strong>{msg.role === 'user' ? 'User' : msg.role === 'assistant' ? 'AI' : 'System'}:</strong>
+                          </Text>
+                          <Text size="2" style={{ whiteSpace: 'pre-wrap' }}>
+                            {msg.content}
+                          </Text>
+                        </Box>
+                      ))}
+                    </Flex>
+                  </ScrollArea>
+
+                  <TextArea
+                    value={userMessage}
+                    onChange={(e) => setUserMessage(e.target.value)}
+                    rows={3}
+                    placeholder="Type your message here..."
+                    style={{ backgroundColor: 'var(--color-panel)' }}
+                  />
+                  <Button 
+                    onClick={sendMessageToAI} 
+                    disabled={isGenerating}
+                    style={{ width: '100%' }}
+                  >
+                    {isGenerating ? 'Thinking...' : 'Send'}
+                  </Button>
 
                   <Flex direction="column" gap="3">
                     <Text as="label" size="2" weight="medium">Script Input</Text>
