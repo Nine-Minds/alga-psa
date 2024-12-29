@@ -16,12 +16,15 @@ export default function ControlPanel() {
   const [scriptInput, setScriptInput] = useState('');
   const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  
+  useEffect(() => {
+    // Initialize with system message
+    setMessages([{
       role: 'system',
       content: 'You are a helpful assistant that generates Puppeteer scripts.'
-    }
-  ]);
+    }]);
+  }, []);
 
   useEffect(() => {
     const socket = io('http://localhost:4000');
@@ -36,13 +39,14 @@ export default function ControlPanel() {
   const sendMessageToAI = async () => {
     if (!userMessage.trim()) return;
 
-      const newMessages: ChatMessage[] = [
-        ...messages,
-        {
-          role: 'user' as const,
-          content: userMessage.trim(),
-        },
-      ];
+    // Keep all previous messages for context
+    const newMessages: ChatMessage[] = [
+      ...messages,
+      {
+        role: 'user' as const,
+        content: userMessage.trim(),
+      },
+    ];
     setMessages(newMessages);
     setUserMessage('');
     setIsGenerating(true);
@@ -54,22 +58,44 @@ export default function ControlPanel() {
         body: JSON.stringify({ messages: newMessages }),
       });
       const data = await res.json();
-      const aiReply = data.reply || '';
-
-      const updatedMessages: ChatMessage[] = [
-        ...newMessages,
-        { role: 'assistant' as const, content: aiReply },
-      ];
+      
+      // Parse the response blocks
+      const responseBlocks = data.reply.split('\n');
+      
+      // Add each response block as a separate message
+      const updatedMessages = [...newMessages];
+      
+      for (const block of responseBlocks) {
+        if (block.startsWith('[Tool Use:')) {
+          // Add tool use as assistant message
+          updatedMessages.push({
+            role: 'assistant' as const,
+            content: block
+          });
+        } else if (block.trim()) {
+          // Add non-empty text blocks as assistant messages
+          updatedMessages.push({
+            role: 'assistant' as const,
+            content: block
+          });
+        }
+      }
+      
       setMessages(updatedMessages);
 
-      try {
-        const parsed = JSON.parse(aiReply);
-        if (parsed.code) {
-          setScriptInput(parsed.code);
-          setLog(prev => [...prev, 'Extracted code from AI reply.']);
+      // Try to find and parse any code blocks in the response
+      for (const block of responseBlocks) {
+        try {
+          const parsed = JSON.parse(block);
+          if (parsed.code) {
+            setScriptInput(parsed.code);
+            setLog(prev => [...prev, 'Extracted code from AI reply.']);
+            break;
+          }
+        } catch {
+          // Skip blocks that aren't valid JSON
+          continue;
         }
-      } catch {
-        console.warn('No valid JSON `code` found in AI response.');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
