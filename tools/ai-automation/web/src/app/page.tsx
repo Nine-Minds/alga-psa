@@ -17,9 +17,8 @@ export default function ControlPanel() {
   const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  
+
   useEffect(() => {
-    // Initialize with system message
     setMessages([{
       role: 'system',
       content: 'You are a helpful assistant that generates Puppeteer scripts.'
@@ -38,68 +37,79 @@ export default function ControlPanel() {
 
   const sendMessageToAI = async () => {
     if (!userMessage.trim()) return;
+    setIsGenerating(true);
 
-    // Keep all previous messages for context
+    // Add the user message
     const newMessages: ChatMessage[] = [
       ...messages,
-      {
-        role: 'user' as const,
-        content: userMessage.trim(),
-      },
+      { role: 'user', content: userMessage.trim() },
     ];
     setMessages(newMessages);
     setUserMessage('');
-    setIsGenerating(true);
 
     try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+      // Set up EventSource for SSE with the messages as query params
+      const queryParams = new URLSearchParams({
+        messages: JSON.stringify(newMessages)
       });
-      const data = await res.json();
-      
-      // Parse the response blocks
-      const responseBlocks = data.reply.split('\n');
-      
-      // Add each response block as a separate message
-      const updatedMessages = [...newMessages];
-      
-      for (const block of responseBlocks) {
-        if (block.startsWith('[Tool Use:')) {
-          // Add tool use as assistant message
-          updatedMessages.push({
-            role: 'assistant' as const,
-            content: block
-          });
-        } else if (block.trim()) {
-          // Add non-empty text blocks as assistant messages
-          updatedMessages.push({
-            role: 'assistant' as const,
-            content: block
-          });
-        }
-      }
-      
-      setMessages(updatedMessages);
+      const eventSource = new EventSource(`/api/ai?${queryParams.toString()}`);
+      let currentAssistantMessage = '';
 
-      // Try to find and parse any code blocks in the response
-      for (const block of responseBlocks) {
-        try {
-          const parsed = JSON.parse(block);
-          if (parsed.code) {
-            setScriptInput(parsed.code);
-            setLog(prev => [...prev, 'Extracted code from AI reply.']);
-            break;
+      // Handle incoming events
+      eventSource.onmessage = (event) => {
+        console.log('Received SSE message:', event);
+      };
+
+      eventSource.addEventListener('token', (event) => {
+        console.log('Received token:', event.data);
+        currentAssistantMessage += event.data;
+        setMessages(prev => {
+          const updated = [...prev];
+          const lastIndex = updated.length - 1;
+          if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
+            updated[lastIndex].content = currentAssistantMessage;
+          } else {
+            updated.push({
+              role: 'assistant',
+              content: currentAssistantMessage
+            });
           }
-        } catch {
-          // Skip blocks that aren't valid JSON
-          continue;
+          return updated;
+        });
+      });
+
+      eventSource.addEventListener('tool_use', (event) => {
+        console.log('Tool use requested:', event.data);
+        setLog(prev => [...prev, `Tool Use Requested: ${event.data}`]);
+      });
+
+      eventSource.addEventListener('tool_result', (event) => {
+        console.log('Tool result:', event.data);
+        setLog(prev => [...prev, `Tool Result: ${event.data}`]);
+      });
+
+      // Handle errors
+      eventSource.onerror = () => {
+        // Only log and cleanup if we haven't received a done event
+        if (eventSource.readyState !== EventSource.CLOSED) {
+          console.error('SSE connection error');
+          eventSource.close();
+          setIsGenerating(false);
         }
-      }
+      };
+
+      // Wait for the response to complete
+      await new Promise((resolve) => {
+        eventSource.addEventListener('done', () => {
+          console.log('Received done event, closing connection');
+          eventSource.close();
+          setIsGenerating(false);
+          resolve(null);
+        });
+      });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      setLog(prev => [...prev, `Error from AI: ${errorMessage}`]);
+      console.error('Error in AI processing:', error);
+      setLog(prev => [...prev, `Error: ${error instanceof Error ? error.message : String(error)}`]);
     } finally {
       setIsGenerating(false);
     }
@@ -131,8 +141,15 @@ export default function ControlPanel() {
                     <Flex direction="column" gap="2" p="2">
                       {messages.map((msg, idx) => (
                         <Box key={idx}>
-                          <Text color={msg.role === 'user' ? 'blue' : 'green'}>
-                            <strong>{msg.role === 'user' ? 'User' : msg.role === 'assistant' ? 'AI' : 'System'}:</strong>
+                          <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'}>
+                            <strong>
+                              {msg.role === 'user'
+                                ? 'User'
+                                : msg.role === 'assistant'
+                                ? 'AI'
+                                : 'System'}
+                              :
+                            </strong>
                           </Text>
                           <Text size="2" style={{ whiteSpace: 'pre-wrap' }}>
                             {msg.content}
