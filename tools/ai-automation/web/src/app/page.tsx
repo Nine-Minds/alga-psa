@@ -9,6 +9,8 @@ export default function ControlPanel() {
   const [imgSrc, setImgSrc] = useState('');
   const [log, setLog] = useState<string[]>([]);
   const [scriptInput, setScriptInput] = useState('');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     const socket = io('http://localhost:4000');
@@ -19,6 +21,37 @@ export default function ControlPanel() {
     socket.on('disconnect', () => console.log('WS disconnected'));
     return () => { socket.disconnect(); };
   }, []);
+
+  const generateScript = async () => {
+    setIsGenerating(true);
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that generates Puppeteer scripts'
+            },
+            {
+              role: 'user',
+              content: aiPrompt
+            }
+          ]
+        })
+      });
+      const { reply } = await res.json();
+      const { code } = JSON.parse(reply);
+      setScriptInput(code);
+      setLog(prev => [...prev, `Generated script: ${code}`]);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setLog(prev => [...prev, `Error: ${errorMessage}`]);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const runScript = async (code: string) => {
     const res = await fetch('/server/api/script', {
@@ -43,6 +76,24 @@ export default function ControlPanel() {
                 <Flex direction="column" gap="4">
                   <Text size="5" weight="bold">Controls</Text>
                   
+                  <Flex direction="column" gap="3">
+                    <Text as="label" size="2" weight="medium">AI Prompt</Text>
+                    <TextArea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      rows={4}
+                      placeholder="Describe what you want to automate"
+                      style={{ backgroundColor: 'var(--color-panel)' }}
+                    />
+                    <Button 
+                      onClick={generateScript}
+                      disabled={isGenerating}
+                      style={{ width: '100%' }}
+                    >
+                      {isGenerating ? 'Generating...' : 'Generate Script'}
+                    </Button>
+                  </Flex>
+
                   <Flex direction="column" gap="3">
                     <Text as="label" size="2" weight="medium">Script Input</Text>
                     <TextArea
