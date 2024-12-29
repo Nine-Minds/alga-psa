@@ -10,14 +10,35 @@ interface ScriptRequest {
 
 const app: express.Application = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:3001',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
 io.engine.on("connection", (rawSocket) => {
-  rawSocket.setTimeout(0);
-  rawSocket.setNoDelay(true);
-  rawSocket.setKeepAlive(true, 0);
+  try {
+    if (rawSocket.setNoDelay) rawSocket.setNoDelay(true);
+    if (rawSocket.setKeepAlive) rawSocket.setKeepAlive(true, 0);
+  } catch (err) {
+    console.error('Error configuring WebSocket:', err);
+  }
 });
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
+// const io = new Server(server, {
+//   cors: {
+//     origin: 'http://localhost:3001',
+//     methods: ['GET', 'POST'],
+//     credentials: true
+//   }
+// });
 app.use(express.json());
 
 // WebSocket connection for screenshot streaming

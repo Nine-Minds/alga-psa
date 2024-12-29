@@ -1,101 +1,111 @@
-import Image from "next/image";
+"use client";
+import React, { useEffect, useState } from 'react';
+import io from 'socket.io-client';
+import Image from 'next/image';
+import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radix-ui/themes';
+import { Theme } from '@radix-ui/themes';
 
-export default function Home() {
+export default function ControlPanel() {
+  const [imgSrc, setImgSrc] = useState('');
+  const [log, setLog] = useState<string[]>([]);
+  const [scriptInput, setScriptInput] = useState('');
+
+  useEffect(() => {
+    const socket = io('http://localhost:4000');
+    socket.on('connect', () => console.log('WS connected'));
+    socket.on('screenshot', (data: string) => {
+      setImgSrc(`data:image/png;base64,${data}`);
+    });
+    socket.on('disconnect', () => console.log('WS disconnected'));
+    return () => { socket.disconnect(); };
+  }, []);
+
+  const runScript = async (code: string) => {
+    const res = await fetch('/server/api/script', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    setLog(prev => [...prev, JSON.stringify(data)]);
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <Theme appearance="dark" accentColor="purple" grayColor="slate">
+      <Box p="8" style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
+        <Flex direction="column" gap="8" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <Text size="8" weight="bold">AI Automation Control Panel</Text>
+          
+          <Grid columns={{ initial: '1', lg: '4' }} gap="8">
+            {/* Sidebar */}
+            <Flex direction="column" gap="4" style={{ gridColumn: 'span 1' }}>
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Controls</Text>
+                  
+                  <Flex direction="column" gap="3">
+                    <Text as="label" size="2" weight="medium">Script Input</Text>
+                    <TextArea
+                      value={scriptInput}
+                      onChange={(e) => setScriptInput(e.target.value)}
+                      rows={4}
+                      placeholder="Enter JavaScript code"
+                      style={{ backgroundColor: 'var(--color-panel)' }}
+                    />
+                  </Flex>
+                  
+                  <Button 
+                    onClick={() => runScript(scriptInput)}
+                    style={{ width: '100%' }}
+                  >
+                    Execute Script
+                  </Button>
+                </Flex>
+              </Card>
+            </Flex>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            {/* Main Content */}
+            <Flex direction="column" gap="8" style={{ gridColumn: 'span 3' }}>
+              {/* Live Feed */}
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Live Browser Feed</Text>
+                  <Box style={{ position: 'relative', aspectRatio: '16/9', backgroundColor: 'var(--color-panel)' }}>
+                    {imgSrc ? (
+                      <Image
+                        src={imgSrc}
+                        alt="Live Feed"
+                        fill
+                        style={{ objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <Flex align="center" justify="center" style={{ position: 'absolute', inset: 0 }}>
+                        <Text color="gray">Connecting to feed...</Text>
+                      </Flex>
+                    )}
+                  </Box>
+                </Flex>
+              </Card>
+
+              {/* Logs */}
+              <Card>
+                <Flex direction="column" gap="4">
+                  <Text size="5" weight="bold">Activity Log</Text>
+                  <ScrollArea style={{ maxHeight: '400px' }}>
+                    <Flex direction="column" gap="2">
+                      {log.map((entry, i) => (
+                        <Box key={i} p="2" style={{ backgroundColor: 'var(--color-panel)' }}>
+                          <Text size="2">{entry}</Text>
+                        </Box>
+                      ))}
+                    </Flex>
+                  </ScrollArea>
+                </Flex>
+              </Card>
+            </Flex>
+          </Grid>
+        </Flex>
+      </Box>
+    </Theme>
   );
 }
