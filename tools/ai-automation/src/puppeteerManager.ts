@@ -96,6 +96,30 @@ class PuppeteerManager {
     return this.page;
   }
 
+  public async execute_puppeteer_script(script: string): Promise<any> {
+    console.log('Executing Puppeteer script:', script);
+    
+    if (!this.page) {
+      throw new Error('Puppeteer page not initialized yet');
+    }
+    
+    try {
+      // First evaluate the script to get the function
+      const evaluatedFunc = eval(`(${script})`);
+      
+      // Then execute the function with the page parameter
+      console.log('Executing function with page parameter...');
+      const result = await evaluatedFunc(this.page);
+      console.log('Function execution result:', result);
+      
+      return result;
+    } catch (error: unknown) {
+      console.error('Error executing Puppeteer script:', error);
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new Error(`Failed to execute Puppeteer script: ${error}`);
+    }
+  }
+
   public async close() {
     if (this.browser) {
       try {

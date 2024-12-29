@@ -25,7 +25,8 @@ RUN apt-get install -qq -y --no-install-recommends \
       chromium-sandbox \
       xvfb \
       fonts-ipafont-gothic \
-      fonts-wqy-zenhei && \
+      fonts-wqy-zenhei \
+      curl && \
     rm -rf /var/lib/apt/lists/*
 
 # Create and switch to non-root user

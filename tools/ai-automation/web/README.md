@@ -6,12 +6,14 @@ This is the control panel for the AI Automation tool, built with Next.js. It pro
 - AI-powered automation control
 - Script execution interface
 - Activity logging
+- Puppeteer browser automation
 
 ## Getting Started with the Control Panel
 
 1. Install dependencies:
    ```bash
    npm install
+   npm install puppeteer
    ```
 
 2. Run the development server:
@@ -21,6 +23,41 @@ This is the control panel for the AI Automation tool, built with Next.js. It pro
 
 3. Open your browser and navigate to:
    [http://localhost:3000](http://localhost:3000)
+
+## Puppeteer Automation
+
+The control panel integrates with Puppeteer for browser automation. Available features:
+
+### API Endpoints
+
+- POST /api/puppeteer/launch - Launch a new browser instance
+- POST /api/puppeteer/close - Close browser instance
+- POST /api/puppeteer/navigate - Navigate to URL
+- POST /api/puppeteer/screenshot - Take page screenshot
+- POST /api/puppeteer/execute - Execute custom Puppeteer script
+
+### AI Tool Usage
+
+The AI can control Puppeteer through tool use commands:
+
+```xml
+<use_mcp_tool>
+  <server_name>puppeteer</server_name>
+  <tool_name>execute_script</tool_name>
+  <arguments>
+    {
+      "script": "async (page) => { await page.goto('https://example.com'); }"
+    }
+  </arguments>
+</use_mcp_tool>
+```
+
+Available Puppeteer tools:
+- execute_script - Execute Puppeteer script
+- take_screenshot - Capture page screenshot
+- navigate_to - Navigate to URL
+- extract_content - Extract page content
+- fill_form - Fill form fields
 
 ---
 
