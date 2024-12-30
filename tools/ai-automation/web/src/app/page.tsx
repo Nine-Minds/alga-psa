@@ -1,9 +1,10 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radix-ui/themes';
 import { Theme } from '@radix-ui/themes';
+import { prompts } from '../tools/prompts';
 
 export default function ControlPanel() {
   interface ChatMessage {
@@ -13,15 +14,34 @@ export default function ControlPanel() {
 
   const [imgSrc, setImgSrc] = useState('');
   const [log, setLog] = useState<string[]>([]);
-  const [scriptInput, setScriptInput] = useState('');
   const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  // Auto-scroll when messages update
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Styles for message formatting
+  const preStyle: React.CSSProperties = {
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'break-word', // Using overflowWrap instead of wordWrap
+    background: 'var(--color-panel)',
+    padding: '8px',
+    borderRadius: '4px',
+    margin: '4px 0'
+  };
 
   useEffect(() => {
     setMessages([{
       role: 'system',
-      content: 'You are a helpful assistant that generates Puppeteer scripts.'
+      content: prompts.chatInterface
     }]);
   }, []);
 
@@ -115,33 +135,23 @@ export default function ControlPanel() {
     }
   };
 
-  const runScript = async (code: string) => {
-    const res = await fetch('/server/api/script', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code })
-    });
-    const data = await res.json();
-    setLog(prev => [...prev, JSON.stringify(data)]);
-  };
-
   return (
     <Theme appearance="dark" accentColor="purple" grayColor="slate">
       <Box p="8" style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)' }}>
         <Flex direction="column" gap="8" style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <Text size="8" weight="bold">AI Automation Control Panel</Text>
           
-          <Grid columns={{ initial: '1', lg: '4' }} gap="8">
+          <Grid columns={{ initial: '1', lg: '3' }} gap="8">
             {/* Sidebar */}
-            <Flex direction="column" gap="4" style={{ gridColumn: 'span 1' }}>
+            <Flex direction="column" gap="4" style={{ gridColumn: 'span 2' }}>
               <Card>
                 <Flex direction="column" gap="4">
                   <Text size="5" weight="bold">Chat with AI</Text>
-                  <ScrollArea style={{ maxHeight: '300px', backgroundColor: 'var(--color-panel)' }}>
+                  <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
                     <Flex direction="column" gap="2" p="2">
                       {messages.map((msg, idx) => (
                         <Box key={idx}>
-                          <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'}>
+                          <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                             <strong>
                               {msg.role === 'user'
                                 ? 'User'
@@ -151,9 +161,22 @@ export default function ControlPanel() {
                               :
                             </strong>
                           </Text>
-                          <Text size="2" style={{ whiteSpace: 'pre-wrap' }}>
-                            {msg.content}
-                          </Text>
+                          {msg.content.split('\n').map((line, lineIdx) => {
+                            if (line.includes('Function call:') || line.includes('Function response:')) {
+                              return (
+                                <pre key={lineIdx} style={preStyle}>
+                                  {line}
+                                  {line.includes('Function response:') ? '\n' : ''}
+                                </pre>
+                              );
+                            }
+                            return (
+                              <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
+                                {line}
+                              </pre>
+                            );
+                          })}
+                          <div ref={messagesEndRef} />
                         </Box>
                       ))}
                     </Flex>
@@ -173,35 +196,17 @@ export default function ControlPanel() {
                   >
                     {isGenerating ? 'Thinking...' : 'Send'}
                   </Button>
-
-                  <Flex direction="column" gap="3">
-                    <Text as="label" size="2" weight="medium">Script Input</Text>
-                    <TextArea
-                      value={scriptInput}
-                      onChange={(e) => setScriptInput(e.target.value)}
-                      rows={4}
-                      placeholder="Enter JavaScript code"
-                      style={{ backgroundColor: 'var(--color-panel)' }}
-                    />
-                  </Flex>
-                  
-                  <Button 
-                    onClick={() => runScript(scriptInput)}
-                    style={{ width: '100%' }}
-                  >
-                    Execute Script
-                  </Button>
                 </Flex>
               </Card>
             </Flex>
 
             {/* Main Content */}
-            <Flex direction="column" gap="8" style={{ gridColumn: 'span 3' }}>
+            <Flex direction="column" gap="8" style={{ gridColumn: 'span 1' }}>
               {/* Live Feed */}
               <Card>
                 <Flex direction="column" gap="4">
                   <Text size="5" weight="bold">Live Browser Feed</Text>
-                  <Box style={{ position: 'relative', aspectRatio: '16/9', backgroundColor: 'var(--color-panel)' }}>
+                  <Box style={{ position: 'relative', aspectRatio: '4/3', minHeight: '400px', backgroundColor: 'var(--color-panel)' }}>
                     {imgSrc ? (
                       <Image
                         src={imgSrc}

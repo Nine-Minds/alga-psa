@@ -3,16 +3,19 @@ import type { MessageParam } from '@anthropic-ai/sdk/src/resources/messages/mess
 
 import { NextResponse } from 'next/server';
 import { tools } from '../../../tools/toolDefinitions';
+import { prompts } from '../../../tools/prompts';
 import {
   observeBrowser,
-  executeScript
+  executeScript,
+  wait,
+  executePuppeteerScript
 } from '../../../tools/invokeTool';
 
 type Role = 'user' | 'assistant';
 type SystemRole = 'system';
 type AnyRole = Role | SystemRole;
 
-type ToolName = 'observe_browser' | 'execute_script';
+type ToolName = 'observe_browser' | 'execute_script' | 'wait' | 'execute_puppeteer_script';
 
 interface ToolExecutionResult {
   error?: string;
@@ -125,7 +128,15 @@ interface ExecuteScriptParams {
   code: string;
 }
 
-type ToolInput = ObserverParams | ExecuteScriptParams;
+interface WaitParams {
+  seconds: number;
+}
+
+interface PuppeteerScriptParams {
+  script: string;
+}
+
+type ToolInput = ObserverParams | ExecuteScriptParams | WaitParams | PuppeteerScriptParams;
 
 interface LocalMessage {
   role: AnyRole;
@@ -176,6 +187,12 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
     } else if (name === ('execute_script' as ToolName)) {
       const params = toolInput as ExecuteScriptParams;
       result = await executeScript(params.code);
+    } else if (name === ('wait' as ToolName)) {
+      const params = toolInput as WaitParams;
+      result = await wait(params.seconds);
+    } else if (name === ('execute_puppeteer_script' as ToolName)) {
+      const params = toolInput as PuppeteerScriptParams;
+      result = await executePuppeteerScript(params.script);
     } else {
       throw new Error(`Unknown tool: ${name}`);
     }
@@ -187,11 +204,21 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
       throw new Error('Tool execution failed');
     }
 
+    let response = '';
     if (result.result) {
-      return JSON.stringify(result.result, null, 2);
+      response = JSON.stringify(result.result, null, 2);
+    } else {
+      response = JSON.stringify({}, null, 2);
     }
 
-    return JSON.stringify({}, null, 2);
+    // Truncate response if it's too long
+    const MAX_LENGTH = 1000;
+    if (response.length > MAX_LENGTH) {
+      const truncated = response.slice(0, MAX_LENGTH);
+      return `${truncated}\n... [Response truncated, total length: ${response.length} characters]`;
+    }
+
+    return response;
   } catch (error) {
     return `Failed to execute ${name}: ${
       error instanceof Error ? error.message : String(error)
@@ -241,7 +268,7 @@ export async function GET(req: Request) {
 
           const completion = await anthropic.messages.create({
             model: 'claude-3-5-sonnet-20241022',
-            system: systemMessage || 'You are a helpful assistant that can observe the page and execute scripts via Puppeteer.',
+            system: systemMessage || prompts.aiEndpoint,
             messages: anthropicMessages,
             tools,
             max_tokens: 1024,

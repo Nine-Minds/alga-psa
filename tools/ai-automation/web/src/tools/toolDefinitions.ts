@@ -43,4 +43,28 @@ export const scriptTool = createTool(
   ['code']
 );
 
-export const tools = [observeTool, scriptTool]; //, nodeScriptTool];
+export const waitTool = createTool(
+  'wait',
+  'Pauses execution for a specified number of seconds',
+  {
+    seconds: {
+      type: "number",
+      description: "Number of seconds to wait",
+    },
+  },
+  ['seconds']
+);
+
+export const puppeteerScriptTool = createTool(
+  'execute_puppeteer_script',
+  'Executes Puppeteer commands in the browser context. The script should be an async function that receives a Puppeteer Page object.',
+  {
+    script: {
+      type: "string",
+      description: 'The Puppeteer script to execute. Must be an async function that takes a Page object as parameter.',
+    },
+  },
+  ['script']
+);
+
+export const tools = [observeTool, scriptTool, waitTool, puppeteerScriptTool];
