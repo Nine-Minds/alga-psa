@@ -3,6 +3,7 @@ import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 import { puppeteerManager } from './puppeteerManager';
+import { toolManager } from './tools/toolManager';
 
 interface ScriptRequest {
   code: string;
@@ -150,7 +151,8 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Script is required' });
     }
 
-    const result = await puppeteerManager.execute_puppeteer_script(script);
+    const page = puppeteerManager.getPage();
+    const result = await toolManager.executeTool('execute_script', page, { script });
     
     console.log('Puppeteer script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
@@ -159,6 +161,34 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
     console.error('Error in /api/puppeteer:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);
     res.status(500).json({
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
+}) as RequestHandler);
+
+app.post('/api/tool', (async (req: Request, res: Response) => {
+  console.log('\n[POST /api/tool]');
+  console.log('Request body:', req.body);
+  const startTime = Date.now();
+
+  const { toolName, args } = req.body;
+
+  if (!toolName) {
+    console.log('Error: Tool name is required');
+    return res.status(400).json({ error: 'Tool name is required' });
+  }
+
+  try {
+    const page = puppeteerManager.getPage();
+    const result = await toolManager.executeTool(toolName, page, args);
+
+    console.log('Tool execution result:', result);
+    console.log(`Completed in ${Date.now() - startTime}ms`);
+    res.json({ result });
+  } catch (error) {
+    console.error('Error executing tool:', error);
+    console.log(`Failed in ${Date.now() - startTime}ms`);
+    res.status(500).json({ 
       error: error instanceof Error ? error.message : String(error)
     });
   }
