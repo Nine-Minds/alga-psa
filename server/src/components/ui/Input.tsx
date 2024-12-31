@@ -1,6 +1,7 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { FormComponent, FormField } from '../../types/ui-reflection/types';
+import { FormField } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   label?: string;
@@ -42,34 +43,23 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     );
 
     // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<FormComponent>({
-      type: 'form',
+    const updateMetadata = id ? useRegisterUIComponent<FormField>({
+      type: 'textField',
       id,
       label,
+      value: typeof value === 'string' ? value : undefined,
       disabled,
-      actions: ['type'],
-      fields: [{
-        type: 'textField',
-        id: `${id}-field`,
-        label,
-        value: typeof value === 'string' ? value : undefined,
-        disabled,
-        required
-      }]
+      required
     }) : undefined;
 
-    // Update metadata when value changes
+    // Update metadata when field props change
     useEffect(() => {
       if (updateMetadata && typeof value === 'string') {
         updateMetadata({
-          fields: [{
-            type: 'textField',
-            id: `${id}-field`,
-            label,
-            value,
-            disabled,
-            required
-          }]
+          value,
+          label,
+          disabled,
+          required
         });
       }
     }, [value, updateMetadata, label, disabled, required, id]);
@@ -124,7 +114,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             handleRef(element);
           }}
           className={`w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className}`}
-          data-automation-id={id}
+          {...withDataAutomationId({ id })}
           value={value}
           disabled={disabled}
           required={required}

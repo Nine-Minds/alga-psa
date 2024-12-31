@@ -1,11 +1,14 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import { Checkbox, Text, Flex } from '@radix-ui/themes';
 import * as Form from '@radix-ui/react-form';
 import Link from 'next/link';
 import { AlertProps } from '@/interfaces';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { FormComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface MspLoginFormProps {
   callbackUrl: string;
@@ -17,6 +20,52 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<FormComponent>({
+    id: 'msp-login-form',
+    type: 'form',
+    label: 'MSP Login',
+    fields: [
+      {
+        id: 'email-field',
+        type: 'textField',
+        label: 'Email',
+        value: email,
+        required: true
+      },
+      {
+        id: 'password-field',
+        type: 'textField',
+        label: 'Password',
+        value: password,
+        required: true
+      }
+    ],
+    actions: ['submit']
+  });
+
+  // Update metadata when form values change
+  useEffect(() => {
+    updateMetadata({
+      fields: [
+        {
+          id: 'email-field',
+          type: 'textField',
+          label: 'Email',
+          value: email,
+          required: true
+        },
+        {
+          id: 'password-field',
+          type: 'textField',
+          label: 'Password',
+          value: password,
+          required: true
+        }
+      ]
+    });
+  }, [email, password, updateMetadata]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +115,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   };
 
   return (
-    <Form.Root className="mt-8 space-y-6">
+    <Form.Root className="mt-8 space-y-6" {...withDataAutomationId({ id: 'msp-login-form' })}>
       <div className="space-y-4">
         <Form.Field name="email">
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
@@ -84,6 +133,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+              {...withDataAutomationId({ id: 'email-field' })}
             />
           </Form.Control>
         </Form.Field>
@@ -96,12 +146,14 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm pr-10"
+                {...withDataAutomationId({ id: 'password-field' })}
               />
             </Form.Control>
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              {...withDataAutomationId({ id: 'toggle-password-visibility' })}
             >
               {showPassword ? (
                 <EyeOpenIcon className="h-5 w-5 text-gray-400" />
@@ -117,13 +169,13 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         <div className="flex items-center">
           <Text as="label" size="2">
             <Flex gap="2">
-              <Checkbox color="purple" defaultChecked />
+              <Checkbox color="purple" defaultChecked {...withDataAutomationId({ id: 'terms-checkbox' })} />
               Agree to Terms and Conditions
             </Flex>
           </Text>
         </div>
         <div className="text-sm">
-          <Link href="/auth/forgot_password" className="font-medium text-purple-600 hover:text-purple-500">
+          <Link href="/auth/forgot_password" className="font-medium text-purple-600 hover:text-purple-500" {...withDataAutomationId({ id: 'forgot-password-link' })}>
             Forgot password?
           </Link>
         </div>
@@ -134,6 +186,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           type="submit"
           onClick={handleSubmit}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          {...withDataAutomationId({ id: 'sign-in-button' })}
         >
           Sign in
         </button>
@@ -144,6 +197,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           type="button"
           onClick={handleGoogleSignIn}
           className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          {...withDataAutomationId({ id: 'google-sign-in-button' })}
         >
           <svg className="w-5 h-5 mr-2" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M20.3081 10.2303C20.3081 9.55056 20.253 8.86711 20.1354 8.19836H10.7031V12.0492H16.1046C15.8804 13.2911 15.1602 14.3898 14.1057 15.0879V17.5866H17.3282C19.2205 15.8449 20.3081 13.2728 20.3081 10.2303Z" fill="#3F83F8"/>

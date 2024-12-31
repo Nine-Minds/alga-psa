@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { ChevronRightIcon, MagnifyingGlassIcon, LockClosedIcon } from '@radix-ui/react-icons';
-import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { NavigationComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { menuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -18,19 +21,123 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
   const isActive = (path: string) => pathname === path;
 
+  // Get icon identifier for UI reflection
+  const getIconIdentifier = (IconComponent: React.ElementType): string => {
+    // Find the icon name by comparing with RadixIcons entries
+    for (const [name, component] of Object.entries(RadixIcons)) {
+      if (component === IconComponent) {
+        return name;
+      }
+    }
+    
+    // For Lucide icons, try to extract name from the function name
+    if (IconComponent.toString().includes('Lucide')) {
+      const match = IconComponent.toString().match(/function (\w+)/);
+      if (match) {
+        return match[1];
+      }
+    }
+    
+    // Fallback to a generic name
+    return 'Icon';
+  };
+
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<NavigationComponent>({
+    id: 'main-sidebar',
+    type: 'navigation',
+    label: 'Main Navigation',
+    expanded: sidebarOpen,
+    actions: ['expand', 'collapse'],
+    items: [
+      ...menuItems.map(item => ({
+        id: `menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+        label: item.name,
+        href: item.href,
+        icon: getIconIdentifier(item.icon),
+        active: isActive(item.href || '#'),
+        items: item.subItems?.map(subItem => ({
+          id: `submenu-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`,
+          label: subItem.name,
+          href: subItem.href,
+          icon: getIconIdentifier(subItem.icon),
+          active: isActive(subItem.href || '#')
+        }))
+      })),
+      ...bottomMenuItems.map(item => ({
+        id: `bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+        label: item.name,
+        href: item.href,
+        icon: getIconIdentifier(item.icon),
+        active: isActive(item.href || '#')
+      }))
+    ]
+  });
+
+  // Update metadata when sidebar state changes
+  useEffect(() => {
+    updateMetadata({
+      expanded: sidebarOpen,
+      items: [
+        ...menuItems.map(item => ({
+          id: `menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+          label: item.name,
+          href: item.href,
+          icon: getIconIdentifier(item.icon),
+          active: isActive(item.href || '#'),
+          items: item.subItems?.map(subItem => ({
+            id: `submenu-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`,
+            label: subItem.name,
+            href: subItem.href,
+            icon: getIconIdentifier(subItem.icon),
+            active: isActive(subItem.href || '#')
+          }))
+        })),
+        ...bottomMenuItems.map(item => ({
+          id: `bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+          label: item.name,
+          href: item.href,
+          icon: getIconIdentifier(item.icon),
+          active: isActive(item.href || '#')
+        }))
+      ]
+    });
+  }, [sidebarOpen, pathname, openSubmenu, updateMetadata]);
+
   const toggleSubmenu = (name: string) => {
     setOpenSubmenu(openSubmenu === name ? null : name);
   };
+
+  // Update metadata when submenu state changes
+  useEffect(() => {
+    updateMetadata({
+      items: menuItems.map(item => ({
+        id: `menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`,
+        label: item.name,
+        href: item.href,
+        icon: getIconIdentifier(item.icon),
+        active: isActive(item.href || '#'),
+        items: item.subItems?.map(subItem => ({
+          id: `submenu-${subItem.name.toLowerCase().replace(/\s+/g, '-')}`,
+          label: subItem.name,
+          href: subItem.href,
+          icon: getIconIdentifier(subItem.icon),
+          active: isActive(subItem.href || '#')
+        }))
+      }))
+    });
+  }, [openSubmenu, updateMetadata]);
 
   const renderMenuItem = (item: MenuItem) => (
     <Tooltip.Provider delayDuration={300} key={item.name}>
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
-          <li >
+          <li>
             {item.subItems ? (
               <div
                 className="flex items-center px-4 py-2 hover:bg-[#2a2b32] cursor-pointer"
                 onClick={() => toggleSubmenu(item.name)}
+                {...withDataAutomationId({ id: `menu-${item.name.toLowerCase().replace(/\s+/g, '-')}` })}
               >
                 <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
                 {sidebarOpen && (
@@ -45,18 +152,23 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                 )}
               </div>
             ) : (
-              <a href={item.href || '#'} className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}>
+              <a 
+                href={item.href || '#'} 
+                className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
+                {...withDataAutomationId({ id: `menu-${item.name.toLowerCase().replace(/\s+/g, '-')}` })}
+              >
                 <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
                 {sidebarOpen && <span className="truncate">{item.name}</span>}
               </a>
             )}
             {item.subItems && openSubmenu === item.name && sidebarOpen && (
               <ul className="ml-4 mt-2 space-y-1">
-                {item.subItems.map((subItem):JSX.Element => (
+                {item.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
                       href={subItem.href || '#'}
                       className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(subItem.href || '#') ? 'bg-[#2a2b32]' : ''}`}
+                      {...withDataAutomationId({ id: `submenu-${subItem.name.toLowerCase().replace(/\s+/g, '-')}` })}
                     >
                       <subItem.icon className="h-4 w-4 mr-2 flex-shrink-0" />
                       <span className="truncate">{subItem.name}</span>
@@ -82,8 +194,12 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
       </Tooltip.Root>
     </Tooltip.Provider>
   );
+
   return (
-    <aside className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}>
+    <aside 
+      className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}
+      {...withDataAutomationId({ id: 'main-sidebar' })}
+    >
       <div className="p-4 flex items-center space-x-2">
         <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
           <Image
@@ -116,7 +232,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         </div>
       </div>
 
-
       <nav className="mt-4 flex-grow overflow-y-auto">
         <ul className="space-y-1">
           {menuItems.map(renderMenuItem)}
@@ -129,17 +244,15 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
         </ul>
       </div>
 
-      {/* Collapse toggle button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="absolute -right-3 top-12 transform w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white"
+        {...withDataAutomationId({ id: 'sidebar-toggle' })}
       >
         <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
       </button>
-
-
     </aside>
   );
-}
+};
 
 export default Sidebar;

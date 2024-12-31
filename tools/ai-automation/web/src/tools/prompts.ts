@@ -28,7 +28,14 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
 - ONLY if you cannot find the information you are looking for via the get_ui_state, then start with exploratory CSS queries to understand the page structure before retrieving full page content.
 
 ## get_ui_state information:
- - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute. You can use this attribute to interact with the element in your Puppeteer scripts.
+ - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute. Use a puppeteer selector to find the element by its data-automation-id attribute.
+
+## Filling out fields
+ - When filling out a form, write scripts to full out the form fields ONE BY ONE. Do not write a script to fill out all fields at once.
+ - Use puppeteer to type into the fields. Do not use the script tool to inject text into the fields.
+
+## Logging In
+ - When logging in, use your observe tool to find the username and password fields, and then use the script tool to fill out the fields with the provided credentials.
 
 For navigation tasks, use Puppeteer functionality to navigate to the desired page.
 

@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Alert, AlertDescription } from '@/components/ui/Alert'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent'
+import { FormComponent } from '../../types/ui-reflection/types'
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId'
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -19,6 +22,52 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<FormComponent>({
+    id: 'client-login-form',
+    type: 'form',
+    label: 'Client Login',
+    fields: [
+      {
+        id: 'client-email-field',
+        type: 'textField',
+        label: 'Email',
+        value: email,
+        required: true
+      },
+      {
+        id: 'client-password-field',
+        type: 'textField',
+        label: 'Password',
+        value: password,
+        required: true
+      }
+    ],
+    actions: ['submit']
+  });
+
+  // Update metadata when form values change
+  useEffect(() => {
+    updateMetadata({
+      fields: [
+        {
+          id: 'client-email-field',
+          type: 'textField',
+          label: 'Email',
+          value: email,
+          required: true
+        },
+        {
+          id: 'client-password-field',
+          type: 'textField',
+          label: 'Password',
+          value: password,
+          required: true
+        }
+      ]
+    });
+  }, [email, password, updateMetadata]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,11 +99,11 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-4" {...withDataAutomationId({ id: 'client-login-form' })}>
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="client-email-field">Email</Label>
         <Input
-          id="email"
+          id="client-email-field"
           name="email"
           type="email"
           placeholder="Enter your email"
@@ -68,9 +117,9 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="client-password-field">Password</Label>
         <Input
-          id="password"
+          id="client-password-field"
           name="password"
           type="password"
           placeholder="Enter your password"
@@ -84,6 +133,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       </div>
 
       <Button
+        id="client-sign-in-button"
         type="submit"
         className="w-full"
         disabled={isLoading}
@@ -95,6 +145,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         <Link
           href="/client-portal/auth/forgot-password"
           className="text-blue-600 hover:text-blue-800 transition-colors"
+          {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >
           Forgot your password?
         </Link>
@@ -102,6 +153,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           type="button"
           onClick={onRegister}
           className="text-blue-600 hover:text-blue-800 transition-colors"
+          {...withDataAutomationId({ id: 'client-register-button' })}
         >
           Register
         </button>

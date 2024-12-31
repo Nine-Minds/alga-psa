@@ -4,6 +4,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { DialogComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface DialogProps {
   isOpen: boolean;
@@ -36,7 +37,7 @@ export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, class
   }, [isOpen, updateMetadata]);
 
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} data-automation-id={id}>
+    <RadixDialog.Root open={isOpen} onOpenChange={onClose} {...withDataAutomationId({ id })}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <RadixDialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl z-50 ${className || ''}`}>

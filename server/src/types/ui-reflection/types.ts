@@ -112,11 +112,39 @@ export interface DataGridComponent extends BaseComponent {
 /**
  * Union type of all possible UI components.
  */
+/**
+ * Navigation component representation.
+ */
+export interface NavigationComponent extends BaseComponent {
+  type: "navigation";
+  
+  /** Whether the navigation menu is expanded */
+  expanded: boolean;
+  
+  /** Child navigation items */
+  items: Array<{
+    id: string;
+    label: string;
+    href?: string;
+    icon?: string;
+    active?: boolean;
+    items?: Array<{
+      id: string;
+      label: string;
+      href?: string;
+      icon?: string;
+      active?: boolean;
+    }>;
+  }>;
+}
+
 export type UIComponent =
   | ButtonComponent
   | DialogComponent
   | FormComponent
-  | DataGridComponent;
+  | DataGridComponent
+  | NavigationComponent
+  | FormField;
 
 /**
  * Top-level page state representation.

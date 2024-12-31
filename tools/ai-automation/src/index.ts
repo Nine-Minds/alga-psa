@@ -119,10 +119,25 @@ app.get('/api/observe', (async (req: Request, res: Response) => {
     const page = puppeteerManager.getPage();
     const title = await page.title();
     const url = page.url();
-    const html = await page.content();
-    const response = { url, title, html };
     
-    console.log('Response:', { url, title, htmlLength: html.length });
+    let html: string;
+    if (req.query.selector) {
+      // If selector is provided, get HTML only for matching elements
+      const elements = await page.$$(req.query.selector as string);
+      const elementHtmls = await Promise.all(elements.map(el => page.evaluate(el => el.outerHTML, el)));
+      html = elementHtmls.join('\n');
+    } else {
+      // If no selector, get full page HTML
+      html = await page.content();
+    }
+    
+    const response = { url, title, html };
+    console.log('Response:', { 
+      url, 
+      title, 
+      htmlLength: html.length,
+      selector: req.query.selector || 'none'
+    });
     console.log(`Completed in ${Date.now() - startTime}ms`);
     res.json(JSON.parse(JSON.stringify(response, null, 0)));
   } catch (err) {
