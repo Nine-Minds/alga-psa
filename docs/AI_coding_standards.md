@@ -71,3 +71,61 @@ There is a work_item_type column in the time_entries table that can be used to d
 There is also a work_item_id column that can be used to reference the work item.
 
 You will need to join against either the tickets or project_tasks table to get the details of the work item, including the company_id.
+
+### Component ID Guidelines (from the UI reflection system)
+
+1. **Use Kebab Case (Dashes, Not Underscores)**
+   - Hard Rule: Always use this-style-of-id rather than this_style_of_id
+   - Examples:
+     * add-ticket-button
+     * quick-add-ticket-dialog
+     * my-form-field
+
+2. **Make Each ID Uniquely Identifying**
+   - Each ID should uniquely identify a single UI element within its scope
+   - Avoid short, ambiguous names like button1 or dialog2
+   - Include both the type of element and its purpose
+   - Good: add-employee-button
+   - Bad: button1
+
+3. **Keep IDs Human-Readable**
+   - IDs will be used in test scripts, automation harnesses, and debugging logs
+   - A quick glance should communicate an element's function or meaning
+   - Good: delete-user-dialog
+   - Bad: dlg-du-1
+
+4. **Avoid Encoding Variable Data**
+   - Do not include dynamic, user-generated content (like user IDs or timestamps)
+   - Store variable data in another attribute (e.g., data-user-id="123")
+   - Maintain variable data in the component's internal data
+
+5. **Match UI Terminology**
+   - Keep IDs consistent with visible labels or component names
+   - Example: If UI shows "Quick Add Ticket" dialog, use quick-add-ticket-dialog
+
+6. **Keep It Short but Descriptive**
+   - Balance length and clarity
+   - Prefer: submit-application-button
+   - Avoid: submit-this-application-to-the-server-now-button
+
+7. **Maintain Consistency**
+   - Use common patterns across the codebase
+   - Apply same principles to all component types
+   - Enable predictable ID patterns for automated tooling
+
+8. **Example Patterns**
+   - Buttons: {action}-{object}-button
+     * add-ticket-button
+     * delete-user-button
+     * save-form-button
+   - Dialogs: {purpose}-{object}-dialog
+     * quick-add-ticket-dialog
+     * confirmation-dialog
+     * edit-profile-dialog
+   - Form Fields: {object}-{field}-field or {object}-input
+     * ticket-title-field
+     * ticket-description-field
+     * user-email-input
+   - Data Grids: {object}-grid or {object}-{purpose}-grid
+     * tickets-grid
+     * users-report-grid

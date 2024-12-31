@@ -509,7 +509,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Contacts</h1>
-        <Button onClick={() => setIsQuickAddOpen(true)}>Add Contact</Button>
+        <Button 
+          id="add-contact-button"
+          onClick={() => setIsQuickAddOpen(true)}
+        >
+          Add Contact
+        </Button>
       </div>
       <div className="bg-white shadow rounded-lg p-4">
         <div className="flex justify-between items-center mb-4">

@@ -1,141 +1,222 @@
 # AI Automation Tool
 
-## AI Integration
+## Overview
 
-The AI endpoint allows for generating Puppeteer scripts using Anthropic's Claude model. Here's how it works:
+The AI automation tool provides a bridge between LLM-driven automation and the browser, enabling automated testing and UI interaction through Puppeteer. It includes WebSocket-based UI state monitoring and screenshot streaming capabilities.
 
-1. **Sending Prompts to AI**
-   - POST requests to `/api/ai` with the following structure:
-     ```json
-     {
-       "messages": [
-         {"role": "system", "content": "You are a helpful assistant that generates Puppeteer scripts"},
-         {"role": "user", "content": "Login to the admin panel"}
-       ]
-     }
-     ```
+## Architecture
 
-2. **AI Response Handling**
-   - The AI returns generated code in the response:
-     ```json
-     {
-       "reply": "{\"code\": \"await page.goto('https://example.com/login'); await page.type('#username', 'admin'); await page.type('#password', 'password'); await page.click('#login-btn');\"}"
-     }
-     ```
+The server acts as a central hub connecting three main components:
 
-3. **Executing the Script**
-   - The returned code can be sent to `/server/api/script` for execution in the Puppeteer environment.
+```
+Browser (React App) -> AI Backend Server -> External Consumers (LLM/Automation)
+```
 
-### Example Flow
-1. Frontend sends prompt to `/api/ai`
-2. AI generates Puppeteer script
-3. Frontend receives and parses the response
-4. Frontend sends the generated code to `/server/api/script`
-5. Puppeteer executes the script and streams results back
+1. **Browser Application**:
+   - Runs React app with UI reflection system
+   - Connects via Socket.IO to broadcast UI state
+   - Provides stable component IDs for automation
 
-## Persistent Puppeteer Session
+2. **AI Backend Server**:
+   - Runs on port 4000
+   - Manages WebSocket connections
+   - Controls browser via Puppeteer
+   - Broadcasts UI state to consumers
+   - Executes automation scripts
 
-The server maintains a persistent Puppeteer browser instance that
-- Launches automatically on server startup
-- Maintains state (cookies, session) across multiple commands
-- Can be accessed via the `puppeteerManager` instance
+3. **External Consumers**:
+   - Connect via WebSocket to receive updates
+   - Can be test harnesses, LLM agents, monitoring tools
+   - Execute automation through server API
 
-### Usage
+## WebSocket Capabilities
 
-The browser instance is automatically initialized when the server starts. You can access the current page using:
+### 1. UI Reflection System
+
+The server receives and broadcasts real-time UI state updates from the browser application:
 
 ```typescript
-import { puppeteerManager } from './puppeteerManager';
+// Connect to receive UI state updates
+const socket = io('ws://localhost:4000');
 
-const page = puppeteerManager.getPage();
+socket.on('UI_STATE_UPDATE', (pageState) => {
+  console.log('UI State:', {
+    pageId: pageState.id,
+    title: pageState.title,
+    componentCount: pageState.components.length
+  });
+});
 ```
 
-### API Endpoints
-
-#### GET /api/observe
-
-Returns the current state of the browser page including:
-- URL
-- Page title
-- HTML content
-
-Example response:
-```json
-{
-  "url": "https://example.com",
-  "title": "Example Domain",
-  "html": "<html>...</html>"
+The pageState object provides a structured view of the UI:
+```typescript
+interface PageState {
+  id: string;          // Page identifier
+  title: string;       // Page title
+  components: {        // UI components
+    id: string;        // Stable component ID
+    type: string;      // Component type (button, dialog, etc.)
+    label?: string;    // User-visible text
+    disabled?: boolean;// Component state
+    actions?: string[]; // Available actions
+  }[];
 }
 ```
 
-#### POST /api/script
+### 2. Screenshot Streaming
 
-Executes arbitrary JavaScript code in the browser context.
-
-Request body:
-```json
-{
-  "code": "document.querySelector('#login').click();"
-}
-
-Response:
-```json
-{
-  "result": "return value from the executed code"
-}
-```
-
-#### POST /api/node-script
-
-Executes arbitrary Node.js code in the server context with access to Puppeteer.
-
-Request body:
-```json
-{
-  "code": "await page.goto('https://example.com');"
-}
-
-Response:
-```json
-{
-  "result": "return value from the executed code"
-}
-```
-
-**Warning:** Both script endpoints allow execution of arbitrary code. Use with extreme caution in production environments.
-
-### WebSocket Streaming
-
-The server provides real-time browser streaming via WebSockets. Clients can connect to:
-
-```
-ws://localhost:4000
-```
-
-Once connected, the server will emit 'screenshot' events every 2 seconds containing base64-encoded PNG images of the browser viewport.
-
-Example client connection:
+The server provides real-time browser screenshots:
 
 ```javascript
-const socket = new WebSocket('ws://localhost:4000');
+const socket = io('ws://localhost:4000');
 
-socket.addEventListener('message', (event) => {
+socket.on('screenshot', (base64Image) => {
   const img = document.createElement('img');
-  img.src = `data:image/png;base64,${event.data}`;
+  img.src = `data:image/png;base64,${base64Image}`;
   document.body.appendChild(img);
 });
 ```
 
-### Shutdown
+## AI Integration
 
-The browser will automatically close when the server process exits. To manually close the browser:
+The `/api/ai` endpoint accepts prompts and returns Puppeteer scripts:
 
 ```typescript
-await puppeteerManager.close();
+// Send prompt to AI
+const response = await fetch('/api/ai', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a helpful assistant that generates Puppeteer scripts'
+      },
+      {
+        role: 'user',
+        content: 'Login to the admin panel'
+      }
+    ]
+  })
+});
+
+// Get generated script
+const { reply } = await response.json();
+const { code } = JSON.parse(reply);
+
+// Execute script
+await fetch('/api/script', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ code })
+});
 ```
 
-### Configuration
+## API Endpoints
 
-The browser is launched with the following options:
-- `headless: false` - Runs in non-headless mode for debugging
-- `args: ['--no-sandbox']` - Required for Docker compatibility
+### GET /api/observe
+Returns current browser state:
+```typescript
+interface ObserveResponse {
+  url: string;      // Current URL
+  title: string;    // Page title
+  html: string;     // Page HTML
+}
+```
+
+### POST /api/script
+Executes JavaScript in browser context:
+```typescript
+interface ScriptRequest {
+  code: string;     // JavaScript code to execute
+}
+```
+
+### POST /api/node-script
+Executes Node.js code with Puppeteer access:
+```typescript
+interface NodeScriptRequest {
+  code: string;     // Node.js code to execute
+}
+```
+
+### POST /api/puppeteer
+Executes Puppeteer automation script:
+```typescript
+interface PuppeteerRequest {
+  script: string;   // Puppeteer script to execute
+}
+```
+
+## WebSocket Events
+
+### UI_STATE_UPDATE
+Emitted when browser UI state changes:
+```typescript
+socket.on('UI_STATE_UPDATE', (pageState: PageState) => {
+  // Handle UI state update
+});
+```
+
+### screenshot
+Emitted every 2 seconds with browser screenshot:
+```typescript
+socket.on('screenshot', (base64Image: string) => {
+  // Handle screenshot update
+});
+```
+
+## Configuration
+
+The server runs on port 4000 with:
+- WebSocket connections enabled
+- CORS configured for localhost:3001
+- Automatic reconnection handling
+- Screenshot streaming every 2 seconds
+- Puppeteer in non-headless mode for debugging
+
+## Security Considerations
+
+- WebSocket connections restricted to localhost
+- Puppeteer runs with sandbox disabled for Docker
+- Exercise caution with script execution in production
+- Validate all incoming messages and scripts
+- Consider adding authentication for external consumers
+
+## Example: LLM Automation Flow
+
+1. Connect to WebSocket for UI state:
+```typescript
+const socket = io('ws://localhost:4000');
+socket.on('UI_STATE_UPDATE', handleUIState);
+```
+
+2. Analyze UI state with LLM:
+```typescript
+async function handleUIState(pageState: PageState) {
+  // Generate automation based on UI state
+  const prompt = generatePrompt(pageState);
+  const script = await getAIScript(prompt);
+  
+  // Execute automation
+  await executeScript(script);
+}
+```
+
+3. Execute automation through API:
+```typescript
+async function executeScript(script: string) {
+  await fetch('/api/puppeteer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ script })
+  });
+}
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch
+3. Add tests
+4. Submit pull request

@@ -4,6 +4,8 @@ import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent'
+import { ButtonComponent } from '../../types/ui-reflection/types'
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background relative',
@@ -41,14 +43,51 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
   tooltipText?: string;
+  /** Unique identifier for UI reflection system */
+  id?: string;
+  /** Label text for UI reflection system */
+  label?: string;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, tooltipText, tooltip, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, tooltipText, tooltip, id, label, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     const buttonRef = React.useRef<HTMLButtonElement | null>(null)
     const [tooltipPosition, setTooltipPosition] = React.useState({ x: 0, y: 0 })
 
+    // Get the current label text, trying multiple sources
+    const currentLabel = React.useMemo(() => {
+      if (label) return label;
+      if (typeof children === 'string') return children;
+      if (React.isValidElement(children) && typeof children.props.children === 'string') {
+        return children.props.children;
+      }
+      return undefined;
+    }, [label, children]);
+
+    // Register with UI reflection system if id is provided
+    const updateMetadata = id ? useRegisterUIComponent<ButtonComponent>({
+      type: 'button',
+      id,
+      label: currentLabel,
+      disabled,
+      variant: variant || undefined,
+      actions: ['click']
+    }) : undefined;
+
+    // Update metadata when disabled state or label changes
+    React.useEffect(() => {
+      if (updateMetadata) {
+        updateMetadata({
+          disabled,
+          label: currentLabel,
+          variant: variant || undefined,
+          actions: ['click']
+        });
+      }
+    }, [disabled, currentLabel, variant, updateMetadata]);
+
+    // Tooltip position effect
     React.useEffect(() => {
       if (tooltipText && buttonRef.current) {
         const button = buttonRef.current
@@ -67,7 +106,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     const content = (
       <>
-        {props.children}
+        {children}
         {tooltipText && (
           <span 
             className="fixed invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity
@@ -101,6 +140,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           }
           buttonRef.current = node
         }}
+        data-automation-id={id}
+        disabled={disabled}
         {...props}
       >
         {content}

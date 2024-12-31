@@ -26,8 +26,8 @@ export async function initializeApp() {
       const policyEngine = new PolicyEngine();
 
       const policies = [
-        `ALLOW read ON Ticket`,
-        `ALLOW write ON Ticket`,
+        `ALLOW read ON Ticket WHEN user.role == "admin"`,
+        `ALLOW write ON Ticket WHEN user.role == "admin"`,
         // Add more policies as needed
       ];
 

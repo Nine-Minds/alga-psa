@@ -65,7 +65,7 @@ const nextConfig = {
   },
   env: {
     EDITION: process.env.NEXT_PUBLIC_EDITION,
-  },
+  }
 }
 
 export default nextConfig;

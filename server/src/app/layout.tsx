@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { initializeApp } from "@/lib/actions/initializeApp";
+import { initializeApp } from "../lib/actions/initializeApp";
 import "./globals.css";
 import { Toaster } from 'react-hot-toast';
-import { getCurrentTenant } from "@/lib/actions/tenantActions";
-import { TenantProvider } from "@/components/TenantProvider";
+import { getCurrentTenant } from "../lib/actions/tenantActions";
+import { TenantProvider } from "../components/TenantProvider";
 import { Suspense } from "react";
 import { Theme } from '@radix-ui/themes';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider } from '../context/ThemeContext';
+import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -46,9 +47,17 @@ async function MainContent({ children }: { children: React.ReactNode }) {
     <TenantProvider tenant={tenant}>
       <ThemeProvider>
         <Theme>
-          <div className="min-h-screen bg-background font-sans antialiased">
-            {children}
-          </div>
+          <ClientUIStateProvider
+            initialPageState={{
+              id: 'msp-application',
+              title: 'MSP Application',
+              components: []
+            }}
+          >
+            <div className="min-h-screen bg-background font-sans antialiased">
+              {children}
+            </div>
+          </ClientUIStateProvider>
         </Theme>
       </ThemeProvider>
     </TenantProvider>

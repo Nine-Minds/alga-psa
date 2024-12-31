@@ -1,12 +1,30 @@
-import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback, useState } from 'react';
+import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { FormComponent, FormField } from '../../types/ui-reflection/types';
 
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   label?: string;
   preserveCursor?: boolean;
+  /** Unique identifier for UI reflection system */
+  id?: string;
+  /** Whether the input is required */
+  required?: boolean;
+  /** Additional class names */
+  className?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, className, preserveCursor = true, ...props }, forwardedRef) => {
+  ({ 
+    label, 
+    className, 
+    preserveCursor = true, 
+    id, 
+    required, 
+    value, 
+    disabled, 
+    onChange,
+    ...props 
+  }, forwardedRef) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
     const cursorPositionRef = useRef<number | null>(null);
     const isComposing = useRef(false);
@@ -23,11 +41,44 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       [forwardedRef]
     );
 
+    // Register with UI reflection system if id is provided
+    const updateMetadata = id ? useRegisterUIComponent<FormComponent>({
+      type: 'form',
+      id,
+      label,
+      disabled,
+      actions: ['type'],
+      fields: [{
+        type: 'textField',
+        id: `${id}-field`,
+        label,
+        value: typeof value === 'string' ? value : undefined,
+        disabled,
+        required
+      }]
+    }) : undefined;
+
+    // Update metadata when value changes
+    useEffect(() => {
+      if (updateMetadata && typeof value === 'string') {
+        updateMetadata({
+          fields: [{
+            type: 'textField',
+            id: `${id}-field`,
+            label,
+            value,
+            disabled,
+            required
+          }]
+        });
+      }
+    }, [value, updateMetadata, label, disabled, required, id]);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!isComposing.current && preserveCursor) {
         cursorPositionRef.current = e.target.selectionStart;
       }
-      props.onChange?.(e);
+      onChange?.(e);
     };
 
     // Restore cursor position after value changes
@@ -46,7 +97,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           }
         });
       }
-    }, [props.value, preserveCursor]);
+    }, [value, preserveCursor]);
 
     const handleCompositionStart = () => {
       isComposing.current = true;
@@ -73,13 +124,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             handleRef(element);
           }}
           className={`w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className}`}
-          {...props}
+          data-automation-id={id}
+          value={value}
+          disabled={disabled}
+          required={required}
           onChange={handleChange}
           onCompositionStart={handleCompositionStart}
           onCompositionEnd={handleCompositionEnd}
-          onClick={(e) => {
-            props.onClick?.(e);
-          }}
+          {...props}
         />
       </div>
     );
