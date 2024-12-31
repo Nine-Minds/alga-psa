@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true
+  serverExternalPackages: ['puppeteer-core'],
 };
 
 export default nextConfig;

@@ -122,15 +122,15 @@ export function UIStateProvider({
   }, [pageState, isConnected]);
 
   // Send periodic updates every 5 seconds
-  // useEffect(() => {
-  //   if (!socket?.connected) return;
+  useEffect(() => {
+    if (!socketRef.current?.connected) return;
 
-  //   const interval = setInterval(() => {
-  //     socket.emit('UI_STATE_UPDATE', pageState);
-  //   }, 5000);
+    const interval = setInterval(() => {
+      socketRef.current?.emit('UI_STATE_UPDATE', pageState);
+    }, 5000);
 
-  //   return () => clearInterval(interval);
-  // }, [socket, pageState]);
+    return () => clearInterval(interval);
+  }, [socketRef.current, pageState]);
 
   /**
    * Add a new component to the page state

@@ -1,7 +1,41 @@
+interface ToolExecutionResult {
+  error?: string;
+  success?: boolean;
+  result?: {
+    url?: string;
+    title?: string;
+    elements?: unknown[];
+    [key: string]: unknown;
+  };
+}
+
 const API_BASE = 'http://localhost:4000/api';
 
+// Get UI State
+export async function getUIState(): Promise<ToolExecutionResult> {
+  const endpoint = `${API_BASE}/ui-state`;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      const error = `Failed to get UI state: ${response.status}`;
+      throw new Error(error);
+    }
+
+    const result = await response.json();
+    return { success: true, result };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
+
 // 1) Observe Browser
-export async function observeBrowser(selector?: string) {
+export async function observeBrowser(selector?: string): Promise<ToolExecutionResult> {
   const endpoint = `${API_BASE}/observe${selector ? `?selector=${encodeURIComponent(selector)}` : ''}`;
   try {
     const response = await fetch(endpoint, {
@@ -14,19 +48,17 @@ export async function observeBrowser(selector?: string) {
     }
 
     const result = await response.json();
-    const successResult = { success: true, result };
-    return successResult;
+    return { success: true, result };
   } catch (error) {
-    const errorResult = {
+    return {
       success: false,
       error: error instanceof Error ? error.message : String(error)
     };
-    return errorResult;
   }
 }
 
 // 2) Execute Browser Script
-export async function executeScript(code: string) {
+export async function executeScript(code: string): Promise<ToolExecutionResult> {
   const endpoint = `${API_BASE}/script`;
   const body = { code };
   try {
@@ -35,29 +67,26 @@ export async function executeScript(code: string) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body, null, 0),
     });
 
     if (!response.ok) {
-      const error = `Failed to execute script: ${response.status}`;
+      const error = `Failed to execute script: ${await response.text()}`;
       throw new Error(error);
     }
 
     const result = await response.json();
-    
-    const successResult = { success: true, result };
-    return successResult;
+    return { success: true, result };
   } catch (error) {
-    const errorResult = {
+    return {
       success: false,
       error: error instanceof Error ? error.message : String(error)
     };
-    return errorResult;
   }
 }
 
 // 3) Wait
-export async function wait(seconds: number) {
+export async function wait(seconds: number): Promise<ToolExecutionResult> {
   try {
     await new Promise(resolve => setTimeout(resolve, seconds * 1000));
     return {
@@ -73,7 +102,7 @@ export async function wait(seconds: number) {
 }
 
 // 4) Execute Puppeteer Script
-export async function executePuppeteerScript(script: string) {
+export async function executePuppeteerScript(script: string): Promise<ToolExecutionResult> {
   const endpoint = `${API_BASE}/puppeteer`;
   const body = { script };
   try {
@@ -82,11 +111,11 @@ export async function executePuppeteerScript(script: string) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body, null, 0),
     });
 
     if (!response.ok) {
-      const error = `Failed to execute puppeteer script: ${response.status}`;
+      const error = `Failed to execute puppeteer script: ${await response.text()}`;
       throw new Error(error);
     }
 
@@ -110,8 +139,11 @@ interface ToolArgs {
   script?: string;
 }
 
+
 export const invokeTool = async (toolName: string, args: ToolArgs) => {
   switch (toolName) {
+    case 'get_ui_state':
+      return getUIState();
     case 'observe_browser':
       return observeBrowser(args.selector);
     case 'execute_script':

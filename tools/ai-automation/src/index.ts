@@ -88,6 +88,28 @@ app.get('/', ((_req: Request, res: Response) => {
   console.log('Health check response sent');
 }) as RequestHandler);
 
+app.get('/api/ui-state', (async (_req: Request, res: Response) => {
+  console.log('\n[GET /api/ui-state]');
+  const startTime = Date.now();
+
+  try {
+    const state = uiStateManager.getCurrentState();
+    if (!state) {
+      throw new Error('No UI state available');
+    }
+    
+    console.log('UI state:', state);
+    console.log(`Completed in ${Date.now() - startTime}ms`);
+    res.json(JSON.parse(JSON.stringify(state, null, 0)));
+  } catch (error) {
+    console.error('Error in /api/ui-state:', error);
+    console.log(`Failed in ${Date.now() - startTime}ms`);
+    res.status(500).json(JSON.parse(JSON.stringify({
+      error: error instanceof Error ? error.message : String(error)
+    }, null, 0)));
+  }
+}) as RequestHandler);
+
 app.get('/api/observe', (async (req: Request, res: Response) => {
   console.log('\n[GET /api/observe]');
   console.log('Query params:', req.query);
@@ -102,11 +124,11 @@ app.get('/api/observe', (async (req: Request, res: Response) => {
     
     console.log('Response:', { url, title, htmlLength: html.length });
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json(response);
+    res.json(JSON.parse(JSON.stringify(response, null, 0)));
   } catch (err) {
     console.error('Error in /api/observe:', err);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json(JSON.parse(JSON.stringify({ error: String(err) }, null, 0)));
   }
 }) as RequestHandler);
 
@@ -118,7 +140,7 @@ app.post('/api/script', (async (req: Request<{}, any, ScriptRequest>, res: Respo
   const { code } = req.body;
   if (!code) {
     console.log('Error: No code provided');
-    return res.status(400).json({ error: 'No code provided.' });
+    return res.status(400).json(JSON.parse(JSON.stringify({ error: 'No code provided.' }, null, 0)));
   }
 
   try {
@@ -127,11 +149,11 @@ app.post('/api/script', (async (req: Request<{}, any, ScriptRequest>, res: Respo
     
     console.log('Script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json({ result });
+    res.json(JSON.parse(JSON.stringify({ result }, null, 0)));
   } catch (err) {
     console.error('Error in /api/script:', err);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json(JSON.parse(JSON.stringify({ error: String(err) }, null, 0)));
   }
 }) as RequestHandler);
 
@@ -148,11 +170,11 @@ app.post('/api/node-script', (async (req: Request<{}, any, ScriptRequest>, res: 
     
     console.log('Node script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json({ result });
+    res.json(JSON.parse(JSON.stringify({ result }, null, 0)));
   } catch (err) {
     console.error('Error in /api/node-script:', err);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json({ error: String(err) });
+    res.status(500).json(JSON.parse(JSON.stringify({ error: String(err) }, null, 0)));
   }
 }) as RequestHandler);
 
@@ -165,21 +187,25 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
     const { script } = req.body;
     if (!script) {
       console.log('Error: Script is required');
-      return res.status(400).json({ error: 'Script is required' });
+      return res.status(400).json(JSON.parse(JSON.stringify({ error: 'Script is required' }, null, 0)));
     }
 
     const page = puppeteerManager.getPage();
-    const result = await toolManager.executeTool('execute_script', page, { script });
+    const result = await toolManager.executeTool('execute_puppeteer_script', page, { script });
     
     console.log('Puppeteer script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json(result);
+    if (!result) {
+      return res.json({});
+    }
+    
+    res.json(JSON.parse(JSON.stringify(result, null, 0)));
   } catch (error) {
     console.error('Error in /api/puppeteer:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json({
+    res.status(500).json(JSON.parse(JSON.stringify({
       error: error instanceof Error ? error.message : String(error)
-    });
+    }, null, 0)));
   }
 }) as RequestHandler);
 
@@ -192,7 +218,7 @@ app.post('/api/tool', (async (req: Request, res: Response) => {
 
   if (!toolName) {
     console.log('Error: Tool name is required');
-    return res.status(400).json({ error: 'Tool name is required' });
+    return res.status(400).json(JSON.parse(JSON.stringify({ error: 'Tool name is required' }, null, 0)));
   }
 
   try {
@@ -201,13 +227,13 @@ app.post('/api/tool', (async (req: Request, res: Response) => {
 
     console.log('Tool execution result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json({ result });
+    res.json(JSON.parse(JSON.stringify({ result }, null, 0)));
   } catch (error) {
     console.error('Error executing tool:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json({ 
+    res.status(500).json(JSON.parse(JSON.stringify({ 
       error: error instanceof Error ? error.message : String(error)
-    });
+    }, null, 0)));
   }
 }) as RequestHandler);
 

@@ -67,4 +67,10 @@ export const puppeteerScriptTool = createTool(
   ['script']
 );
 
-export const tools = [observeTool, scriptTool, waitTool, puppeteerScriptTool];
+export const getUIStateTool = createTool(
+  'get_ui_state',
+  'Get the current UI state including all registered components and their properties',
+  {} // No input parameters required
+);
+
+export const tools = [observeTool, scriptTool, waitTool, puppeteerScriptTool, getUIStateTool];

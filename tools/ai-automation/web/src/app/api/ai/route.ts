@@ -8,14 +8,15 @@ import {
   observeBrowser,
   executeScript,
   wait,
-  executePuppeteerScript
+  executePuppeteerScript,
+  getUIState
 } from '../../../tools/invokeTool';
 
 type Role = 'user' | 'assistant';
 type SystemRole = 'system';
 type AnyRole = Role | SystemRole;
 
-type ToolName = 'observe_browser' | 'execute_script' | 'wait' | 'execute_puppeteer_script';
+type ToolName = 'observe_browser' | 'execute_script' | 'wait' | 'execute_puppeteer_script' | 'get_ui_state';
 
 interface ToolExecutionResult {
   error?: string;
@@ -136,7 +137,9 @@ interface PuppeteerScriptParams {
   script: string;
 }
 
-type ToolInput = ObserverParams | ExecuteScriptParams | WaitParams | PuppeteerScriptParams;
+type UIStateParams = Record<never, never>;
+
+type ToolInput = ObserverParams | ExecuteScriptParams | WaitParams | PuppeteerScriptParams | UIStateParams;
 
 interface LocalMessage {
   role: AnyRole;
@@ -193,6 +196,8 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
     } else if (name === ('execute_puppeteer_script' as ToolName)) {
       const params = toolInput as PuppeteerScriptParams;
       result = await executePuppeteerScript(params.script);
+    } else if (name === ('get_ui_state' as ToolName)) {
+      result = await getUIState();
     } else {
       throw new Error(`Unknown tool: ${name}`);
     }
@@ -212,7 +217,7 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
     }
 
     // Truncate response if it's too long
-    const MAX_LENGTH = 1000;
+    const MAX_LENGTH = 5000;
     if (response.length > MAX_LENGTH) {
       const truncated = response.slice(0, MAX_LENGTH);
       return `${truncated}\n... [Response truncated, total length: ${response.length} characters]`;
@@ -226,6 +231,161 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
   }
 }
 
+async function handleAIRequest(rawMessages: LocalMessage[]) {
+  // Extract system message and filter other messages
+  let systemMessage = '';
+  const initialMessages = rawMessages.filter(msg => {
+    if (msg.role === 'system') {
+      systemMessage = typeof msg.content === 'string' ? msg.content : '';
+      return false;
+    }
+    return true;
+  });
+
+  const currentMessages: LocalMessage[] = [...initialMessages];
+  const textEncoder = new TextEncoder();
+  const readable = new ReadableStream({
+    async start(controller) {
+      // Helper to send a chunk over SSE
+      function sendEvent(eventName: string, data: string) {
+        const event: StreamEvent = { type: eventName as StreamEventType, data };
+        const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
+        controller.enqueue(textEncoder.encode(payload));
+      }
+
+      // We may repeat calls until the model stops requesting a tool
+      while (true) {
+        const anthropicMessages = currentMessages.map(convertToAnthropicMessage);
+
+        let toolUseBlock: ToolUseBlock | null = null;
+        let currentText = '';
+        let currentInput = '';
+        let lastMessageDelta: ToolCallDelta | null = null;
+
+        const completion = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          system: systemMessage || prompts.aiEndpoint,
+          messages: anthropicMessages,
+          tools,
+          max_tokens: 1024,
+          temperature: 0.2,
+          stream: true,
+        });
+
+        for await (const chunk of completion) {
+          const streamChunk = chunk as StreamChunk;
+          
+          if (streamChunk.type === 'content_block_start') {
+            const contentBlock = streamChunk.content_block;
+            if (contentBlock.type === 'tool_use') {
+              toolUseBlock = {
+                type: 'tool_use',
+                id: contentBlock.id,
+                name: contentBlock.name,
+                input: contentBlock.input
+              } as ToolUseBlock;
+            }
+          } else if (streamChunk.type === 'content_block_delta') {
+            const delta = streamChunk.delta;
+            
+            if (delta.type === 'text_delta') {
+              currentText += delta.text;
+              sendEvent('token', delta.text);
+            } else if (delta.type === 'input_json_delta' && 'partial_json' in delta) {
+              currentInput += delta.partial_json;
+              sendEvent('token', delta.partial_json);
+            }
+          } else if (streamChunk.type === 'content_block_stop') {
+            if (toolUseBlock && currentInput) {
+              try {
+                const parsedInput = JSON.parse(currentInput);
+                toolUseBlock.input = parsedInput;
+              } catch (error) {
+                console.error('Failed to parse tool input:', error);
+              }
+            }
+            if (toolUseBlock) {
+              console.log('Tool use request:', JSON.stringify(toolUseBlock, null, 2));
+              sendEvent('tool_use', JSON.stringify(toolUseBlock));
+            }
+          } else if (streamChunk.type === 'message_delta') {
+            lastMessageDelta = streamChunk.delta;
+          }
+        }
+        
+        // Push an "assistant" message with the accumulated content and tool use if present
+        const messageContent: (TextBlock | ToolUseBlock)[] = [];
+        if (currentText) {
+          messageContent.push({ type: 'text', text: currentText } as TextBlock);
+        }
+        if (toolUseBlock) {
+          messageContent.push(toolUseBlock);
+        }
+        const assistantMessage: LocalMessage = {
+          role: 'assistant',
+          content: messageContent,
+        };
+        currentMessages.push(assistantMessage);
+        console.log('Assistant response:', JSON.stringify(assistantMessage, null, 2));
+
+        // If we have a tool use block and the stop reason is tool_use, execute the tool and continue
+        if (toolUseBlock && lastMessageDelta?.stop_reason === 'tool_use') {
+          const result = await executeToolAndGetResult(toolUseBlock);
+          console.log('Tool use response:', result);
+          sendEvent('tool_result', result);
+
+          // Provide the result as a "user" message for the next iteration
+          const toolResultMessage: LocalMessage = {
+            role: 'user',
+            content: [
+              {
+                type: 'tool_result',
+                tool_use_id: toolUseBlock.id,
+                content: [{ type: 'text', text: result } as TextBlock],
+                is_error: result.startsWith('Failed to execute'),
+              } as ToolResult,
+            ],
+          };
+          currentMessages.push(toolResultMessage);
+          continue;
+        }
+        
+        break;
+      }
+
+      sendEvent('done', 'true');
+      controller.close();
+    },
+  });
+
+  return new NextResponse(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
+}
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    console.log('User request:', JSON.stringify(body, null, 2));
+    return handleAIRequest(body.messages);
+  } catch (error) {
+    console.error('Error in AI processing:', error);
+    return NextResponse.json(
+      {
+        reply: `Error processing request: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// Keep GET for backward compatibility
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -235,140 +395,7 @@ export async function GET(req: Request) {
     }
     const rawMessages = JSON.parse(messagesParam);
     console.log('User request:', JSON.stringify(rawMessages, null, 2));
-
-    // Extract system message and filter other messages
-    let systemMessage = '';
-    const initialMessages = (rawMessages as LocalMessage[]).filter(msg => {
-      if (msg.role === 'system') {
-        systemMessage = typeof msg.content === 'string' ? msg.content : '';
-        return false;
-      }
-      return true;
-    });
-
-    const currentMessages: LocalMessage[] = [...initialMessages];
-    const textEncoder = new TextEncoder();
-    const readable = new ReadableStream({
-      async start(controller) {
-        // Helper to send a chunk over SSE
-        function sendEvent(eventName: string, data: string) {
-          const event: StreamEvent = { type: eventName as StreamEventType, data };
-          const payload = `event: ${event.type}\ndata: ${event.data}\n\n`;
-          controller.enqueue(textEncoder.encode(payload));
-        }
-
-        // We may repeat calls until the model stops requesting a tool
-        while (true) {
-          const anthropicMessages = currentMessages.map(convertToAnthropicMessage);
-
-          let toolUseBlock: ToolUseBlock | null = null;
-          let currentText = '';
-          let currentInput = '';
-          let lastMessageDelta: ToolCallDelta | null = null;
-
-          const completion = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            system: systemMessage || prompts.aiEndpoint,
-            messages: anthropicMessages,
-            tools,
-            max_tokens: 1024,
-            temperature: 0.2,
-            stream: true,
-          });
-
-          for await (const chunk of completion) {
-            const streamChunk = chunk as StreamChunk;
-            
-            if (streamChunk.type === 'content_block_start') {
-              const contentBlock = streamChunk.content_block;
-              if (contentBlock.type === 'tool_use') {
-                toolUseBlock = {
-                  type: 'tool_use',
-                  id: contentBlock.id,
-                  name: contentBlock.name,
-                  input: contentBlock.input
-                } as ToolUseBlock;
-              }
-            } else if (streamChunk.type === 'content_block_delta') {
-              const delta = streamChunk.delta;
-              
-              if (delta.type === 'text_delta') {
-                currentText += delta.text;
-                sendEvent('token', delta.text);
-              } else if (delta.type === 'input_json_delta' && 'partial_json' in delta) {
-                currentInput += delta.partial_json;
-                sendEvent('token', delta.partial_json);
-              }
-            } else if (streamChunk.type === 'content_block_stop') {
-              if (toolUseBlock && currentInput) {
-                try {
-                  const parsedInput = JSON.parse(currentInput);
-                  toolUseBlock.input = parsedInput;
-                } catch (error) {
-                  console.error('Failed to parse tool input:', error);
-                }
-              }
-              if (toolUseBlock) {
-                console.log('Tool use request:', JSON.stringify(toolUseBlock, null, 2));
-                sendEvent('tool_use', JSON.stringify(toolUseBlock));
-              }
-            } else if (streamChunk.type === 'message_delta') {
-              lastMessageDelta = streamChunk.delta;
-            }
-          }
-          
-          // Push an "assistant" message with the accumulated content and tool use if present
-          const messageContent: (TextBlock | ToolUseBlock)[] = [];
-          if (currentText) {
-            messageContent.push({ type: 'text', text: currentText } as TextBlock);
-          }
-          if (toolUseBlock) {
-            messageContent.push(toolUseBlock);
-          }
-          const assistantMessage: LocalMessage = {
-            role: 'assistant',
-            content: messageContent,
-          };
-          currentMessages.push(assistantMessage);
-          console.log('Assistant response:', JSON.stringify(assistantMessage, null, 2));
-
-          // If we have a tool use block and the stop reason is tool_use, execute the tool and continue
-          if (toolUseBlock && lastMessageDelta?.stop_reason === 'tool_use') {
-            const result = await executeToolAndGetResult(toolUseBlock);
-            console.log('Tool use response:', result);
-            sendEvent('tool_result', result);
-
-            // Provide the result as a "user" message for the next iteration
-            const toolResultMessage: LocalMessage = {
-              role: 'user',
-              content: [
-                {
-                  type: 'tool_result',
-                  tool_use_id: toolUseBlock.id,
-                  content: [{ type: 'text', text: result } as TextBlock],
-                  is_error: result.startsWith('Failed to execute'),
-                } as ToolResult,
-              ],
-            };
-            currentMessages.push(toolResultMessage);
-            continue;
-          }
-          
-          break;
-        }
-
-        sendEvent('done', 'true');
-        controller.close();
-      },
-    });
-
-    return new NextResponse(readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-    });
+    return handleAIRequest(rawMessages);
   } catch (error) {
     console.error('Error in AI processing:', error);
     return NextResponse.json(

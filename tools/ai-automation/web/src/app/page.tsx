@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
+import { ArrowRight } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radix-ui/themes';
@@ -12,38 +13,104 @@ export default function ControlPanel() {
     content: string;
   }
 
+  interface LogEntry {
+    type: 'tool_use' | 'tool_result' | 'navigation' | 'error';
+    title: string;
+    content: unknown;
+    timestamp: string;
+  }
+
   const [imgSrc, setImgSrc] = useState('');
-  const [log, setLog] = useState<string[]>([]);
+  const [log, setLog] = useState<LogEntry[]>([]);
   const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [url, setUrl] = useState('http://server:3000');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const scrollToBottom = () => {
+  const scrollMessagesToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Auto-scroll when messages update
+  const scrollLogToBottom = () => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   useEffect(() => {
-    scrollToBottom();
+    scrollMessagesToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    scrollLogToBottom();
+  }, [log]);
 
   // Styles for message formatting
   const preStyle: React.CSSProperties = {
     whiteSpace: 'pre-wrap',
-    overflowWrap: 'break-word', // Using overflowWrap instead of wordWrap
+    overflowWrap: 'break-word',
     background: 'var(--color-panel)',
     padding: '8px',
     borderRadius: '4px',
     margin: '4px 0'
   };
 
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '8px',
+    backgroundColor: 'var(--color-panel)',
+    border: 'none',
+    borderRadius: '4px',
+    color: 'inherit',
+    fontSize: 'inherit',
+    outline: 'none'
+  };
+
+  const formatLogContent = (content: unknown): string => {
+    try {
+      if (typeof content === 'string') {
+        // Clean and try to parse string as JSON for pretty printing
+        const cleaned = content
+          .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+          .replace(/\\[^"\\\/bfnrtu]/g, '');
+        try {
+          const parsed = JSON.parse(cleaned);
+          return JSON.stringify(parsed, null, 2);
+        } catch {
+          // If JSON parsing fails, return the cleaned string
+          return cleaned;
+        }
+      }
+      // For non-string content, try to stringify with pretty printing
+      return JSON.stringify(content, null, 2);
+    } catch {
+      // If all else fails, return as string with basic cleaning
+      const str = String(content);
+      return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    }
+  };
+
   useEffect(() => {
-    setMessages([{
-      role: 'system',
-      content: prompts.chatInterface
-    }]);
-  }, []);
+    const systemPrompt = prompts.chatInterface
+      .replace('{url}', url)
+      .replace('{username}', username || '[Not provided]')
+      .replace('{password}', password || '[Not provided]');
+    
+    setMessages([
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'assistant',
+        content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
+      }
+    ]);
+  }, [url, username, password]);
 
   useEffect(() => {
     const socket = io('http://localhost:4000');
@@ -54,6 +121,34 @@ export default function ControlPanel() {
     socket.on('disconnect', () => console.log('WS disconnected'));
     return () => { socket.disconnect(); };
   }, []);
+
+  const cancelGeneration = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setIsGenerating(false);
+  };
+
+  const clearConversation = () => {
+    const systemPrompt = prompts.chatInterface
+      .replace('{url}', url)
+      .replace('{username}', username || '[Not provided]')
+      .replace('{password}', password || '[Not provided]');
+    
+    setMessages([
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      {
+        role: 'assistant',
+        content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
+      }
+    ]);
+    setIsGenerating(false);
+    setUserMessage('');
+  };
 
   const sendMessageToAI = async () => {
     if (!userMessage.trim()) return;
@@ -72,40 +167,147 @@ export default function ControlPanel() {
       const queryParams = new URLSearchParams({
         messages: JSON.stringify(newMessages)
       });
-      const eventSource = new EventSource(`/api/ai?${queryParams.toString()}`);
-      let currentAssistantMessage = '';
-
+      eventSourceRef.current = new EventSource(`/api/ai?${queryParams.toString()}`);
+      const eventSource = eventSourceRef.current;
       // Handle incoming events
       eventSource.onmessage = (event) => {
         console.log('Received SSE message:', event);
       };
 
+      let currentAssistantMessage = '';
+      let tokenBuffer = '';
+
       eventSource.addEventListener('token', (event) => {
-        console.log('Received token:', event.data);
-        currentAssistantMessage += event.data;
-        setMessages(prev => {
-          const updated = [...prev];
-          const lastIndex = updated.length - 1;
-          if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
-            updated[lastIndex].content = currentAssistantMessage;
-          } else {
-            updated.push({
-              role: 'assistant',
-              content: currentAssistantMessage
-            });
+        try {
+          // Add new data to the buffer
+          tokenBuffer += event.data;
+          
+          // Try to extract complete token objects
+          let match;
+          const tokenRegex = /\{"type":"token","data":"((?:[^"\\]|\\.)*)"\}/g;
+          
+          while ((match = tokenRegex.exec(tokenBuffer)) !== null) {
+            try {
+              const token = match[0];
+              const parsed = JSON.parse(token);
+              
+              if (parsed.data) {
+                currentAssistantMessage += parsed.data;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  const lastIndex = updated.length - 1;
+                  if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
+                    updated[lastIndex].content = currentAssistantMessage;
+                  } else {
+                    updated.push({
+                      role: 'assistant',
+                      content: currentAssistantMessage
+                    });
+                  }
+                  return updated;
+                });
+              }
+              
+              // Remove the processed token from the buffer
+              tokenBuffer = tokenBuffer.slice(match.index + token.length);
+            } catch (error) {
+              // Skip malformed tokens
+              console.warn('Skipping malformed token:', match[0], error);
+            }
           }
-          return updated;
-        });
+          
+          // If buffer gets too large, clear it to prevent memory issues
+          if (tokenBuffer.length > 10000) {
+            console.warn('Token buffer overflow, clearing buffer');
+            tokenBuffer = '';
+          }
+        } catch (error) {
+          console.error('Error processing token event:', error);
+        }
       });
 
+      const cleanAndParseJSON = (str: string) => {
+        try {
+          // Remove control characters and escape sequences
+          const cleaned = str
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+            .replace(/\\[^"\\\/bfnrtu]/g, '');
+          return JSON.parse(cleaned);
+        } catch (error) {
+          console.warn('JSON parse error:', error);
+          return null;
+        }
+      };
+
       eventSource.addEventListener('tool_use', (event) => {
-        console.log('Tool use requested:', event.data);
-        setLog(prev => [...prev, `Tool Use Requested: ${event.data}`]);
+        try {
+          const toolEvent = cleanAndParseJSON(event.data);
+          if (!toolEvent) {
+            console.error('Invalid tool use event data');
+            return;
+          }
+          console.log('Tool use requested:', toolEvent);
+
+          let toolData;
+          try {
+            toolData = cleanAndParseJSON(toolEvent.data);
+          } catch (error) {
+            console.warn('Failed to parse tool data:', error);
+            toolData = toolEvent.data;
+          }
+
+          setLog(prev => [...prev, {
+            type: 'tool_use',
+            title: 'Tool Use Requested',
+            content: toolData ? {
+              name: toolData.name,
+              input: toolData.input
+            } : toolEvent.data,
+            timestamp: new Date().toISOString()
+          }]);
+        } catch (error) {
+          console.error('Error handling tool use event:', error);
+          setLog(prev => [...prev, {
+            type: 'error',
+            title: 'Tool Use Error',
+            content: String(error),
+            timestamp: new Date().toISOString()
+          }]);
+        }
       });
 
       eventSource.addEventListener('tool_result', (event) => {
-        console.log('Tool result:', event.data);
-        setLog(prev => [...prev, `Tool Result: ${event.data}`]);
+        try {
+          const resultEvent = cleanAndParseJSON(event.data);
+          if (!resultEvent) {
+            console.error('Invalid tool result event data');
+            return;
+          }
+          console.log('Tool result:', resultEvent);
+
+          let resultData;
+          try {
+            resultData = cleanAndParseJSON(resultEvent.data);
+          } catch (error) {
+            console.warn('Failed to parse result data:', error);
+            resultData = resultEvent.data;
+          }
+
+          setLog(prev => [...prev, {
+            type: 'tool_result',
+            title: 'Tool Result',
+            content: resultData || resultEvent.data,
+            timestamp: new Date().toISOString()
+          }]);
+        } catch (error) {
+          console.error('Error handling tool result event:', error);
+          setLog(prev => [...prev, {
+            type: 'error',
+            title: 'Tool Result Error',
+            content: String(error),
+            timestamp: new Date().toISOString()
+          }]);
+        }
       });
 
       // Handle errors
@@ -113,8 +315,11 @@ export default function ControlPanel() {
         // Only log and cleanup if we haven't received a done event
         if (eventSource.readyState !== EventSource.CLOSED) {
           console.error('SSE connection error');
-          eventSource.close();
-          setIsGenerating(false);
+          if (eventSourceRef.current === eventSource) {
+            eventSource.close();
+            eventSourceRef.current = null;
+            setIsGenerating(false);
+          }
         }
       };
 
@@ -122,15 +327,22 @@ export default function ControlPanel() {
       await new Promise((resolve) => {
         eventSource.addEventListener('done', () => {
           console.log('Received done event, closing connection');
-          eventSource.close();
-          setIsGenerating(false);
-          resolve(null);
+          if (eventSourceRef.current === eventSource) {
+            eventSource.close();
+            eventSourceRef.current = null;
+            setIsGenerating(false);
+            resolve(null);
+          }
         });
       });
     } catch (error) {
       console.error('Error in AI processing:', error);
-      setLog(prev => [...prev, `Error: ${error instanceof Error ? error.message : String(error)}`]);
-    } finally {
+      setLog(prev => [...prev, {
+        type: 'error',
+        title: 'Error',
+        content: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      }]);
       setIsGenerating(false);
     }
   };
@@ -147,9 +359,77 @@ export default function ControlPanel() {
               <Card>
                 <Flex direction="column" gap="4">
                   <Text size="5" weight="bold">Chat with AI</Text>
+                  <Flex direction="column" gap="4">
+                    <Flex gap="2">
+                      <Box style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={url}
+                          onChange={(e) => setUrl(e.target.value)}
+                          placeholder="URL"
+                          style={inputStyle}
+                        />
+                      </Box>
+                      <Button
+                        style={{ padding: '0 8px', height: '37px' }}
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('http://localhost:4000/api/puppeteer', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                script: `async (page) => { await page.goto('${url}', { waitUntil: 'networkidle0' });}`
+                              })
+                            });
+                            if (!response.ok) {
+                              throw new Error('Navigation failed');
+                            }
+                            setLog(prev => [...prev, {
+                              type: 'navigation',
+                              title: 'Navigation',
+                              content: `Navigated to: ${url}`,
+                              timestamp: new Date().toISOString()
+                            }]);
+                          } catch (error: unknown) {
+                            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+                            setLog(prev => [...prev, {
+                              type: 'error',
+                              title: 'Navigation Error',
+                              content: errorMessage,
+                              timestamp: new Date().toISOString()
+                            }]);
+                          }
+                        }}
+                      >
+                        <ArrowRight size={16} />
+                      </Button>
+                    </Flex>
+                    <Flex gap="4">
+                      <Box style={{ flex: 1 }}>
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Username"
+                          autoComplete="off"
+                          style={inputStyle}
+                        />
+                      </Box>
+                      <Box style={{ flex: 1 }}>
+                        <input
+                          type="password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Password"
+                          autoComplete="off"
+                          style={inputStyle}
+                        />
+                      </Box>
+                    </Flex>
+                  </Flex>
                   <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
                     <Flex direction="column" gap="2" p="2">
-                      {messages.map((msg, idx) => (
+                      {messages.filter(msg => msg.role !== 'system').map((msg, idx) => (
                         <Box key={idx}>
                           <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                             <strong>
@@ -161,22 +441,12 @@ export default function ControlPanel() {
                               :
                             </strong>
                           </Text>
-                          {msg.content.split('\n').map((line, lineIdx) => {
-                            if (line.includes('Function call:') || line.includes('Function response:')) {
-                              return (
-                                <pre key={lineIdx} style={preStyle}>
-                                  {line}
-                                  {line.includes('Function response:') ? '\n' : ''}
-                                </pre>
-                              );
-                            }
-                            return (
-                              <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
-                                {line}
-                              </pre>
-                            );
-                          })}
-                          <div ref={messagesEndRef} />
+                          {msg.content.split('\n').map((line, lineIdx) => (
+                            <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
+                              {line}
+                            </pre>
+                          ))}
+                          <div ref={messagesEndRef} style={{ height: 1 }} />
                         </Box>
                       ))}
                     </Flex>
@@ -185,17 +455,45 @@ export default function ControlPanel() {
                   <TextArea
                     value={userMessage}
                     onChange={(e) => setUserMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        if (!e.shiftKey) {
+                          e.preventDefault();
+                          if (!isGenerating && userMessage.trim()) {
+                            sendMessageToAI();
+                          }
+                        }
+                      }
+                    }}
                     rows={3}
-                    placeholder="Type your message here..."
+                    placeholder="Type your message here... (Enter to send, Shift+Enter for new line)"
                     style={{ backgroundColor: 'var(--color-panel)' }}
                   />
-                  <Button 
-                    onClick={sendMessageToAI} 
-                    disabled={isGenerating}
-                    style={{ width: '100%' }}
-                  >
-                    {isGenerating ? 'Thinking...' : 'Send'}
-                  </Button>
+                  <Flex direction="column" gap="2">
+                    <Button 
+                      onClick={sendMessageToAI} 
+                      disabled={isGenerating}
+                      style={{ width: '100%' }}
+                    >
+                      {isGenerating ? 'Thinking...' : 'Send'}
+                    </Button>
+                    {isGenerating && (
+                      <Button 
+                        onClick={cancelGeneration}
+                        color="gray"
+                        style={{ width: '100%' }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button 
+                      onClick={clearConversation}
+                      color="blue"
+                      style={{ width: '100%' }}
+                    >
+                      Clear Conversation
+                    </Button>
+                  </Flex>
                 </Flex>
               </Card>
             </Flex>
@@ -230,10 +528,44 @@ export default function ControlPanel() {
                   <ScrollArea style={{ maxHeight: '400px' }}>
                     <Flex direction="column" gap="2">
                       {log.map((entry, i) => (
-                        <Box key={i} p="2" style={{ backgroundColor: 'var(--color-panel)' }}>
-                          <Text size="2">{entry}</Text>
+                        <Box key={i} p="4" style={{ 
+                          backgroundColor: 'var(--color-panel)',
+                          borderRadius: '6px',
+                          border: '1px solid var(--gray-6)'
+                        }}>
+                          <Flex direction="column" gap="2">
+                            <Flex justify="between" align="center">
+                              <Text 
+                                size="2" 
+                                weight="bold"
+                                color={
+                                  entry.type === 'tool_use' ? 'blue' :
+                                  entry.type === 'tool_result' ? 'green' :
+                                  entry.type === 'navigation' ? 'purple' :
+                                  'red'
+                                }
+                              >
+                                {entry.title}
+                              </Text>
+                              <Text size="1" color="gray">
+                                {new Date(entry.timestamp).toLocaleTimeString()}
+                              </Text>
+                            </Flex>
+                            <Box style={{ 
+                              backgroundColor: 'var(--gray-3)', 
+                              padding: '8px',
+                              borderRadius: '4px',
+                              fontFamily: 'monospace',
+                              fontSize: '12px'
+                            }}>
+                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                {formatLogContent(entry.content)}
+                              </pre>
+                            </Box>
+                          </Flex>
                         </Box>
                       ))}
+                      <div ref={logEndRef} style={{ height: 1 }} />
                     </Flex>
                   </ScrollArea>
                 </Flex>
