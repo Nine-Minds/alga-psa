@@ -25,6 +25,12 @@ export interface BaseComponent {
   
   /** List of valid actions that can be performed on this component */
   actions?: string[];
+
+  /** Parent component ID for hierarchical relationships */
+  parentId?: string;
+
+  /** Child components for hierarchical structure */
+  children?: UIComponent[];
 }
 
 /**
@@ -48,29 +54,20 @@ export interface DialogComponent extends BaseComponent {
   
   /** Dialog title text */
   title: string;
-  
-  /** Child components contained within the dialog */
-  content?: UIComponent[];
 }
 
 /**
- * Form field representation within a form component.
+ * Form field component representation.
  */
-export interface FormField {
-  /** Unique identifier for the field */
-  id: string;
+export interface FormFieldComponent extends BaseComponent {
+  /** Specific type identifier for form fields */
+  type: "formField";
   
-  /** Type of form field */
-  type: "textField" | "checkbox" | "select" | "radio";
-  
-  /** Field label text */
-  label?: string;
+  /** Type of form input */
+  fieldType: "textField" | "checkbox" | "select" | "radio";
   
   /** Current field value */
   value?: string | boolean;
-  
-  /** Whether the field is disabled */
-  disabled?: boolean;
   
   /** Whether the field is required */
   required?: boolean;
@@ -81,9 +78,7 @@ export interface FormField {
  */
 export interface FormComponent extends BaseComponent {
   type: "form";
-  
-  /** List of form fields */
-  fields: FormField[];
+  // Uses children inherited from BaseComponent to contain FormFieldComponents
 }
 
 /**
@@ -142,9 +137,9 @@ export type UIComponent =
   | ButtonComponent
   | DialogComponent
   | FormComponent
+  | FormFieldComponent
   | DataGridComponent
-  | NavigationComponent
-  | FormField;
+  | NavigationComponent;
 
 /**
  * Top-level page state representation.

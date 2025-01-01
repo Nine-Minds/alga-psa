@@ -12,6 +12,90 @@ The UI Reflection System provides a live, high-level JSON description of the app
 - **Automatic State Updates**: Components self-report their state changes
 - **WebSocket Broadcasting**: UI state changes are broadcast for external tools
 - **Minimal Boilerplate**: Easy integration with existing components
+- **Hierarchical Structure**: True parent-child relationships between components
+
+## Hierarchical Component Model
+
+The UI reflection system supports a true hierarchical component model, enabling natural representation of nested UI structures:
+
+### 1. Base Component Structure
+
+All components can participate in parent-child relationships:
+
+```typescript
+interface BaseComponent {
+  id: string;
+  type: string;
+  // Hierarchical properties
+  parentId?: string;  // Reference to parent component
+  children?: UIComponent[];  // Child components
+}
+```
+
+### 2. Parent-Child Registration
+
+Components can be registered with explicit parent-child relationships:
+
+```typescript
+// Register parent form
+const updateForm = useRegisterUIComponent<FormComponent>({
+  id: 'login-form',
+  type: 'form'
+});
+
+// Register child field with parent reference
+const updateField = useRegisterUIComponent<FormFieldComponent>({
+  id: 'email-field',
+  type: 'formField',
+  fieldType: 'textField',
+  parentId: 'login-form'  // Reference to parent
+});
+```
+
+### 3. Implicit Child Registration
+
+Use the convenience hook for child components:
+
+```typescript
+const updateChild = useRegisterChildComponent<ButtonComponent>(
+  parentId,  // Parent component's ID
+  {
+    id: 'submit-button',
+    type: 'button',
+    label: 'Submit'
+  }
+);
+```
+
+### 4. State Management
+
+The UIStateContext maintains the complete component hierarchy:
+
+```typescript
+// Internal state structure
+{
+  components: [
+    {
+      id: 'login-form',
+      type: 'form',
+      children: [
+        {
+          id: 'email-field',
+          type: 'formField',
+          fieldType: 'textField',
+          parentId: 'login-form'
+        },
+        {
+          id: 'password-field',
+          type: 'formField',
+          fieldType: 'textField',
+          parentId: 'login-form'
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Architecture
 
@@ -194,35 +278,52 @@ function SubmitButton({ label, disabled }: Props) {
 
 ```tsx
 function ConfirmDialog({ isOpen, title, onConfirm, onCancel }: Props) {
-  useRegisterUIComponentWithProps<DialogComponent>(
-    {
-      id: 'confirm-dialog',
-      type: 'dialog',
-      title,
-      open: isOpen,
-      content: [
-        {
-          id: 'confirm-button',
-          type: 'button',
-          label: 'Confirm',
-          actions: ['click']
-        },
-        {
-          id: 'cancel-button',
-          type: 'button',
-          label: 'Cancel',
-          actions: ['click']
-        }
-      ]
-    },
-    { open: isOpen }
-  );
+  // Register the dialog
+  const updateDialog = useRegisterUIComponent<DialogComponent>({
+    id: 'confirm-dialog',
+    type: 'dialog',
+    title,
+    open: isOpen
+  });
+
+  // Register confirm button as child
+  const updateConfirmButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'confirm-dialog-confirm',
+    type: 'button',
+    label: 'Confirm',
+    actions: ['click'],
+    parentId: 'confirm-dialog'
+  });
+
+  // Register cancel button as child
+  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'confirm-dialog-cancel',
+    type: 'button',
+    label: 'Cancel',
+    actions: ['click'],
+    parentId: 'confirm-dialog'
+  });
+
+  // Update dialog state when it changes
+  useEffect(() => {
+    updateDialog({ open: isOpen });
+  }, [isOpen, updateDialog]);
 
   return (
     <Dialog open={isOpen}>
       <h2>{title}</h2>
-      <button onClick={onConfirm}>Confirm</button>
-      <button onClick={onCancel}>Cancel</button>
+      <Button 
+        id="confirm-dialog-confirm"
+        onClick={onConfirm}
+      >
+        Confirm
+      </Button>
+      <Button 
+        id="confirm-dialog-cancel"
+        onClick={onCancel}
+      >
+        Cancel
+      </Button>
     </Dialog>
   );
 }
@@ -234,33 +335,44 @@ function ConfirmDialog({ isOpen, title, onConfirm, onCancel }: Props) {
 function LoginForm({ onSubmit }: Props) {
   const [values, setValues] = useState({ username: '', password: '' });
 
-  useRegisterUIComponentWithProps<FormComponent>(
-    {
-      id: 'login-form',
-      type: 'form',
-      fields: [
-        {
-          id: 'username',
-          type: 'textField',
-          label: 'Username',
-          value: values.username,
-          required: true
-        },
-        {
-          id: 'password',
-          type: 'textField',
-          label: 'Password',
-          value: values.password,
-          required: true
-        }
-      ]
-    },
-    { fields: [/* updated field values */] }
-  );
+  // Register the form component
+  const updateForm = useRegisterUIComponent<FormComponent>({
+    id: 'login-form',
+    type: 'form'
+  });
+
+  // Register username field as child
+  const updateUsernameField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'username-field',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Username',
+    value: values.username,
+    required: true,
+    parentId: 'login-form'
+  });
+
+  // Register password field as child
+  const updatePasswordField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'password-field',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Password',
+    value: values.password,
+    required: true,
+    parentId: 'login-form'
+  });
+
+  // Update field values when they change
+  useEffect(() => {
+    updateUsernameField({ value: values.username });
+    updatePasswordField({ value: values.password });
+  }, [values, updateUsernameField, updatePasswordField]);
 
   return (
     <form onSubmit={onSubmit}>
-      {/* form fields */}
+      <Input id="username-field" value={values.username} />
+      <Input id="password-field" value={values.password} type="password" />
     </form>
   );
 }
@@ -272,6 +384,14 @@ function LoginForm({ onSubmit }: Props) {
    - Use descriptive, hierarchical IDs (e.g., 'user-settings-save-button')
    - Keep IDs stable across renders
    - Make IDs unique within their context
+   - Use parent IDs as prefixes for child components
+
+2. **Parent-Child Relationships**:
+   - Match component hierarchy to UI structure
+   - Keep hierarchies shallow when possible
+   - Consider component reuse in hierarchies
+   - Update parent state before children
+   - Clean up entire component trees on unmount
 
 2. **State Updates**:
    - Only update metadata for props that affect the UI state
@@ -469,12 +589,12 @@ interface DialogProps {
   title?: string;
   /** Unique identifier for UI reflection system */
   id?: string;
-  /** Content components for UI reflection */
-  content?: DialogComponent['content'];
+  /** Child components for UI reflection */
+  reflectionChildren?: UIComponent[];
 }
 
 export const Dialog: React.FC<DialogProps> = ({ 
-  isOpen, onClose, title, id, content, children 
+  isOpen, onClose, title, id, reflectionChildren, children 
 }) => {
   // Register with UI reflection system if id is provided
   const updateMetadata = id ? useRegisterUIComponent<DialogComponent>({
@@ -482,20 +602,24 @@ export const Dialog: React.FC<DialogProps> = ({
     id,
     title: title || '',
     open: isOpen,
-    content,
+    children: reflectionChildren,
     actions: ['submit', 'cancel']
   }) : undefined;
 
   // Update metadata when open state changes
   useEffect(() => {
     if (updateMetadata) {
-      updateMetadata({ open: isOpen });
+      updateMetadata({ 
+        open: isOpen,
+        children: reflectionChildren
+      });
     }
-  }, [isOpen, updateMetadata]);
+  }, [isOpen, reflectionChildren, updateMetadata]);
 
   return (
     <DialogRoot open={isOpen} data-automation-id={id}>
-      {/* Dialog content */}
+      <DialogTitle>{title}</DialogTitle>
+      {children}
     </DialogRoot>
   );
 };
@@ -521,38 +645,28 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ id, label, value, disabled, required, ...props }, ref) => {
-    // Register as a form component with a single field
-    const updateMetadata = id ? useRegisterUIComponent<FormComponent>({
-      type: 'form',
+    // Register as a form field component
+    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+      type: 'formField',
+      fieldType: 'textField',
       id,
       label,
+      value: typeof value === 'string' ? value : undefined,
       disabled,
-      actions: ['type'],
-      fields: [{
-        type: 'textField',
-        id: `${id}-field`,
-        label,
-        value: typeof value === 'string' ? value : undefined,
-        disabled,
-        required
-      }]
+      required
     }) : undefined;
 
     // Update metadata when value or field props change
     useEffect(() => {
       if (updateMetadata && typeof value === 'string') {
         updateMetadata({
-          fields: [{
-            type: 'textField',
-            id: `${id}-field`,
-            label,
-            value,
-            disabled,
-            required
-          }]
+          value,
+          label,
+          disabled,
+          required
         });
       }
-    }, [value, label, disabled, required, id, updateMetadata]);
+    }, [value, label, disabled, required, updateMetadata]);
 
     return (
       <input

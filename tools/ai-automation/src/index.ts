@@ -200,6 +200,7 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
 
   try {
     const { script } = req.body;
+    console.log('Script:', script);
     if (!script) {
       console.log('Error: Script is required');
       return res.status(400).json(JSON.parse(JSON.stringify({ error: 'Script is required' }, null, 0)));
@@ -260,7 +261,6 @@ app.post('/api/tool', (async (req: Request, res: Response) => {
       throw error;
     }
 
-    console.log('Tool execution result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
     res.json(JSON.parse(JSON.stringify({ result }, null, 0)));
   } catch (error) {

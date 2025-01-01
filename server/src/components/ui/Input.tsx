@@ -1,6 +1,6 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { FormField } from '../../types/ui-reflection/types';
+import { FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
@@ -43,8 +43,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     );
 
     // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<FormField>({
-      type: 'textField',
+    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+      type: 'formField',
+      fieldType: 'textField',
       id,
       label,
       value: typeof value === 'string' ? value : undefined,

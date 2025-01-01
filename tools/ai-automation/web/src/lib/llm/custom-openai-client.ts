@@ -15,6 +15,7 @@ export class CustomOpenAIClient extends BaseOpenAIClient {
       apiKey: config.apiKey,
       baseURL: config.baseURL,
     });
+    console.log('CustomOpenAIClient initialized with default model:', config.defaultModel);
     this.defaultModel = config.defaultModel;
   }
 

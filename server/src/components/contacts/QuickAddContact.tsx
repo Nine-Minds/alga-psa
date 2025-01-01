@@ -1,5 +1,7 @@
 // server/src/components/QuickAddContact.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { DialogComponent, FormComponent, FormFieldComponent, ButtonComponent } from '@/types/ui-reflection/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,12 +21,12 @@ interface QuickAddContactProps {
   selectedCompanyId?: string | null;
 }
 
-export const QuickAddContact: React.FC<QuickAddContactProps> = ({ 
-  isOpen, 
-  onClose, 
-  onContactAdded, 
+export const QuickAddContact: React.FC<QuickAddContactProps> = ({
+  isOpen,
+  onClose,
+  onContactAdded,
   companies,
-  selectedCompanyId = null 
+  selectedCompanyId = null
 }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -35,6 +37,89 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
   const [isInactive, setIsInactive] = useState(false);
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Register dialog with UI reflection system
+  const updateDialog = useRegisterUIComponent<DialogComponent>({
+    id: 'quick-add-contact-dialog',
+    type: 'dialog',
+    title: 'Add New Contact',
+    open: isOpen
+  });
+
+  // Register form
+  const updateForm = useRegisterUIComponent<FormComponent>({
+    id: 'quick-add-contact-form',
+    type: 'form',
+    parentId: 'quick-add-contact-dialog'
+  });
+
+  // Register form fields
+  const updateNameField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-name',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Full Name',
+    required: true,
+    parentId: 'quick-add-contact-form'
+  });
+
+  const updateEmailField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-email',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Email',
+    required: true,
+    parentId: 'quick-add-contact-form'
+  });
+
+  const updatePhoneField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-phone',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Phone Number',
+    parentId: 'quick-add-contact-form'
+  });
+
+  const updateRoleField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-role',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Role',
+    parentId: 'quick-add-contact-form'
+  });
+
+  const updateNotesField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-notes',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Notes',
+    parentId: 'quick-add-contact-form'
+  });
+
+  const updateStatusSwitch = useRegisterUIComponent<FormFieldComponent>({
+    id: 'quick-add-contact-status',
+    type: 'formField',
+    fieldType: 'checkbox',
+    label: 'Status',
+    value: isInactive,
+    parentId: 'quick-add-contact-form'
+  });
+
+  // Register buttons
+  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'quick-add-contact-cancel',
+    type: 'button',
+    label: 'Cancel',
+    variant: 'outline',
+    parentId: 'quick-add-contact-dialog'
+  });
+
+  const updateSubmitButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'quick-add-contact-submit',
+    type: 'button',
+    label: 'Add Contact',
+    parentId: 'quick-add-contact-dialog'
+  });
 
   // Set initial company ID when the component mounts or when selectedCompanyId changes
   useEffect(() => {
@@ -79,8 +164,21 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
     }
   };
 
+  // Update UI reflection state when form values change
+  useEffect(() => {
+    updateDialog({ open: isOpen });
+    updateNameField({ value: fullName });
+    updateEmailField({ value: email });
+    updatePhoneField({ value: phoneNumber });
+    updateRoleField({ value: role });
+    updateNotesField({ value: notes });
+    updateStatusSwitch({ value: isInactive });
+  }, [isOpen, fullName, email, phoneNumber, role, notes, isInactive, 
+      updateDialog, updateNameField, updateEmailField, updatePhoneField, 
+      updateRoleField, updateNotesField, updateStatusSwitch]);
+
   return (
-    <Dialog isOpen={isOpen} onClose={onClose}>
+    <Dialog id="quick-add-contact-dialog" isOpen={isOpen} onClose={onClose}>
       <DialogHeader>
         <DialogTitle>Add New Contact</DialogTitle>
       </DialogHeader>
@@ -90,7 +188,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             <div>
               <Label htmlFor="fullName">Full Name</Label>
               <Input
-                id="fullName"
+                id="quick-add-contact-name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
@@ -99,7 +197,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
-                id="email"
+                id="quick-add-contact-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -109,7 +207,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             <div>
               <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input
-                id="phoneNumber"
+                id="quick-add-contact-phone"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
               />
@@ -117,7 +215,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             <div>
               <Label htmlFor="role">Role</Label>
               <Input
-                id="role"
+                id="quick-add-contact-role"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="e.g., Manager, Developer, etc."
@@ -126,7 +224,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             <div>
               <Label htmlFor="notes">Notes</Label>
               <TextArea
-                id="notes"
+                id="quick-add-contact-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add any additional notes about the contact..."
@@ -152,7 +250,7 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
                 </span>
               </div>
               <Switch
-                id="inactive-switch"
+                id="quick-add-contact-status"
                 checked={isInactive}
                 onCheckedChange={setIsInactive}
                 className="data-[state=checked]:bg-primary-500"
@@ -160,10 +258,10 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button id="quick-add-contact-cancel" type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Add Contact</Button>
+            <Button id="quick-add-contact-submit" type="submit">Add Contact</Button>
           </DialogFooter>
         </form>
       </DialogContent>

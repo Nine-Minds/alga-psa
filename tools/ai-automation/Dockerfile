@@ -6,7 +6,7 @@ ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 ENV CHROME_PATH=/usr/bin/chromium
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:99
-ENV NODE_OPTIONS="--max-http-header-size=5242880"
+ENV NODE_OPTIONS="--max-http-header-size=26214400"
 
 # Update package list and install essential dependencies
 RUN apt-get update -qq && \

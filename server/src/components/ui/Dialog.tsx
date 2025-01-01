@@ -3,7 +3,7 @@ import React, { ReactNode, useEffect } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { DialogComponent } from '../../types/ui-reflection/types';
+import { DialogComponent, UIComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface DialogProps {
@@ -14,18 +14,18 @@ interface DialogProps {
   title?: string;
   /** Unique identifier for UI reflection system */
   id?: string;
-  /** Content components for UI reflection */
-  content?: DialogComponent['content'];
+  /** Child components for UI reflection */
+  reflectionChildren?: UIComponent[];
 }
 
-export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title, id, content }) => {
+export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title, id, reflectionChildren }) => {
   // Register with UI reflection system if id is provided
   const updateMetadata = id ? useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id,
     title: title || '',
     open: isOpen,
-    content,
+    children: reflectionChildren,
     actions: ['submit', 'cancel']
   }) : undefined;
 

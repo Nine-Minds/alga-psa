@@ -136,45 +136,110 @@ export function UIStateProvider({
    * Add a new component to the page state
    */
   const registerComponent = useCallback((component: UIComponent) => {
-    setPageState((prev) => ({
-      ...prev,
-      components: [...prev.components, component]
-    }));
+    setPageState((prev) => {
+      // If component has a parentId, add it as a child to that parent
+      if (component.parentId) {
+        return {
+          ...prev,
+          components: prev.components.map(comp => {
+            if (comp.id === component.parentId) {
+              return {
+                ...comp,
+                children: [...(comp.children || []), component]
+              };
+            }
+            return comp;
+          })
+        };
+      }
+      
+      // Otherwise add to root level components
+      return {
+        ...prev,
+        components: [...prev.components, component]
+      };
+    });
   }, []);
 
   /**
-   * Remove a component from the page state by its ID
+   * Remove a component and its children from the page state
    */
   const unregisterComponent = useCallback((id: string) => {
-    setPageState((prev) => ({
-      ...prev,
-      components: prev.components.filter((comp) => comp.id !== id)
-    }));
+    setPageState((prev) => {
+      // Helper function to get all descendant IDs
+      const getDescendantIds = (comp: UIComponent): string[] => {
+        const childIds = comp.children?.map(child => child.id) || [];
+        const descendantIds = comp.children?.flatMap(getDescendantIds) || [];
+        return [...childIds, ...descendantIds];
+      };
+
+      // Find component and get all its descendants
+      const componentToRemove = prev.components.find(comp => comp.id === id);
+      const idsToRemove = componentToRemove ? 
+        [id, ...getDescendantIds(componentToRemove)] : 
+        [id];
+
+      // Remove from parent's children if it exists
+      const updatedComponents = prev.components.map(comp => {
+        if (comp.children) {
+          return {
+            ...comp,
+            children: comp.children.filter(child => !idsToRemove.includes(child.id))
+          };
+        }
+        return comp;
+      });
+
+      // Remove from root level
+      return {
+        ...prev,
+        components: updatedComponents.filter(comp => !idsToRemove.includes(comp.id))
+      };
+    });
   }, []);
 
   /**
    * Update an existing component's properties
    */
   const updateComponent = useCallback((id: string, partial: Partial<UIComponent>) => {
-    setPageState((prev) => ({
-      ...prev,
-      components: prev.components.map((comp) => {
-        if (comp.id !== id) return comp;
-        
-        // Ensure type safety by checking component type
-        if (comp.type !== partial.type && partial.type !== undefined) {
-          console.warn(`Cannot change component type from ${comp.type} to ${partial.type}`);
+    setPageState((prev) => {
+      // Helper function to update component in a tree
+      const updateComponentInTree = (components: UIComponent[]): UIComponent[] => {
+        return components.map(comp => {
+          if (comp.id === id) {
+            // Ensure type safety by checking component type
+            if (comp.type !== partial.type && partial.type !== undefined) {
+              console.warn(`Cannot change component type from ${comp.type} to ${partial.type}`);
+              return comp;
+            }
+
+            // Type-safe spread
+            return {
+              ...comp,
+              ...partial,
+              type: comp.type, // Preserve the original type
+              // Preserve children if not explicitly updated
+              children: partial.children || comp.children
+            } as UIComponent;
+          }
+
+          // Recursively update children
+          if (comp.children) {
+            return {
+              ...comp,
+              children: updateComponentInTree(comp.children)
+            };
+          }
+
           return comp;
-        }
-        
-        // Type-safe spread
-        return {
-          ...comp,
-          ...partial,
-          type: comp.type // Preserve the original type
-        } as UIComponent;
-      })
-    }));
+        });
+      };
+
+      return {
+        ...prev,
+        components: updateComponentInTree(prev.components)
+      };
+    });
   }, []);
 
   const value = {

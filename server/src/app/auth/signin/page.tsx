@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { UIStateProvider } from '../../../types/ui-reflection/UIStateContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import MspLoginForm from '@/components/auth/MspLoginForm';
 import ClientLoginForm from '@/components/auth/ClientLoginForm';
@@ -61,8 +62,15 @@ export default function SignIn() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
-      <TwoFactorInput
+    <UIStateProvider
+      initialPageState={{
+        id: isCustomerPortal ? "client-portal" : "msp-application",
+        title: isCustomerPortal ? "Client Portal" : "MSP Application",
+        components: []
+      }}
+    >
+      <div className="flex min-h-screen bg-gray-100">
+        <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}
         onComplete={handle2FA}
@@ -172,7 +180,8 @@ export default function SignIn() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </UIStateProvider>
   );
 }

@@ -8,6 +8,9 @@ import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/Button';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { DialogComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface ContactPickerDialogProps {
   isOpen: boolean;
@@ -15,6 +18,8 @@ interface ContactPickerDialogProps {
   onSelect: (contact: IContact) => void;
   contacts: IContact[];
   prefilledCompanyId?: string;
+  /** Unique identifier for UI reflection system */
+  id?: string;
 }
 
 const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
@@ -22,11 +27,50 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
   onClose,
   onSelect,
   contacts,
-  prefilledCompanyId
+  prefilledCompanyId,
+  id
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filteredContacts, setFilteredContacts] = useState<IContact[]>([]);
+
+  // Register dialog with UI reflection system if id is provided
+  const updateDialog = id ? useRegisterUIComponent<DialogComponent>({
+    type: 'dialog',
+    id,
+    title: 'Select Contact',
+    open: isOpen
+  }) : undefined;
+
+  // Register search input as child of dialog
+  const updateSearchInput = id ? useRegisterUIComponent<FormFieldComponent>({
+    type: 'formField',
+    fieldType: 'textField',
+    id: `${id}-search`,
+    label: 'Search',
+    value: searchTerm,
+    parentId: id
+  }) : undefined;
+
+  // Register cancel button as child of dialog
+  const updateCancelButton = id ? useRegisterUIComponent<ButtonComponent>({
+    type: 'button',
+    id: `${id}-cancel`,
+    label: 'Cancel',
+    variant: 'ghost',
+    actions: ['click'],
+    parentId: id
+  }) : undefined;
+
+  // Update metadata when dialog state changes
+  useEffect(() => {
+    if (updateDialog) {
+      updateDialog({ open: isOpen });
+    }
+    if (updateSearchInput) {
+      updateSearchInput({ value: searchTerm });
+    }
+  }, [isOpen, searchTerm, updateDialog, updateSearchInput]);
 
   useEffect(() => {
     const filtered = contacts.filter(contact => {
@@ -75,6 +119,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
           }}
           variant="ghost"
           size="sm"
+          id={id ? `${id}-select-${record.contact_name_id}` : undefined}
         >
           Select
         </Button>
@@ -86,7 +131,10 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
     <Dialog.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-[800px] max-h-[80vh] overflow-y-auto">
+        <Dialog.Content 
+          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-[800px] max-h-[80vh] overflow-y-auto"
+          {...withDataAutomationId({ id })}
+        >
           <Dialog.Title className="text-xl font-bold mb-4">
             Select Contact
           </Dialog.Title>
@@ -100,6 +148,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
                 className="flex-1 outline-none"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                {...withDataAutomationId({ id: id ? `${id}-search` : undefined })}
               />
             </div>
           </div>
@@ -114,7 +163,11 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
           />
 
           <div className="mt-4 flex justify-end">
-            <Button variant="ghost" onClick={onClose}>
+            <Button 
+              variant="ghost" 
+              onClick={onClose}
+              id={id ? `${id}-cancel` : undefined}
+            >
               Cancel
             </Button>
           </div>

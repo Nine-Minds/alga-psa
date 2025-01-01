@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/Alert'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent'
-import { FormComponent } from '../../types/ui-reflection/types'
+import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types'
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId'
 
 interface ClientLoginFormProps {
@@ -23,51 +23,64 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<FormComponent>({
+  // Register the form component
+  const updateForm = useRegisterUIComponent<FormComponent>({
     id: 'client-login-form',
     type: 'form',
-    label: 'Client Login',
-    fields: [
-      {
-        id: 'client-email-field',
-        type: 'textField',
-        label: 'Email',
-        value: email,
-        required: true
-      },
-      {
-        id: 'client-password-field',
-        type: 'textField',
-        label: 'Password',
-        value: password,
-        required: true
-      }
-    ],
-    actions: ['submit']
+    label: 'Client Login'
   });
 
-  // Update metadata when form values change
+  // Register email field as child of form
+  const updateEmailField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'client-email-field',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Email',
+    value: email,
+    required: true,
+    parentId: 'client-login-form'
+  });
+
+  // Register password field as child of form
+  const updatePasswordField = useRegisterUIComponent<FormFieldComponent>({
+    id: 'client-password-field',
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Password',
+    value: password,
+    required: true,
+    parentId: 'client-login-form'
+  });
+
+  // Register sign in button as child of form
+  const updateSignInButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'client-sign-in-button',
+    type: 'button',
+    label: isLoading ? 'Signing in...' : 'Sign In',
+    disabled: isLoading,
+    actions: ['click'],
+    parentId: 'client-login-form'
+  });
+
+  // Register register button as child of form
+  const updateRegisterButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'client-register-button',
+    type: 'button',
+    label: 'Register',
+    disabled: false,
+    actions: ['click'],
+    parentId: 'client-login-form'
+  });
+
+  // Update field values when they change
   useEffect(() => {
-    updateMetadata({
-      fields: [
-        {
-          id: 'client-email-field',
-          type: 'textField',
-          label: 'Email',
-          value: email,
-          required: true
-        },
-        {
-          id: 'client-password-field',
-          type: 'textField',
-          label: 'Password',
-          value: password,
-          required: true
-        }
-      ]
+    updateEmailField({ value: email });
+    updatePasswordField({ value: password });
+    updateSignInButton({ 
+      label: isLoading ? 'Signing in...' : 'Sign In',
+      disabled: isLoading 
     });
-  }, [email, password, updateMetadata]);
+  }, [email, password, isLoading, updateEmailField, updatePasswordField, updateSignInButton]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
