@@ -1,11 +1,18 @@
 import React, { forwardRef, useLayoutEffect, useEffect, useRef } from 'react';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
-interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
   label?: string;
+  /** Unique identifier for UI reflection system */
+  id?: string;
+  /** Whether the textarea is required */
+  required?: boolean;
 }
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
-  ({ label, onChange, className, value = '', ...props }, ref) => {
+  ({ label, onChange, className, value = '', id, disabled, required, ...props }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const combinedRef = (node: HTMLTextAreaElement) => {
       textareaRef.current = node;
@@ -56,6 +63,29 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       }
     }, [value]);
 
+    // Register with UI reflection system if id is provided
+    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+      type: 'formField',
+      fieldType: 'textField',
+      id,
+      label,
+      value: typeof value === 'string' ? value : undefined,
+      disabled,
+      required
+    }) : undefined;
+
+    // Update metadata when field props change
+    useEffect(() => {
+      if (updateMetadata && typeof value === 'string') {
+        updateMetadata({
+          value,
+          label,
+          disabled,
+          required
+        });
+      }
+    }, [value, updateMetadata, label, disabled, required]);
+
     const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       if (textareaRef.current) {
         adjustHeight(textareaRef.current);
@@ -95,6 +125,9 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           `}
           onChange={handleInput}
           value={value}
+          disabled={disabled}
+          required={required}
+          {...withDataAutomationId({ id })}
           {...props}
         />
       </div>

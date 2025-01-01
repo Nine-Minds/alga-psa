@@ -7,12 +7,9 @@ import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } fro
 import { Theme } from '@radix-ui/themes';
 import { prompts } from '../tools/prompts';
 
-export default function ControlPanel() {
-  interface ChatMessage {
-    role: 'system' | 'user' | 'assistant';
-    content: string;
-  }
+import { ChatMessage } from '../types/messages';
 
+export default function ControlPanel() {
   interface LogEntry {
     type: 'tool_use' | 'tool_result' | 'navigation' | 'error';
     title: string;
@@ -277,9 +274,21 @@ export default function ControlPanel() {
             timestamp: new Date().toISOString()
           }]);
 
+          // Generate a unique ID for the tool call
+          const toolCallId = `call_${Math.random().toString(36).substring(2)}`;
+          
+          // Add assistant message with tool call
           setMessages(prev => [...prev, {
             role: 'assistant',
-            content: `Tool Use: ${JSON.stringify(toolContent, null, 2)}`
+            content: null,
+            tool_calls: [{
+              id: toolCallId,
+              type: 'function',
+              function: {
+                name: toolContent.name,
+                arguments: JSON.stringify(toolContent.input)
+              }
+            }]
           }]);
 
           // Wait for the tool result before continuing
@@ -324,10 +333,31 @@ export default function ControlPanel() {
             timestamp: new Date().toISOString()
           }]);
 
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: `Tool Result: ${JSON.stringify(resultContent, null, 2)}`
-          }]);
+          // Add tool response message
+          setMessages(prev => {
+            const lastMessage = prev[prev.length - 1];
+            const toolCallId = lastMessage?.tool_calls?.[0]?.id;
+            
+            if (!toolCallId) {
+              debugger;
+              console.error('No tool call ID found for tool response');
+              return prev;
+            }
+
+            // Ensure tool_calls exists and has the expected structure
+            if (!lastMessage?.tool_calls?.[0]?.function?.name) {
+              console.error('Invalid tool call structure');
+              return prev;
+            }
+
+            return [...prev, {
+              role: 'tool',
+              name: lastMessage.tool_calls[0].function.name,
+              tool_call_id: toolCallId,
+              content: JSON.stringify(resultContent),
+              timestamp: new Date().toISOString()
+            }];
+          });
 
           // Resolve the current tool use promise
           if (toolUsePromiseResolve) {
@@ -486,11 +516,11 @@ export default function ControlPanel() {
                               :
                             </strong>
                           </Text>
-                          {msg.content.split('\n').map((line, lineIdx) => (
+                          {msg.content ? msg.content.split('\n').map((line: string, lineIdx: number) => (
                             <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
                               {line}
                             </pre>
-                          ))}
+                          )) : null}
                           <div ref={messagesEndRef} style={{ height: 1 }} />
                         </Box>
                       ))}
@@ -561,9 +591,16 @@ export default function ControlPanel() {
                             :
                           </strong>
                         </Text>
-                        <pre style={preStyle}>
-                          {msg.content}
-                        </pre>
+                        {msg.content && (
+                          <pre style={preStyle}>
+                            {msg.content}
+                          </pre>
+                        )}
+                        {msg.tool_calls && (
+                          <pre style={preStyle}>
+                            Tool Call: {JSON.stringify(msg.tool_calls, null, 2)}
+                          </pre>
+                        )}
                       </Box>
                     ))}
                   </Flex>

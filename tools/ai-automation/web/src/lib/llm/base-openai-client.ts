@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
-import { LLMClient, StreamChatCompletionParams, StreamChunk } from './types';
+import { LLMClient, StreamChatCompletionParams, StreamChunk, ToolCall, ToolCallFunction } from './types';
 import { LocalMessage, TextBlock, ToolResult, ToolUseBlock } from '../../types/messages';
+import { ChatCompletionCreateParamsStreaming } from 'openai/resources/index.mjs';
 
 // OpenAI message types including tool response
 type OpenAIToolResponseMessage = {
@@ -13,6 +14,7 @@ type OpenAIToolResponseMessage = {
 type OpenAIMessage = OpenAI.Chat.ChatCompletionMessageParam | OpenAIToolResponseMessage;
 
 function convertToOpenAIMessage(msg: LocalMessage): OpenAIMessage[] {
+
   if (msg.role === 'system') {
       return [{
         role: 'system',
@@ -28,7 +30,7 @@ function convertToOpenAIMessage(msg: LocalMessage): OpenAIMessage[] {
           return [{
               role: 'tool',
               content: msg.content,
-              tool_call_id: msg.tool_call_id,
+              tool_call_id: msg.tool_call_id!,
               name: msg.name
           }];
       }
@@ -103,9 +105,11 @@ function convertToOpenAIMessage(msg: LocalMessage): OpenAIMessage[] {
       return [{
           role: msg.role === 'user' ? 'user' : 'assistant',
           content: msg.content,
+          tool_calls: msg.tool_calls || undefined,
       } as OpenAI.Chat.ChatCompletionUserMessageParam | OpenAI.Chat.ChatCompletionAssistantMessageParam];
 }
 
+// Find this function
 async function* openAIStreamToChunks(
   stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>
 ): AsyncGenerator<StreamChunk> {
@@ -113,9 +117,14 @@ async function* openAIStreamToChunks(
     id: string;
     name: string;
     arguments?: string;
+    parameters?: unknown;
+    index: number;
+    function?: ToolCallFunction;
   } | null = null;
 
   for await (const chunk of stream) {
+    console.log('raw chunk:', JSON.stringify(chunk, null, 2));
+
     const delta = chunk.choices[0]?.delta;
     if (!delta) continue;
 
@@ -143,10 +152,19 @@ async function* openAIStreamToChunks(
         currentToolCall = {
           id: toolCall.id,
           name: toolCall.function?.name ?? 'unknown_tool',
-          arguments: toolCall.function?.arguments,
+          arguments: toolCall.function?.arguments || '',
+          parameters: (toolCall as ToolCall).parameters,
+          index: toolCall.index,
+          function: delta.tool_calls[0].function,
         };
 
-        // Emit tool use start with the tool call info from OpenAI
+        // Get input from either parameters or arguments
+        const input = currentToolCall.parameters || 
+                     (currentToolCall.arguments ? 
+                       (currentToolCall.arguments.trim() ? JSON.parse(currentToolCall.arguments) : {}) : 
+                       {});
+
+        // Emit tool use start with the tool call info
         yield {
           type: 'content_block_start',
           index: 0,
@@ -154,13 +172,16 @@ async function* openAIStreamToChunks(
             type: 'tool_use',
             id: currentToolCall.id,
             name: currentToolCall.name,
-            input: currentToolCall.arguments ? JSON.parse(currentToolCall.arguments) : {},
+            input,
           },
         };
       } else {
         // Update existing tool call with new chunks
         if (toolCall.function?.arguments) {
           currentToolCall.arguments = (currentToolCall.arguments || '') + toolCall.function.arguments;
+        }
+        if ((toolCall as ToolCall).parameters) {
+          currentToolCall.parameters = (toolCall as ToolCall).parameters;
         }
 
         // Emit updates
@@ -188,9 +209,11 @@ async function* openAIStreamToChunks(
     // Handle finish reason
     if (chunk.choices[0]?.finish_reason) {
       if (currentToolCall) {
-        // Parse the complete arguments JSON if available
-        const input = currentToolCall.arguments ? 
-          JSON.parse(currentToolCall.arguments) : {};
+        // Use parameters if available, otherwise parse arguments
+        const input = currentToolCall.parameters || 
+                     (currentToolCall.arguments ? 
+                       (currentToolCall.arguments.trim() ? JSON.parse(currentToolCall.arguments) : {}) : 
+                       {});
 
         yield {
           type: 'content_block_stop',
@@ -201,9 +224,11 @@ async function* openAIStreamToChunks(
           delta: {
             stop_reason: 'tool_use',
             tool_calls: [{
+              index: currentToolCall.index,
               id: currentToolCall.id,
               type: 'function',
               parameters: input,
+              function: currentToolCall.function!
             }],
           },
         };
@@ -229,8 +254,6 @@ export abstract class BaseOpenAIClient implements LLMClient {
     this.openai = new OpenAI(config);
   }
 
-  protected abstract getModelName(params: StreamChatCompletionParams): string;
-
   public async *streamChatCompletion(
     params: StreamChatCompletionParams
   ): AsyncIterable<StreamChunk> {
@@ -246,7 +269,7 @@ export abstract class BaseOpenAIClient implements LLMClient {
     ];
 
     // Convert tools to OpenAI tools format
-    const tools = params.tools?.map(tool => ({
+    const tools = (params.tools || []).map(tool => ({
       type: 'function' as const,
       function: {
         name: tool.name,
@@ -259,20 +282,30 @@ export abstract class BaseOpenAIClient implements LLMClient {
       }
     }));
 
-    // Create streaming request to OpenAI
-    const stream = await this.openai.chat.completions.create({
-      model: this.getModelName(params),
+    const completion: ChatCompletionCreateParamsStreaming =  {
+      model: params.model,
       messages,
       tools,
       tool_choice: tools ? 'auto' : undefined,
       max_tokens: params.maxTokens ?? 1024,
       temperature: params.temperature ?? 0.2,
       stream: true,
-    });
+    };
 
-    // Stream the response, transforming each chunk
-    for await (const chunk of openAIStreamToChunks(stream)) {
-      yield chunk;
+    console.log('OpenRouter model:', params.model);
+    console.log('OpenAI stream params:', JSON.stringify(completion, null, 2));
+
+    // Create streaming request to OpenAI
+    const stream = await this.openai.chat.completions.create(completion);
+
+    try {
+      // Stream the response, transforming each chunk
+      for await (const chunk of openAIStreamToChunks(stream)) {
+        yield chunk;
+      }
+    } catch (error) {
+      console.log('Unexpected error in sendMessage:', JSON.stringify(error, null, 2));
+      throw error;
     }
   }
 }

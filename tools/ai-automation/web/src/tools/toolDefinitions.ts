@@ -1,76 +1,128 @@
-import type { Tool } from '@anthropic-ai/sdk/resources/messages/messages';
+import { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages/messages';
 
-interface ToolProperty {
-  type: "string" | "number" | "boolean" | "object";
-  description?: string;
+interface Tool extends AnthropicTool {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
 }
 
-const createTool = (
-  name: string, 
-  description: string, 
-  properties: Record<string, ToolProperty> = {}, 
-  required: string[] = []
-): Tool => ({
-  name,
-  description,
-  input_schema: {
-    type: "object",
-    properties,
-    required,
-  },
-});
-
-export const observeTool = createTool(
-  'observe_browser',
-  'Retrieves information about elements matching a CSS selector on the current page, along with page URL and title.',
+// Define available tools for the AI to use
+export const tools: Tool[] = [
   {
-    selector: {
-      type: "string",
-      description: "CSS selector to find elements on the page. If omitted, returns just page info without elements.",
+    name: 'observe_browser',
+    description: 'Observe elements in the browser matching a CSS selector',
+    parameters: {
+      type: 'object',
+      properties: {
+        selector: {
+          type: 'string',
+          description: 'CSS selector to find elements'
+        }
+      },
+      required: ['selector']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        selector: {
+          type: 'string',
+          description: 'CSS selector to find elements'
+        }
+      },
+      required: ['selector']
+    }
+  },
+  {
+    name: 'execute_script',
+    description: 'Execute JavaScript code in the browser context',
+    parameters: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          description: 'JavaScript code to execute'
+        }
+      },
+      required: ['code']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          description: 'JavaScript code to execute'
+        }
+      },
+      required: ['code']
+    }
+  },
+  {
+    name: 'wait',
+    description: 'Wait for a specified number of seconds',
+    parameters: {
+      type: 'object',
+      properties: {
+        seconds: {
+          type: 'number',
+          description: 'Number of seconds to wait'
+        }
+      },
+      required: ['seconds']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        seconds: {
+          type: 'number',
+          description: 'Number of seconds to wait'
+        }
+      },
+      required: ['seconds']
+    }
+  },
+  {
+    name: 'execute_puppeteer_script',
+    description: 'Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function.',
+    parameters: {
+      type: 'object',
+      properties: {
+        script: {
+          type: 'string',
+          description: 'Puppeteer script to execute, formatted as a self-executing function'
+        }
+      },
+      required: ['script']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        script: {
+          type: 'string',
+          description: 'Puppeteer script to execute'
+        }
+      },
+      required: ['script']
+    }
+  },
+  {
+    name: 'get_ui_state',
+    description: 'Get the current UI state of the page',
+    parameters: {
+      type: 'object',
+      properties: {}
+    },
+    input_schema: {
+      type: 'object',
+      properties: {}
     }
   }
-);
-
-export const scriptTool = createTool(
-  'execute_script',
-  'Executes arbitrary JavaScript in the browser context, allowing you to send puppeteer commands to the browser.',
-  {
-    code: {
-      type: "string",
-      description: 'The JavaScript code to run in the browser context',
-    },
-  },
-  ['code']
-);
-
-export const waitTool = createTool(
-  'wait',
-  'Pauses execution for a specified number of seconds',
-  {
-    seconds: {
-      type: "number",
-      description: "Number of seconds to wait",
-    },
-  },
-  ['seconds']
-);
-
-export const puppeteerScriptTool = createTool(
-  'execute_puppeteer_script',
-  'Executes Puppeteer commands in the browser context. The script should be an async function that receives a Puppeteer Page object.',
-  {
-    script: {
-      type: "string",
-      description: 'The Puppeteer script to execute. Must be an async function that takes a Page object as parameter.',
-    },
-  },
-  ['script']
-);
-
-export const getUIStateTool = createTool(
-  'get_ui_state',
-  'Get the current UI state including all registered components and their properties',
-  {} // No input parameters required
-);
-
-export const tools = [observeTool, scriptTool, waitTool, puppeteerScriptTool, getUIStateTool];
+];

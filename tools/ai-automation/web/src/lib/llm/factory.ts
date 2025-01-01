@@ -5,32 +5,6 @@ import { LLMClient } from './types';
 
 export type LLMProvider = 'anthropic' | 'openai' | 'custom-openai';
 
-const MODEL_MAPPINGS = {
-  anthropic: {
-    'gpt-4': 'claude-3-opus-20240229',
-    'gpt-4-turbo': 'claude-3-sonnet-20240229',
-    'gpt-3.5-turbo': 'claude-3-haiku-20240307',
-    default: 'claude-3-sonnet-20240229'
-  },
-  openai: {
-    'gpt-4': 'gpt-4',
-    'gpt-4-turbo': 'gpt-4-turbo-preview',
-    'gpt-3.5-turbo': 'gpt-3.5-turbo',
-    default: 'gpt-4-turbo-preview'
-  }
-};
-
-export function mapModelName(provider: LLMProvider, model: string): string {
-  // For custom OpenAI, use the model name directly
-  if (provider === 'custom-openai') {
-    return model;
-  }
-  
-  // For other providers, use the mapping
-  const mappings = MODEL_MAPPINGS[provider as keyof typeof MODEL_MAPPINGS];
-  return mappings[model as keyof typeof mappings] || mappings.default;
-}
-
 export function getLLMClient(): LLMClient {
   const provider = process.env.LLM_PROVIDER as LLMProvider || 'anthropic';
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
