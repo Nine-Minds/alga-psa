@@ -1,9 +1,9 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Eye } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
-import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea } from '@radix-ui/themes';
+import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
 import { Theme } from '@radix-ui/themes';
 import { prompts } from '../tools/prompts';
 
@@ -25,6 +25,7 @@ export default function ControlPanel() {
   const [userMessage, setUserMessage] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [showContext, setShowContext] = useState(false);
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -217,10 +218,10 @@ export default function ControlPanel() {
           }
           
           // If buffer gets too large, clear it to prevent memory issues
-          if (tokenBuffer.length > 10000) {
-            console.warn('Token buffer overflow, clearing buffer');
-            tokenBuffer = '';
-          }
+          // if (tokenBuffer.length > 10000) {
+          //   console.warn('Token buffer overflow, clearing buffer');
+          //   tokenBuffer = '';
+          // }
         } catch (error) {
           console.error('Error processing token event:', error);
         }
@@ -239,8 +240,16 @@ export default function ControlPanel() {
         }
       };
 
-      eventSource.addEventListener('tool_use', (event) => {
+      let toolUsePromiseResolve: ((value: unknown) => void) | null = null;
+      let currentToolUsePromise: Promise<unknown> | null = null;
+
+      eventSource.addEventListener('tool_use', async (event) => {
         try {
+          // Create a new promise for this tool use
+          currentToolUsePromise = new Promise(resolve => {
+            toolUsePromiseResolve = resolve;
+          });
+
           const toolEvent = cleanAndParseJSON(event.data);
           if (!toolEvent) {
             console.error('Invalid tool use event data');
@@ -256,15 +265,25 @@ export default function ControlPanel() {
             toolData = toolEvent.data;
           }
 
+          const toolContent = toolData ? {
+            name: toolData.name,
+            input: toolData.input
+          } : toolEvent.data;
+
           setLog(prev => [...prev, {
             type: 'tool_use',
             title: 'Tool Use Requested',
-            content: toolData ? {
-              name: toolData.name,
-              input: toolData.input
-            } : toolEvent.data,
+            content: toolContent,
             timestamp: new Date().toISOString()
           }]);
+
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Tool Use: ${JSON.stringify(toolContent, null, 2)}`
+          }]);
+
+          // Wait for the tool result before continuing
+          await currentToolUsePromise;
         } catch (error) {
           console.error('Error handling tool use event:', error);
           setLog(prev => [...prev, {
@@ -273,10 +292,13 @@ export default function ControlPanel() {
             content: String(error),
             timestamp: new Date().toISOString()
           }]);
+          if (toolUsePromiseResolve) {
+            toolUsePromiseResolve(null);
+          }
         }
       });
 
-      eventSource.addEventListener('tool_result', (event) => {
+      eventSource.addEventListener('tool_result', async (event) => {
         try {
           const resultEvent = cleanAndParseJSON(event.data);
           if (!resultEvent) {
@@ -293,12 +315,26 @@ export default function ControlPanel() {
             resultData = resultEvent.data;
           }
 
+          const resultContent = resultData || resultEvent.data;
+          
           setLog(prev => [...prev, {
             type: 'tool_result',
             title: 'Tool Result',
-            content: resultData || resultEvent.data,
+            content: resultContent,
             timestamp: new Date().toISOString()
           }]);
+
+          setMessages(prev => [...prev, {
+            role: 'assistant',
+            content: `Tool Result: ${JSON.stringify(resultContent, null, 2)}`
+          }]);
+
+          // Resolve the current tool use promise
+          if (toolUsePromiseResolve) {
+            toolUsePromiseResolve(resultContent);
+            toolUsePromiseResolve = null;
+            currentToolUsePromise = null;
+          }
         } catch (error) {
           console.error('Error handling tool result event:', error);
           setLog(prev => [...prev, {
@@ -358,7 +394,16 @@ export default function ControlPanel() {
             <Flex direction="column" gap="4" style={{ gridColumn: 'span 2' }}>
               <Card>
                 <Flex direction="column" gap="4">
-                  <Text size="5" weight="bold">Chat with AI</Text>
+                  <Flex justify="between" align="center">
+                    <Text size="5" weight="bold">Chat with AI</Text>
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => setShowContext(true)}
+                      style={{ padding: '6px' }}
+                    >
+                      <Eye size={16} />
+                    </Button>
+                  </Flex>
                   <Flex direction="column" gap="4">
                     <Flex gap="2">
                       <Box style={{ flex: 1 }}>
@@ -378,7 +423,7 @@ export default function ControlPanel() {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                script: `async (page) => { await page.goto('${url}', { waitUntil: 'networkidle0' });}`
+                                script: `(async () => { await page.goto('http://server:3000'); })();`
                               })
                             });
                             if (!response.ok) {
@@ -429,7 +474,7 @@ export default function ControlPanel() {
                   </Flex>
                   <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
                     <Flex direction="column" gap="2" p="2">
-                      {messages.filter(msg => msg.role !== 'system').map((msg, idx) => (
+                      {messages.map((msg, idx) => (
                         <Box key={idx}>
                           <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                             <strong>
@@ -497,6 +542,41 @@ export default function ControlPanel() {
                 </Flex>
               </Card>
             </Flex>
+
+            {/* Context Dialog */}
+            <Dialog.Root open={showContext} onOpenChange={setShowContext}>
+              <Dialog.Content style={{ maxWidth: 600 }}>
+                <Dialog.Title>Conversation Context</Dialog.Title>
+                <ScrollArea style={{ height: '400px', marginTop: '16px' }}>
+                  <Flex direction="column" gap="2">
+                    {messages.map((msg, idx) => (
+                      <Box key={idx}>
+                        <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
+                          <strong>
+                            {msg.role === 'user'
+                              ? 'User'
+                              : msg.role === 'assistant'
+                              ? 'AI'
+                              : 'System'}
+                            :
+                          </strong>
+                        </Text>
+                        <pre style={preStyle}>
+                          {msg.content}
+                        </pre>
+                      </Box>
+                    ))}
+                  </Flex>
+                </ScrollArea>
+                <Flex gap="3" mt="4" justify="end">
+                  <Dialog.Close>
+                    <Button variant="soft" color="gray">
+                      Close
+                    </Button>
+                  </Dialog.Close>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
 
             {/* Main Content */}
             <Flex direction="column" gap="8" style={{ gridColumn: 'span 1' }}>

@@ -16,15 +16,20 @@ export const executePuppeteerScript: Tool = {
 
     const script = args.script;
     
-    // Check if script is already an async function
-    if (script.trim().startsWith('async')) {
-      // Execute the function directly
-      const fn = new Function('page', `return (${script})(page);`);
+    try {
+      // Create a closure with page in scope and execute the script
+      const fn = new Function('page', `
+        const scriptFn = ${script}
+        return scriptFn;
+      `);
       return await fn(page);
-    } else {
-      // Wrap non-function scripts in an async function
-      const fn = new Function('page', `return (async (page) => { ${script} })(page);`);
-      return await fn(page);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error executing puppeteer script:', {
+        error: errorMessage,
+        script: script.slice(0, 100) + (script.length > 100 ? '...' : '')
+      });
+      throw error;
     }
   }
 };

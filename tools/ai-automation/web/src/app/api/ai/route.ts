@@ -1,6 +1,3 @@
-import { Anthropic } from '@anthropic-ai/sdk';
-import type { MessageParam } from '@anthropic-ai/sdk/src/resources/messages/messages.js';
-
 import { NextResponse } from 'next/server';
 import { tools } from '../../../tools/toolDefinitions';
 import { prompts } from '../../../tools/prompts';
@@ -11,10 +8,31 @@ import {
   executePuppeteerScript,
   getUIState
 } from '../../../tools/invokeTool';
+import { getLLMClient, mapModelName } from '../../../lib/llm/factory';
+import { StreamChatCompletionParams } from '../../../lib/llm/types';
+import { LocalMessage } from '../../../types/messages';
 
-type Role = 'user' | 'assistant';
-type SystemRole = 'system';
-type AnyRole = Role | SystemRole;
+interface ToolUseBlock {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  status: 'pending' | 'executing' | 'complete';
+}
+
+// Message content block for tool use without status
+interface MessageToolUseBlock {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+}
+
+// Message content block for text
+interface MessageTextBlock {
+  type: 'text';
+  text: string;
+}
 
 type ToolName = 'observe_browser' | 'execute_script' | 'wait' | 'execute_puppeteer_script' | 'get_ui_state';
 
@@ -29,97 +47,12 @@ interface ToolExecutionResult {
   };
 }
 
-type ChunkType = 'content_block_start' | 'content_block_delta' | 'content_block_stop' | 'message_delta' | 'message_stop';
-
-interface ContentBlockStartChunk {
-  type: Extract<ChunkType, 'content_block_start'>;
-  index: number;
-  content_block: {
-    type: string;
-    id: string;
-    name: string;
-    input: unknown;
-  };
-}
-
-interface ContentBlockChunk {
-  type: Extract<ChunkType, 'content_block_delta'>;
-  delta: ContentBlockDelta;
-}
-
-interface ContentBlockStopChunk {
-  type: Extract<ChunkType, 'content_block_stop'>;
-  index: number;
-}
-
-interface MessageDeltaChunk {
-  type: Extract<ChunkType, 'message_delta'>;
-  delta: ToolCallDelta;
-}
-
-interface MessageStopChunk {
-  type: Extract<ChunkType, 'message_stop'>;
-}
-
-type StreamChunk = ContentBlockStartChunk | ContentBlockChunk | ContentBlockStopChunk | MessageDeltaChunk | MessageStopChunk;
-
-type StreamEventType = 'token' | 'tool_use' | 'tool_result' | 'done';
+type StreamEventType = 'token' | 'tool_use' | 'tool_result' | 'error' | 'done';
 
 interface StreamEvent {
   type: StreamEventType;
   data: string;
 }
-
-type DeltaType = 'text_delta' | 'input_json_delta';
-
-interface TextDelta {
-  type: Extract<DeltaType, 'text_delta'>;
-  text: string;
-}
-
-interface InputJSONDelta {
-  type: Extract<DeltaType, 'input_json_delta'>;
-  partial_json: string;
-}
-
-type ContentBlockDelta = TextDelta | InputJSONDelta;
-
-type BlockType = 'text' | 'tool_use' | 'tool_result';
-
-interface TextBlock {
-  type: Extract<BlockType, 'text'>;
-  text: string;
-}
-
-interface ToolUseBlock {
-  type: Extract<BlockType, 'tool_use'>;
-  id: string;
-  name: string;
-  input: unknown;
-}
-
-interface ToolCall {
-  id: string;
-  type: string;
-  parameters: unknown;
-}
-
-interface ToolResult {
-  type: Extract<BlockType, 'tool_result'>;
-  tool_use_id: string;
-  content: TextBlock[];
-  is_error: boolean;
-}
-
-type StopReason = 'end_turn' | 'max_tokens' | 'stop_sequence' | 'tool_use';
-
-interface MessageDelta {
-  stop_reason?: StopReason | null;
-  stop_sequence?: string | null;
-  tool_calls?: ToolCall[];
-}
-
-type ToolCallDelta = MessageDelta;
 
 interface ObserverParams {
   selector: string;
@@ -140,43 +73,6 @@ interface PuppeteerScriptParams {
 type UIStateParams = Record<never, never>;
 
 type ToolInput = ObserverParams | ExecuteScriptParams | WaitParams | PuppeteerScriptParams | UIStateParams;
-
-interface LocalMessage {
-  role: AnyRole;
-  content: string | (TextBlock | ToolResult | ToolUseBlock)[];
-}
-
-function convertToAnthropicMessage(msg: LocalMessage): MessageParam {
-  if (msg.role === 'system') {
-    throw new Error('System messages should be handled separately');
-  }
-  
-  if (typeof msg.content === 'string') {
-    return {
-      role: msg.role as 'user' | 'assistant',
-      content: msg.content,
-    };
-  }
-  return {
-    role: msg.role as 'user' | 'assistant',
-    content: msg.content.map((block) => {
-      if ('tool_use_id' in block) {
-        return {
-          type: 'tool_result',
-          tool_use_id: block.tool_use_id,
-          content: block.content,
-          is_error: block.is_error,
-        } as ToolResult;
-      }
-      if (block.type === 'tool_use') {
-        return block as ToolUseBlock;
-      }
-      return block as TextBlock;
-    }),
-  };
-}
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string> {
   const { name, input } = toolBlock;
@@ -253,104 +149,169 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
         controller.enqueue(textEncoder.encode(payload));
       }
 
+      // Get the LLM client
+      const provider = (process.env.LLM_PROVIDER as 'anthropic' | 'openai') || 'anthropic';
+      const client = getLLMClient();
+
       // We may repeat calls until the model stops requesting a tool
       while (true) {
-        const anthropicMessages = currentMessages.map(convertToAnthropicMessage);
-
         let toolUseBlock: ToolUseBlock | null = null;
         let currentText = '';
         let currentInput = '';
-        let lastMessageDelta: ToolCallDelta | null = null;
+        let toolCallId: string = '';
+        let stopReason: string | undefined | null;
 
-        const completion = await anthropic.messages.create({
-          model: 'claude-3-5-sonnet-20241022',
-          system: systemMessage || prompts.aiEndpoint,
-          messages: anthropicMessages,
+        // Stream the completion using our LLM client
+        const params: StreamChatCompletionParams = {
+          model: mapModelName(provider, 'gpt-4-turbo'),
+          systemPrompt: systemMessage || prompts.aiEndpoint,
+          messages: currentMessages,
           tools,
-          max_tokens: 1024,
+          maxTokens: 1024,
           temperature: 0.2,
-          stream: true,
-        });
-
-        for await (const chunk of completion) {
-          const streamChunk = chunk as StreamChunk;
-          
-          if (streamChunk.type === 'content_block_start') {
-            const contentBlock = streamChunk.content_block;
-            if (contentBlock.type === 'tool_use') {
-              toolUseBlock = {
-                type: 'tool_use',
-                id: contentBlock.id,
-                name: contentBlock.name,
-                input: contentBlock.input
-              } as ToolUseBlock;
+        };
+        
+        try {
+          const completion = client.streamChatCompletion(params);
+          for await (const streamChunk of completion) {
+            if (streamChunk.type === 'message_delta') {
+              stopReason = streamChunk.delta.stop_reason;
             }
-          } else if (streamChunk.type === 'content_block_delta') {
-            const delta = streamChunk.delta;
             
-            if (delta.type === 'text_delta') {
-              currentText += delta.text;
-              sendEvent('token', delta.text);
-            } else if (delta.type === 'input_json_delta' && 'partial_json' in delta) {
-              currentInput += delta.partial_json;
-              sendEvent('token', delta.partial_json);
-            }
-          } else if (streamChunk.type === 'content_block_stop') {
-            if (toolUseBlock && currentInput) {
-              try {
-                const parsedInput = JSON.parse(currentInput);
-                toolUseBlock.input = parsedInput;
-              } catch (error) {
-                console.error('Failed to parse tool input:', error);
+            if (streamChunk.type === 'content_block_start') {
+              const contentBlock = streamChunk.content_block;
+              if (contentBlock.type === 'tool_use') {
+                toolUseBlock = {
+                  type: 'tool_use',
+                  id: contentBlock.id,
+                  name: contentBlock.name,
+                  input: {} as Record<string, unknown>,
+                  status: 'pending'
+                };
+              }
+            } else if (streamChunk.type === 'content_block_delta') {
+              const delta = streamChunk.delta;
+              
+              if (delta.type === 'text_delta' && delta.text) {
+                currentText += delta.text;
+                sendEvent('token', delta.text);
+              } else if (delta.type === 'input_json_delta' && delta.partial_json) {
+                currentInput += delta.partial_json;
+                
+                // Send non-empty chunks to the client
+                if (delta.partial_json.trim()) {
+                  sendEvent('token', delta.partial_json);
+                }
+              }
+            } else if (streamChunk.type === 'content_block_stop') {
+              // Wait for message_delta to get tool_call_id before executing
+            } else if (streamChunk.type === 'message_delta') {
+              if (streamChunk.delta.tool_calls?.[0]) {
+                const toolCall = streamChunk.delta.tool_calls[0];
+                toolCallId = toolCall.id;
+                
+                if (toolUseBlock && currentInput) {
+                  try {
+                    // Parse and validate input
+                    const inputObject = JSON.parse(currentInput);
+                    if (typeof inputObject === 'object' && inputObject !== null) {
+                      // Update tool block with validated input
+                      toolUseBlock.input = inputObject;
+                      toolUseBlock.id = toolCallId;
+                      toolUseBlock.status = 'executing';
+                      
+                      // Add assistant message with tool call first
+                      const messageToolUse: MessageToolUseBlock = {
+                        type: 'tool_use',
+                        id: toolCallId,
+                        name: toolUseBlock.name,
+                        input: toolUseBlock.input
+                      };
+                      const assistantMessage: LocalMessage = {
+                        role: 'assistant',
+                        content: [messageToolUse],
+                      };
+                      currentMessages.push(assistantMessage);
+                      
+                      console.log('Tool use request:', JSON.stringify(toolUseBlock, null, 2));
+                      sendEvent('tool_use', JSON.stringify(toolUseBlock));
+
+                      // Execute tool after we have the tool_call_id
+                      const result = await executeToolAndGetResult(toolUseBlock);
+                      console.log('Tool execution result:', result);
+                      sendEvent('tool_result', result);
+
+                      // Add tool result message that responds to the tool call
+                      currentMessages.push({
+                        role: 'tool',
+                        content: result,
+                        tool_call_id: toolCallId,
+                        name: toolUseBlock.name
+                      });
+                      
+                      toolUseBlock.status = 'complete';
+                    }
+                  } catch (error) {
+                    console.error('Failed to process tool input:', {
+                      error,
+                      input: currentInput
+                    });
+                  }
+                }
               }
             }
-            if (toolUseBlock) {
-              console.log('Tool use request:', JSON.stringify(toolUseBlock, null, 2));
-              sendEvent('tool_use', JSON.stringify(toolUseBlock));
-            }
-          } else if (streamChunk.type === 'message_delta') {
-            lastMessageDelta = streamChunk.delta;
           }
-        }
         
-        // Push an "assistant" message with the accumulated content and tool use if present
-        const messageContent: (TextBlock | ToolUseBlock)[] = [];
-        if (currentText) {
-          messageContent.push({ type: 'text', text: currentText } as TextBlock);
-        }
-        if (toolUseBlock) {
-          messageContent.push(toolUseBlock);
-        }
-        const assistantMessage: LocalMessage = {
-          role: 'assistant',
-          content: messageContent,
-        };
-        currentMessages.push(assistantMessage);
-        console.log('Assistant response:', JSON.stringify(assistantMessage, null, 2));
+          // Push an "assistant" message with any accumulated text content
+          if (currentText) {
+            const textBlock: MessageTextBlock = { type: 'text', text: currentText };
+            const assistantMessage: LocalMessage = {
+              role: 'assistant',
+              content: [textBlock],
+            };
+            currentMessages.push(assistantMessage);
+            console.log('Assistant response:', JSON.stringify(assistantMessage, null, 2));
+          }
 
-        // If we have a tool use block and the stop reason is tool_use, execute the tool and continue
-        if (toolUseBlock && lastMessageDelta?.stop_reason === 'tool_use') {
-          const result = await executeToolAndGetResult(toolUseBlock);
-          console.log('Tool use response:', result);
-          sendEvent('tool_result', result);
+          // Handle different stop reasons
+          if (stopReason === 'tool_use') {
+            // Continue for tool use
+            continue;
+          } else {
+            // Normal completion or other stop reasons
+            break;
+          }
+        } catch (error) {
+          // Type guard for OpenAI API errors
+          interface OpenAIError {
+            status?: number;
+            code?: number;
+            message?: string;
+            error?: {
+              metadata?: unknown;
+            };
+          }
 
-          // Provide the result as a "user" message for the next iteration
-          const toolResultMessage: LocalMessage = {
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: toolUseBlock.id,
-                content: [{ type: 'text', text: result } as TextBlock],
-                is_error: result.startsWith('Failed to execute'),
-              } as ToolResult,
-            ],
+          const isOpenAIError = (err: unknown): err is OpenAIError => {
+            return typeof err === 'object' && err !== null && 
+              ('status' in err || 'code' in err || 'message' in err || 'error' in err);
           };
-          currentMessages.push(toolResultMessage);
-          continue;
+
+          const providerError = isOpenAIError(error) ? {
+            status: error.status,
+            code: error.code,
+            message: error.message,
+            metadata: error.error?.metadata
+          } : {
+            message: error instanceof Error ? error.message : String(error)
+          };
+
+          console.error('Provider error:', providerError);
+          
+          // Send error to client
+          sendEvent('error', `Provider error: ${error instanceof Error ? error.message : String(error)}`);
+          break;
         }
-        
-        break;
       }
 
       sendEvent('done', 'true');

@@ -69,6 +69,8 @@ d. Consider potential challenges or edge cases
 
 Do not just write out the script block, but actually USE your tools to execute the scripts.
 
+ONLY SEND ONE TOOL AT A TIME.
+
 Then, return your user-friendly explanation of what you're doing or have done. Remember to focus on the "what" rather than the "how" in your user-facing response.`
 } as const;
 

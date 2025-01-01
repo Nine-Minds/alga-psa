@@ -206,7 +206,17 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
     }
 
     const page = puppeteerManager.getPage();
-    const result = await toolManager.executeTool('execute_puppeteer_script', page, { script });
+    
+    // Ensure script execution is properly awaited
+    let result;
+    try {
+      result = await toolManager.executeTool('execute_puppeteer_script', page, { script });
+      // Wait for any pending promises to settle
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)));
+    } catch (error) {
+      console.error('Error executing puppeteer script:', error);
+      throw error;
+    }
     
     console.log('Puppeteer script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
@@ -238,7 +248,17 @@ app.post('/api/tool', (async (req: Request, res: Response) => {
 
   try {
     const page = puppeteerManager.getPage();
-    const result = await toolManager.executeTool(toolName, page, args);
+    
+    // Ensure tool execution is properly awaited
+    let result;
+    try {
+      result = await toolManager.executeTool(toolName, page, args);
+      // Wait for any pending promises to settle
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)));
+    } catch (error) {
+      console.error('Error executing tool:', error);
+      throw error;
+    }
 
     console.log('Tool execution result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
