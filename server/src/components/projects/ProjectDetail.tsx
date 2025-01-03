@@ -10,6 +10,7 @@ import PhaseQuickAdd from './PhaseQuickAdd';
 import { 
   updateTaskStatus, 
   getProjectTaskStatuses, 
+  reorderTasksInStatus,
   updatePhase, 
   moveTaskToPhase, 
   updateTaskWithChecklist, 
@@ -422,13 +423,35 @@ export default function ProjectDetail({
     setSelectedPhase(phase);
     setCurrentPhase(phase);
   };
+const handleDeletePhaseClick = (phase: IProjectPhase) => {
+  setDeletePhaseConfirmation({
+    phaseId: phase.phase_id,
+    phaseName: phase.phase_name
+  });
+};
 
-  const handleDeletePhaseClick = (phase: IProjectPhase) => {
-    setDeletePhaseConfirmation({
-      phaseId: phase.phase_id,
-      phaseName: phase.phase_name
+const handleReorderTasks = async (updates: { taskId: string, newWbsCode: string }[]) => {
+  try {
+    await reorderTasksInStatus(updates);
+    // Update local state to reflect the new order
+    const updatedTasks = [...projectTasks];
+    updates.forEach(({taskId, newWbsCode}) => {
+      const taskIndex = updatedTasks.findIndex(t => t.task_id === taskId);
+      if (taskIndex !== -1) {
+        updatedTasks[taskIndex] = {
+          ...updatedTasks[taskIndex],
+          wbs_code: newWbsCode
+        };
+      }
     });
-  };
+    setProjectTasks(updatedTasks);
+    toast.success('Tasks reordered successfully');
+  } catch (error) {
+    console.error('Error reordering tasks:', error);
+    toast.error('Failed to reorder tasks');
+  }
+};
+
 
   const renderContent = () => {
     if (!selectedPhase) {
@@ -466,6 +489,7 @@ export default function ProjectDetail({
             onAssigneeChange={handleAssigneeChange}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
+            onReorderTasks={handleReorderTasks}
           />
         </div>
       </div>

@@ -1,5 +1,6 @@
 'use server';
 
+import { Knex } from 'knex';
 import ProjectModel from '../models/project';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IStatus, IProjectStatusMapping, IStandardStatus, ItemType, ITaskChecklistItem, IProjectTicketLinkWithDetails, ProjectStatus } from '@/interfaces/project.interfaces';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
@@ -7,6 +8,7 @@ import { IUser, IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getAllUsers } from './user-actions/userActions';
 import { validateData, validateArray } from '../utils/validation';
+import { createTenantKnex } from '@/lib/db';
 import { 
     createProjectSchema, 
     updateProjectSchema, 
@@ -962,6 +964,47 @@ export async function deleteTaskTicketLinkAction(linkId: string): Promise<void> 
         await ProjectModel.deleteTaskTicketLink(linkId);
     } catch (error) {
         console.error('Error deleting ticket link:', error);
+        throw error;
+    }
+}
+
+export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: string }[]): Promise<void> {
+    try {
+        const currentUser = await getCurrentUser();
+        if (!currentUser) {
+            throw new Error("user not found");
+        }
+
+        await checkPermission(currentUser, 'project', 'update');
+
+        const {knex: db} = await createTenantKnex();
+        await db.transaction(async (trx: Knex.Transaction) => {
+            // Verify tasks exist and are in the same phase
+            const taskRecords = await trx('project_tasks')
+                .whereIn('task_id', tasks.map(t => t.taskId))
+                .select('task_id', 'phase_id');
+
+            if (taskRecords.length !== tasks.length) {
+                throw new Error('Some tasks not found');
+            }
+
+            const phaseId = taskRecords[0].phase_id;
+            if (!taskRecords.every(t => t.phase_id === phaseId)) {
+                throw new Error('All tasks must be in the same phase');
+            }
+
+            // Update all tasks with their new WBS codes
+            await Promise.all(tasks.map(({taskId, newWbsCode}) =>
+                trx('project_tasks')
+                    .where('task_id', taskId)
+                    .update({
+                        wbs_code: newWbsCode,
+                        updated_at: trx.fn.now()
+                    })
+            ));
+        });
+    } catch (error) {
+        console.error('Error reordering tasks:', error);
         throw error;
     }
 }

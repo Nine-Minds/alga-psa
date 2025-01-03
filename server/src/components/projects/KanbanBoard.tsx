@@ -19,6 +19,7 @@ interface KanbanBoardProps {
   onAssigneeChange: (taskId: string, newAssigneeId: string) => void;
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
+  onReorderTasks: (updates: { taskId: string, newWbsCode: string }[]) => void;
 }
 
 const statusIcons: { [key: string]: React.ReactNode } = {
@@ -46,6 +47,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAssigneeChange,
   onDragStart,
   onDragEnd,
+  onReorderTasks,
 }) => {
   return (
     <div className={styles.kanbanBoard}>
@@ -74,6 +76,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onAssigneeChange={onAssigneeChange}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
+            onReorderTasks={onReorderTasks}
           />
         );
       })}
