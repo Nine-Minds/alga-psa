@@ -76,7 +76,7 @@ export default function TaskForm({
   const [taskResources, setTaskResources] = useState<any[]>(task?.task_id ? [] : []);
   const [tempTaskResources, setTempTaskResources] = useState<any[]>([]);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
-  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>([]);
+  const [pendingTicketLinks, setPendingTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(task?.ticket_links || []);
 
   const [selectedStatusId, setSelectedStatusId] = useState<string>(
     task?.project_status_mapping_id || 
@@ -314,9 +314,66 @@ export default function TaskForm({
     }
   };
 
+  const hasChanges = (): boolean => {
+    if (mode === 'create') return true; // Always confirm for new tasks
+    
+    // Compare all form fields with their original values
+    if (!task) return false;
+
+    if (taskName !== task.task_name) return true;
+    if (description !== task.description) return true;
+    if (selectedPhaseId !== task.phase_id) return true;
+    if (selectedStatusId !== task.project_status_mapping_id) return true;
+    if (estimatedHours !== Number(task.estimated_hours)) return true;
+    if (actualHours !== Number(task.actual_hours)) return true;
+    if (assignedUser !== task.assigned_to) return true;
+
+    // Compare checklist items
+    if (checklistItems.length !== task.checklist_items?.length) return true;
+    for (let i = 0; i < checklistItems.length; i++) {
+      const current = checklistItems[i];
+      const original = task.checklist_items?.[i];
+      if (!original) return true;
+      if (current.item_name !== original.item_name) return true;
+      if (current.completed !== original.completed) return true;
+    }
+
+    // Compare resources
+    const currentResources = task.task_id ? taskResources : tempTaskResources;
+    const initialResourcesLength = task.task_id ? taskResources.length : 0;
+    if (currentResources.length !== initialResourcesLength) return true;
+
+    if (task.task_id && taskResources.length > 0) {
+      const sortedCurrentResources = [...taskResources].sort((a, b) =>
+        a.additional_user_id.localeCompare(b.additional_user_id)
+      );
+      const sortedInitialResources = [...taskResources].sort((a, b) =>
+        a.additional_user_id.localeCompare(b.additional_user_id)
+      );
+      for (let i = 0; i < sortedCurrentResources.length; i++) {
+        if (sortedCurrentResources[i].additional_user_id !== sortedInitialResources[i].additional_user_id) return true;
+      }
+    }
+
+    // Compare ticket links - only compare ticket IDs since other fields might differ in format
+    const currentTicketIds = new Set(pendingTicketLinks.map(link => link.ticket_id));
+    const originalTicketIds = new Set(task.ticket_links?.map(link => link.ticket_id) || []);
+    
+    if (currentTicketIds.size !== originalTicketIds.size) return true;
+    for (const id of currentTicketIds) {
+      if (!originalTicketIds.has(id)) return true;
+    }
+
+    return false;
+  };
+
   const handleCancelClick = (e?: React.MouseEvent) => {
     e?.preventDefault();
-    setShowCancelConfirm(true);
+    if (hasChanges()) {
+      setShowCancelConfirm(true);
+    } else {
+      onClose();
+    }
   };
 
   const handleCancelConfirm = () => {
