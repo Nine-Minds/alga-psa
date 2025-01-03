@@ -464,53 +464,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
             currentState = transitionState(currentState, 'TOOL_EXECUTING');
             break;
           }
-
-          case 'TOOL_REQUESTED': {
-            // We have a tool block that we want to execute
-            if (ctx.currentToolIndex === null || !ctx.toolUseBlocks.has(ctx.currentToolIndex)) {
-              currentState = transitionState(currentState, 'READING_STREAM');
-              break;
-            }
-
-            // Validate JSON
-            const currentTool = ctx.toolUseBlocks.get(ctx.currentToolIndex)!;
-            try {
-              const inputObject = ctx.currentInput.trim() === '' ? {} : JSON.parse(ctx.currentInput);
-              currentTool.input = inputObject;
-              currentTool.id = ctx.toolCallId;
-              currentTool.status = 'executing';
-            } catch (err) {
-              console.error('Failed to parse tool input JSON:', {
-                err,
-                input: ctx.accumulatedInput,
-              });
-              currentTool.status = 'complete';
-              ctx.toolUseBlocks.delete(ctx.currentToolIndex);
-              currentState = transitionState(currentState, 'READING_STREAM');
-              break;
-            }
-
-            // Add assistant message with the tool call
-            const assistantMessage: LocalMessage = {
-              role: 'assistant',
-              content: null,
-              tool_calls: [
-                {
-                  id: ctx.toolCallId,
-                  type: 'function',
-                  function: {
-                    name: currentTool.name,
-                    arguments: JSON.stringify(currentTool.input),
-                  },
-                },
-              ],
-            };
-            ctx.currentMessages.push(assistantMessage);
-
-            // Transition to the next state
-            currentState = transitionState(currentState, 'TOOL_EXECUTING');
-            break;
-          }
+          
           case 'TOOL_EXECUTING': {
             if (ctx.currentToolIndex === null || !ctx.toolUseBlocks.has(ctx.currentToolIndex)) {
               currentState = transitionState(currentState, 'READING_STREAM');
