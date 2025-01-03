@@ -20,7 +20,7 @@ The scheduling system provides a comprehensive solution for managing appointment
 
 ### Core Files
 * Models:
-  - `server/src/lib/models/scheduleEntry.ts`: Core scheduling logic
+  - `@`: Core scheduling logic
   - `server/src/interfaces/schedule.interfaces.ts`: TypeScript interfaces
   - `server/src/lib/schemas/scheduleSchemas.ts`: Zod validation schemas
 

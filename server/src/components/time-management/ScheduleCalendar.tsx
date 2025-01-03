@@ -34,13 +34,15 @@ const ScheduleCalendar: React.FC = () => {
   const workItemColors: Record<WorkItemType, string> = {
     ticket: 'rgb(var(--color-primary-100))',
     project_task: 'rgb(var(--color-secondary-100))',
-    non_billable_category: 'rgb(var(--color-accent-100))'
+    non_billable_category: 'rgb(var(--color-accent-100))',
+    ad_hoc: 'rgb(var(--color-border-200))'
   };
 
   const workItemHoverColors: Record<WorkItemType, string> = {
     ticket: 'rgb(var(--color-primary-200))',
     project_task: 'rgb(var(--color-secondary-200))',
-    non_billable_category: 'rgb(var(--color-accent-200))'
+    non_billable_category: 'rgb(var(--color-accent-200))',
+    ad_hoc: 'rgb(var(--color-border-300))'
   };
 
   const Legend = () => (
@@ -52,7 +54,7 @@ const ScheduleCalendar: React.FC = () => {
             style={{ backgroundColor: color }}
           ></div>
           <span className="capitalize text-sm font-medium text-[rgb(var(--color-text-900))]">
-            {type.replace('_', ' ')}
+            {type === 'ad_hoc' ? 'Ad-hoc Entry' : type.replace('_', ' ')}
           </span>
         </div>
       ))}
@@ -81,16 +83,64 @@ const ScheduleCalendar: React.FC = () => {
   const fetchEvents = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    const rangeStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    const rangeEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    // Calculate date range based on current view
+    let rangeStart, rangeEnd;
+    
+    if (view === 'month') {
+      // For month view, include the entire visible range (which might span multiple months)
+      const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+      const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+      
+      // Adjust for days from previous/next month that are visible
+      rangeStart = new Date(firstDay);
+      rangeStart.setDate(1 - firstDay.getDay()); // Start from the first day of the week
+      
+      rangeEnd = new Date(lastDay);
+      rangeEnd.setDate(lastDay.getDate() + (6 - lastDay.getDay())); // End on the last day of the week
+      
+      // Set times to include full days
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd.setHours(23, 59, 59, 999);
+    } else {
+      // For week/day views, use the exact visible range
+      rangeStart = new Date(date);
+      rangeEnd = new Date(date);
+      
+      if (view === 'week') {
+        rangeStart.setDate(date.getDate() - date.getDay());
+        rangeEnd.setDate(rangeStart.getDate() + 6);
+      }
+      
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd.setHours(23, 59, 59, 999);
+    }
+    
+    console.log('Fetching schedule entries:', { 
+      view,
+      rangeStart: rangeStart.toISOString(), 
+      rangeEnd: rangeEnd.toISOString() 
+    });
+    
     const result = await getCurrentUserScheduleEntries(rangeStart, rangeEnd);
     if (result.success) {
+      console.log('Fetched entries:', {
+        count: result.entries.length,
+        entries: result.entries.map(e => ({
+          id: e.entry_id,
+          title: e.title,
+          type: e.work_item_type,
+          start: e.scheduled_start,
+          end: e.scheduled_end
+        }))
+      });
       setEvents(result.entries);
     } else {
+      console.error('Failed to fetch schedule entries:', result.error);
       setError(result.error || 'An unknown error occurred');
     }
     setIsLoading(false);
-  }, [date]);
+  }, [date, view]);
 
   useEffect(() => {
     fetchEvents();
@@ -113,53 +163,56 @@ const ScheduleCalendar: React.FC = () => {
   };
 
   const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
-    let updatedEntry;
-    if (selectedEvent) {
-      // Ensure we're using the correct entry ID and maintaining virtual instance relationship
-      const entryToUpdate = {
-        ...entryData,
-        recurrence_pattern: entryData.recurrence_pattern || null,
-        assigned_user_ids: entryData.assigned_user_ids,
-        // Only preserve original_entry_id if this is actually a virtual instance
-        ...(selectedEvent.entry_id.includes('_') ? { original_entry_id: selectedEvent.original_entry_id } : {})
-      };
-      
-      // Use the virtual instance's ID if it exists, otherwise use the master entry's ID
-      const entryId = selectedEvent.entry_id;
-      const result = await updateScheduleEntry(entryId, entryToUpdate);
-      if (result.success && result.entry) {
-        updatedEntry = result.entry;
-      }
-    } else {
-      const result = await addScheduleEntry({
-        ...entryData,
-        recurrence_pattern: entryData.recurrence_pattern || null,
-      });
-      if (result.success && result.entry) {
-        updatedEntry = result.entry;
-      }
-    }
-
-    if (updatedEntry) {
-      // If this is a recurring entry, refresh all events to get updated virtual instances
-      if (updatedEntry.recurrence_pattern || (selectedEvent?.recurrence_pattern && !updatedEntry.recurrence_pattern)) {
-        await fetchEvents();
+    try {
+      console.log('Saving entry:', entryData);
+      let updatedEntry;
+      if (selectedEvent) {
+        // Ensure we're using the correct entry ID and maintaining virtual instance relationship
+        const entryToUpdate = {
+          ...entryData,
+          recurrence_pattern: entryData.recurrence_pattern || null,
+          assigned_user_ids: entryData.assigned_user_ids,
+          // Only preserve original_entry_id if this is actually a virtual instance
+          ...(selectedEvent.entry_id.includes('_') ? { original_entry_id: selectedEvent.original_entry_id } : {})
+        };
+        
+        // Use the virtual instance's ID if it exists, otherwise use the master entry's ID
+        const entryId = selectedEvent.entry_id;
+        const result = await updateScheduleEntry(entryId, entryToUpdate);
+        if (result.success && result.entry) {
+          updatedEntry = result.entry;
+          console.log('Updated entry:', updatedEntry);
+        } else {
+          console.error('Failed to update entry:', result.error);
+          alert('Failed to update schedule entry: ' + result.error);
+          return;
+        }
       } else {
-        // For non-recurring entries, just update the local state
-        setEvents(prevEvents => {
-          if (selectedEvent) {
-            return prevEvents.map((event):IScheduleEntry => 
-              event.entry_id === updatedEntry.entry_id ? updatedEntry : event
-            );
-          } else {
-            return [...prevEvents, updatedEntry];
-          }
+        const result = await addScheduleEntry({
+          ...entryData,
+          recurrence_pattern: entryData.recurrence_pattern || null,
         });
+        if (result.success && result.entry) {
+          updatedEntry = result.entry;
+          console.log('Added new entry:', updatedEntry);
+        } else {
+          console.error('Failed to add entry:', result.error);
+          alert('Failed to add schedule entry: ' + result.error);
+          return;
+        }
       }
-    }
 
-    setShowEntryPopup(false);
-    setSelectedEvent(null);
+      if (updatedEntry) {
+        // Always refresh events to ensure we have the latest data
+        await fetchEvents();
+      }
+
+      setShowEntryPopup(false);
+      setSelectedEvent(null);
+    } catch (error) {
+      console.error('Error saving schedule entry:', error);
+      alert('An error occurred while saving the schedule entry');
+    }
   };
 
   // Pass canAssignMultipleAgents to EntryPopup
@@ -387,7 +440,6 @@ const ScheduleCalendar: React.FC = () => {
         }
         .rbc-time-gutter {
           position: relative;
-
         }
         .rbc-day-slot {
           position: relative;
@@ -400,7 +452,6 @@ const ScheduleCalendar: React.FC = () => {
           bottom: 0;
           width: 1px;
           background: rgb(var(--color-border-200));
-
         }
       `}</style>
       <Legend />

@@ -1,6 +1,7 @@
 'use server'
 import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry } from '../../interfaces/schedule.interfaces';
+import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { getCurrentUser } from './user-actions/userActions';
 
 export type ScheduleActionResult<T> = 
@@ -49,11 +50,27 @@ export async function addScheduleEntry(
   }
 ) {
   try {
-    // Validate work item ID if provided
-    if (entry.work_item_id === '') {
-      return { 
-        success: false, 
-        error: 'Work item ID cannot be empty. Please select a valid work item or remove the work item reference.' 
+    // Validate work item ID based on type
+    if (entry.work_item_type === 'ad_hoc') {
+      // For ad-hoc entries, ensure work_item_id is null
+      entry.work_item_id = null;
+      entry.status = entry.status || 'scheduled'; // Ensure status is set for ad-hoc entries
+    } else if (!entry.work_item_id) {
+      return {
+        success: false,
+        error: 'Non-ad-hoc entries must have a valid work item ID'
+      };
+    }
+
+    // Ensure at least one user is assigned
+    if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error('No authenticated user found');
+      }
+      options = {
+        ...options,
+        assignedUserIds: [user.user_id]
       };
     }
 

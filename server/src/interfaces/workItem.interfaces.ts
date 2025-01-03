@@ -1,6 +1,6 @@
 import { TenantEntity } from ".";
 
-export type WorkItemType = 'ticket' | 'project_task' | 'non_billable_category';
+export type WorkItemType = 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc';
 
 export interface IWorkItem extends TenantEntity {
   work_item_id: string;

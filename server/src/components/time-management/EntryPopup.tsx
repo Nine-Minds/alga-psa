@@ -34,51 +34,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   loading = false,
   error = null
 }) => {
-  const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>({
-    entry_id: '',
-    title: '',
-    scheduled_start: new Date(),
-    scheduled_end: new Date(),
-    notes: '',
-    created_at: new Date(),
-    updated_at: new Date(),
-    work_item_id: '',
-    status: '',
-    work_item_type: 'project_task',
-    assigned_user_ids: [],
-  });
-  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
-  const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
-  const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
-
-  useEffect(() => {
+  const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
-      setEntryData({
+      return {
         ...event,
         scheduled_start: new Date(event.scheduled_start),
         scheduled_end: new Date(event.scheduled_end),
         assigned_user_ids: event.assigned_user_ids,
-      });
-
-      // Load recurrence pattern if it exists
-      if (event.recurrence_pattern) {
-        setRecurrencePattern({
-          ...event.recurrence_pattern,
-          startDate: new Date(event.recurrence_pattern.startDate),
-          endDate: event.recurrence_pattern.endDate ? new Date(event.recurrence_pattern.endDate) : undefined,
-        });
-      }
-
-      // Fetch work item information if editing an existing entry
-      if (event.work_item_id && event.work_item_type) {
-        getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
-          if (workItem) {
-            setSelectedWorkItem(workItem);
-          }
-        });
-      }
+      };
     } else if (slot) {
-      setEntryData({
+      return {
         entry_id: '',
         title: '',
         scheduled_start: new Date(slot.start),
@@ -86,12 +51,77 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         notes: '',
         created_at: new Date(),
         updated_at: new Date(),
-        work_item_id: '',
-        status: '',
-        work_item_type: 'project_task',
+        work_item_id: null,
+        status: 'scheduled',
+        work_item_type: 'ad_hoc',
         assigned_user_ids: [],
-      });
+      };
+    } else {
+      return {
+        entry_id: '',
+        title: '',
+        scheduled_start: new Date(),
+        scheduled_end: new Date(),
+        notes: '',
+        created_at: new Date(),
+        updated_at: new Date(),
+        work_item_id: null,
+        status: 'scheduled',
+        work_item_type: 'ad_hoc',
+        assigned_user_ids: [],
+      };
     }
+  });
+  const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
+  const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
+  const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
+
+  useEffect(() => {
+    const initializeData = () => {
+      if (event) {
+        setEntryData({
+          ...event,
+          scheduled_start: new Date(event.scheduled_start),
+          scheduled_end: new Date(event.scheduled_end),
+          assigned_user_ids: event.assigned_user_ids,
+          work_item_id: event.work_item_id,
+        });
+
+        // Load recurrence pattern if it exists
+        if (event.recurrence_pattern) {
+          setRecurrencePattern({
+            ...event.recurrence_pattern,
+            startDate: new Date(event.recurrence_pattern.startDate),
+            endDate: event.recurrence_pattern.endDate ? new Date(event.recurrence_pattern.endDate) : undefined,
+          });
+        }
+
+        // Fetch work item information if editing an existing entry
+        if (event.work_item_id && event.work_item_type !== 'ad_hoc') {
+          getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
+            if (workItem) {
+              setSelectedWorkItem(workItem);
+            }
+          });
+        }
+      } else if (slot) {
+        setEntryData({
+          entry_id: '',
+          title: '',
+          scheduled_start: new Date(slot.start),
+          scheduled_end: new Date(slot.end),
+          notes: '',
+          created_at: new Date(),
+          updated_at: new Date(),
+          work_item_id: null,
+          status: 'scheduled',
+          work_item_type: 'ad_hoc',
+          assigned_user_ids: [],
+        });
+      }
+    };
+
+    initializeData();
   }, [event, slot]);
 
   const recurrenceOptions = [
@@ -134,9 +164,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     setSelectedWorkItem(workItem);
     setEntryData(prev => ({
       ...prev,
-      work_item_id: workItem ? workItem.work_item_id : '',
+      work_item_id: workItem ? workItem.work_item_id : null,
       title: workItem ? workItem.name : prev.title,
-      work_item_type: workItem?.type as "ticket" | "project_task" | "non_billable_category"
+      work_item_type: workItem?.type || 'ad_hoc'
     }));
     setIsEditingWorkItem(false);
   };
@@ -160,15 +190,25 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleSave = () => {
+    // Ensure required fields are present
+    if (!entryData.title) {
+      alert('Title is required');
+      return;
+    }
+
+    // Prepare entry data
     const savedEntryData = {
       ...entryData,
-      recurrence_pattern: recurrencePattern || null // Use null instead of undefined
+      recurrence_pattern: recurrencePattern || null,
+      // For ad-hoc entries, ensure work_item_id is null and type is 'ad_hoc'
+      work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
+      status: entryData.status || 'scheduled',
+      // Ensure assigned_user_ids is an array
+      assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : []
     };
 
-    // If there's no recurrence pattern, ensure it's explicitly set to null
-    if (!recurrencePattern) {
-      savedEntryData.recurrence_pattern = null;
-    }
+    // Log the data being saved
+    console.log('Saving schedule entry:', savedEntryData);
 
     onSave(savedEntryData);
   };

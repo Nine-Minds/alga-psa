@@ -65,7 +65,13 @@ class ScheduleEntry {
         this.whereBetween('scheduled_start', [start, end])
           .orWhereBetween('scheduled_end', [start, end]);
       })
-      .select('*') as unknown as IScheduleEntry[];
+      .select('*')
+      .orderBy('scheduled_start', 'asc') as unknown as IScheduleEntry[];
+
+    console.log('[ScheduleEntry.getAll] Query parameters:', {
+      start: start.toISOString(),
+      end: end.toISOString()
+    });
 
     console.log('[ScheduleEntry.getAll] Regular entries:', {
       count: regularEntries.length,
@@ -178,22 +184,31 @@ class ScheduleEntry {
     try {
       const entry_id = uuidv4();
       
-      // Create main entry with only valid columns
-      const [createdEntry] = await trx('schedule_entries').insert({
+      // Prepare entry data
+      const entryData = {
         entry_id,
         title: entry.title,
         scheduled_start: entry.scheduled_start,
         scheduled_end: entry.scheduled_end,
         notes: entry.notes,
-        status: entry.status,
-        work_item_id: entry.work_item_id,
+        status: entry.status || 'scheduled',
+        work_item_id: entry.work_item_type === 'ad_hoc' ? null : entry.work_item_id,
         work_item_type: entry.work_item_type,
         tenant: tenant || '',
         recurrence_pattern: (entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
           ? JSON.stringify(entry.recurrence_pattern)
           : null,
         is_recurring: !!(entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
-      }).returning('*');
+      };
+
+      console.log('Creating schedule entry:', entryData);
+
+      // Create main entry with only valid columns
+      const [createdEntry] = await trx('schedule_entries')
+        .insert(entryData)
+        .returning('*');
+
+      console.log('Created schedule entry:', createdEntry);
 
       // Create assignee records
       await this.updateAssignees(trx, tenant || '', createdEntry.entry_id, options.assignedUserIds);

@@ -2,14 +2,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Input } from '../ui/Input';
 import { SwitchWithLabel } from '../ui/SwitchWithLabel';
-import { IWorkItem, IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
-import { searchWorkItems } from '@/lib/actions/workItemActions';
+import { IWorkItem, IExtendedWorkItem, WorkItemType } from '../../interfaces/workItem.interfaces';
+import { searchWorkItems } from '../../lib/actions/workItemActions';
+import { Button } from '../ui/Button';
 
 interface WorkItemPickerProps {
-  onSelect: (workItem: IWorkItem) => void;
+  onSelect: (workItem: IWorkItem | null) => void;
   existingWorkItems: IWorkItem[];
-  initialWorkItemId?: string;
-  initialWorkItemType?: 'ticket' | 'project_task' | 'non_billable_category';
+  initialWorkItemId?: string | null;
+  initialWorkItemType?: WorkItemType;
 }
 
 interface WorkItemWithStatus extends Omit<IExtendedWorkItem, "tenant"> {
@@ -139,6 +140,15 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
   return (
     <div className="flex flex-col h-[calc(80vh-8rem)]">
       <div className="flex-none bg-white dark:bg-[rgb(var(--color-border-50))] pb-4">
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            onClick={() => onSelect(null)}
+            variant="outline"
+            className="text-sm"
+          >
+            Create Ad-hoc Entry
+          </Button>
+        </div>
         <div className="relative">
           <Input
             value={searchTerm}

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '../ui/Button';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
+import { IWorkItem } from '../../interfaces/workItem.interfaces';
 
 interface SelectedWorkItemProps {
   workItem: Omit<IWorkItem, 'tenant'> | null;
@@ -13,7 +13,7 @@ const SelectedWorkItem: React.FC<SelectedWorkItemProps> = ({ workItem, onEdit })
   if (!workItem) {
     return (
       <div className="flex justify-between items-center p-2 border rounded-md">
-        <span className="text-gray-500">No work item selected</span>
+        <span className="text-gray-500">Ad-hoc entry (no work item)</span>
         <Button onClick={onEdit} variant="outline" size="sm">
           Select Work Item
         </Button>
