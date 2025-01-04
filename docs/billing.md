@@ -82,11 +82,11 @@ This typing ensures that only valid service types can be assigned, maintaining d
 
 11. **`invoices`** *(From Original Plan, Updated)*
      - **Purpose:** Stores invoice header information
-     - **Key Fields:** `tenant`, `invoice_id` (UUID, PK), `company_id`, `invoice_date`, `due_date`, `total_amount`, `status`, **`currency_code`** *(New Field)*
+     - **Key Fields:** `tenant`, `invoice_id` (UUID, PK), `company_id`, `invoice_date`, `due_date`, `total_amount`, `status`, `currency_code`, `billing_period_start`, `billing_period_end`, `credit_applied`, `finalized_at`
 
 12. **`invoice_items`** *(From Original Plan, Updated)*
      - **Purpose:** Stores line items for each invoice
-     - **Key Fields:** `tenant`, `invoice_id`, `item_id` (UUID, PK), `service_id`, `description`, `quantity`, `unit_price`, `total_price`, **`currency_code`** *(New Field)*, **`tax_rate_id`** *(New Field)*
+     - **Key Fields:** `tenant`, `invoice_id`, `item_id` (UUID, PK), `service_id`, `description`, `quantity`, `unit_price`, `total_price`, `currency_code`, `tax_rate_id`, `tax_region`, `tax_amount`, `net_amount`
 
 13. **`bucket_plans`** *(From Original Plan)*
      - **Purpose:** Defines bucket of hours/retainer plans
@@ -95,6 +95,22 @@ This typing ensures that only valid service types can be assigned, maintaining d
 14. **`bucket_usage`** *(From Original Plan)*
      - **Purpose:** Tracks usage against bucket of hours/retainer plans
      - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `bucket_plan_id`, `company_id`, `period_start`, `period_end`, `hours_used`, `overage_hours`
+
+15. **`invoice_templates`** *(New)*
+     - **Purpose:** Stores invoice templates with DSL for dynamic generation
+     - **Key Fields:** `tenant`, `template_id` (UUID, PK), `name`, `version`, `dsl`, `is_default`, `created_at`, `updated_at`
+
+16. **`invoice_annotations`** *(New)*
+     - **Purpose:** Stores comments and notes on invoices
+     - **Key Fields:** `tenant`, `annotation_id` (UUID, PK), `invoice_id`, `user_id`, `content`, `is_internal`, `created_at`
+
+17. **`invoice_time_entries`** *(New)*
+     - **Purpose:** Links time entries to specific invoice items
+     - **Key Fields:** `invoice_time_entry_id` (UUID, PK), `invoice_id`, `entry_id`, `tenant`, `created_at`
+
+18. **`invoice_usage_records`** *(New)*
+     - **Purpose:** Links usage records to specific invoice items
+     - **Key Fields:** `invoice_usage_record_id` (UUID, PK), `invoice_id`, `usage_id`, `tenant`, `created_at`
 
 ### **New Tables**
 
@@ -187,6 +203,9 @@ interface IInvoice {
   billingPeriodStart: Date;
   billingPeriodEnd: Date;
   items: IInvoiceItem[];
+  billing_cycle_id?: string;
+  credit_applied: number;
+  finalized_at?: Date;
   // ... existing code ...
 }
 ```
@@ -201,6 +220,8 @@ interface ICompanyBillingPlan {
   companyId: string;
   planType: 'fixed' | 'time-based' | 'usage-based' | 'bucket';
   billingCycle: 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+  period_start_date: Date;
+  period_end_date: Date;
   // ... existing code ...
 }
 ```
@@ -208,6 +229,11 @@ interface ICompanyBillingPlan {
 ### Relationships Between Data Models
 
 These interfaces are interconnected and form the backbone of the billing system:
+
+- **`invoices`** are linked to **`invoice_templates`** through the `template_id` field
+- **`invoices`** track their source data through **`invoice_time_entries`** and **`invoice_usage_records`**
+- **`invoices`** can have multiple **`invoice_annotations`** for comments and notes
+- **`invoice_items`** include detailed tax information through **`tax_rates`**
 
 An ICompanyBillingPlan determines how IBillingCharges are calculated.
 Multiple IBillingCharges are combined to create IInvoiceItems.

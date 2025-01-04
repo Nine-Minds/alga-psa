@@ -111,13 +111,15 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
       }
       console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
 
-      // A period can be generated if its end date is in the past
-      const can_generate = new Date(period.period_end_date) <= new Date(currentDate);
+      // Allow generation of invoices even if period hasn't ended
+      const can_generate = true;
+      const is_early = new Date(period.period_end_date) > new Date(currentDate);
 
       return {
         ...period,
         total_unbilled,
-        can_generate
+        can_generate,
+        is_early
       };
     }));
 
@@ -397,6 +399,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     total_amount: createdInvoice.total_amount,
     invoice_items: await knex('invoice_items').where({ invoice_id: createdInvoice.invoice_id }),
     credit_applied: invoice.credit_applied,
+    billing_cycle_id: billing_cycle_id,
   };
 
   return viewModel;
@@ -464,7 +467,7 @@ export async function finalizeInvoice(invoiceId: string): Promise<IInvoice> {
   return updatedInvoice;
 }
 
-async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
+export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex } = await createTenantKnex();
   const company = await knex('company_billing_cycles')
     .where({ company_id: companyId })
@@ -588,4 +591,89 @@ export async function addInvoiceAnnotation(annotation: Omit<IInvoiceAnnotation, 
 export async function getInvoiceAnnotations(_invoiceId: string): Promise<IInvoiceAnnotation[]> {
   // Implementation to fetch annotations for an invoice
   return [];
+}
+
+export async function hardDeleteInvoice(invoiceId: string) {
+  const { knex, tenant } = await createTenantKnex();
+  
+  await knex.transaction(async (trx) => {
+    // 1. Get invoice details
+    const invoice = await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+      
+    // 2. Handle payments
+    const payments = await trx('transactions')
+      .where({ invoice_id: invoiceId, type: 'payment' });
+      
+    if (payments.length > 0) {
+      // Insert reversal transactions
+      await trx('transactions').insert(
+        payments.map(p => ({
+          ...p,
+          transaction_id: uuidv4(),
+          type: 'payment_reversal',
+          amount: -p.amount,
+          description: `Reversal of payment ${p.transaction_id}`
+        }))
+      );
+    }
+    
+    // 3. Handle credit
+    if (invoice.credit_applied > 0) {
+      await trx('transactions').insert({
+        transaction_id: uuidv4(),
+        type: 'credit_issuance',
+        amount: invoice.credit_applied,
+        description: `Credit reissued from deleted invoice ${invoiceId}`
+      });
+      
+      await CompanyBillingPlan.updateCompanyCredit(
+        invoice.company_id,
+        invoice.credit_applied
+      );
+    }
+    
+    // 4. Unmark time entries
+    await trx('time_entries')
+      .whereIn('entry_id', 
+        trx('invoice_time_entries')
+          .select('entry_id')
+          .where({ invoice_id: invoiceId })
+      )
+      .update({ invoiced: false });
+      
+    // 5. Unmark usage records
+    await trx('usage_tracking')
+      .whereIn('usage_id',
+        trx('invoice_usage_records')
+          .select('usage_id')
+          .where({ invoice_id: invoiceId })
+      )
+      .update({ invoiced: false });
+      
+    // 6. Delete transactions
+    await trx('transactions')
+      .where({ invoice_id: invoiceId })
+      .delete();
+
+    // 7. Delete join records
+    await trx('invoice_time_entries')
+      .where({ invoice_id: invoiceId })
+      .delete();
+      
+    await trx('invoice_usage_records')
+      .where({ invoice_id: invoiceId })
+      .delete();
+      
+    // 8. Delete invoice items
+    await trx('invoice_items')
+      .where({ invoice_id: invoiceId })
+      .delete();
+      
+    // 9. Delete invoice record
+    await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .delete();
+  });
 }

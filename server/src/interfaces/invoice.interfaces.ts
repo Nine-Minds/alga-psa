@@ -234,4 +234,5 @@ export interface InvoiceViewModel {
   custom_fields?: Record<string, any>;
   finalized_at?: Date;
   credit_applied: number;
+  billing_cycle_id?: string;
 }

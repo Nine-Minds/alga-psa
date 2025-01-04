@@ -15,6 +15,9 @@ The `BillingEngine` class is a central component of our billing system, responsi
 - Implements bucket plan charges
 - Applies proration for partial billing periods
 - Manages rollover of unapproved time entries
+- Supports multiple billing cycles per company
+- Handles billing cycle transitions and overlaps
+- Tracks billing cycle history for audit purposes
 
 The `BillingEngine` integrates closely with billing cycles to determine billing periods and proration factors. It provides methods such as `calculateBilling`, `calculateFixedPriceCharges`, `calculateTimeBasedCharges`, and `rolloverUnapprovedTime` to handle various aspects of the billing process.
 

@@ -1,12 +1,16 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
+import { Tooltip } from '../ui/Tooltip';
+import { Info, AlertTriangle } from 'lucide-react';
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 import { generateInvoice } from '../../lib/actions/invoiceActions';
+import { getInvoicedBillingCycles, removeBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
+import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter } from '../ui/Dialog';
 
 interface AutomaticInvoicesProps {
   periods: (ICompanyBillingCycle & {
@@ -24,17 +28,51 @@ interface Period extends ICompanyBillingCycle {
   billing_cycle_id?: string;
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
+  is_early?: boolean;
 }
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenerateSuccess }) => {
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isReversing, setIsReversing] = useState(false);
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [companyFilter, setCompanyFilter] = useState<string>('');
+  const [invoicedPeriods, setInvoicedPeriods] = useState<Period[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showReverseDialog, setShowReverseDialog] = useState(false);
+  const [selectedCycleToReverse, setSelectedCycleToReverse] = useState<{
+    id: string;
+    company: string;
+    period: string;
+  } | null>(null);
+  const itemsPerPage = 10;
 
   const filteredPeriods = periods.filter(period => 
     period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
   );
+
+  const filteredInvoicedPeriods = invoicedPeriods.filter(period =>
+    period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
+  );
+
+  useEffect(() => {
+    const loadInvoicedPeriods = async () => {
+      setIsLoading(true);
+      try {
+        const cycles = await getInvoicedBillingCycles();
+        setInvoicedPeriods(cycles.map(cycle => ({
+          ...cycle,
+          can_generate: false // Already invoiced periods can't be generated again
+        })));
+      } catch (error) {
+        console.error('Error loading invoiced periods:', error);
+      }
+      setIsLoading(false);
+    };
+
+    loadInvoicedPeriods();
+  }, []);
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
@@ -62,101 +100,279 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
   const handleGenerateInvoices = async () => {
     setIsGenerating(true);
-    setError(null);
-    try {
-      for (const billingCycleId of selectedPeriods) {
+    setErrors({});
+    const newErrors: {[key: string]: string} = {};
+    
+    for (const billingCycleId of selectedPeriods) {
+      try {
         await generateInvoice(billingCycleId);
+      } catch (err) {
+        // Get company name for the failed billing cycle
+        const period = periods.find(p => p.billing_cycle_id === billingCycleId);
+        const companyName = period?.company_name || billingCycleId;
+        
+        // Store error message for this company
+        newErrors[companyName] = err instanceof Error ? err.message : 'Unknown error occurred';
       }
-      
-      setSelectedPeriods(new Set());
-      onGenerateSuccess();
-    } catch (err) {
-      setError('Error generating invoices');
-      console.error('Error generating invoices:', err);
-    } finally {
-      setIsGenerating(false);
     }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+    } else {
+      setSelectedPeriods(new Set());
+      // Refresh the invoiced periods list
+      const cycles = await getInvoicedBillingCycles();
+      setInvoicedPeriods(cycles.map(cycle => ({
+        ...cycle,
+        can_generate: false, // Already invoiced periods can't be generated again
+        is_early: false // Already invoiced periods can't be early
+      })));
+      onGenerateSuccess();
+    }
+    
+    setIsGenerating(false);
+  };
+
+  const handleReverseBillingCycle = async () => {
+    if (!selectedCycleToReverse) return;
+
+    setIsReversing(true);
+    try {
+      await removeBillingCycle(selectedCycleToReverse.id);
+      // Refresh both lists after successful reversal
+      const cycles = await getInvoicedBillingCycles();
+      setInvoicedPeriods(cycles.map(cycle => ({
+        ...cycle,
+        can_generate: false, // Already invoiced periods can't be generated again
+        is_early: false // Already invoiced periods can't be early
+      })));
+      setShowReverseDialog(false);
+      setSelectedCycleToReverse(null);
+      onGenerateSuccess(); // This will refresh the available periods list
+    } catch (error) {
+      setErrors({
+        [selectedCycleToReverse.company]: error instanceof Error ? error.message : 'Failed to reverse billing cycle'
+      });
+    }
+    setIsReversing(false);
   };
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold">Ready to Invoice Billing Periods</h2>
-        <div className="flex gap-4">
-          <input
-            type="text"
-            placeholder="Filter companies..."
-            className="px-3 py-2 border rounded-md"
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
+      <div className="space-y-8">
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold">Ready to Invoice Billing Periods</h2>
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="Filter companies..."
+                className="px-3 py-2 border rounded-md"
+                value={companyFilter}
+                onChange={(e) => setCompanyFilter(e.target.value)}
+              />
+              <Button
+                onClick={handleGenerateInvoices}
+                disabled={selectedPeriods.size === 0 || isGenerating}
+                className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
+              >
+                {isGenerating ? 'Generating...' : `Generate Selected Invoices (${selectedPeriods.size})`}
+              </Button>
+            </div>
+          </div>
+
+          {Object.keys(errors).length > 0 && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+              <h4 className="font-semibold mb-2">Errors occurred while generating invoices:</h4>
+              <ul className="list-disc pl-5">
+                {Object.entries(errors).map(([company, errorMessage]) => (
+                  <li key={company}>
+                    <span className="font-medium">{company}:</span> {errorMessage}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <DataTable
+            data={filteredPeriods}
+            columns={[
+              {
+                title: (
+                  <Checkbox
+                    id="select-all"
+                    checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter(p => p.can_generate).length}
+                    onChange={handleSelectAll}
+                    disabled={!filteredPeriods.some(p => p.can_generate)}
+                  />
+                ),
+                dataIndex: 'billing_cycle_id',
+                render: (_: unknown, record: Period) => record.can_generate ? (
+                  <Checkbox
+                    id={`select-${record.billing_cycle_id}`}
+                    checked={selectedPeriods.has(record.billing_cycle_id || '')}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => handleSelectPeriod(record.billing_cycle_id, event)}
+                  />
+                ) : null
+              },
+              {
+                title: 'Company',
+                dataIndex: 'company_name'
+              },
+              {
+                title: 'Billing Cycle',
+                dataIndex: 'billing_cycle'
+              },
+              {
+                title: 'Period Start',
+                dataIndex: 'period_start_date',
+                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+              },
+              {
+                title: 'Period End',
+                dataIndex: 'period_end_date',
+                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+              },
+              {
+                title: 'Status',
+                dataIndex: 'can_generate',
+                render: (_: boolean, record: Period) => {
+                  if (!record.can_generate) {
+                    return (
+                      <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                        Period Active
+                      </span>
+                    );
+                  }
+                  if (record.is_early) {
+                    return (
+                      <div className="flex items-center">
+                        <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${new Date(record.period_end_date).toLocaleDateString()})`}>
+                          <div className="flex items-center">
+                            <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded mr-2">
+                              Early Invoice
+                            </span>
+                            <Info className="h-4 w-4 text-yellow-500" />
+                          </div>
+                        </Tooltip>
+                      </div>
+                    );
+                  }
+                  return null;
+                }
+              }
+            ]}
+            pagination={false}
           />
-          <Button
-            onClick={handleGenerateInvoices}
-            disabled={selectedPeriods.size === 0 || isGenerating}
-            className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
-          >
-            {isGenerating ? 'Generating...' : `Generate Selected Invoices (${selectedPeriods.size})`}
-          </Button>
+        </div>
+
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Previously Invoiced Periods</h2>
+          {isLoading ? (
+            <div className="text-center py-4">Loading...</div>
+          ) : (
+            <>
+              <DataTable
+                data={filteredInvoicedPeriods}
+                columns={[
+                  {
+                    title: 'Company',
+                    dataIndex: 'company_name'
+                  },
+                  {
+                    title: 'Billing Cycle',
+                    dataIndex: 'billing_cycle'
+                  },
+                  {
+                    title: 'Period Start',
+                    dataIndex: 'period_start_date',
+                    render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                  },
+                  {
+                    title: 'Period End',
+                    dataIndex: 'period_end_date',
+                    render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                  },
+                  {
+                    title: 'Actions',
+                    dataIndex: 'billing_cycle_id',
+                    render: (_: unknown, record: Period) => (
+                      <Button
+                        onClick={() => {
+                          setSelectedCycleToReverse({
+                            id: record.billing_cycle_id || '',
+                            company: record.company_name,
+                            period: `${new Date(record.period_start_date).toLocaleDateString()} - ${new Date(record.period_end_date).toLocaleDateString()}`
+                          });
+                          setShowReverseDialog(true);
+                        }}
+                        variant="destructive"
+                        size="sm"
+                      >
+                        Reverse
+                      </Button>
+                    )
+                  }
+                ]}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={setCurrentPage}
+                pageSize={itemsPerPage}
+                totalItems={filteredInvoicedPeriods.length}
+              />
+            </>
+          )}
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-          {error}
-        </div>
-      )}
+      <Dialog
+        isOpen={showReverseDialog}
+        onClose={() => setShowReverseDialog(false)}
+      >
+        <DialogHeader>
+          <DialogTitle>
+            <div className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Warning: Reverse Billing Cycle</span>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
 
-      <DataTable
-        data={filteredPeriods}
-        columns={[
-          {
-            title: (
-              <Checkbox
-                id="select-all"
-                checked={filteredPeriods.length > 0 && selectedPeriods.size === filteredPeriods.filter(p => p.can_generate).length}
-                onChange={handleSelectAll}
-                disabled={!filteredPeriods.some(p => p.can_generate)}
-              />
-            ),
-            dataIndex: 'billing_cycle_id',
-            render: (_: unknown, record: Period) => record.can_generate ? (
-              <Checkbox
-                id={`select-${record.billing_cycle_id}`}
-                checked={selectedPeriods.has(record.billing_cycle_id || '')}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) => handleSelectPeriod(record.billing_cycle_id, event)}
-              />
-            ) : null
-          },
-          {
-            title: 'Company',
-            dataIndex: 'company_name'
-          },
-          {
-            title: 'Billing Cycle',
-            dataIndex: 'billing_cycle'
-          },
-          {
-            title: 'Period Start',
-            dataIndex: 'period_start_date',
-            render: (date: ISO8601String) => new Date(date).toLocaleDateString()
-          },
-          {
-            title: 'Period End',
-            dataIndex: 'period_end_date',
-            render: (date: ISO8601String) => new Date(date).toLocaleDateString()
-          },
-          {
-            title: 'Status',
-            dataIndex: 'can_generate',
-            render: (canGenerate: boolean) => !canGenerate ? (
-              <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-                Period Active
-              </span>
-            ) : null
-          }
-        ]}
-        pagination={false}
-      />
+        <DialogContent>
+          <div className="text-sm space-y-2">
+            <p className="font-semibold">You are about to reverse the billing cycle for:</p>
+            <p>Company: {selectedCycleToReverse?.company}</p>
+            <p>Period: {selectedCycleToReverse?.period}</p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded p-4 text-sm space-y-2 mt-4">
+            <p className="font-semibold text-yellow-800">This action will:</p>
+            <ul className="list-disc pl-5 text-yellow-700">
+              <li>Reverse any invoices generated for this billing cycle</li>
+              <li>Reissue any credits that were applied to these invoices</li>
+              <li>Unmark all time entries and usage records as invoiced</li>
+              <li>Mark the billing cycle as inactive</li>
+            </ul>
+            <p className="text-red-600 font-semibold mt-4">This action cannot be undone!</p>
+          </div>
+        </DialogContent>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setShowReverseDialog(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleReverseBillingCycle}
+            disabled={isReversing}
+          >
+            {isReversing ? 'Reversing...' : 'Yes, Reverse Billing Cycle'}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </>
   );
 };

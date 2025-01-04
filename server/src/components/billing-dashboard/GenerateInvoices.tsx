@@ -37,6 +37,7 @@ const GenerateInvoices: React.FC = () => {
   const [periods, setPeriods] = useState<(ICompanyBillingCycle & {
     company_name: string;
     can_generate: boolean;
+    is_early?: boolean;
   })[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<Service[]>([]);
