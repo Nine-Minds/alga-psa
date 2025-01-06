@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-
 import { LockClosedIcon } from '@radix-ui/react-icons';
 import * as Dialog from '@radix-ui/react-dialog';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface TwoFactorInputProps {
   isOpen: boolean;
@@ -13,12 +14,43 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
+  // Register 2FA input field
+  const updateInput = useRegisterUIComponent<FormFieldComponent>({
+    id: '2fa-input',
+    type: 'formField',
+    fieldType: 'textField',
+    label: '2FA Code',
+    parentId: 'signin-2fa',
+    required: true
+  });
+
+  // Register 2FA submit button
+  const updateSubmitButton = useRegisterUIComponent<ButtonComponent>({
+    id: '2fa-submit-button',
+    type: 'button',
+    label: 'Verify',
+    parentId: 'signin-2fa',
+    actions: ['click']
+  });
+
   useEffect(() => {
     if (isOpen) {
       inputRefs.current[0]?.focus();
       setCode(['', '', '', '', '', '']);
+
+      // Update component states with empty code
+      updateInput({
+        label: '2FA Code',
+        disabled: !isOpen,
+        required: true,
+        value: ''
+      });
+      updateSubmitButton({
+        label: 'Verify',
+        disabled: !isOpen
+      });
     }
-  }, [isOpen]);
+  }, [isOpen, updateInput, updateSubmitButton]);
 
   const handleChange = (index: number, value: string) => {
     if (value.length <= 1 && /^\d*$/.test(value)) {
@@ -30,8 +62,17 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
         inputRefs.current[index + 1]?.focus();
       }
 
+      const fullCode = newCode.join('');
+      
+      // Update input value in UI state
+      updateInput({
+        value: fullCode,
+        disabled: !isOpen,
+        required: true
+      });
+
       if (newCode.every(digit => digit !== '')) {
-        onComplete(newCode.join(''));
+        onComplete(fullCode);
       }
     }
   };

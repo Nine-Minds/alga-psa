@@ -14,6 +14,7 @@
     "@types/socket.io": "^3.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "jsonpath-plus": "^10.2.0",
     "puppeteer": "^23.11.1",
     "socket.io": "^4.8.1"
   },

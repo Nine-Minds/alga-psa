@@ -1,4 +1,6 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo } from 'react';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { DataTableComponent } from '@/types/ui-reflection/types';
 import {
   useReactTable,
   getCoreRowModel,
@@ -26,8 +28,14 @@ const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
   }, obj);
 };
 
-export const DataTable = <T extends object>(props: DataTableProps<T>): React.ReactElement => {
+export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
+  /** Unique identifier for UI reflection system */
+  id?: string;
+}
+
+export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): React.ReactElement => {
   const {
+    id,
     data,
     columns,
     pagination = true,
@@ -38,6 +46,31 @@ export const DataTable = <T extends object>(props: DataTableProps<T>): React.Rea
     totalItems,
     editableConfig
   } = props;
+
+  // Register with UI reflection system if id is provided
+  const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
+    id,
+    type: 'dataTable',
+    columns: columns.map(col => ({
+      id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
+      title: String(col.title), // Convert ReactNode to string
+      dataIndex: col.dataIndex,
+      hasCustomRender: !!col.render
+    })),
+    pagination: {
+      enabled: pagination,
+      currentPage,
+      pageSize,
+      totalItems: totalItems ?? data.length,
+      totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
+    },
+    rowCount: data.length,
+    visibleRows: data.slice(0, pageSize).map(row => ({
+      id: ('id' in row) ? (row as { id: string }).id : '',
+      values: row as Record<string, unknown>
+    })),
+    isEditable: !!editableConfig
+  }) : undefined;
 
   // Generate a unique context for this table instance
   const tableContext = useMemo(() => Math.random().toString(36).substring(7), []);
@@ -98,12 +131,34 @@ export const DataTable = <T extends object>(props: DataTableProps<T>): React.Rea
     }
   };
 
-  // Notify parent component of page changes
+  // Notify parent component of page changes and update reflection metadata
   React.useEffect(() => {
     if (onPageChange) {
       onPageChange(pageIndex + 1);
     }
-  }, [pageIndex, onPageChange]);
+
+    // Update reflection metadata when pagination or sorting changes
+    if (updateMetadata) {
+      updateMetadata({
+        pagination: {
+          enabled: pagination,
+          currentPage: pageIndex + 1,
+          pageSize: currentPageSize,
+          totalItems: totalItems ?? data.length,
+          totalPages: Math.ceil((totalItems ?? data.length) / currentPageSize)
+        },
+        rowCount: data.length,
+        visibleRows: table.getPaginationRowModel().rows.map(row => ({
+          id: ('id' in row.original) ? (row.original as { id: string }).id : '',
+          values: row.original as Record<string, unknown>
+        })),
+        sortedBy: table.getState().sorting[0] ? {
+          column: table.getState().sorting[0].id,
+          direction: table.getState().sorting[0].desc ? 'desc' : 'asc'
+        } : undefined
+      });
+    }
+  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, onPageChange, updateMetadata, table]);
 
   const handlePreviousPage = () => {
     table.previousPage();
@@ -114,7 +169,10 @@ export const DataTable = <T extends object>(props: DataTableProps<T>): React.Rea
   };
 
   return (
-    <div className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200">
+    <div
+      className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200"
+      data-automation-id={id}
+    >
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-white">

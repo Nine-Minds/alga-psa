@@ -123,7 +123,7 @@ async function* openAIStreamToChunks(
   }> = [];
 
   for await (const chunk of stream) {
-    
+    console.log('chunk', JSON.stringify(chunk));
 
     const delta = chunk.choices[0]?.delta;
     if (!delta) continue;

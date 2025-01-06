@@ -20,6 +20,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
@@ -76,19 +77,52 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
     type: 'formField',
     fieldType: 'checkbox',
     label: 'Agree to Terms and Conditions',
-    value: true,
+    value: termsAccepted,
     required: true,
     parentId: 'msp-login-form'
   });
 
-  // Update field values when they change
+  // Update field values and form state when they change
   useEffect(() => {
-    updateEmailField({ value: email });
-    updatePasswordField({ value: password });
-  }, [email, password, updateEmailField, updatePasswordField]);
+    const isFormValid = email.length > 0 && password.length > 0 && termsAccepted;
+
+    // Update individual field states
+    updateEmailField({ 
+      value: email,
+      disabled: false
+    });
+    
+    updatePasswordField({ 
+      value: password,
+      disabled: false
+    });
+    
+    updateTermsCheckbox({ 
+      value: termsAccepted,
+      disabled: false
+    });
+
+    // Update button states based on form validity
+    updateSignInButton({
+      disabled: !isFormValid
+    });
+
+    updateGoogleButton({
+      disabled: false
+    });
+
+  }, [email, password, termsAccepted, updateEmailField, updatePasswordField, updateTermsCheckbox, updateSignInButton, updateGoogleButton, updateForm]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Disable form elements during submission
+    updateSignInButton({ disabled: true });
+    updateGoogleButton({ disabled: true });
+    updateEmailField({ disabled: true });
+    updatePasswordField({ disabled: true });
+    updateTermsCheckbox({ disabled: true });
+
 
     try {
       const result = await signIn('credentials', {
@@ -115,6 +149,15 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         title: 'Error', 
         message: 'An unexpected error occurred. Please try again.' 
       });
+    } finally {
+      // Re-enable form elements after submission
+      const isFormValid = email.length > 0 && password.length > 0 && termsAccepted;
+      updateSignInButton({ disabled: !isFormValid });
+      updateGoogleButton({ disabled: false });
+      updateEmailField({ disabled: false });
+      updatePasswordField({ disabled: false });
+      updateTermsCheckbox({ disabled: false });
+
     }
   };
 
@@ -189,7 +232,12 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
         <div className="flex items-center">
           <Text as="label" size="2">
             <Flex gap="2">
-              <Checkbox color="purple" defaultChecked {...withDataAutomationId({ id: 'msp-terms-checkbox' })} />
+              <Checkbox 
+                color="purple" 
+                checked={termsAccepted}
+                onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                {...withDataAutomationId({ id: 'msp-terms-checkbox' })} 
+              />
               Agree to Terms and Conditions
             </Flex>
           </Text>

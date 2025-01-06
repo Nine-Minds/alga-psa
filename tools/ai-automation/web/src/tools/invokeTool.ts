@@ -1,4 +1,4 @@
-interface ToolExecutionResult {
+export interface ToolExecutionResult {
   error?: string;
   success?: boolean;
   result?: {
@@ -12,8 +12,17 @@ interface ToolExecutionResult {
 const API_BASE = 'http://localhost:4000/api';
 
 // Get UI State
-export async function getUIState(): Promise<ToolExecutionResult> {
-  const endpoint = `${API_BASE}/ui-state`;
+export async function getUIState(jsonpath?: string): Promise<ToolExecutionResult> {
+  if (!jsonpath || jsonpath == '$.components') {
+    return {
+      success: true,
+      result: {
+        message: 'TOO BROAD - please narrow your search with a specific JSONPath'
+      }
+    };
+  }
+
+  const endpoint = `${API_BASE}/ui-state${jsonpath ? `?jsonpath=${encodeURIComponent(jsonpath)}` : ''}`;
   try {
     const response = await fetch(endpoint, {
       method: 'GET',
@@ -137,13 +146,14 @@ interface ToolArgs {
   code?: string;
   seconds?: number;
   script?: string;
+  jsonpath?: string;
 }
 
 
 export const invokeTool = async (toolName: string, args: ToolArgs) => {
   switch (toolName) {
     case 'get_ui_state':
-      return getUIState();
+      return getUIState(args.jsonpath);
     case 'observe_browser':
       return observeBrowser(args.selector);
     case 'execute_script':

@@ -105,8 +105,47 @@ export interface DataGridComponent extends BaseComponent {
 }
 
 /**
- * Union type of all possible UI components.
+ * Data table component representation.
  */
+export interface DataTableComponent extends BaseComponent {
+  type: "dataTable";
+  
+  /** Column definitions */
+  columns: Array<{
+    id: string;
+    title: string;
+    dataIndex: string | string[];
+    hasCustomRender: boolean;
+  }>;
+  
+  /** Pagination state */
+  pagination: {
+    enabled: boolean;
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+  
+  /** Number of rows in the current data set */
+  rowCount: number;
+
+  /** Currently visible rows */
+  visibleRows: Array<{
+    id: string;
+    values: Record<string, unknown>;
+  }>;
+  
+  /** Current sorting state */
+  sortedBy?: {
+    column: string;
+    direction: 'asc' | 'desc';
+  };
+  
+  /** Whether the table has editable cells */
+  isEditable: boolean;
+}
+
 /**
  * Navigation component representation.
  */
@@ -133,13 +172,33 @@ export interface NavigationComponent extends BaseComponent {
   }>;
 }
 
+/**
+ * Container component representation.
+ */
+export interface ContainerComponent extends BaseComponent {
+  type: "container";
+}
+
+/**
+ * Card component representation.
+ */
+export interface CardComponent extends BaseComponent {
+  type: "card";
+}
+
+/**
+ * Union type of all possible UI components.
+ */
 export type UIComponent =
   | ButtonComponent
   | DialogComponent
   | FormComponent
   | FormFieldComponent
   | DataGridComponent
-  | NavigationComponent;
+  | NavigationComponent
+  | DataTableComponent
+  | ContainerComponent
+  | CardComponent;
 
 /**
  * Top-level page state representation.

@@ -115,14 +115,24 @@ export const tools: Tool[] = [
   },
   {
     name: 'get_ui_state',
-    description: 'Get the current UI state of the page. This is your main tool for understanding what the user is seeing on the page.',
+    description: 'Get the current UI state of the page, optionally filtered by a JSONPath expression. This is your main tool for understanding what the user is seeing on the page. The JSONPath must start with $ and can use filters like [?(@.type=="button")]. Returns full state if no path provided, filtered results if path matches, or error message if path is invalid.',
     parameters: {
       type: 'object',
-      properties: {}
+      properties: {
+        jsonpath: {
+          type: 'string',
+          description: 'Optional JSONPath expression to filter the UI state. Must start with $. Examples: $.components[?(@.type=="button")], $.components[?(@.id=="contacts-table")]'
+        }
+      }
     },
     input_schema: {
       type: 'object',
-      properties: {}
+      properties: {
+        jsonpath: {
+          type: 'string',
+          description: 'Optional JSONPath expression to filter the UI state. Must start with $. Examples: $.components[?(@.type=="button")], $.components[?(@.id=="contacts-table")]'
+        }
+      }
     }
   }
 ];

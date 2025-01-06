@@ -1,8 +1,9 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
-import { UIStateProvider } from '../../../types/ui-reflection/UIStateContext';
+import { useRegisterUIComponent } from '../../../types/ui-reflection/useRegisterUIComponent';
+import { ContainerComponent, CardComponent, DialogComponent, FormComponent, ButtonComponent, FormFieldComponent } from '../../../types/ui-reflection/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import MspLoginForm from '@/components/auth/MspLoginForm';
 import ClientLoginForm from '@/components/auth/ClientLoginForm';
@@ -23,8 +24,52 @@ export default function SignIn() {
   const error = searchParams?.get('error');
   const registered = searchParams?.get('registered');
 
+  // Register the page container
+  const updatePage = useRegisterUIComponent<ContainerComponent>({
+    id: 'signin-page',
+    type: 'container',
+    label: isCustomerPortal ? 'Client Portal Login' : 'MSP Login'
+  });
+
+  // Register alert dialog
+  const updateAlert = useRegisterUIComponent<DialogComponent>({
+    id: 'signin-alert',
+    type: 'dialog',
+    title: alertInfo.title,
+    open: isAlertOpen,
+    parentId: 'signin-page'
+  });
+
+  // Register 2FA dialog
+  const update2FA = useRegisterUIComponent<DialogComponent>({
+    id: 'signin-2fa',
+    type: 'dialog',
+    title: '2FA Verification',
+    open: isOpen2FA,
+    parentId: 'signin-page'
+  });
+
+  // Register 2FA close button
+  const update2FACloseButton = useRegisterUIComponent<ButtonComponent>({
+    id: 'signin-2fa-close-button',
+    type: 'button',
+    label: 'Close 2FA Dialog',
+    parentId: 'signin-2fa',
+    actions: ['click']
+  });
+
+  // Register main card
+  const updateCard = useRegisterUIComponent<CardComponent>({
+    id: 'signin-card',
+    type: 'card',
+    label: isCustomerPortal ? 
+      (showRegister ? 'Create Account' : 'Customer Portal Login') : 
+      'MSP Dashboard Login',
+    parentId: 'signin-page'
+  });
+
   // Handle error and success messages from URL parameters
-  useState(() => {
+  useEffect(() => {
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
@@ -40,7 +85,34 @@ export default function SignIn() {
       });
       setIsAlertOpen(true);
     }
-  });
+  }, [error, registered]);
+
+  // Update component states when they change
+  useEffect(() => {
+    updateAlert({ 
+      open: isAlertOpen,
+      title: alertInfo.title
+    });
+    
+    update2FA({ 
+      open: isOpen2FA 
+    });
+
+    // Update 2FA close button state
+    update2FACloseButton({
+      label: 'Close 2FA Dialog',
+      disabled: !isOpen2FA
+    });
+
+    updateCard({
+      label: isCustomerPortal ? 
+        (showRegister ? 'Create Account' : 'Customer Portal Login') : 
+        'MSP Dashboard Login'
+    });
+  }, [
+    isAlertOpen, alertInfo, isOpen2FA, showRegister, isCustomerPortal,
+    updateAlert, update2FA, update2FACloseButton, updateCard
+  ]);
 
   const handle2FA = (twoFactorCode: string) => {
     setIsOpen2FA(false);
@@ -61,16 +133,17 @@ export default function SignIn() {
     setIsAlertOpen(true);
   };
 
+  // Initialize page state once at component mount
+  useEffect(() => {
+    updatePage({
+      label: isCustomerPortal ? 'Client Portal Login' : 'MSP Login',
+      children: []
+    });
+  }, [isCustomerPortal, updatePage]);
+
   return (
-    <UIStateProvider
-      initialPageState={{
-        id: isCustomerPortal ? "client-portal" : "msp-application",
-        title: isCustomerPortal ? "Client Portal" : "MSP Application",
-        components: []
-      }}
-    >
-      <div className="flex min-h-screen bg-gray-100">
-        <TwoFactorInput
+    <div className="flex min-h-screen bg-gray-100">
+      <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}
         onComplete={handle2FA}
@@ -180,8 +253,7 @@ export default function SignIn() {
             )}
           </CardContent>
         </Card>
-        </div>
       </div>
-    </UIStateProvider>
+    </div>
   );
 }

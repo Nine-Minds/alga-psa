@@ -26,7 +26,9 @@ All components can participate in parent-child relationships:
 interface BaseComponent {
   id: string;
   type: string;
-  // Hierarchical properties
+  label?: string;
+  disabled?: boolean;
+  actions?: string[];
   parentId?: string;  // Reference to parent component
   children?: UIComponent[];  // Child components
 }
@@ -52,22 +54,7 @@ const updateField = useRegisterUIComponent<FormFieldComponent>({
 });
 ```
 
-### 3. Implicit Child Registration
-
-Use the convenience hook for child components:
-
-```typescript
-const updateChild = useRegisterChildComponent<ButtonComponent>(
-  parentId,  // Parent component's ID
-  {
-    id: 'submit-button',
-    type: 'button',
-    label: 'Submit'
-  }
-);
-```
-
-### 4. State Management
+### 3. State Management
 
 The UIStateContext maintains the complete component hierarchy:
 
@@ -97,105 +84,6 @@ The UIStateContext maintains the complete component hierarchy:
 }
 ```
 
-## Architecture
-
-The system follows a client-server architecture with three main components:
-
-```
-Browser (React App) -> AI Backend Server -> External Consumers (LLM/Automation)
-```
-
-1. **React Client Components**:
-   - **Type System** (`types.ts`):
-     * Defines interfaces for UI components
-     * Provides type safety and documentation
-     * Extensible for custom component types
-
-   - **State Aggregator** (`UIStateContext.tsx`):
-     * Maintains the global UI state
-     * Handles component registration
-     * Manages state updates
-     * Connects to AI Backend Server via Socket.IO
-     * Emits real-time state changes
-
-   - **Registration Hooks** (`useRegisterUIComponent.ts`):
-     * Enables component self-registration
-     * Handles lifecycle management
-     * Provides state update utilities
-
-2. **AI Backend Server** (`tools/ai-automation/src/index.ts`):
-   - Runs on port 4000
-   - Receives UI state updates from React client
-   - Broadcasts updates to connected automation tools/LLMs
-   - Integrates with Puppeteer for browser automation
-   - Handles WebSocket connections and lifecycle
-
-3. **External Consumers**:
-   - Connect to AI Backend Server via WebSocket
-   - Receive real-time UI state updates
-   - Can be test harnesses, LLM agents, or monitoring tools
-   - Use stable component IDs for automation
-
-### Communication Flow
-
-1. **Component Registration**:
-   ```
-   React Component -> UIStateContext -> Socket.IO -> AI Backend Server
-   ```
-
-2. **State Updates**:
-   ```
-   Component State Change -> UIStateContext -> Socket.IO -> AI Backend Server -> External Consumers
-   ```
-
-3. **Automation**:
-   ```
-   LLM/Test Tool -> AI Backend Server -> Puppeteer -> Browser
-   ```
-
-## WebSocket Integration
-
-### 1. React Client to AI Backend
-
-The UIStateContext automatically:
-- Connects to the AI Backend Server on mount
-- Handles connection lifecycle and reconnection
-- Emits state updates when components change
-
-```typescript
-// Internal Socket.IO connection (handled by UIStateContext)
-const socket = io('http://localhost:4000', {
-  transports: ['websocket'],
-  reconnection: true,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 5000,
-  reconnectionAttempts: 5
-});
-
-// Automatic state emission
-socket.emit('UI_STATE_UPDATE', pageState);
-```
-
-### 2. External Consumer Connection
-
-Connect to the AI Backend Server to receive UI state updates:
-
-```typescript
-// Example Socket.IO consumer
-const socket = io('http://localhost:4000');
-
-socket.on('UI_STATE_UPDATE', (pageState) => {
-  console.log('Current UI State:', {
-    pageId: pageState.id,
-    title: pageState.title,
-    componentCount: pageState.components.length
-  });
-  
-  // Handle the update (e.g., run automation, update monitoring)
-  handleUIStateUpdate(pageState);
-});
-```
-
 ## Implementation Guide
 
 ### 1. Setting Up the Provider
@@ -220,16 +108,11 @@ function App() {
 }
 ```
 
-### 2. Augmenting Components
-
-#### Basic Component Registration
+### 2. Component Registration
 
 Use the `useRegisterUIComponent` hook to register any UI component:
 
 ```tsx
-import { useRegisterUIComponent } from '../types/ui-reflection/useRegisterUIComponent';
-import { ButtonComponent } from '../types/ui-reflection/types';
-
 function ActionButton({ label, disabled, onClick }: Props) {
   const updateMetadata = useRegisterUIComponent<ButtonComponent>({
     id: 'action-button',
@@ -252,127 +135,53 @@ function ActionButton({ label, disabled, onClick }: Props) {
 }
 ```
 
-#### Automatic Props Synchronization
+### 3. Form Components
 
-For simpler cases, use `useRegisterUIComponentWithProps`:
-
-```tsx
-function SubmitButton({ label, disabled }: Props) {
-  useRegisterUIComponentWithProps<ButtonComponent>(
-    {
-      id: 'submit-button',
-      type: 'button',
-      label,
-      disabled
-    },
-    { label, disabled } // These props will automatically sync
-  );
-
-  return <button type="submit">{label}</button>;
-}
-```
-
-### 3. Complex Components
-
-#### Dialogs
-
-```tsx
-function ConfirmDialog({ isOpen, title, onConfirm, onCancel }: Props) {
-  // Register the dialog
-  const updateDialog = useRegisterUIComponent<DialogComponent>({
-    id: 'confirm-dialog',
-    type: 'dialog',
-    title,
-    open: isOpen
-  });
-
-  // Register confirm button as child
-  const updateConfirmButton = useRegisterUIComponent<ButtonComponent>({
-    id: 'confirm-dialog-confirm',
-    type: 'button',
-    label: 'Confirm',
-    actions: ['click'],
-    parentId: 'confirm-dialog'
-  });
-
-  // Register cancel button as child
-  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
-    id: 'confirm-dialog-cancel',
-    type: 'button',
-    label: 'Cancel',
-    actions: ['click'],
-    parentId: 'confirm-dialog'
-  });
-
-  // Update dialog state when it changes
-  useEffect(() => {
-    updateDialog({ open: isOpen });
-  }, [isOpen, updateDialog]);
-
-  return (
-    <Dialog open={isOpen}>
-      <h2>{title}</h2>
-      <Button 
-        id="confirm-dialog-confirm"
-        onClick={onConfirm}
-      >
-        Confirm
-      </Button>
-      <Button 
-        id="confirm-dialog-cancel"
-        onClick={onCancel}
-      >
-        Cancel
-      </Button>
-    </Dialog>
-  );
-}
-```
-
-#### Forms
+Forms require special attention to maintain proper state synchronization between the form component and its children:
 
 ```tsx
 function LoginForm({ onSubmit }: Props) {
-  const [values, setValues] = useState({ username: '', password: '' });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   // Register the form component
   const updateForm = useRegisterUIComponent<FormComponent>({
     id: 'login-form',
-    type: 'form'
+    type: 'form',
+    label: 'Login'
   });
 
-  // Register username field as child
+  // Register individual components with parent reference
   const updateUsernameField = useRegisterUIComponent<FormFieldComponent>({
     id: 'username-field',
     type: 'formField',
     fieldType: 'textField',
     label: 'Username',
-    value: values.username,
+    value: username,
     required: true,
     parentId: 'login-form'
   });
 
-  // Register password field as child
   const updatePasswordField = useRegisterUIComponent<FormFieldComponent>({
     id: 'password-field',
     type: 'formField',
     fieldType: 'textField',
     label: 'Password',
-    value: values.password,
+    value: password,
     required: true,
     parentId: 'login-form'
   });
 
-  // Update field values when they change
+  // Update field states when they change
   useEffect(() => {
-    updateUsernameField({ value: values.username });
-    updatePasswordField({ value: values.password });
-  }, [values, updateUsernameField, updatePasswordField]);
+    updateUsernameField({ value: username });
+    updatePasswordField({ value: password });
+  }, [username, password, updateUsernameField, updatePasswordField]);
 
   return (
     <form onSubmit={onSubmit}>
-      <Input id="username-field" value={values.username} />
-      <Input id="password-field" value={values.password} type="password" />
+      <Input id="username-field" value={username} onChange={setUsername} />
+      <Input id="password-field" value={password} onChange={setPassword} type="password" />
     </form>
   );
 }
@@ -380,340 +189,59 @@ function LoginForm({ onSubmit }: Props) {
 
 ## Best Practices
 
-1. **Component IDs**:
+1. **Component Registration**:
+   - Register form components first
+   - Register child components with proper parentId references
    - Use descriptive, hierarchical IDs (e.g., 'user-settings-save-button')
    - Keep IDs stable across renders
    - Make IDs unique within their context
-   - Use parent IDs as prefixes for child components
 
-2. **Parent-Child Relationships**:
-   - Match component hierarchy to UI structure
-   - Keep hierarchies shallow when possible
-   - Consider component reuse in hierarchies
-   - Update parent state before children
-   - Clean up entire component trees on unmount
-
-2. **State Updates**:
-   - Only update metadata for props that affect the UI state
-   - Avoid unnecessary updates
-   - Use the convenience hook when possible
-
-3. **Type Safety**:
-   - Always provide specific component types to hooks
-   - Define proper interfaces for custom components
-   - Validate component type changes
-
-4. **Performance**:
-   - Use memoization for complex metadata
-   - Only register components that need external visibility
+2. **State Management**:
+   - Update individual components when their state changes
+   - Keep state updates minimal and focused
    - Clean up properly in unmount handlers
+   - Only update properties defined in type interfaces
 
-5. **WebSocket Communication**:
-   - Handle connection errors gracefully
-   - Implement reconnection logic
-   - Consider message throttling for high-frequency updates
-   - Validate message formats
+3. **Parent-Child Relationships**:
+   - Use parentId to establish relationships
+   - Keep hierarchies shallow when possible
+   - Clean up entire component trees on unmount
+   - Consider component reuse in hierarchies
 
-6. **Security Considerations**:
-   - Restrict WebSocket connections to trusted sources
-   - Validate UI state updates
-   - Consider authentication for external consumers
-   - Monitor for suspicious patterns
+4. **Type Safety**:
+   - Always provide specific component types to hooks
+   - Follow type definitions strictly
+   - Avoid adding custom fields not in type definitions
+   - Use proper type imports
 
-## Use Cases
+5. **Performance**:
+   - Batch state updates when possible
+   - Only register components that need external visibility
+   - Use memoization for complex state calculations
+   - Consider update frequency
 
-### 1. Automated Testing
+## Testing Integration
 
-```typescript
-// Example test using Socket.IO connection
-test('submit button enables when form is valid', async () => {
-  const socket = io('http://localhost:4000');
-  
-  // Wait for UI state update
-  const pageState = await new Promise(resolve => {
-    socket.once('UI_STATE_UPDATE', resolve);
-  });
-  
-  const submitButton = pageState.components.find(
-    c => c.id === 'submit-button'
-  );
-  expect(submitButton.disabled).toBe(false);
-  
-  socket.close();
-});
-```
-
-### 2. LLM Integration
-
-```typescript
-// Example LLM automation using Socket.IO
-const socket = io('http://localhost:4000');
-
-socket.on('UI_STATE_UPDATE', async (pageState) => {
-  // Analyze UI state with LLM
-  const actions = await llm.analyze(pageState);
-  
-  // Execute actions through Puppeteer API
-  for (const action of actions) {
-    await fetch('http://localhost:4000/api/puppeteer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ script: action })
-    });
-  }
-});
-```
-
-### 3. UI State Monitoring
-
-```typescript
-// Example Socket.IO monitoring
-const socket = io('http://localhost:4000');
-
-socket.on('UI_STATE_UPDATE', (pageState) => {
-  console.log('Current UI State:', {
-    pageId: pageState.id,
-    title: pageState.title,
-    componentCount: pageState.components.length
-  });
-  
-  // Record metrics or trigger automation
-  metrics.record(pageState);
-  automationSystem.analyze(pageState);
-});
-```
-
-## Troubleshooting
-
-Common issues and solutions:
-
-1. **Component Not Appearing in State**:
-   - Verify the component is wrapped in UIStateProvider
-   - Check that useRegisterUIComponent is called
-   - Ensure proper cleanup on unmount
-
-2. **Type Errors**:
-   - Confirm component type matches interface
-   - Check for required properties
-   - Verify generic type parameters
-
-3. **Performance Issues**:
-   - Reduce update frequency
-   - Memoize complex metadata
-   - Only register necessary components
-
-## Future Enhancements
-
-Planned improvements:
-
-1. Component action handlers
-2. State persistence
-3. Time-travel debugging
-4. Component relationship tracking
-5. Automated accessibility checking
-
-## Augmenting Existing Components
-
-When adding UI reflection capabilities to existing components, follow these patterns based on the component type:
-
-### 1. Basic Components (e.g., Button)
-
-For simple components that maintain minimal state:
+The UI reflection system integrates with testing through data-automation-id attributes:
 
 ```tsx
-// Before
-interface ButtonProps {
-  onClick: () => void;
-  label: string;
-  disabled?: boolean;
-  variant?: string;
-}
+// Component registration
+const updateButton = useRegisterUIComponent<ButtonComponent>({
+  id: 'submit-button',
+  type: 'button',
+  label: 'Submit'
+});
 
-// After
-interface ButtonProps {
-  onClick: () => void;
-  label: string;
-  disabled?: boolean;
-  variant?: string;
-  /** Unique identifier for UI reflection system */
-  id?: string;
-}
-
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ id, label, disabled, variant, ...props }, ref) => {
-    // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<ButtonComponent>({
-      type: 'button',
-      id,
-      label,
-      disabled,
-      variant,
-      actions: ['click']
-    }) : undefined;
-
-    // Update metadata when disabled state changes
-    useEffect(() => {
-      if (updateMetadata && disabled !== undefined) {
-        updateMetadata({ disabled });
-      }
-    }, [disabled, updateMetadata]);
-
-    return (
-      <button
-        ref={ref}
-        disabled={disabled}
-        data-automation-id={id}
-        {...props}
-      >
-        {label}
-      </button>
-    );
-  }
-);
+// DOM element
+<button {...withDataAutomationId({ id: 'submit-button' })}>
+  Submit
+</button>
 ```
 
-Key points:
-- Make UI reflection opt-in via optional id prop
-- Add data-automation-id for testing
-- Update metadata when relevant props change
-- Preserve existing functionality
-
-### 2. Stateful Components (e.g., Dialog)
-
-For components that manage internal state:
-
-```tsx
-interface DialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  /** Unique identifier for UI reflection system */
-  id?: string;
-  /** Child components for UI reflection */
-  reflectionChildren?: UIComponent[];
-}
-
-export const Dialog: React.FC<DialogProps> = ({ 
-  isOpen, onClose, title, id, reflectionChildren, children 
-}) => {
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<DialogComponent>({
-    type: 'dialog',
-    id,
-    title: title || '',
-    open: isOpen,
-    children: reflectionChildren,
-    actions: ['submit', 'cancel']
-  }) : undefined;
-
-  // Update metadata when open state changes
-  useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({ 
-        open: isOpen,
-        children: reflectionChildren
-      });
-    }
-  }, [isOpen, reflectionChildren, updateMetadata]);
-
-  return (
-    <DialogRoot open={isOpen} data-automation-id={id}>
-      <DialogTitle>{title}</DialogTitle>
-      {children}
-    </DialogRoot>
-  );
-};
-```
-
-Key points:
-- Track component state in reflection system
-- Update metadata on state changes
-- Allow passing child components for reflection
-
-### 3. Form Components (e.g., Input)
-
-For form fields that need to track value changes:
-
-```tsx
-interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  /** Unique identifier for UI reflection system */
-  id?: string;
-  /** Whether the field is required */
-  required?: boolean;
-}
-
-export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ id, label, value, disabled, required, ...props }, ref) => {
-    // Register as a form field component
-    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
-      type: 'formField',
-      fieldType: 'textField',
-      id,
-      label,
-      value: typeof value === 'string' ? value : undefined,
-      disabled,
-      required
-    }) : undefined;
-
-    // Update metadata when value or field props change
-    useEffect(() => {
-      if (updateMetadata && typeof value === 'string') {
-        updateMetadata({
-          value,
-          label,
-          disabled,
-          required
-        });
-      }
-    }, [value, label, disabled, required, updateMetadata]);
-
-    return (
-      <input
-        ref={ref}
-        data-automation-id={id}
-        {...props}
-        value={value}
-        disabled={disabled}
-        required={required}
-      />
-    );
-  }
-);
-```
-
-Key points:
-- Handle form field value updates
-- Maintain proper typing with InputHTMLAttributes
-- Structure as a single-field form component
-- Preserve HTML input attributes and behavior
-
-### Best Practices for Augmentation
-
-1. **Opt-in Registration**:
-   - Make UI reflection optional via id prop
-   - Only register and update when id is provided
-   - Maintain backward compatibility
-
-2. **Type Safety**:
-   - Extend existing prop interfaces carefully
-   - Handle optional props appropriately
-   - Ensure proper typing with HTML attributes
-
-3. **State Updates**:
-   - Update metadata only when relevant props change
-   - Group related updates together
-   - Consider performance implications
-
-4. **Testing Support**:
-   - Add data-automation-id attributes
-   - Maintain consistent id patterns
-   - Document component reflection behavior
-
-5. **Existing Functionality**:
-   - Preserve all current features
-   - Maintain ref forwarding if present
-   - Keep existing event handlers
+This ensures:
+- UI reflection IDs match testing selectors
+- Components are consistently identifiable
+- Automated tests can reliably interact with elements
 
 ## Contributing
 

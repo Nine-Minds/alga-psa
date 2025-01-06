@@ -60,8 +60,20 @@ d. Consider potential challenges or edge cases
 
 ## Gathering Information
 1. When you are looking at or looking for UI elements, PREFER to use the get_ui_state function to get information about the current page. 
-2. If that doesn't help, use your observe_browser function to use a series of less specific selectors to find the relevant elements. 
-3. If that doesn't help, ask the user to provide more context about the page, and then repeat the process.
+2. If the results of your search are TRUNCATED, pass in the JSONPath expression to the get_ui_state function to filter the results.
+3. If that doesn't help, use your observe_browser function to use a series of less specific selectors to find the relevant elements. 
+4. If that doesn't help, ask the user to provide more context about the page, and then repeat the process.
+
+To get an overall idea of the items available on a page, use a json path like $..components[*][id, type] - this should provide sufficient information to decide what to do next.
+
+## Navigating
+- Use the get_ui_state function to get information about the different screens or pages in the application. Use this json path to grab the menu items: $.components[?(@.id=="main-sidebar")]
+
+You have a limited token budget.
+Please do not request large swaths of JSON at once.
+Instead, use an iterative approach: get a high-level structure first, then fetch specific segments only as needed.
+
+Responses are TRUNCATED if you see "[Response truncated, total length: ##### characters]" in the response.
 
 After each tool is executed, determine if the result allows you to continue. If you need to execute another tool, explain why, and then execute it.
 

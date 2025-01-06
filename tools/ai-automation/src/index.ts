@@ -100,19 +100,26 @@ app.get('/', ((_req: Request, res: Response) => {
   console.log('Health check response sent');
 }) as RequestHandler);
 
-app.get('/api/ui-state', (async (_req: Request, res: Response) => {
+app.get('/api/ui-state', (async (req: Request, res: Response) => {
   console.log('\n[GET /api/ui-state]');
   const startTime = Date.now();
+  const jsonpath = req.query.jsonpath as string | undefined;
 
   try {
     const state = uiStateManager.getCurrentState();
     if (!state) {
       throw new Error('No UI state available');
     }
+
+    let result = state;
+    if (jsonpath) {
+      const { JSONPath } = await import('jsonpath-plus');
+      result = JSONPath({ path: jsonpath, json: state });
+    }
     
-    console.log('UI state:', state);
+    console.log('UI state:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json(JSON.parse(JSON.stringify(state, null, 0)));
+    res.json(JSON.parse(JSON.stringify(result, null, 0)));
   } catch (error) {
     console.error('Error in /api/ui-state:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);

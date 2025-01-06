@@ -575,6 +575,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           </DropdownMenu.Root>
         </div>
       <DataTable
+        id="contacts-table"
         data={filteredContacts.map(contact => ({
           ...contact,
           id: contact.contact_name_id // Add id property for unique keys

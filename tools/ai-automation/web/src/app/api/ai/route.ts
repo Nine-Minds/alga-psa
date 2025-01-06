@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { tools } from '../../../tools/toolDefinitions';
 import { prompts } from '../../../tools/prompts';
-import {
-  observeBrowser,
-  executeScript,
-  wait,
-  executePuppeteerScript,
-  getUIState,
-} from '../../../tools/invokeTool';
+import { invokeTool, ToolExecutionResult } from '../../../tools/invokeTool';
 import { getLLMClient } from '../../../lib/llm/factory';
 import { StreamChatCompletionParams } from '../../../lib/llm/types';
 import { LocalMessage } from '../../../types/messages';
@@ -16,6 +10,7 @@ import {
   MessageDeltaChunk,
   ToolCall
 } from '../../../lib/llm/types';
+import { v4 as uuidv4 } from 'uuid';
 
 
 // ------------------- Types & Interfaces -------------------
@@ -38,16 +33,6 @@ function isMessageDeltaChunk(chunk: StreamChunk): chunk is MessageDeltaChunk {
   return chunk.type === 'message_delta';
 }
 
-interface ToolExecutionResult {
-  error?: string;
-  success?: boolean;
-  result?: {
-    url?: string;
-    title?: string;
-    elements?: unknown[];
-    [key: string]: unknown;
-  };
-}
 
 type StreamEventType = 'token' | 'tool_result' | 'tool_use' | 'error' | 'done';
 
@@ -97,24 +82,7 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
   const toolInput = input as unknown as ToolInput;
 
   try {
-    let result: ToolExecutionResult;
-    if (name === 'observe_browser') {
-      const params = toolInput as ObserverParams;
-      result = await observeBrowser(params.selector);
-    } else if (name === 'execute_script') {
-      const params = toolInput as ExecuteScriptParams;
-      result = await executeScript(params.code);
-    } else if (name === 'wait') {
-      const params = toolInput as WaitParams;
-      result = await wait(params.seconds);
-    } else if (name === 'execute_puppeteer_script') {
-      const params = toolInput as PuppeteerScriptParams;
-      result = await executePuppeteerScript(params.script);
-    } else if (name === 'get_ui_state') {
-      result = await getUIState();
-    } else {
-      throw new Error(`Unknown tool: ${name}`);
-    }
+    const result: ToolExecutionResult = await invokeTool(name, toolInput);
 
     if (result.error) {
       throw new Error(result.error);
@@ -131,13 +99,13 @@ async function executeToolAndGetResult(toolBlock: ToolUseBlock): Promise<string>
     }
 
     // Truncate response if it's too long
-    const MAX_LENGTH = 5000;
+    const MAX_LENGTH = 4096;
     if (response.length > MAX_LENGTH) {
       const truncated = response.slice(0, MAX_LENGTH);
-      return `${truncated}\n... [Response truncated, total length: ${response.length} characters]`;
+      return `${truncated}\n... [Response truncated, total length: ${response.length} characters]. \n\nYOU SHOULD CONSIDER FILTERING THE RESULTS WITH A JSONPATH EXPRESSION OF $.components[*].[id, type] TO SEE JUST THE COMPONENTS YOU NEED. \n\nRUN ID: ${uuidv4()}`;
     }
 
-    return response;
+    return response + "\nRUN ID: " + uuidv4();
   } catch (error) {
     return `Failed to execute ${name}: ${error instanceof Error ? error.message : String(error)
       }`;
