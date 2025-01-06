@@ -19,7 +19,7 @@ interface Tool extends AnthropicTool {
 export const tools: Tool[] = [
   {
     name: 'observe_browser',
-    description: 'Observe elements in the browser matching a CSS selector',
+    description: 'Observe elements in the browser matching a CSS selector. Use this tool when you cannot find what you are looking for with the get_ui_state tool.',
     parameters: {
       type: 'object',
       properties: {
@@ -115,7 +115,7 @@ export const tools: Tool[] = [
   },
   {
     name: 'get_ui_state',
-    description: 'Get the current UI state of the page',
+    description: 'Get the current UI state of the page. This is your main tool for understanding what the user is seeing on the page.',
     parameters: {
       type: 'object',
       properties: {}

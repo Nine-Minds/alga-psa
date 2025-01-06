@@ -142,6 +142,11 @@ async function* openAIStreamToChunks(
     // Handle tool calls
     if (delta.tool_calls?.length) {
       for (const toolCall of delta.tool_calls) {
+        if (toolCall.index > 0) {
+          chunk.choices[0].finish_reason = 'stop';
+          break;
+        }
+
         let currentToolCall = currentToolCalls.find(t => t.index === toolCall.index);
         
         // Initialize tool call if this is the first chunk for this tool

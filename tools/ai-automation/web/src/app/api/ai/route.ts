@@ -174,7 +174,7 @@ interface StateContext {
   currentToolIndex: number | null; // Track current tool index
   toolCallId: string;
   stopReason: string | null;
-  accumulatedInput: string[]; // Add this to track accumulated JSON chunks
+  accumulatedInput: (string | undefined)[]; // Add this to track accumulated JSON chunks
 
   // SSE controller
   controller: ReadableStreamDefaultController<Uint8Array>;
@@ -236,6 +236,8 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
         sendEvent,
       };
 
+      ctx.systemMessage = prompts.systemMessage;
+
       // Finite State Machine
       let currentState: StreamingState = 'INIT';
       const client = getLLMClient();
@@ -251,7 +253,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
             // Initialize the streaming request to the LLM
             const params: StreamChatCompletionParams = {
               model: process.env.CUSTOM_OPENAI_MODEL || 'gpt-4o-mini',
-              systemPrompt: ctx.systemMessage || prompts.aiEndpoint,
+              systemPrompt: ctx.systemMessage,
               messages: ctx.currentMessages,
               tools,
               maxTokens: 1024,
@@ -273,41 +275,82 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
               currentState = transitionState(currentState, 'DONE');
               break;
             }
-          
+
             let hasContent = false;
             for await (const streamChunk of completionStream) {
-              // console.log('Processing stream chunk:', {
-              //   type: streamChunk.type,
-              //   state: currentState,
-              //   toolIndex: ctx.currentToolIndex,
-              //   toolCallId: ctx.toolCallId,
-              // });
-          
               // Handle content deltas
               if (streamChunk.type === 'content_block_delta') {
                 if (streamChunk.delta.type === 'text_delta' && streamChunk.delta.text) {
                   ctx.currentText += streamChunk.delta.text;
                   ctx.sendEvent('token', streamChunk.delta.text);
-
+                  
                   process.stdout.write(streamChunk.delta.text);
 
                   hasContent = true;
                 } else if (streamChunk.delta.type === 'input_json_delta' && streamChunk.delta.partial_json) {
-                  // Accumulate JSON chunks
-                  ctx.accumulatedInput[streamChunk.delta.index!] += streamChunk.delta.partial_json;
-                  
                   process.stdout.write(streamChunk.delta.partial_json);
+                  
+                  // Check if this is a tool index > 0
+                  if (streamChunk.delta.index! > 0) {
+                    console.log('Detected tool index > 0, transitioning to TOOL_REQUESTED');
+                    
+                    // Close the current stream
+                    const iterator = completionStream[Symbol.asyncIterator]();
+                    if (iterator.return) {
+                      await iterator.return();
+                    }                
+                    
+                    ctx.currentToolIndex = 0;
+                    // Transition to TOOL_REQUESTED state
+                    currentState = transitionState(currentState, 'TOOL_REQUESTED');
+                    continue messageProcessing;
+                  }
+                  
+                  // Initialize if undefined
+                  if (!ctx.accumulatedInput[streamChunk.delta.index!]) {
+                    ctx.accumulatedInput[streamChunk.delta.index!] = '';
+                  }
+                  ctx.accumulatedInput[streamChunk.delta.index!] += streamChunk.delta.partial_json;
                 }
                 continue;
               }
-          
+
               if (isMessageDeltaChunk(streamChunk)) {
                 const toolCalls = streamChunk.delta.tool_calls;
                 if (toolCalls && toolCalls.length > 0) {
                   const toolCall = toolCalls[0] as unknown as ToolCall;
-                  console.log('Received provider tool call:', JSON.stringify(toolCall, null, 2));
-          
-                  // Handle new tool call
+                  
+                  // If we detect any tool call, process it and disconnect
+                  if (toolCall.index >= 0) {
+                    console.log('Processing function call and disconnecting stream');
+                    
+                    // Close the current stream
+                    const iterator = completionStream[Symbol.asyncIterator]();
+                    if (iterator.return) {
+                      await iterator.return();
+                    }
+                    
+                    // Transition to TOOL_REQUESTED state to execute the function
+                    if (toolCall.id && toolCall.function?.name) {
+                      const toolBlock: ToolUseBlock = {
+                        type: 'tool_use',
+                        id: toolCall.id,
+                        index: toolCall.index,
+                        name: toolCall.function.name,
+                        input: toolCall.function.arguments ? JSON.parse(toolCall.function.arguments) : {},
+                        status: 'pending'
+                      };
+                      ctx.toolUseBlocks.set(toolCall.index, toolBlock);
+                      ctx.currentToolIndex = toolCall.index;
+                      ctx.toolCallId = toolCall.id;
+                      
+                      // Transition to TOOL_REQUESTED state
+                      currentState = transitionState(currentState, 'TOOL_REQUESTED');
+                      continue messageProcessing;
+                    }
+                  }
+
+                  // Handle new tool call (index 0)
                   if (toolCall.id && (!ctx.currentToolIndex || !ctx.toolCallId)) {
                     const toolName = toolCall.function.name;
                     if (toolName) {
@@ -316,7 +359,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                         id: toolCall.id,
                         index: toolCall.index
                       });
-          
+
                       const toolBlock: ToolUseBlock = {
                         type: 'tool_use',
                         id: toolCall.id,
@@ -328,12 +371,16 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                       ctx.toolUseBlocks.set(toolCall.index, toolBlock);
                       ctx.currentToolIndex = toolCall.index;
                       ctx.toolCallId = toolCall.id;
-                      ctx.accumulatedInput[toolCall.index] = ''; // Reset accumulated input for new tool
+                      ctx.accumulatedInput[toolCall.index] = ''; // Initialize as empty string
                     }
                   }
           
                   // Accumulate function arguments
                   if (toolCall.function?.arguments) {
+                    // Initialize the accumulated input for this tool index if it's undefined
+                    if (!ctx.accumulatedInput[toolCall.index]) {
+                      ctx.accumulatedInput[toolCall.index] = ''; // Initialize as empty string
+                    }
                     ctx.accumulatedInput[toolCall.index] += toolCall.function.arguments;
                   }
 
@@ -366,7 +413,8 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                     if (currentTool) {
                       try {
                         // Parse accumulated JSON and store in tool block
-                        const inputObject = JSON.parse(ctx.accumulatedInput[ctx.currentToolIndex!]);
+                        const inputStr = ctx.accumulatedInput[ctx.currentToolIndex!] || '{}';
+                        const inputObject = JSON.parse(inputStr);
                         currentTool.input = inputObject;
                         console.log('Parsed tool input:', inputObject);
                         currentState = transitionState(currentState, 'TOOL_REQUESTED');
@@ -441,6 +489,8 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           case 'TOOL_REQUESTED': {
             // We have a tool block that we want to execute
             if (ctx.currentToolIndex === null || !ctx.toolUseBlocks.has(ctx.currentToolIndex)) {
+              console.log('currentToolIndex', ctx.currentToolIndex);
+              console.log('toolUseBlocks has index', ctx.toolUseBlocks.has(ctx.currentToolIndex || 0));
               currentState = transitionState(currentState, 'READING_STREAM');
               break;
             }
@@ -448,8 +498,23 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
             // Validate JSON
             const currentTool = ctx.toolUseBlocks.get(ctx.currentToolIndex)!;
             try {
-              const inputObject = ctx.accumulatedInput[ctx.currentToolIndex!].trim() === '' ? {} : JSON.parse(ctx.accumulatedInput[ctx.currentToolIndex!]);
-              currentTool.input = inputObject;
+              // Initialize if undefined
+              if (!ctx.accumulatedInput[ctx.currentToolIndex!]) {
+                ctx.accumulatedInput[ctx.currentToolIndex!] = ''; // Initialize as empty string
+              }
+              
+              // Get and clean the input
+              const inputStr = (ctx.accumulatedInput[ctx.currentToolIndex!] || '').trim();
+              
+              // Handle empty input
+              if (!inputStr || inputStr === 'undefined{}') {
+                currentTool.input = {};
+              } else {
+                // Try to parse JSON
+                const inputObject = JSON.parse(inputStr);
+                currentTool.input = inputObject;
+              }
+              
               currentTool.id = ctx.toolCallId;
               currentTool.status = 'executing';
             } catch (err) {
@@ -503,7 +568,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                 console.log('skipping tool', tool);
                 continue;
               }
-              
+
               // ctx.sendEvent('token', `\nExecuting tool: ${tool.name}...\n`);
               try {
                 const result = await executeToolAndGetResult(tool);
@@ -542,7 +607,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
             // Create new stream with updated context
             const params: StreamChatCompletionParams = {
               model: process.env.CUSTOM_OPENAI_MODEL || 'gpt-4o-mini',
-              systemPrompt: ctx.systemMessage || prompts.aiEndpoint,
+              systemPrompt: ctx.systemMessage,
               messages: ctx.currentMessages,
               tools,
               maxTokens: 1024,

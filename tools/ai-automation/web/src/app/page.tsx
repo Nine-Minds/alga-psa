@@ -75,7 +75,7 @@ export default function ControlPanel() {
 
 
   useEffect(() => {
-    const systemPrompt = prompts.chatInterface
+    const systemPrompt = prompts.systemMessage
       .replace('{url}', url)
       .replace('{username}', username || '[Not provided]')
       .replace('{password}', password || '[Not provided]');
@@ -85,10 +85,10 @@ export default function ControlPanel() {
         role: 'system',
         content: systemPrompt
       },
-      {
-        role: 'assistant',
-        content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
-      }
+      // {
+      //   role: 'assistant',
+      //   content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
+      // }
     ]);
   }, [url, username, password]);
 
@@ -111,7 +111,7 @@ export default function ControlPanel() {
   };
 
   const clearConversation = () => {
-    const systemPrompt = prompts.chatInterface
+    const systemPrompt = prompts.systemMessage
       .replace('{url}', url)
       .replace('{username}', username || '[Not provided]')
       .replace('{password}', password || '[Not provided]');
@@ -121,10 +121,10 @@ export default function ControlPanel() {
         role: 'system',
         content: systemPrompt
       },
-      {
-        role: 'assistant',
-        content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
-      }
+      // {
+      //   role: 'assistant',
+      //   content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
+      // }
     ]);
     setIsGenerating(false);
     setUserMessage('');
