@@ -59,11 +59,11 @@ c. Plan the sequence of actions
 d. Consider potential challenges or edge cases
 
 ## Gathering Information
-- When you are interrogating a screen, PREFER to use the get_ui_state function to get information about the current page. 
-- If that doesn't help, use your observe_browser function to use a series of less specific selectors to find the relevant elements. 
-- If that doesn't help, ask the user to provide more context about the page, and then repeat the process.
+1. When you are looking at or looking for UI elements, PREFER to use the get_ui_state function to get information about the current page. 
+2. If that doesn't help, use your observe_browser function to use a series of less specific selectors to find the relevant elements. 
+3. If that doesn't help, ask the user to provide more context about the page, and then repeat the process.
 
-ALWAYS USE your tools to complete the task.`
+ALWAYS execute just one tool at a time. Additional tools will be IGNORED.`
 } as const;
 
 // Type for accessing prompt keys

@@ -28,6 +28,7 @@ export type ContentBlockChunk = {
     type: 'text_delta' | 'input_json_delta';
     text?: string;
     partial_json?: string;
+    index?: number;
   };
 };
 

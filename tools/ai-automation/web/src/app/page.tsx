@@ -10,10 +10,15 @@ import { prompts } from '../tools/prompts';
 import { ChatMessage } from '../types/messages';
 
 export default function ControlPanel() {
+  interface ToolContent {
+    name: string;
+    input?: unknown;
+  }
+
   interface LogEntry {
     type: 'tool_use' | 'tool_result' | 'navigation' | 'error';
     title: string;
-    content: unknown;
+    content: string | ToolContent | unknown;
     timestamp: string;
   }
 
@@ -68,29 +73,6 @@ export default function ControlPanel() {
     outline: 'none'
   };
 
-  const formatLogContent = (content: unknown): string => {
-    try {
-      if (typeof content === 'string') {
-        // Clean and try to parse string as JSON for pretty printing
-        const cleaned = content
-          .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
-          .replace(/\\[^"\\\/bfnrtu]/g, '');
-        try {
-          const parsed = JSON.parse(cleaned);
-          return JSON.stringify(parsed, null, 2);
-        } catch {
-          // If JSON parsing fails, return the cleaned string
-          return cleaned;
-        }
-      }
-      // For non-string content, try to stringify with pretty printing
-      return JSON.stringify(content, null, 2);
-    } catch {
-      // If all else fails, return as string with basic cleaning
-      const str = String(content);
-      return str.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-    }
-  };
 
   useEffect(() => {
     const systemPrompt = prompts.chatInterface
@@ -275,7 +257,7 @@ export default function ControlPanel() {
           }]);
 
           // Generate a unique ID for the tool call
-          const toolCallId = `call_${Math.random().toString(36).substring(2)}`;
+          const toolCallId = toolData.tool_use_id;
           
           // Add assistant message with tool call
           setMessages(prev => [...prev, {
@@ -301,6 +283,7 @@ export default function ControlPanel() {
             content: String(error),
             timestamp: new Date().toISOString()
           }]);
+
           if (toolUsePromiseResolve) {
             toolUsePromiseResolve(null);
           }
@@ -333,30 +316,37 @@ export default function ControlPanel() {
             timestamp: new Date().toISOString()
           }]);
 
-          // Add tool response message
+          // Add tool response message and prepare for assistant response
           setMessages(prev => {
-            const lastMessage = prev[prev.length - 1];
-            const toolCallId = lastMessage?.tool_calls?.[0]?.id;
+            const toolCallId = resultContent.tool_call_id;
             
             if (!toolCallId) {
-              debugger;
               console.error('No tool call ID found for tool response');
               return prev;
             }
 
-            // Ensure tool_calls exists and has the expected structure
-            if (!lastMessage?.tool_calls?.[0]?.function?.name) {
-              console.error('Invalid tool call structure');
-              return prev;
-            }
+            // Find the last assistant message index
+            // const lastAssistantIndex = prev.length - 1;
 
-            return [...prev, {
+            // Create properly typed tool response message
+            const toolResponse: ChatMessage = {
               role: 'tool',
-              name: lastMessage.tool_calls[0].function.name,
+              name: resultContent.name,
               tool_call_id: toolCallId,
-              content: JSON.stringify(resultContent),
+              content: JSON.stringify(resultContent.content),
               timestamp: new Date().toISOString()
-            }];
+            };
+            
+
+            // // Insert the tool response before the last assistant message
+            // const newMessages = [
+            //   ...prev.slice(0, lastAssistantIndex),
+            //   toolResponse,
+            //   prev[lastAssistantIndex]
+            // ];
+
+            // just append the tool response to the assistant message
+            return [...prev, toolResponse];
           });
 
           // Resolve the current tool use promise
@@ -504,7 +494,7 @@ export default function ControlPanel() {
                   </Flex>
                   <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
                     <Flex direction="column" gap="2" p="2">
-                      {messages.map((msg, idx) => (
+                      {messages.filter(msg => msg.role === 'assistant' || msg.role === 'user').map((msg, idx) => (
                         <Box key={idx}>
                           <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                             <strong>
@@ -516,6 +506,18 @@ export default function ControlPanel() {
                               :
                             </strong>
                           </Text>
+                          {msg.tool_calls && (
+                            <Box mb="2" style={{
+                              backgroundColor: 'var(--accent-9)',
+                              padding: '8px 12px',
+                              borderRadius: '4px',
+                              display: 'inline-block'
+                            }}>
+                              <Text size="2" style={{ color: 'white' }}>
+                                🔧 Function Call: {msg.tool_calls[0].function.name}
+                              </Text>
+                            </Box>
+                          )}
                           {msg.content ? msg.content.split('\n').map((line: string, lineIdx: number) => (
                             <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
                               {line}
@@ -668,16 +670,37 @@ export default function ControlPanel() {
                                 {new Date(entry.timestamp).toLocaleTimeString()}
                               </Text>
                             </Flex>
-                            <Box style={{ 
-                              backgroundColor: 'var(--gray-3)', 
+                            <Box style={{
+                              backgroundColor: 'var(--gray-3)',
                               padding: '8px',
                               borderRadius: '4px',
                               fontFamily: 'monospace',
                               fontSize: '12px'
                             }}>
-                              <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                                {formatLogContent(entry.content)}
-                              </pre>
+                              {entry.type === 'tool_use' && typeof entry.content === 'object' && entry.content !== null && 'name' in entry.content ? (
+                                <>
+                                  <Text>🔧 Using: {(entry.content as ToolContent).name}</Text>
+                                  <Box mt="2">
+                                    <Text>Input:</Text>
+                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                      {JSON.stringify((entry.content as ToolContent).input, null, 2)}
+                                    </pre>
+                                  </Box>
+                                </>
+                              ) : entry.type === 'tool_result' && typeof entry.content === 'object' && entry.content !== null && 'name' in entry.content ? (
+                                <>
+                                  <Text>🔧 Result from: {(entry.content as ToolContent).name}</Text>
+                                  <Box mt="2">
+                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                      {JSON.stringify(entry.content, null, 2)}
+                                    </pre>
+                                  </Box>
+                                </>
+                              ) : (
+                                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
+                                  {typeof entry.content === 'string' ? entry.content : JSON.stringify(entry.content, null, 2)}
+                                </pre>
+                              )}
                             </Box>
                           </Flex>
                         </Box>

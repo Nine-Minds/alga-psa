@@ -31,13 +31,14 @@ class PuppeteerManager {
       
       try {
         console.log('Launching browser with args:', [
-
+          '--window-size=1900,1200'
         ]);
 
         this.browser = await puppeteer.launch({
           executablePath: puppeteer.executablePath(), // Use bundled Chromium
           headless: options?.headless ?? true,
           args: options?.args ?? [
+            '--window-size=1900,1200'
           ],
           protocolTimeout: 60000, // Increase timeout to 60 seconds
           dumpio: true, // Enable verbose logging
@@ -47,10 +48,14 @@ class PuppeteerManager {
         console.log('Browser launched successfully. Creating new page...');
         try {
           this.page = await this.browser.newPage();
+          this.page.setDefaultNavigationTimeout(30000);
+          this.page.setDefaultTimeout(5000);
+          
           if (!this.page) {
             throw new Error('Page creation returned null');
           }
           
+          await this.page.setViewport({ width: 1900, height: 1200 });
           console.log('Page created successfully. Setting up event listeners...');
           this.page.on('console', (msg) => {
             console.log(`[PAGE CONSOLE] ${msg.type()}: ${msg.text()}`);

@@ -59,13 +59,25 @@ io.on('connection', (socket) => {
     }
   }, 2000);
 
+  // Track previous UI state for comparison
+  let previousState: any = null;
+
   // Handle UI reflection updates
   socket.on('UI_STATE_UPDATE', (pageState) => {
-    console.log('Received UI state update:', {
-      pageId: pageState.id,
-      title: pageState.title,
-      componentCount: pageState.components.length
-    });
+    const stateChanged = !previousState || 
+      previousState.id !== pageState.id ||
+      previousState.title !== pageState.title ||
+      previousState.components.length !== pageState.components.length ||
+      JSON.stringify(previousState.components) !== JSON.stringify(pageState.components);
+
+    if (stateChanged) {
+      console.log('Received UI state update:', {
+        pageId: pageState.id,
+        title: pageState.title,
+        componentCount: pageState.components.length
+      });
+      previousState = JSON.parse(JSON.stringify(pageState)); // Deep copy to avoid reference issues
+    }
     
     // Store the state in UIStateManager
     uiStateManager.updateState(pageState);
@@ -143,7 +155,9 @@ app.get('/api/observe', (async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Error in /api/observe:', err);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json(JSON.parse(JSON.stringify({ error: String(err) }, null, 0)));
+    res.status(500).json(JSON.parse(JSON.stringify({
+      error: err instanceof Error ? err.message : String(err)
+    }, null, 0)));
   }
 }) as RequestHandler);
 

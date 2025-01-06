@@ -113,17 +113,17 @@ function convertToOpenAIMessage(msg: LocalMessage): OpenAIMessage[] {
 async function* openAIStreamToChunks(
   stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>
 ): AsyncGenerator<StreamChunk> {
-  let currentToolCall: {
+  const currentToolCalls: Array<{
     id: string;
     name: string;
     arguments?: string;
     parameters?: unknown;
     index: number;
     function?: ToolCallFunction;
-  } | null = null;
+  }> = [];
 
   for await (const chunk of stream) {
-    console.log('raw chunk:', JSON.stringify(chunk, null, 2));
+    
 
     const delta = chunk.choices[0]?.delta;
     if (!delta) continue;
@@ -140,96 +140,95 @@ async function* openAIStreamToChunks(
     }
 
     // Handle tool calls
-    if (delta.tool_calls?.[0]) {
-      const toolCall = delta.tool_calls[0];
-      
-      // Initialize tool call if this is the first chunk
-      if (!currentToolCall) {
-        if (!toolCall.id) {
-          throw new Error('Tool call missing required ID from OpenAI');
-        }
+    if (delta.tool_calls?.length) {
+      for (const toolCall of delta.tool_calls) {
+        let currentToolCall = currentToolCalls.find(t => t.index === toolCall.index);
+        
+        // Initialize tool call if this is the first chunk for this tool
+        if (!currentToolCall) {
+          if (!toolCall.id) {
+            throw new Error('Tool call missing required ID from OpenAI');
+          }
 
-        currentToolCall = {
-          id: toolCall.id,
-          name: toolCall.function?.name ?? 'unknown_tool',
-          arguments: toolCall.function?.arguments || '',
-          parameters: (toolCall as ToolCall).parameters,
-          index: toolCall.index,
-          function: delta.tool_calls[0].function,
-        };
+          currentToolCall = {
+            id: toolCall.id,
+            name: toolCall.function?.name ?? 'unknown_tool',
+            arguments: toolCall.function?.arguments || '',
+            parameters: (toolCall as ToolCall).parameters,
+            index: toolCall.index,
+            function: toolCall.function,
+          };
+          currentToolCalls.push(currentToolCall);
 
-        // Get input from either parameters or arguments
-        const input = currentToolCall.parameters || 
-                     (currentToolCall.arguments ? 
-                       (currentToolCall.arguments.trim() ? JSON.parse(currentToolCall.arguments) : {}) : 
-                       {});
+          // Get input from either parameters or arguments
+          if (currentToolCall.arguments) {
+            console.log('Parsing tool call arguments:', currentToolCall.arguments);
+          }
+          const input = currentToolCall.parameters || 
+                       (currentToolCall.arguments ? 
+                         (currentToolCall.arguments.trim() ? JSON.parse(currentToolCall.arguments) : {}) : 
+                         {});
 
-        // Emit tool use start with the tool call info
-        yield {
-          type: 'content_block_start',
-          index: 0,
-          content_block: {
-            type: 'tool_use',
-            id: currentToolCall.id,
-            name: currentToolCall.name,
-            input,
-          },
-        };
-      } else {
-        // Update existing tool call with new chunks
-        if (toolCall.function?.arguments) {
-          currentToolCall.arguments = (currentToolCall.arguments || '') + toolCall.function.arguments;
-        }
-        if ((toolCall as ToolCall).parameters) {
-          currentToolCall.parameters = (toolCall as ToolCall).parameters;
-        }
-
-        // Emit updates
-        if (toolCall.function?.name) {
+          // Emit tool use start with the tool call info
           yield {
-            type: 'content_block_delta',
-            delta: {
-              type: 'text_delta',
-              text: toolCall.function.name,
+            type: 'content_block_start',
+            index: currentToolCall.index,
+            content_block: {
+              type: 'tool_use',
+              id: currentToolCall.id,
+              name: currentToolCall.name,
+              input,
             },
           };
-        }
-        if (toolCall.function?.arguments) {
-          yield {
-            type: 'content_block_delta',
-            delta: {
-              type: 'input_json_delta',
-              partial_json: toolCall.function.arguments,
-            },
-          };
+        } else {
+          // Update existing tool call with new chunks
+          if (toolCall.function?.arguments) {
+            currentToolCall.arguments = (currentToolCall.arguments || '') + toolCall.function.arguments;
+          }
+          if ((toolCall as ToolCall).parameters) {
+            currentToolCall.parameters = (toolCall as ToolCall).parameters;
+          }
+
+          if (toolCall.function?.arguments) {
+            yield {
+              type: 'content_block_delta',
+              delta: {
+                type: 'input_json_delta',
+                index: currentToolCall.index,
+                partial_json: toolCall.function.arguments,
+              },
+            };
+          }
         }
       }
     }
 
     // Handle finish reason
     if (chunk.choices[0]?.finish_reason) {
-      if (currentToolCall) {
-        // Use parameters if available, otherwise parse arguments
-        const input = currentToolCall.parameters || 
-                     (currentToolCall.arguments ? 
-                       (currentToolCall.arguments.trim() ? JSON.parse(currentToolCall.arguments) : {}) : 
-                       {});
+      if (currentToolCalls.length > 0) {
+        // Emit stop for each tool call
+        for (const toolCall of currentToolCalls) {
+          yield {
+            type: 'content_block_stop',
+            index: toolCall.index,
+          };
+        }
 
-        yield {
-          type: 'content_block_stop',
-          index: 0,
-        };
+        // Emit message delta with all tool calls
         yield {
           type: 'message_delta',
           delta: {
             stop_reason: 'tool_use',
-            tool_calls: [{
-              index: currentToolCall.index,
-              id: currentToolCall.id,
+            tool_calls: currentToolCalls.map(toolCall => ({
+              index: toolCall.index,
+              id: toolCall.id,
               type: 'function',
-              parameters: input,
-              function: currentToolCall.function!
-            }],
+              parameters: toolCall.parameters || 
+                         (toolCall.arguments ? 
+                           (toolCall.arguments.trim() ? JSON.parse(toolCall.arguments) : {}) : 
+                           {}),
+              function: toolCall.function!
+            })),
           },
         };
       } else {
@@ -286,6 +285,7 @@ export abstract class BaseOpenAIClient implements LLMClient {
       model: params.model,
       messages,
       tools,
+      response_format: {type: 'text'},
       tool_choice: tools ? 'auto' : undefined,
       max_tokens: params.maxTokens ?? 1024,
       temperature: params.temperature ?? 0.2,

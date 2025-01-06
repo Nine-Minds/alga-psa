@@ -49,7 +49,7 @@ interface ToolExecutionResult {
   };
 }
 
-type StreamEventType = 'token' | 'tool_result' | 'error' | 'done';
+type StreamEventType = 'token' | 'tool_result' | 'tool_use' | 'error' | 'done';
 
 interface StreamEvent {
   type: StreamEventType;
@@ -174,7 +174,7 @@ interface StateContext {
   currentToolIndex: number | null; // Track current tool index
   toolCallId: string;
   stopReason: string | null;
-  accumulatedInput: string; // Add this to track accumulated JSON chunks
+  accumulatedInput: string[]; // Add this to track accumulated JSON chunks
 
   // SSE controller
   controller: ReadableStreamDefaultController<Uint8Array>;
@@ -230,7 +230,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
         currentToolIndex: null,
         toolCallId: '',
         stopReason: null,
-        accumulatedInput: '', // Initialize accumulated input
+        accumulatedInput: [], // Initialize accumulated input
 
         controller,
         sendEvent,
@@ -276,22 +276,27 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           
             let hasContent = false;
             for await (const streamChunk of completionStream) {
-              console.log('Processing stream chunk:', {
-                type: streamChunk.type,
-                state: currentState,
-                toolIndex: ctx.currentToolIndex,
-                toolCallId: ctx.toolCallId,
-              });
+              // console.log('Processing stream chunk:', {
+              //   type: streamChunk.type,
+              //   state: currentState,
+              //   toolIndex: ctx.currentToolIndex,
+              //   toolCallId: ctx.toolCallId,
+              // });
           
               // Handle content deltas
               if (streamChunk.type === 'content_block_delta') {
                 if (streamChunk.delta.type === 'text_delta' && streamChunk.delta.text) {
                   ctx.currentText += streamChunk.delta.text;
                   ctx.sendEvent('token', streamChunk.delta.text);
+
+                  process.stdout.write(streamChunk.delta.text);
+
                   hasContent = true;
                 } else if (streamChunk.delta.type === 'input_json_delta' && streamChunk.delta.partial_json) {
                   // Accumulate JSON chunks
-                  ctx.accumulatedInput += streamChunk.delta.partial_json;
+                  ctx.accumulatedInput[streamChunk.delta.index!] += streamChunk.delta.partial_json;
+                  
+                  process.stdout.write(streamChunk.delta.partial_json);
                 }
                 continue;
               }
@@ -300,7 +305,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                 const toolCalls = streamChunk.delta.tool_calls;
                 if (toolCalls && toolCalls.length > 0) {
                   const toolCall = toolCalls[0] as unknown as ToolCall;
-                  console.log('Raw tool call:', JSON.stringify(toolCall, null, 2));
+                  console.log('Received provider tool call:', JSON.stringify(toolCall, null, 2));
           
                   // Handle new tool call
                   if (toolCall.id && (!ctx.currentToolIndex || !ctx.toolCallId)) {
@@ -323,17 +328,17 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                       ctx.toolUseBlocks.set(toolCall.index, toolBlock);
                       ctx.currentToolIndex = toolCall.index;
                       ctx.toolCallId = toolCall.id;
-                      ctx.accumulatedInput = ''; // Reset accumulated input for new tool
+                      ctx.accumulatedInput[toolCall.index] = ''; // Reset accumulated input for new tool
                     }
                   }
           
                   // Accumulate function arguments
                   if (toolCall.function?.arguments) {
-                    ctx.accumulatedInput += toolCall.function.arguments;
+                    ctx.accumulatedInput[toolCall.index] += toolCall.function.arguments;
                   }
 
                   if (toolCall.parameters) {
-                    ctx.accumulatedInput += JSON.stringify(toolCall.parameters);
+                    ctx.accumulatedInput[toolCall.index] += JSON.stringify(toolCall.parameters);
                     currentState = transitionState(currentState, 'TOOL_REQUESTED');
                     continue messageProcessing;
                   }
@@ -353,7 +358,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                   console.log('Tool calls finish reason, accumulated input:', {
                     currentToolIndex: ctx.currentToolIndex,
                     hasToolBlock: ctx.currentToolIndex !== null && ctx.toolUseBlocks.has(ctx.currentToolIndex),
-                    accumulatedInput: ctx.accumulatedInput
+                    accumulatedInput: ctx.accumulatedInput[ctx.currentToolIndex!]
                   });
           
                   if (ctx.currentToolIndex !== null && ctx.accumulatedInput) {
@@ -361,7 +366,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                     if (currentTool) {
                       try {
                         // Parse accumulated JSON and store in tool block
-                        const inputObject = JSON.parse(ctx.accumulatedInput);
+                        const inputObject = JSON.parse(ctx.accumulatedInput[ctx.currentToolIndex!]);
                         currentTool.input = inputObject;
                         console.log('Parsed tool input:', inputObject);
                         currentState = transitionState(currentState, 'TOOL_REQUESTED');
@@ -369,7 +374,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                       } catch (err) {
                         console.error('Failed to parse tool input JSON:', {
                           err,
-                          input: ctx.accumulatedInput
+                          input: ctx.accumulatedInput[ctx.currentToolIndex!]
                         });
                         // Handle JSON parse error
                         ctx.sendEvent('error', `Failed to parse tool input: ${String(err)}`);
@@ -382,7 +387,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           
                 if (streamChunk.delta.finish_reason === 'stop' ||
                     streamChunk.delta.stop_reason === 'end_turn') {
-                  // Save any remaining text content before finishing
+                  // Save any remaining text content
                   if (hasContent) {
                     const textBlock: MessageTextBlock = {
                       type: 'text',
@@ -394,6 +399,21 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                     });
                     ctx.currentText = '';
                   }
+
+                  // Check for any pending tool executions
+                  const pendingTools = Array.from(ctx.toolUseBlocks.values())
+                    .filter(tool => tool.status === 'pending');
+                  
+                  if (pendingTools.length > 0) {
+                    ctx.sendEvent('token', `\nExecuting ${pendingTools.length} pending tool(s)...\n`);
+                    for (const tool of pendingTools) {
+                      ctx.currentToolIndex = tool.index;
+                      ctx.toolCallId = tool.id;
+                      currentState = transitionState(currentState, 'TOOL_EXECUTING');
+                      continue messageProcessing;
+                    }
+                  }
+                  
                   currentState = transitionState(currentState, 'DONE');
                   continue messageProcessing;
                 }
@@ -428,20 +448,27 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
             // Validate JSON
             const currentTool = ctx.toolUseBlocks.get(ctx.currentToolIndex)!;
             try {
-              const inputObject = ctx.accumulatedInput.trim() === '' ? {} : JSON.parse(ctx.accumulatedInput);
+              const inputObject = ctx.accumulatedInput[ctx.currentToolIndex!].trim() === '' ? {} : JSON.parse(ctx.accumulatedInput[ctx.currentToolIndex!]);
               currentTool.input = inputObject;
               currentTool.id = ctx.toolCallId;
               currentTool.status = 'executing';
             } catch (err) {
               console.error('Failed to parse tool input JSON:', {
                 err,
-                input: ctx.accumulatedInput,
+                input: ctx.accumulatedInput[ctx.currentToolIndex!],
               });
               currentTool.status = 'complete';
               ctx.toolUseBlocks.delete(ctx.currentToolIndex);
               currentState = transitionState(currentState, 'READING_STREAM');
               break;
             }
+
+            // Send tool use event
+            ctx.sendEvent('tool_use', JSON.stringify({
+              name: currentTool.name,
+              input: currentTool.input,
+              tool_use_id: ctx.toolCallId
+            }));
 
             // Add assistant message with the tool call
             const assistantMessage: LocalMessage = {
@@ -466,35 +493,51 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           }
           
           case 'TOOL_EXECUTING': {
-            if (ctx.currentToolIndex === null || !ctx.toolUseBlocks.has(ctx.currentToolIndex)) {
-              currentState = transitionState(currentState, 'READING_STREAM');
-              break;
+            // Get all pending tools
+            // const pendingTools = Array.from(ctx.toolUseBlocks.values())
+            //   .filter(tool => tool.status === 'executing');
+
+            // Execute all pending tools
+            for (const [idx, tool] of ctx.toolUseBlocks) {
+              if (idx > 0) {
+                console.log('skipping tool', tool);
+                continue;
+              }
+              
+              // ctx.sendEvent('token', `\nExecuting tool: ${tool.name}...\n`);
+              try {
+                const result = await executeToolAndGetResult(tool);
+                console.log('Tool execution result:', result);
+                // ctx.sendEvent('token', `Tool execution completed.\n`);
+                ctx.sendEvent('tool_result', JSON.stringify({
+                  role: 'tool',
+                  content: result,
+                  tool_call_id: tool.id,
+                  name: tool.name,
+                }));
+
+                // Add result to messages
+                ctx.currentMessages.push({
+                  role: 'tool',
+                  content: result,
+                  tool_call_id: tool.id,
+                  name: tool.name,
+                });
+
+                // Mark tool as complete
+                tool.status = 'complete';
+                ctx.toolUseBlocks.delete(tool.index);
+              } catch (error) {
+                console.error('Failed to execute tool:', error);
+                ctx.sendEvent('error', `Failed to execute tool: ${String(error)}`);
+              }
             }
 
-            const currentTool = ctx.toolUseBlocks.get(ctx.currentToolIndex)!;
-            try {
-              const result = await executeToolAndGetResult(currentTool);
-              console.log('Tool execution result:', result);
-              ctx.sendEvent('tool_result', result);
-
-              ctx.currentMessages.push({
-                role: 'tool',
-                content: result,
-                tool_call_id: ctx.toolCallId,
-                name: currentTool.name,
-              });
-            } catch (error) {
-              console.error('Failed to execute tool:', error);
-              ctx.sendEvent('error', `Failed to execute tool: ${String(error)}`);
-            }
-
-            // Mark tool done, reset fields
-            currentTool.status = 'complete';
-            ctx.toolUseBlocks.delete(ctx.currentToolIndex);
+            // Reset all state
             ctx.currentToolIndex = null;
             ctx.currentInput = '';
-            ctx.accumulatedInput = ''; // Reset accumulated input
             ctx.toolCallId = '';
+            ctx.accumulatedInput = [];
 
             // Create new stream with updated context
             const params: StreamChatCompletionParams = {
