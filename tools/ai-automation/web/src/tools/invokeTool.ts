@@ -112,6 +112,13 @@ export async function wait(seconds: number): Promise<ToolExecutionResult> {
 
 // 4) Execute Puppeteer Script
 export async function executePuppeteerScript(script: string): Promise<ToolExecutionResult> {
+  if (script.indexOf('{username}') !== -1 || script.indexOf('{password}') !== -1) {
+    return {
+      success: false,
+      error: 'Please do not include \'{username}\' or \'{password}\' in the script. Use the provided username and password instead.'
+    };
+  }
+
   const endpoint = `${API_BASE}/puppeteer`;
   const body = { script };
   try {

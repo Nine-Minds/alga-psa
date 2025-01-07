@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
 import { Theme } from '@radix-ui/themes';
 import { prompts } from '../tools/prompts';
-
+import { invokeTool } from '../tools/invokeTool';
 import { ChatMessage } from '../types/messages';
 
 export default function ControlPanel() {
@@ -20,6 +20,7 @@ export default function ControlPanel() {
     title: string;
     content: string | ToolContent | unknown;
     timestamp: string;
+    toolCallId?: string;
   }
 
   const [imgSrc, setImgSrc] = useState('');
@@ -34,6 +35,14 @@ export default function ControlPanel() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const logEntryRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+
+  const scrollToLogEntry = (toolCallId: string) => {
+    const ref = logEntryRefs.current[toolCallId];
+    if (ref) {
+      ref.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   const scrollMessagesToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -73,7 +82,6 @@ export default function ControlPanel() {
     outline: 'none'
   };
 
-
   useEffect(() => {
     const systemPrompt = prompts.systemMessage
       .replace('{url}', url)
@@ -84,11 +92,7 @@ export default function ControlPanel() {
       {
         role: 'system',
         content: systemPrompt
-      },
-      // {
-      //   role: 'assistant',
-      //   content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
-      // }
+      }
     ]);
   }, [url, username, password]);
 
@@ -103,14 +107,32 @@ export default function ControlPanel() {
   }, []);
 
   const cancelGeneration = () => {
+    console.log('Cancelling generation');
     if (eventSourceRef.current) {
+      console.log('Closing SSE connection for cancellation');
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
     setIsGenerating(false);
+    // Reset current assistant message if it's empty
+    setMessages(prev => {
+      const lastMessage = prev[prev.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant' && (!lastMessage.content || !lastMessage.content.trim())) {
+        return prev.slice(0, -1);
+      }
+      return prev;
+    });
   };
 
   const clearConversation = () => {
+    console.log('Clearing conversation');
+    // Close any existing SSE connection
+    if (eventSourceRef.current) {
+      console.log('Closing SSE connection for conversation clear');
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    
     const systemPrompt = prompts.systemMessage
       .replace('{url}', url)
       .replace('{username}', username || '[Not provided]')
@@ -120,35 +142,75 @@ export default function ControlPanel() {
       {
         role: 'system',
         content: systemPrompt
-      },
-      // {
-      //   role: 'assistant',
-      //   content: 'Welcome to the AI Automation Control Panel! 👋\n\nI can help you interact with web applications by:\n• Navigating pages\n• Finding and clicking elements\n• Filling out forms\n• Extracting information\n• And more!\n\nJust tell me what you\'d like to do and I\'ll guide you through it.'
-      // }
+      }
     ]);
     setIsGenerating(false);
     setUserMessage('');
+    // Clear the log as well since we're starting fresh
+    setLog([]);
   };
 
-  const sendMessageToAI = async () => {
-    if (!userMessage.trim()) return;
+  const cleanAssistantMessage = (message: string) => {
+    // Remove function call blocks
+    const withoutFuncCalls = message.replace(/<func-call[^>]*>[\s\S]*?<\/func-call>/g, '');
+    
+    // Remove any duplicate content that might follow the function call
+    const withoutDuplicates = withoutFuncCalls.replace(/(.+?)(?:\1)+/g, '$1');
+    
+    // Trim whitespace and newlines
+    return withoutDuplicates.trim();
+  };
+
+  const startNewSseSession = (messages: ChatMessage[]) => {
+    // Close any existing SSE connection first
+    if (eventSourceRef.current) {
+      console.log('Closing existing SSE connection before starting new one');
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    // Filter out empty messages and clean assistant messages
+    const filteredMessages = messages
+      .filter(msg => {
+        if (msg.role === 'system') return true;
+        if (msg.role === 'assistant' && !msg.content && !msg.tool_calls) return false;
+        if (!msg.content && !msg.tool_calls) return false;
+        return true;
+      })
+      .map(msg => {
+        if (msg.role === 'assistant' && msg.content) {
+          return {
+            ...msg,
+            content: msg.content
+          };
+        }
+        return msg;
+      });
+
+    const queryParams = new URLSearchParams({
+      messages: JSON.stringify(filteredMessages)
+    });
+
+    console.log('Starting new SSE session');
+    eventSourceRef.current = new EventSource(`/api/ai?${queryParams.toString()}`);
+    return eventSourceRef.current;
+  };
+
+  const sendMessagesToAI = async (messages: ChatMessage[]) => {
+    // if (!userMessage.trim()) return;
     setIsGenerating(true);
 
-    // Add the user message
-    const newMessages: ChatMessage[] = [
-      ...messages,
-      { role: 'user', content: userMessage.trim() },
-    ];
-    setMessages(newMessages);
+    // Add the user message to the conversation
+    // const newMessages: ChatMessage[] = [
+    //   ...messages,
+    //   { role: 'user', content: userMessage.trim() },
+    // ];
+    // setMessages(newMessages);
     setUserMessage('');
 
     try {
-      // Set up EventSource for SSE with the messages as query params
-      const queryParams = new URLSearchParams({
-        messages: JSON.stringify(newMessages)
-      });
-      eventSourceRef.current = new EventSource(`/api/ai?${queryParams.toString()}`);
-      const eventSource = eventSourceRef.current;
+      const eventSource = startNewSseSession(messages);
+
       // Handle incoming events
       eventSource.onmessage = (event) => {
         console.log('Received SSE message:', event);
@@ -172,7 +234,7 @@ export default function ControlPanel() {
               const parsed = JSON.parse(token);
               
               if (parsed.data) {
-                currentAssistantMessage += parsed.data;
+                currentAssistantMessage += parsed.data; // Only update if there's actual content
                 setMessages(prev => {
                   const updated = [...prev];
                   const lastIndex = updated.length - 1;
@@ -195,12 +257,6 @@ export default function ControlPanel() {
               console.warn('Skipping malformed token:', match[0], error);
             }
           }
-          
-          // If buffer gets too large, clear it to prevent memory issues
-          // if (tokenBuffer.length > 10000) {
-          //   console.warn('Token buffer overflow, clearing buffer');
-          //   tokenBuffer = '';
-          // }
         } catch (error) {
           console.error('Error processing token event:', error);
         }
@@ -219,16 +275,9 @@ export default function ControlPanel() {
         }
       };
 
-      let toolUsePromiseResolve: ((value: unknown) => void) | null = null;
-      let currentToolUsePromise: Promise<unknown> | null = null;
-
       eventSource.addEventListener('tool_use', async (event) => {
         try {
-          // Create a new promise for this tool use
-          currentToolUsePromise = new Promise(resolve => {
-            toolUsePromiseResolve = resolve;
-          });
-
+          console.log('Received tool use event:', event);
           const toolEvent = cleanAndParseJSON(event.data);
           if (!toolEvent) {
             console.error('Invalid tool use event data');
@@ -236,45 +285,50 @@ export default function ControlPanel() {
           }
           console.log('Tool use requested:', toolEvent);
 
-          let toolData;
-          try {
-            toolData = cleanAndParseJSON(toolEvent.data);
-          } catch (error) {
-            console.warn('Failed to parse tool data:', error);
-            toolData = toolEvent.data;
+          const toolData = cleanAndParseJSON(toolEvent.data);
+          if (!toolData) {
+            throw new Error('Invalid tool data');
           }
 
-          const toolContent = toolData ? {
+          const toolContent = {
             name: toolData.name,
             input: toolData.input
-          } : toolEvent.data;
+          };
+          const toolCallId = toolData.tool_use_id;
 
+          // Log the tool use
           setLog(prev => [...prev, {
             type: 'tool_use',
             title: 'Tool Use Requested',
             content: toolContent,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            toolCallId: toolCallId
           }]);
 
-          // Generate a unique ID for the tool call
-          const toolCallId = toolData.tool_use_id;
+          // Execute the tool
+          const result = await invokeTool(toolContent.name, toolContent.input);
           
-          // Add assistant message with tool call
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: null,
-            tool_calls: [{
-              id: toolCallId,
-              type: 'function',
-              function: {
-                name: toolContent.name,
-                arguments: JSON.stringify(toolContent.input)
-              }
-            }]
+          // Add tool result as user message
+          const toolResult: ChatMessage = {
+            role: 'user',
+            content: JSON.stringify(result.result)
+          };
+
+          // Log the result
+          setLog(prev => [...prev, {
+            type: 'tool_result',
+            title: 'Tool Result',
+            content: result,
+            timestamp: new Date().toISOString(),
+            toolCallId: toolCallId
           }]);
 
-          // Wait for the tool result before continuing
-          await currentToolUsePromise;
+          // Add tool result to messages and start new SSE session
+          setMessages(prev => {
+            const updatedMessages = [...prev, toolResult];
+            sendMessagesToAI(updatedMessages);
+            return updatedMessages;
+          });
         } catch (error) {
           console.error('Error handling tool use event:', error);
           setLog(prev => [...prev, {
@@ -283,95 +337,16 @@ export default function ControlPanel() {
             content: String(error),
             timestamp: new Date().toISOString()
           }]);
-
-          if (toolUsePromiseResolve) {
-            toolUsePromiseResolve(null);
-          }
-        }
-      });
-
-      eventSource.addEventListener('tool_result', async (event) => {
-        try {
-          const resultEvent = cleanAndParseJSON(event.data);
-          if (!resultEvent) {
-            console.error('Invalid tool result event data');
-            return;
-          }
-          console.log('Tool result:', resultEvent);
-
-          let resultData;
-          try {
-            resultData = cleanAndParseJSON(resultEvent.data);
-          } catch (error) {
-            console.warn('Failed to parse result data:', error);
-            resultData = resultEvent.data;
-          }
-
-          const resultContent = resultData || resultEvent.data;
-          
-          setLog(prev => [...prev, {
-            type: 'tool_result',
-            title: 'Tool Result',
-            content: resultContent,
-            timestamp: new Date().toISOString()
-          }]);
-
-          // Add tool response message and prepare for assistant response
-          setMessages(prev => {
-            const toolCallId = resultContent.tool_call_id;
-            
-            if (!toolCallId) {
-              console.error('No tool call ID found for tool response');
-              return prev;
-            }
-
-            // Find the last assistant message index
-            // const lastAssistantIndex = prev.length - 1;
-
-            // Create properly typed tool response message
-            const toolResponse: ChatMessage = {
-              role: 'tool',
-              name: resultContent.name,
-              tool_call_id: toolCallId,
-              content: JSON.stringify(resultContent.content),
-              timestamp: new Date().toISOString()
-            };
-            
-
-            // // Insert the tool response before the last assistant message
-            // const newMessages = [
-            //   ...prev.slice(0, lastAssistantIndex),
-            //   toolResponse,
-            //   prev[lastAssistantIndex]
-            // ];
-
-            // just append the tool response to the assistant message
-            return [...prev, toolResponse];
-          });
-
-          // Resolve the current tool use promise
-          if (toolUsePromiseResolve) {
-            toolUsePromiseResolve(resultContent);
-            toolUsePromiseResolve = null;
-            currentToolUsePromise = null;
-          }
-        } catch (error) {
-          console.error('Error handling tool result event:', error);
-          setLog(prev => [...prev, {
-            type: 'error',
-            title: 'Tool Result Error',
-            content: String(error),
-            timestamp: new Date().toISOString()
-          }]);
         }
       });
 
       // Handle errors
-      eventSource.onerror = () => {
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
         // Only log and cleanup if we haven't received a done event
         if (eventSource.readyState !== EventSource.CLOSED) {
-          console.error('SSE connection error');
           if (eventSourceRef.current === eventSource) {
+            console.log('Closing SSE connection due to error');
             eventSource.close();
             eventSourceRef.current = null;
             setIsGenerating(false);
@@ -383,10 +358,10 @@ export default function ControlPanel() {
       await new Promise((resolve) => {
         eventSource.addEventListener('done', () => {
           console.log('Received done event, closing connection');
+          setIsGenerating(false);
           if (eventSourceRef.current === eventSource) {
             eventSource.close();
-            eventSourceRef.current = null;
-            setIsGenerating(false);
+            eventSourceRef.current = null;            
             resolve(null);
           }
         });
@@ -494,35 +469,50 @@ export default function ControlPanel() {
                   </Flex>
                   <ScrollArea style={{ height: '600px', backgroundColor: 'var(--color-panel)' }}>
                     <Flex direction="column" gap="2" p="2">
-                      {messages.filter(msg => msg.role === 'assistant' || msg.role === 'user').map((msg, idx) => (
+                      {messages.filter(msg => msg.role !== 'system').map((msg, idx) => (
                         <Box key={idx}>
                           <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                             <strong>
-                              {msg.role === 'user'
-                                ? 'User'
-                                : msg.role === 'assistant'
-                                ? 'AI'
-                                : 'System'}
+                              {msg.role === 'user' ? 'User' 
+                               : msg.role === 'assistant' ? 'AI'
+                               : msg.role === 'tool' ? 'Tool Response'
+                               : 'System'}
                               :
                             </strong>
                           </Text>
-                          {msg.tool_calls && (
-                            <Box mb="2" style={{
-                              backgroundColor: 'var(--accent-9)',
-                              padding: '8px 12px',
-                              borderRadius: '4px',
-                              display: 'inline-block'
-                            }}>
+                          {msg.tool_calls?.[0] && (
+                            <Box 
+                              mb="2" 
+                              style={{
+                                backgroundColor: 'var(--accent-9)',
+                                padding: '8px 12px',
+                                borderRadius: '4px',
+                                display: 'inline-block',
+                                cursor: 'pointer'
+                              }}
+                              onClick={() => msg.tool_calls?.[0] && scrollToLogEntry(msg.tool_calls[0].id)}
+                            >
                               <Text size="2" style={{ color: 'white' }}>
                                 🔧 Function Call: {msg.tool_calls[0].function.name}
                               </Text>
                             </Box>
                           )}
-                          {msg.content ? msg.content.split('\n').map((line: string, lineIdx: number) => (
-                            <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
-                              {line}
-                            </pre>
-                          )) : null}
+                          {msg.role === 'tool' ? (
+                            <Box mb="2">
+                              <Text size="2" style={{ color: 'var(--accent-9)' }}>
+                                Function: {msg.name}
+                              </Text>
+                              <pre style={{ ...preStyle, maxWidth: '100%' }}>
+                                {msg.content}
+                              </pre>
+                            </Box>
+                          ) : (
+                            msg.content ? cleanAssistantMessage(msg.content).split('\n').map((line: string, lineIdx: number) => (
+                              <pre key={lineIdx} style={{ ...preStyle, maxWidth: '100%' }}>
+                                {line}
+                              </pre>
+                            )) : null
+                          )}
                           <div ref={messagesEndRef} style={{ height: 1 }} />
                         </Box>
                       ))}
@@ -537,7 +527,7 @@ export default function ControlPanel() {
                         if (!e.shiftKey) {
                           e.preventDefault();
                           if (!isGenerating && userMessage.trim()) {
-                            sendMessageToAI();
+                            setMessages(prev => { sendMessagesToAI([...prev, { role: 'user', content: userMessage.trim() }]); return [...prev, { role: 'user', content: userMessage.trim() }] });
                           }
                         }
                       }
@@ -548,7 +538,7 @@ export default function ControlPanel() {
                   />
                   <Flex direction="column" gap="2">
                     <Button 
-                      onClick={sendMessageToAI} 
+                      onClick={() => sendMessagesToAI(messages)}
                       disabled={isGenerating}
                       style={{ width: '100%' }}
                     >
@@ -585,23 +575,48 @@ export default function ControlPanel() {
                       <Box key={idx}>
                         <Text color={msg.role === 'user' ? 'blue' : msg.role === 'assistant' ? 'green' : 'gray'} mb="2">
                           <strong>
-                            {msg.role === 'user'
-                              ? 'User'
-                              : msg.role === 'assistant'
-                              ? 'AI'
-                              : 'System'}
+                            {msg.role === 'user' ? 'User'
+                             : msg.role === 'assistant' ? 'AI'
+                             : msg.role === 'tool' ? 'Tool Response'
+                             : 'System'}
                             :
                           </strong>
                         </Text>
-                        {msg.content && (
-                          <pre style={preStyle}>
-                            {msg.content}
-                          </pre>
-                        )}
-                        {msg.tool_calls && (
-                          <pre style={preStyle}>
-                            Tool Call: {JSON.stringify(msg.tool_calls, null, 2)}
-                          </pre>
+                        {msg.role === 'tool' ? (
+                          <Box mb="2">
+                            <Text size="2" style={{ color: 'var(--accent-9)' }}>
+                              Function: {msg.name}
+                            </Text>
+                            <pre style={preStyle}>
+                              {msg.content}
+                            </pre>
+                          </Box>
+                        ) : (
+                          <>
+                            {msg.content && (
+                              <pre style={preStyle}>
+                                {msg.content}
+                              </pre>
+                            )}
+                            {msg.tool_calls && (
+                              <Box 
+                                mb="2" 
+                                style={{
+                                  backgroundColor: 'var(--accent-9)',
+                                  padding: '8px 12px',
+                                  borderRadius: '4px',
+                                  display: 'inline-block'
+                                }}
+                              >
+                                <Text size="2" style={{ color: 'white' }}>
+                                  🔧 Function Call: {msg.tool_calls[0].function.name}
+                                </Text>
+                                <pre style={{ ...preStyle, marginTop: '8px' }}>
+                                  {msg.tool_calls[0].function.arguments}
+                                </pre>
+                              </Box>
+                            )}
+                          </>
                         )}
                       </Box>
                     ))}
@@ -647,7 +662,13 @@ export default function ControlPanel() {
                   <ScrollArea style={{ maxHeight: '400px' }}>
                     <Flex direction="column" gap="2">
                       {log.map((entry, i) => (
-                        <Box key={i} p="4" style={{ 
+                        <Box 
+                          key={i} 
+                          ref={entry.toolCallId ? (el: HTMLDivElement | null) => {
+                            if (el) logEntryRefs.current[entry.toolCallId!] = el;
+                          } : undefined}
+                          p="4" 
+                          style={{ 
                           backgroundColor: 'var(--color-panel)',
                           borderRadius: '6px',
                           border: '1px solid var(--gray-6)'

@@ -12,19 +12,39 @@ export const getUIState: Tool = {
   name: 'get_ui_state',
   description: 'Get the current high-level UI state including all registered components',
   
-  async execute(_page: Page, args: GetUIStateArgs): Promise<PageState | any> {
-    if (!args.jsonpath) {
-      return "TOO BROAD - please narrow your search with a JSONPath";
+  async execute(page: Page, args: GetUIStateArgs): Promise<PageState | any> {
+    // Get page info first since we'll need it for all responses
+    const pageInfo = {
+      page: {
+        title: await page.title(),
+        url: page.url()
+      }
+    };
+
+    const baseState = uiStateManager.getCurrentState();
+    if (!baseState) {
+      return {
+        ...pageInfo,
+        result: {
+          error: true,
+          message: 'No UI state available. Make sure the React application is running and connected.'
+        }
+      };
     }
 
-    const state = uiStateManager.getCurrentState();
-    if (!state) {
-      throw new Error('No UI state available. Make sure the React application is running and connected.');
-    }
+    const state = {
+      ...baseState,
+      ...pageInfo
+    };
 
-    // If no JSONPath provided, return full state
+    // Require JSONPath to prevent overly broad queries
     if (!args.jsonpath) {
-      return state;
+      return {
+        ...pageInfo,
+        result: {
+          message: "TOO BROAD - please narrow your search with a JSONPath"
+        }
+      };
     }
 
     // Apply JSONPath filter with error handling
@@ -44,19 +64,36 @@ export const getUIState: Tool = {
 
         // Handle no matches
         if (result === undefined || result === null || (Array.isArray(result) && result.length === 0)) {
-          return { message: `No components found matching path: ${args.jsonpath}` };
+          return {
+            ...pageInfo,
+            result: {
+              message: `No components found matching path: ${args.jsonpath}`
+            }
+          };
         }
 
-        return result;
+        return {
+          ...pageInfo,
+          result
+        };
       } catch (evalError) {
         // Handle evaluation errors (like null property access)
-        throw new Error(`Error evaluating JSONPath: ${evalError instanceof Error ? evalError.message : String(evalError)}`);
+          return {
+            ...pageInfo,
+            result: {
+              error: true,
+              message: `Error evaluating JSONPath: ${evalError instanceof Error ? evalError.message : String(evalError)}`
+            }
+          };
       }
     } catch (error) {
       // Return a structured error response instead of throwing
       return {
-        error: true,
-        message: `Invalid JSONPath: ${error instanceof Error ? error.message : String(error)}`
+        ...pageInfo,
+        result: {
+          error: true,
+          message: `Invalid JSONPath: ${error instanceof Error ? error.message : String(error)}`
+        }
       };
     }
   }
