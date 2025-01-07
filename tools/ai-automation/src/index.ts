@@ -101,11 +101,21 @@ app.get('/', ((_req: Request, res: Response) => {
 }) as RequestHandler);
 
 app.get('/api/ui-state', (async (req: Request, res: Response) => {
-  console.log('\n[GET /api/ui-state]');
+  console.log('\n[GET /api/ui-state], jsonpath:', req.query.jsonpath);
   const startTime = Date.now();
   const jsonpath = req.query.jsonpath as string | undefined;
 
   try {
+    const page = puppeteerManager.getPage();
+    const pageTitle = await page.title();
+    const pageUrl = page.url();
+    const pageInfo = {
+      page: {
+        title: pageTitle,
+        url: pageUrl
+      }
+    };
+
     const state = uiStateManager.getCurrentState();
     if (!state) {
       throw new Error('No UI state available');
@@ -114,18 +124,46 @@ app.get('/api/ui-state', (async (req: Request, res: Response) => {
     let result = state;
     if (jsonpath) {
       const { JSONPath } = await import('jsonpath-plus');
+      
+      console.log('state before jsonpath:', JSON.stringify(state));
+      
       result = JSONPath({ path: jsonpath, json: state });
     }
     
-    console.log('UI state:', result);
+    const response = {
+      ...pageInfo,
+      result
+    };
+    
+    console.log('UI state:', JSON.stringify(response));
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    res.json(JSON.parse(JSON.stringify(result, null, 0)));
+    res.json(JSON.parse(JSON.stringify(response, null, 0)));
   } catch (error) {
     console.error('Error in /api/ui-state:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);
-    res.status(500).json(JSON.parse(JSON.stringify({
-      error: error instanceof Error ? error.message : String(error)
-    }, null, 0)));
+
+    // Get page info even for error responses
+    try {
+      const page = puppeteerManager.getPage();
+      const pageTitle = await page.title();
+      const pageUrl = page.url();
+      const pageInfo = {
+        page: {
+          title: pageTitle,
+          url: pageUrl
+        }
+      };
+
+      res.status(500).json(JSON.parse(JSON.stringify({
+        ...pageInfo,
+        error: error instanceof Error ? error.message : String(error)
+      }, null, 0)));
+    } catch (pageError) {
+      // If we can't get page info, just return the original error
+      res.status(500).json(JSON.parse(JSON.stringify({
+        error: error instanceof Error ? error.message : String(error)
+      }, null, 0)));
+    }
   }
 }) as RequestHandler);
 
