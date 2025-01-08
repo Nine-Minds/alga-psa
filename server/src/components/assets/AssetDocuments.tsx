@@ -32,6 +32,7 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant }) => {
 
     return (
         <Documents
+            id='documents'
             documents={documents}
             gridColumns={3}
             userId={tenant} // Using tenant as userId since we're in tenant context

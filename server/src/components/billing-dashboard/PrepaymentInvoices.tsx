@@ -103,6 +103,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
               Company
             </label>
             <CompanyPicker
+              id='company-picker'
               companies={companies}
               selectedCompanyId={selectedCompany}
               onSelect={setSelectedCompany}

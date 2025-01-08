@@ -227,6 +227,7 @@ export default function DocumentsPage() {
               </div>
             ) : (
               <Documents
+                id='documents'
                 documents={documents}
                 gridColumns={3}
                 userId={currentUserId}

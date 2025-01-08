@@ -344,6 +344,7 @@ const Companies: React.FC = () => {
     <div className="flex flex-col min-h-full">
       {/* Create Client Dialog */}
       <GenericDialog
+        id='create-company-dialog'
         isOpen={isDialogOpen}
         onClose={() => setIsDialogOpen(false)}
         title="Create New Client"
@@ -368,6 +369,7 @@ const Companies: React.FC = () => {
         <div className="w-64 relative [&>div]:rounded-md overflow-visible">
           <div className="relative z-[1000]">
             <CompanyPicker
+              id='company-picker'
               onSelect={(companyId) => setSelectedCompanyId(companyId)}
               selectedCompanyId={selectedCompanyId}
               companies={statusFilteredCompanies}

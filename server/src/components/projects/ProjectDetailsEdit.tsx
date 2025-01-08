@@ -177,6 +177,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               Client
             </label>
             <CompanyPicker
+              id='company-picker'
               companies={companies}
               selectedCompanyId={project.company_id}
               onSelect={handleCompanySelect}

@@ -122,6 +122,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
                 <CompanyPicker
+                  id='company-picker'
                   companies={companies}
                   onSelect={setSelectedCompanyId}
                   selectedCompanyId={selectedCompanyId}

@@ -263,6 +263,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Label htmlFor="company_id">Client</Label>
           <div className="mt-1">
             <CompanyPicker
+              id='company-picker'
               companies={companies}
               selectedCompanyId={formData.company_id || null}
               onSelect={(companyId) => handleChange('company_id', companyId)}

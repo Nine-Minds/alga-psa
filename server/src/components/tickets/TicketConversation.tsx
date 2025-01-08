@@ -9,12 +9,14 @@ import CommentItem from './CommentItem';
 import CustomTabs from '../ui/CustomTabs';
 import Documents from '../documents/Documents';
 import styles from './TicketDetails.module.css';
-import { Button } from '../ui/Button';
-import AvatarIcon from '../ui/AvatarIcon';
-import { getContactByContactNameId, getAllContacts } from '../../lib/actions/contact-actions/contactActions';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { Button } from '@/components/ui/Button';
+import AvatarIcon from '@/components/ui/AvatarIcon';
+import { getContactByContactNameId, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { ButtonComponent, ContainerComponent } from '@/types/ui-reflection/types';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 const DEFAULT_BLOCK: PartialBlock[] = [{
   id: "1",
@@ -31,7 +33,7 @@ type UserInfo = {
 };
 
 interface TicketConversationProps {
-  id: string; // Made required since it's needed for reflection registration
+  id?: string;
   ticket: ITicket;
   conversations: IComment[];
   documents: any[];
@@ -53,7 +55,7 @@ interface TicketConversationProps {
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
-  id,
+  id = 'ticket-conversation',
   ticket,
   conversations,
   documents,
@@ -78,6 +80,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contacts, setContacts] = useState<IContact[]>([]);
 
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
+    id,
+    type: 'container',
+    label: `Conversation for ticket ${ticket.ticket_number}`
+  });
+
   useEffect(() => {
     const fetchAllContacts = async () => {
       try {
@@ -95,7 +104,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     const fetchContactsForComments = async () => {
       const contactIds = conversations
         .filter(conv => conv.author_type === 'contact' && conv.contact_id)
-        .map((conv):string => conv.contact_id!)
+        .map((conv): string => conv.contact_id!)
         .filter((id, index, self) => self.indexOf(id) === index);
 
       for (const contactId of contactIds) {
@@ -122,15 +131,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     const buttons = ['Comments', 'Internal', 'Resolution'];
     return (
       <div className={styles.buttonBar}>
-        {buttons.map((button):JSX.Element => (
+        {buttons.map((button): JSX.Element => (
           <button
             key={button}
-            {...useAutomationIdAndRegister<ButtonComponent>({
-              id: `${id}-${button.toLowerCase()}-tab`,
-              type: 'button',
-              label: button,
-              actions: ['click']
-            }).automationIdProps}
+            {...withDataAutomationId({ id: `${id}-${button.toLowerCase()}-tab` })}
             className={`${styles.button} ${activeTab === button ? styles.activeButton : styles.inactiveButton}`}
             onClick={() => onTabChange(button)}
           >
@@ -164,9 +168,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const isLoadingContact = (conversation: IComment): boolean => {
-    return conversation.author_type === 'contact' && 
-           conversation.contact_id !== undefined && 
-           loadingContacts[conversation.contact_id] === true;
+    return conversation.author_type === 'contact' &&
+      conversation.contact_id !== undefined &&
+      loadingContacts[conversation.contact_id] === true;
   };
 
   const handleNewCommentContentChange = (blocks: Block[]) => {
@@ -175,7 +179,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const renderComments = (comments: IComment[]) => {
-    return comments.map((conversation):JSX.Element => (
+    return comments.map((conversation): JSX.Element => (
       <CommentItem
         key={conversation.comment_id}
         id={`${id}-comment-${conversation.comment_id}`}
@@ -230,9 +234,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-documents`} label="Documents">
           <div className="mx-8">
-            <Documents 
+            <Documents
               id={`${id}-documents-list`}
-              documents={documents} 
+              documents={documents}
               userId={`${currentUser?.id}`}
               entityId={ticket.ticket_id}
               entityType="ticket"
@@ -249,72 +253,66 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   return (
-    <ReflectionContainer id={id} label={`Conversation for ticket ${ticket.ticket_number}`}>
-      <div className={`${styles['card']}`}>
-        <div className="p-6">
-          <h2 className="text-xl font-bold mb-4">Comments</h2>
-          <div className='mb-6'>
-            <div className='flex items-start'>
-              <div className="mr-3">
-                <AvatarIcon
-                  {...useAutomationIdAndRegister<ContainerComponent>({
-                    id: `${id}-current-user-avatar`,
-                    type: 'container',
-                    label: 'Current User Avatar'
+    <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
+      <div className="p-6">
+        <h2 className="text-xl font-bold mb-4">Comments</h2>
+        <div className='mb-6'>
+          <div className='flex items-start'>
+            <div className="mr-3">
+              <AvatarIcon
+                {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
+                userId={currentUser?.id || ''}
+                firstName={currentUser?.name?.split(' ')[0] || ''}
+                lastName={currentUser?.name?.split(' ')[1] || ''}
+                size="md"
+              />
+            </div>
+            <div className='flex-grow'>
+              <TextEditor
+                {...withDataAutomationId({ id: `${id}-editor` })}
+                key={editorKey}
+                roomName={`ticket-${ticket.ticket_id}`}
+                initialContent=""
+                onContentChange={handleNewCommentContentChange}
+                editorRef={editorRef}
+              >
+                {renderButtonBar()}
+              </TextEditor>
+              <div className="flex justify-end mt-2">
+                <Button
+                  {...useAutomationIdAndRegister<ButtonComponent>({
+                    id: `${id}-add-comment-btn`,
+                    type: 'button',
+                    label: 'Add Comment',
+                    actions: ['click']
                   }).automationIdProps}
-                  userId={currentUser?.id || ''}
-                  firstName={currentUser?.name?.split(' ')[0] || ''}
-                  lastName={currentUser?.name?.split(' ')[1] || ''}
-                  size="md"
-                />
-              </div>
-              <div className='flex-grow'>
-                <TextEditor
-                  {...useAutomationIdAndRegister<FormFieldComponent>({
-                    id: `${id}-editor`,
-                    type: 'formField',
-                    fieldType: 'textField',
-                    label: 'Comment Editor',
-                    value: newCommentContent
-                  }).automationIdProps}
-                  key={editorKey}
-                  roomName={`ticket-${ticket.ticket_id}`}
-                  initialContent=""
-                  onContentChange={handleNewCommentContentChange}
-                  editorRef={editorRef}
+                  onClick={handleAddNewComment}
+                  className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
                 >
-                  {renderButtonBar()}
-                </TextEditor>
-                <div className="flex justify-end mt-2">
-                  <Button
-                    {...useAutomationIdAndRegister<ButtonComponent>({
-                      id: `${id}-add-comment-btn`,
-                      type: 'button',
-                      label: 'Add Comment',
-                      actions: ['click']
-                    }).automationIdProps}
-                    onClick={handleAddNewComment}
-                    className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-                  >
-                    Add Comment
-                  </Button>
-                </div>
+                  Add Comment
+                </Button>
               </div>
             </div>
           </div>
-          <CustomTabs 
-            {...useAutomationIdAndRegister<ContainerComponent>({
-              id: `${id}-tabs`,
-              type: 'container',
-              label: 'Comment Tabs'
-            }).automationIdProps}
-            tabs={tabContent} 
-            defaultTab="All Comments" 
-            tabStyles={tabStyles} 
-          />
         </div>
+        <CustomTabs
+          {...useAutomationIdAndRegister<ContainerComponent>({
+            id: `${id}-tabs`,
+            type: 'container',
+            label: 'Comment Tabs'
+          }).automationIdProps}
+          tabs={tabContent}
+          defaultTab="All Comments"
+          tabStyles={tabStyles}
+        />
       </div>
-    </ReflectionContainer>
+      <CustomTabs
+        {...withDataAutomationId({ id: `${id}-tabs` })}
+        tabs={tabContent}
+        defaultTab="All Comments"
+        tabStyles={tabStyles}
+      />
+    </div>
   );
 };
 

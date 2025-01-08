@@ -573,6 +573,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
       content: (
         <Card {...withDataAutomationId({ id: 'documents-card' })} className="p-6">
           <Documents
+            id='documents'
             documents={[]} // Initial empty array
             gridColumns={3}
             userId={asset.tenant}

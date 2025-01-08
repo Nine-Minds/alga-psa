@@ -761,6 +761,7 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
 
                 {selectedCell && isEditable && timeSheet.time_period && (
                     <TimeEntryDialog
+                        id='time-entry-dialog'
                         isOpen={true}
                         onClose={() => setSelectedCell(null)}
                         onSave={handleSaveTimeEntry}

@@ -391,98 +391,91 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   return (
-    <ReflectionContainer {...getTicketLinkProps}>
+    <div data-automation-id={id}>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">
-          Ticketing Dashboard
-        </h1>
-        <Button
-          onClick={() => setIsQuickAddOpen(true)}
-        >
-          Add Ticket
-        </Button>
+        <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
+        <Button onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
       </div>
-
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-fit">
-                <ChannelPicker
-                  id={`${id}-channel-picker`}
-                  channels={channels}
-                  onSelect={handleChannelSelect}
-                  selectedChannelId={selectedChannel}
-                  filterState={channelFilterState}
-                  onFilterStateChange={setChannelFilterState}
-                />
-              </div>
-              <CompanyPicker
-                id={`${id}-company-picker`}
-                companies={companies}
-                onSelect={handleCompanySelect}
-                selectedCompanyId={selectedCompany}
-                filterState={companyFilterState}
-                onFilterStateChange={handleCompanyFilterStateChange}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={handleClientTypeFilterChange}
-                fitContent={true}
-              />
-              <CustomSelect
-                options={statusOptions}
-                value={selectedStatus}
-                onValueChange={(value) => setSelectedStatus(value)}
-                placeholder="All Statuses"
-              />
-              <CustomSelect
-                options={priorityOptions}
-                value={selectedPriority}
-                onValueChange={(value) => setSelectedPriority(value)}
-                placeholder="All Priorities"
-              />
-              <CategoryPicker
-                id={`${id}-category-picker`}
-                categories={categories}
-                selectedCategories={selectedCategories}
-                excludedCategories={excludedCategories}
-                onSelect={handleCategorySelect}
-                placeholder="Filter by category"
-                multiSelect={true}
-                showExclude={true}
-                showReset={true}
-                allowEmpty={true}
-                className="text-sm min-w-[200px]"
-              />
-              <input
-                type="text"
-                placeholder="Search tickets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
+      <div className="bg-white shadow rounded-lg p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-fit">
+              <ChannelPicker
+                id='channel-picker'
+                data-automation-id={`${id}-channel-picker`}
+                channels={channels}
+                onSelect={handleChannelSelect}
+                selectedChannelId={selectedChannel}
+                filterState={channelFilterState}
+                onFilterStateChange={setChannelFilterState}
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={handleResetFilters}
-              className="whitespace-nowrap flex items-center gap-2"
-            >
-              <XCircle className="h-4 w-4" />
-              Reset Filters
-            </Button>
+            <CompanyPicker
+              id='company-picker'
+              data-automation-id={`${id}-company-picker`}
+              companies={companies}
+              onSelect={handleCompanySelect}
+              selectedCompanyId={selectedCompany}
+              filterState={companyFilterState}
+              onFilterStateChange={handleCompanyFilterStateChange}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={handleClientTypeFilterChange}
+              fitContent={true}
+            />
+            <CustomSelect
+              data-automation-id={`${id}-status-select`}
+              options={statusOptions}
+              value={selectedStatus}
+              onValueChange={(value) => setSelectedStatus(value)}
+              placeholder="All Statuses"
+            />
+            <CustomSelect
+              data-automation-id={`${id}-priority-select`}
+              options={priorityOptions}
+              value={selectedPriority}
+              onValueChange={(value) => setSelectedPriority(value)}
+              placeholder="All Priorities"
+            />
+            <CategoryPicker
+              id={`${id}-category-picker`}
+              categories={categories}
+              selectedCategories={selectedCategories}
+              excludedCategories={excludedCategories}
+              onSelect={handleCategorySelect}
+              placeholder="Filter by category"
+              multiSelect={true}
+              showExclude={true}
+              showReset={true}
+              allowEmpty={true}
+              className="text-sm min-w-[200px]"
+            />
+            <input
+              data-automation-id={`${id}-search-input`}
+              type="text"
+              placeholder="Search tickets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
+            />
           </div>
+          <Button
+            data-automation-id={`${id}-reset-filters-btn`}
+            variant="outline"
+            onClick={handleResetFilters}
+            className="whitespace-nowrap flex items-center gap-2"
+          >
+            <XCircle className="h-4 w-4" />
+            Reset Filters
+          </Button>
         </div>
-
-      {/* <ReflectionContainer id={`${id}-tickets-table`} label="Tickets Table"> */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <h2 className="text-xl font-semibold mb-2">
-          Tickets
-        </h2>
+        <h2 className="text-xl font-semibold mt-6 mb-2">Tickets</h2>
         {isLoading ? (
           <div className="flex justify-center items-center h-32">
             <span>Loading...</span>
           </div>
         ) : (
           <DataTable
-            id={`${id}-ticket-table`}
+            data-automation-id={`${id}-tickets-table`}
             data={ticketsWithIds}
             columns={columns}
           />
@@ -506,8 +499,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
-    </ReflectionContainer>
+    </div>
   );
+
 };
 
 export default TicketingDashboard;

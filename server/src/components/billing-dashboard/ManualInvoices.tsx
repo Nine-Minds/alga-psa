@@ -180,6 +180,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
               Company
             </label>
             <CompanyPicker
+              id='company-picker'
               companies={companies}
               selectedCompanyId={selectedCompany}
               onSelect={setSelectedCompany}

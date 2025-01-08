@@ -544,6 +544,7 @@ export default function TaskTicketLinks({
                             Channel
                           </label>
                           <ChannelPicker
+                            id='channel-picker'
                             channels={channels}
                             onSelect={handleChannelSelect}
                             selectedChannelId={selectedChannel}
