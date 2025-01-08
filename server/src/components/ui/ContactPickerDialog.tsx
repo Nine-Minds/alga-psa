@@ -34,16 +34,16 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [filteredContacts, setFilteredContacts] = useState<IContact[]>([]);
 
-  // Register dialog with UI reflection system if id is provided
-  const updateDialog = id ? useRegisterUIComponent<DialogComponent>({
+  // Only register dialog and its children with UI reflection system when open
+  const updateDialog = id && isOpen ? useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id,
     title: 'Select Contact',
-    open: isOpen
+    open: true
   }) : undefined;
 
-  // Register search input as child of dialog
-  const updateSearchInput = id ? useRegisterUIComponent<FormFieldComponent>({
+  // Only register search input when dialog is open
+  const updateSearchInput = id && isOpen ? useRegisterUIComponent<FormFieldComponent>({
     type: 'formField',
     fieldType: 'textField',
     id: `${id}-search`,
@@ -52,8 +52,8 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
     parentId: id
   }) : undefined;
 
-  // Register cancel button as child of dialog
-  const updateCancelButton = id ? useRegisterUIComponent<ButtonComponent>({
+  // Only register cancel button when dialog is open
+  const updateCancelButton = id && isOpen ? useRegisterUIComponent<ButtonComponent>({
     type: 'button',
     id: `${id}-cancel`,
     label: 'Cancel',
@@ -62,15 +62,12 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
     parentId: id
   }) : undefined;
 
-  // Update metadata when dialog state changes
+  // Update search input value when it changes
   useEffect(() => {
-    if (updateDialog) {
-      updateDialog({ open: isOpen });
-    }
     if (updateSearchInput) {
       updateSearchInput({ value: searchTerm });
     }
-  }, [isOpen, searchTerm, updateDialog, updateSearchInput]);
+  }, [searchTerm, updateSearchInput]);
 
   useEffect(() => {
     const filtered = contacts.filter(contact => {

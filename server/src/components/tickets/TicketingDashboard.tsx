@@ -1,4 +1,3 @@
-// server/src/components/tickets/TicketingDashboard.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -25,13 +24,26 @@ import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import { getTicketsForList, deleteTicket } from '@/lib/actions/ticket-actions/ticketActions';
 import { MoreHorizontal, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { ContainerComponent } from '@/types/ui-reflection/types';
 
 interface TicketingDashboardProps {
+  id?: string;
   initialTickets: ITicketListItem[];
 }
 
-const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets }) => {
-  const id = 'ticketing-dashboard';
+const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ 
+  id = 'ticketing-dashboard',
+  initialTickets 
+}) => {
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
+    id,
+    type: 'container',
+    label: 'Ticketing Dashboard'
+  });
+
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
@@ -63,7 +75,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
     title: 'Ticket Number',
     dataIndex: 'ticket_number',
     render: (value: string, record: ITicketListItem) => (
-      <Link href={`/msp/tickets/${record.ticket_id}`} className="text-blue-500 hover:underline">
+      <Link {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-link` })} href={`/msp/tickets/${record.ticket_id}`} className="text-blue-500 hover:underline">
         {value}
       </Link>
     ),
@@ -116,6 +128,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <Button 
+            {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-menu-btn` })}
             variant="ghost" 
             className="h-8 w-8 p-0"
           >
@@ -128,6 +141,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
           className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
         >
           <DropdownMenu.Item
+            {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-delete-btn` })}
             className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer outline-none"
             onSelect={() => handleDeleteTicket(record.ticket_id as string)}
           >
@@ -376,69 +390,71 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
   }, []);
 
   return (
-    <div data-automation-id={id}>
+    <div {...withDataAutomationId({ id })}>
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
+        <h1 {...withDataAutomationId({ id: `${id}-title` })} className="text-2xl font-bold">
+          Ticketing Dashboard
+        </h1>
         <Button 
-          data-automation-id={`${id}-add-ticket-btn`}
+          {...withDataAutomationId({ id: `${id}-add-ticket-btn` })}
           onClick={() => setIsQuickAddOpen(true)}
         >
           Add Ticket
         </Button>
       </div>
-      <div className="bg-white shadow rounded-lg p-4">
+      <div {...withDataAutomationId({ id: `${id}-filters` })} className="bg-white shadow rounded-lg p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-        <div className="w-fit">
-          <ChannelPicker
-            data-automation-id={`${id}-channel-picker`}
-            channels={channels}
-            onSelect={handleChannelSelect}
-            selectedChannelId={selectedChannel}
-            filterState={channelFilterState}
-            onFilterStateChange={setChannelFilterState}
-          />
-          </div>
-          <CompanyPicker
-            data-automation-id={`${id}-company-picker`}
-            companies={companies}
-            onSelect={handleCompanySelect}
-            selectedCompanyId={selectedCompany}
-            filterState={companyFilterState}
-            onFilterStateChange={handleCompanyFilterStateChange}
-            clientTypeFilter={clientTypeFilter}
-            onClientTypeFilterChange={handleClientTypeFilterChange}
-            fitContent={true}
-          />
-          <CustomSelect
-            data-automation-id={`${id}-status-select`}
-            options={statusOptions}
-            value={selectedStatus}
-            onValueChange={(value) => setSelectedStatus(value)}
-            placeholder="All Statuses"
-          />
-          <CustomSelect
-            data-automation-id={`${id}-priority-select`}
-            options={priorityOptions}
-            value={selectedPriority}
-            onValueChange={(value) => setSelectedPriority(value)}
-            placeholder="All Priorities"
-          />
-          <CategoryPicker
-            id={`${id}-category-picker`}
-            categories={categories}
-            selectedCategories={selectedCategories}
-            excludedCategories={excludedCategories}
-            onSelect={handleCategorySelect}
-            placeholder="Filter by category"
-            multiSelect={true}
-            showExclude={true}
-            showReset={true}
-            allowEmpty={true}
-            className="text-sm min-w-[200px]"
-          />
+            <div className="w-fit">
+              <ChannelPicker
+                {...withDataAutomationId({ id: `${id}-channel-picker` })}
+                channels={channels}
+                onSelect={handleChannelSelect}
+                selectedChannelId={selectedChannel}
+                filterState={channelFilterState}
+                onFilterStateChange={setChannelFilterState}
+              />
+            </div>
+            <CompanyPicker
+              {...withDataAutomationId({ id: `${id}-company-picker` })}
+              companies={companies}
+              onSelect={handleCompanySelect}
+              selectedCompanyId={selectedCompany}
+              filterState={companyFilterState}
+              onFilterStateChange={handleCompanyFilterStateChange}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={handleClientTypeFilterChange}
+              fitContent={true}
+            />
+            <CustomSelect
+              {...withDataAutomationId({ id: `${id}-status-select` })}
+              options={statusOptions}
+              value={selectedStatus}
+              onValueChange={(value) => setSelectedStatus(value)}
+              placeholder="All Statuses"
+            />
+            <CustomSelect
+              {...withDataAutomationId({ id: `${id}-priority-select` })}
+              options={priorityOptions}
+              value={selectedPriority}
+              onValueChange={(value) => setSelectedPriority(value)}
+              placeholder="All Priorities"
+            />
+            <CategoryPicker
+              id={`${id}-category-picker`}
+              categories={categories}
+              selectedCategories={selectedCategories}
+              excludedCategories={excludedCategories}
+              onSelect={handleCategorySelect}
+              placeholder="Filter by category"
+              multiSelect={true}
+              showExclude={true}
+              showReset={true}
+              allowEmpty={true}
+              className="text-sm min-w-[200px]"
+            />
             <input
-              data-automation-id={`${id}-search-input`}
+              {...withDataAutomationId({ id: `${id}-search-input` })}
               type="text"
               placeholder="Search tickets..."
               value={searchQuery}
@@ -447,7 +463,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
             />
           </div>
           <Button
-            data-automation-id={`${id}-reset-filters-btn`}
+            {...withDataAutomationId({ id: `${id}-reset-filters-btn` })}
             variant="outline"
             onClick={handleResetFilters}
             className="whitespace-nowrap flex items-center gap-2"
@@ -456,25 +472,29 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
             Reset Filters
           </Button>
         </div>
-        <h2 className="text-xl font-semibold mt-6 mb-2">Tickets</h2>
+        <h2 {...withDataAutomationId({ id: `${id}-tickets-heading` })} className="text-xl font-semibold mt-6 mb-2">
+          Tickets
+        </h2>
         {isLoading ? (
-          <div className="flex justify-center items-center h-32">
+          <div {...withDataAutomationId({ id: `${id}-loading` })} className="flex justify-center items-center h-32">
             <span>Loading...</span>
           </div>
         ) : (
           <DataTable
-            data-automation-id={`${id}-tickets-table`}
+            {...withDataAutomationId({ id: `${id}-tickets-table` })}
             data={ticketsWithIds}
             columns={columns}
           />
         )}
       </div>
       <QuickAddTicket
+        id={`${id}-quick-add`}
         open={isQuickAddOpen}
         onOpenChange={setIsQuickAddOpen}
         onTicketAdded={handleTicketAdded}
       />
       <ConfirmationDialog
+        {...withDataAutomationId({ id: `${id}-delete-dialog` })}
         isOpen={!!ticketToDelete}
         onClose={() => setTicketToDelete(null)}
         onConfirm={confirmDeleteTicket}

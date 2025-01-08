@@ -38,88 +38,93 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Register dialog with UI reflection system
-  const updateDialog = useRegisterUIComponent<DialogComponent>({
+  // Only register dialog and its children with UI reflection system when open
+  const updateDialog = isOpen ? useRegisterUIComponent<DialogComponent>({
     id: 'quick-add-contact-dialog',
     type: 'dialog',
     title: 'Add New Contact',
-    open: isOpen
-  });
+    open: true
+  }) : undefined;
 
-  // Register form
-  const updateForm = useRegisterUIComponent<FormComponent>({
+  // Only register form when dialog is open
+  const updateForm = isOpen ? useRegisterUIComponent<FormComponent>({
     id: 'quick-add-contact-form',
     type: 'form',
     parentId: 'quick-add-contact-dialog'
-  });
+  }) : undefined;
 
-  // Register form fields
-  const updateNameField = useRegisterUIComponent<FormFieldComponent>({
+  // Only register form fields when dialog is open
+  const updateNameField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-name',
     type: 'formField',
     fieldType: 'textField',
     label: 'Full Name',
     required: true,
+    value: fullName,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  const updateEmailField = useRegisterUIComponent<FormFieldComponent>({
+  const updateEmailField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-email',
     type: 'formField',
     fieldType: 'textField',
     label: 'Email',
     required: true,
+    value: email,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  const updatePhoneField = useRegisterUIComponent<FormFieldComponent>({
+  const updatePhoneField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-phone',
     type: 'formField',
     fieldType: 'textField',
     label: 'Phone Number',
+    value: phoneNumber,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  const updateRoleField = useRegisterUIComponent<FormFieldComponent>({
+  const updateRoleField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-role',
     type: 'formField',
     fieldType: 'textField',
     label: 'Role',
+    value: role,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  const updateNotesField = useRegisterUIComponent<FormFieldComponent>({
+  const updateNotesField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-notes',
     type: 'formField',
     fieldType: 'textField',
     label: 'Notes',
+    value: notes,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  const updateStatusSwitch = useRegisterUIComponent<FormFieldComponent>({
+  const updateStatusSwitch = isOpen ? useRegisterUIComponent<FormFieldComponent>({
     id: 'quick-add-contact-status',
     type: 'formField',
     fieldType: 'checkbox',
     label: 'Status',
     value: isInactive,
     parentId: 'quick-add-contact-form'
-  });
+  }) : undefined;
 
-  // Register buttons
-  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
+  // Only register buttons when dialog is open
+  const updateCancelButton = isOpen ? useRegisterUIComponent<ButtonComponent>({
     id: 'quick-add-contact-cancel',
     type: 'button',
     label: 'Cancel',
     variant: 'outline',
     parentId: 'quick-add-contact-dialog'
-  });
+  }) : undefined;
 
-  const updateSubmitButton = useRegisterUIComponent<ButtonComponent>({
+  const updateSubmitButton = isOpen ? useRegisterUIComponent<ButtonComponent>({
     id: 'quick-add-contact-submit',
     type: 'button',
     label: 'Add Contact',
     parentId: 'quick-add-contact-dialog'
-  });
+  }) : undefined;
 
   // Set initial company ID when the component mounts or when selectedCompanyId changes
   useEffect(() => {
@@ -164,17 +169,18 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
     }
   };
 
-  // Update UI reflection state when form values change
+  // Update form field values when they change
   useEffect(() => {
-    updateDialog({ open: isOpen });
-    updateNameField({ value: fullName });
-    updateEmailField({ value: email });
-    updatePhoneField({ value: phoneNumber });
-    updateRoleField({ value: role });
-    updateNotesField({ value: notes });
-    updateStatusSwitch({ value: isInactive });
-  }, [isOpen, fullName, email, phoneNumber, role, notes, isInactive, 
-      updateDialog, updateNameField, updateEmailField, updatePhoneField, 
+    if (isOpen) {
+      updateNameField?.({ value: fullName });
+      updateEmailField?.({ value: email });
+      updatePhoneField?.({ value: phoneNumber });
+      updateRoleField?.({ value: role });
+      updateNotesField?.({ value: notes });
+      updateStatusSwitch?.({ value: isInactive });
+    }
+  }, [isOpen, fullName, email, phoneNumber, role, notes, isInactive,
+      updateNameField, updateEmailField, updatePhoneField,
       updateRoleField, updateNotesField, updateStatusSwitch]);
 
   return (

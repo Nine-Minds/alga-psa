@@ -52,7 +52,8 @@ export async function observeBrowser(selector?: string): Promise<ToolExecutionRe
     });
     
     if (!response.ok) {
-      const error = `Failed to observe: ${response.status}`;
+      const errorText = await response.text();
+      const error = `Failed to observe: ${response.status} - ${errorText}`;
       throw new Error(error);
     }
 

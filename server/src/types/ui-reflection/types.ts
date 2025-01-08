@@ -189,6 +189,19 @@ export interface CardComponent extends BaseComponent {
 /**
  * Union type of all possible UI components.
  */
+/**
+ * Drawer component representation.
+ */
+export interface DrawerComponent extends BaseComponent {
+  type: "drawer";
+  
+  /** Whether the drawer is currently open */
+  open: boolean;
+  
+  /** Width of the drawer (e.g., "40%", "500px") */
+  width?: string;
+}
+
 export type UIComponent =
   | ButtonComponent
   | DialogComponent
@@ -198,7 +211,8 @@ export type UIComponent =
   | NavigationComponent
   | DataTableComponent
   | ContainerComponent
-  | CardComponent;
+  | CardComponent
+  | DrawerComponent;
 
 /**
  * Top-level page state representation.
