@@ -94,15 +94,13 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                 // Close the stream - frontend will make a new request
                 // sendEvent('done', 'true');
 
-                // Send tool use event, send done event, then close the stream
+                // Send tool use event and close the stream
                 sendEvent('tool_use', JSON.stringify({
                   name: funcCall.funcName,
                   input: funcCall.xmlArgs,
                   tool_use_id: toolUseId
                 }));
-                
-                sendEvent('done', 'true');
-                controller.close();
+
                 return;
               }
             }

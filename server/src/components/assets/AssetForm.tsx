@@ -10,6 +10,8 @@ import { getAsset, updateAsset } from '@/lib/actions/asset-actions/assetActions'
 import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface AssetFormProps {
   assetId: string;
@@ -55,6 +57,13 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const updateForm = useRegisterUIComponent({
+    id: 'asset-edit-form',
+    type: 'form',
+    label: 'Edit Asset',
+    disabled: saving
+  });
   const [formData, setFormData] = useState<AssetFormData>({
     asset_type: 'unknown',
     company_id: '',
@@ -797,7 +806,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div {...withDataAutomationId({ id: 'asset-form-loading' })} className="flex items-center justify-center min-h-[400px]">
         <div className="text-gray-500">Loading asset details...</div>
       </div>
     );
@@ -805,34 +814,35 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
   if (error || !asset) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div {...withDataAutomationId({ id: 'asset-form-error' })} className="flex items-center justify-center min-h-[400px]">
         <div className="text-red-500">{error || 'Asset not found'}</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div {...withDataAutomationId({ id: 'asset-form-container' })} className="space-y-6">
+      <div {...withDataAutomationId({ id: 'asset-form-header' })} className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Edit Asset</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="p-6 border border-[rgb(var(--color-border-200))]">
-          <div className="flex flex-col items-center mb-6">
+      <form {...withDataAutomationId({ id: 'asset-edit-form' })} onSubmit={handleSubmit} className="space-y-6">
+        <Card {...withDataAutomationId({ id: 'basic-info-section' })} className="p-6 border border-[rgb(var(--color-border-200))]">
+          <div {...withDataAutomationId({ id: 'asset-type-icon' })} className="flex flex-col items-center mb-6">
             {getAssetTypeIcon()}
             <Text size="5" weight="medium" className="text-[rgb(var(--color-text-900))]">
               Basic Information
             </Text>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
+          <div {...withDataAutomationId({ id: 'basic-info-fields-grid' })} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div {...withDataAutomationId({ id: 'basic-info-left-column' })} className="space-y-4">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
                   Name
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'asset-name-input' })}
                   id="name"
                   name="name"
                   value={formData.name}
@@ -848,6 +858,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             Asset Tag
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'asset-tag-input' })}
                   id="asset_tag"
                   name="asset_tag"
                   value={formData.asset_tag}
@@ -862,6 +873,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   Serial Number
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'serial-number-input' })}
                   id="serial_number"
                   name="serial_number"
                   value={formData.serial_number}
@@ -875,6 +887,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
               Status
             </label>
             <CustomSelect
+              {...withDataAutomationId({ id: 'status-select' })}
               value={formData.status}
               onValueChange={handleSelectChange}
               options={STATUS_OPTIONS}
@@ -888,6 +901,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   Location
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'location-input' })}
                   id="location"
                   name="location"
                   value={formData.location}
@@ -901,6 +915,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   Purchase Date
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'purchase-date-input' })}
                   id="purchase_date"
                   name="purchase_date"
                   type="date"
@@ -915,6 +930,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
                   Warranty End Date
                 </label>
                 <Input
+                  {...withDataAutomationId({ id: 'warranty-date-input' })}
                   id="warranty_end_date"
                   name="warranty_end_date"
                   type="date"
@@ -928,7 +944,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </Card>
 
         {(asset.workstation || asset.network_device || asset.server || asset.mobile_device || asset.printer) && (
-          <Card className="p-6 border border-[rgb(var(--color-border-200))]">
+          <Card {...withDataAutomationId({ id: 'type-specific-details' })} className="p-6 border border-[rgb(var(--color-border-200))]">
             <Text size="5" weight="medium" className="block mb-6 text-[rgb(var(--color-text-900))]">
               {asset.workstation ? 'Workstation Details' :
                 asset.network_device ? 'Network Device Details' :
@@ -944,8 +960,9 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </Card>
         )}
 
-        <div className="flex justify-end gap-4">
+        <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end gap-4">
           <Button
+            {...withDataAutomationId({ id: 'cancel-button' })}
             type="button"
             variant="outline"
             onClick={() => router.back()}
@@ -954,6 +971,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             Cancel
           </Button>
           <Button
+            {...withDataAutomationId({ id: 'save-button' })}
             type="submit"
             disabled={saving}
           >
@@ -962,7 +980,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
 
         {error && (
-          <div className="text-red-500 text-sm mt-2">
+          <div {...withDataAutomationId({ id: 'form-error' })} className="text-red-500 text-sm mt-2">
             {error}
           </div>
         )}

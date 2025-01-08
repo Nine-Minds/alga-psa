@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { Card } from '@/components/ui/Card';
 import { DataTable } from '@/components/ui/DataTable';
 import { Asset, AssetListResponse, ClientMaintenanceSummary } from '@/interfaces/asset.interfaces';
@@ -23,6 +25,11 @@ interface AssetDashboardProps {
 }
 
 export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
+  const updateDashboard = useRegisterUIComponent({
+    id: 'asset-dashboard',
+    type: 'container',
+    label: 'Asset Dashboard'
+  });
   const [assets, setAssets] = useState<Asset[]>(initialAssets.assets);
   const [maintenanceSummaries, setMaintenanceSummaries] = useState<Record<string, ClientMaintenanceSummary>>({});
   const [loading, setLoading] = useState(false);
@@ -185,31 +192,33 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   return (
     <div className="space-y-6 p-6">
       {/* Header with Add Asset Button */}
-      <div className="flex justify-between items-center">
+      <div {...withDataAutomationId({ id: 'asset-dashboard-header' })} className="flex justify-between items-center">
         <h1 className="text-2xl font-bold text-[rgb(var(--color-text-900))]">Assets</h1>
-        <QuickAddAsset onAssetAdded={handleAssetAdded} />
+        <div {...withDataAutomationId({ id: 'quick-add-asset-wrapper' })}>
+          <QuickAddAsset onAssetAdded={handleAssetAdded} />
+        </div>
       </div>
 
       {/* Overview Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+      <div {...withDataAutomationId({ id: 'asset-overview-section' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card {...withDataAutomationId({ id: 'total-assets-card' })} className="p-4 border border-[rgb(var(--color-border-200))]">
           <h3 className="text-lg font-semibold mb-2 text-[rgb(var(--color-text-900))]">Total Assets</h3>
           <p className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{totalAssets}</p>
         </Card>
         
-        <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+        <Card {...withDataAutomationId({ id: 'maintenance-schedules-card' })} className="p-4 border border-[rgb(var(--color-border-200))]">
           <h3 className="text-lg font-semibold mb-2 text-[rgb(var(--color-text-900))]">Maintenance Schedules</h3>
           <p className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{maintenanceStats.totalSchedules}</p>
         </Card>
         
-        <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+        <Card {...withDataAutomationId({ id: 'overdue-maintenance-card' })} className="p-4 border border-[rgb(var(--color-border-200))]">
           <h3 className="text-lg font-semibold mb-2 text-[rgb(var(--color-text-900))]">Overdue Maintenance</h3>
           <p className="text-3xl font-bold text-[rgb(var(--color-accent-500))]">
             {maintenanceStats.overdueMaintenances}
           </p>
         </Card>
         
-        <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+        <Card {...withDataAutomationId({ id: 'upcoming-maintenance-card' })} className="p-4 border border-[rgb(var(--color-border-200))]">
           <h3 className="text-lg font-semibold mb-2 text-[rgb(var(--color-text-900))]">Upcoming Maintenance</h3>
           <p className="text-3xl font-bold text-[rgb(var(--color-primary-500))]">
             {maintenanceStats.upcomingMaintenances}
@@ -218,11 +227,15 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       </div>
 
       {/* Status Distribution */}
-      <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+      <Card {...withDataAutomationId({ id: 'asset-status-distribution' })} className="p-4 border border-[rgb(var(--color-border-200))]">
         <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Asset Status Distribution</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Object.entries(assetsByStatus).map(([status, count]): JSX.Element => (
-            <div key={status} className="text-center p-4 rounded-lg bg-[rgb(var(--color-border-50))]">
+            <div 
+              {...withDataAutomationId({ id: `status-count-${status}` })}
+              key={status} 
+              className="text-center p-4 rounded-lg bg-[rgb(var(--color-border-50))]"
+            >
               <p className="text-lg font-medium text-[rgb(var(--color-text-700))]">{status}</p>
               <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{count}</p>
             </div>
@@ -231,15 +244,19 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       </Card>
 
       {/* Company Assets Overview */}
-      <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+      <Card {...withDataAutomationId({ id: 'company-assets-overview' })} className="p-4 border border-[rgb(var(--color-border-200))]">
         <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Assets by Company</h3>
         <div className="space-y-4">
           {Object.entries(assetsByCompany).map(([companyId, companyAssets]): JSX.Element => {
             const summary = maintenanceSummaries[companyId];
             const companyName = companyAssets[0]?.company?.company_name || 'Unassigned';
             return (
-              <div key={companyId} className="border border-[rgb(var(--color-border-200))] rounded-lg p-4 bg-[rgb(var(--color-border-50))]">
-                <div className="flex justify-between items-center mb-2">
+              <div 
+                {...withDataAutomationId({ id: `company-assets-${companyId}` })}
+                key={companyId} 
+                className="border border-[rgb(var(--color-border-200))] rounded-lg p-4 bg-[rgb(var(--color-border-50))]"
+              >
+                <div {...withDataAutomationId({ id: `company-header-${companyId}` })} className="flex justify-between items-center mb-2">
                   <h4 className="text-lg font-medium text-[rgb(var(--color-text-900))]">
                     {companyName}
                   </h4>
@@ -248,20 +265,20 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                   </span>
                 </div>
                 {summary && (
-                  <div className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                    <div>
+                  <div {...withDataAutomationId({ id: `company-maintenance-stats-${companyId}` })} className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                    <div {...withDataAutomationId({ id: `company-compliance-${companyId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Maintenance Compliance</p>
                       <p className="font-semibold text-[rgb(var(--color-text-900))]">
                         {summary.compliance_rate.toFixed(1)}%
                       </p>
                     </div>
-                    <div>
+                    <div {...withDataAutomationId({ id: `company-overdue-${companyId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Overdue</p>
                       <p className="font-semibold text-[rgb(var(--color-accent-500))]">
                         {summary.overdue_maintenances}
                       </p>
                     </div>
-                    <div>
+                    <div {...withDataAutomationId({ id: `company-upcoming-${companyId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Upcoming</p>
                       <p className="font-semibold text-[rgb(var(--color-primary-500))]">
                         {summary.upcoming_maintenances}
@@ -276,10 +293,19 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       </Card>
 
       {/* Recent Assets Table */}
-      <Card className="p-4 border border-[rgb(var(--color-border-200))]">
+      <Card {...withDataAutomationId({ id: 'recent-assets-table-card' })} className="p-4 border border-[rgb(var(--color-border-200))]">
         <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Recent Assets</h3>
         <DataTable
-          columns={columns}
+          {...withDataAutomationId({ id: 'recent-assets-table' })}
+          columns={columns.map(col => ({
+            ...col,
+            render: col.render ? 
+              (value: unknown, record: Asset, index: number) => (
+                <div {...withDataAutomationId({ id: `asset-${record.asset_id}-${col.dataIndex}` })}>
+                  {col.render(value, record, index)}
+                </div>
+              ) : undefined
+          }))}
           data={assets.slice(0, 5).map(asset => ({
             ...asset,
             id: asset.asset_id // Add id property for unique keys
@@ -290,7 +316,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       </Card>
 
       {loading && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div {...withDataAutomationId({ id: 'loading-overlay' })} className="fixed inset-0 bg-black/50 flex items-center justify-center">
           <div className="bg-white p-4 rounded-lg text-[rgb(var(--color-text-900))]">
             Loading maintenance data...
           </div>

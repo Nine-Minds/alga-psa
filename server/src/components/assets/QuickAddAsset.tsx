@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -68,6 +70,18 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(companyId || null);
+
+  const updateDialog = useRegisterUIComponent({
+    id: 'quick-add-asset-dialog',
+    type: 'dialog',
+    label: 'Quick Add Asset',
+    open,
+    title: 'Add New Asset'
+  });
+
+  useEffect(() => {
+    updateDialog({ open });
+  }, [open, updateDialog]);
 
   // Initialize with minimum required fields
   const [formData, setFormData] = useState<FormData>({
@@ -234,9 +248,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       case 'workstation':
         return (
           <>
-            <div>
+            <div {...withDataAutomationId({ id: 'workstation-os-type-container' })}>
               <label className="block text-sm font-medium text-gray-700">OS Type</label>
               <Input
+                {...withDataAutomationId({ id: 'workstation-os-type-input' })}
                 value={formData.workstation.os_type}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -246,9 +261,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                 required
               />
             </div>
-            <div>
+            <div {...withDataAutomationId({ id: 'workstation-os-version-container' })}>
               <label className="block text-sm font-medium text-gray-700">OS Version</label>
               <Input
+                {...withDataAutomationId({ id: 'workstation-os-version-input' })}
                 value={formData.workstation.os_version}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -264,9 +280,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       case 'network_device':
         return (
           <>
-            <div>
+            <div {...withDataAutomationId({ id: 'network-device-type-container' })}>
               <label className="block text-sm font-medium text-gray-700">Device Type</label>
               <CustomSelect
+                {...withDataAutomationId({ id: 'network-device-type-select' })}
                 options={[
                   { value: 'switch', label: 'Switch' },
                   { value: 'router', label: 'Router' },
@@ -282,9 +299,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                 placeholder="Select device type"
               />
             </div>
-            <div>
+            <div {...withDataAutomationId({ id: 'network-device-ip-container' })}>
               <label className="block text-sm font-medium text-gray-700">Management IP</label>
               <Input
+                {...withDataAutomationId({ id: 'network-device-ip-input' })}
                 value={formData.network_device.management_ip}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -300,9 +318,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       case 'server':
         return (
           <>
-            <div>
+            <div {...withDataAutomationId({ id: 'server-os-type-container' })}>
               <label className="block text-sm font-medium text-gray-700">OS Type</label>
               <Input
+                {...withDataAutomationId({ id: 'server-os-type-input' })}
                 value={formData.server.os_type}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -312,9 +331,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                 required
               />
             </div>
-            <div>
+            <div {...withDataAutomationId({ id: 'server-os-version-container' })}>
               <label className="block text-sm font-medium text-gray-700">OS Version</label>
               <Input
+                {...withDataAutomationId({ id: 'server-os-version-input' })}
                 value={formData.server.os_version}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -330,9 +350,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       case 'mobile_device':
         return (
           <>
-            <div>
+            <div {...withDataAutomationId({ id: 'mobile-device-os-type-container' })}>
               <label className="block text-sm font-medium text-gray-700">OS Type</label>
               <CustomSelect
+                {...withDataAutomationId({ id: 'mobile-device-os-type-select' })}
                 options={[
                   { value: 'ios', label: 'iOS' },
                   { value: 'android', label: 'Android' }
@@ -345,9 +366,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                 placeholder="Select OS type"
               />
             </div>
-            <div>
+            <div {...withDataAutomationId({ id: 'mobile-device-model-container' })}>
               <label className="block text-sm font-medium text-gray-700">Model</label>
               <Input
+                {...withDataAutomationId({ id: 'mobile-device-model-input' })}
                 value={formData.mobile_device.model}
                 onChange={(e) => setFormData(prev => ({
                   ...prev,
@@ -362,9 +384,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
 
       case 'printer':
         return (
-          <div>
+          <div {...withDataAutomationId({ id: 'printer-model-container' })}>
             <label className="block text-sm font-medium text-gray-700">Model</label>
             <Input
+              {...withDataAutomationId({ id: 'printer-model-input' })}
               value={formData.printer.model}
               onChange={(e) => setFormData(prev => ({
                 ...prev,
@@ -384,18 +407,19 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button>Add Asset</Button>
+        <Button {...withDataAutomationId({ id: 'quick-add-asset-button' })}>Add Asset</Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px]">
+        <Dialog.Content {...withDataAutomationId({ id: 'quick-add-asset-content' })} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px]">
           <Dialog.Title className="text-lg font-bold mb-4">Add New Asset</Dialog.Title>
           {error && <div className="text-red-500 mb-4">{error}</div>}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form {...withDataAutomationId({ id: 'quick-add-asset-form' })} onSubmit={handleSubmit} className="space-y-4">
             {!companyId && (
-              <div>
+              <div {...withDataAutomationId({ id: 'company-picker-container' })}>
                 <label className="block text-sm font-medium text-gray-700">Company</label>
                 <CompanyPicker
+                  {...withDataAutomationId({ id: 'company-picker' })}
                   companies={companies}
                   selectedCompanyId={selectedCompanyId}
                   onSelect={setSelectedCompanyId}
@@ -407,9 +431,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               </div>
             )}
 
-            <div>
+            <div {...withDataAutomationId({ id: 'asset-name-container' })}>
               <label className="block text-sm font-medium text-gray-700">Asset Name</label>
               <Input
+                {...withDataAutomationId({ id: 'asset-name-input' })}
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="Enter asset name"
@@ -417,9 +442,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               />
             </div>
 
-            <div>
+            <div {...withDataAutomationId({ id: 'asset-tag-container' })}>
               <label className="block text-sm font-medium text-gray-700">Asset Tag</label>
               <Input
+                {...withDataAutomationId({ id: 'asset-tag-input' })}
                 value={formData.asset_tag}
                 onChange={(e) => setFormData(prev => ({ ...prev, asset_tag: e.target.value }))}
                 placeholder="Enter asset tag"
@@ -427,9 +453,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               />
             </div>
 
-            <div>
+            <div {...withDataAutomationId({ id: 'asset-type-container' })}>
               <label className="block text-sm font-medium text-gray-700">Type</label>
               <CustomSelect
+                {...withDataAutomationId({ id: 'asset-type-select' })}
                 options={ASSET_TYPE_OPTIONS}
                 value={formData.asset_type}
                 onValueChange={(value) => setFormData(prev => ({ 
@@ -440,9 +467,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               />
             </div>
 
-            <div>
+            <div {...withDataAutomationId({ id: 'asset-status-container' })}>
               <label className="block text-sm font-medium text-gray-700">Status</label>
               <CustomSelect
+                {...withDataAutomationId({ id: 'asset-status-select' })}
                 options={STATUS_OPTIONS}
                 value={formData.status}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as AssetStatus }))}
@@ -450,9 +478,10 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
               />
             </div>
 
-            <div>
+            <div {...withDataAutomationId({ id: 'serial-number-container' })}>
               <label className="block text-sm font-medium text-gray-700">Serial Number</label>
               <Input
+                {...withDataAutomationId({ id: 'serial-number-input' })}
                 value={formData.serial_number}
                 onChange={(e) => setFormData(prev => ({ ...prev, serial_number: e.target.value }))}
                 placeholder="Enter serial number"
@@ -460,17 +489,17 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
             </div>
 
             {formData.asset_type && (
-              <div className="border-t pt-4">
+              <div {...withDataAutomationId({ id: 'type-specific-details' })} className="border-t pt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-4">Type-specific Details</h3>
                 {renderTypeSpecificFields()}
               </div>
             )}
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <div {...withDataAutomationId({ id: 'form-actions' })} className="flex justify-end space-x-2 pt-4">
+              <Button {...withDataAutomationId({ id: 'cancel-button' })} type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button {...withDataAutomationId({ id: 'submit-button' })} type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Creating...' : 'Create Asset'}
               </Button>
             </div>

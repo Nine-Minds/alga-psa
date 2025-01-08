@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Asset, AssetAssociation } from '@/interfaces/asset.interfaces';
-import { listEntityAssets, getAsset, createAssetAssociation, removeAssetAssociation, listAssets } from '@/lib/actions/asset-actions/assetActions';
-import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
+import { Asset, AssetAssociation } from '../../interfaces/asset.interfaces';
+import { listEntityAssets, getAsset, createAssetAssociation, removeAssetAssociation, listAssets } from '../../lib/actions/asset-actions/assetActions';
+import { Button } from '../../components/ui/Button';
+import { Dialog } from '../../components/ui/Dialog';
+import CustomSelect, { SelectOption } from '../../components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface AssociatedAssetsProps {
     entityId: string;
@@ -15,12 +17,20 @@ interface AssociatedAssetsProps {
 }
 
 export default function AssociatedAssets({ entityId, entityType, companyId }: AssociatedAssetsProps) {
-    const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [selectedAssetId, setSelectedAssetId] = useState<string>('');
     const [relationshipType, setRelationshipType] = useState<'affected' | 'related'>('affected');
     const [isLoading, setIsLoading] = useState(true);
     const [availableAssets, setAvailableAssets] = useState<SelectOption[]>([]);
+    const [associatedAssets, setAssociatedAssets] = useState<AssetAssociation[]>([]);
+
+    const updateDialog = useRegisterUIComponent({
+        id: 'add-asset-dialog',
+        type: 'dialog',
+        label: 'Add Asset Association',
+        title: 'Add Asset',
+        open: isAddDialogOpen
+    });
 
     useEffect(() => {
         loadAssociatedAssets();
@@ -110,10 +120,11 @@ export default function AssociatedAssets({ entityId, entityType, companyId }: As
     ];
 
     return (
-        <div className="space-y-4">
-            <div className="flex justify-between items-center">
+        <div {...withDataAutomationId({ id: 'associated-assets-container' })} className="space-y-4">
+            <div {...withDataAutomationId({ id: 'associated-assets-header' })} className="flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Associated Assets</h3>
                 <Button
+                    {...withDataAutomationId({ id: 'add-asset-button' })}
                     variant="outline"
                     onClick={() => setIsAddDialogOpen(true)}
                 >
@@ -122,13 +133,14 @@ export default function AssociatedAssets({ entityId, entityType, companyId }: As
             </div>
 
             {isLoading ? (
-                <div>Loading assets...</div>
+                <div {...withDataAutomationId({ id: 'loading-state' })}>Loading assets...</div>
             ) : associatedAssets.length === 0 ? (
-                <div className="text-gray-500">No assets associated</div>
+                <div {...withDataAutomationId({ id: 'empty-state' })} className="text-gray-500">No assets associated</div>
             ) : (
-                <div className="space-y-2">
+                <div {...withDataAutomationId({ id: 'associated-assets-list' })} className="space-y-2">
                     {associatedAssets.map((association): JSX.Element => (
                         <div
+                            {...withDataAutomationId({ id: `asset-association-${association.asset_id}` })}
                             key={`${association.asset_id}-${association.entity_id}`}
                             className="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm"
                         >
@@ -139,6 +151,7 @@ export default function AssociatedAssets({ entityId, entityType, companyId }: As
                                 </div>
                             </div>
                             <Button
+                                {...withDataAutomationId({ id: `remove-asset-${association.asset_id}` })}
                                 variant="ghost"
                                 onClick={() => handleRemoveAsset(association.asset_id)}
                             >
@@ -150,31 +163,35 @@ export default function AssociatedAssets({ entityId, entityType, companyId }: As
             )}
 
             <Dialog
+                {...withDataAutomationId({ id: 'add-asset-dialog' })}
                 isOpen={isAddDialogOpen}
                 onClose={() => setIsAddDialogOpen(false)}
                 title="Add Asset"
             >
-                <div className="space-y-4">
+                <div {...withDataAutomationId({ id: 'add-asset-form' })} className="space-y-4">
                     <CustomSelect
+                        {...withDataAutomationId({ id: 'asset-select' })}
                         options={availableAssets}
                         value={selectedAssetId}
                         onValueChange={setSelectedAssetId}
                         placeholder="Select an asset..."
                     />
                     <CustomSelect
+                        {...withDataAutomationId({ id: 'relationship-type-select' })}
                         options={relationshipOptions}
                         value={relationshipType}
                         onValueChange={(value) => setRelationshipType(value as 'affected' | 'related')}
                         placeholder="Select relationship type..."
                     />
-                    <div className="flex justify-end space-x-2">
+                    <div {...withDataAutomationId({ id: 'dialog-actions' })} className="flex justify-end space-x-2">
                         <Button
+                            {...withDataAutomationId({ id: 'cancel-button' })}
                             variant="outline"
                             onClick={() => setIsAddDialogOpen(false)}
                         >
                             Cancel
                         </Button>
-                        <Button onClick={handleAddAsset}>
+                        <Button {...withDataAutomationId({ id: 'add-button' })} onClick={handleAddAsset}>
                             Add Asset
                         </Button>
                     </div>

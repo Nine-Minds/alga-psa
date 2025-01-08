@@ -2,12 +2,14 @@
 
 import React from 'react';
 import { Card, Flex, Text, Heading } from '@radix-ui/themes';
-import { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '@/interfaces/asset.interfaces';
-import { getAssetMaintenanceReport } from '@/lib/actions/asset-actions/assetActions';
-import { Button } from '@/components/ui/Button';
+import { Asset, AssetMaintenanceReport, AssetRelationship, NetworkDeviceAsset } from '../../interfaces/asset.interfaces';
+import { getAssetMaintenanceReport } from '../../lib/actions/asset-actions/assetActions';
+import { Button } from '../../components/ui/Button';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import Documents from '@/components/documents/Documents';
+import Documents from '../../components/documents/Documents';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import {
   Edit,
   AlertTriangle,
@@ -48,6 +50,12 @@ interface AssetDetailsProps {
 }
 
 export default function AssetDetails({ asset }: AssetDetailsProps) {
+  const updateDetails = useRegisterUIComponent({
+    id: 'asset-details',
+    type: 'container',
+    label: 'Asset Details'
+  });
+
   const [maintenanceReport, setMaintenanceReport] = React.useState<AssetMaintenanceReport | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const router = useRouter();
@@ -90,8 +98,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   };
 
   const renderBasicInfo = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div>
+    <div {...withDataAutomationId({ id: 'basic-info-grid' })} className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div {...withDataAutomationId({ id: 'asset-status-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Status</Text>
         <div className={`inline-flex px-2 py-1 rounded-full text-sm ${
           asset.status === 'active' ? 'bg-green-100 text-green-800' :
@@ -101,26 +109,26 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           {asset.status}
         </div>
       </div>
-      <div>
+      <div {...withDataAutomationId({ id: 'asset-serial-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Serial Number</Text>
         <Text as="div" size="2">{asset.serial_number || 'Not specified'}</Text>
       </div>
-      <div>
+      <div {...withDataAutomationId({ id: 'asset-location-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Location</Text>
         <Text as="div" size="2">{asset.location || 'Not specified'}</Text>
       </div>
-      <div>
+      <div {...withDataAutomationId({ id: 'asset-company-info' })}>
         <Text as="div" size="2" className="font-medium text-gray-700">Company</Text>
         <Text as="div" size="2">{asset.company?.company_name || 'Unassigned'}</Text>
       </div>
       {asset.purchase_date && (
-        <div>
+        <div {...withDataAutomationId({ id: 'asset-purchase-date-info' })}>
           <Text as="div" size="2" className="font-medium text-gray-700">Purchase Date</Text>
           <Text as="div" size="2">{new Date(asset.purchase_date).toLocaleDateString()}</Text>
         </div>
       )}
       {asset.warranty_end_date && (
-        <div>
+        <div {...withDataAutomationId({ id: 'asset-warranty-info' })}>
           <Text as="div" size="2" className="font-medium text-gray-700">Warranty End</Text>
           <Text as="div" size="2" className={new Date(asset.warranty_end_date) < new Date() ? 'text-red-600' : ''}>
             {new Date(asset.warranty_end_date).toLocaleDateString()}
@@ -133,7 +141,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   const renderTypeSpecificDetails = () => {
     if (asset.workstation) {
       return (
-        <div className="space-y-6">
+        <div {...withDataAutomationId({ id: 'workstation-details' })} className="space-y-6">
           <Flex align="center" gap="4" className="mb-6">
             <Monitor className="h-16 w-16 text-primary-500" />
             <div>
@@ -141,8 +149,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               <Text as="div" size="2" color="gray">{asset.workstation.os_type} {asset.workstation.os_version}</Text>
             </div>
           </Flex>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-4">
+          <div {...withDataAutomationId({ id: 'workstation-specs-grid' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card {...withDataAutomationId({ id: 'workstation-cpu-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Cpu className="h-6 w-6 text-primary-400" />
                 <div>
@@ -151,7 +159,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'workstation-ram-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <CircuitBoard className="h-6 w-6 text-primary-400" />
                 <div>
@@ -160,7 +168,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'workstation-storage-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <HardDrive className="h-6 w-6 text-primary-400" />
                 <div>
@@ -170,7 +178,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Flex>
             </Card>
             {asset.workstation.gpu_model && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'workstation-gpu-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Monitor className="h-6 w-6 text-primary-400" />
                   <div>
@@ -180,7 +188,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </Flex>
               </Card>
             )}
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'workstation-login-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Clock className="h-6 w-6 text-primary-400" />
                 <div>
@@ -198,7 +206,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
     if (asset.network_device) {
       return (
-        <div className="space-y-6">
+        <div {...withDataAutomationId({ id: 'network-device-details' })} className="space-y-6">
           <Flex align="center" gap="4" className="mb-6">
             {getNetworkDeviceIcon(asset.network_device.device_type)}
             <div>
@@ -208,8 +216,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Text>
             </div>
           </Flex>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-4">
+          <div {...withDataAutomationId({ id: 'network-device-specs-grid' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card {...withDataAutomationId({ id: 'network-device-ip-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Signal className="h-6 w-6 text-primary-400" />
                 <div>
@@ -218,7 +226,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'network-device-ports-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Layers className="h-6 w-6 text-primary-400" />
                 <div>
@@ -227,7 +235,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'network-device-power-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Power className="h-6 w-6 text-primary-400" />
                 <div>
@@ -236,7 +244,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'network-device-firmware-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <RotateCw className="h-6 w-6 text-primary-400" />
                 <div>
@@ -245,7 +253,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'network-device-poe-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Power className="h-6 w-6 text-primary-400" />
                 <div>
@@ -261,7 +269,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
     if (asset.server) {
       return (
-        <div className="space-y-6">
+        <div {...withDataAutomationId({ id: 'server-details' })} className="space-y-6">
           <Flex align="center" gap="4" className="mb-6">
             <Server className="h-16 w-16 text-primary-500" />
             <div>
@@ -269,8 +277,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               <Text as="div" size="2" color="gray">{asset.server.os_type} {asset.server.os_version}</Text>
             </div>
           </Flex>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-4">
+          <div {...withDataAutomationId({ id: 'server-specs-grid' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card {...withDataAutomationId({ id: 'server-cpu-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Cpu className="h-6 w-6 text-primary-400" />
                 <div>
@@ -279,7 +287,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'server-ram-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <CircuitBoard className="h-6 w-6 text-primary-400" />
                 <div>
@@ -288,7 +296,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'server-type-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Cloud className="h-6 w-6 text-primary-400" />
                 <div>
@@ -298,7 +306,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Flex>
             </Card>
             {asset.server.hypervisor && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'server-hypervisor-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Database className="h-6 w-6 text-primary-400" />
                   <div>
@@ -309,7 +317,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Card>
             )}
             {asset.server.primary_ip && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'server-ip-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Network className="h-6 w-6 text-primary-400" />
                   <div>
@@ -326,7 +334,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
     if (asset.mobile_device) {
       return (
-        <div className="space-y-6">
+        <div {...withDataAutomationId({ id: 'mobile-device-details' })} className="space-y-6">
           <Flex align="center" gap="4" className="mb-6">
             <PhoneIcon className="h-16 w-16 text-primary-500" />
             <div>
@@ -334,8 +342,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               <Text as="div" size="2" color="gray">{asset.mobile_device.model}</Text>
             </div>
           </Flex>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="p-4">
+          <div {...withDataAutomationId({ id: 'mobile-device-specs-grid' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card {...withDataAutomationId({ id: 'mobile-device-os-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <AppWindow className="h-6 w-6 text-primary-400" />
                 <div>
@@ -345,7 +353,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Flex>
             </Card>
             {asset.mobile_device.imei && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'mobile-device-imei-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Fingerprint className="h-6 w-6 text-primary-400" />
                   <div>
@@ -356,7 +364,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Card>
             )}
             {asset.mobile_device.phone_number && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'mobile-device-phone-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <PhoneIcon className="h-6 w-6 text-primary-400" />
                   <div>
@@ -367,7 +375,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Card>
             )}
             {asset.mobile_device.carrier && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'mobile-device-carrier-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Signal className="h-6 w-6 text-primary-400" />
                   <div>
@@ -377,7 +385,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </Flex>
               </Card>
             )}
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'mobile-device-supervision-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Shield className="h-6 w-6 text-primary-400" />
                 <div>
@@ -393,7 +401,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
 
     if (asset.printer) {
       return (
-        <div className="space-y-6">
+        <div {...withDataAutomationId({ id: 'printer-details' })} className="space-y-6">
           <Flex align="center" gap="4" className="mb-6">
             <Printer className="h-16 w-16 text-primary-500" />
             <div>
@@ -401,9 +409,9 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               <Text as="div" size="2" color="gray">{asset.printer.model}</Text>
             </div>
           </Flex>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div {...withDataAutomationId({ id: 'printer-specs-grid' })} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {asset.printer.ip_address && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'printer-ip-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Network className="h-6 w-6 text-primary-400" />
                   <div>
@@ -413,7 +421,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </Flex>
               </Card>
             )}
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'printer-network-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Wifi className="h-6 w-6 text-primary-400" />
                 <div>
@@ -422,7 +430,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'printer-color-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <Palette className="h-6 w-6 text-primary-400" />
                 <div>
@@ -431,7 +439,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </div>
               </Flex>
             </Card>
-            <Card className="p-4">
+            <Card {...withDataAutomationId({ id: 'printer-duplex-card' })} className="p-4">
               <Flex gap="3" align="center">
                 <FileStack className="h-6 w-6 text-primary-400" />
                 <div>
@@ -441,7 +449,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
               </Flex>
             </Card>
             {asset.printer.monthly_duty_cycle && (
-              <Card className="p-4">
+              <Card {...withDataAutomationId({ id: 'printer-duty-cycle-card' })} className="p-4">
                 <Flex gap="3" align="center">
                   <Gauge className="h-6 w-6 text-primary-400" />
                   <div>
@@ -463,8 +471,8 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
     if (isLoading || !maintenanceReport) return null;
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4">
+      <div {...withDataAutomationId({ id: 'maintenance-summary-grid' })} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card {...withDataAutomationId({ id: 'active-schedules-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
               <Text as="div" size="2" color="gray" weight="medium">Active Schedules</Text>
@@ -474,7 +482,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           </Flex>
         </Card>
 
-        <Card className="p-4">
+        <Card {...withDataAutomationId({ id: 'overdue-maintenance-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
               <Text as="div" size="2" color="gray" weight="medium">Overdue</Text>
@@ -486,7 +494,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
           </Flex>
         </Card>
 
-        <Card className="p-4">
+        <Card {...withDataAutomationId({ id: 'upcoming-maintenance-card' })} className="p-4">
           <Flex justify="between" align="center">
             <div>
               <Text as="div" size="2" color="gray" weight="medium">Upcoming</Text>
@@ -504,18 +512,19 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   const renderRelatedAssets = () => {
     if (!asset.relationships || asset.relationships.length === 0) {
       return (
-        <Card className="p-6">
+        <Card {...withDataAutomationId({ id: 'no-related-assets' })} className="p-6">
           <Text as="p" color="gray">No related assets found</Text>
         </Card>
       );
     }
 
     return (
-      <Card className="p-6">
+      <Card {...withDataAutomationId({ id: 'related-assets-card' })} className="p-6">
         <Text as="div" size="4" weight="medium" className="mb-4">Related Assets</Text>
-        <div className="space-y-2">
+        <div {...withDataAutomationId({ id: 'related-assets-list' })} className="space-y-2">
           {asset.relationships.map((rel: AssetRelationship): JSX.Element => (
-            <div key={`${rel.parent_asset_id}-${rel.child_asset_id}`}
+            <div {...withDataAutomationId({ id: `related-asset-${rel.parent_asset_id}-${rel.child_asset_id}` })}
+                 key={`${rel.parent_asset_id}-${rel.child_asset_id}`}
                  className="flex justify-between items-center p-2 bg-gray-50 rounded">
               <div>
                 <Text as="div" size="2" weight="medium">{rel.relationship_type}</Text>
@@ -524,6 +533,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
                 </Text>
               </div>
               <Link
+                {...withDataAutomationId({ id: `view-related-asset-${rel.parent_asset_id === asset.asset_id ? rel.child_asset_id : rel.parent_asset_id}` })}
                 href={`/msp/assets/${rel.parent_asset_id === asset.asset_id ? rel.child_asset_id : rel.parent_asset_id}`}
                 className="text-indigo-600 hover:text-indigo-700"
               >
@@ -540,13 +550,13 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
     {
       label: "Details",
       content: (
-        <div className="space-y-6">
-          <Card className="p-6">
+        <div {...withDataAutomationId({ id: 'details-tab-content' })} className="space-y-6">
+          <Card {...withDataAutomationId({ id: 'basic-info-card' })} className="p-6">
             <Text as="div" size="4" weight="medium" className="mb-4">Basic Information</Text>
             {renderBasicInfo()}
           </Card>
 
-          <Card className="p-6">
+          <Card {...withDataAutomationId({ id: 'type-specific-details-card' })} className="p-6">
             {renderTypeSpecificDetails()}
           </Card>
 
@@ -561,7 +571,7 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
     {
       label: "Documents",
       content: (
-        <Card className="p-6">
+        <Card {...withDataAutomationId({ id: 'documents-card' })} className="p-6">
           <Documents
             documents={[]} // Initial empty array
             gridColumns={3}
@@ -576,16 +586,16 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto bg-gray-50 p-6">
-      <Flex justify="between" align="center" className="mb-6">
-        <div>
+    <div {...withDataAutomationId({ id: 'asset-details-container' })} className="max-w-4xl mx-auto bg-gray-50 p-6">
+      <Flex {...withDataAutomationId({ id: 'asset-details-header' })} justify="between" align="center" className="mb-6">
+        <div {...withDataAutomationId({ id: 'asset-title' })}>
           <Heading size="6">{asset.name}</Heading>
           <Text as="p" size="2" color="gray">Asset Tag: {asset.asset_tag}</Text>
         </div>
-        <Flex gap="2">
+        <Flex {...withDataAutomationId({ id: 'asset-actions' })} gap="2">
           <CreateTicketFromAssetButton asset={asset} />
           <Link href={`/msp/assets/${asset.asset_id}/edit`}>
-            <Button variant="outline" className="flex items-center gap-2">
+            <Button {...withDataAutomationId({ id: 'edit-asset-button' })} variant="outline" className="flex items-center gap-2">
               <Edit className="h-4 w-4" />
               Edit
             </Button>
