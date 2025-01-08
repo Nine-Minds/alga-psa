@@ -7,12 +7,35 @@ import { UIComponent } from './types';
  * @param props Component props that may include an id
  * @returns Props with data-automation-id matching the id if present
  */
-export function withDataAutomationId<P extends { id?: string }>(props: P): P & { 'data-automation-id'?: string } {
-  if (!props.id) return props;
-  
+export function withDataAutomationId<P extends { id?: string; 'data-automation-id'?: string }>(
+  props: P
+): P & { 'data-automation-id': string } {
+  const automationId = props['data-automation-id'];
+  const id = props.id;
+
+  // If data-automation-id is provided but no id, use data-automation-id for both
+  if (automationId && !id) {
+    return {
+      ...props,
+      id: automationId,
+      'data-automation-id': automationId
+    };
+  }
+
+  // If id is provided, use it for data-automation-id
+  if (id) {
+    return {
+      ...props,
+      'data-automation-id': id
+    };
+  }
+
+  // If neither is provided, generate a default id
+  const defaultId = 'auto-id';
   return {
     ...props,
-    'data-automation-id': props.id
+    id: defaultId,
+    'data-automation-id': defaultId
   };
 }
 
