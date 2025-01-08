@@ -40,16 +40,16 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     }
   };
 
-  // Register dialog with UI reflection system if id is provided
-  const updateDialog = id ? useRegisterUIComponent<DialogComponent>({
+  // Only register dialog and its children with UI reflection system when open
+  const updateDialog = id && isOpen ? useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id,
     title,
-    open: isOpen
+    open: true
   }) : undefined;
 
-  // Register confirm button as child of dialog
-  const updateConfirmButton = id ? useRegisterUIComponent<ButtonComponent>({
+  // Only register confirm button when dialog is open
+  const updateConfirmButton = id && isOpen ? useRegisterUIComponent<ButtonComponent>({
     type: 'button',
     id: `${id}-confirm`,
     label: confirmLabel,
@@ -58,8 +58,8 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     parentId: id
   }) : undefined;
 
-  // Register cancel button as child of dialog
-  const updateCancelButton = id ? useRegisterUIComponent<ButtonComponent>({
+  // Only register cancel button when dialog is open
+  const updateCancelButton = id && isOpen ? useRegisterUIComponent<ButtonComponent>({
     type: 'button',
     id: `${id}-cancel`,
     label: cancelLabel,
@@ -68,18 +68,15 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     parentId: id
   }) : undefined;
 
-  // Update metadata when dialog state changes
+  // Update button states when processing state changes
   useEffect(() => {
-    if (updateDialog) {
-      updateDialog({ open: isOpen });
-    }
     if (updateConfirmButton) {
       updateConfirmButton({ disabled: isConfirming || isProcessing });
     }
     if (updateCancelButton) {
       updateCancelButton({ disabled: isProcessing });
     }
-  }, [isOpen, isConfirming, isProcessing, updateDialog, updateConfirmButton, updateCancelButton]);
+  }, [isConfirming, isProcessing, updateConfirmButton, updateCancelButton]);
 
   return (
     <Dialog 

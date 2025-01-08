@@ -5,9 +5,99 @@ import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
 import { Theme } from '@radix-ui/themes';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 import { prompts } from '../tools/prompts';
 import { invokeTool } from '../tools/invokeTool';
 import { ChatMessage } from '../types/messages';
+
+type JsonValue = 
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: JsonValue }
+  | JsonValue[];
+
+interface UIStateResponse {
+  [key: string]: JsonValue;
+  page: {
+    title: string;
+    url: string;
+  };
+  result: JsonValue;
+}
+
+interface ExpandedState {
+  [path: string]: boolean;
+}
+
+interface JsonViewerProps {
+  data: JsonValue;
+  level?: number;
+  path?: string;
+  expandedState: ExpandedState;
+  setExpandedState: (state: ExpandedState) => void;
+}
+
+function JsonViewer({ data, level = 0, path = '', expandedState, setExpandedState }: JsonViewerProps) {
+  const isExpanded = expandedState[path] ?? (level < 2);
+  const indent = level * 20;
+
+  if (data === null) return <span style={{ color: 'var(--gray-11)' }}>null</span>;
+  if (typeof data !== 'object') {
+    return <span style={{ color: typeof data === 'string' ? '#c3e88d' : '#ff9cac' }}>
+      {JSON.stringify(data)}
+    </span>;
+  }
+
+  const isArray = Array.isArray(data);
+  const isEmpty = Object.keys(data).length === 0;
+
+  if (isEmpty) {
+    return <span>{isArray ? '[]' : '{}'}</span>;
+  }
+
+  return (
+    <Box>
+      <Flex 
+        align="center" 
+        gap="1" 
+        style={{ cursor: 'pointer' }} 
+        onClick={() => {
+          setExpandedState({
+            ...expandedState,
+            [path]: !isExpanded
+          });
+        }}
+      >
+        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+        <span>{isArray ? '[' : '{'}</span>
+      </Flex>
+      {isExpanded && (
+        <Box style={{ paddingLeft: indent + 20 }}>
+          {Object.entries(data).map(([key, value], index) => (
+            <Box key={key}>
+              <Text>
+                <span style={{ color: '#89ddff' }}>{isArray ? '' : `"${key}": `}</span>
+                <JsonViewer 
+                  data={value} 
+                  level={level + 1} 
+                  path={`${path}${path ? '.' : ''}${key}`}
+                  expandedState={expandedState}
+                  setExpandedState={setExpandedState}
+                />
+                {index < Object.keys(data).length - 1 && ','}
+              </Text>
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Box style={{ paddingLeft: indent }}>
+        <span>{isArray ? ']' : '}'}</span>
+      </Box>
+    </Box>
+  );
+}
 
 export default function ControlPanel() {
   interface ToolContent {
@@ -29,6 +119,9 @@ export default function ControlPanel() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showContext, setShowContext] = useState(false);
+  const [showUIState, setShowUIState] = useState(false);
+  const [uiStateData, setUIStateData] = useState<UIStateResponse | null>(null);
+  const [expandedState, setExpandedState] = useState<ExpandedState>({});
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +129,7 @@ export default function ControlPanel() {
   const logEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const logEntryRefs = useRef<{[key: string]: HTMLDivElement | null}>({});
+  const currentAssistantMessageRef = useRef<string>('');
 
   const scrollToLogEntry = (toolCallId: string) => {
     const ref = logEntryRefs.current[toolCallId];
@@ -168,6 +262,9 @@ export default function ControlPanel() {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
+    
+    // Reset the current assistant message
+    currentAssistantMessageRef.current = '';
 
     // Filter out empty messages and clean assistant messages
     const filteredMessages = messages
@@ -197,26 +294,31 @@ export default function ControlPanel() {
   };
 
   const sendMessagesToAI = async (messages: ChatMessage[]) => {
-    // if (!userMessage.trim()) return;
     setIsGenerating(true);
-
-    // Add the user message to the conversation
-    // const newMessages: ChatMessage[] = [
-    //   ...messages,
-    //   { role: 'user', content: userMessage.trim() },
-    // ];
-    // setMessages(newMessages);
     setUserMessage('');
 
+    // Filter messages and add empty assistant slot
+    const filteredMessages = messages.filter(msg => {
+      // Always keep system messages
+      if (msg.role === 'system') return true;
+      // Keep assistant messages that have content or tool calls
+      if (msg.role === 'assistant') {
+        return !!(msg.content || msg.tool_calls);
+      }
+      // Keep user messages even if they don't have content (like error responses)
+      if (msg.role === 'user') return true;
+      return false;
+    });
+    setMessages([...filteredMessages, { role: 'assistant', content: '' }]);
+
     try {
-      const eventSource = startNewSseSession(messages);
+      const eventSource = startNewSseSession(filteredMessages);
 
       // Handle incoming events
       eventSource.onmessage = (event) => {
         console.log('Received SSE message:', event);
       };
 
-      let currentAssistantMessage = '';
       let tokenBuffer = '';
 
       eventSource.addEventListener('token', (event) => {
@@ -234,17 +336,12 @@ export default function ControlPanel() {
               const parsed = JSON.parse(token);
               
               if (parsed.data) {
-                currentAssistantMessage += parsed.data; // Only update if there's actual content
+                currentAssistantMessageRef.current += parsed.data;
                 setMessages(prev => {
                   const updated = [...prev];
-                  const lastIndex = updated.length - 1;
-                  if (lastIndex >= 0 && updated[lastIndex].role === 'assistant') {
-                    updated[lastIndex].content = currentAssistantMessage;
-                  } else {
-                    updated.push({
-                      role: 'assistant',
-                      content: currentAssistantMessage
-                    });
+                  const lastMessage = updated[updated.length - 1];
+                  if (lastMessage && lastMessage.role === 'assistant') {
+                    lastMessage.content = currentAssistantMessageRef.current;
                   }
                   return updated;
                 });
@@ -308,16 +405,16 @@ export default function ControlPanel() {
           // Execute the tool
           const result = await invokeTool(toolContent.name, toolContent.input);
           
-          // Add tool result as user message
+          // Create tool result message
           const toolResult: ChatMessage = {
             role: 'user',
-            content: JSON.stringify(result.result)
+            content: JSON.stringify(result.success ? result.result : result)
           };
 
           // Log the result
           setLog(prev => [...prev, {
             type: 'tool_result',
-            title: 'Tool Result',
+            title: result.success ? 'Tool Result' : 'Tool Error',
             content: result,
             timestamp: new Date().toISOString(),
             toolCallId: toolCallId
@@ -358,12 +455,12 @@ export default function ControlPanel() {
       await new Promise((resolve) => {
         eventSource.addEventListener('done', () => {
           console.log('Received done event, closing connection');
-          setIsGenerating(false);
           if (eventSourceRef.current === eventSource) {
             eventSource.close();
-            eventSourceRef.current = null;            
-            resolve(null);
+            eventSourceRef.current = null;
           }
+          setIsGenerating(false);
+          resolve(null);
         });
       });
     } catch (error) {
@@ -391,13 +488,42 @@ export default function ControlPanel() {
                 <Flex direction="column" gap="4">
                   <Flex justify="between" align="center">
                     <Text size="5" weight="bold">Chat with AI</Text>
-                    <Button 
-                      variant="ghost" 
-                      onClick={() => setShowContext(true)}
-                      style={{ padding: '6px' }}
-                    >
-                      <Eye size={16} />
-                    </Button>
+                    <Flex gap="2">
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setShowContext(true)}
+                        style={{ padding: '6px' }}
+                      >
+                        <Eye size={16} />
+                      </Button>
+                      <Button 
+                        variant="ghost"
+                        onClick={async () => {
+                          try {
+                            const response = await fetch('http://localhost:4000/api/ui-state');
+                            if (!response.ok) {
+                              throw new Error('Failed to fetch UI state');
+                            }
+                            const data = await response.json();
+                            setUIStateData(data);
+                            setShowUIState(true);
+                          } catch (error) {
+                            setLog(prev => [...prev, {
+                              type: 'error',
+                              title: 'UI State Error',
+                              content: error instanceof Error ? error.message : String(error),
+                              timestamp: new Date().toISOString()
+                            }]);
+                          }
+                        }}
+                        style={{ 
+                          padding: '6px',
+                          color: '#0091FF'
+                        }}
+                      >
+                        <Eye size={16} />
+                      </Button>
+                    </Flex>
                   </Flex>
                   <Flex direction="column" gap="4">
                     <Flex gap="2">
@@ -521,13 +647,18 @@ export default function ControlPanel() {
 
                   <TextArea
                     value={userMessage}
-                    onChange={(e) => setUserMessage(e.target.value)}
+                    onChange={(e) => {
+                        setUserMessage(e.target.value);
+                      }
+                    }
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         if (!e.shiftKey) {
                           e.preventDefault();
                           if (!isGenerating && userMessage.trim()) {
-                            setMessages(prev => { sendMessagesToAI([...prev, { role: 'user', content: userMessage.trim() }]); return [...prev, { role: 'user', content: userMessage.trim() }] });
+                            const newMessage: ChatMessage = { role: 'user' as const, content: userMessage.trim() };
+                            setMessages(prev => [...prev, newMessage]);
+                            sendMessagesToAI([...messages, newMessage]);
                           }
                         }
                       }
@@ -538,7 +669,13 @@ export default function ControlPanel() {
                   />
                   <Flex direction="column" gap="2">
                     <Button 
-                      onClick={() => sendMessagesToAI(messages)}
+                      onClick={() => {
+                        if (!isGenerating && userMessage.trim()) {
+                          const newMessage: ChatMessage = { role: 'user' as const, content: userMessage.trim() };
+                          setMessages(prev => [...prev, newMessage]);
+                          sendMessagesToAI([...messages, newMessage]);
+                        }
+                      }}
                       disabled={isGenerating}
                       style={{ width: '100%' }}
                     >
@@ -564,6 +701,76 @@ export default function ControlPanel() {
                 </Flex>
               </Card>
             </Flex>
+
+            {/* UI State Dialog */}
+            <Dialog.Root open={showUIState} onOpenChange={setShowUIState}>
+              <Dialog.Content style={{ maxWidth: 800 }}>
+                <Dialog.Title>Current UI State</Dialog.Title>
+                <ScrollArea style={{ height: '500px', marginTop: '16px' }}>
+                  <Box style={{ 
+                    backgroundColor: 'var(--color-panel)',
+                    padding: '12px',
+                    borderRadius: '6px'
+                  }}>
+                    <Box style={{ 
+                      fontFamily: 'monospace',
+                      fontSize: '14px'
+                    }}>
+                      {uiStateData ? (
+                        <JsonViewer 
+                          data={uiStateData}
+                          expandedState={expandedState}
+                          setExpandedState={setExpandedState}
+                        />
+                      ) : 'Loading...'}
+                    </Box>
+                  </Box>
+                </ScrollArea>
+                <Flex gap="3" mt="4" justify="end">
+                  <Button 
+                    variant="soft" 
+                    onClick={() => {
+                      const getAllPaths = (obj: JsonValue, parentPath = ''): string[] => {
+                        if (obj === null || typeof obj !== 'object') return [];
+                        if (Array.isArray(obj)) {
+                          return obj.reduce((paths: string[], _, index) => {
+                            const currentPath = parentPath ? `${parentPath}.${index}` : index.toString();
+                            return [...paths, currentPath, ...getAllPaths(obj[index], currentPath)];
+                          }, []);
+                        }
+                        return Object.entries(obj).reduce((paths: string[], [key, value]) => {
+                          const currentPath = parentPath ? `${parentPath}.${key}` : key;
+                          return [...paths, currentPath, ...getAllPaths(value, currentPath)];
+                        }, []);
+                      };
+                      
+                      const allPaths = getAllPaths(uiStateData);
+                      const newState = allPaths.reduce((acc, path) => ({
+                        ...acc,
+                        [path]: true
+                      }), {});
+                      
+                      setExpandedState(newState);
+                    }}
+                  >
+                    Expand All
+                  </Button>
+                  <Button 
+                    variant="soft" 
+                    onClick={() => {
+                      setExpandedState({});
+                    }}
+                  >
+                    Collapse All
+                  </Button>
+                  <Dialog.Close>
+                    <Button variant="soft" color="gray">
+                      Close
+                    </Button>
+                  </Dialog.Close>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
 
             {/* Context Dialog */}
             <Dialog.Root open={showContext} onOpenChange={setShowContext}>

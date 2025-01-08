@@ -25,24 +25,21 @@ const GenericDialog: React.FC<GenericDialogProps> = ({
   id,
   reflectionChildren
 }) => {
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<DialogComponent>({
+  // Only register with UI reflection system when dialog is open
+  const updateMetadata = id && isOpen ? useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id,
     title,
-    open: isOpen,
+    open: true,
     children: reflectionChildren
   }) : undefined;
 
-  // Update metadata when dialog state changes
+  // Update children if they change while dialog is open
   useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({ 
-        open: isOpen,
-        children: reflectionChildren
-      });
+    if (updateMetadata && reflectionChildren) {
+      updateMetadata({ children: reflectionChildren });
     }
-  }, [isOpen, reflectionChildren, updateMetadata]);
+  }, [reflectionChildren, updateMetadata]);
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>

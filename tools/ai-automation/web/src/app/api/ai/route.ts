@@ -91,9 +91,6 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                 // Generate a unique ID for this tool use
                 const toolUseId = `tool_${Date.now()}_${funcCall.funcName}`;
 
-                // Close the stream - frontend will make a new request
-                // sendEvent('done', 'true');
-
                 // Send tool use event and close the stream
                 sendEvent('tool_use', JSON.stringify({
                   name: funcCall.funcName,
@@ -101,9 +98,17 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
                   tool_use_id: toolUseId
                 }));
 
+                // Close the stream - frontend will make a new request
+                sendEvent('done', 'true');
+                controller.close();
                 return;
               }
             }
+          } else if (chunk.type === 'message_stop') {
+            // Forward the message_stop event to the frontend
+            sendEvent('done', 'true');
+            controller.close();
+            return;
           }
         }
 
@@ -116,8 +121,8 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           });
         }
 
-        // sendEvent('done', 'true');
-        // controller.close();
+        sendEvent('done', 'true');
+        controller.close();
       } catch (error) {
         console.error('Error in stream processing:', error);
         sendEvent('error', `Stream error: ${String(error)}`);

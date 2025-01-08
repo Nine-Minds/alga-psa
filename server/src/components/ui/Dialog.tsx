@@ -19,22 +19,15 @@ interface DialogProps {
 }
 
 export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title, id, reflectionChildren }) => {
-  // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<DialogComponent>({
+  // Only register with UI reflection system when dialog is open
+  const updateMetadata = id && isOpen ? useRegisterUIComponent<DialogComponent>({
     type: 'dialog',
     id,
     title: title || '',
-    open: isOpen,
+    open: true,
     children: reflectionChildren,
     actions: ['submit', 'cancel']
   }) : undefined;
-
-  // Update metadata when open state changes
-  useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({ open: isOpen });
-    }
-  }, [isOpen, updateMetadata]);
 
   return (
     <RadixDialog.Root open={isOpen} onOpenChange={onClose} {...withDataAutomationId({ id })}>

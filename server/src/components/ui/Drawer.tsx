@@ -5,14 +5,37 @@ import { Cross2Icon } from '@radix-ui/react-icons';
 import { SessionProvider } from "next-auth/react";
 import { Theme } from '@radix-ui/themes';
 
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
+import { DrawerComponent, UIComponent } from '../../types/ui-reflection/types';
+import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+
 export interface DrawerProps {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
   isInDrawer?: boolean;
+  /** Unique identifier for UI reflection system */
+  id?: string;
+  /** Child components for UI reflection */
+  reflectionChildren?: UIComponent[];
 }
 
-const Drawer: React.FC<DrawerProps> = ({ isOpen, onClose, children, isInDrawer = false }) => {
+const Drawer: React.FC<DrawerProps> = ({ 
+  isOpen, 
+  onClose, 
+  children, 
+  isInDrawer = false,
+  id,
+  reflectionChildren
+}) => {
+  // Only register with UI reflection system when drawer is open
+  const updateMetadata = id && isOpen ? useRegisterUIComponent<DrawerComponent>({
+    type: 'drawer',
+    id,
+    open: true,
+    width: isInDrawer ? '40%' : '50%',
+    children: reflectionChildren
+  }) : undefined;
   return (
     <Dialog.Root modal open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
