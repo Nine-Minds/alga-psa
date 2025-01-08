@@ -1,4 +1,3 @@
-// server/src/components/tickets/TicketConversation.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IComment, ITicket } from '@/interfaces';
@@ -11,15 +10,16 @@ import styles from './TicketDetails.module.css';
 import { Button } from '@/components/ui/Button';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import { getContactByContactNameId, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { ContainerComponent } from '@/types/ui-reflection/types';
 
-// Default block for empty content using proper BlockNote types
 const DEFAULT_BLOCK: PartialBlock[] = [{
   id: "1",
   type: "paragraph",
   content: "Enter your comment here...",
 }];
 
-// Match the exact type expected by CommentItem
 type UserInfo = {
   user_id: string;
   first_name: string;
@@ -29,6 +29,7 @@ type UserInfo = {
 };
 
 interface TicketConversationProps {
+  id?: string;
   ticket: ITicket;
   conversations: IComment[];
   documents: any[];
@@ -50,6 +51,7 @@ interface TicketConversationProps {
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
+  id = 'ticket-conversation',
   ticket,
   conversations,
   documents,
@@ -73,6 +75,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [contactMap, setContactMap] = useState<Record<string, IContact>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contacts, setContacts] = useState<IContact[]>([]);
+
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
+    id,
+    type: 'container',
+    label: `Conversation for ticket ${ticket.ticket_number}`
+  });
 
   useEffect(() => {
     const fetchAllContacts = async () => {
@@ -121,6 +130,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         {buttons.map((button):JSX.Element => (
           <button
             key={button}
+            {...withDataAutomationId({ id: `${id}-${button.toLowerCase()}-tab` })}
             className={`${styles.button} ${activeTab === button ? styles.activeButton : styles.inactiveButton}`}
             onClick={() => onTabChange(button)}
           >
@@ -160,7 +170,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleNewCommentContentChange = (blocks: Block[]) => {
-    // Convert blocks to string representation for storage
     const content = blocks.map(block => block.content).join('\n');
     onNewCommentContentChange(content);
   };
@@ -236,13 +245,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   return (
-    <div className={`${styles['card']}`}>
+    <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
       <div className="p-6">
         <h2 className="text-xl font-bold mb-4">Comments</h2>
         <div className='mb-6'>
           <div className='flex items-start'>
             <div className="mr-3">
               <AvatarIcon
+                {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
                 userId={currentUser?.id || ''}
                 firstName={currentUser?.name?.split(' ')[0] || ''}
                 lastName={currentUser?.name?.split(' ')[1] || ''}
@@ -251,6 +261,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             </div>
             <div className='flex-grow'>
               <TextEditor
+                {...withDataAutomationId({ id: `${id}-editor` })}
                 key={editorKey}
                 roomName={`ticket-${ticket.ticket_id}`}
                 initialContent=""
@@ -261,6 +272,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </TextEditor>
               <div className="flex justify-end mt-2">
                 <Button
+                  {...withDataAutomationId({ id: `${id}-add-comment-btn` })}
                   onClick={handleAddNewComment}
                   className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
                 >
@@ -270,7 +282,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             </div>
           </div>
         </div>
-        <CustomTabs tabs={tabContent} defaultTab="All Comments" tabStyles={tabStyles} />
+        <CustomTabs 
+          {...withDataAutomationId({ id: `${id}-tabs` })}
+          tabs={tabContent} 
+          defaultTab="All Comments" 
+          tabStyles={tabStyles} 
+        />
       </div>
     </div>
   );

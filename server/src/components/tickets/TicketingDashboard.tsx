@@ -31,6 +31,7 @@ interface TicketingDashboardProps {
 }
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({ initialTickets }) => {
+  const id = 'ticketing-dashboard';
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
@@ -375,16 +376,22 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
   }, []);
 
   return (
-    <div>
+    <div data-automation-id={id}>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
-        <Button onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
+        <Button 
+          data-automation-id={`${id}-add-ticket-btn`}
+          onClick={() => setIsQuickAddOpen(true)}
+        >
+          Add Ticket
+        </Button>
       </div>
       <div className="bg-white shadow rounded-lg p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
         <div className="w-fit">
           <ChannelPicker
+            data-automation-id={`${id}-channel-picker`}
             channels={channels}
             onSelect={handleChannelSelect}
             selectedChannelId={selectedChannel}
@@ -407,18 +414,21 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
             </div>
           </div>
           <CustomSelect
+            data-automation-id={`${id}-status-select`}
             options={statusOptions}
             value={selectedStatus}
             onValueChange={(value) => setSelectedStatus(value)}
             placeholder="All Statuses"
           />
           <CustomSelect
+            data-automation-id={`${id}-priority-select`}
             options={priorityOptions}
             value={selectedPriority}
             onValueChange={(value) => setSelectedPriority(value)}
             placeholder="All Priorities"
           />
           <CategoryPicker
+            id={`${id}-category-picker`}
             categories={categories}
             selectedCategories={selectedCategories}
             excludedCategories={excludedCategories}
@@ -431,6 +441,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
             className="text-sm min-w-[200px]"
           />
             <input
+              data-automation-id={`${id}-search-input`}
               type="text"
               placeholder="Search tickets..."
               value={searchQuery}
@@ -439,6 +450,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
             />
           </div>
           <Button
+            data-automation-id={`${id}-reset-filters-btn`}
             variant="outline"
             onClick={handleResetFilters}
             className="whitespace-nowrap flex items-center gap-2"
@@ -454,6 +466,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
           </div>
         ) : (
           <DataTable
+            data-automation-id={`${id}-tickets-table`}
             data={ticketsWithIds}
             columns={columns}
           />

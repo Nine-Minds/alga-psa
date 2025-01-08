@@ -1,8 +1,11 @@
 import React, { useMemo } from 'react';
 import { ITicketCategory } from '@/interfaces/ticket.interfaces';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@/components/ui/TreeSelect';
+import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { FormFieldComponent } from '@/types/ui-reflection/types';
 
 interface CategoryPickerProps {
+  id?: string;
   categories: ITicketCategory[];
   selectedCategories: string[];
   excludedCategories?: string[];
@@ -19,6 +22,7 @@ interface CategoryPickerProps {
 type CategoryType = 'parent' | 'child';
 
 export const CategoryPicker: React.FC<CategoryPickerProps> = ({
+  id = 'category-picker',
   categories,
   selectedCategories,
   excludedCategories = [],
@@ -30,6 +34,15 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   showReset = false,
   allowEmpty = false,
 }) => {
+  // Register with UI reflection system
+  const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
+    id,
+    type: 'formField',
+    fieldType: 'select',
+    value: selectedCategories.join(','),
+    label: placeholder
+  });
+
   // Transform categories into TreeSelect format
   const treeOptions = useMemo((): TreeSelectOption<CategoryType>[] => {
     // First, separate parents and children
@@ -133,6 +146,9 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
         onSelect([value], []);
       }
     }
+
+    // Update UI reflection state
+    updateMetadata({ value: selectedCategories.join(',') });
   };
 
   // Update display label to show both selected and excluded categories
@@ -196,21 +212,24 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   }, [selectedCategories, excludedCategories, categories]);
 
   return (
-    <TreeSelect
-      options={treeOptions}
-      value={currentValue}
-      onValueChange={handleValueChange}
-      placeholder={displayLabel || placeholder}
-      className={className}
-      selectedClassName="bg-gray-50"
-      hoverClassName="hover:bg-gray-50"
-      triggerClassName="hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-      contentClassName="bg-white rounded-md shadow-lg border border-gray-200"
-      multiSelect={multiSelect}
-      showExclude={showExclude}
-      showReset={true}
-      allowEmpty={true}
-    />
+    <div data-automation-id={id}>
+      <TreeSelect
+        data-automation-id={`${id}-select`}
+        options={treeOptions}
+        value={currentValue}
+        onValueChange={handleValueChange}
+        placeholder={displayLabel || placeholder}
+        className={className}
+        selectedClassName="bg-gray-50"
+        hoverClassName="hover:bg-gray-50"
+        triggerClassName="hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        contentClassName="bg-white rounded-md shadow-lg border border-gray-200"
+        multiSelect={multiSelect}
+        showExclude={showExclude}
+        showReset={true}
+        allowEmpty={true}
+      />
+    </div>
   );
 };
 
