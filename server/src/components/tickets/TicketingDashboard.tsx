@@ -27,6 +27,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from '@/types/ui-reflection/types';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -391,12 +392,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   return (
-    <div data-automation-id={id}>
+    <div {...withDataAutomationId({ id })}>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
         <Button onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
       </div>
-      <div className="bg-white shadow rounded-lg p-4">
+      <div {...withDataAutomationId({ id: `${id}-filters` })} className="bg-white shadow rounded-lg p-4">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-fit">
@@ -450,7 +451,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               className="text-sm min-w-[200px]"
             />
             <input
-              data-automation-id={`${id}-search-input`}
+              {...withDataAutomationId({ id: `${id}-search-input` })}
               type="text"
               placeholder="Search tickets..."
               value={searchQuery}
@@ -459,7 +460,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             />
           </div>
           <Button
-            data-automation-id={`${id}-reset-filters-btn`}
+            {...withDataAutomationId({ id: `${id}-reset-filters-btn` })}
             variant="outline"
             onClick={handleResetFilters}
             className="whitespace-nowrap flex items-center gap-2"
@@ -468,14 +469,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             Reset Filters
           </Button>
         </div>
-        <h2 className="text-xl font-semibold mt-6 mb-2">Tickets</h2>
+        <h2 {...withDataAutomationId({ id: `${id}-tickets-heading` })} className="text-xl font-semibold mt-6 mb-2">
+          Tickets
+        </h2>
         {isLoading ? (
-          <div className="flex justify-center items-center h-32">
+          <div {...withDataAutomationId({ id: `${id}-loading` })} className="flex justify-center items-center h-32">
             <span>Loading...</span>
           </div>
         ) : (
           <DataTable
-            data-automation-id={`${id}-tickets-table`}
+            {...withDataAutomationId({ id: `${id}-tickets-table` })}
             data={ticketsWithIds}
             columns={columns}
           />

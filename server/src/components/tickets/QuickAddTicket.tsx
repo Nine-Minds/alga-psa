@@ -76,11 +76,152 @@ export function QuickAddTicket({
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
 
   // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
-    id,
-    type: 'container',
-    label: 'Quick Add Ticket Form'
+  const updateDialog = useRegisterUIComponent<DialogComponent>({
+    id: id || 'quick-add-ticket',
+    label: 'Quick Add Ticket Form',
+    type: 'dialog',
+    open: open,
+    title: 'Quick Add Ticket'
   });
+
+  // Register form
+  const updateForm = useRegisterUIComponent<ContainerComponent>({
+    id: `${id || 'quick-add-ticket'}-form`,
+    type: 'container',
+    label: 'Quick Add Ticket Form',
+    parentId: id || 'quick-add-ticket'
+  });
+
+  // Register input fields
+  const updateTitleInput = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-title-input`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Title',
+    value: title,
+    required: true,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateDescriptionInput = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-description-input`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Description',
+    value: description,
+    required: true,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  // Register select fields
+  const updateAssignedToSelect = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-assigned-to-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Assign To',
+    value: assignedTo,
+    required: true,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateStatusSelect = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-status-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Status',
+    value: statusId,
+    required: true,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updatePrioritySelect = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-priority-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Priority',
+    value: priorityId,
+    required: true,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  // Register pickers
+  const updateCompanyPicker = useRegisterUIComponent<ContainerComponent>({
+    id: `${id || 'quick-add-ticket'}-company-picker`,
+    type: 'container',
+    label: 'Company Picker',
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateChannelPicker = useRegisterUIComponent<ContainerComponent>({
+    id: `${id || 'quick-add-ticket'}-channel-picker`,
+    type: 'container',
+    label: 'Channel Picker',
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateCategoryPicker = useRegisterUIComponent<ContainerComponent>({
+    id: `${id || 'quick-add-ticket'}-category-picker`,
+    type: 'container',
+    label: 'Category Picker',
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateContactSelect = useRegisterUIComponent<FormFieldComponent>({
+    id: `${id || 'quick-add-ticket'}-contact-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Contact',
+    value: contactId || '',
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  // Register buttons
+  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
+    id: `${id || 'quick-add-ticket'}-cancel-btn`,
+    type: 'button',
+    label: 'Cancel',
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateSaveButton = useRegisterUIComponent<ButtonComponent>({
+    id: `${id || 'quick-add-ticket'}-save-btn`,
+    type: 'button',
+    label: 'Save Ticket',
+    disabled: isSubmitting,
+    parentId: `${id || 'quick-add-ticket'}-form`
+  });
+
+  const updateCloseButton = useRegisterUIComponent<ButtonComponent>({
+    id: `${id || 'quick-add-ticket'}-close-btn`,
+    type: 'button',
+    label: 'Close',
+    parentId: id || 'quick-add-ticket'
+  });
+
+  // Update field states when they change
+  useEffect(() => {
+    if (!open) return;
+    
+    updateTitleInput({ value: title });
+    updateDescriptionInput({ value: description });
+    updateAssignedToSelect({ value: assignedTo });
+    updateStatusSelect({ value: statusId });
+    updatePrioritySelect({ value: priorityId });
+    updateContactSelect({ value: contactId || '' });
+    updateCompanyPicker({ label: `Company: ${companies.find(c => c.company_id === companyId)?.company_name || 'None'}` });
+    updateChannelPicker({ label: `Channel: ${channels.find(c => c.channel_id === channelId)?.channel_name || 'None'}` });
+    updateCategoryPicker({ label: `Category: ${categories.find(c => c.category_id === selectedCategories[0])?.category_name || 'None'}` });
+    updateSaveButton({ disabled: isSubmitting });
+  }, [
+    id, open,
+    title, description, assignedTo, statusId, priorityId, contactId, isSubmitting,
+    companyId, channelId, selectedCategories,
+    companies, channels, categories,
+    updateTitleInput, updateDescriptionInput, updateAssignedToSelect,
+    updateStatusSelect, updatePrioritySelect, updateContactSelect,
+    updateCompanyPicker, updateChannelPicker, updateCategoryPicker,
+    updateSaveButton
+  ]);
 
   useEffect(() => {
     if (!open) {
