@@ -610,6 +610,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
 
       {/* Delete Confirmation Dialog */}
       <GenericDialog
+        id={`delete-contact-dialog`}
         isOpen={isDeleteDialogOpen}
         onClose={() => {
           setIsDeleteDialogOpen(false);

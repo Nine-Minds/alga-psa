@@ -6,6 +6,8 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
 import { DialogComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 interface DialogProps {
   isOpen: boolean;
@@ -18,10 +20,8 @@ interface DialogProps {
 }
 
 export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog' }) => {
-  const dialogId = id || `dialog-${Math.random().toString(36).substr(2, 9)}`;
-  
-  const updateDialog = useRegisterUIComponent<DialogComponent>({
-    id: dialogId,
+  const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
+    id: `${id}-confirm-dialog`,
     type: 'dialog',
     title,
     open: isOpen,
@@ -30,29 +30,29 @@ export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, class
 
   // Update dialog metadata when props change
   useEffect(() => {
-    updateDialog({ open: isOpen, title });
-  }, [isOpen, title, updateDialog]);
+    updateMetadata({ open: isOpen, title });
+  }, [ isOpen, title ]);
 
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} {...withDataAutomationId({ id: dialogId })}>
-      <RadixDialog.Portal>
-        <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <RadixDialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl z-50 ${className || ''}`}>
-          <ReflectionParentContext.Provider value={dialogId}>
-            {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
-            {children}
-          </ReflectionParentContext.Provider>
-          <RadixDialog.Close asChild>
-            <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              aria-label="Close"
-            >
-              <Cross2Icon />
-            </button>
-          </RadixDialog.Close>
-        </RadixDialog.Content>
-      </RadixDialog.Portal>
-    </RadixDialog.Root>
+    <ReflectionContainer {...updateDialog}>
+      <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
+        <RadixDialog.Portal>
+          <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+          <RadixDialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl z-50 ${className || ''}`}>
+              {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
+              {children}
+            <RadixDialog.Close asChild>
+              <button
+                className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <Cross2Icon />
+              </button>
+            </RadixDialog.Close>
+          </RadixDialog.Content>
+        </RadixDialog.Portal>
+      </RadixDialog.Root>
+    </ReflectionContainer>
   );
 };
 

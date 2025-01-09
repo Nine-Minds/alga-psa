@@ -2,18 +2,27 @@
 
 import { UIComponent } from './types';
 import { useRegisterChild } from './useRegisterChild';
-import { useContext } from 'react';
+import { useContext, useRef } from 'react';
 import { ReflectionParentContext } from './ReflectionParentContext';
 
-// Keep a module-level counter for auto-generated IDs
+// Keep a module-level counter for auto-generated IDs and registration tracking
 let autoIdCounter = 0;
+let registrationCounter = 0;
+
+/**
+ * Generates a unique registration ID for tracking component registrations
+ */
+function generateRegistrationId(): string {
+  registrationCounter++;
+  return `reg_${Date.now()}_${registrationCounter}`;
+}
 
 /**
  * Generates a unique ID for a component when none is provided
  * @param type The component type (e.g., 'container', 'button', etc.)
  * @returns A unique auto-generated ID
  */
-function generateAutoId(type: string): string {
+function generateAutoId(type: string, registrationId: string): string {
   autoIdCounter++;
   return `${type}-${autoIdCounter}`;
 }
@@ -27,18 +36,30 @@ function generateAutoId(type: string): string {
  * @param id The provided or auto-generated ID
  * @param parentId The parent component's ID from context
  * @param type The component type
+ * @param registrationId Unique ID for tracking this registration
  * @returns Properly formatted component ID
  */
-function formatComponentId(id: string | undefined, parentId: string | null, type: string): string {
-  if (id) return id;
+function formatComponentId(
+  id: string | undefined, 
+  parentId: string | null, 
+  type: string,
+  registrationId: string
+): string {
+
+
+  if (id) {
+    return id;
+  }
 
   // If no parent, this is likely a page/screen component
   if (!parentId) {
-    return generateAutoId(type);
+    const generatedId = generateAutoId(type, registrationId);
+    return generatedId;
   }
 
   // For child components, include parent ID in the auto-generated ID
-  return `${parentId}-${generateAutoId(type)}`;
+  const generatedId = `${parentId}-${generateAutoId(type, registrationId)}`;
+  return generatedId;
 }
 
 /**
@@ -78,11 +99,25 @@ export function useAutomationIdAndRegister<T extends UIComponent>(
   automationIdProps: { id: string; 'data-automation-id': string };
   updateMetadata: (partial: Partial<T>) => void;
 } {
+  if (!component.parentId) {
+    component.parentId = undefined;
+  }
+  if (!component.label) {
+    component.label = undefined;
+  }
+
+  // Generate a unique registration ID for tracking this specific registration
+  const registrationId = useRef(generateRegistrationId());
   // Get parent ID from context
   const parentId = useContext(ReflectionParentContext);
 
   // Generate or format component ID
-  const formattedId = formatComponentId(component.id, parentId, component.type);
+  const formattedId = formatComponentId(
+    component.id, 
+    parentId, 
+    component.type,
+    registrationId.current
+  );
 
   // Register with reflection system
   const updateMetadata = useRegisterChild<T>({

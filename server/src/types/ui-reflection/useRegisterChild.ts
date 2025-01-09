@@ -5,6 +5,8 @@ import { useReflectionParent } from './ReflectionParentContext';
 import { useRegisterUIComponent } from './useRegisterUIComponent';
 import { UIComponent } from './types';
 
+let childRegistrationCounter = 0;
+
 /**
  * Like useRegisterUIComponent, but automatically sets parentId
  * from ReflectionParentContext so you don't have to do it manually.
@@ -28,7 +30,9 @@ import { UIComponent } from './types';
  */
 export function useRegisterChild<T extends UIComponent>(component: T) {
   const parentId = useReflectionParent() ?? undefined;
-  return useRegisterUIComponent<T>(component, parentId);
+  const updateMetadata = useRegisterUIComponent<T>(component, parentId);
+
+  return updateMetadata;
 }
 
 /**
@@ -59,12 +63,13 @@ export function useRegisterChildWithProps<T extends UIComponent>(
   component: T,
   props: Partial<Omit<T, 'id' | 'type'>>
 ) {
+  const registrationId = `child_props_${Date.now()}_${++childRegistrationCounter}`;
   const updateMetadata = useRegisterChild(component);
 
   // Update metadata whenever props change
   useEffect(() => {
     updateMetadata(props as Partial<T>);
-  }, [props, updateMetadata]);
+  }, [props, updateMetadata, component.id, registrationId]);
 
   return updateMetadata;
 }

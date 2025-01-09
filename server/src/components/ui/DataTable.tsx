@@ -50,7 +50,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   // Register with UI reflection system if id is provided
   const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
-    id,
+    id: `${id}-table`,
     type: 'dataTable',
     columns: columns.map(col => ({
       id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,

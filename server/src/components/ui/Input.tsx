@@ -2,6 +2,8 @@ import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback 
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { useRegisterChildWithProps } from '@/types/ui-reflection/useRegisterChild';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   label?: string;
@@ -42,28 +44,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       [forwardedRef]
     );
 
-    // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+    const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
+      id: `${id}-add-ticket-btn`,
       type: 'formField',
-      fieldType: 'textField',
-      id,
-      label,
-      value: typeof value === 'string' ? value : undefined,
-      disabled,
-      required
-    }) : undefined;
-
-    // Update metadata when field props change
-    useEffect(() => {
-      if (updateMetadata && typeof value === 'string') {
-        updateMetadata({
-          value,
-          label,
-          disabled,
-          required
-        });
-      }
-    }, [value, updateMetadata, label, disabled, required, id]);
+      fieldType: 'textField'
+    });
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!isComposing.current && preserveCursor) {
@@ -103,7 +88,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     };
 
     return (
-      <div className="mb-4">
+      <div className="mb-4" {...textProps} >
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {label}
