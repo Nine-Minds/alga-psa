@@ -1,22 +1,26 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { IContact } from '@/interfaces/contact.interfaces';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { IContact } from '../../interfaces/contact.interfaces';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { TextArea } from '../ui/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact } from '@/lib/actions/contact-actions/contactActions';
-import { findTagsByEntityIds, findAllTagsByType } from '@/lib/actions/tagActions';
-import { ITag } from '@/interfaces/tag.interfaces';
+import { updateContact } from '../../lib/actions/contact-actions/contactActions';
+import { findTagsByEntityIds, findAllTagsByType } from '../../lib/actions/tagActions';
+import { ITag } from '../../interfaces/tag.interfaces';
 import { CompanyPicker } from '../companies/CompanyPicker';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { TagManager } from '@/components/tags';
+import { ICompany } from '../../interfaces/company.interfaces';
+import { TagManager } from '../tags';
 import { ArrowLeft } from 'lucide-react';
-import { Switch } from '@/components/ui/Switch';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { Switch } from '../ui/Switch';
+import CustomSelect from '../ui/CustomSelect';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 
 interface ContactDetailsEditProps {
+  id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
   companies: ICompany[];
   onSave: (contact: IContact) => void;
@@ -25,6 +29,7 @@ interface ContactDetailsEditProps {
 }
 
 const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
+  id = 'contact-edit',
   initialContact,
   companies,
   onSave,
@@ -72,106 +77,152 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   };
 
   return (
-    <div className="p-6 bg-white shadow rounded-lg">
-      <div className="flex justify-between items-center mb-4">
-        <Heading size="6">Edit Contact: {contact.full_name}</Heading>
-      </div>
-      <table className="min-w-full">
-        <tbody>
-          <TableRow 
-            label="Full Name" 
-            value={contact.full_name} 
-            onChange={(value) => handleInputChange('full_name', value)} 
-          />
-          <TableRow 
-            label="Email" 
-            value={contact.email} 
-            onChange={(value) => handleInputChange('email', value)} 
-          />
-          <TableRow 
-            label="Phone" 
-            value={contact.phone_number} 
-            onChange={(value) => handleInputChange('phone_number', value)} 
-          />
-          <TableRow 
-            label="Role" 
-            value={contact.role || ''} 
-            onChange={(value) => handleInputChange('role', value)} 
-            placeholder="e.g., Manager, Developer, etc."
-          />
-          <tr>
-            <td className="py-2 font-semibold">Company:</td>
-            <td className="py-2">
-              <CompanyPicker
-                companies={companies}
-                onSelect={handleCompanySelect}
-                selectedCompanyId={contact.company_id}
-                filterState={filterState}
-                onFilterStateChange={setFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
-              />
-            </td>
-          </tr>
-          <TableRow 
-            label="Date of Birth" 
-            value={contact.date_of_birth || ''} 
-            onChange={(value) => handleInputChange('date_of_birth', value)} 
-            type="date"
-          />
-          <tr>
-            <td className="py-2 font-semibold">Status:</td>
-            <td className="py-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-gray-500">Set contact status as active or inactive</div>
+    <ReflectionContainer id={id} label={`Edit Contact - ${contact.full_name}`}>
+      <div className="p-6 bg-white shadow rounded-lg">
+        <div className="flex justify-between items-center mb-4">
+          <Heading size="6">Edit Contact: {contact.full_name}</Heading>
+        </div>
+        <table className="min-w-full">
+          <tbody>
+            <TableRow 
+              id={`${id}-full-name`}
+              label="Full Name" 
+              value={contact.full_name} 
+              onChange={(value) => handleInputChange('full_name', value)} 
+            />
+            <TableRow 
+              id={`${id}-email`}
+              label="Email" 
+              value={contact.email} 
+              onChange={(value) => handleInputChange('email', value)} 
+            />
+            <TableRow 
+              id={`${id}-phone`}
+              label="Phone" 
+              value={contact.phone_number} 
+              onChange={(value) => handleInputChange('phone_number', value)} 
+            />
+            <TableRow 
+              id={`${id}-role`}
+              label="Role" 
+              value={contact.role || ''} 
+              onChange={(value) => handleInputChange('role', value)} 
+              placeholder="e.g., Manager, Developer, etc."
+            />
+            <tr>
+              <td className="py-2 font-semibold">Company:</td>
+              <td className="py-2">
+                <CompanyPicker
+                  id={`${id}-company-picker`}
+                  companies={companies}
+                  onSelect={handleCompanySelect}
+                  selectedCompanyId={contact.company_id}
+                  filterState={filterState}
+                  onFilterStateChange={setFilterState}
+                  clientTypeFilter={clientTypeFilter}
+                  onClientTypeFilterChange={setClientTypeFilter}
+                />
+              </td>
+            </tr>
+            <TableRow 
+              id={`${id}-dob`}
+              label="Date of Birth" 
+              value={contact.date_of_birth || ''} 
+              onChange={(value) => handleInputChange('date_of_birth', value)} 
+              type="date"
+            />
+            <tr>
+              <td className="py-2 font-semibold">Status:</td>
+              <td className="py-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm text-gray-500">Set contact status as active or inactive</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700">
+                      {contact.is_inactive ? 'Inactive' : 'Active'}
+                    </span>
+                    <Switch
+                      {...useAutomationIdAndRegister<FormFieldComponent>({
+                        id: `${id}-status-toggle`,
+                        type: 'formField',
+                        fieldType: 'checkbox',
+                        label: 'Status Toggle',
+                        value: contact.is_inactive.toString()
+                      }).automationIdProps}
+                      checked={contact.is_inactive}
+                      onCheckedChange={(value) => handleInputChange('is_inactive', value)}
+                      className="data-[state=checked]:bg-primary-500"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">
-                    {contact.is_inactive ? 'Inactive' : 'Active'}
-                  </span>
-                  <Switch
-                    checked={contact.is_inactive}
-                    onCheckedChange={(value) => handleInputChange('is_inactive', value)}
-                    className="data-[state=checked]:bg-primary-500"
-                  />
-                </div>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td className="py-2 font-semibold">Notes:</td>
-            <td className="py-2">
-              <TextArea
-                value={contact.notes || ''}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                placeholder="Add any additional notes about the contact..."
-              />
-            </td>
-          </tr>
-          <tr>
-            <td className="py-2 font-semibold">Tags:</td>
-            <td className="py-2">
-              <TagManager
-                entityId={contact.contact_name_id}
-                entityType="contact"
-                initialTags={tags}
-                existingTags={allTagTexts}
-                onTagsChange={handleTagsChange}
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div className="mt-6 flex justify-end space-x-4">
-        <Button variant="soft" onClick={onCancel}>Cancel</Button>
-        <Button variant="default" onClick={handleSave}>Save</Button>
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 font-semibold">Notes:</td>
+              <td className="py-2">
+                <TextArea
+                  {...useAutomationIdAndRegister<FormFieldComponent>({
+                    id: `${id}-notes`,
+                    type: 'formField',
+                    fieldType: 'textField',
+                    label: 'Notes',
+                    value: contact.notes || ''
+                  }).automationIdProps}
+                  value={contact.notes || ''}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  placeholder="Add any additional notes about the contact..."
+                />
+              </td>
+            </tr>
+            <tr>
+              <td className="py-2 font-semibold">Tags:</td>
+              <td className="py-2">
+                <TagManager
+                  id={`${id}-tags`}
+                  entityId={contact.contact_name_id}
+                  entityType="contact"
+                  initialTags={tags}
+                  existingTags={allTagTexts}
+                  onTagsChange={handleTagsChange}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div className="mt-6 flex justify-end space-x-4">
+          <Button
+            {...useAutomationIdAndRegister<ButtonComponent>({
+              id: `${id}-cancel-btn`,
+              type: 'button',
+              label: 'Cancel',
+              actions: ['click']
+            }).automationIdProps}
+            variant="soft"
+            onClick={onCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            {...useAutomationIdAndRegister<ButtonComponent>({
+              id: `${id}-save-btn`,
+              type: 'button',
+              label: 'Save',
+              actions: ['click']
+            }).automationIdProps}
+            variant="default"
+            onClick={handleSave}
+          >
+            Save
+          </Button>
+        </div>
       </div>
-    </div>
+    </ReflectionContainer>
   );
 };
 
 interface TableRowProps {
+  id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -180,18 +231,32 @@ interface TableRowProps {
   placeholder?: string;
 }
 
-const TableRow: React.FC<TableRowProps> = ({ label, value, onChange, type = "text", options, placeholder }) => (
+const TableRow: React.FC<TableRowProps> = ({ id, label, value, onChange, type = "text", options, placeholder }) => (
   <tr>
     <td className="py-2 font-semibold">{label}:</td>
     <td className="py-2">
       {options ? (
         <CustomSelect
+          {...useAutomationIdAndRegister<FormFieldComponent>({
+            id: id,
+            type: 'formField',
+            fieldType: 'select',
+            label: label,
+            value: value
+          }).automationIdProps}
           value={value}
           onValueChange={onChange}
           options={options}
         />
       ) : (
         <Input
+          {...useAutomationIdAndRegister<FormFieldComponent>({
+            id: id,
+            type: 'formField',
+            fieldType: 'textField',
+            label: label,
+            value: value
+          }).automationIdProps}
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}

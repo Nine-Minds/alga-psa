@@ -1,30 +1,34 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { Block, BlockNoteEditor } from '@blocknote/core';
-import { IDocument } from '@/interfaces/document.interface';
+import { IDocument } from '../../interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
-import { Button } from '@/components/ui/Button';
-import Drawer from '@/components/ui/Drawer';
-import { Input } from '@/components/ui/Input';
-import TextEditor from '@/components/editor/TextEditor';
+import { Button } from '../ui/Button';
+import Drawer from '../ui/Drawer';
+import { Input } from '../ui/Input';
+import TextEditor from '../editor/TextEditor';
 import { 
     getDocumentsByEntity, 
     deleteDocument, 
     removeDocumentAssociations,
     updateDocument
-} from '@/lib/actions/document-actions/documentActions';
+} from '../../lib/actions/document-actions/documentActions';
 import { 
     getBlockContent,
     createBlockDocument,
     updateBlockContent 
-} from '@/lib/actions/document-actions/documentBlockContentActions';
+} from '../../lib/actions/document-actions/documentBlockContentActions';
 import { Plus, Link, FileText } from 'lucide-react';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface DocumentsProps {
+    id: string; // Made required since it's needed for reflection registration
     documents: IDocument[];
     gridColumns?: 3 | 4;
     userId: string;
@@ -35,6 +39,7 @@ interface DocumentsProps {
 }
 
 const Documents = ({
+    id,
     documents: initialDocuments,
     gridColumns,
     userId,
@@ -283,184 +288,260 @@ const Documents = ({
     };
 
     return (
-        <div className="w-full space-y-4">
-            <div className="flex justify-between items-center">
-                <div className="flex space-x-2">
-                    {/* Create new document button */}
-                    <Button
-                        onClick={handleCreateDocument}
-                        className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                    >
-                        <FileText className="w-4 h-4 mr-2" />
-                        New Document
-                    </Button>
-                    {/* Upload new document button */}
-                    <Button
-                        onClick={() => setShowUpload(true)}
-                        className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                    >
-                        <Plus className="w-4 h-4 mr-2" />
-                        Upload File
-                    </Button>
-                    {/* Select existing documents button - only show if entityId and entityType are provided */}
-                    {entityId && entityType && (
+        <ReflectionContainer id={id} label="Documents">
+            <div className="w-full space-y-4">
+                <div className="flex justify-between items-center">
+                    <div className="flex space-x-2">
+                        {/* Create new document button */}
                         <Button
-                            onClick={() => setShowSelector(true)}
+                            {...useAutomationIdAndRegister<ButtonComponent>({
+                                id: `${id}-new-document-btn`,
+                                type: 'button',
+                                label: 'New Document',
+                                actions: ['click']
+                            }).automationIdProps}
+                            onClick={handleCreateDocument}
                             className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
                         >
-                            <Link className="w-4 h-4 mr-2" />
-                            Link Documents
+                            <FileText className="w-4 h-4 mr-2" />
+                            New Document
                         </Button>
-                    )}
+                        {/* Upload new document button */}
+                        <Button
+                            {...useAutomationIdAndRegister<ButtonComponent>({
+                                id: `${id}-upload-btn`,
+                                type: 'button',
+                                label: 'Upload File',
+                                actions: ['click']
+                            }).automationIdProps}
+                            onClick={() => setShowUpload(true)}
+                            className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                        >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Upload File
+                        </Button>
+                        {/* Select existing documents button - only show if entityId and entityType are provided */}
+                        {entityId && entityType && (
+                            <Button
+                                {...useAutomationIdAndRegister<ButtonComponent>({
+                                    id: `${id}-link-documents-btn`,
+                                    type: 'button',
+                                    label: 'Link Documents',
+                                    actions: ['click']
+                                }).automationIdProps}
+                                onClick={() => setShowSelector(true)}
+                                className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                            >
+                                <Link className="w-4 h-4 mr-2" />
+                                Link Documents
+                            </Button>
+                        )}
+                    </div>
                 </div>
-            </div>
 
-            {/* Upload Dialog */}
-            {showUpload && (
-                <div className="mb-4 p-4 border border-gray-200 rounded-md bg-white">
-                    <DocumentUpload
-                        userId={userId}
+                {/* Upload Dialog */}
+                {showUpload && (
+                    <div className="mb-4 p-4 border border-gray-200 rounded-md bg-white">
+                        <DocumentUpload
+                            id={`${id}-upload`}
+                            userId={userId}
+                            entityId={entityId}
+                            entityType={entityType}
+                            onUploadComplete={handleUploadComplete}
+                            onCancel={() => setShowUpload(false)}
+                        />
+                    </div>
+                )}
+
+                {/* Document Selector Dialog - only render if entityId and entityType are provided */}
+                {entityId && entityType && (
+                    <DocumentSelector
+                        id={`${id}-selector`}
                         entityId={entityId}
                         entityType={entityType}
-                        onUploadComplete={handleUploadComplete}
-                        onCancel={() => setShowUpload(false)}
+                        onDocumentsSelected={handleDocumentsSelected}
+                        isOpen={showSelector}
+                        onClose={() => setShowSelector(false)}
                     />
-                </div>
-            )}
+                )}
 
-            {/* Document Selector Dialog - only render if entityId and entityType are provided */}
-            {entityId && entityType && (
-                <DocumentSelector
-                    entityId={entityId}
-                    entityType={entityType}
-                    onDocumentsSelected={handleDocumentsSelected}
-                    isOpen={showSelector}
-                    onClose={() => setShowSelector(false)}
-                />
-            )}
+                {/* Error State */}
+                {error && (
+                    <div {...useAutomationIdAndRegister<ContainerComponent>({
+                        id: `${id}-error`,
+                        type: 'container',
+                        label: 'Error Message'
+                    }).automationIdProps} className="text-center py-4 text-red-500 bg-red-50 rounded-md">
+                        {error}
+                    </div>
+                )}
 
-            {/* Error State */}
-            {error && (
-                <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
-                    {error}
-                </div>
-            )}
+                {/* Loading State */}
+                {isLoading && (
+                    <div {...useAutomationIdAndRegister<ContainerComponent>({
+                        id: `${id}-loading`,
+                        type: 'container',
+                        label: 'Loading'
+                    }).automationIdProps} className="flex justify-center items-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                    </div>
+                )}
 
-            {/* Loading State */}
-            {isLoading && (
-                <div className="flex justify-center items-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
-                </div>
-            )}
-
-            {/* Documents Grid */}
-            {!isLoading && documents && documents.length > 0 ? (
-                <div className={`grid ${gridColumnsClass} gap-4`}>
-                    {documents.map((document): JSX.Element => (
-                        <div key={document.document_id} className="h-full">
-                            <DocumentStorageCard
-                                document={document}
-                                onDelete={() => handleDelete(document)}
-                                onDisassociate={entityId && entityType ? () => handleDisassociate(document) : undefined}
-                                showDisassociate={Boolean(entityId && entityType)}
-                                onClick={() => handleDocumentClick(document)}
-                                isContentDocument={!document.file_id}
-                            />
-                        </div>
-                    ))}
-                </div>
-            ) : !isLoading && (
-                <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
-                    No documents found
-                </div>
-            )}
-
-            {/* Pagination */}
-            {documents && documents.length > 0 && (
-                <div className="mt-4">
-                    <DocumentsPagination />
-                </div>
-            )}
-
-            {/* Content Drawer */}
-            <Drawer
-                isOpen={isDrawerOpen}
-                onClose={() => {
-                    setIsDrawerOpen(false);
-                    setSelectedDocument(null);
-                    setDocumentContent(null);
-                    setIsCreatingNew(false);
-                    setHasContentChanged(false);
-                }}
-            >
-                <div className="p-6">
-                    {isCreatingNew ? (
-                        <div className="space-y-4">
-                            <Input
-                                type="text"
-                                placeholder="Document Name"
-                                value={newDocumentName}
-                                onChange={(e) => setNewDocumentName(e.target.value)}
-                            />
-                            <div className="flex justify-end space-x-2 mb-4">
-                                <Button
-                                    onClick={() => {
-                                        setIsDrawerOpen(false);
-                                        setIsCreatingNew(false);
-                                    }}
-                                    variant="outline"
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleSaveNewDocument}
-                                    disabled={isSaving}
-                                    className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                                >
-                                    {isSaving ? 'Saving...' : 'Save'}
-                                </Button>
+                {/* Documents Grid */}
+                {!isLoading && documents && documents.length > 0 ? (
+                    <div {...useAutomationIdAndRegister<ContainerComponent>({
+                        id: `${id}-grid`,
+                        type: 'container',
+                        label: 'Documents Grid'
+                    }).automationIdProps} className={`grid ${gridColumnsClass} gap-4`}>
+                        {documents.map((document): JSX.Element => (
+                            <div key={document.document_id} className="h-full">
+                                <DocumentStorageCard
+                                    id={`${id}-document-${document.document_id}`}
+                                    document={document}
+                                    onDelete={() => handleDelete(document)}
+                                    onDisassociate={entityId && entityType ? () => handleDisassociate(document) : undefined}
+                                    showDisassociate={Boolean(entityId && entityType)}
+                                    onClick={() => handleDocumentClick(document)}
+                                    isContentDocument={!document.file_id}
+                                />
                             </div>
-                            <TextEditor
-                                editorRef={editorRef}
-                                initialContent={[]}
-                                onContentChange={(blocks) => {
-                                    setCurrentContent(blocks);
-                                    setHasContentChanged(true);
-                                }}
-                            />
-                        </div>
-                    ) : selectedDocument && (
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-end mb-4">
+                        ))}
+                    </div>
+                ) : !isLoading && (
+                    <div {...useAutomationIdAndRegister<ContainerComponent>({
+                        id: `${id}-empty`,
+                        type: 'container',
+                        label: 'No Documents'
+                    }).automationIdProps} className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">
+                        No documents found
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {documents && documents.length > 0 && (
+                    <div className="mt-4">
+                        <DocumentsPagination id={`${id}-pagination`} />
+                    </div>
+                )}
+
+                {/* Content Drawer */}
+                <Drawer
+                    id={`${id}-drawer`}
+                    isOpen={isDrawerOpen}
+                    onClose={() => {
+                        setIsDrawerOpen(false);
+                        setSelectedDocument(null);
+                        setDocumentContent(null);
+                        setIsCreatingNew(false);
+                        setHasContentChanged(false);
+                    }}
+                >
+                    <div className="p-6">
+                        {isCreatingNew ? (
+                            <div className="space-y-4">
+                                <Input
+                                    {...useAutomationIdAndRegister<FormFieldComponent>({
+                                        id: `${id}-new-document-name`,
+                                        type: 'formField',
+                                        fieldType: 'textField',
+                                        label: 'Document Name',
+                                        value: newDocumentName
+                                    }).automationIdProps}
+                                    type="text"
+                                    placeholder="Document Name"
+                                    value={newDocumentName}
+                                    onChange={(e) => setNewDocumentName(e.target.value)}
+                                />
+                                <div className="flex justify-end space-x-2 mb-4">
                                     <Button
-                                        onClick={handleSaveChanges}
+                                        {...useAutomationIdAndRegister<ButtonComponent>({
+                                            id: `${id}-cancel-new-btn`,
+                                            type: 'button',
+                                            label: 'Cancel',
+                                            actions: ['click']
+                                        }).automationIdProps}
+                                        onClick={() => {
+                                            setIsDrawerOpen(false);
+                                            setIsCreatingNew(false);
+                                        }}
+                                        variant="outline"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        {...useAutomationIdAndRegister<ButtonComponent>({
+                                            id: `${id}-save-new-btn`,
+                                            type: 'button',
+                                            label: 'Save',
+                                            actions: ['click'],
+                                            disabled: isSaving
+                                        }).automationIdProps}
+                                        onClick={handleSaveNewDocument}
                                         disabled={isSaving}
                                         className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
                                     >
                                         {isSaving ? 'Saving...' : 'Save'}
                                     </Button>
                                 </div>
-                                <Input
-                                    type="text"
-                                    value={documentName}
-                                    onChange={(e) => setDocumentName(e.target.value)}
-                                    className="text-lg font-semibold mb-2"
-                                />
                                 <TextEditor
+                                    id={`${id}-new-editor`}
                                     editorRef={editorRef}
-                                    initialContent={documentContent ? parseBlockData(documentContent.block_data) : []}
+                                    initialContent={[]}
                                     onContentChange={(blocks) => {
                                         setCurrentContent(blocks);
                                         setHasContentChanged(true);
                                     }}
                                 />
                             </div>
-                        </div>
-                    )}
-                </div>
-            </Drawer>
-        </div>
+                        ) : selectedDocument && (
+                            <div className="space-y-4">
+                                <div>
+                                    <div className="flex justify-end mb-4">
+                                        <Button
+                                            {...useAutomationIdAndRegister<ButtonComponent>({
+                                                id: `${id}-save-changes-btn`,
+                                                type: 'button',
+                                                label: 'Save Changes',
+                                                actions: ['click'],
+                                                disabled: isSaving
+                                            }).automationIdProps}
+                                            onClick={handleSaveChanges}
+                                            disabled={isSaving}
+                                            className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                                        >
+                                            {isSaving ? 'Saving...' : 'Save'}
+                                        </Button>
+                                    </div>
+                                    <Input
+                                        {...useAutomationIdAndRegister<FormFieldComponent>({
+                                            id: `${id}-document-name`,
+                                            type: 'formField',
+                                            fieldType: 'textField',
+                                            label: 'Document Name',
+                                            value: documentName
+                                        }).automationIdProps}
+                                        type="text"
+                                        value={documentName}
+                                        onChange={(e) => setDocumentName(e.target.value)}
+                                        className="text-lg font-semibold mb-2"
+                                    />
+                                    <TextEditor
+                                        id={`${id}-editor`}
+                                        editorRef={editorRef}
+                                        initialContent={documentContent ? parseBlockData(documentContent.block_data) : []}
+                                        onContentChange={(blocks) => {
+                                            setCurrentContent(blocks);
+                                            setHasContentChanged(true);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </Drawer>
+            </div>
+        </ReflectionContainer>
     );
 };
 

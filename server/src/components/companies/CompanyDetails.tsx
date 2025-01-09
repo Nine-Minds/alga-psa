@@ -35,6 +35,7 @@ import {
 import { updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
 
 interface CompanyDetailsProps {
+  id?: string; // Made optional to maintain backward compatibility
   company: ICompany;
   documents?: IDocument[];
   contacts?: IContact[];
@@ -93,6 +94,7 @@ const TextDetailItem: React.FC<{
 };
 
 const CompanyDetails: React.FC<CompanyDetailsProps> = ({ 
+  id = 'company-details',
   company, 
   documents = [], 
   contacts = [],
@@ -373,6 +375,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Documents",
       content: currentUser ? (
         <Documents
+          id={`${id}-documents`}
           documents={documents}
           gridColumns={3}
           userId={currentUser.user_id}
@@ -540,6 +543,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       />
 
       <QuickAddTicket 
+        id={`${id}-quick-add-ticket`}
         open={isQuickAddTicketOpen}
         onOpenChange={setIsQuickAddTicketOpen}
         onTicketAdded={handleTicketAdded}
@@ -550,6 +554,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       />
 
       <DocumentSelector
+        id={`${id}-document-selector`}
         isOpen={isDocumentSelectorOpen}
         onClose={() => setIsDocumentSelectorOpen(false)}
         entityId={company.company_id}

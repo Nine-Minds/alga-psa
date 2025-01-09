@@ -1,20 +1,23 @@
-// server/src/components/interactions/InteractionsFeed.tsx
 'use client'
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
-import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType, ISystemInteractionType } from '../../interfaces/interaction.interfaces';
 import { QuickAddInteraction } from './QuickAddInteraction';
-import { getInteractionsForEntity, getInteractionById } from '@/lib/actions/interactionActions';
-import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
-import { useDrawer } from '@/context/DrawerContext';
+import { getInteractionsForEntity, getInteractionById } from '../../lib/actions/interactionActions';
+import { getAllInteractionTypes } from '../../lib/actions/interactionTypeActions';
+import { useDrawer } from '../../context/DrawerContext';
 import InteractionDetails from './InteractionDetails';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import CustomSelect from '../ui/CustomSelect';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent, ContainerComponent } from '../../types/ui-reflection/types';
 
 interface InteractionsFeedProps {
+  id?: string; // Made optional to maintain backward compatibility
   entityId: string;
   entityType: 'contact' | 'company';
   companyId?: string;
@@ -34,7 +37,14 @@ const InteractionIcon = ({ type }: { type: string }) => {
   }
 };
 
-const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityType, companyId, interactions, setInteractions }) => {
+const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ 
+  id = 'interactions-feed',
+  entityId, 
+  entityType, 
+  companyId, 
+  interactions, 
+  setInteractions 
+}) => {
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
@@ -43,6 +53,79 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
   const [endDate, setEndDate] = useState<string>('');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+
+  // Register all components with UI reflection system
+  const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-title`,
+    type: 'container',
+    label: 'Interactions Title'
+  });
+
+  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-add-btn`,
+    type: 'button',
+    label: 'Add Interaction',
+    actions: ['click']
+  });
+
+  const { automationIdProps: searchProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-search`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Search Interactions',
+    value: searchTerm
+  });
+
+  const { automationIdProps: filterButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-filter-btn`,
+    type: 'button',
+    label: 'Filter',
+    actions: ['click']
+  });
+
+  const { automationIdProps: listProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-list`,
+    type: 'container',
+    label: 'Interactions List'
+  });
+
+  const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-type-select`,
+    type: 'formField',
+    fieldType: 'select',
+    label: 'Interaction Type',
+    value: selectedType
+  });
+
+  const { automationIdProps: startDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-start-date`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Start Date',
+    value: startDate
+  });
+
+  const { automationIdProps: endDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-end-date`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'End Date',
+    value: endDate
+  });
+
+  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-reset-btn`,
+    type: 'button',
+    label: 'Reset Filters',
+    actions: ['click']
+  });
+
+  const { automationIdProps: applyButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-apply-btn`,
+    type: 'button',
+    label: 'Apply Filters',
+    actions: ['click']
+  });
 
   useEffect(() => {
     fetchInteractions();
@@ -132,56 +215,64 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
   };
 
   return (
-    <Card className="w-full max-w-2xl">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">Interactions</h2>
-          <Button 
-            onClick={() => setIsQuickAddOpen(true)} 
-            size="default"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Add Interaction
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-4 mb-4">
-          <Input
-            type="text"
-            value={searchTerm}
-            onChange={handleSearchChange}
-            placeholder="Search interactions"
-            className="flex-grow"
-          />
-          <Button 
-            onClick={() => setIsFilterDialogOpen(true)} 
-            variant="outline"
-            size="default"
-            className="flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-        </div>
-      </div>
-      <CardContent>
-        <ul className="space-y-2">
-          {filteredInteractions.map((interaction): JSX.Element => (
-            <li 
-              key={interaction.interaction_id} 
-              className="flex items-start space-x-3 p-4 hover:bg-gray-50 rounded-lg cursor-pointer border-b border-gray-200 last:border-b-0"
-              onClick={() => handleInteractionClick(interaction)}
+    <ReflectionContainer id={id} label="Interactions Feed">
+      <Card className="w-full max-w-2xl">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 {...titleProps} className="text-2xl font-bold">
+              Interactions
+            </h2>
+            <Button 
+              {...addButtonProps}
+              onClick={() => setIsQuickAddOpen(true)} 
+              size="default"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              <div className="flex-shrink-0">
-                <InteractionIcon type={interaction.type_name} />
-              </div>
-              <div className="flex-grow">
-                <p className="font-semibold">{interaction.description}</p>
-                <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
+              Add Interaction
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-4 mb-4">
+            <Input
+              {...searchProps}
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder="Search interactions"
+              className="flex-grow"
+            />
+            <Button 
+              {...filterButtonProps}
+              onClick={() => setIsFilterDialogOpen(true)} 
+              variant="outline"
+              size="default"
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              Filter
+            </Button>
+          </div>
+        </div>
+        <CardContent>
+          <ul {...listProps} className="space-y-2">
+            {filteredInteractions.map((interaction): JSX.Element => (
+              <li 
+                key={interaction.interaction_id} 
+                data-automation-id={`${id}-interaction-${interaction.interaction_id}`}
+                className="flex items-start space-x-3 p-4 hover:bg-gray-50 rounded-lg cursor-pointer border-b border-gray-200 last:border-b-0"
+                onClick={() => handleInteractionClick(interaction)}
+              >
+                <div className="flex-shrink-0">
+                  <InteractionIcon type={interaction.type_name} />
+                </div>
+                <div className="flex-grow">
+                  <p className="font-semibold">{interaction.description}</p>
+                  <p className="text-sm text-gray-500">{new Date(interaction.interaction_date).toLocaleString()}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
       <Dialog isOpen={isFilterDialogOpen} onClose={() => setIsFilterDialogOpen(false)}>
         <DialogHeader>
@@ -190,6 +281,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
+              {...typeSelectProps}
               options={[
                 { value: '', label: 'All Types' },
                 ...interactionTypes.map((type): { value: string; label: string } => ({
@@ -202,29 +294,42 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
               placeholder="Interaction Type"
             />
             <Input
+              {...startDateProps}
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               placeholder="Start Date"
             />
             <Input
+              {...endDateProps}
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               placeholder="End Date"
             />
             <div className="flex justify-between">
-              <Button onClick={resetFilters} variant="outline" className="flex items-center">
+              <Button 
+                {...resetButtonProps}
+                onClick={resetFilters} 
+                variant="outline" 
+                className="flex items-center"
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reset Filters
               </Button>
-              <Button onClick={handleApplyFilters}>Apply Filters</Button>
+              <Button 
+                {...applyButtonProps}
+                onClick={handleApplyFilters}
+              >
+                Apply Filters
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       <QuickAddInteraction
+        id={`${id}-quick-add`}
         isOpen={isQuickAddOpen}
         onClose={() => setIsQuickAddOpen(false)}
         entityId={entityId}
@@ -232,7 +337,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({ entityId, entityTyp
         companyId={companyId}
         onInteractionAdded={handleInteractionAdded}
       />
-    </Card>
+    </ReflectionContainer>
   );
 };
 

@@ -12,11 +12,12 @@ The UI Reflection System provides a live, high-level JSON description of the app
 - **Automatic State Updates**: Components self-report their state changes
 - **WebSocket Broadcasting**: UI state changes are broadcast for external tools
 - **Minimal Boilerplate**: Easy integration with existing components
-- **Hierarchical Structure**: True parent-child relationships between components
+- **Hierarchical Structure**: Automatic parent-child relationships through context
+- **Auto ID Generation**: Consistent ID generation with parent context integration
 
 ## Hierarchical Component Model
 
-The UI reflection system supports a true hierarchical component model, enabling natural representation of nested UI structures:
+The UI reflection system uses React Context to maintain parent-child relationships automatically:
 
 ### 1. Base Component Structure
 
@@ -24,34 +25,25 @@ All components can participate in parent-child relationships:
 
 ```typescript
 interface BaseComponent {
-  id: string;
-  type: string;
-  label?: string;
-  disabled?: boolean;
-  actions?: string[];
-  parentId?: string;  // Reference to parent component
-  children?: UIComponent[];  // Child components
+  id: string;          // Unique identifier (can be auto-generated)
+  type: string;        // Component type (e.g., 'container', 'button')
+  label?: string;      // Human-readable label
+  disabled?: boolean;  // Component state
+  actions?: string[];  // Available actions
 }
 ```
 
 ### 2. Parent-Child Registration
 
-Components can be registered with explicit parent-child relationships:
+Components inherit their parent's ID through context:
 
 ```typescript
-// Register parent form
-const updateForm = useRegisterUIComponent<FormComponent>({
-  id: 'login-form',
-  type: 'form'
-});
-
-// Register child field with parent reference
-const updateField = useRegisterUIComponent<FormFieldComponent>({
-  id: 'email-field',
-  type: 'formField',
-  fieldType: 'textField',
-  parentId: 'login-form'  // Reference to parent
-});
+// Parent container sets the context
+<ReflectionContainer id="ticketing-dashboard">
+  {/* Children automatically know their parent */}
+  <TicketFilters />  // Gets ticketing-dashboard as parent
+  <TicketTable />    // Gets ticketing-dashboard as parent
+</ReflectionContainer>
 ```
 
 ### 3. State Management
@@ -63,20 +55,23 @@ The UIStateContext maintains the complete component hierarchy:
 {
   components: [
     {
-      id: 'login-form',
-      type: 'form',
+      id: 'ticketing-dashboard',
+      type: 'container',
       children: [
         {
-          id: 'email-field',
-          type: 'formField',
-          fieldType: 'textField',
-          parentId: 'login-form'
+          id: 'ticketing-dashboard-filters',
+          type: 'container'
         },
         {
-          id: 'password-field',
-          type: 'formField',
-          fieldType: 'textField',
-          parentId: 'login-form'
+          id: 'ticketing-dashboard-table',
+          type: 'container',
+          children: [
+            {
+              id: 'ticketing-dashboard-table-status-select',
+              type: 'formField',
+              fieldType: 'select'
+            }
+          ]
         }
       ]
     }
@@ -110,12 +105,13 @@ function App() {
 
 ### 2. Component Registration
 
-Use the `useRegisterUIComponent` hook to register any UI component:
+Use the `useAutomationIdAndRegister` hook to register components and get DOM props:
 
 ```tsx
-function ActionButton({ label, disabled, onClick }: Props) {
-  const updateMetadata = useRegisterUIComponent<ButtonComponent>({
-    id: 'action-button',
+function ActionButton({ id, label, disabled, onClick }: Props) {
+  // Single hook call for registration and DOM props
+  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
+    id,                    // Optional - will auto-generate if not provided
     type: 'button',
     label,
     disabled,
@@ -128,7 +124,7 @@ function ActionButton({ label, disabled, onClick }: Props) {
   }, [label, disabled, updateMetadata]);
 
   return (
-    <button onClick={onClick} disabled={disabled}>
+    <button {...automationIdProps} onClick={onClick} disabled={disabled}>
       {label}
     </button>
   );
@@ -137,52 +133,29 @@ function ActionButton({ label, disabled, onClick }: Props) {
 
 ### 3. Form Components
 
-Forms require special attention to maintain proper state synchronization between the form component and its children:
+Forms use ReflectionContainer to establish parent-child relationships:
 
 ```tsx
-function LoginForm({ onSubmit }: Props) {
+function LoginForm({ id }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
 
-  // Register the form component
-  const updateForm = useRegisterUIComponent<FormComponent>({
-    id: 'login-form',
-    type: 'form',
-    label: 'Login'
-  });
-
-  // Register individual components with parent reference
-  const updateUsernameField = useRegisterUIComponent<FormFieldComponent>({
-    id: 'username-field',
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Username',
-    value: username,
-    required: true,
-    parentId: 'login-form'
-  });
-
-  const updatePasswordField = useRegisterUIComponent<FormFieldComponent>({
-    id: 'password-field',
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Password',
-    value: password,
-    required: true,
-    parentId: 'login-form'
-  });
-
-  // Update field states when they change
-  useEffect(() => {
-    updateUsernameField({ value: username });
-    updatePasswordField({ value: password });
-  }, [username, password, updateUsernameField, updatePasswordField]);
-
   return (
-    <form onSubmit={onSubmit}>
-      <Input id="username-field" value={username} onChange={setUsername} />
-      <Input id="password-field" value={password} onChange={setPassword} type="password" />
-    </form>
+    <ReflectionContainer id={id} label="Login Form">
+      <form onSubmit={handleSubmit}>
+        <Input
+          id={`${id}-username`}  // Parent ID is inherited
+          value={username}
+          onChange={setUsername}
+        />
+        <Input
+          id={`${id}-password`}
+          value={password}
+          onChange={setPassword}
+          type="password"
+        />
+      </form>
+    </ReflectionContainer>
   );
 }
 ```
@@ -190,20 +163,21 @@ function LoginForm({ onSubmit }: Props) {
 ## Best Practices
 
 1. **Component Registration**:
-   - Register form components first
-   - Register child components with proper parentId references
-   - Use descriptive, hierarchical IDs (e.g., 'user-settings-save-button')
-   - Keep IDs stable across renders
-   - Make IDs unique within their context
+   - Use ReflectionContainer for major UI sections
+   - Let child components inherit parent context
+   - Follow naming conventions for IDs:
+     * Screen/Page: my-screen
+     * Subcontainers: ${parentId}-section
+     * Components: ${parentId}-type
 
 2. **State Management**:
-   - Update individual components when their state changes
+   - Use useAutomationIdAndRegister for unified registration
    - Keep state updates minimal and focused
    - Clean up properly in unmount handlers
    - Only update properties defined in type interfaces
 
 3. **Parent-Child Relationships**:
-   - Use parentId to establish relationships
+   - Let React context handle parent-child relationships
    - Keep hierarchies shallow when possible
    - Clean up entire component trees on unmount
    - Consider component reuse in hierarchies
@@ -225,15 +199,15 @@ function LoginForm({ onSubmit }: Props) {
 The UI reflection system integrates with testing through data-automation-id attributes:
 
 ```tsx
-// Component registration
-const updateButton = useRegisterUIComponent<ButtonComponent>({
+// Component registration and DOM props in one call
+const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
   id: 'submit-button',
   type: 'button',
   label: 'Submit'
 });
 
 // DOM element
-<button {...withDataAutomationId({ id: 'submit-button' })}>
+<button {...automationIdProps}>
   Submit
 </button>
 ```
@@ -242,6 +216,7 @@ This ensures:
 - UI reflection IDs match testing selectors
 - Components are consistently identifiable
 - Automated tests can reliably interact with elements
+- Parent-child relationships are reflected in IDs
 
 ## Contributing
 
@@ -251,3 +226,7 @@ To extend the system:
 2. Update documentation
 3. Add test coverage
 4. Submit PR with examples
+
+See also:
+- [UI Automation IDs](ui_automation_ids.md)
+- [Development Guide](development_guide.md)

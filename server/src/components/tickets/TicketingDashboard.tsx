@@ -1,32 +1,32 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import Link from 'next/link';
 import { getServerSession } from 'next-auth';
-import { ITicket, ITicketListItem, ITicketCategory } from '@/interfaces/ticket.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { ITicket, ITicketListItem, ITicketCategory } from '../../interfaces/ticket.interfaces';
+import { IUser } from '../../interfaces/auth.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { Button } from '../ui/Button';
-import { getAllChannels } from '@/lib/actions/channel-actions/channelActions';
-import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { getAllUsers, getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getTicketCategories } from '@/lib/actions/ticketCategoryActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import { IChannel, ICompany } from '@/interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { getTicketsForList, deleteTicket } from '@/lib/actions/ticket-actions/ticketActions';
+import { getAllChannels } from '../../lib/actions/channel-actions/channelActions';
+import { getTicketStatuses } from '../../lib/actions/status-actions/statusActions';
+import { getAllPriorities } from '../../lib/actions/priorityActions';
+import { getAllUsers, getCurrentUser } from '../../lib/actions/user-actions/userActions';
+import { getTicketCategories } from '../../lib/actions/ticketCategoryActions';
+import { getAllCompanies } from '../../lib/actions/companyActions';
+import { ChannelPicker } from '../settings/general/ChannelPicker';
+import { CompanyPicker } from '../companies/CompanyPicker';
+import { IChannel, ICompany } from '../../interfaces';
+import { DataTable } from '../ui/DataTable';
+import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
+import { getTicketsForList, deleteTicket } from '../../lib/actions/ticket-actions/ticketActions';
 import { MoreHorizontal, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ContainerComponent } from '@/types/ui-reflection/types';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -37,16 +37,58 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets 
 }) => {
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
-    id,
-    type: 'container',
-    label: 'Ticketing Dashboard'
-  });
-
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
+
+  // Register components with UI reflection system
+  const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-title`,
+    type: 'container',
+    label: 'Dashboard Title'
+  });
+
+  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-add-ticket-btn`,
+    type: 'container',
+    label: 'Add Ticket Button'
+  });
+
+  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-search-input`,
+    type: 'container',
+    label: 'Search Input'
+  });
+
+  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-reset-filters-btn`,
+    type: 'container',
+    label: 'Reset Filters Button'
+  });
+
+  const { automationIdProps: headingProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-tickets-heading`,
+    type: 'container',
+    label: 'Tickets Heading'
+  });
+
+  const { automationIdProps: loadingProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-loading`,
+    type: 'container',
+    label: 'Loading State'
+  });
+
+  const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-tickets-table`,
+    type: 'container',
+    label: 'Tickets Table'
+  });
+
+  const { automationIdProps: deleteDialogProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-delete-dialog`,
+    type: 'container',
+    label: 'Delete Dialog'
+  });
 
   const handleDeleteTicket = (ticketId: string) => {
     setTicketToDelete(ticketId);
@@ -70,12 +112,43 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
+// Pre-register automation props for ticket links and actions
+const getTicketLinkProps = useCallback((ticketId: string) => {
+  return useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-ticket-${ticketId}-link`,
+    type: 'container',
+    label: 'Ticket Link'
+  }).automationIdProps;
+}, [id]);
+
+const getTicketMenuButtonProps = useCallback((ticketId: string) => {
+  return useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-ticket-${ticketId}-menu-btn`,
+    type: 'button',
+    label: 'Menu Button',
+    actions: ['click']
+  }).automationIdProps;
+}, [id]);
+
+const getTicketDeleteButtonProps = useCallback((ticketId: string) => {
+  return useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-ticket-${ticketId}-delete-btn`,
+    type: 'button',
+    label: 'Delete Button',
+    actions: ['click']
+  }).automationIdProps;
+}, [id]);
+
+const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
   {
     title: 'Ticket Number',
     dataIndex: 'ticket_number',
     render: (value: string, record: ITicketListItem) => (
-      <Link {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-link` })} href={`/msp/tickets/${record.ticket_id}`} className="text-blue-500 hover:underline">
+      <Link 
+        {...getTicketLinkProps(record.ticket_id!)} 
+        href={`/msp/tickets/${record.ticket_id}`} 
+        className="text-blue-500 hover:underline"
+      >
         {value}
       </Link>
     ),
@@ -128,7 +201,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <Button 
-            {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-menu-btn` })}
+            {...getTicketMenuButtonProps(record.ticket_id!)}
             variant="ghost" 
             className="h-8 w-8 p-0"
           >
@@ -141,7 +214,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
           className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
         >
           <DropdownMenu.Item
-            {...withDataAutomationId({ id: `${id}-ticket-${record.ticket_id}-delete-btn` })}
+            {...getTicketDeleteButtonProps(record.ticket_id!)}
             className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer outline-none"
             onSelect={() => handleDeleteTicket(record.ticket_id as string)}
           >
@@ -151,7 +224,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
       </DropdownMenu.Root>
     ),
   }
-];
+], [getTicketLinkProps, getTicketMenuButtonProps, getTicketDeleteButtonProps]);
 
   const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
   const [channels, setChannels] = useState<IChannel[]>([]);
@@ -173,7 +246,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
   const [isLoading, setIsLoading] = useState(false);
   
   // Create columns with categories data
-  const columns = useMemo(() => createTicketColumns(categories), [categories]);
+  const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
 
   const fetchOptions = useCallback(async () => {
     return Promise.all([
@@ -390,34 +463,35 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
   }, []);
 
   return (
-    <div {...withDataAutomationId({ id })}>
+    <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-4">
-        <h1 {...withDataAutomationId({ id: `${id}-title` })} className="text-2xl font-bold">
+        <h1 {...titleProps} className="text-2xl font-bold">
           Ticketing Dashboard
         </h1>
         <Button 
-          {...withDataAutomationId({ id: `${id}-add-ticket-btn` })}
+          {...addButtonProps}
           onClick={() => setIsQuickAddOpen(true)}
         >
           Add Ticket
         </Button>
       </div>
-      <div {...withDataAutomationId({ id: `${id}-filters` })} className="bg-white shadow rounded-lg p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-        <div className="w-fit">
-          <ChannelPicker
-            data-automation-id={`${id}-channel-picker`}
-            channels={channels}
-            onSelect={handleChannelSelect}
-            selectedChannelId={selectedChannel}
-            filterState={channelFilterState}
-            onFilterStateChange={setChannelFilterState}
-          />
-          </div>
-          <div className="relative w-fit">
-            <div className="[&>div>button]:max-w-[300px] [&>div>button>span]:truncate [&>div>div[class*='absolute']]:!w-[330px] [&>div>div[class*='absolute']]:!min-w-0 [&>div>div[class*='absolute']>div:last-child>button]:w-full [&>div>div[class*='absolute']>div:last-child>button>span]:truncate [&>div>div[class*='absolute']>div>div>div>button]:!w-auto">
+
+      <ReflectionContainer id={`${id}-filters`} label="Filters">
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-fit">
+                <ChannelPicker
+                  id={`${id}-channel-picker`}
+                  channels={channels}
+                  onSelect={handleChannelSelect}
+                  selectedChannelId={selectedChannel}
+                  filterState={channelFilterState}
+                  onFilterStateChange={setChannelFilterState}
+                />
+              </div>
               <CompanyPicker
+                id={`${id}-company-picker`}
                 companies={companies}
                 onSelect={handleCompanySelect}
                 selectedCompanyId={selectedCompany}
@@ -427,69 +501,72 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
                 onClientTypeFilterChange={handleClientTypeFilterChange}
                 fitContent={true}
               />
+              <CustomSelect
+                options={statusOptions}
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value)}
+                placeholder="All Statuses"
+              />
+              <CustomSelect
+                options={priorityOptions}
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value)}
+                placeholder="All Priorities"
+              />
+              <CategoryPicker
+                id={`${id}-category-picker`}
+                categories={categories}
+                selectedCategories={selectedCategories}
+                excludedCategories={excludedCategories}
+                onSelect={handleCategorySelect}
+                placeholder="Filter by category"
+                multiSelect={true}
+                showExclude={true}
+                showReset={true}
+                allowEmpty={true}
+                className="text-sm min-w-[200px]"
+              />
+              <input
+                {...searchInputProps}
+                type="text"
+                placeholder="Search tickets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
+              />
             </div>
+            <Button
+              {...resetButtonProps}
+              variant="outline"
+              onClick={handleResetFilters}
+              className="whitespace-nowrap flex items-center gap-2"
+            >
+              <XCircle className="h-4 w-4" />
+              Reset Filters
+            </Button>
           </div>
-          <CustomSelect
-            data-automation-id={`${id}-status-select`}
-            options={statusOptions}
-            value={selectedStatus}
-            onValueChange={(value) => setSelectedStatus(value)}
-            placeholder="All Statuses"
-          />
-          <CustomSelect
-            data-automation-id={`${id}-priority-select`}
-            options={priorityOptions}
-            value={selectedPriority}
-            onValueChange={(value) => setSelectedPriority(value)}
-            placeholder="All Priorities"
-          />
-          <CategoryPicker
-            id={`${id}-category-picker`}
-            categories={categories}
-            selectedCategories={selectedCategories}
-            excludedCategories={excludedCategories}
-            onSelect={handleCategorySelect}
-            placeholder="Filter by category"
-            multiSelect={true}
-            showExclude={true}
-            showReset={true}
-            allowEmpty={true}
-            className="text-sm min-w-[200px]"
-          />
-            <input
-              {...withDataAutomationId({ id: `${id}-search-input` })}
-              type="text"
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
-            />
-          </div>
-          <Button
-            {...withDataAutomationId({ id: `${id}-reset-filters-btn` })}
-            variant="outline"
-            onClick={handleResetFilters}
-            className="whitespace-nowrap flex items-center gap-2"
-          >
-            <XCircle className="h-4 w-4" />
-            Reset Filters
-          </Button>
         </div>
-        <h2 {...withDataAutomationId({ id: `${id}-tickets-heading` })} className="text-xl font-semibold mt-6 mb-2">
-          Tickets
-        </h2>
-        {isLoading ? (
-          <div {...withDataAutomationId({ id: `${id}-loading` })} className="flex justify-center items-center h-32">
-            <span>Loading...</span>
-          </div>
-        ) : (
-          <DataTable
-            {...withDataAutomationId({ id: `${id}-tickets-table` })}
-            data={ticketsWithIds}
-            columns={columns}
-          />
-        )}
-      </div>
+      </ReflectionContainer>
+
+      <ReflectionContainer id={`${id}-table`} label="Tickets Table">
+        <div className="bg-white shadow rounded-lg p-4">
+          <h2 {...headingProps} className="text-xl font-semibold mb-2">
+            Tickets
+          </h2>
+          {isLoading ? (
+            <div {...loadingProps} className="flex justify-center items-center h-32">
+              <span>Loading...</span>
+            </div>
+          ) : (
+            <DataTable
+              {...tableProps}
+              data={ticketsWithIds}
+              columns={columns}
+            />
+          )}
+        </div>
+      </ReflectionContainer>
+
       <QuickAddTicket
         id={`${id}-quick-add`}
         open={isQuickAddOpen}
@@ -497,7 +574,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
         onTicketAdded={handleTicketAdded}
       />
       <ConfirmationDialog
-        {...withDataAutomationId({ id: `${id}-delete-dialog` })}
+        {...deleteDialogProps}
         isOpen={!!ticketToDelete}
         onClose={() => setTicketToDelete(null)}
         onConfirm={confirmDeleteTicket}
@@ -506,7 +583,7 @@ const createTicketColumns = (categories: ITicketCategory[]): ColumnDefinition<IT
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
-    </div>
+    </ReflectionContainer>
   );
 };
 

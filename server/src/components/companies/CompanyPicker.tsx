@@ -1,12 +1,16 @@
-// server/src/components/CompanyPicker.tsx
+'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Input } from '../ui/Input';
 import CustomSelect from '../ui/CustomSelect';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { ICompany } from '../../interfaces/company.interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface CompanyPickerProps {
+  id: string;
   companies?: ICompany[];
   onSelect: (companyId: string) => void;
   selectedCompanyId: string | null;
@@ -18,6 +22,7 @@ interface CompanyPickerProps {
 }
 
 export const CompanyPicker: React.FC<CompanyPickerProps> = ({
+  id,
   companies = [],
   onSelect,
   selectedCompanyId,
@@ -41,7 +46,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
     });
   }, [companies, selectedCompanyId, filterState, clientTypeFilter]);
 
-  const selectedCompany = useMemo(() => 
+  const selectedCompany = useMemo(() =>
     companies.find((c) => c.company_id === selectedCompanyId),
     [companies, selectedCompanyId]
   );
@@ -57,16 +62,16 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
 
     const filtered = companies.filter(company => {
       const matchesSearch = company.company_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesState = 
+      const matchesState =
         filterState === 'all' ? true :
-        filterState === 'active' ? !company.is_inactive :
-        filterState === 'inactive' ? company.is_inactive :
-        true;
-      const matchesClientType = 
+          filterState === 'active' ? !company.is_inactive :
+            filterState === 'inactive' ? company.is_inactive :
+              true;
+      const matchesClientType =
         clientTypeFilter === 'all' ? true :
-        clientTypeFilter === 'company' ? company.client_type === 'company' :
-        clientTypeFilter === 'individual' ? company.client_type === 'individual' :
-        true;
+          clientTypeFilter === 'company' ? company.client_type === 'company' :
+            clientTypeFilter === 'individual' ? company.client_type === 'individual' :
+              true;
 
       const matches = matchesSearch && matchesState && matchesClientType;
       console.log('Company filter result:', {
@@ -127,25 +132,16 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
   };
 
   return (
-    <div className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`} ref={dropdownRef}>
-      <button 
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-2 border-2 border-gray-200 rounded-md flex justify-between items-center text-left outline-none transition-colors duration-200 hover:border-gray-300 focus:border-purple-500 bg-white"
+    <ReflectionContainer id={id} label="Company Picker">
+      <div
+        className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`}
+        ref={dropdownRef}
       >
-        <span>{selectedCompany ? selectedCompany.company_name : 'Select Client'}</span>
-        <ChevronDownIcon />
-      </button>
-      
-      {isOpen && (
-        <div 
-          className={`absolute z-[100] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
-          style={{ 
-            top: '100%',
-            left: 0
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full p-2 border-2 border-gray-200 rounded-md flex justify-between items-center text-left outline-none transition-colors duration-200 hover:border-gray-300 focus:border-purple-500 bg-white"
+        />
           <div className="p-3 space-y-3 bg-white">
             <div className="grid grid-cols-2 gap-2">
               <div className="w-full">
@@ -173,15 +169,22 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                 />
               </div>
             </div>
-            <div className="whitespace-nowrap">
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setSearchTerm(e.target.value);
-                }}
-              />
+            <div className="max-h-60 overflow-y-auto border-t bg-white">
+              {filteredCompanies.map((company): JSX.Element => (
+                <button
+                  key={company.company_id}
+                  onClick={(e) => handleSelect(company.company_id, e)}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${company.company_id === selectedCompanyId ? 'bg-blue-100' : ''
+                    }`}
+                  data-automation-id={`${id}-company-${company.company_id}`}
+                >
+                  {company.company_name}
+                  {company.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
+                  <span className="ml-2 text-gray-500">
+                    ({company.client_type === 'company' ? 'Company' : 'Individual'})
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
           <div className="max-h-60 overflow-y-auto border-t bg-white">
@@ -193,9 +196,8 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                   type="button"
                   key={company.company_id}
                   onClick={(e) => handleSelect(company.company_id, e)}
-                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${
-                    company.company_id === selectedCompanyId ? 'bg-blue-100' : ''
-                  }`}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${company.company_id === selectedCompanyId ? 'bg-blue-100' : ''
+                    }`}
                 >
                   {company.company_name}
                   {company.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
@@ -206,8 +208,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
               ))
             )}
           </div>
-        </div>
-      )}
-    </div>
+      </div>
+    </ReflectionContainer >
   );
 };

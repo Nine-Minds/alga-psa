@@ -1,8 +1,9 @@
 // server/src/components/QuickAddContact.tsx
-import React, { useState, useEffect, useCallback } from 'react';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { DialogComponent, FormComponent, FormFieldComponent, ButtonComponent } from '@/types/ui-reflection/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/Dialog";
+import React, { useState, useEffect } from 'react';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from '@/types/ui-reflection/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
@@ -38,93 +39,95 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
   const [role, setRole] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Only register dialog and its children with UI reflection system when open
-  const updateDialog = isOpen ? useRegisterUIComponent<DialogComponent>({
-    id: 'quick-add-contact-dialog',
-    type: 'dialog',
-    title: 'Add New Contact',
-    open: true
-  }) : undefined;
-
-  // Only register form when dialog is open
-  const updateForm = isOpen ? useRegisterUIComponent<FormComponent>({
+  // Register form containers and fields
+  const { automationIdProps: formProps, updateMetadata: updateForm } = useAutomationIdAndRegister<FormComponent>({
     id: 'quick-add-contact-form',
     type: 'form',
-    parentId: 'quick-add-contact-dialog'
-  }) : undefined;
+    label: 'Add Contact Form'
+  });
 
-  // Only register form fields when dialog is open
-  const updateNameField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: formFieldsProps, updateMetadata: updateFormFields } = useAutomationIdAndRegister<ContainerComponent>({
+    id: 'quick-add-contact-form-fields',
+    type: 'container',
+    label: 'Contact Form Fields'
+  });
+
+  const { automationIdProps: nameProps, updateMetadata: updateName } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-name',
     type: 'formField',
     fieldType: 'textField',
     label: 'Full Name',
     required: true,
-    value: fullName,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: ''
+  });
 
-  const updateEmailField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: emailProps, updateMetadata: updateEmail } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-email',
     type: 'formField',
     fieldType: 'textField',
     label: 'Email',
     required: true,
-    value: email,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: ''
+  });
 
-  const updatePhoneField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: phoneProps, updateMetadata: updatePhone } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-phone',
     type: 'formField',
     fieldType: 'textField',
     label: 'Phone Number',
-    value: phoneNumber,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: ''
+  });
 
-  const updateRoleField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: roleProps, updateMetadata: updateRole } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-role',
     type: 'formField',
     fieldType: 'textField',
     label: 'Role',
-    value: role,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: ''
+  });
 
-  const updateNotesField = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: notesProps, updateMetadata: updateNotes } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-notes',
     type: 'formField',
     fieldType: 'textField',
     label: 'Notes',
-    value: notes,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: ''
+  });
 
-  const updateStatusSwitch = isOpen ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: statusProps, updateMetadata: updateStatus } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'quick-add-contact-status',
     type: 'formField',
     fieldType: 'checkbox',
     label: 'Status',
-    value: isInactive,
-    parentId: 'quick-add-contact-form'
-  }) : undefined;
+    value: false
+  });
 
-  // Only register buttons when dialog is open
-  const updateCancelButton = isOpen ? useRegisterUIComponent<ButtonComponent>({
+  const { automationIdProps: cancelProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'quick-add-contact-cancel',
     type: 'button',
     label: 'Cancel',
-    variant: 'outline',
-    parentId: 'quick-add-contact-dialog'
-  }) : undefined;
+    variant: 'outline'
+  });
 
-  const updateSubmitButton = isOpen ? useRegisterUIComponent<ButtonComponent>({
+  const { automationIdProps: submitProps } = useAutomationIdAndRegister<ButtonComponent>({
     id: 'quick-add-contact-submit',
     type: 'button',
-    label: 'Add Contact',
-    parentId: 'quick-add-contact-dialog'
-  }) : undefined;
+    label: 'Add Contact'
+  });
+
+  // Update form field metadata when values change
+  useEffect(() => {
+    if (isOpen) {
+      updateName({ value: fullName });
+      updateEmail({ value: email });
+      updatePhone({ value: phoneNumber });
+      updateRole({ value: role });
+      updateNotes({ value: notes });
+      updateStatus({ value: isInactive });
+    }
+  }, [isOpen, fullName, email, phoneNumber, role, notes, isInactive,
+      updateName, updateEmail, updatePhone, updateRole,
+      updateNotes, updateStatus]);
 
   // Set initial company ID when the component mounts or when selectedCompanyId changes
   useEffect(() => {
@@ -169,107 +172,98 @@ export const QuickAddContact: React.FC<QuickAddContactProps> = ({
     }
   };
 
-  // Update form field values when they change
-  useEffect(() => {
-    if (isOpen) {
-      updateNameField?.({ value: fullName });
-      updateEmailField?.({ value: email });
-      updatePhoneField?.({ value: phoneNumber });
-      updateRoleField?.({ value: role });
-      updateNotesField?.({ value: notes });
-      updateStatusSwitch?.({ value: isInactive });
-    }
-  }, [isOpen, fullName, email, phoneNumber, role, notes, isInactive,
-      updateNameField, updateEmailField, updatePhoneField,
-      updateRoleField, updateNotesField, updateStatusSwitch]);
-
   return (
-    <Dialog id="quick-add-contact-dialog" isOpen={isOpen} onClose={onClose}>
+    <Dialog isOpen={isOpen} onClose={onClose} title="Add New Contact">
       <DialogHeader>
         <DialogTitle>Add New Contact</DialogTitle>
       </DialogHeader>
       <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="quick-add-contact-name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-              />
+        <ReflectionContainer {...formProps}>
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              <ReflectionContainer {...formFieldsProps}>
+                <div>
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    {...nameProps}
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    {...emailProps}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    {...phoneProps}
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="role">Role</Label>
+                  <Input
+                    {...roleProps}
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="e.g., Manager, Developer, etc."
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="notes">Notes</Label>
+                  <TextArea
+                    {...notesProps}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Add any additional notes about the contact..."
+                  />
+                </div>
+                <div>
+                  <Label>Company (Optional)</Label>
+                  <CompanyPicker
+                    id="quick-add-contact-company"
+                    companies={companies}
+                    onSelect={handleCompanySelect}
+                    selectedCompanyId={companyId}
+                    filterState={filterState}
+                    onFilterStateChange={setFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
+                  />
+                </div>
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center space-x-2">
+                    <Label htmlFor="inactive-switch">Status</Label>
+                    <span className="text-sm text-gray-500">
+                      {isInactive ? 'Inactive' : 'Active'}
+                    </span>
+                  </div>
+                  <Switch
+                    {...statusProps}
+                    checked={isInactive}
+                    onCheckedChange={setIsInactive}
+                    className="data-[state=checked]:bg-primary-500"
+                  />
+                </div>
+              </ReflectionContainer>
             </div>
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="quick-add-contact-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
-                id="quick-add-contact-phone"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="role">Role</Label>
-              <Input
-                id="quick-add-contact-role"
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                placeholder="e.g., Manager, Developer, etc."
-              />
-            </div>
-            <div>
-              <Label htmlFor="notes">Notes</Label>
-              <TextArea
-                id="quick-add-contact-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any additional notes about the contact..."
-              />
-            </div>
-            <div>
-              <Label>Company (Optional)</Label>
-              <CompanyPicker
-                companies={companies}
-                onSelect={handleCompanySelect}
-                selectedCompanyId={companyId}
-                filterState={filterState}
-                onFilterStateChange={setFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
-              />
-            </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="inactive-switch">Status</Label>
-                <span className="text-sm text-gray-500">
-                  {isInactive ? 'Inactive' : 'Active'}
-                </span>
-              </div>
-              <Switch
-                id="quick-add-contact-status"
-                checked={isInactive}
-                onCheckedChange={setIsInactive}
-                className="data-[state=checked]:bg-primary-500"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button id="quick-add-contact-cancel" type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button id="quick-add-contact-submit" type="submit">Add Contact</Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button {...cancelProps} type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button {...submitProps} type="submit">Add Contact</Button>
+            </DialogFooter>
+          </form>
+        </ReflectionContainer>
       </DialogContent>
     </Dialog>
   );
