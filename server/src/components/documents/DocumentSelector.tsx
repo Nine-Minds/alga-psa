@@ -1,16 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
+import { Button } from '../ui/Button';
 import { Search, X, Check, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
+import { Input } from '../ui/Input';
 import DocumentStorageCard from './DocumentStorageCard';
-import { IDocument } from '@/interfaces/document.interface';
-import { getAllDocuments, createDocumentAssociations } from '@/lib/actions/document-actions/documentActions';
+import { IDocument } from '../../interfaces/document.interface';
+import { getAllDocuments, createDocumentAssociations } from '../../lib/actions/document-actions/documentActions';
 import { Text } from '@radix-ui/themes';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface DocumentSelectorProps {
+    id: string; // Made required since it's needed for reflection registration
     entityId: string;
     entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
     onDocumentSelected?: (document: IDocument) => Promise<void>;
@@ -21,6 +25,7 @@ interface DocumentSelectorProps {
 }
 
 export default function DocumentSelector({
+    id,
     entityId,
     entityType,
     onDocumentSelected,
@@ -126,94 +131,139 @@ export default function DocumentSelector({
                 <DialogHeader>
                     <DialogTitle>Select Documents</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
-                    {/* Search Bar */}
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            placeholder="Search documents..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                            onKeyPress={handleSearchKeyPress}
-                            className="pl-10"
-                        />
-                        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-                    </div>
-
-                    {/* Error Message */}
-                    {error && (
-                        <Text as="div" size="2" color="red" className="flex items-center">
-                            <X className="w-4 h-4 mr-2" />
-                            {error}
-                        </Text>
-                    )}
-
-                    {/* Loading State */}
-                    {isLoading ? (
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+                <ReflectionContainer id={id} label="Document Selector">
+                    <div className="space-y-4">
+                        {/* Search Bar */}
+                        <div className="relative">
+                            <Input
+                                {...useAutomationIdAndRegister<FormFieldComponent>({
+                                    id: `${id}-search`,
+                                    type: 'formField',
+                                    fieldType: 'textField',
+                                    label: 'Search Documents',
+                                    value: searchTerm
+                                }).automationIdProps}
+                                type="text"
+                                placeholder="Search documents..."
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                                onKeyPress={handleSearchKeyPress}
+                                className="pl-10"
+                            />
+                            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                         </div>
-                    ) : (
-                        <>
-                            {/* Documents Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-2">
-                                {documents.map((document): JSX.Element => (
-                                    <div
-                                        key={document.document_id}
-                                        className={`relative cursor-pointer transition-all ${
-                                            selectedDocuments.has(document.document_id)
-                                                ? 'ring-2 ring-primary-500'
-                                                : 'hover:ring-2 hover:ring-gray-200'
-                                        }`}
-                                        onClick={() => toggleDocumentSelection(document.document_id)}
-                                    >
-                                        <DocumentStorageCard
-                                            document={document}
-                                            hideActions
-                                        />
-                                        {/* Selection Indicator */}
-                                        {selectedDocuments.has(document.document_id) && (
-                                            <div className="absolute top-2 right-2 bg-primary-500 text-white rounded-full p-1">
-                                                <Check className="w-4 h-4" />
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                                {documents.length === 0 && !isLoading && (
-                                    <div className="col-span-2 text-center py-8">
-                                        <Text as="div" size="2" color="gray">
-                                            No documents found
-                                        </Text>
-                                    </div>
-                                )}
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex justify-end space-x-2 pt-4 border-t">
-                                <Button
-                                    variant="outline"
-                                    onClick={onClose}
-                                    disabled={isSaving}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={selectedDocuments.size === 0 || isSaving}
-                                >
-                                    {isSaving ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        singleSelect ? 'Select Document' : 'Associate Selected'
-                                    )}
-                                </Button>
+                        {/* Error Message */}
+                        {error && (
+                            <Text {...useAutomationIdAndRegister<ContainerComponent>({
+                                id: `${id}-error`,
+                                type: 'container',
+                                label: 'Error Message'
+                            }).automationIdProps} as="div" size="2" color="red" className="flex items-center">
+                                <X className="w-4 h-4 mr-2" />
+                                {error}
+                            </Text>
+                        )}
+
+                        {/* Loading State */}
+                        {isLoading ? (
+                            <div {...useAutomationIdAndRegister<ContainerComponent>({
+                                id: `${id}-loading`,
+                                type: 'container',
+                                label: 'Loading'
+                            }).automationIdProps} className="flex justify-center py-8">
+                                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
                             </div>
-                        </>
-                    )}
-                </div>
+                        ) : (
+                            <>
+                                {/* Documents Grid */}
+                                <div {...useAutomationIdAndRegister<ContainerComponent>({
+                                    id: `${id}-grid`,
+                                    type: 'container',
+                                    label: 'Documents Grid'
+                                }).automationIdProps} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-2">
+                                    {documents.map((document): JSX.Element => (
+                                        <div
+                                            key={document.document_id}
+                                            {...useAutomationIdAndRegister<ContainerComponent>({
+                                                id: `${id}-document-${document.document_id}`,
+                                                type: 'container',
+                                                label: `Document ${document.document_name}`
+                                            }).automationIdProps}
+                                            className={`relative cursor-pointer transition-all ${
+                                                selectedDocuments.has(document.document_id)
+                                                    ? 'ring-2 ring-primary-500'
+                                                    : 'hover:ring-2 hover:ring-gray-200'
+                                            }`}
+                                            onClick={() => toggleDocumentSelection(document.document_id)}
+                                        >
+                                            <DocumentStorageCard
+                                                id={`${id}-document-card-${document.document_id}`}
+                                                document={document}
+                                                hideActions
+                                            />
+                                            {/* Selection Indicator */}
+                                            {selectedDocuments.has(document.document_id) && (
+                                                <div className="absolute top-2 right-2 bg-primary-500 text-white rounded-full p-1">
+                                                    <Check className="w-4 h-4" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {documents.length === 0 && !isLoading && (
+                                        <div {...useAutomationIdAndRegister<ContainerComponent>({
+                                            id: `${id}-empty`,
+                                            type: 'container',
+                                            label: 'No Documents'
+                                        }).automationIdProps} className="col-span-2 text-center py-8">
+                                            <Text as="div" size="2" color="gray">
+                                                No documents found
+                                            </Text>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex justify-end space-x-2 pt-4 border-t">
+                                    <Button
+                                        {...useAutomationIdAndRegister<ButtonComponent>({
+                                            id: `${id}-cancel-btn`,
+                                            type: 'button',
+                                            label: 'Cancel',
+                                            actions: ['click'],
+                                            disabled: isSaving
+                                        }).automationIdProps}
+                                        variant="outline"
+                                        onClick={onClose}
+                                        disabled={isSaving}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        {...useAutomationIdAndRegister<ButtonComponent>({
+                                            id: `${id}-save-btn`,
+                                            type: 'button',
+                                            label: singleSelect ? 'Select Document' : 'Associate Selected',
+                                            actions: ['click'],
+                                            disabled: selectedDocuments.size === 0 || isSaving
+                                        }).automationIdProps}
+                                        onClick={handleSave}
+                                        disabled={selectedDocuments.size === 0 || isSaving}
+                                    >
+                                        {isSaving ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            singleSelect ? 'Select Document' : 'Associate Selected'
+                                        )}
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </ReflectionContainer>
             </DialogContent>
         </Dialog>
     );

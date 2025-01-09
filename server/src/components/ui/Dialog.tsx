@@ -3,7 +3,8 @@ import React, { ReactNode, useEffect } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { DialogComponent, UIComponent } from '../../types/ui-reflection/types';
+import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
+import { DialogComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface DialogProps {
@@ -14,28 +15,33 @@ interface DialogProps {
   title?: string;
   /** Unique identifier for UI reflection system */
   id?: string;
-  /** Child components for UI reflection */
-  reflectionChildren?: UIComponent[];
 }
 
-export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title, id, reflectionChildren }) => {
-  // Only register with UI reflection system when dialog is open
-  const updateMetadata = id && isOpen ? useRegisterUIComponent<DialogComponent>({
+export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog' }) => {
+  const dialogId = id || `dialog-${Math.random().toString(36).substr(2, 9)}`;
+  
+  const updateDialog = useRegisterUIComponent<DialogComponent>({
+    id: dialogId,
     type: 'dialog',
-    id,
-    title: title || '',
-    open: true,
-    children: reflectionChildren,
+    title,
+    open: isOpen,
     actions: ['submit', 'cancel']
-  }) : undefined;
+  });
+
+  // Update dialog metadata when props change
+  useEffect(() => {
+    updateDialog({ open: isOpen, title });
+  }, [isOpen, title, updateDialog]);
 
   return (
-    <RadixDialog.Root open={isOpen} onOpenChange={onClose} {...withDataAutomationId({ id })}>
+    <RadixDialog.Root open={isOpen} onOpenChange={onClose} {...withDataAutomationId({ id: dialogId })}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
         <RadixDialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full max-w-3xl z-50 ${className || ''}`}>
-          {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
-          {children}
+          <ReflectionParentContext.Provider value={dialogId}>
+            {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
+            {children}
+          </ReflectionParentContext.Provider>
           <RadixDialog.Close asChild>
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"

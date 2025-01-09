@@ -3,16 +3,20 @@
 
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { addInteraction, getInteractionById } from '@/lib/actions/interactionActions';
-import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
-import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
-import { useTenant } from '@/components/TenantProvider';
+import { Button } from '../ui/Button';
+import CustomSelect from '../ui/CustomSelect';
+import { Input } from '../ui/Input';
+import { addInteraction, getInteractionById } from '../../lib/actions/interactionActions';
+import { getAllInteractionTypes } from '../../lib/actions/interactionTypeActions';
+import { IInteraction, IInteractionType, ISystemInteractionType } from '../../interfaces/interaction.interfaces';
+import { useTenant } from '../TenantProvider';
 import { useSession } from 'next-auth/react';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent, ContainerComponent } from '../../types/ui-reflection/types';
 
 interface QuickAddInteractionProps {
+  id?: string; // Made optional to maintain backward compatibility
   entityId: string;
   entityType: 'contact' | 'company';
   companyId?: string;
@@ -22,6 +26,7 @@ interface QuickAddInteractionProps {
 }
 
 export function QuickAddInteraction({ 
+  id = 'quick-add-interaction',
   entityId, 
   entityType, 
   companyId, 
@@ -114,39 +119,79 @@ export function QuickAddInteraction({
   };
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-96">
-          <Dialog.Title className="text-lg font-bold mb-4">Add New Interaction</Dialog.Title>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <CustomSelect
-              options={interactionTypes.map((type): { value: string; label: string } => ({ 
-                value: type.type_id, 
-                label: getTypeLabel(type)
-              }))}
-              value={typeId}
-              onValueChange={setTypeId}
-              placeholder="Select Interaction Type"
-              className="w-full"
-            />
-            <Input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
-              required
-            />
-            <Input
-              type="number"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              placeholder="Duration (minutes)"
-            />
-            <Button type="submit" className="w-full">Save Interaction</Button>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+    <ReflectionContainer id={id} label="Quick Add Interaction">
+      <Dialog.Root open={isOpen} onOpenChange={onClose}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 bg-black/50" />
+          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-96">
+            <Dialog.Title {...useAutomationIdAndRegister<ContainerComponent>({
+              id: `${id}-title`,
+              type: 'container',
+              label: 'Dialog Title'
+            }).automationIdProps} className="text-lg font-bold mb-4">
+              Add New Interaction
+            </Dialog.Title>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <CustomSelect
+                {...useAutomationIdAndRegister<FormFieldComponent>({
+                  id: `${id}-type-select`,
+                  type: 'formField',
+                  fieldType: 'select',
+                  label: 'Interaction Type',
+                  value: typeId
+                }).automationIdProps}
+                options={interactionTypes.map((type): { value: string; label: string } => ({ 
+                  value: type.type_id, 
+                  label: getTypeLabel(type)
+                }))}
+                value={typeId}
+                onValueChange={setTypeId}
+                placeholder="Select Interaction Type"
+                className="w-full"
+              />
+              <Input
+                {...useAutomationIdAndRegister<FormFieldComponent>({
+                  id: `${id}-description`,
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Description',
+                  value: description
+                }).automationIdProps}
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description"
+                required
+              />
+              <Input
+                {...useAutomationIdAndRegister<FormFieldComponent>({
+                  id: `${id}-duration`,
+                  type: 'formField',
+                  fieldType: 'textField',
+                  label: 'Duration',
+                  value: duration
+                }).automationIdProps}
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="Duration (minutes)"
+              />
+              <Button 
+                {...useAutomationIdAndRegister<ButtonComponent>({
+                  id: `${id}-save-btn`,
+                  type: 'button',
+                  label: 'Save Interaction',
+                  actions: ['click']
+                }).automationIdProps}
+                type="submit" 
+                className="w-full"
+              >
+                Save Interaction
+              </Button>
+            </form>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </ReflectionContainer>
   );
 }

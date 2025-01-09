@@ -1,24 +1,25 @@
-// components/CommentItem.tsx
-'use client'
+'use client';
+
 import React, { useMemo, useState } from 'react';
 import { Block } from '@blocknote/core';
-import TextEditor from '@/components/editor/TextEditor';
+import TextEditor from '../editor/TextEditor';
 import ReactMarkdown from 'react-markdown';
 import { formatDistanceToNow } from 'date-fns';
 import { Pencil2Icon, TrashIcon } from '@radix-ui/react-icons';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { IComment } from '@/interfaces/comment.interface';
-import { IContact } from '@/interfaces/contact.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
-import UserPicker from '@/components/ui/UserPicker';
-import ContactPickerDialog from '@/components/ui/ContactPickerDialog';
-import { Button } from '@/components/ui/Button';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ContainerComponent } from '@/types/ui-reflection/types';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import AvatarIcon from '../ui/AvatarIcon';
+import { IComment } from '../../interfaces/comment.interface';
+import { IContact } from '../../interfaces/contact.interfaces';
+import { IUserWithRoles } from '../../interfaces/auth.interfaces';
+import CustomSelect from '../ui/CustomSelect';
+import UserPicker from '../ui/UserPicker';
+import ContactPickerDialog from '../ui/ContactPickerDialog';
+import { Button } from '../ui/Button';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface CommentItemProps {
+  id: string; // Made required since it's needed for reflection registration
   conversation: IComment;
   user: { 
     first_name: string; 
@@ -42,6 +43,7 @@ interface CommentItemProps {
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({
+  id,
   conversation,
   user,
   contact,
@@ -58,7 +60,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onEdit,
   onDelete
 }) => {
-  const commentId = `comment-${conversation.comment_id}`;
   const [authorType, setAuthorType] = useState(conversation.author_type);
   const [selectedUserId, setSelectedUserId] = useState(conversation.user_id || '');
   const [selectedContactId, setSelectedContactId] = useState(conversation.contact_id || '');
@@ -77,13 +78,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
         return 'Unknown Author';
     }
   };
-
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
-    id: commentId,
-    type: 'container',
-    label: `Comment by ${getAuthorName()}`
-  });
 
   const commentAge = useMemo(() => {
     if (conversation.created_at) {
@@ -151,14 +145,20 @@ const CommentItem: React.FC<CommentItemProps> = ({
     if (!currentComment) return null;
 
     return (
-      <div {...withDataAutomationId({ id: `${commentId}-editor-container` })}>
+      <ReflectionContainer id={`${id}-editor`} label="Comment Editor">
         <div className="mb-4 space-y-4">
           <div className="max-w-xs">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Author Type
             </label>
             <CustomSelect
-              {...withDataAutomationId({ id: `${commentId}-author-type-select` })}
+              {...useAutomationIdAndRegister<FormFieldComponent>({
+                id: `${id}-author-type-select`,
+                type: 'formField',
+                fieldType: 'select',
+                label: 'Author Type',
+                value: authorType
+              }).automationIdProps}
               value={authorType}
               onValueChange={handleAuthorTypeChange}
               options={[
@@ -171,7 +171,13 @@ const CommentItem: React.FC<CommentItemProps> = ({
           <div>
             {authorType === 'user' ? (
               <UserPicker
-                {...withDataAutomationId({ id: `${commentId}-user-picker` })}
+                {...useAutomationIdAndRegister<FormFieldComponent>({
+                  id: `${id}-user-picker`,
+                  type: 'formField',
+                  fieldType: 'select',
+                  label: 'Select User',
+                  value: selectedUserId
+                }).automationIdProps}
                 label="Select User"
                 value={selectedUserId}
                 onValueChange={setSelectedUserId}
@@ -208,7 +214,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     </div>
                   )}
                   <Button
-                    {...withDataAutomationId({ id: `${commentId}-select-contact-btn` })}
+                    {...useAutomationIdAndRegister<ButtonComponent>({
+                      id: `${id}-select-contact-btn`,
+                      type: 'button',
+                      label: `${selectedContact ? 'Change' : 'Select'} Contact`,
+                      actions: ['click']
+                    }).automationIdProps}
                     onClick={() => setIsContactPickerOpen(true)}
                     variant="outline"
                   >
@@ -221,40 +232,61 @@ const CommentItem: React.FC<CommentItemProps> = ({
         </div>
 
         <TextEditor
-          {...withDataAutomationId({ id: `${commentId}-text-editor` })}
+          {...useAutomationIdAndRegister<FormFieldComponent>({
+            id: `${id}-text-editor`,
+            type: 'formField',
+            fieldType: 'textField',
+            label: 'Comment Content',
+            value: editedContent
+          }).automationIdProps}
           roomName={`ticket-${ticketId}-comment-${currentComment.comment_id}`}
           initialContent={editedContent}
           onContentChange={handleContentChange}
         />
 
         <div className="flex justify-end space-x-2 mt-2">
-          <button
-            {...withDataAutomationId({ id: `${commentId}-save-btn` })}
+          <Button
+            {...useAutomationIdAndRegister<ButtonComponent>({
+              id: `${id}-save-btn`,
+              type: 'button',
+              label: 'Save',
+              actions: ['click'],
+              disabled: !((authorType === 'user' && selectedUserId) || (authorType === 'contact' && selectedContactId))
+            }).automationIdProps}
             onClick={handleSave}
             className="bg-green-500 hover:bg-green-600 text-white font-medium py-1 px-3 rounded-md transition duration-150 ease-in-out"
             disabled={!((authorType === 'user' && selectedUserId) || (authorType === 'contact' && selectedContactId))}
           >
             Save
-          </button>
-          <button
-            {...withDataAutomationId({ id: `${commentId}-cancel-btn` })}
+          </Button>
+          <Button
+            {...useAutomationIdAndRegister<ButtonComponent>({
+              id: `${id}-cancel-btn`,
+              type: 'button',
+              label: 'Cancel',
+              actions: ['click']
+            }).automationIdProps}
             onClick={onClose}
             className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-1 px-3 rounded-md transition duration-150 ease-in-out"
           >
             Cancel
-          </button>
+          </Button>
         </div>
-      </div>
+      </ReflectionContainer>
     );
   };
 
   return (
-    <>
-      <div {...withDataAutomationId({ id: commentId })} className="bg-gray-50 rounded-lg p-4 mb-4 shadow-sm">
+    <ReflectionContainer id={id} label={`Comment by ${getAuthorName()}`}>
+      <div className="bg-gray-50 rounded-lg p-4 mb-4 shadow-sm">
         <div className="flex items-start mb-2">
           <div className="mr-3">
             <AvatarIcon 
-              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              {...useAutomationIdAndRegister<ContainerComponent>({
+                id: `${id}-avatar`,
+                type: 'container',
+                label: 'Author Avatar'
+              }).automationIdProps}
               userId={conversation.author_type === 'user' ? conversation.user_id || '' : ''}
               firstName={user?.first_name || contact?.full_name?.split(' ')[0] || ''}
               lastName={user?.last_name || contact?.full_name?.split(' ')[1] || ''}
@@ -264,43 +296,69 @@ const CommentItem: React.FC<CommentItemProps> = ({
           <div className="flex-grow">
             <div className="flex justify-between items-start">
               <div>
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800">
+                <p {...useAutomationIdAndRegister<ContainerComponent>({
+                  id: `${id}-author-name`,
+                  type: 'container',
+                  label: 'Author Name'
+                }).automationIdProps} className="font-semibold text-gray-800">
                   {getAuthorName()}
                 </p>
                 {getAuthorEmail() && (
-                  <p {...withDataAutomationId({ id: `${commentId}-author-email` })} className="text-sm text-gray-600">
+                  <p {...useAutomationIdAndRegister<ContainerComponent>({
+                    id: `${id}-author-email`,
+                    type: 'container',
+                    label: 'Author Email'
+                  }).automationIdProps} className="text-sm text-gray-600">
                     <a href={`mailto:${getAuthorEmail()}`} className="hover:text-indigo-600">
                       {getAuthorEmail()}
                     </a>
                   </p>
                 )}
-                <p {...withDataAutomationId({ id: `${commentId}-age` })} className="text-sm text-gray-500">{commentAge}</p>
+                <p {...useAutomationIdAndRegister<ContainerComponent>({
+                  id: `${id}-age`,
+                  type: 'container',
+                  label: 'Comment Age'
+                }).automationIdProps} className="text-sm text-gray-500">{commentAge}</p>
               </div>
               {canEdit && (
                 <div className="space-x-2">
-                  <button
-                    {...withDataAutomationId({ id: `${commentId}-edit-btn` })}
+                  <Button
+                    {...useAutomationIdAndRegister<ButtonComponent>({
+                      id: `${id}-edit-btn`,
+                      type: 'button',
+                      label: 'Edit Comment',
+                      actions: ['click']
+                    }).automationIdProps}
                     onClick={() => onEdit(conversation)}
                     className="text-indigo-600 hover:text-indigo-800 font-medium p-1 rounded-full hover:bg-indigo-100 transition duration-150 ease-in-out"
                     aria-label="Edit comment"
                   >
                     <Pencil2Icon className="w-5 h-5" />
-                  </button>
-                  <button
-                    {...withDataAutomationId({ id: `${commentId}-delete-btn` })}
+                  </Button>
+                  <Button
+                    {...useAutomationIdAndRegister<ButtonComponent>({
+                      id: `${id}-delete-btn`,
+                      type: 'button',
+                      label: 'Delete Comment',
+                      actions: ['click']
+                    }).automationIdProps}
                     onClick={() => onDelete(conversation.comment_id!)}
                     className="text-red-600 hover:text-red-800 font-medium p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
                     aria-label="Delete comment"
                   >
                     <TrashIcon className="w-5 h-5" />
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
             {isEditing && currentComment?.comment_id === conversation.comment_id ? (
               renderEditor()
             ) : (
-              <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-2">
+              <div {...useAutomationIdAndRegister<ContainerComponent>({
+                id: `${id}-content`,
+                type: 'container',
+                label: 'Comment Content'
+              }).automationIdProps} className="prose max-w-none mt-2">
                 <ReactMarkdown>{conversation.note || ''}</ReactMarkdown>
               </div>
             )}
@@ -309,7 +367,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
 
       <ContactPickerDialog
-        {...withDataAutomationId({ id: `${commentId}-contact-picker` })}
+        id={`${id}-contact-picker`}
         isOpen={isContactPickerOpen}
         onClose={() => setIsContactPickerOpen(false)}
         onSelect={(contact) => {
@@ -319,7 +377,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         contacts={contacts}
         prefilledCompanyId={companyId}
       />
-    </>
+    </ReflectionContainer>
   );
 };
 

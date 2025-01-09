@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useMemo } from 'react';
-import { ITicketCategory } from '@/interfaces/ticket.interfaces';
-import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@/components/ui/TreeSelect';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { FormFieldComponent } from '@/types/ui-reflection/types';
+import { ITicketCategory } from '../../interfaces/ticket.interfaces';
+import TreeSelect, { TreeSelectOption, TreeSelectPath } from '../ui/TreeSelect';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface CategoryPickerProps {
-  id?: string;
+  id: string; // Made required since it's needed for reflection registration
   categories: ITicketCategory[];
   selectedCategories: string[];
   excludedCategories?: string[];
@@ -22,7 +25,7 @@ interface CategoryPickerProps {
 type CategoryType = 'parent' | 'child';
 
 export const CategoryPicker: React.FC<CategoryPickerProps> = ({
-  id = 'category-picker',
+  id,
   categories,
   selectedCategories,
   excludedCategories = [],
@@ -34,13 +37,21 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   showReset = false,
   allowEmpty = false,
 }) => {
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
+  // Register components with UI reflection system
+  const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id,
     type: 'formField',
     fieldType: 'select',
     value: selectedCategories.join(','),
     label: placeholder
+  });
+
+  const { automationIdProps: selectProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-select`,
+    type: 'formField',
+    fieldType: 'select',
+    value: selectedCategories.join(','),
+    label: 'Category Select'
   });
 
   // Transform categories into TreeSelect format
@@ -212,24 +223,26 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   }, [selectedCategories, excludedCategories, categories]);
 
   return (
-    <div data-automation-id={id}>
-      <TreeSelect
-        data-automation-id={`${id}-select`}
-        options={treeOptions}
-        value={currentValue}
-        onValueChange={handleValueChange}
-        placeholder={displayLabel || placeholder}
-        className={className}
-        selectedClassName="bg-gray-50"
-        hoverClassName="hover:bg-gray-50"
-        triggerClassName="hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-        contentClassName="bg-white rounded-md shadow-lg border border-gray-200"
-        multiSelect={multiSelect}
-        showExclude={showExclude}
-        showReset={true}
-        allowEmpty={true}
-      />
-    </div>
+    <ReflectionContainer id={id} label="Category Picker">
+      <div {...containerProps}>
+        <TreeSelect
+          {...selectProps}
+          options={treeOptions}
+          value={currentValue}
+          onValueChange={handleValueChange}
+          placeholder={displayLabel || placeholder}
+          className={className}
+          selectedClassName="bg-gray-50"
+          hoverClassName="hover:bg-gray-50"
+          triggerClassName="hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          contentClassName="bg-white rounded-md shadow-lg border border-gray-200"
+          multiSelect={multiSelect}
+          showExclude={showExclude}
+          showReset={showReset}
+          allowEmpty={allowEmpty}
+        />
+      </div>
+    </ReflectionContainer>
   );
 };
 

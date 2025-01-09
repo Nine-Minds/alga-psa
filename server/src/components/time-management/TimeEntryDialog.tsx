@@ -1,26 +1,29 @@
-'use client'
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, MinusCircle, XCircle, Plus } from 'lucide-react';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { TaxRegion } from '@/types/types.d';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
-import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '@/lib/actions/timeEntryActions';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { Skeleton } from '../ui/Skeleton';
+import { TaxRegion } from '../../types/types.d';
+import { Dialog, DialogContent, DialogFooter } from '../ui/Dialog';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '../../lib/actions/timeEntryActions';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import CustomSelect, { SelectOption } from '../ui/CustomSelect';
+import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '../../interfaces/timeEntry.interfaces';
+import { IWorkItem } from '../../interfaces/workItem.interfaces';
+import { BsClock } from 'react-icons/bs';
+import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../lib/actions/timeEntryActions';
+import { formatISO, parseISO, setHours, setMinutes, addMinutes } from 'date-fns';
+import { Switch } from '../ui/Switch';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 
 interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
 }
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
-import { BsClock } from 'react-icons/bs';
-import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
-import { formatISO, parseISO, setHours, setMinutes, addMinutes } from 'date-fns';
-import { Switch } from '../ui/Switch';
 
 // Update ITimeEntryWithWorkItem interface to use string types for dates
 interface ITimeEntryWithWorkItemString extends Omit<ITimeEntryWithWorkItem, 'start_time' | 'end_time'> {
@@ -29,6 +32,7 @@ interface ITimeEntryWithWorkItemString extends Omit<ITimeEntryWithWorkItem, 'sta
 }
 
 interface TimeEntryDialogProps {
+  id: string; // Made required since it's needed for reflection registration
   isOpen: boolean;
   onClose: () => void;
   onSave: (timeEntry: Omit<ITimeEntry, 'tenant'>) => Promise<void>;
@@ -52,6 +56,7 @@ interface Service {
 }
 
 export function TimeEntryDialog({
+  id,
   isOpen,
   onClose,
   onSave,
@@ -511,7 +516,7 @@ export function TimeEntryDialog({
   return (
     <Dialog isOpen={isOpen} onClose={handleClose} title={`Edit Time Entries for ${workItem.name}`}>
       <DialogContent className="w-full max-w-4xl">
-        <div>
+        <ReflectionContainer id={id} label="Time Entry Dialog">
           {isLoading && existingEntries?.length ? (
               <div className="space-y-4">
               {[1, 2].map((i: number): JSX.Element => (
@@ -547,6 +552,12 @@ export function TimeEntryDialog({
                           <div className="flex space-x-2">
                             {!entry.isNew && (
                               <Button
+                                {...useAutomationIdAndRegister<ButtonComponent>({
+                                  id: `${id}-entry-${index}-collapse-btn`,
+                                  type: 'button',
+                                  label: 'Collapse Entry',
+                                  actions: ['click']
+                                }).automationIdProps}
                                 onClick={() => setEditingIndex(null)}
                                 variant="ghost"
                                 size="sm"
@@ -557,6 +568,12 @@ export function TimeEntryDialog({
                               </Button>
                             )}
                             <Button
+                              {...useAutomationIdAndRegister<ButtonComponent>({
+                                id: `${id}-entry-${index}-delete-btn-edit`,
+                                type: 'button',
+                                label: 'Delete Entry',
+                                actions: ['click']
+                              }).automationIdProps}
                               onClick={() => handleDeleteEntry(index)}
                               variant="ghost"
                               size="sm"
@@ -573,6 +590,13 @@ export function TimeEntryDialog({
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Service <span className="text-red-500">*</span></label>
                     <CustomSelect
+                      {...useAutomationIdAndRegister<FormFieldComponent>({
+                        id: `${id}-entry-${editingIndex}-service`,
+                        type: 'formField',
+                        fieldType: 'select',
+                        label: 'Service',
+                        value: selectedEntry!.service_id || ''
+                      }).automationIdProps}
                       value={selectedEntry!.service_id || ''}
                       onValueChange={(value) => handleServiceChange(editingIndex!, value)}
                       disabled={!isEditable}
@@ -589,6 +613,13 @@ export function TimeEntryDialog({
                       Tax Region {services.find(s => s.id === selectedEntry!.service_id)?.is_taxable && <span className="text-red-500">*</span>}
                     </label>
                     <CustomSelect
+                      {...useAutomationIdAndRegister<FormFieldComponent>({
+                        id: `${id}-entry-${editingIndex}-tax-region`,
+                        type: 'formField',
+                        fieldType: 'select',
+                        label: 'Tax Region',
+                        value: selectedEntry!.tax_region || ''
+                      }).automationIdProps}
                       value={selectedEntry!.tax_region || ''}
                       onValueChange={(value) => handleTaxRegionChange(editingIndex!, value)}
                       disabled={!isEditable || !services.find(s => s.id === selectedEntry!.service_id)?.is_taxable}
@@ -606,6 +637,13 @@ export function TimeEntryDialog({
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Start Time</label>
                     <Input
+                      {...useAutomationIdAndRegister<FormFieldComponent>({
+                        id: `${id}-entry-${editingIndex}-start-time`,
+                        type: 'formField',
+                        fieldType: 'textField',
+                        label: 'Start Time',
+                        value: timeInputs[`start-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.start_time))
+                      }).automationIdProps}
                       type="time"
                       value={timeInputs[`start-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.start_time))}
                       onChange={(e) => {
@@ -643,6 +681,13 @@ export function TimeEntryDialog({
                   <div>
                     <label className="block text-sm font-medium text-gray-700">End Time</label>
                     <Input
+                      {...useAutomationIdAndRegister<FormFieldComponent>({
+                        id: `${id}-entry-${editingIndex}-end-time`,
+                        type: 'formField',
+                        fieldType: 'textField',
+                        label: 'End Time',
+                        value: timeInputs[`end-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.end_time))
+                      }).automationIdProps}
                       type="time"
                       value={timeInputs[`end-${editingIndex}`] || formatTimeForInput(parseISO(selectedEntry!.end_time))}
                       onChange={(e) => {
@@ -684,6 +729,13 @@ export function TimeEntryDialog({
                     <label className="text-sm font-medium text-gray-700">Duration</label>
                     <div className="flex items-center space-x-2">
                       <Input
+                        {...useAutomationIdAndRegister<FormFieldComponent>({
+                          id: `${id}-entry-${editingIndex}-duration-hours`,
+                          type: 'formField',
+                          fieldType: 'textField',
+                          label: 'Duration Hours',
+                          value: durationHours.toString()
+                        }).automationIdProps}
                         type="number"
                         min="0"
                         value={durationHours}
@@ -697,6 +749,13 @@ export function TimeEntryDialog({
                       />
                       <span>h</span>
                       <Input
+                        {...useAutomationIdAndRegister<FormFieldComponent>({
+                          id: `${id}-entry-${editingIndex}-duration-minutes`,
+                          type: 'formField',
+                          fieldType: 'textField',
+                          label: 'Duration Minutes',
+                          value: durationMinutes.toString()
+                        }).automationIdProps}
                         type="number"
                         min="0"
                         max="59"
@@ -719,6 +778,13 @@ export function TimeEntryDialog({
                         {selectedEntry!.billable_duration > 0 ? 'Billable' : 'Non-billable'}
                       </span>
                       <Switch
+                        {...useAutomationIdAndRegister<FormFieldComponent>({
+                          id: `${id}-entry-${editingIndex}-billable-toggle`,
+                          type: 'formField',
+                          fieldType: 'checkbox',
+                          label: 'Billable Toggle',
+                          value: (selectedEntry!.billable_duration > 0).toString()
+                        }).automationIdProps}
                         checked={selectedEntry!.billable_duration > 0}
                         onCheckedChange={(checked) => handleBillableToggle(editingIndex!, checked)}
                         className="data-[state=checked]:bg-primary-500"
@@ -730,6 +796,13 @@ export function TimeEntryDialog({
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Notes</label>
                   <Input
+                    {...useAutomationIdAndRegister<FormFieldComponent>({
+                      id: `${id}-entry-${editingIndex}-notes`,
+                      type: 'formField',
+                      fieldType: 'textField',
+                      label: 'Notes',
+                      value: selectedEntry!.notes
+                    }).automationIdProps}
                     value={selectedEntry!.notes}
                     onChange={(e) => {
                       if (isEditable) {
@@ -748,6 +821,12 @@ export function TimeEntryDialog({
 
                 <div className="flex justify-end mt-4">
                   <Button
+                    {...useAutomationIdAndRegister<ButtonComponent>({
+                      id: `${id}-entry-${editingIndex}-save-btn`,
+                      type: 'button',
+                      label: 'Save Entry',
+                      actions: ['click']
+                    }).automationIdProps}
                     onClick={() => handleSaveEntry(index)}
                     variant="default"
                     size="default"
@@ -777,6 +856,12 @@ export function TimeEntryDialog({
                       {isEditable && (
                         <div className="flex space-x-2">
                           <Button
+                            {...useAutomationIdAndRegister<ButtonComponent>({
+                              id: `${id}-entry-${index}-edit-btn`,
+                              type: 'button',
+                              label: 'Edit Entry',
+                              actions: ['click']
+                            }).automationIdProps}
                             onClick={() => setEditingIndex(index)}
                             variant="ghost"
                             size="sm"
@@ -785,6 +870,12 @@ export function TimeEntryDialog({
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
+                            {...useAutomationIdAndRegister<ButtonComponent>({
+                              id: `${id}-entry-${index}-delete-btn`,
+                              type: 'button',
+                              label: 'Delete Entry',
+                              actions: ['click']
+                            }).automationIdProps}
                             onClick={() => handleDeleteEntry(index)}
                             variant="ghost"
                             size="sm"
@@ -801,6 +892,12 @@ export function TimeEntryDialog({
               
               {isEditable && (
                 <Button 
+                  {...useAutomationIdAndRegister<ButtonComponent>({
+                    id: `${id}-add-entry-btn`,
+                    type: 'button',
+                    label: 'Add Entry',
+                    actions: ['click']
+                  }).automationIdProps}
                   onClick={() => {
                     handleAddEntry();
                     setEditingIndex(entries.length);
@@ -817,11 +914,20 @@ export function TimeEntryDialog({
           )}
 
           <DialogFooter>
-            <Button onClick={handleClose} variant="outline">
+            <Button
+              {...useAutomationIdAndRegister<ButtonComponent>({
+                id: `${id}-close-btn`,
+                type: 'button',
+                label: 'Close Dialog',
+                actions: ['click']
+              }).automationIdProps}
+              onClick={handleClose}
+              variant="outline"
+            >
               Close
             </Button>
           </DialogFooter>
-        </div>
+        </ReflectionContainer>
       </DialogContent>
     </Dialog>
   );

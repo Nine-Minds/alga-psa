@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState, MutableRefObject, use } from 'react';
+import { useEffect, useMemo, useState, MutableRefObject } from 'react';
 import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { BlockNoteView, lightDefaultTheme } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
-import { getBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
-import { Card } from '@/components/ui/Card';
+import { getBlockContent } from '../../lib/actions/document-actions/documentBlockContentActions';
+import { Card } from '../ui/Card';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 
 interface TextEditorProps {
+  id?: string; // Made optional to maintain backward compatibility
   roomName?: string;
   initialContent?: string | Block[];
   onContentChange?: (blocks: Block[]) => void;
@@ -33,6 +37,7 @@ const DEFAULT_BLOCK: PartialBlock[] = [{
 }];
 
 export default function TextEditor({ 
+  id = 'text-editor',
   initialContent: propInitialContent,
   onContentChange,
   children,
@@ -41,6 +46,34 @@ export default function TextEditor({
 }: TextEditorProps) {
   const [error, setError] = useState<string | null>(null);
   const [initialContent, setInitialContent] = useState<PartialBlock[] | undefined | 'loading'>('loading');
+  const [loading, setLoading] = useState(true);
+  const [editor, setEditor] = useState<BlockNoteEditor | undefined>(undefined);
+
+  // Register all components with UI reflection system
+  const { automationIdProps: errorProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-error`,
+    type: 'container',
+    label: 'Error Message'
+  });
+
+  const { automationIdProps: loadingProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-loading`,
+    type: 'container',
+    label: 'Loading State'
+  });
+
+  const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-container`,
+    type: 'container',
+    label: 'Editor Container'
+  });
+
+  const { automationIdProps: editorProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-editor`,
+    type: 'formField',
+    fieldType: 'textField',
+    label: 'Rich Text Editor'
+  });
 
   // Load document content if documentId is provided
   useEffect(() => {
@@ -108,34 +141,19 @@ export default function TextEditor({
   }, [documentId, propInitialContent]);
 
   useEffect(() => {
-      // Use setTimeout to ensure state updates after render
-      setTimeout(() => {
-        if (initialContent === 'loading') {
-          return undefined;
-        }        
-        const newEditor = BlockNoteEditor.create({ 
-              initialContent: initialContent || DEFAULT_BLOCK
-            });
-        
-        setEditor(newEditor);
-        setLoading(false);
-      }, 10);
+    // Use setTimeout to ensure state updates after render
+    setTimeout(() => {
+      if (initialContent === 'loading') {
+        return undefined;
+      }        
+      const newEditor = BlockNoteEditor.create({ 
+        initialContent: initialContent || DEFAULT_BLOCK
+      });
+      
+      setEditor(newEditor);
+      setLoading(false);
+    }, 10);
   }, [initialContent]);
-
-  // Creates a new editor instance
-  const [loading, setLoading] = useState(true);
-  const [editor, setEditor] = useState<BlockNoteEditor | undefined>(undefined);
-
-  // const editor = useMemo(() => {
-  //   if (initialContent === 'loading') {
-  //     return undefined;
-  //   }
-  //   const newEditor = BlockNoteEditor.create({ 
-  //     initialContent: initialContent || DEFAULT_BLOCK
-  //   });
-
-  //   return newEditor;
-  // }, [initialContent]);
 
   // Set editor reference if provided
   useEffect(() => {
@@ -144,49 +162,61 @@ export default function TextEditor({
     }
   }, [editor, editorRef]);
 
-  if (error) {
-    return (
-      <Card className="p-4">
-        <div className="text-red-500">Error: {error}</div>
-      </Card>
-    );
-  }
+  const content = useMemo(() => {
+    if (error) {
+      return (
+        <ReflectionContainer id={id} label="Text Editor Error">
+          <Card {...errorProps} className="p-4">
+            <div className="text-red-500">Error: {error}</div>
+          </Card>
+        </ReflectionContainer>
+      );
+    }
 
-  if (editor === undefined || loading) {
-    return (
-      <Card className="p-4">
-        <div className="flex justify-center items-center h-64">
-          Loading...
-        </div>
-      </Card>
-    );
-  }
+    if (editor === undefined || loading) {
+      return (
+        <ReflectionContainer id={id} label="Text Editor Loading">
+          <Card {...loadingProps} className="p-4">
+            <div className="flex justify-center items-center h-64">
+              Loading...
+            </div>
+          </Card>
+        </ReflectionContainer>
+      );
+    }
 
-  return (
-    <Card className="p-4">
-      {children}
-      
-      <BlockNoteView 
-        editor={editor}
-        theme={{
-          ...lightDefaultTheme,
-          colors: {
-            ...lightDefaultTheme.colors,
-            editor: {
-              text: '#000000',
-              background: '#ffffff'
-            }
-          }
-        }}
-        onChange={() => {
-          if (onContentChange) {
-            // Get the current blocks and pass them back
-            const blocks = editor.document;
-            // Let Documents.tsx handle the wrapping with formatBlocksForStorage
-            onContentChange(blocks);
-          }
-        }}
-      />
-    </Card>
-  );
+    return (
+      <ReflectionContainer id={id} label="Text Editor">
+        <Card {...containerProps} className="p-4">
+          {children}
+          
+          <div {...editorProps}>
+            <BlockNoteView 
+              editor={editor}
+              theme={{
+                ...lightDefaultTheme,
+                colors: {
+                  ...lightDefaultTheme.colors,
+                  editor: {
+                    text: '#000000',
+                    background: '#ffffff'
+                  }
+                }
+              }}
+              onChange={() => {
+                if (onContentChange) {
+                  // Get the current blocks and pass them back
+                  const blocks = editor.document;
+                  // Let Documents.tsx handle the wrapping with formatBlocksForStorage
+                  onContentChange(blocks);
+                }
+              }}
+            />
+          </div>
+        </Card>
+      </ReflectionContainer>
+    );
+  }, [error, editor, loading, children, errorProps, loadingProps, containerProps, editorProps, id, onContentChange]);
+
+  return content;
 }
