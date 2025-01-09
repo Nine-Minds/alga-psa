@@ -25,7 +25,7 @@ import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId
 import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
 
 interface QuickAddTicketProps {
-  id?: string;
+  id: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
@@ -42,7 +42,7 @@ interface QuickAddTicketProps {
 }
 
 export function QuickAddTicket({ 
-  id = 'quick-add-ticket',
+  id,
   open, 
   onOpenChange, 
   onTicketAdded, 
@@ -75,153 +75,79 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
 
-  // Register with UI reflection system
-  const updateDialog = useRegisterUIComponent<DialogComponent>({
-    id: id || 'quick-add-ticket',
-    label: 'Quick Add Ticket Form',
-    type: 'dialog',
-    open: open,
-    title: 'Quick Add Ticket'
-  });
-
-  // Register form
-  const updateForm = useRegisterUIComponent<ContainerComponent>({
-    id: `${id || 'quick-add-ticket'}-form`,
-    type: 'container',
-    label: 'Quick Add Ticket Form',
-    parentId: id || 'quick-add-ticket'
-  });
-
-  // Register input fields
-  const updateTitleInput = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-title-input`,
+  // Register all components with UI reflection system
+  const { automationIdProps: titleProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-title-input`,
     type: 'formField',
     fieldType: 'textField',
     label: 'Title',
     value: title,
-    required: true,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    required: true
   });
 
-  const updateDescriptionInput = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-description-input`,
+  const { automationIdProps: descriptionProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-description-input`,
     type: 'formField',
     fieldType: 'textField',
     label: 'Description',
     value: description,
-    required: true,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    required: true
   });
 
-  // Register select fields
-  const updateAssignedToSelect = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-assigned-to-select`,
+  const { automationIdProps: assignedToProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-assigned-to-select`,
     type: 'formField',
     fieldType: 'select',
     label: 'Assign To',
-    value: assignedTo,
-    required: true,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    value: assignedTo
   });
 
-  const updateStatusSelect = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-status-select`,
+  const { automationIdProps: statusProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-status-select`,
     type: 'formField',
     fieldType: 'select',
     label: 'Status',
-    value: statusId,
-    required: true,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    value: statusId
   });
 
-  const updatePrioritySelect = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-priority-select`,
+  const { automationIdProps: priorityProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-priority-select`,
     type: 'formField',
     fieldType: 'select',
     label: 'Priority',
-    value: priorityId,
-    required: true,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    value: priorityId
   });
 
-  // Register pickers
-  const updateCompanyPicker = useRegisterUIComponent<ContainerComponent>({
-    id: `${id || 'quick-add-ticket'}-company-picker`,
-    type: 'container',
-    label: 'Company Picker',
-    parentId: `${id || 'quick-add-ticket'}-form`
-  });
-
-  const updateChannelPicker = useRegisterUIComponent<ContainerComponent>({
-    id: `${id || 'quick-add-ticket'}-channel-picker`,
-    type: 'container',
-    label: 'Channel Picker',
-    parentId: `${id || 'quick-add-ticket'}-form`
-  });
-
-  const updateCategoryPicker = useRegisterUIComponent<ContainerComponent>({
-    id: `${id || 'quick-add-ticket'}-category-picker`,
-    type: 'container',
-    label: 'Category Picker',
-    parentId: `${id || 'quick-add-ticket'}-form`
-  });
-
-  const updateContactSelect = useRegisterUIComponent<FormFieldComponent>({
-    id: `${id || 'quick-add-ticket'}-contact-select`,
+  const { automationIdProps: contactProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-contact-select`,
     type: 'formField',
     fieldType: 'select',
     label: 'Contact',
     value: contactId || '',
-    parentId: `${id || 'quick-add-ticket'}-form`
+    disabled: !companyId || selectedCompanyType !== 'company'
   });
 
-  // Register buttons
-  const updateCancelButton = useRegisterUIComponent<ButtonComponent>({
-    id: `${id || 'quick-add-ticket'}-cancel-btn`,
+  const { automationIdProps: cancelButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-cancel-btn`,
     type: 'button',
     label: 'Cancel',
-    parentId: `${id || 'quick-add-ticket'}-form`
+    actions: ['click']
   });
 
-  const updateSaveButton = useRegisterUIComponent<ButtonComponent>({
-    id: `${id || 'quick-add-ticket'}-save-btn`,
+  const { automationIdProps: saveButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-save-btn`,
     type: 'button',
     label: 'Save Ticket',
     disabled: isSubmitting,
-    parentId: `${id || 'quick-add-ticket'}-form`
+    actions: ['click']
   });
 
-  const updateCloseButton = useRegisterUIComponent<ButtonComponent>({
-    id: `${id || 'quick-add-ticket'}-close-btn`,
+  const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `${id}-close-btn`,
     type: 'button',
     label: 'Close',
-    parentId: id || 'quick-add-ticket'
+    actions: ['click']
   });
-
-  // Update field states when they change
-  useEffect(() => {
-    if (!open) return;
-    
-    updateTitleInput({ value: title });
-    updateDescriptionInput({ value: description });
-    updateAssignedToSelect({ value: assignedTo });
-    updateStatusSelect({ value: statusId });
-    updatePrioritySelect({ value: priorityId });
-    updateContactSelect({ value: contactId || '' });
-    updateCompanyPicker({ label: `Company: ${companies.find(c => c.company_id === companyId)?.company_name || 'None'}` });
-    updateChannelPicker({ label: `Channel: ${channels.find(c => c.channel_id === channelId)?.channel_name || 'None'}` });
-    updateCategoryPicker({ label: `Category: ${categories.find(c => c.category_id === selectedCategories[0])?.category_name || 'None'}` });
-    updateSaveButton({ disabled: isSubmitting });
-  }, [
-    id, open,
-    title, description, assignedTo, statusId, priorityId, contactId, isSubmitting,
-    companyId, channelId, selectedCategories,
-    companies, channels, categories,
-    updateTitleInput, updateDescriptionInput, updateAssignedToSelect,
-    updateStatusSelect, updatePrioritySelect, updateContactSelect,
-    updateCompanyPicker, updateChannelPicker, updateCategoryPicker,
-    updateSaveButton
-  ]);
 
   useEffect(() => {
     if (!open) {
@@ -451,140 +377,144 @@ export function QuickAddTicket({
   }
 
   const dialogContent = (
-    <div {...withDataAutomationId({ id })} className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[90vh] overflow-y-auto">
-      <Dialog.Title className="text-xl font-bold mb-4">Quick Add Ticket</Dialog.Title>
-      <Dialog.Description className="sr-only">
-        Form to create a new ticket with fields for title, description, company, contact, assignee, channel, category, status, and priority.
-      </Dialog.Description>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
-          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <span className="text-red-700 text-sm">{error}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          {...withDataAutomationId({ id: `${id}-title-input` })}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Ticket Title"
-          required
-        />
-        <TextArea
-          {...withDataAutomationId({ id: `${id}-description-input` })}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Description"
-          required
-        />
-
-        <CompanyPicker
-          {...withDataAutomationId({ id: `${id}-company-picker` })}
-          companies={filteredCompanies}
-          onSelect={handleCompanyChange}
-          selectedCompanyId={companyId}
-          filterState={companyFilterState}
-          onFilterStateChange={setCompanyFilterState}
-          clientTypeFilter={clientTypeFilter}
-          onClientTypeFilterChange={setClientTypeFilter}
-        />
-
-        {selectedCompanyType === 'company' && contacts.length > 0 && (
-          <div className="relative z-20">
-            <CustomSelect
-              {...withDataAutomationId({ id: `${id}-contact-select` })}
-              value={contactId || ''}
-              onValueChange={(value) => setContactId(value || null)}
-              options={contacts.map((contact): SelectOption => ({
-                value: contact.contact_name_id,
-                label: contact.full_name
-              }))}
-              placeholder="Select Contact"
-              disabled={!companyId || selectedCompanyType !== 'company'}
-            />
+    <ReflectionContainer id={id} label="Quick Add Ticket Form">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[90vh] overflow-y-auto">
+        <Dialog.Title className="text-xl font-bold mb-4">Quick Add Ticket</Dialog.Title>
+        <Dialog.Description className="sr-only">
+          Form to create a new ticket with fields for title, description, company, contact, assignee, channel, category, status, and priority.
+        </Dialog.Description>
+        
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <span className="text-red-700 text-sm">{error}</span>
           </div>
         )}
 
-        <div className="relative z-30">
-          <CustomSelect
-            {...withDataAutomationId({ id: `${id}-assigned-to-select` })}
-            value={assignedTo}
-            onValueChange={setAssignedTo}
-            options={users.map((user): SelectOption => ({
-              value: user.user_id,
-              label: `${user.first_name} ${user.last_name}`
-            }))}
-            placeholder="Assign To"
-          />
-        </div>
+        <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              {...titleProps}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Ticket Title"
+              required
+            />
+            <TextArea
+              {...descriptionProps}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description"
+              required
+            />
 
-        <ChannelPicker
-          {...withDataAutomationId({ id: `${id}-channel-picker` })}
-          channels={channels}
-          onSelect={handleChannelChange}
-          selectedChannelId={channelId}
-          onFilterStateChange={() => {}}
-          filterState="all"
-        />
+            <CompanyPicker
+              id={`${id}-company-picker`}
+              companies={filteredCompanies}
+              onSelect={handleCompanyChange}
+              selectedCompanyId={companyId}
+              filterState={companyFilterState}
+              onFilterStateChange={setCompanyFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+            />
 
-        <CategoryPicker
-          id={`${id}-category-picker`}
-          categories={categories}
-          selectedCategories={selectedCategories}
-          onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
-          placeholder={channelId ? "Select category" : "Select a channel first"}
-          multiSelect={false}
-          className="w-full"
-        />
+            {selectedCompanyType === 'company' && contacts.length > 0 && (
+              <div className="relative z-20">
+                <CustomSelect
+                  {...contactProps}
+                  value={contactId || ''}
+                  onValueChange={(value) => setContactId(value || null)}
+                  options={contacts.map((contact): SelectOption => ({
+                    value: contact.contact_name_id,
+                    label: contact.full_name
+                  }))}
+                  placeholder="Select Contact"
+                  disabled={!companyId || selectedCompanyType !== 'company'}
+                />
+              </div>
+            )}
 
-        <div className="relative z-20">
-          <CustomSelect
-            {...withDataAutomationId({ id: `${id}-status-select` })}
-            value={statusId}
-            onValueChange={setStatusId}
-            options={statuses.map((status): SelectOption => ({
-              value: status.status_id!,
-              label: status.name ?? ""
-            }))}
-            placeholder="Select Status"
-          />
-        </div>
+            <div className="relative z-30">
+              <CustomSelect
+                {...assignedToProps}
+                value={assignedTo}
+                onValueChange={setAssignedTo}
+                options={users.map((user): SelectOption => ({
+                  value: user.user_id,
+                  label: `${user.first_name} ${user.last_name}`
+                }))}
+                placeholder="Assign To"
+              />
+            </div>
 
-        <div className="relative z-10">
-          <CustomSelect
-            {...withDataAutomationId({ id: `${id}-priority-select` })}
-            value={priorityId}
-            onValueChange={setPriorityId}
-            options={priorities.map((priority): SelectOption => ({
-              value: priority.priority_id,
-              label: priority.priority_name
-            }))}
-            placeholder="Select Priority"
-          />
-        </div>
+            <ChannelPicker
+              id={`${id}-channel-picker`}
+              channels={channels}
+              onSelect={handleChannelChange}
+              selectedChannelId={channelId}
+              onFilterStateChange={() => {}}
+              filterState="all"
+            />
 
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button 
-            {...withDataAutomationId({ id: `${id}-cancel-btn` })}
-            type="button" 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button 
-            {...withDataAutomationId({ id: `${id}-save-btn` })}
-            type="submit" 
-            variant="default" 
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving...' : 'Save Ticket'}
-          </Button>
-        </div>
-      </form>
-    </div>
+            <CategoryPicker
+              id={`${id}-category-picker`}
+              categories={categories}
+              selectedCategories={selectedCategories}
+              onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
+              placeholder={channelId ? "Select category" : "Select a channel first"}
+              multiSelect={false}
+              className="w-full"
+            />
+
+            <div className="relative z-20">
+              <CustomSelect
+                {...statusProps}
+                value={statusId}
+                onValueChange={setStatusId}
+                options={statuses.map((status): SelectOption => ({
+                  value: status.status_id!,
+                  label: status.name ?? ""
+                }))}
+                placeholder="Select Status"
+              />
+            </div>
+
+            <div className="relative z-10">
+              <CustomSelect
+                {...priorityProps}
+                value={priorityId}
+                onValueChange={setPriorityId}
+                options={priorities.map((priority): SelectOption => ({
+                  value: priority.priority_id,
+                  label: priority.priority_name
+                }))}
+                placeholder="Select Priority"
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                {...cancelButtonProps}
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                {...saveButtonProps}
+                type="submit" 
+                variant="default" 
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Saving...' : 'Save Ticket'}
+              </Button>
+            </div>
+          </form>
+        </ReflectionContainer>
+      </div>
+    </ReflectionContainer>
   );
 
   return (
@@ -604,7 +534,7 @@ export function QuickAddTicket({
           {dialogContent}
           <Dialog.Close asChild>
             <Button 
-              {...withDataAutomationId({ id: `${id}-close-btn` })}
+              {...closeButtonProps}
               variant="ghost"
               className="absolute top-4 right-4" 
               aria-label="Close"

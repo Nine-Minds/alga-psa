@@ -11,9 +11,10 @@ import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId
 import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
 import { ContainerComponent, FormFieldComponent } from '@/types/ui-reflection/types';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 
 interface TicketInfoProps {
-  id?: string;
+  id: string; // Made required since it's needed for reflection registration
   ticket: ITicket;
   conversations: IComment[];
   statusOptions: { value: string; label: string }[];
@@ -24,7 +25,7 @@ interface TicketInfoProps {
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
-  id = 'ticket-info',
+  id,
   ticket,
   conversations,
   statusOptions,
@@ -38,7 +39,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [titleValue, setTitleValue] = useState(ticket.title);
 
   // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
+  const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
     id,
     type: 'container',
     label: `Info for ticket ${ticket.ticket_number}`
@@ -126,97 +127,64 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   return (
-    <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
-      <div className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2 flex-1">
-              <input
-                {...withDataAutomationId({ id: `${id}-title-input` })}
-                type="text"
-                value={titleValue}
-                onChange={(e) => setTitleValue(e.target.value)}
-                onKeyDown={handleTitleKeyDown}
-                autoFocus
-                className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <button
-                {...withDataAutomationId({ id: `${id}-save-title-btn` })}
-                onClick={handleTitleSubmit}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                title="Save title"
-              >
-                <Check className="w-4 h-4 text-gray-500" />
-              </button>
-            </div>
-          ) : (
-            <>
-              <h1 {...withDataAutomationId({ id: `${id}-title` })} className="text-2xl font-bold">{ticket.title}</h1>
-              <button
-                {...withDataAutomationId({ id: `${id}-edit-title-btn` })}
-                onClick={() => setIsEditingTitle(true)}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                title="Edit title"
-              >
-                <Pencil className="w-4 h-4 text-gray-500" />
-              </button>
-            </>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <h5 className="font-bold mb-2">Status</h5>
-            <CustomSelect
-              {...withDataAutomationId({ id: `${id}-status-select` })}
-              value={ticket.status_id || ''}
-              options={statusOptions}
-              onValueChange={(value) => onSelectChange('status_id', value)}
-              customStyles={customStyles}
-              className="!w-fit"
-            />
+    <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>
+      <div className={`${styles['card']}`}>
+        <div className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2 flex-1">
+                <input
+
+                  type="text"
+                  value={titleValue}
+                  onChange={(e) => setTitleValue(e.target.value)}
+                  onKeyDown={handleTitleKeyDown}
+                  autoFocus
+                  className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <button
+
+                  onClick={handleTitleSubmit}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  title="Save title"
+                >
+                  <Check className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <h1 
+
+                  className="text-2xl font-bold"
+                >
+                  {ticket.title}
+                </h1>
+                <button
+                  onClick={() => setIsEditingTitle(true)}
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  title="Edit title"
+                >
+                  <Pencil className="w-4 h-4 text-gray-500" />
+                </button>
+              </>
+            )}
           </div>
-          <div>
-            <h5 className="font-bold mb-2">Assigned To</h5>
-            <CustomSelect
-              {...withDataAutomationId({ id: `${id}-assigned-to-select` })}
-              value={ticket.assigned_to || ''}
-              options={agentOptions}
-              onValueChange={(value) => onSelectChange('assigned_to', value)}
-              customStyles={customStyles}
-              className="!w-fit"
-            />
-          </div>
-          <div>
-            <h5 className="font-bold mb-2">Channel</h5>
-            <CustomSelect
-              {...withDataAutomationId({ id: `${id}-channel-select` })}
-              value={ticket.channel_id || ''}
-              options={channelOptions}
-              onValueChange={(value) => onSelectChange('channel_id', value)}
-              customStyles={customStyles}
-              className="!w-fit"
-            />
-          </div>
-          <div>
-            <h5 className="font-bold mb-2">Priority</h5>
-            <CustomSelect
-              {...withDataAutomationId({ id: `${id}-priority-select` })}
-              value={ticket.priority_id || ''}
-              options={priorityOptions}
-              onValueChange={(value) => onSelectChange('priority_id', value)}
-              customStyles={customStyles}
-              className="!w-fit"
-            />
-          </div>
-          <div className="col-span-2">
-            <h5 className="font-bold mb-1">Category</h5>
-            <div className="w-fit">
-              <CategoryPicker
-                id={`${id}-category-picker`}
-                categories={categories}
-                selectedCategories={[getSelectedCategoryId()]}
-                onSelect={handleCategoryChange}
-                placeholder="Select a category..."
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <h5 className="font-bold mb-2">Status</h5>
+              <CustomSelect
+                {...useAutomationIdAndRegister<FormFieldComponent>({
+                  id: `${id}-status-select`,
+                  type: 'formField',
+                  fieldType: 'select',
+                  label: 'Status',
+                  value: ticket.status_id || ''
+                }).automationIdProps}
+                value={ticket.status_id || ''}
+                options={statusOptions}
+                onValueChange={(value) => onSelectChange('status_id', value)}
+                customStyles={customStyles}
+                className="!w-fit"
               />
             </div>
             <div>
@@ -295,7 +263,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </ReflectionContainer>
   );
 };
 

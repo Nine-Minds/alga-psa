@@ -55,7 +55,7 @@ interface TicketConversationProps {
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
-  id = 'ticket-conversation',
+  id,
   ticket,
   conversations,
   documents,
@@ -79,13 +79,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [contactMap, setContactMap] = useState<Record<string, IContact>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contacts, setContacts] = useState<IContact[]>([]);
-
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
-    id,
-    type: 'container',
-    label: `Conversation for ticket ${ticket.ticket_number}`
-  });
 
   useEffect(() => {
     const fetchAllContacts = async () => {
@@ -280,12 +273,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </TextEditor>
               <div className="flex justify-end mt-2">
                 <Button
-                  {...useAutomationIdAndRegister<ButtonComponent>({
-                    id: `${id}-add-comment-btn`,
-                    type: 'button',
-                    label: 'Add Comment',
-                    actions: ['click']
-                  }).automationIdProps}
                   onClick={handleAddNewComment}
                   className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
                 >

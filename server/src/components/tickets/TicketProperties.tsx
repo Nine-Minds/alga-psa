@@ -15,9 +15,10 @@ import { TimeEntryDialog } from '../time-management/TimeEntryDialog';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import CustomSelect from '../ui/CustomSelect';
 import { toast } from 'react-hot-toast';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ContainerComponent } from '@/types/ui-reflection/types';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -97,13 +98,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
-
-  // Register with UI reflection system
-  const updateMetadata = useRegisterUIComponent<ContainerComponent>({
-    id,
-    type: 'container',
-    label: `Properties for ticket ${ticket.ticket_number}`
-  });
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -452,7 +446,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 return (
                   <div
                     key={agent.assignment_id}
-                    {...withDataAutomationId({ id: `${id}-additional-agent-${agent.additional_user_id}` })}
                     className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded"
                   >
                     <div
@@ -460,7 +453,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded"
                     >
                       <AvatarIcon
-                        {...withDataAutomationId({ id: `${id}-agent-${agent.additional_user_id}-avatar` })}
                         userId={agent.additional_user_id!}
                         firstName={agentUser?.first_name || ''}
                         lastName={agentUser?.last_name || ''}
@@ -472,7 +464,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
                     </div>
                     <Button
-                      {...withDataAutomationId({ id: `${id}-remove-agent-${agent.assignment_id}-btn` })}
                       variant="ghost"
                       size="sm"
                       className="opacity-0 group-hover:opacity-100"

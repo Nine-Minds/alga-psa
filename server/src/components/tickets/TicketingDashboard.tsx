@@ -42,6 +42,55 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
 
+  // Register components with UI reflection system
+  const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-title`,
+    type: 'container',
+    label: 'Dashboard Title'
+  });
+
+  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-add-ticket-btn`,
+    type: 'container',
+    label: 'Add Ticket Button'
+  });
+
+  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-search-input`,
+    type: 'container',
+    label: 'Search Input'
+  });
+
+  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-reset-filters-btn`,
+    type: 'container',
+    label: 'Reset Filters Button'
+  });
+
+  const { automationIdProps: headingProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-tickets-heading`,
+    type: 'container',
+    label: 'Tickets Heading'
+  });
+
+  const { automationIdProps: loadingProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-loading`,
+    type: 'container',
+    label: 'Loading State'
+  });
+
+  const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-tickets-table`,
+    type: 'container',
+    label: 'Tickets Table'
+  });
+
+  const { automationIdProps: deleteDialogProps } = useAutomationIdAndRegister<ContainerComponent>({
+    id: `${id}-delete-dialog`,
+    type: 'container',
+    label: 'Delete Dialog'
+  });
+
   const handleDeleteTicket = (ticketId: string) => {
     setTicketToDelete(ticketId);
   };
@@ -392,7 +441,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   return (
-    <div {...withDataAutomationId({ id })}>
+    <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
         <Button onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
@@ -459,15 +508,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
             />
           </div>
-          <Button
-            {...withDataAutomationId({ id: `${id}-reset-filters-btn` })}
-            variant="outline"
-            onClick={handleResetFilters}
-            className="whitespace-nowrap flex items-center gap-2"
-          >
-            <XCircle className="h-4 w-4" />
-            Reset Filters
-          </Button>
         </div>
         <h2 {...withDataAutomationId({ id: `${id}-tickets-heading` })} className="text-xl font-semibold mt-6 mb-2">
           Tickets
@@ -502,7 +542,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
-    </div>
+    </ReflectionContainer>
   );
 
 };

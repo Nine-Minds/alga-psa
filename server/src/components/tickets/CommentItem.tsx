@@ -19,7 +19,7 @@ import { ContainerComponent } from '@/types/ui-reflection/types';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface CommentItemProps {
-  id: string; // Made required since it's needed for reflection registration
+  id?: string;
   conversation: IComment;
   user: { 
     first_name: string; 
@@ -60,7 +60,6 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onEdit,
   onDelete
 }) => {
-  const commentId = `comment-${conversation.comment_id}`;
   const [authorType, setAuthorType] = useState(conversation.author_type);
   const [selectedUserId, setSelectedUserId] = useState(conversation.user_id || '');
   const [selectedContactId, setSelectedContactId] = useState(conversation.contact_id || '');
@@ -137,6 +136,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const renderEditor = () => {
     if (!currentComment) return null;
+    let commentId = currentComment.comment_id;
 
     return (
       <div>
@@ -236,11 +236,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <>
-      <div {...withDataAutomationId({ id: commentId })} className="bg-gray-50 rounded-lg p-4 mb-4 shadow-sm">
+      <div {...withDataAutomationId({ id: currentComment!.comment_id })} className="bg-gray-50 rounded-lg p-4 mb-4 shadow-sm">
         <div className="flex items-start mb-2">
           <div className="mr-3">
             <AvatarIcon 
-              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              {...withDataAutomationId({ id: `${currentComment!.comment_id }-avatar` })}
               userId={conversation.author_type === 'user' ? conversation.user_id || '' : ''}
               firstName={user?.first_name || contact?.full_name?.split(' ')[0] || ''}
               lastName={user?.last_name || contact?.full_name?.split(' ')[1] || ''}
@@ -250,17 +250,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
           <div className="flex-grow">
             <div className="flex justify-between items-start">
               <div>
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800">
+                <p {...withDataAutomationId({ id: `${currentComment!.comment_id }-author-name` })} className="font-semibold text-gray-800">
                   {getAuthorName()}
                 </p>
                 {getAuthorEmail() && (
-                  <p {...withDataAutomationId({ id: `${commentId}-author-email` })} className="text-sm text-gray-600">
+                  <p {...withDataAutomationId({ id: `${currentComment!.comment_id }-author-email` })} className="text-sm text-gray-600">
                     <a href={`mailto:${getAuthorEmail()}`} className="hover:text-indigo-600">
                       {getAuthorEmail()}
                     </a>
                   </p>
                 )}
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800"></p>
+                <p {...withDataAutomationId({ id: `${currentComment!.comment_id }-author-name` })} className="font-semibold text-gray-800"></p>
                 </div>
               {canEdit && (
                 <div className="space-x-2">
@@ -284,7 +284,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             {isEditing && currentComment?.comment_id === conversation.comment_id ? (
               renderEditor()
             ) : (
-              <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-2">
+              <div {...withDataAutomationId({ id: `${currentComment!.comment_id }-content` })} className="prose max-w-none mt-2">
                 <ReactMarkdown>{conversation.note || ''}</ReactMarkdown>
               </div>
             )}
@@ -293,7 +293,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
 
       <ContactPickerDialog
-        {...withDataAutomationId({ id: `${commentId}-contact-picker` })}
+        {...withDataAutomationId({ id: `${currentComment!.comment_id }-contact-picker` })}
         isOpen={isContactPickerOpen}
         onClose={() => setIsContactPickerOpen(false)}
         onSelect={(contact) => {
