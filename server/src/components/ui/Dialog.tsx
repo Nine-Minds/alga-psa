@@ -21,7 +21,7 @@ interface DialogProps {
 
 export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog' }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
-    id: `${id}-confirm-dialog`,
+    id: `${id}-dialog`,
     type: 'dialog',
     title,
     open: isOpen,

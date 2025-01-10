@@ -30,7 +30,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
 
   useEffect(() => {
     setTags(initialTags);
-  }, [initialTags]);
+  }, []);
 
   const handleAddTag = async (tagText: string) => {
     try {
@@ -61,11 +61,7 @@ export const TagManager: React.FC<TagManagerProps> = ({
 
   return (
     <ReflectionContainer id={id} label="Tag Manager">
-      <div {...useAutomationIdAndRegister<ContainerComponent>({
-        id: `${id}-container`,
-        type: 'container',
-        label: 'Tags Container'
-      }).automationIdProps} className={`flex flex-wrap gap-1 ${className}`}>
+      <div className={`flex flex-wrap gap-1 ${className}`}>
         <TagList 
           id={`${id}-list`}
           tags={tags} 

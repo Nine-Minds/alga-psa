@@ -45,7 +45,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     );
 
     const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
-      id: `${id}-add-ticket-btn`,
+      id: `${id}-input`,
       type: 'formField',
       fieldType: 'textField'
     });

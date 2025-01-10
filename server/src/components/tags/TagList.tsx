@@ -21,11 +21,7 @@ export const TagList: React.FC<TagListProps> = ({
 }) => {
   return (
     <ReflectionContainer id={id} label="Tag List">
-      <div {...useAutomationIdAndRegister<ContainerComponent>({
-        id: `${id}-container`,
-        type: 'container',
-        label: 'Tags List Container'
-      }).automationIdProps} className={`flex flex-wrap gap-1 ${className}`}>
+      <div className={`flex flex-wrap gap-1 ${className}`}>
         {tags.map((tag):JSX.Element => {
           const colors = generateEntityColor(tag.tag_text);
           return (
@@ -45,12 +41,6 @@ export const TagList: React.FC<TagListProps> = ({
               {tag.tag_text}
               {onRemoveTag && (
                 <button
-                  {...useAutomationIdAndRegister<ButtonComponent>({
-                    id: `${id}-remove-${tag.tag_id}`,
-                    type: 'button',
-                    label: `Remove ${tag.tag_text}`,
-                    actions: ['click']
-                  }).automationIdProps}
                   onClick={() => onRemoveTag(tag.tag_id)}
                   className="ml-1 text-red-500 hover:text-red-700"
                 >

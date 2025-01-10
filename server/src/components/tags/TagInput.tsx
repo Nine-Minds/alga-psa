@@ -87,12 +87,6 @@ export const TagInput: React.FC<TagInputProps> = ({
     <ReflectionContainer id={id} label="Tag Input">
       {!isEditing ? (
         <button
-          {...useAutomationIdAndRegister<ButtonComponent>({
-            id: `${id}-add-btn`,
-            type: 'button',
-            label: 'Add Tag',
-            actions: ['click']
-          }).automationIdProps}
           onClick={() => setIsEditing(true)}
           className="text-gray-500 hover:text-gray-700"
         >
@@ -101,13 +95,6 @@ export const TagInput: React.FC<TagInputProps> = ({
       ) : (
         <div ref={containerRef} className={`relative flex items-center gap-1 ${className}`}>
           <input
-            {...useAutomationIdAndRegister<FormFieldComponent>({
-              id: `${id}-input`,
-              type: 'formField',
-              fieldType: 'textField',
-              label: 'Tag Text',
-              value: inputValue
-            }).automationIdProps}
             ref={inputRef}
             type="text"
             value={inputValue}
@@ -118,12 +105,6 @@ export const TagInput: React.FC<TagInputProps> = ({
             autoFocus
           />
           <button
-            {...useAutomationIdAndRegister<ButtonComponent>({
-              id: `${id}-save-btn`,
-              type: 'button',
-              label: 'Save Tag',
-              actions: ['click']
-            }).automationIdProps}
             onClick={() => handleSave()}
             disabled={isSaving || !inputValue.trim()}
             className={`border border-l-0 rounded-r-md px-3 py-1 text-sm font-medium transition-colors ${
@@ -140,12 +121,6 @@ export const TagInput: React.FC<TagInputProps> = ({
                 const colors = generateEntityColor(suggestion);
                 return (
                   <button
-                    {...useAutomationIdAndRegister<ButtonComponent>({
-                      id: `${id}-suggestion-${index}`,
-                      type: 'button',
-                      label: `Select Tag: ${suggestion}`,
-                      actions: ['click']
-                    }).automationIdProps}
                     key={index}
                     className="w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 flex items-center gap-2"
                     onClick={() => handleSave(suggestion)}
