@@ -8,7 +8,7 @@ import { FormFieldComponent } from '../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface CategoryPickerProps {
-  id: string; // Made required since it's needed for reflection registration
+  id?: string; // Made required since it's needed for reflection registration
   categories: ITicketCategory[];
   selectedCategories: string[];
   excludedCategories?: string[];
@@ -25,7 +25,7 @@ interface CategoryPickerProps {
 type CategoryType = 'parent' | 'child';
 
 export const CategoryPicker: React.FC<CategoryPickerProps> = ({
-  id,
+  id = 'category-picker',
   categories,
   selectedCategories,
   excludedCategories = [],

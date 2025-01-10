@@ -32,7 +32,7 @@ interface ITimeEntryWithWorkItemString extends Omit<ITimeEntryWithWorkItem, 'sta
 }
 
 interface TimeEntryDialogProps {
-  id: string; // Made required since it's needed for reflection registration
+  id?: string;
   isOpen: boolean;
   onClose: () => void;
   onSave: (timeEntry: Omit<ITimeEntry, 'tenant'>) => Promise<void>;
@@ -56,7 +56,7 @@ interface Service {
 }
 
 export function TimeEntryDialog({
-  id,
+  id = 'time-entry-dialog',
   isOpen,
   onClose,
   onSave,

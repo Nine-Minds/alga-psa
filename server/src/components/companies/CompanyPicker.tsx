@@ -10,7 +10,7 @@ import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../t
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface CompanyPickerProps {
-  id: string;
+  id?: string;
   companies?: ICompany[];
   onSelect: (companyId: string) => void;
   selectedCompanyId: string | null;
@@ -22,7 +22,7 @@ interface CompanyPickerProps {
 }
 
 export const CompanyPicker: React.FC<CompanyPickerProps> = ({
-  id,
+  id = 'company-picker',
   companies = [],
   onSelect,
   selectedCompanyId,

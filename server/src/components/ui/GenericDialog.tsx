@@ -13,7 +13,7 @@ interface GenericDialogProps {
   title: string;
   children: ReactNode;
   /** Unique identifier for UI reflection system */
-  id: string; // Made required since it's needed for reflection registration
+  id?: string; // Made required since it's needed for reflection registration
 }
 
 const GenericDialog: React.FC<GenericDialogProps> = ({ 
@@ -21,7 +21,7 @@ const GenericDialog: React.FC<GenericDialogProps> = ({
   onClose, 
   title, 
   children,
-  id
+  id = 'dialog'
 }) => {
   // Register dialog with UI reflection system
   const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({

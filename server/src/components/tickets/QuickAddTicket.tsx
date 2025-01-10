@@ -23,7 +23,7 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 
 interface QuickAddTicketProps {
-  id: string;
+  id?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
@@ -40,7 +40,7 @@ interface QuickAddTicketProps {
 }
 
 export function QuickAddTicket({ 
-  id,
+  id = 'ticket-quick-add',
   open, 
   onOpenChange, 
   onTicketAdded, 
