@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Input } from '../ui/Input';
 import CustomSelect from '../ui/CustomSelect';
+import { Button } from '../ui/Button';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from '@/types/ui-reflection/types';
 
 interface CompanyPickerProps {
   id?: string;
@@ -132,19 +133,21 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
   };
 
   return (
-    <ReflectionContainer id={id} label="Company Picker">
+    <ReflectionContainer id={`${id}-company-picker`} label="Company Picker">
       <div
         className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`}
         ref={dropdownRef}
       >
-        <button
-          type="button"
+        <Button
+          id={`${id}-toggle`}
+          variant="outline"
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full p-2 border-2 border-gray-200 rounded-md flex justify-between items-center text-left outline-none transition-colors duration-200 hover:border-gray-300 focus:border-purple-500 bg-white"
+          className="w-full justify-between"
+          label={selectedCompany ? selectedCompany.company_name : 'Select Client'}
         >
           <span>{selectedCompany ? selectedCompany.company_name : 'Select Client'}</span>
-          <ChevronDownIcon />
-        </button>
+          <ChevronDownIcon className="ml-2 h-4 w-4" />
+        </Button>
 
         {isOpen && (
           <div
@@ -159,6 +162,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <div className="w-full">
                   <CustomSelect
+                    id={`${id}-status-filter`}
                     value={filterState}
                     onValueChange={handleFilterStateChange}
                     options={[
@@ -167,10 +171,12 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                       { value: 'all', label: 'All Clients' },
                     ]}
                     placeholder="Filter by status"
+                    label="Status Filter"
                   />
                 </div>
                 <div className="w-full">
                   <CustomSelect
+                    id={`${id}-type-filter`}
                     value={clientTypeFilter}
                     onValueChange={handleClientTypeFilterChange}
                     options={[
@@ -179,38 +185,42 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                       { value: 'individual', label: 'Individuals' },
                     ]}
                     placeholder="Filter by client type"
+                    label="Client Type Filter"
                   />
                 </div>
               </div>
               <div className="whitespace-nowrap">
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => {
-                  e.stopPropagation();
-                  setSearchTerm(e.target.value);
-                }}
-              />
-            </div>
+                <Input
+                  id={`${id}-search`}
+                  placeholder="Search clients..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSearchTerm(e.target.value);
+                  }}
+                  label="Search Clients"
+                />
+              </div>
             </div>
             <div className="max-h-60 overflow-y-auto border-t bg-white">
-              {filteredCompanies.length === 0 ? (
+              {isOpen && filteredCompanies.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No clients found</div>
               ) : (
                 filteredCompanies.map((company): JSX.Element => (
-                  <button
-                    type="button"
+                  <Button
                     key={company.company_id}
+                    id={`${id}-company-picker-company-${company.company_id}`}
+                    variant="ghost"
                     onClick={(e) => handleSelect(company.company_id, e)}
-                    className={`w-full text-left px-4 py-2 hover:bg-gray-100 ${company.company_id === selectedCompanyId ? 'bg-blue-100' : ''
-                      }`}
+                    className={`w-full justify-start ${company.company_id === selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
+                    label={company.company_name}
                   >
                     {company.company_name}
                     {company.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
                     <span className="ml-2 text-gray-500">
                       ({company.client_type === 'company' ? 'Company' : 'Individual'})
                     </span>
-                  </button>
+                  </Button>
                 ))
               )}
             </div>

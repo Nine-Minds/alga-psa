@@ -11,7 +11,6 @@ import { DataTable } from "@/components/ui/DataTable";
 import { ColumnDefinition } from "@/interfaces/dataTable.interfaces";
 import { 
   getTemplatesAction,
-  createTenantTemplateAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction
@@ -94,7 +93,13 @@ export function EmailTemplates() {
   }
 
   // Group templates by category and name
-  const templateGroups = templates.systemTemplates.reduce((acc, systemTemplate) => {
+  const templateGroups = templates.systemTemplates.reduce((acc: Record<string, Array<{
+    name: string;
+    systemTemplate: SystemEmailTemplate;
+    tenantTemplate?: TenantEmailTemplate;
+    activeTemplate: SystemEmailTemplate | TenantEmailTemplate;
+    category: string;
+  }>>, systemTemplate) => {
     const tenantTemplate = templates.tenantTemplates.find(
       t => t.name === systemTemplate.name
     );
@@ -126,7 +131,7 @@ export function EmailTemplates() {
   function formatTemplateName(name: string): string {
     return name
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
 
@@ -134,7 +139,7 @@ export function EmailTemplates() {
     {
       title: "Event Type",
       dataIndex: "name",
-      render: (_, record) => (
+      render: (_, record): JSX.Element => (
         <div>
           <div className="font-medium">{record.name}</div>
           <div className="text-sm text-gray-500">
@@ -148,7 +153,7 @@ export function EmailTemplates() {
     {
       title: "Subject",
       dataIndex: "activeTemplate",
-      render: (_, record) => (
+      render: (_, record): JSX.Element => (
         <div className="break-words">
           {record.activeTemplate.subject}
         </div>
@@ -157,15 +162,16 @@ export function EmailTemplates() {
     {
       title: "Template",
       dataIndex: "template",
-      render: (_, record) => {
+      render: (_, record): JSX.Element => {
         if (record.tenantTemplate) {
           return (
             <div className="flex space-x-2">
-              <Button onClick={() => setEditingTemplate(record.tenantTemplate!)}>
+              <Button id="edit-custom-template-btn" onClick={() => setEditingTemplate(record.tenantTemplate!)}>
                 Edit Custom
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                id="switch-to-standard-btn"
+                variant="outline"
                 onClick={() => handleUseStandard(record.systemTemplate.name)}
               >
                 Switch to Standard
@@ -175,13 +181,15 @@ export function EmailTemplates() {
         } else {
           return (
             <div className="flex space-x-2">
-              <Button 
+              <Button
+                id="view-template-btn"
                 variant="outline"
                 onClick={() => setViewingTemplate(record.systemTemplate)}
               >
                 View
               </Button>
-              <Button 
+              <Button
+                id="customize-template-btn"
                 variant="outline"
                 onClick={() => handleCreateCustom(record.systemTemplate)}
                 disabled={isCloning}
@@ -205,7 +213,7 @@ export function EmailTemplates() {
         </p>
       </div>
 
-      {Object.entries(templateGroups).map(([category, templates]) => (
+      {Object.entries(templateGroups).map(([category, templates]): JSX.Element => (
         <Card key={category} className="p-6">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{category}</h3>
@@ -299,7 +307,7 @@ function ViewTemplateDialog({
       </DialogContent>
 
       <DialogFooter>
-        <Button type="button" onClick={onClose}>
+          <Button id="close-view-dialog-btn" type="button" onClick={onClose}>
           Close
         </Button>
       </DialogFooter>
@@ -396,10 +404,10 @@ function EditTemplateDialog({
         </DialogContent>
 
         <DialogFooter>
-          <Button type="button" onClick={onClose} variant="outline">
+          <Button id="cancel-edit-dialog-btn" type="button" onClick={onClose} variant="outline">
             Cancel
           </Button>
-          <Button type="submit" disabled={isSaving}>
+          <Button id="save-template-btn" type="submit" disabled={isSaving}>
             {isSaving ? "Saving..." : "Save"}
           </Button>
         </DialogFooter>
@@ -409,8 +417,8 @@ function EditTemplateDialog({
 }
 
 function formatTemplateName(name: string): string {
-  return name
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    return name
+      .split('-')
+      .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
 }

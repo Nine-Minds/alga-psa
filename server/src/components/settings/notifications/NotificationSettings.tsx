@@ -115,7 +115,7 @@ function NotificationSettingsForm({
         </div>
 
         <div className="mt-6 flex justify-end">
-          <Button type="submit" disabled={isSaving}>
+          <Button id="save-notification-settings-btn" type="submit" disabled={isSaving}>
             {isSaving ? "Saving..." : "Save Changes"}
           </Button>
         </div>

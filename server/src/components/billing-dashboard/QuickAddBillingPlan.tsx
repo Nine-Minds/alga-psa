@@ -2,7 +2,7 @@
 'use client'
 
 import React, { useState } from 'react';
-import CustomSelect from '../ui/CustomSelect';
+import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '../ui/Button';
 
@@ -59,7 +59,7 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button>Add Billing Plan</Button>
+        <Button id='add-billing-plan-button' variant="outline" className="mr-2"></Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
@@ -85,7 +85,7 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
             <div className="mb-4">
               <label className="block mb-2">Plan Type</label>
               <CustomSelect
-                options={planTypes.map(type => ({ value: type, label: type }))}
+                options={planTypes.map((type):SelectOption => ({ value: type, label: type }))}
                 onValueChange={handlePlanTypeChange}
                 value={planType}
                 placeholder="Select plan type"
@@ -100,7 +100,7 @@ export function QuickAddBillingPlan({ onPlanAdded }: QuickAddBillingPlanProps) {
               />
               Is Custom Plan
             </label>
-            <Button type="submit">Save Billing Plan</Button>
+            <Button id='save-billing-plan-button' type="submit">Save Billing Plan</Button>
           </form>
         </Dialog.Content>
       </Dialog.Portal>

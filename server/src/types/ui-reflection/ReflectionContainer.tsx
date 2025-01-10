@@ -32,7 +32,7 @@ function ReflectionContainerBase({ id, label, children }: ReflectionContainerPro
   // Update container metadata when props change
   useEffect(() => {
     updateContainer({ label });
-  }, [label, updateContainer]);
+  }, [label]);
 
   return (
     <ReflectionParentContext.Provider value={id}>

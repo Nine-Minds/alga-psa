@@ -31,6 +31,9 @@ export interface BaseComponent {
 
   /** Child components for hierarchical structure */
   children?: UIComponent[];
+
+  /** Creation order for deterministic sorting */
+  ordinal?: number;
 }
 
 /**
@@ -71,6 +74,12 @@ export interface FormFieldComponent extends BaseComponent {
   
   /** Whether the field is required */
   required?: boolean;
+
+  /** Available options for select/radio fields */
+  options?: Array<{
+    value: string;
+    label: string;
+  }>;
 }
 
 /**
@@ -79,29 +88,6 @@ export interface FormFieldComponent extends BaseComponent {
 export interface FormComponent extends BaseComponent {
   type: "form";
   // Uses children inherited from BaseComponent to contain FormFieldComponents
-}
-
-/**
- * Data grid component representation.
- */
-export interface DataGridComponent extends BaseComponent {
-  type: "dataGrid";
-  
-  /** Column definitions */
-  columns: Array<{
-    id: string;
-    header: string;
-  }>;
-  
-  /** Row data */
-  rows: Array<{
-    id: string;
-    cells: Array<{
-      columnId: string;
-      value: string;
-    }>;
-    actions?: string[];
-  }>;
 }
 
 /**
@@ -207,7 +193,6 @@ export type UIComponent =
   | DialogComponent
   | FormComponent
   | FormFieldComponent
-  | DataGridComponent
   | NavigationComponent
   | DataTableComponent
   | ContainerComponent

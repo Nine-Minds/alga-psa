@@ -111,7 +111,9 @@ export async function deleteContact(contactId: string) {
   }
 }
 
-export async function getContactsByCompany(companyId: string, includeInactive: boolean = true): Promise<IContact[]> {
+type ContactFilterStatus = 'active' | 'inactive' | 'all';
+
+export async function getContactsByCompany(companyId: string, status: ContactFilterStatus = 'active'): Promise<IContact[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -126,8 +128,8 @@ export async function getContactsByCompany(companyId: string, includeInactive: b
       .where('contacts.company_id', companyId)
       .andWhere('contacts.tenant', tenant)
       .modify(function(queryBuilder) {
-        if (!includeInactive) {
-          queryBuilder.where('contacts.is_inactive', false);
+        if (status !== 'all') {
+          queryBuilder.where('contacts.is_inactive', status === 'inactive');
         }
       });
     return contacts;
@@ -153,7 +155,7 @@ export async function getAllCompanies(): Promise<ICompany[]> {
   }
 }
 
-export async function getAllContacts(includeInactive: boolean = true): Promise<IContact[]> {
+export async function getAllContacts(status: ContactFilterStatus = 'active'): Promise<IContact[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -167,8 +169,8 @@ export async function getAllContacts(includeInactive: boolean = true): Promise<I
       .leftJoin('companies', 'contacts.company_id', 'companies.company_id')
       .where('contacts.tenant', tenant)
       .modify(function(queryBuilder) {
-        if (!includeInactive) {
-          queryBuilder.where('contacts.is_inactive', false);
+        if (status !== 'all') {
+          queryBuilder.where('contacts.is_inactive', status === 'inactive');
         }
       });
     return contacts;

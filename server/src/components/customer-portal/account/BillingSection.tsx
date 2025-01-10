@@ -218,6 +218,7 @@ export default function BillingSection() {
                       <div className="flex space-x-2">
                         {!method.isDefault && (
                           <Button
+                            id={`set-default-payment-${method.id}`}
                             variant="outline"
                             size="sm"
                             onClick={() => handleSetDefaultPayment(method.id)}
@@ -226,6 +227,7 @@ export default function BillingSection() {
                           </Button>
                         )}
                         <Button
+                          id={`remove-payment-${method.id}`}
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemovePayment(method.id)}
@@ -238,6 +240,7 @@ export default function BillingSection() {
                 </div>
               )}
               <Button
+                id="add-payment-method"
                 variant="outline"
                 className="mt-4"
                 onClick={() => setIsAddingPayment(true)}
@@ -365,6 +368,7 @@ export default function BillingSection() {
 
             <div className="flex justify-end space-x-2">
               <Button
+                id="cancel-add-payment"
                 type="button"
                 variant="ghost"
                 onClick={() => setIsAddingPayment(false)}
@@ -373,6 +377,7 @@ export default function BillingSection() {
                 Cancel
               </Button>
               <Button
+                id="submit-add-payment"
                 type="submit"
                 disabled={isProcessing}
               >
@@ -419,7 +424,7 @@ export default function BillingSection() {
                     </span>
                   </td>
                   <td>
-                    <Button variant="ghost" size="sm">
+                    <Button id={`view-invoice-${invoice.id}`} variant="ghost" size="sm">
                       View
                     </Button>
                   </td>

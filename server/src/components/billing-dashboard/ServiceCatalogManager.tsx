@@ -136,6 +136,7 @@ const ServiceCatalogManager: React.FC = () => {
       render: (_, record) => (
         <div className="space-x-2">
           <Button
+            id='edit-button'
             variant="default"
             onClick={() => {
               setEditingService(record);
@@ -145,6 +146,7 @@ const ServiceCatalogManager: React.FC = () => {
             Edit
           </Button>
           <Button
+            id='delete-button'
             variant="destructive"
             onClick={() => handleDeleteService(record.service_id!)}
           >
@@ -229,11 +231,11 @@ const ServiceCatalogManager: React.FC = () => {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
+            <Button id='cancel-button' variant="outline" onClick={() => {
               setIsEditDialogOpen(false);
               setEditingService(null);
             }}>Cancel</Button>
-            <Button onClick={() => {
+            <Button id='save-button' onClick={() => {
               handleUpdateService();
               setIsEditDialogOpen(false);
             }}>Save Changes</Button>

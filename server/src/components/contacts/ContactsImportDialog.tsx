@@ -353,6 +353,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         <h3 className="text-lg font-medium">Import Results</h3>
         {failedRecords.length > 0 && (
           <Button
+            id="download-failed-records"
             variant="outline"
             onClick={handleDownloadFailedRecords}
             className="flex items-center gap-2"
@@ -392,7 +393,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         pagination={true}
       />
       <DialogFooter>
-        <Button onClick={onClose}>Close</Button>
+        <Button id='close-import-dialog' onClick={onClose}>Close</Button>
       </DialogFooter>
     </div>
   );
@@ -450,8 +451,8 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 ))}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                <Button onClick={handlePreview}>Preview</Button>
+                <Button id='back-to-upload' variant="outline" onClick={() => setStep('upload')}>Back</Button>
+                <Button id='preview-import' onClick={handlePreview}>Preview</Button>
               </DialogFooter>
             </div>
           )}
@@ -511,8 +512,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 />
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setStep('mapping')}>Back</Button>
+                <Button id='back-to-mapping' variant="outline" onClick={() => setStep('mapping')}>Back</Button>
                 <Button
+                  id='import-contacts'
                   onClick={handleImport}
                   disabled={validationResults.every(result => !result.isValid)}
                 >
@@ -555,7 +557,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 Successfully imported {importResults.filter((r: ImportContactResult): boolean => r.success).length} contacts
               </p>
               <DialogFooter>
-                <Button onClick={onClose}>Close</Button>
+                <Button id='close-import-complete' onClick={onClose}>Close</Button>
               </DialogFooter>
             </div>
           )}

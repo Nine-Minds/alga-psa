@@ -1,9 +1,8 @@
 import React, { useEffect } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
-import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
-import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 export interface SelectOption {
   value: string;
@@ -45,15 +44,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   required = false,
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+  const { automationIdProps: selectProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
     id,
     label,
     value: value || '',
     disabled,
-    required
-  }) : undefined;
+    required,
+    options: options.map((opt): { value: string; label: string } => ({
+      value: opt.value,
+      label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
+    }))
+  });
 
   // Update metadata when field props change
   useEffect(() => {
@@ -62,17 +65,21 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         value: value || '',
         label,
         disabled,
-        required
+        required,
+        options: options.map((opt): { value: string; label: string } => ({
+          value: opt.value,
+          label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
+        }))
       });
     }
-  }, [value, updateMetadata, label, disabled, required]);
+  }, [value, label, disabled, required, options]);
 
   // Ensure value is never undefined/null/empty string for Radix
   const safeValue = value || 'placeholder';
   const selectedOption = options.find(option => option.value === value);
 
   return (
-    <div className={label ? 'mb-4' : ''}>
+    <div className={label ? 'mb-4' : ''} {...selectProps}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}
@@ -83,7 +90,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         onValueChange={onValueChange} 
         disabled={disabled}
         required={required}
-        {...withDataAutomationId({ id })}
       >
         <RadixSelect.Trigger
           className={`

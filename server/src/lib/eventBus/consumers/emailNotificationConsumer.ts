@@ -245,7 +245,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
 
   async function processMessages() {
     try {
-      const streams = Object.keys(EventSchemas).map(eventType => ({
+      const streams = Object.keys(EventSchemas).map((eventType): { key: string; id: string } => ({
         key: getEventStream(eventType),
         id: '>'
       }));

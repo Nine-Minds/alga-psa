@@ -80,7 +80,7 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
     const baseOccurrences = rrule.between(rangeStart, rangeEnd);
     console.log('[generateOccurrences] Base occurrences:', {
       total: baseOccurrences.length,
-      dates: baseOccurrences.map(d => d.toISOString()),
+      dates: baseOccurrences.map((d): string => d.toISOString()),
       rangeStart: rangeStart.toISOString(),
       rangeEnd: rangeEnd.toISOString()
     });
@@ -100,7 +100,7 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       pattern: entry.recurrence_pattern
     });
     const occurrencesWithTime = baseOccurrences
-      .filter(date => {
+      .filter((date): boolean => {
         // Compare dates without time
         const dateStr = date.toISOString().split('T')[0];
         const masterStr = masterStartDate.toISOString().split('T')[0];
@@ -113,7 +113,7 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
         });
         return shouldInclude;
       })
-      .map(date => {
+      .map((date): Date => {
         const result = applyTimeToDate(date, originalTime);
         console.log('[generateOccurrences] Applied time to occurrence:', {
           originalDate: date.toISOString(),
@@ -125,7 +125,7 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
 
     console.log('[generateOccurrences] Final occurrences:', {
       total: occurrencesWithTime.length,
-      dates: occurrencesWithTime.map(d => d.toISOString()),
+      dates: occurrencesWithTime.map((d): string => d.toISOString()),
       entryId: entry.entry_id
     });
 
@@ -134,7 +134,7 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
       try {
         // Convert exceptions to Date objects and validate
         const validExceptions = pattern.exceptions
-          .map(d => {
+          .map((d): Date | null => {
             try {
               // Handle both string and Date inputs
               const date = d instanceof Date ? d : new Date(d);
@@ -151,14 +151,14 @@ export function generateOccurrences(entry: IScheduleEntry, start: Date, end: Dat
           .filter((d): d is Date => d !== null);
 
         // Convert to ISO date strings for comparison
-        const exceptionDates = validExceptions.map(d => d.toISOString().split('T')[0]);
+        const exceptionDates = validExceptions.map((d): string => d.toISOString().split('T')[0]);
         console.log('[generateOccurrences] Processing exceptions:', {
           totalExceptions: pattern.exceptions.length,
           validExceptions: validExceptions.length,
           firstException: exceptionDates[0]
         });
 
-        return occurrencesWithTime.filter((date: Date) => {
+        return occurrencesWithTime.filter((date: Date): boolean => {
           const dateStr = date.toISOString().split('T')[0];
           return !exceptionDates.includes(dateStr);
         });

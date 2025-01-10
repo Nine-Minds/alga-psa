@@ -189,6 +189,7 @@ const InteractionTypesSettings: React.FC = () => {
           {editingTypeId === record.type_id ? (
             <>
               <Button 
+                id='save-button'
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
@@ -199,6 +200,7 @@ const InteractionTypesSettings: React.FC = () => {
                 Save
               </Button>
               <Button
+                id='cancel-button'
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
@@ -213,6 +215,7 @@ const InteractionTypesSettings: React.FC = () => {
             <>
               {!record.system_type_id && (
                 <Button
+                  id='edit-button'
                   variant="ghost"
                   size="sm"
                   onClick={(e) => {
@@ -224,6 +227,7 @@ const InteractionTypesSettings: React.FC = () => {
                 </Button>
               )}
               <Button
+                id='delete-button'
                 variant="ghost"
                 size="sm"
                 onClick={(e) => {
@@ -279,7 +283,7 @@ const InteractionTypesSettings: React.FC = () => {
             <CustomSelect
               options={[
                 { value: 'standalone', label: 'Create as standalone type' },
-                ...systemTypes.map(type => ({
+                ...systemTypes.map((type): { value: string; label: string } => ({
                   value: type.type_id,
                   label: `Inherit from ${type.type_name}`
                 }))
@@ -290,6 +294,7 @@ const InteractionTypesSettings: React.FC = () => {
             />
           </div>
           <Button 
+            id='add-button'
             onClick={handleCreateType} 
             className="bg-primary-500 text-white hover:bg-primary-600 self-start"
           >

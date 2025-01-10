@@ -62,8 +62,24 @@ const SettingsPage = (): JSX.Element =>  {
                   onChange={(e) => setCompanyName(e.target.value)}
                 />
               </div>
-              <Button>Save Changes</Button>
+              <Button id="save-general-settings-button">Save Changes</Button>
             </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Profile",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>Manage your personal profile and preferences</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button id="go-to-profile-button" onClick={() => router.push('/msp/profile')}>
+              Go to Profile Settings
+            </Button>
           </CardContent>
         </Card>
       ),

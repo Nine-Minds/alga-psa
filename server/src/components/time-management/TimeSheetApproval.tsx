@@ -89,6 +89,7 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
         <div className="flex space-x-2 mt-2">
           {statusButtons.map(({ status, icon: Icon, label }):JSX.Element => (
             <Button
+              id={`update-status-${status}-btn`}
               key={status}
               onClick={() => handleStatusChange(status)}
               className={getButtonClasses(status)}
@@ -324,6 +325,7 @@ export function TimeSheetApproval({
                     </td>
                     <td>
                       <Button
+                        id={`toggle-details-${entry.entry_id}`}
                         variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -413,6 +415,7 @@ export function TimeSheetApproval({
                 "border-orange-200 focus:border-orange-500" : ""}
             />
             <Button
+              id="add-comment-button"
               onClick={handleAddComment}
               className={`mt-2 ${timeSheet.approval_status === 'CHANGES_REQUESTED' ? 
                 'bg-orange-500 hover:bg-orange-600' : ''}`}
@@ -427,8 +430,8 @@ export function TimeSheetApproval({
       </Card>
 
       <div className="flex justify-end space-x-4">
-        <Button onClick={onApprove} variant="default">Approve</Button>
-        <Button onClick={onRequestChanges} variant="outline">Request Changes</Button>
+        <Button id="timesheet-approve-btn" onClick={onApprove} variant="default">Approve</Button>
+        <Button id="timesheet-request-changes-btn" onClick={onRequestChanges} variant="outline">Request Changes</Button>
       </div>
     </div>
   );

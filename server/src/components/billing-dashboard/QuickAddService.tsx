@@ -107,7 +107,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <Button>Add Service</Button>
+        <Button id='add-service'>Add Service</Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
@@ -188,10 +188,10 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button id='cancel-button' type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit">Save Service</Button>
+              <Button id='save-button' type="submit">Save Service</Button>
             </div>
           </form>
         </Dialog.Content>

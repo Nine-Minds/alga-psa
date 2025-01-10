@@ -332,12 +332,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
             <Button 
+              id="save-company-changes-btn"
               onClick={handleSave} 
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               Save Changes
             </Button>
             <Button 
+              id="add-ticket-btn"
               onClick={() => setIsQuickAddTicketOpen(true)} 
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
@@ -429,6 +431,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           
           <Flex gap="4" justify="end" align="center">
             <Button 
+              id="save-additional-info-btn"
               onClick={handleSave} 
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
               disabled={!hasUnsavedChanges}
@@ -451,6 +454,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 </h2>
                 <div className="flex gap-2">
                   <Button 
+                    id="save-note-btn"
                     onClick={async () => {
                       try {
                         if (!currentUser?.user_id) {
@@ -475,7 +479,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   >
                     Save Note
                   </Button>
-                  <Button onClick={() => setIsDocumentSelectorOpen(true)}>Change Note Document</Button>
+                  <Button id="change-note-document-btn" onClick={() => setIsDocumentSelectorOpen(true)}>Change Note Document</Button>
                 </div>
               </div>
               <TextEditor
@@ -490,8 +494,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <div className="space-y-4">
               <p>No note document selected.</p>
               <div className="flex gap-4">
-                <Button onClick={handleCreateNewNoteDocument}>Create New Note Document</Button>
-                <Button onClick={() => setIsDocumentSelectorOpen(true)}>Select Existing Document</Button>
+                <Button id="create-note-document-btn" onClick={handleCreateNewNoteDocument}>Create New Note Document</Button>
+                <Button id="select-existing-document-btn" onClick={() => setIsDocumentSelectorOpen(true)}>Select Existing Document</Button>
               </div>
             </div>
           )}
@@ -526,6 +530,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   return (
     <div className="max-w-4xl mx-auto bg-gray-50 p-6 relative">
       <Button
+        id="back-to-companies-btn"
         onClick={handleBack}
         variant="ghost"
         size="sm"

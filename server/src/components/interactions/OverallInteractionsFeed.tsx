@@ -136,6 +136,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
           </div>
         </div>
         <Button 
+          id="open-filter-button"
           onClick={() => setIsFilterDialogOpen(true)} 
           size="lg"
           className="flex-shrink-0 whitespace-nowrap"
@@ -188,11 +189,21 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
               placeholder="End Date"
             />
             <div className="flex justify-between">
-              <Button onClick={resetFilters} variant="outline" className="flex items-center">
+              <Button 
+                id="reset-filters-button"
+                onClick={resetFilters} 
+                variant="outline" 
+                className="flex items-center"
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reset Filters
               </Button>
-              <Button onClick={handleApplyFilters}>Apply Filters</Button>
+              <Button 
+                id="apply-filters-button"
+                onClick={handleApplyFilters}
+              >
+                Apply Filters
+              </Button>
             </div>
           </div>
         </DialogContent>

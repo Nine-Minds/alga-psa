@@ -553,7 +553,7 @@ export function TimeEntryDialog({
                             {!entry.isNew && (
                               <Button
                                 {...useAutomationIdAndRegister<ButtonComponent>({
-                                  id: `${id}-entry-${index}-collapse-btn`,
+                                  id: `${id}-collapse-entry-${index}-btn`,
                                   type: 'button',
                                   label: 'Collapse Entry',
                                   actions: ['click']
@@ -569,7 +569,7 @@ export function TimeEntryDialog({
                             )}
                             <Button
                               {...useAutomationIdAndRegister<ButtonComponent>({
-                                id: `${id}-entry-${index}-delete-btn-edit`,
+                                id: `${id}-delete-entry-${index}-btn`,
                                 type: 'button',
                                 label: 'Delete Entry',
                                 actions: ['click']
@@ -821,12 +821,7 @@ export function TimeEntryDialog({
 
                 <div className="flex justify-end mt-4">
                   <Button
-                    {...useAutomationIdAndRegister<ButtonComponent>({
-                      id: `${id}-entry-${editingIndex}-save-btn`,
-                      type: 'button',
-                      label: 'Save Entry',
-                      actions: ['click']
-                    }).automationIdProps}
+                    id={`${id}-save-entry-${editingIndex}-btn`}
                     onClick={() => handleSaveEntry(index)}
                     variant="default"
                     size="default"
@@ -857,7 +852,7 @@ export function TimeEntryDialog({
                         <div className="flex space-x-2">
                           <Button
                             {...useAutomationIdAndRegister<ButtonComponent>({
-                              id: `${id}-entry-${index}-edit-btn`,
+                              id: `${id}-edit-entry-${index}-btn`,
                               type: 'button',
                               label: 'Edit Entry',
                               actions: ['click']
@@ -870,12 +865,7 @@ export function TimeEntryDialog({
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
-                            {...useAutomationIdAndRegister<ButtonComponent>({
-                              id: `${id}-entry-${index}-delete-btn`,
-                              type: 'button',
-                              label: 'Delete Entry',
-                              actions: ['click']
-                            }).automationIdProps}
+                            id={`${id}-delete-entry-${index}-btn`}
                             onClick={() => handleDeleteEntry(index)}
                             variant="ghost"
                             size="sm"
@@ -892,12 +882,7 @@ export function TimeEntryDialog({
               
               {isEditable && (
                 <Button 
-                  {...useAutomationIdAndRegister<ButtonComponent>({
-                    id: `${id}-add-entry-btn`,
-                    type: 'button',
-                    label: 'Add Entry',
-                    actions: ['click']
-                  }).automationIdProps}
+                  id={`${id}-add-new-entry-btn`}
                   onClick={() => {
                     handleAddEntry();
                     setEditingIndex(entries.length);
@@ -915,12 +900,7 @@ export function TimeEntryDialog({
 
           <DialogFooter>
             <Button
-              {...useAutomationIdAndRegister<ButtonComponent>({
-                id: `${id}-close-btn`,
-                type: 'button',
-                label: 'Close Dialog',
-                actions: ['click']
-              }).automationIdProps}
+              id={`${id}-close-dialog-btn`}
               onClick={handleClose}
               variant="outline"
             >

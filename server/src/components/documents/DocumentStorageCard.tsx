@@ -122,13 +122,7 @@ export default function DocumentStorageCard({
 
     return (
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
-            <div 
-                {...useAutomationIdAndRegister<ContainerComponent>({
-                    id: `${id}-card`,
-                    type: 'container',
-                    label: 'Document Card'
-                }).automationIdProps}
-                className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${
+            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${
                     isContentDocument ? 'cursor-pointer' : ''
                 }`}
                 onClick={isContentDocument && onClick ? onClick : undefined}
@@ -140,27 +134,15 @@ export default function DocumentStorageCard({
                         <div className="flex-1 min-w-0 mr-2">
                             <div className="flex items-center space-x-2">
                                 {getFileIcon()}
-                                <h3 {...useAutomationIdAndRegister<ContainerComponent>({
-                                    id: `${id}-name`,
-                                    type: 'container',
-                                    label: 'Document Name'
-                                }).automationIdProps} className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
+                                <h3 className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
                                     {document.document_name}
                                 </h3>
                             </div>
-                            <p {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-author`,
-                                type: 'container',
-                                label: 'Author'
-                            }).automationIdProps} className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">
+                            <p className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">
                                 {document.createdByFullName || document.created_by}
                             </p>
                             {document.type_name && (
-                                <p {...useAutomationIdAndRegister<ContainerComponent>({
-                                    id: `${id}-type`,
-                                    type: 'container',
-                                    label: 'Document Type'
-                                }).automationIdProps} className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">
+                                <p className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">
                                     Type: {document.type_name}
                                 </p>
                             )}
@@ -169,21 +151,13 @@ export default function DocumentStorageCard({
 
                     <div className="space-y-1">
                         {document.mime_type && (
-                            <p {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-mime-type`,
-                                type: 'container',
-                                label: 'MIME Type'
-                            }).automationIdProps} className="text-xs text-[rgb(var(--color-text-500))]">
+                            <p className="text-xs text-[rgb(var(--color-text-500))]">
                                 {document.mime_type}
                             </p>
                         )}
 
                         {document.file_size && (
-                            <p {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-size`,
-                                type: 'container',
-                                label: 'File Size'
-                            }).automationIdProps} className="text-xs text-[rgb(var(--color-text-500))]">
+                            <p className="text-xs text-[rgb(var(--color-text-500))]">
                                 Size: {(document.file_size / 1024).toFixed(1)} KB
                             </p>
                         )}
@@ -191,32 +165,15 @@ export default function DocumentStorageCard({
 
                     {/* Preview Content */}
                     {isLoading ? (
-                        <div {...useAutomationIdAndRegister<ContainerComponent>({
-                            id: `${id}-loading`,
-                            type: 'container',
-                            label: 'Loading'
-                        }).automationIdProps} className="mt-4 flex justify-center">
+                        <div className="mt-4 flex justify-center">
                             <Loader2 className="animate-spin h-8 w-8 text-[rgb(var(--color-primary-400))]" />
                         </div>
                     ) : previewContent.error ? (
-                        <p {...useAutomationIdAndRegister<ContainerComponent>({
-                            id: `${id}-error`,
-                            type: 'container',
-                            label: 'Error Message'
-                        }).automationIdProps} className="mt-4 text-sm text-red-500">{previewContent.error}</p>
+                        <p className="mt-4 text-sm text-red-500">{previewContent.error}</p>
                     ) : (
-                        <div {...useAutomationIdAndRegister<ContainerComponent>({
-                            id: `${id}-preview`,
-                            type: 'container',
-                            label: 'Preview'
-                        }).automationIdProps} className="mt-4 preview-container">
+                        <div className="mt-4 preview-container">
                             {previewContent.previewImage ? (
                                 <img
-                                    {...useAutomationIdAndRegister<ContainerComponent>({
-                                        id: `${id}-preview-image`,
-                                        type: 'container',
-                                        label: 'Preview Image'
-                                    }).automationIdProps}
                                     src={previewContent.previewImage}
                                     alt={document.document_name}
                                     className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer"
@@ -227,11 +184,6 @@ export default function DocumentStorageCard({
                                 />
                             ) : previewContent.content ? (
                                 <div 
-                                    {...useAutomationIdAndRegister<ContainerComponent>({
-                                        id: `${id}-preview-content`,
-                                        type: 'container',
-                                        label: 'Preview Content'
-                                    }).automationIdProps}
                                     className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] cursor-pointer"
                                     style={{
                                         display: '-webkit-box',
@@ -251,13 +203,6 @@ export default function DocumentStorageCard({
                 {!hideActions && (
                     <div className="mt-4 pt-3 flex justify-end space-x-2 border-t border-[rgb(var(--color-border-100))]">
                         <a
-                            {...useAutomationIdAndRegister<ButtonComponent>({
-                                id: `${id}-download-btn`,
-                                type: 'button',
-                                label: 'Download',
-                                actions: ['click'],
-                                disabled: isLoading || !document.file_id
-                            }).automationIdProps}
                             href={document.file_id ? getDocumentDownloadUrl(document.file_id) : '#'}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -277,13 +222,7 @@ export default function DocumentStorageCard({
                         </a>
                         {showDisassociate && onDisassociate && (
                             <Button
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-disassociate-btn`,
-                                    type: 'button',
-                                    label: 'Remove',
-                                    actions: ['click'],
-                                    disabled: isLoading
-                                }).automationIdProps}
+                                id={`disassociate-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleDisassociate}
@@ -296,13 +235,7 @@ export default function DocumentStorageCard({
                         )}
                         {onDelete && (
                             <Button
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-delete-btn`,
-                                    type: 'button',
-                                    label: 'Delete',
-                                    actions: ['click'],
-                                    disabled: isLoading
-                                }).automationIdProps}
+                                id={`delete-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
                                 onClick={handleDelete}

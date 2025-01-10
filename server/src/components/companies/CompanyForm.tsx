@@ -173,7 +173,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSubmit }) => {
       </div>
 
       <div className="pt-4 mt-4 border-t">
-        <Button type="submit">
+        <Button id="create-company-btn" type="submit">
           Create Client
         </Button>
       </div>

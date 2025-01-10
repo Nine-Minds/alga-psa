@@ -40,7 +40,7 @@ export default function UsersPage() {
     return (
       <div>
         <p>Error: {error}</p>
-        <Button onClick={handleRefresh} className="mt-4">
+        <Button id="retry-users-button" onClick={handleRefresh} className="mt-4">
           Retry
         </Button>
       </div>
@@ -51,7 +51,7 @@ export default function UsersPage() {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Users</h1>
-        <Button onClick={handleRefresh}>
+        <Button id="refresh-users-button" onClick={handleRefresh}>
           Refresh
         </Button>
       </div>

@@ -255,6 +255,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               <div key={role.role_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                 <Text size="2">{role.role_name}</Text>
                 <Button
+                  id={`remove-role-${role.role_id}`}
                   variant="ghost"
                   onClick={() => handleRemoveRole(role.role_id)}
                   className="text-red-500 hover:text-red-600"
@@ -273,6 +274,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               placeholder="Select role to add"
             />
             <Button
+              id={`add-role-btn`}
               onClick={handleAddRole}
               variant="outline"
               disabled={!selectedRole}
@@ -331,7 +333,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                 </button>
               </div>
             </div>
-            <Button type="submit" variant="default">
+            <Button id='set-password-btn' type="submit" variant="default">
               Set Password
             </Button>
           </form>
@@ -353,12 +355,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
       <div className="flex justify-end space-x-2 mt-6">
         <Button
+          id="close-button"
           onClick={closeDrawer}
           variant="outline"
         >
           Cancel
         </Button>
         <Button
+          id='save-changes-btn'
           onClick={handleSave}
           variant="default"
         >

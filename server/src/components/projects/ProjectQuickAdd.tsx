@@ -50,7 +50,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         const contactsData = selectedCompanyId 
           ? await getContactsByCompany(selectedCompanyId)
           : await getAllContacts();
-        setContacts(contactsData.map(contact => ({
+        setContacts(contactsData.map((contact): { value: string; label: string } => ({
           value: contact.contact_name_id,
           label: contact.full_name
         })));
@@ -146,7 +146,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 <CustomSelect
                   value={selectedUserId || ''}
                   onValueChange={setSelectedUserId}
-                  options={users.map(user => ({
+                  options={users.map((user): { value: string; label: string } => ({
                     value: user.user_id,
                     label: `${user.first_name} ${user.last_name}`
                   }))}
@@ -174,10 +174,10 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 </div>
               </div>
               <div className="flex justify-between mt-6">
-                <Button variant="ghost" onClick={onClose} disabled={isSubmitting}>
+                <Button id='cancel-button' variant="ghost" onClick={onClose} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting || !selectedCompanyId}>
+                <Button id='create-button' type="submit" disabled={isSubmitting || !selectedCompanyId}>
                   {isSubmitting ? 'Creating...' : 'Create Project'}
                 </Button>
               </div>

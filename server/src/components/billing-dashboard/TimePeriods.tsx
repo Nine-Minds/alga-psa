@@ -69,6 +69,7 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   return (
     <>
       <Button 
+        id="create-time-period-button"
         className="mb-4" 
         onClick={() => {
           setMode('create');
@@ -109,6 +110,7 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
                   <TableCell>{period.end_date.slice(0, 10)}</TableCell>
                   <TableCell>
                     <Button 
+                      id={`edit-period-${period.period_id}`}
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleEdit(period)}

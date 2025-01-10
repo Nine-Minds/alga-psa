@@ -92,8 +92,8 @@ const TaxRates: React.FC = () => {
       dataIndex: 'tax_rate_id',
       render: (_, record) => (
         <>
-          <Button onClick={() => handleEditTaxRate(record)} className="mr-2">Edit</Button>
-          <Button onClick={() => handleDeleteTaxRate(record.tax_rate_id!)}>Delete</Button>
+          <Button id={`edit-tax-rate-${record.tax_rate_id}`} onClick={() => handleEditTaxRate(record)} className="mr-2">Edit</Button>
+          <Button id={`delete-tax-rate-${record.tax_rate_id}`} onClick={() => handleDeleteTaxRate(record.tax_rate_id!)}>Delete</Button>
         </>
       ),
     },
@@ -111,7 +111,7 @@ const TaxRates: React.FC = () => {
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-          <Button onClick={() => { setIsDialogOpen(true); setIsEditing(false); setCurrentTaxRate({}); }}>Add New Tax Rate</Button>
+          <Button id="add-tax-rate-btn" onClick={() => { setIsDialogOpen(true); setIsEditing(false); setCurrentTaxRate({}); }}>Add New Tax Rate</Button>
           <DataTable
             data={taxRates}
             columns={columns}
@@ -170,7 +170,7 @@ const TaxRates: React.FC = () => {
                 onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, end_date: e.target.value || null })}
               />
             </div>
-            <Button onClick={handleAddOrUpdateTaxRate}>{isEditing ? 'Update' : 'Add'} Tax Rate</Button>
+            <Button id="save-tax-rate-btn" onClick={handleAddOrUpdateTaxRate}>{isEditing ? 'Update' : 'Add'} Tax Rate</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -121,10 +121,15 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
             </DialogContent>
             <DialogFooter>
                 <div className="flex justify-end space-x-2">
-                    <Button variant="outline" onClick={onClose}>
+                    <Button 
+                        id="plan-picker-cancel-btn"
+                        variant="outline" 
+                        onClick={onClose}
+                    >
                         Cancel
                     </Button>
                     <Button 
+                        id="plan-picker-submit-btn"
                         onClick={handleSubmit}
                         disabled={!selectedPlan}
                     >

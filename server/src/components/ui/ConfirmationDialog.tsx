@@ -53,14 +53,14 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           <Button 
             variant="outline" 
             onClick={onClose}
-            id={id ? `${id}-cancel` : undefined}
+            id={`${id}-cancel`}
           >
             {cancelLabel}
           </Button>
           <Button 
             onClick={handleConfirm}
             disabled={isConfirming || isProcessing}
-            id={id ? `${id}-confirm` : undefined}
+            id={`${id}-confirm`}
           >
             {confirmLabel}
           </Button>

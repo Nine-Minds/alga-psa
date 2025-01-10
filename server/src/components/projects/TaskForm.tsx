@@ -371,8 +371,8 @@ export default function TaskForm({
     }
 
     // Compare ticket links - only compare ticket IDs since other fields might differ in format
-    const currentTicketIds = new Set(pendingTicketLinks.map(link => link.ticket_id));
-    const originalTicketIds = new Set(task.ticket_links?.map(link => link.ticket_id) || []);
+    const currentTicketIds = new Set(pendingTicketLinks.map((link): string => link.ticket_id));
+    const originalTicketIds = new Set(task.ticket_links?.map((link): string => link.ticket_id) || []);
     
     if (currentTicketIds.size !== originalTicketIds.size) return true;
     for (const id of currentTicketIds) {
@@ -596,6 +596,7 @@ export default function TaskForm({
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="font-semibold">Additional Agents</h3>
                       <Button
+                        id='add-agent-button'
                         type="button"
                         variant="soft"
                         onClick={() => setShowAgentPicker(true)}
@@ -618,6 +619,7 @@ export default function TaskForm({
                             <span>{resource.first_name} {resource.last_name}</span>
                           </div>
                           <Button
+                            id='remove-agent-button'
                             variant="ghost"
                             size="sm"
                             onClick={() => handleRemoveAgent(resource.assignment_id)}
@@ -689,7 +691,7 @@ export default function TaskForm({
                 </div>
 
                 {isEditingChecklist && (
-                  <Button type="button" variant="soft" onClick={addChecklistItem}>
+                  <Button id='add-checklist-item-button' type="button" variant="soft" onClick={addChecklistItem}>
                     Add an item
                   </Button>
                 )}
@@ -705,6 +707,7 @@ export default function TaskForm({
 
                 <div className="flex justify-between mt-6">
                   <Button 
+                    id='cancel-button'
                     type="button" 
                     variant="ghost" 
                     onClick={handleCancelClick} 
@@ -714,6 +717,7 @@ export default function TaskForm({
                   </Button>
                   {mode === 'edit' && (
                     <Button
+                      id='delete-button'
                       type="button"
                       variant="destructive"
                       onClick={() => setShowDeleteConfirm(true)}
@@ -722,7 +726,7 @@ export default function TaskForm({
                       Delete
                     </Button>
                   )}
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button id='save-button' type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (mode === 'edit' ? 'Updating...' : 'Adding...') : (mode === 'edit' ? 'Update' : 'Save')}
                   </Button>
                 </div>
@@ -785,7 +789,7 @@ export default function TaskForm({
                 size="sm"
               />
               <div className="flex justify-end space-x-2">
-                <Button variant="ghost" onClick={() => setShowAgentPicker(false)}>
+                <Button id='cancel-button' variant="ghost" onClick={() => setShowAgentPicker(false)}>
                   Cancel
                 </Button>
               </div>

@@ -116,7 +116,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
           }}
           variant="ghost"
           size="sm"
-          id={id ? `${id}-select-${record.contact_name_id}` : undefined}
+          id={`${id}-select-${record.contact_name_id}`}
         >
           Select
         </Button>
@@ -163,7 +163,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
             <Button 
               variant="ghost" 
               onClick={onClose}
-              id={id ? `${id}-cancel` : undefined}
+              id={`${id}-cancel`}
             >
               Cancel
             </Button>

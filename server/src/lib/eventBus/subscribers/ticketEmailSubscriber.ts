@@ -20,7 +20,7 @@ import { getSecret } from '../../utils/getSecret';
  */
 async function formatChanges(db: any, changes: Record<string, unknown>, tenantId: string): Promise<string> {
   const formattedChanges = await Promise.all(
-    Object.entries(changes).map(async ([field, value]) => {
+    Object.entries(changes).map(async ([field, value]): Promise<string> => {
       // Handle different types of values
       if (typeof value === 'object' && value !== null) {
         const { from, to } = value as { from?: unknown; to?: unknown };
@@ -47,25 +47,28 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
 
   // Handle special fields that need resolution
   switch (field) {
-    case 'status_id':
+    case 'status_id': {
       const status = await db('statuses')
         .where({ status_id: value, tenant: tenantId })
         .first();
       return status?.name || String(value);
+    }
 
     case 'updated_by':
     case 'assigned_to':
-    case 'closed_by':
+    case 'closed_by': {
       const user = await db('users')
         .where({ user_id: value, tenant: tenantId })
         .first();
       return user ? `${user.first_name} ${user.last_name}` : String(value);
+    }
 
-    case 'priority_id':
+    case 'priority_id': {
       const priority = await db('priorities')
         .where({ priority_id: value, tenant: tenantId })
         .first();
       return priority?.priority_name || String(value);
+    }
 
     default:
       if (typeof value === 'boolean') {
@@ -84,7 +87,7 @@ async function resolveValue(db: any, field: string, value: unknown, tenantId: st
 function formatFieldName(field: string): string {
   return field
     .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word): string => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');
 }
 

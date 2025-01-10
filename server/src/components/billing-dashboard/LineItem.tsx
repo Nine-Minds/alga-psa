@@ -55,6 +55,7 @@ export const LineItem: React.FC<LineItemProps> = ({
         <h3 className="text-sm font-medium">Item {index + 1}</h3>
         <div className="flex gap-2">
           <Button
+            id='add-button'
             type="button"
             onClick={onToggleExpand}
             variant="secondary"
@@ -63,6 +64,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             Add
           </Button>
           <Button
+            id='remove-button'
             type="button"
             onClick={onRemove}
             variant="secondary"

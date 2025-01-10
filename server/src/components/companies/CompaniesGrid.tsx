@@ -45,7 +45,7 @@ const CompaniesGrid = ({ filteredCompanies, selectedCompanies, handleCheckboxCha
                         <div className="absolute top-3 right-3">
                             <DropdownMenu.Root>
                                 <DropdownMenu.Trigger asChild>
-                                    <Button variant="ghost" size="1" className="hover:bg-gray-50">
+                                    <Button id={`company-menu-${company.company_id}`} variant="ghost" size="1" className="hover:bg-gray-50">
                                         <MoreVertical size={16} />
                                     </Button>
                                 </DropdownMenu.Trigger>

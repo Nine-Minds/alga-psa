@@ -4,7 +4,6 @@ import React, { useMemo, useState } from 'react';
 import { Block } from '@blocknote/core';
 import TextEditor from '../editor/TextEditor';
 import ReactMarkdown from 'react-markdown';
-import { formatDistanceToNow } from 'date-fns';
 import { Pencil2Icon, TrashIcon } from '@radix-ui/react-icons';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import { IComment } from '@/interfaces/comment.interface';
@@ -14,8 +13,6 @@ import CustomSelect from '@/components/ui/CustomSelect';
 import UserPicker from '@/components/ui/UserPicker';
 import ContactPickerDialog from '@/components/ui/ContactPickerDialog';
 import { Button } from '@/components/ui/Button';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ContainerComponent } from '@/types/ui-reflection/types';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface CommentItemProps {
@@ -42,7 +39,7 @@ interface CommentItemProps {
   onDelete: (commentId: string) => void;
 }
 
-const CommentItem: React.FC<CommentItemProps> = ({
+  const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
   user,
@@ -132,7 +129,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   };
 
   const handleContentChange = (blocks: Block[]) => {
-    const content = blocks.map(block => block.content).join('\n');
+    const content = blocks.map((block):any => block.content).join('\n');
     setEditedContent(content);
     onContentChange(content);
   };
@@ -165,7 +162,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 label="Select User"
                 value={selectedUserId}
                 onValueChange={setSelectedUserId}
-                users={Object.entries(userMap).map(([id, user]): IUserWithRoles => ({
+                users={Object.entries(userMap).map(([id, user]): IUserWithRoles => {
+                  return {
                   user_id: id,
                   username: id,
                   first_name: user.first_name,
@@ -179,7 +177,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   two_factor_enabled: false,
                   is_google_user: false,
                   user_type: user.user_type
-                }))}
+                  };
+                })}
               />
             ) : (
               <div>
@@ -282,6 +281,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               {canEdit && (
                 <div className="space-x-2">
                   <button
+                    id={`edit-comment-${conversation.comment_id}-button`}
                     onClick={() => onEdit(conversation)}
                     className="text-indigo-600 hover:text-indigo-800 font-medium p-1 rounded-full hover:bg-indigo-100 transition duration-150 ease-in-out"
                     aria-label="Edit comment"
@@ -289,6 +289,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     <Pencil2Icon className="w-5 h-5" />
                   </button>
                   <Button
+                    id='delete-comment-button'
                     onClick={() => onDelete(conversation.comment_id || '')}
                     className="text-red-600 hover:text-red-800 font-medium p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
                     aria-label="Delete comment"

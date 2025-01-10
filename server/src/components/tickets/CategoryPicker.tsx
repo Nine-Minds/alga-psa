@@ -61,7 +61,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     const childrenMap = new Map<string, ITicketCategory[]>();
     
     // Group children by parent
-    categories.filter(c => c.parent_category).forEach(child => {
+    categories.filter(c => c.parent_category).forEach((child: ITicketCategory): void => {
       if (!childrenMap.has(child.parent_category!)) {
         childrenMap.set(child.parent_category!, []);
       }
@@ -69,13 +69,13 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     });
 
     // Transform into tree structure with selected and excluded states
-    const categoryOptions = parentCategories.map(parent => ({
+    const categoryOptions = parentCategories.map((parent: ITicketCategory): TreeSelectOption<CategoryType> => ({
       label: parent.category_name,
       value: parent.category_id,
       type: 'parent' as CategoryType,
       selected: selectedCategories.includes(parent.category_id),
       excluded: excludedCategories.includes(parent.category_id),
-      children: childrenMap.get(parent.category_id)?.map(child => ({
+      children: childrenMap.get(parent.category_id)?.map((child: ITicketCategory): TreeSelectOption<CategoryType> => ({
         label: child.category_name,
         value: child.category_id,
         type: 'child' as CategoryType,

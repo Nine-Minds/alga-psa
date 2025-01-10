@@ -47,7 +47,7 @@ const ScheduleCalendar: React.FC = () => {
 
   const Legend = () => (
     <div className="flex justify-center space-x-4 mb-4 p-2 rounded-lg bg-opacity-50">
-      {Object.entries(workItemColors).map(([type, color]):JSX.Element => (
+      {Object.entries(workItemColors).map(([type, color]): JSX.Element => (
         <div key={type} className="flex items-center">
           <div
             className="w-4 h-4 mr-2 rounded"
@@ -69,7 +69,7 @@ const ScheduleCalendar: React.FC = () => {
     async function fetchUserRoles() {
       const user = await getCurrentUser();
       if (user?.roles) {
-        setCurrentUserRoles(user.roles.map(role => role.role_name));
+        setCurrentUserRoles(user.roles.map((role): string => role.role_name));
       }
     }
     fetchUserRoles();
@@ -126,12 +126,12 @@ const ScheduleCalendar: React.FC = () => {
     if (result.success) {
       console.log('Fetched entries:', {
         count: result.entries.length,
-        entries: result.entries.map(e => ({
+        entries: result.entries.map((e): { id: string; title: string; type: string; start: string; end: string } => ({
           id: e.entry_id,
           title: e.title,
           type: e.work_item_type,
-          start: e.scheduled_start,
-          end: e.scheduled_end
+          start: new Date(e.scheduled_start).toISOString(),
+          end: new Date(e.scheduled_end).toISOString()
         }))
       });
       setEvents(result.entries);

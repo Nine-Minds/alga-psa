@@ -44,7 +44,7 @@ import { UIComponent } from './types';
 export function useRegisterUIComponent<T extends UIComponent>(
   component: T,
   parentId?: string
-) {
+): (partial: Partial<T>) => void {
   const { registerComponent, unregisterComponent, updateComponent } = useUIState();
   
   // Keep a ref to the latest component for the cleanup function
@@ -142,7 +142,7 @@ export type MetadataProps<T extends UIComponent> = {
 export function useRegisterChildComponent<T extends UIComponent>(
   parentId: string,
   component: T
-) {
+): (partial: Partial<T>) => void {
   return useRegisterUIComponent(component, parentId);
 }
 
@@ -150,7 +150,7 @@ export function useRegisterUIComponentWithProps<T extends UIComponent>(
   component: T,
   props: MetadataProps<T>,
   parentId?: string
-) {
+): (partial: Partial<T>) => void {
   const updateMetadata = useRegisterUIComponent(component, parentId);
 
   // Update metadata whenever props change

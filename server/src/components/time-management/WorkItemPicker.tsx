@@ -145,6 +145,7 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
             onClick={() => onSelect(null)}
             variant="outline"
             className="text-sm"
+            id="create-adhoc-entry-btn"
           >
             Create Ad-hoc Entry
           </Button>
@@ -214,6 +215,7 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
                       onClick={() => handlePageChange(currentPage - 1)}
                       className="px-3 py-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={currentPage === 1 || isSearching}
+                      id="previous-page-btn"
                     >
                       Previous
                     </button>
@@ -224,6 +226,7 @@ export function WorkItemPicker({ onSelect, existingWorkItems }: WorkItemPickerPr
                       onClick={() => handlePageChange(currentPage + 1)}
                       className="px-3 py-1 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                       disabled={!hasMore || isSearching}
+                      id="next-page-btn"
                     >
                       Next
                     </button>

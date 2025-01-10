@@ -1,8 +1,8 @@
 import { createTenantKnex } from '../db';
 import { IScheduleEntry, IRecurrencePattern } from '../../interfaces/schedule.interfaces';
-import { getCurrentUser } from '../actions/user-actions/userActions';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
+import { Knex } from 'knex';
 
 interface CreateScheduleEntryOptions {
   assignedUserIds: string[];  // Make required since it's the only way to assign users now
@@ -12,7 +12,7 @@ class ScheduleEntry {
   /**
    * Helper method to fetch assigned user IDs for schedule entries
    */
-  private static async getAssignedUserIds(db: any, entryIds: (string | undefined)[]): Promise<Record<string, string[]>> {
+  private static async getAssignedUserIds(db: Knex, entryIds: (string | undefined)[]): Promise<Record<string, string[]>> {
     // Filter out undefined entry IDs
     const validEntryIds = entryIds.filter((id): id is string => id !== undefined);
     
@@ -25,7 +25,7 @@ class ScheduleEntry {
       .select('entry_id', 'user_id');
     
     // Group by entry_id
-    return assignments.reduce((acc: Record<string, string[]>, curr: any) => {
+    return assignments.reduce((acc: Record<string, string[]>, curr: { entry_id: string; user_id: string }) => {
       if (!acc[curr.entry_id]) {
         acc[curr.entry_id] = [];
       }
@@ -37,7 +37,7 @@ class ScheduleEntry {
   /**
    * Helper method to update assignee records for a schedule entry
    */
-  private static async updateAssignees(db: any, tenant: string, entry_id: string, userIds: string[]): Promise<void> {
+  private static async updateAssignees(db: Knex, tenant: string, entry_id: string, userIds: string[]): Promise<void> {
     // Delete existing assignments
     await db('schedule_entry_assignees')
       .where({ entry_id })
@@ -45,7 +45,7 @@ class ScheduleEntry {
 
     // Insert new assignments
     if (userIds.length > 0) {
-      const assignments = userIds.map(user_id => ({
+      const assignments = userIds.map((user_id): { tenant: string; entry_id: string; user_id: string; } => ({
         tenant,
         entry_id,
         user_id,
@@ -75,11 +75,11 @@ class ScheduleEntry {
 
     console.log('[ScheduleEntry.getAll] Regular entries:', {
       count: regularEntries.length,
-      entries: regularEntries.map(e => ({
+      entries: regularEntries.map((e): { id: string; title: string; start: Date; isRecurring: boolean; hasPattern: boolean; } => ({
         id: e.entry_id,
         title: e.title,
         start: e.scheduled_start,
-        isRecurring: e.is_recurring,
+        isRecurring: !!e.is_recurring,
         hasPattern: !!e.recurrence_pattern
       }))
     });
@@ -89,7 +89,7 @@ class ScheduleEntry {
     
     console.log('[ScheduleEntry.getAll] Virtual entries:', {
       count: virtualEntries.length,
-      entries: virtualEntries.map(e => ({
+      entries: virtualEntries.map((e): { id: string; title: string; start: Date; originalId: string | undefined; } => ({
         id: e.entry_id,
         title: e.title,
         start: e.scheduled_start,
@@ -101,11 +101,11 @@ class ScheduleEntry {
     if (allEntries.length === 0) return allEntries;
 
     // Get assigned user IDs for all non-virtual entries
-    const entryIds = regularEntries.map(e => e.entry_id);
+    const entryIds = regularEntries.map((e): string => e.entry_id);
     const assignedUserIds = await this.getAssignedUserIds(db, entryIds);
 
     // Merge assigned user IDs into entries
-    const finalEntries = allEntries.map(entry => ({
+    const finalEntries = allEntries.map((entry): IScheduleEntry => ({
       ...entry,
       // For recurring entries, assigned_user_ids is already populated
       assigned_user_ids: entry.assigned_user_ids || assignedUserIds[entry.entry_id] || []
@@ -115,7 +115,7 @@ class ScheduleEntry {
       total: finalEntries.length,
       regularCount: regularEntries.length,
       virtualCount: virtualEntries.length,
-      entries: finalEntries.map(e => ({
+      entries: finalEntries.map((e): { id: string; title: string; start: Date; isVirtual: boolean; originalId: string | undefined; } => ({
         id: e.entry_id,
         title: e.title,
         start: e.scheduled_start,
@@ -315,7 +315,7 @@ class ScheduleEntry {
         (!entry.recurrence_pattern || Object.keys(entry.recurrence_pattern).length === 0)) || isVirtualId;
 
       // Initialize update data
-      const updateData: any = {
+      const updateData: Partial<IScheduleEntry & { tenant: string }> = {
         tenant: tenant || ''
       };
 
@@ -445,9 +445,13 @@ class ScheduleEntry {
       if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
       if (entry.recurrence_pattern !== undefined) {
         // Only stringify if it's a valid recurrence pattern object
-        updateData.recurrence_pattern = (entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
-          ? JSON.stringify(entry.recurrence_pattern)
-          : null;
+        if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
+        if (entry.recurrence_pattern !== undefined) {
+          // Assign the object directly instead of stringifying it
+          updateData.recurrence_pattern = entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0
+            ? entry.recurrence_pattern
+            : null;
+        }
         updateData.is_recurring = !!(entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0);
       }
 
@@ -575,7 +579,7 @@ class ScheduleEntry {
    * Gets recurring entries within a date range by calculating occurrences from the recurrence pattern
    */
   private static async getRecurringEntriesWithAssignments(
-    db: any,
+    db: Knex,
     entries: IScheduleEntry[],
     start: Date,
     end: Date
@@ -583,7 +587,7 @@ class ScheduleEntry {
     const result: IScheduleEntry[] = [];
     
     // Get assigned user IDs for all master entries
-    const entryIds = entries.map(e => e.entry_id);
+    const entryIds = entries.map((e): string => e.entry_id);
     const assignedUserIds = await this.getAssignedUserIds(db, entryIds);
 
     // Process each recurring entry
@@ -608,7 +612,7 @@ class ScheduleEntry {
             if (pattern.endDate < start) continue;
           }
           if (pattern.exceptions) {
-            pattern.exceptions = pattern.exceptions.map(d => new Date(d));
+            pattern.exceptions = (pattern.exceptions || []).map((d): Date => new Date(d));
           }
           entry.recurrence_pattern = pattern;
         }
@@ -621,7 +625,7 @@ class ScheduleEntry {
 
         // Create virtual entries for each occurrence
         const duration = new Date(entry.scheduled_end).getTime() - new Date(entry.scheduled_start).getTime();
-        const virtualEntries = occurrences.map(occurrence => ({
+        const virtualEntries = occurrences.map((occurrence): IScheduleEntry => ({
           ...entry,
           entry_id: `${entry.entry_id}_${occurrence.getTime()}`, // Generate unique ID for virtual instance
           scheduled_start: occurrence,
@@ -665,11 +669,11 @@ class ScheduleEntry {
 
     console.log('[ScheduleEntry.getRecurringEntriesInRange] Master entries found:', {
       count: masterEntries.length,
-      entries: masterEntries.map(e => ({
+      entries: masterEntries.map((e): { id: string; title: string; start: Date; pattern: string | IRecurrencePattern | null; } => ({
         id: e.entry_id,
         title: e.title,
         start: e.scheduled_start,
-        pattern: e.recurrence_pattern
+        pattern: typeof e.recurrence_pattern === 'string' ? e.recurrence_pattern : e.recurrence_pattern || null
       }))
     });
 
@@ -680,7 +684,7 @@ class ScheduleEntry {
 
     console.log('[ScheduleEntry.getRecurringEntriesInRange] Generated virtual entries:', {
       count: virtualEntries.length,
-      entries: virtualEntries.map(e => ({
+      entries: virtualEntries.map((e): { id: string; title: string; start: Date; originalId: string | undefined; } => ({
         id: e.entry_id,
         title: e.title,
         start: e.scheduled_start,

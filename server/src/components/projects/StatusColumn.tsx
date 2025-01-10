@@ -172,7 +172,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
         orderedTasks.splice(insertIndex, 0, draggedTask);
 
         // Update WBS codes
-        const updates = orderedTasks.map((task, index) => ({
+        const updates = orderedTasks.map((task, index): { taskId: string, newWbsCode: string } => ({
           taskId: task.task_id,
           newWbsCode: task.wbs_code.split('.').slice(0, -1).concat(String(index + 1)).join('.')
         }));
@@ -202,6 +202,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
         </div>
         <div className={styles.statusHeader}>
           <Button
+            id="close-agent-picker-button"
             variant="default"
             size="sm"
             onClick={() => onAddCard(status)}

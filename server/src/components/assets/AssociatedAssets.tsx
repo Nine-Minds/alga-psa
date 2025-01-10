@@ -116,19 +116,10 @@ export default function AssociatedAssets({ id, entityId, entityType, companyId }
     return (
         <ReflectionContainer id={id} label="Associated Assets">
             <div className="space-y-4">
-                <div {...useAutomationIdAndRegister<ContainerComponent>({
-                    id: `${id}-header`,
-                    type: 'container',
-                    label: 'Header'
-                }).automationIdProps} className="flex justify-between items-center">
+                <div className="flex justify-between items-center">
                     <h3 className="text-lg font-semibold">Associated Assets</h3>
                     <Button
-                        {...useAutomationIdAndRegister<ButtonComponent>({
-                            id: `${id}-add-btn`,
-                            type: 'button',
-                            label: 'Add Asset',
-                            actions: ['click']
-                        }).automationIdProps}
+                        id='add-asset-button'
                         variant="outline"
                         onClick={() => setIsAddDialogOpen(true)}
                     >
@@ -137,31 +128,14 @@ export default function AssociatedAssets({ id, entityId, entityType, companyId }
                 </div>
 
                 {isLoading ? (
-                    <div {...useAutomationIdAndRegister<ContainerComponent>({
-                        id: `${id}-loading`,
-                        type: 'container',
-                        label: 'Loading'
-                    }).automationIdProps}>Loading assets...</div>
+                    <div>Loading assets...</div>
                 ) : associatedAssets.length === 0 ? (
-                    <div {...useAutomationIdAndRegister<ContainerComponent>({
-                        id: `${id}-empty`,
-                        type: 'container',
-                        label: 'Empty State'
-                    }).automationIdProps} className="text-gray-500">No assets associated</div>
+                    <div className="text-gray-500">No assets associated</div>
                 ) : (
-                    <div {...useAutomationIdAndRegister<ContainerComponent>({
-                        id: `${id}-list`,
-                        type: 'container',
-                        label: 'Asset List'
-                    }).automationIdProps} className="space-y-2">
+                    <div className="space-y-2">
                         {associatedAssets.map((association): JSX.Element => (
                             <div
                                 key={`${association.asset_id}-${association.entity_id}`}
-                                {...useAutomationIdAndRegister<ContainerComponent>({
-                                    id: `${id}-asset-${association.asset_id}`,
-                                    type: 'container',
-                                    label: `Asset ${association.asset?.name}`
-                                }).automationIdProps}
                                 className="flex justify-between items-center p-2 bg-white rounded-lg shadow-sm"
                             >
                                 <div>
@@ -171,12 +145,7 @@ export default function AssociatedAssets({ id, entityId, entityType, companyId }
                                     </div>
                                 </div>
                                 <Button
-                                    {...useAutomationIdAndRegister<ButtonComponent>({
-                                        id: `${id}-remove-btn-${association.asset_id}`,
-                                        type: 'button',
-                                        label: 'Remove Asset',
-                                        actions: ['click']
-                                    }).automationIdProps}
+                                    id='remove-asset-button'
                                     variant="ghost"
                                     onClick={() => handleRemoveAsset(association.asset_id)}
                                 >
@@ -193,61 +162,29 @@ export default function AssociatedAssets({ id, entityId, entityType, companyId }
                     onClose={() => setIsAddDialogOpen(false)}
                     title="Add Asset"
                 >
-                    <div {...useAutomationIdAndRegister<ContainerComponent>({
-                        id: `${id}-dialog-content`,
-                        type: 'container',
-                        label: 'Dialog Content'
-                    }).automationIdProps} className="space-y-4">
+                    <div className="space-y-4">
                         <CustomSelect
-                            {...useAutomationIdAndRegister<FormFieldComponent>({
-                                id: `${id}-asset-select`,
-                                type: 'formField',
-                                fieldType: 'select',
-                                label: 'Select Asset',
-                                value: selectedAssetId
-                            }).automationIdProps}
                             options={availableAssets}
                             value={selectedAssetId}
                             onValueChange={setSelectedAssetId}
                             placeholder="Select an asset..."
                         />
                         <CustomSelect
-                            {...useAutomationIdAndRegister<FormFieldComponent>({
-                                id: `${id}-relationship-select`,
-                                type: 'formField',
-                                fieldType: 'select',
-                                label: 'Select Relationship Type',
-                                value: relationshipType
-                            }).automationIdProps}
                             options={relationshipOptions}
                             value={relationshipType}
                             onValueChange={(value) => setRelationshipType(value as 'affected' | 'related')}
                             placeholder="Select relationship type..."
                         />
-                        <div {...useAutomationIdAndRegister<ContainerComponent>({
-                            id: `${id}-dialog-actions`,
-                            type: 'container',
-                            label: 'Dialog Actions'
-                        }).automationIdProps} className="flex justify-end space-x-2">
+                        <div className="flex justify-end space-x-2">
                             <Button
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-cancel-btn`,
-                                    type: 'button',
-                                    label: 'Cancel',
-                                    actions: ['click']
-                                }).automationIdProps}
+                                id='cancel-button'
                                 variant="outline"
                                 onClick={() => setIsAddDialogOpen(false)}
                             >
                                 Cancel
                             </Button>
                             <Button
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-confirm-btn`,
-                                    type: 'button',
-                                    label: 'Add Asset',
-                                    actions: ['click']
-                                }).automationIdProps}
+                                id='add-asset-button'
                                 onClick={handleAddAsset}
                             >
                                 Add Asset

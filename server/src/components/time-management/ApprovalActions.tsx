@@ -35,9 +35,9 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
 
   return (
     <div className="mb-4 flex space-x-2">
-      <Button onClick={handleApprove}>Approve</Button>
-      <Button onClick={() => setIsRejectDialogOpen(true)}>Reject</Button>
-      <Button onClick={() => setIsChangesDialogOpen(true)}>Request Changes</Button>
+      <Button id="approve-timesheet-btn" onClick={handleApprove}>Approve</Button>
+      <Button id="reject-timesheet-btn" onClick={() => setIsRejectDialogOpen(true)}>Reject</Button>
+      <Button id="request-changes-btn" onClick={() => setIsChangesDialogOpen(true)}>Request Changes</Button>
 
       <Dialog isOpen={isRejectDialogOpen} onClose={() => setIsRejectDialogOpen(false)}>
         <DialogHeader>
@@ -52,8 +52,8 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
           />
         </DialogContent>
         <DialogFooter>
-          <Button onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleReject}>Confirm Reject</Button>
+          <Button id="cancel-reject-btn" onClick={() => setIsRejectDialogOpen(false)}>Cancel</Button>
+          <Button id="confirm-reject-btn" onClick={handleReject}>Confirm Reject</Button>
         </DialogFooter>
       </Dialog>
 
@@ -66,8 +66,8 @@ export function ApprovalActions({ timeSheet, onApprove, onReject, onRequestChang
           {/* Implement a form or interface for specifying change requests */}
         </DialogContent>
         <DialogFooter>
-          <Button onClick={() => setIsChangesDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleRequestChanges}>Confirm Changes</Button>
+          <Button id="cancel-changes-btn" onClick={() => setIsChangesDialogOpen(false)}>Cancel</Button>
+          <Button id="confirm-changes-btn" onClick={handleRequestChanges}>Confirm Changes</Button>
         </DialogFooter>
       </Dialog>
     </div>

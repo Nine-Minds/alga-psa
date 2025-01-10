@@ -28,7 +28,7 @@ let childRegistrationCounter = 0;
  * }
  * ```
  */
-export function useRegisterChild<T extends UIComponent>(component: T) {
+export function useRegisterChild<T extends UIComponent>(component: T): (partial: Partial<T>) => void {
   const parentId = useReflectionParent() ?? undefined;
   const updateMetadata = useRegisterUIComponent<T>(component, parentId);
 
@@ -62,7 +62,7 @@ export function useRegisterChild<T extends UIComponent>(component: T) {
 export function useRegisterChildWithProps<T extends UIComponent>(
   component: T,
   props: Partial<Omit<T, 'id' | 'type'>>
-) {
+): (partial: Partial<T>) => void {
   const registrationId = `child_props_${Date.now()}_${++childRegistrationCounter}`;
   const updateMetadata = useRegisterChild(component);
 

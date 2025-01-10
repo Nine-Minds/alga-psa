@@ -220,7 +220,7 @@ export async function updateTaskStatus(
         }
 
             // Update all tasks
-            await Promise.all(updates.map(({taskId, newWbsCode}) =>
+            await Promise.all(updates.map(({taskId, newWbsCode}): Promise<number> =>
                 trx('project_tasks')
                     .where('task_id', taskId)
                     .update({
@@ -587,7 +587,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
         const {knex: db} = await createTenantKnex();
         await db.transaction(async (trx: Knex.Transaction) => {
             const taskRecords = await trx('project_tasks')
-                .whereIn('task_id', tasks.map(t => t.taskId))
+                .whereIn('task_id', tasks.map((t): string => t.taskId))
                 .select('task_id', 'phase_id');
 
             if (taskRecords.length !== tasks.length) {
@@ -599,7 +599,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
                 throw new Error('All tasks must be in the same phase');
             }
 
-            await Promise.all(tasks.map(({taskId, newWbsCode}) =>
+            await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
                 trx('project_tasks')
                     .where('task_id', taskId)
                     .update({

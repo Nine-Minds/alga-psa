@@ -20,7 +20,7 @@ export async function initializeEventBus(): Promise<void> {
 
     // Initialize email notification consumer for each tenant
     cleanupFunctions = await Promise.all(
-      tenants.map(async (tenantRecord) => {
+      tenants.map(async (tenantRecord): Promise<() => Promise<void>> => {
         logger.info(`Initializing email notification consumer for tenant: ${tenantRecord.tenant}`);
         return initializeEmailNotificationConsumer(tenantRecord.tenant);
       })
@@ -39,7 +39,7 @@ export async function initializeEventBus(): Promise<void> {
 export async function cleanupEventBus(): Promise<void> {
   try {
     logger.info('Shutting down email notification consumers');
-    await Promise.all(cleanupFunctions.map(cleanup => cleanup()));
+    await Promise.all(cleanupFunctions.map((cleanup): Promise<void> => cleanup()));
     cleanupFunctions = []; // Clear the array after cleanup
     logger.info('Event bus cleanup completed successfully');
   } catch (error) {

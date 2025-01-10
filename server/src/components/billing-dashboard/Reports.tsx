@@ -84,6 +84,7 @@ const Reports: React.FC = () => {
             />
           </div>
           <Button 
+            id='generate-button'
             onClick={handleGenerateReport}
             disabled={!selectedReport || !timePeriod}
           >

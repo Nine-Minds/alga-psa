@@ -69,7 +69,7 @@ export default function RoleManagement() {
             value={newRole.description}
             onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
           />
-          <Button onClick={handleCreateRole}>Create Role</Button>
+          <Button id="create-role-btn" onClick={handleCreateRole}>Create Role</Button>
         </Flex>
 
         <DataTable
@@ -88,8 +88,8 @@ export default function RoleManagement() {
               onChange={(e) => setEditingRole({ ...editingRole, role_name: e.target.value })}
             />
             <Flex gap="2">
-              <Button onClick={handleUpdateRole}>Update Role</Button>
-              <Button variant="soft" onClick={() => setEditingRole(null)}>Cancel</Button>
+              <Button id="update-role-btn" onClick={handleUpdateRole}>Update Role</Button>
+              <Button id="cancel-edit-role-btn" variant="soft" onClick={() => setEditingRole(null)}>Cancel</Button>
             </Flex>
           </Flex>
         )}

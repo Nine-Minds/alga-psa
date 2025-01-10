@@ -75,6 +75,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
               className="font-mono"
             />
             <Button 
+              id='save-template-button'
               onClick={async () => {
                 if (selectedTemplate) {
                   await saveInvoiceTemplate(selectedTemplate);

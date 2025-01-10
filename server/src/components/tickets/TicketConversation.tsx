@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IComment, ITicket } from '../../interfaces';
+import { IDocument } from '../../interfaces/document.interface';
 import { IContact } from '../../interfaces/contact.interfaces';
 import TextEditor from '../editor/TextEditor';
 import CommentItem from './CommentItem';
@@ -12,11 +13,8 @@ import styles from './TicketDetails.module.css';
 import { Button } from '@/components/ui/Button';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import { getContactByContactNameId, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ButtonComponent, ContainerComponent } from '@/types/ui-reflection/types';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId'
 import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 const DEFAULT_BLOCK: PartialBlock[] = [{
   id: "1",
@@ -36,10 +34,10 @@ interface TicketConversationProps {
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
-  documents: any[];
+  documents: IDocument[];
   userMap: Record<string, UserInfo>;
   currentUser: { id: string; name?: string | null; email?: string | null; } | null | undefined;
-  newCommentContent: string;
+  // TODO: Remove _newCommentContent as it's unused
   activeTab: string;
   isEditing: boolean;
   currentComment: IComment | null;
@@ -61,7 +59,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   documents,
   userMap,
   currentUser,
-  newCommentContent,
+  // _newCommentContent is unused
   activeTab,
   isEditing,
   currentComment,
@@ -120,14 +118,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     fetchContactsForComments();
   }, [conversations]);
 
-  const renderButtonBar = () => {
+  const renderButtonBar = (): JSX.Element => {
     const buttons = ['Comments', 'Internal', 'Resolution'];
     return (
       <div className={styles.buttonBar}>
-        {buttons.map((button): JSX.Element => (
+        {buttons.map((button: string): JSX.Element => (
           <button
             key={button}
-            {...withDataAutomationId({ id: `${id}-${button.toLowerCase()}-tab` })}
             className={`${styles.button} ${activeTab === button ? styles.activeButton : styles.inactiveButton}`}
             onClick={() => onTabChange(button)}
           >
@@ -167,11 +164,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleNewCommentContentChange = (blocks: Block[]) => {
-    const content = blocks.map(block => block.content).join('\n');
+    const content = blocks.map((block):any => block.content).join('\n');
     onNewCommentContentChange(content);
   };
 
-  const renderComments = (comments: IComment[]) => {
+  const renderComments = (comments: IComment[]): JSX.Element[] => {
     return comments.map((conversation): JSX.Element => (
       <CommentItem
         key={conversation.comment_id}
@@ -273,6 +270,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               </TextEditor>
               <div className="flex justify-end mt-2">
                 <Button
+                  id={`${id}-add-comment-btn`}
                   onClick={handleAddNewComment}
                   className="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
                 >
@@ -283,22 +281,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           </div>
         </div>
         <CustomTabs
-          {...useAutomationIdAndRegister<ContainerComponent>({
-            id: `${id}-tabs`,
-            type: 'container',
-            label: 'Comment Tabs'
-          }).automationIdProps}
           tabs={tabContent}
           defaultTab="All Comments"
           tabStyles={tabStyles}
         />
       </div>
-      <CustomTabs
-        {...withDataAutomationId({ id: `${id}-tabs` })}
-        tabs={tabContent}
-        defaultTab="All Comments"
-        tabStyles={tabStyles}
-      />
     </div>
   );
 };

@@ -3,9 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import Link from 'next/link';
-import { getServerSession } from 'next-auth';
 import { ITicket, ITicketListItem, ITicketCategory } from '../../interfaces/ticket.interfaces';
-import { IUser } from '../../interfaces/auth.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
@@ -22,11 +20,9 @@ import { IChannel, ICompany } from '../../interfaces';
 import { DataTable } from '../ui/DataTable';
 import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
 import { getTicketsForList, deleteTicket } from '../../lib/actions/ticket-actions/ticketActions';
-import { MoreHorizontal, XCircle } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@/types/ui-reflection/types';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface TicketingDashboardProps {
@@ -39,57 +35,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTickets
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
-
-  // Register components with UI reflection system
-  const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-title`,
-    type: 'container',
-    label: 'Dashboard Title'
-  });
-
-  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-add-ticket-btn`,
-    type: 'container',
-    label: 'Add Ticket Button'
-  });
-
-  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-search-input`,
-    type: 'container',
-    label: 'Search Input'
-  });
-
-  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-reset-filters-btn`,
-    type: 'container',
-    label: 'Reset Filters Button'
-  });
-
-  const { automationIdProps: headingProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-tickets-heading`,
-    type: 'container',
-    label: 'Tickets Heading'
-  });
-
-  const { automationIdProps: loadingProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-loading`,
-    type: 'container',
-    label: 'Loading State'
-  });
-
-  const { automationIdProps: tableProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-tickets-table`,
-    type: 'container',
-    label: 'Tickets Table'
-  });
-
-  const { automationIdProps: deleteDialogProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-delete-dialog`,
-    type: 'container',
-    label: 'Delete Dialog'
-  });
 
   const handleDeleteTicket = (ticketId: string) => {
     setTicketToDelete(ticketId);
@@ -113,12 +59,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-  const { automationIdProps: getTicketLinkProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}`,
-    type: 'container',
-    label: 'Ticket Dashbaord'
-  });
-
+  const [categories, setCategories] = useState<ITicketCategory[]>([]);
 
   const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
     {
@@ -181,6 +122,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <Button
+              id="ticket-actions-button"
               variant="ghost"
               className="h-8 w-8 p-0"
             >
@@ -202,11 +144,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DropdownMenu.Root>
       ),
     }
-  ], []);
+  ], [categories]);
 
   const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
   const [channels, setChannels] = useState<IChannel[]>([]);
-  const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([]);
@@ -269,7 +210,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Add id to each ticket for DataTable keys
   const ticketsWithIds = useMemo(() =>
-    filteredTickets.map(ticket => ({
+    filteredTickets.map((ticket): any => ({
       ...ticket,
       id: ticket.ticket_id
     }))
@@ -362,7 +303,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
         setStatusOptions([
           { value: 'all', label: 'All Statuses' },
-          ...statuses.map((status): SelectOption => ({
+          ...statuses.map((status: { status_id: string; name: string | null }): SelectOption => ({
             value: status.status_id!,
             label: status.name ?? ""
           }))
@@ -370,7 +311,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
         setPriorityOptions([
           { value: 'all', label: 'All Priorities' },
-          ...priorities.map((priority): SelectOption => ({
+          ...priorities.map((priority: { priority_id: string; priority_name: string }): SelectOption => ({
             value: priority.priority_id,
             label: priority.priority_name
           }))
@@ -444,76 +385,77 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
-        <Button onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
+        <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
       </div>
-      <div {...withDataAutomationId({ id: `${id}-filters` })} className="bg-white shadow rounded-lg p-4">
+      <div className="bg-white shadow rounded-lg p-4">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-fit">
-              <ChannelPicker
-                id='channel-picker'
-                data-automation-id={`${id}-channel-picker`}
-                channels={channels}
-                onSelect={handleChannelSelect}
-                selectedChannelId={selectedChannel}
-                filterState={channelFilterState}
-                onFilterStateChange={setChannelFilterState}
+          <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
+            <div className="flex items-center gap-3">
+              <div className="w-fit">
+                <ChannelPicker
+                  id='channel-picker'
+                  data-automation-id={`${id}-channel-picker`}
+                  channels={channels}
+                  onSelect={handleChannelSelect}
+                  selectedChannelId={selectedChannel}
+                  filterState={channelFilterState}
+                  onFilterStateChange={setChannelFilterState}
+                />
+              </div>
+              <CompanyPicker
+                id='company-picker'
+                data-automation-id={`${id}-company-picker`}
+                companies={companies}
+                onSelect={handleCompanySelect}
+                selectedCompanyId={selectedCompany}
+                filterState={companyFilterState}
+                onFilterStateChange={handleCompanyFilterStateChange}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={handleClientTypeFilterChange}
+                fitContent={true}
+              />
+              <CustomSelect
+                data-automation-id={`${id}-status-select`}
+                options={statusOptions}
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value)}
+                placeholder="All Statuses"
+              />
+              <CustomSelect
+                data-automation-id={`${id}-priority-select`}
+                options={priorityOptions}
+                value={selectedPriority}
+                onValueChange={(value) => setSelectedPriority(value)}
+                placeholder="All Priorities"
+              />
+              <CategoryPicker
+                id={`${id}-category-picker`}
+                categories={categories}
+                selectedCategories={selectedCategories}
+                excludedCategories={excludedCategories}
+                onSelect={handleCategorySelect}
+                placeholder="Filter by category"
+                multiSelect={true}
+                showExclude={true}
+                showReset={true}
+                allowEmpty={true}
+                className="text-sm min-w-[200px]"
+              />
+              <input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
               />
             </div>
-            <CompanyPicker
-              id='company-picker'
-              data-automation-id={`${id}-company-picker`}
-              companies={companies}
-              onSelect={handleCompanySelect}
-              selectedCompanyId={selectedCompany}
-              filterState={companyFilterState}
-              onFilterStateChange={handleCompanyFilterStateChange}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={handleClientTypeFilterChange}
-              fitContent={true}
-            />
-            <CustomSelect
-              data-automation-id={`${id}-status-select`}
-              options={statusOptions}
-              value={selectedStatus}
-              onValueChange={(value) => setSelectedStatus(value)}
-              placeholder="All Statuses"
-            />
-            <CustomSelect
-              data-automation-id={`${id}-priority-select`}
-              options={priorityOptions}
-              value={selectedPriority}
-              onValueChange={(value) => setSelectedPriority(value)}
-              placeholder="All Priorities"
-            />
-            <CategoryPicker
-              id={`${id}-category-picker`}
-              categories={categories}
-              selectedCategories={selectedCategories}
-              excludedCategories={excludedCategories}
-              onSelect={handleCategorySelect}
-              placeholder="Filter by category"
-              multiSelect={true}
-              showExclude={true}
-              showReset={true}
-              allowEmpty={true}
-              className="text-sm min-w-[200px]"
-            />
-            <input
-              {...withDataAutomationId({ id: `${id}-search-input` })}
-              type="text"
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
-            />
-          </div>
+          </ReflectionContainer>
         </div>
-        <h2 {...withDataAutomationId({ id: `${id}-tickets-heading` })} className="text-xl font-semibold mt-6 mb-2">
+        <h2 className="text-xl font-semibold mt-6 mb-2">
           Tickets
         </h2>
         {isLoading ? (
-          <div {...withDataAutomationId({ id: `${id}-loading` })} className="flex justify-center items-center h-32">
+          <div className="flex justify-center items-center h-32">
             <span>Loading...</span>
           </div>
         ) : (

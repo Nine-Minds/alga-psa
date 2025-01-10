@@ -33,7 +33,7 @@ const formatTimezoneLabel = (timezone: string): string => {
 };
 
 const groupTimezones = (timezones: string[]): TimezoneOption[] => {
-  return timezones.map(tz => {
+  return timezones.map((tz): TimezoneOption => {
     const region = tz.split('/')[0];
     return {
       value: tz,
@@ -121,10 +121,10 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
           />
         </div>
         <Command.List className="max-h-[300px] overflow-y-auto p-2">
-          {groupedOptions.map(([region, options]) => (
+          {groupedOptions.map(([region, options]): JSX.Element => (
             <React.Fragment key={region}>
               <Command.Group heading={region} className="text-sm text-gray-500 px-2 py-1">
-                {options.map((option) => (
+                {options.map((option): JSX.Element => (
                   <Command.Item
                     key={option.value}
                     value={option.value}

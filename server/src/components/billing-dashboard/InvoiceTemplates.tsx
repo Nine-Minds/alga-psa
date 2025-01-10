@@ -85,6 +85,7 @@ const InvoiceTemplates: React.FC = () => {
             </div>
             {selectedTemplate?.isStandard && (
               <Button
+                id='clone-template-button'
                 onClick={() => handleCloneTemplate(selectedTemplate)}
                 variant="outline"
                 size="sm"
@@ -100,7 +101,7 @@ const InvoiceTemplates: React.FC = () => {
               selectedTemplate={selectedTemplate}
             />
           )}
-          <Button onClick={fetchTemplates}>Refresh Templates</Button>
+          <Button id='add-template-button' onClick={() => setSelectedTemplate(null)}></Button>
         </div>
       </CardContent>
     </Card>

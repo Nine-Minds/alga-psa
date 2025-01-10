@@ -8,7 +8,7 @@ export const prompts = {
 You have access to the following tools that can be called using XML-style syntax:
 
 <func-def name="get_ui_state">
-  <description>Get the current UI state of the page, optionally filtered by a JSONPath expression. This is your main tool for understanding what the user is seeing on the page. The JSONPath must start with $ and can use filters like [?(@.type=="button")]. Returns full state if no path provided, filtered results if path matches, or error message if path is invalid.</description>
+  <description>Get the current UI state of the page, optionally filtered by a JSONPath expression. This is your main tool for understanding what the user is seeing on the page. The JSONPath must start with $ and can use filters like $.components[*][id, type] (which will give you an overview). Returns full state if no path provided, filtered results if path matches, or error message if path is invalid.</description>
   <usage>
     <func-call name="get_ui_state">
       <jsonpath>$.components[?(@.type=="button")]</jsonpath>
@@ -17,7 +17,7 @@ You have access to the following tools that can be called using XML-style syntax
 </func-def>
 
 <func-def name="observe_browser">
-  <description>Observe elements in the browser matching a CSS selector. Use this tool when you cannot find what you are looking for with the get_ui_state tool.</description>
+  <description>Observe elements in the browser matching a CSS selector. Use this tool when you cannot find what you are looking for with the get_ui_state tool. Use as a last resort. Remember that get_ui_state with $.components[*][id, type] will give you an overview.</description>
   <usage>
     <func-call name="observe_browser">
       <selector>button[aria-label="Submit"]</selector>
@@ -85,6 +85,7 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
 
 ## get_ui_state information:
  - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute. Use a puppeteer selector to find the element by its data-automation-id attribute.
+ - Available component types: button, dialog, form, formField, dataTable, navigation, container, card, drawer
 
 ## Filling out fields
  - When filling out a form, write scripts to full out the form fields ONE BY ONE. Do not write a script to fill out all fields at once.
@@ -116,13 +117,17 @@ b. Identify required Puppeteer actions
 c. Plan the sequence of actions
 d. Consider potential challenges or edge cases
 
+## Scripting guidelines
+- Do not use page.waitForTimeout, as that is not a valid function. Use waitForSelector, waitForNavigation, etc. instead.
+- After taking an action, use get_ui_state again to retrieve an updated UI state, rather than relying on the previous state.
+
 ## Gathering Information
 1. When you are looking at or looking for UI elements, PREFER to use the get_ui_state function to get information about the current page. 
 2. If the results of your search are TRUNCATED, pass in the JSONPath expression to the get_ui_state function to filter the results.
 3. If that doesn't help, use your observe_browser function to use a series of less specific selectors to find the relevant elements. 
 4. If that doesn't help, ask the user to provide more context about the page, and then repeat the process.
 
-To get an overall idea of the items available on a page, use a json path like $..components[*][id, type] - this should provide sufficient information to decide what to do next.
+To get an overall idea of the items available on a page, use a json path like $.components[*][id, type] - this should provide sufficient information to decide what to do next.
 
 ## Navigating
 - Use the get_ui_state function to get information about the different screens or pages in the application. Use this json path to grab the menu items: $.components[?(@.id=="main-sidebar")]
@@ -134,9 +139,6 @@ Please do not request large swaths of JSON at once.
 Instead, use an iterative approach: get a high-level structure first, then fetch specific segments only as needed.
 
 Responses are TRUNCATED if you see "[Response truncated, total length: ##### characters]" in the response.
-
-## Tool Use
- - After each tool is executed, determine STEP-BY-STEP if the result allows you to continue. If you need to execute another tool, explain WHY IN DETAIL, and then execute it.
 
 When a user asks you to NAVIGATE, use the get_ui_state to click on the menu item that the user wants to navigate to. DO NOT navigate via a URL.
 

@@ -14,7 +14,7 @@ const SelectedWorkItem: React.FC<SelectedWorkItemProps> = ({ workItem, onEdit })
     return (
       <div className="flex justify-between items-center p-2 border rounded-md">
         <span className="text-gray-500">Ad-hoc entry (no work item)</span>
-        <Button onClick={onEdit} variant="outline" size="sm">
+        <Button onClick={onEdit} variant="outline" size="sm" id="select-work-item-btn">
           Select Work Item
         </Button>
       </div>
@@ -27,7 +27,7 @@ const SelectedWorkItem: React.FC<SelectedWorkItemProps> = ({ workItem, onEdit })
         <div className="font-medium">{workItem.name}</div>
         <div className="text-sm text-gray-500 capitalize">{workItem.type.replace('_', ' ')}</div>
       </div>
-      <Button onClick={onEdit} variant="outline" size="sm">
+      <Button onClick={onEdit} variant="outline" size="sm" id="change-work-item-btn">
         Change
       </Button>
     </div>

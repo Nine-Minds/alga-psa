@@ -143,13 +143,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                       {contact.is_inactive ? 'Inactive' : 'Active'}
                     </span>
                     <Switch
-                      {...useAutomationIdAndRegister<FormFieldComponent>({
-                        id: `${id}-status-toggle`,
-                        type: 'formField',
-                        fieldType: 'checkbox',
-                        label: 'Status Toggle',
-                        value: contact.is_inactive.toString()
-                      }).automationIdProps}
                       checked={contact.is_inactive}
                       onCheckedChange={(value) => handleInputChange('is_inactive', value)}
                       className="data-[state=checked]:bg-primary-500"
@@ -162,13 +155,6 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               <td className="py-2 font-semibold">Notes:</td>
               <td className="py-2">
                 <TextArea
-                  {...useAutomationIdAndRegister<FormFieldComponent>({
-                    id: `${id}-notes`,
-                    type: 'formField',
-                    fieldType: 'textField',
-                    label: 'Notes',
-                    value: contact.notes || ''
-                  }).automationIdProps}
                   value={contact.notes || ''}
                   onChange={(e) => handleInputChange('notes', e.target.value)}
                   placeholder="Add any additional notes about the contact..."
@@ -192,24 +178,14 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         </table>
         <div className="mt-6 flex justify-end space-x-4">
           <Button
-            {...useAutomationIdAndRegister<ButtonComponent>({
-              id: `${id}-cancel-btn`,
-              type: 'button',
-              label: 'Cancel',
-              actions: ['click']
-            }).automationIdProps}
+            id={`${id}-cancel-button`}
             variant="soft"
             onClick={onCancel}
           >
             Cancel
           </Button>
           <Button
-            {...useAutomationIdAndRegister<ButtonComponent>({
-              id: `${id}-save-btn`,
-              type: 'button',
-              label: 'Save',
-              actions: ['click']
-            }).automationIdProps}
+            id={`${id}-save-button`}
             variant="default"
             onClick={handleSave}
           >
@@ -237,26 +213,12 @@ const TableRow: React.FC<TableRowProps> = ({ id, label, value, onChange, type = 
     <td className="py-2">
       {options ? (
         <CustomSelect
-          {...useAutomationIdAndRegister<FormFieldComponent>({
-            id: id,
-            type: 'formField',
-            fieldType: 'select',
-            label: label,
-            value: value
-          }).automationIdProps}
           value={value}
           onValueChange={onChange}
           options={options}
         />
       ) : (
         <Input
-          {...useAutomationIdAndRegister<FormFieldComponent>({
-            id: id,
-            type: 'formField',
-            fieldType: 'textField',
-            label: label,
-            value: value
-          }).automationIdProps}
           type={type}
           value={value}
           onChange={(e) => onChange(e.target.value)}

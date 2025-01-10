@@ -15,10 +15,7 @@ const ProjectTaskModel = {
   addTask: async (phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectTask> => {
     try {
       const {knex: db, tenant} = await createTenantKnex();
-      const [currentUser, phase] = await Promise.all([
-        getCurrentUser(),
-        ProjectModel.getPhaseById(phaseId)
-      ]);
+      const phase = await ProjectModel.getPhaseById(phaseId);
 
       if (!phase) {
         throw new Error('Phase not found');
@@ -140,8 +137,8 @@ const ProjectTaskModel = {
         )
         .orderBy('project_tasks.wbs_code');
       return tasks.sort((a, b) => {
-        const aNumbers = a.wbs_code.split('.').map((n: string) => parseInt(n));
-        const bNumbers = b.wbs_code.split('.').map((n: string) => parseInt(n));
+        const aNumbers = a.wbs_code.split('.').map((n: string): number => parseInt(n));
+        const bNumbers = b.wbs_code.split('.').map((n: string): number => parseInt(n));
         
         // Compare each part numerically
         for (let i = 0; i < Math.max(aNumbers.length, bNumbers.length); i++) {
@@ -164,7 +161,7 @@ const ProjectTaskModel = {
       const {knex: db} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
         const taskRecords = await trx('project_tasks')
-          .whereIn('task_id', tasks.map(t => t.taskId))
+          .whereIn('task_id', tasks.map((t): string => t.taskId))
           .select('task_id', 'phase_id');
 
         if (taskRecords.length !== tasks.length) {
@@ -176,7 +173,7 @@ const ProjectTaskModel = {
           throw new Error('All tasks must be in the same phase');
         }
 
-        await Promise.all(tasks.map(({taskId, newWbsCode}) =>
+        await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
           trx('project_tasks')
             .where('task_id', taskId)
             .update({
@@ -305,7 +302,16 @@ const ProjectTaskModel = {
     }
   },
 
-  getTaskResources: async (taskId: string): Promise<any[]> => {
+  getTaskResources: async (taskId: string): Promise<Array<{
+    assignment_id: string;
+    task_id: string;
+    assigned_to: string | null;
+    additional_user_id: string;
+    role: string | null;
+    first_name: string;
+    last_name: string;
+    tenant: string;
+  }>> => {
     try {
       const {knex: db} = await createTenantKnex();
       const resources = await db('task_resources')

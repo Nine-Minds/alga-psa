@@ -10,7 +10,7 @@ import { pages } from 'next/dist/build/templates/app-page';
  */
 interface UIStateContextValue {
   /** Current state of the page including all registered components */
-  pageState: PageState;
+  // pageState: PageState;
 
   /** Register a new component in the page state */
   registerComponent: (component: UIComponent) => void;
@@ -26,11 +26,11 @@ interface UIStateContextValue {
  * Default context value with no-op functions
  */
 const defaultContextValue: UIStateContextValue = {
-  pageState: {
-    id: '',
-    title: '',
-    components: []
-  },
+  // pageState: {
+  //   id: '',
+  //   title: '',
+  //   components: []
+  // },
   registerComponent: () => { },
   unregisterComponent: () => { },
   updateComponent: () => { }
@@ -41,9 +41,10 @@ type ComponentDict = Record<string, UIComponent>;
 
 /** 
  * Rebuild the entire tree from the component dictionary.
- * - Reset each component’s `children` to []
+ * - Reset each component's `children` to []
  * - Attach each node to its parent if `parentId` is valid
  * - Otherwise, push it to top-level
+ * - Sort children and root components by ordinal for deterministic ordering
  */
 function rebuildTreeFromDictionary(dict: ComponentDict): UIComponent[] {
   // First, clear out all children arrays
@@ -53,6 +54,7 @@ function rebuildTreeFromDictionary(dict: ComponentDict): UIComponent[] {
 
   const rootComponents: UIComponent[] = [];
 
+  // Attach children to parents
   for (const key in dict) {
     const comp = dict[key];
 
@@ -64,6 +66,22 @@ function rebuildTreeFromDictionary(dict: ComponentDict): UIComponent[] {
       rootComponents.push(comp);
     }
   }
+
+  // Sort children of each node by ordinal
+  for (const key in dict) {
+    dict[key].children?.sort((a, b) => {
+      const aOrd = a.ordinal ?? 0;
+      const bOrd = b.ordinal ?? 0;
+      return aOrd - bOrd;
+    });
+  }
+
+  // Sort root components by ordinal
+  rootComponents.sort((a, b) => {
+    const aOrd = a.ordinal ?? 0;
+    const bOrd = b.ordinal ?? 0;
+    return aOrd - bOrd;
+  });
 
   return rootComponents;
 }
@@ -96,6 +114,7 @@ export function UIStateProvider({ children, initialPageState }: {
   const socketRef = useRef<Socket | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const timerRef = useRef<number>();
 
   // Initialize and manage Socket.IO connection
   useEffect(() => {
@@ -147,26 +166,22 @@ export function UIStateProvider({ children, initialPageState }: {
     };
   }, []); // Empty dependency array since we manage connection internally
 
-  // Emit state updates to AI Backend Server
   useEffect(() => {
-    if (isConnected && socketRef.current) {
-      socketRef.current.emit('UI_STATE_UPDATE', pageState);
-    }
-  }, [pageState, isConnected]);
+    if (!(socketRef.current?.connected)) return;
+    socketRef.current?.emit('UI_STATE_UPDATE', pageState);
+  
+  }, [pageState]);
 
-  // Send periodic updates every 5 seconds
+  // Send initial UI state update when socket connection changes
   useEffect(() => {
-    if (!socketRef.current?.connected) return;
-
-    const interval = setInterval(() => {
-      socketRef.current?.emit('UI_STATE_UPDATE', pageState);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [socketRef.current, pageState]);
+    if (!isConnected) return;
+    socketRef.current?.emit('UI_STATE_UPDATE', pageState);
+  }, [isConnected, pageState]);
 
   // Keep a single reference to the dictionary of all components
   const componentDictRef = useRef<ComponentDict>({});
+  // Track the next available ordinal for deterministic ordering
+  const nextOrdinalRef = useRef(0);
 
   /**
    * Registers or updates a component in the dictionary,
@@ -174,14 +189,24 @@ export function UIStateProvider({ children, initialPageState }: {
    */
   const registerComponent = useCallback((component: UIComponent) => {
     setPageState((prev) => {
-      // Update the dictionary entry for this component
       const dict = { ...componentDictRef.current };
-      dict[component.id] = {
-        // preserve existing fields if they were set before
-        ...dict[component.id],
-        // apply new/updated fields from this registration
-        ...component,
-      };
+      const existing = dict[component.id];
+
+      if (!existing) {
+        // New component: assign an ordinal for deterministic ordering
+        dict[component.id] = {
+          ...component,
+          ordinal: nextOrdinalRef.current,
+        };
+        nextOrdinalRef.current++;
+      } else {
+        // Existing component: preserve its ordinal
+        dict[component.id] = {
+          ...existing,
+          ...component,
+          ordinal: existing.ordinal,
+        };
+      }
 
       // Commit the updated dict
       componentDictRef.current = dict;
@@ -237,12 +262,13 @@ export function UIStateProvider({ children, initialPageState }: {
         return prev;
       }
       
-      // Merge partial update, but preserve type & children
+      // Merge partial update, but preserve type, children & ordinal
       dict[id] = {
         ...existing,
         ...partial,
         type: existing.type,
-        children: existing.children
+        children: existing.children,
+        ordinal: existing.ordinal
       } as UIComponent;
 
       componentDictRef.current = dict;
@@ -256,7 +282,6 @@ export function UIStateProvider({ children, initialPageState }: {
 
   // Provide context
   const value = {
-    pageState,
     registerComponent,
     unregisterComponent,
     updateComponent
@@ -280,7 +305,7 @@ function getAllDescendants(dict: ComponentDict, id: string): string[] {
     
     result.push(current);
     // Add children to stack
-    const childIds = dict[current].children?.map((c) => c.id) || [];
+    const childIds = dict[current].children?.map((c): string => c.id) || [];
     stack.push(...childIds);
   }
 

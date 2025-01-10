@@ -71,7 +71,7 @@ export const ServiceForm: React.FC = () => {
         required
       />
 
-      <Button type="submit">Add Service</Button>
+      <Button id='add-service-button' type="submit">Add Service</Button>
     </form>
   )
 }

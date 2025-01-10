@@ -27,7 +27,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
-  const [preferences, setPreferences] = useState<UserNotificationPreference[]>([]);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -59,7 +58,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         // Get subtypes for each category
         const subtypes: Record<number, NotificationSubtype[]> = {};
         await Promise.all(
-          notificationCategories.map(async (category) => {
+          notificationCategories.map(async (category: NotificationCategory): Promise<void> => {
             const { subtypes: categorySubtypes } = await getCategoryWithSubtypesAction(category.id);
             subtypes[category.id] = categorySubtypes;
           })
@@ -78,7 +77,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
   }, [userId]);
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      setError('User not found');
+      return;
+    }
 
     try {
       // Update user profile
@@ -92,11 +94,11 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       // Update notification preferences
       await Promise.all(
-        categories.map(async (category) => {
+        categories.map(async (category: NotificationCategory): Promise<UserNotificationPreference> => {
           // Update category preference
-          await updateUserPreferenceAction(
-            user.tenant,
-            parseInt(user.user_id),
+          return await updateUserPreferenceAction(
+            user!.tenant,
+            parseInt(user!.user_id),
             {
               subtype_id: category.id,
               is_enabled: category.is_enabled,
@@ -108,10 +110,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
           // Update subtype preferences
           const subtypes = subtypesByCategory[category.id] || [];
           await Promise.all(
-            subtypes.map((subtype) =>
+            subtypes.map((subtype: NotificationSubtype): Promise<UserNotificationPreference> =>
               updateUserPreferenceAction(
-                user.tenant,
-                parseInt(user.user_id),
+                user!.tenant,
+                parseInt(user!.user_id),
                 {
                   subtype_id: subtype.id,
                   is_enabled: subtype.is_enabled && category.is_enabled,
@@ -132,7 +134,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
   const handleCategoryToggle = (categoryId: number, enabled: boolean) => {
     setCategories(prev => 
-      prev.map(cat => 
+      prev.map((cat):NotificationCategory => 
         cat.id === categoryId ? { ...cat, is_enabled: enabled } : cat
       )
     );
@@ -141,7 +143,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const handleSubtypeToggle = (categoryId: number, subtypeId: number, enabled: boolean) => {
     setSubtypesByCategory(prev => ({
       ...prev,
-      [categoryId]: prev[categoryId].map(subtype =>
+      [categoryId]: prev[categoryId].map((subtype):NotificationSubtype =>
         subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
       )
     }));
@@ -235,7 +237,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            {categories.map((category) => (
+            {categories.map((category: NotificationCategory): JSX.Element => (
               <div key={category.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>{category.name}</Label>
@@ -245,7 +247,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   />
                 </div>
                 <div className="ml-6 space-y-2">
-                  {subtypesByCategory[category.id]?.map((subtype) => (
+                  {subtypesByCategory[category.id]?.map((subtype: NotificationSubtype): JSX.Element => (
                     <div key={subtype.id} className="flex items-center justify-between">
                       <Label className="text-sm">{subtype.name}</Label>
                       <Switch
@@ -264,7 +266,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       {/* Action Buttons */}
       <div className="flex justify-end space-x-2">
-        <Button onClick={handleSave}>
+        <Button 
+          id="save-button"
+          onClick={handleSave}
+        >
           Save Changes
         </Button>
       </div>

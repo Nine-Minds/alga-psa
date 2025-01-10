@@ -47,7 +47,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         companies={companies}
         onSave={(updatedProject) => {
           setProjects(prevProjects =>
-            prevProjects.map(p =>
+            prevProjects.map((p): IProject =>
               p.project_id === updatedProject.project_id ? updatedProject : p
             )
           );
@@ -221,7 +221,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
               }}
             />
           </div>
-          <Button onClick={() => setShowQuickAdd(true)}>
+          <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
             Add Project
           </Button>
         </div>
@@ -251,6 +251,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
             </p>
             <div className="flex justify-end space-x-4">
               <Button
+                id='cancel-button'
                 variant="outline"
                 onClick={() => {
                   setShowDeleteConfirm(false);
@@ -260,6 +261,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
                 Cancel
               </Button>
               <Button
+                id='delete-button'
                 variant="destructive"
                 onClick={confirmDelete}
               >

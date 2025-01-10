@@ -1,4 +1,3 @@
-// @ts-nocheck
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -79,7 +78,8 @@ export function BlockEditor({ documentId, userId }: BlockEditorProps) {
   return (
     <Card className="p-4">
       <div className="mb-4 flex justify-end">
-        <Button 
+        <Button
+          id='handle-save-button'
           onClick={handleSave}
           disabled={isLoading || isSaving}
         >

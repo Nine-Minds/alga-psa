@@ -131,7 +131,7 @@ const TimePeriodSettings: React.FC = () => {
               onCancel={() => setShowNewSettingForm(false)}
             />
           ) : (
-            <Button onClick={() => setShowNewSettingForm(true)}>Add New Time Period Setting</Button>
+            <Button id="add-new-setting-button" onClick={() => setShowNewSettingForm(true)}>Add New Time Period Setting</Button>
           )}
           {error && <div className="text-red-500">{error}</div>}
         </div>
@@ -308,8 +308,8 @@ const NewTimePeriodSettingForm: React.FC<NewTimePeriodSettingFormProps> = ({ new
       )}
 
       <div className="space-x-2">
-        <Button onClick={onAdd}>Add Time Period Setting</Button>
-        <Button onClick={onCancel} variant="outline">Cancel</Button>
+        <Button id="add-setting-button" onClick={onAdd}>Add Time Period Setting</Button>
+        <Button id="cancel-add-button" onClick={onCancel} variant="outline">Cancel</Button>
       </div>
     </div>
   );
@@ -502,8 +502,8 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
             )}
 
             <div className="space-x-2">
-              <Button onClick={handleSave}>Save</Button>
-              <Button onClick={() => setIsEditing(false)} variant="outline">Cancel</Button>
+              <Button id="save-setting-button" onClick={handleSave}>Save</Button>
+              <Button id="cancel-edit-button" onClick={() => setIsEditing(false)} variant="outline">Cancel</Button>
             </div>
           </div>
         </>
@@ -529,8 +529,8 @@ const TimePeriodSettingItem: React.FC<TimePeriodSettingItemProps> = ({ setting, 
           <p>Effective From: {parseISO(setting.effective_from).toLocaleString()}</p>
           <p>Effective To: {setting.effective_to ? parseISO(setting.effective_to).toLocaleString() : 'No end'}</p>
           <div className="space-x-2 mt-2">
-            <Button onClick={() => setIsEditing(true)}>Edit</Button>
-            <Button onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">Delete</Button>
+            <Button id="edit-setting-button" onClick={() => setIsEditing(true)}>Edit</Button>
+            <Button id="delete-setting-button" onClick={() => onDelete(setting.time_period_settings_id)} variant="destructive">Delete</Button>
           </div>
         </>
       )}

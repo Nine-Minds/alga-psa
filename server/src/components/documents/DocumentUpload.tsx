@@ -124,11 +124,6 @@ export default function DocumentUpload({
         <ReflectionContainer id={id} label="Document Upload">
             <div className="space-y-4">
                 <div
-                    {...useAutomationIdAndRegister<ContainerComponent>({
-                        id: `${id}-drop-zone`,
-                        type: 'container',
-                        label: 'Drop Zone'
-                    }).automationIdProps}
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
                         isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
                     }`}
@@ -144,13 +139,7 @@ export default function DocumentUpload({
                             />
                             <p className="text-sm">Drag and drop your file here, or</p>
                             <Button
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-browse-btn`,
-                                    type: 'button',
-                                    label: 'Browse Files',
-                                    actions: ['click'],
-                                    disabled: isUploading
-                                }).automationIdProps}
+                                id="select-file-button"
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading}
@@ -161,12 +150,6 @@ export default function DocumentUpload({
                                 {isUploading ? 'Uploading...' : 'Browse Files'}
                             </Button>
                             <input
-                                {...useAutomationIdAndRegister<ButtonComponent>({
-                                    id: `${id}-file-input`,
-                                    type: 'button',
-                                    label: 'File Input',
-                                    actions: ['click']
-                                }).automationIdProps}
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleFileSelect}
@@ -174,20 +157,12 @@ export default function DocumentUpload({
                             />
                         </div>
                         {isUploading && (
-                            <div {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-loading`,
-                                type: 'container',
-                                label: 'Loading'
-                            }).automationIdProps} className="flex justify-center">
+                            <div className="flex justify-center">
                                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
                             </div>
                         )}
                         {error && (
-                            <div {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-error`,
-                                type: 'container',
-                                label: 'Error Message'
-                            }).automationIdProps} className="text-red-500 text-sm flex items-center justify-center">
+                            <div className="text-red-500 text-sm flex items-center justify-center">
                                 <X className="w-4 h-4 mr-2" />
                                 {error}
                             </div>
@@ -196,13 +171,7 @@ export default function DocumentUpload({
                 </div>
                 <div className="flex justify-end space-x-2">
                     <Button
-                        {...useAutomationIdAndRegister<ButtonComponent>({
-                            id: `${id}-cancel-btn`,
-                            type: 'button',
-                            label: 'Cancel',
-                            actions: ['click'],
-                            disabled: isUploading
-                        }).automationIdProps}
+                        id="cancel-button"
                         variant="outline"
                         onClick={onCancel}
                         disabled={isUploading}
