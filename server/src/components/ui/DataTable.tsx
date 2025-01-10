@@ -183,11 +183,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                   {headerGroup.headers.map((header) => {
                     const columnId = header.column.columnDef.id || header.id;
                     return (
-                      <th
-                        key={`${tableContext}_header_${columnId}`}
-                        onClick={header.column.getToggleSortingHandler()}
-                        className="px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider cursor-pointer hover:bg-gray-50 transition-colors"
-                      >
+                    <th 
+                      key={`${tableContext}_header_${columnId}`}
+                      onClick={header.column.getToggleSortingHandler()}
+                      className="px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider cursor-pointer hover:bg-gray-50 transition-colors"
+                      style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
+                    >
                         <div className="flex items-center space-x-1">
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           <span className="text-gray-400">
@@ -221,9 +222,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       return (
                         <td
                           key={`${tableContext}_cell_${rowId}_${columnId}`}
-                          className="px-6 py-4 whitespace-nowrap text-[14px] text-[rgb(var(--color-text-700))]"
+                          className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
+                          style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >
+                        <div className="truncate w-full">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </div>
                         </td>
                       );
                     })}
