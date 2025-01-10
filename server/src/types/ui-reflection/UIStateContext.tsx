@@ -92,6 +92,78 @@ export function UIStateProvider({ children, initialPageState }: {
   initialPageState: PageState;
 }) {
   const [pageState, setPageState] = useState<PageState>(initialPageState);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
+
+  // Initialize and manage Socket.IO connection
+  useEffect(() => {
+    const initializeSocket = () => {
+      if (socketRef.current?.connected) {
+        return; // Reuse existing connection
+      }
+
+      if (!socketRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
+        socketRef.current = io('http://localhost:4000', {
+          transports: ['websocket'],
+          reconnection: true,
+          reconnectionDelay: Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 5000), // Exponential backoff
+          reconnectionDelayMax: 5000,
+          reconnectionAttempts: maxReconnectAttempts
+        });
+
+        const socket = socketRef.current;
+
+        socket.on('connect', () => {
+          console.log('Connected to AI Backend Server');
+          setIsConnected(true);
+          reconnectAttemptsRef.current = 0;
+        });
+
+        socket.on('connect_error', (error) => {
+          console.error('Socket.IO connection error:', error);
+          reconnectAttemptsRef.current++;
+          setIsConnected(false);
+        });
+
+        socket.on('disconnect', () => {
+          console.log('Disconnected from AI Backend Server');
+          setIsConnected(false);
+        });
+      }
+    };
+
+    initializeSocket();
+
+    // Cleanup function
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+        socketRef.current = null;
+        setIsConnected(false);
+        reconnectAttemptsRef.current = 0;
+      }
+    };
+  }, []); // Empty dependency array since we manage connection internally
+
+  // Emit state updates to AI Backend Server
+  useEffect(() => {
+    if (isConnected && socketRef.current) {
+      socketRef.current.emit('UI_STATE_UPDATE', pageState);
+    }
+  }, [pageState, isConnected]);
+
+  // Send periodic updates every 5 seconds
+  useEffect(() => {
+    if (!socketRef.current?.connected) return;
+
+    const interval = setInterval(() => {
+      socketRef.current?.emit('UI_STATE_UPDATE', pageState);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [socketRef.current, pageState]);
 
   // Keep a single reference to the dictionary of all components
   const componentDictRef = useRef<ComponentDict>({});
