@@ -136,7 +136,7 @@ export class EventBus {
 
       try {
         const client = await getClient();
-        const streams = Array.from(this.handlers.keys()).map(eventType => getEventStream(eventType));
+        const streams = Array.from(this.handlers.keys()).map((eventType): string => getEventStream(eventType));
         
         if (streams.length === 0) {
           setTimeout(processEvents, 1000);
@@ -146,7 +146,7 @@ export class EventBus {
         const streamEntries = await client.xReadGroup(
           getRedisConfig().eventBus.consumerGroup,
           this.consumerName,
-          streams.map(stream => ({
+          streams.map((stream): { key: string; id: string } => ({
             key: stream,
             id: '>' // Read only new messages
           })),
@@ -233,7 +233,7 @@ export class EventBus {
   private async claimPendingMessages() {
     try {
       const client = await getClient();
-      const streams = Array.from(this.handlers.keys()).map(eventType => getEventStream(eventType));
+      const streams = Array.from(this.handlers.keys()).map((eventType): string => getEventStream(eventType));
 
       for (const stream of streams) {
         const pendingInfo = await client.xPending(
@@ -254,7 +254,7 @@ export class EventBus {
             const now = Date.now();
             const claimIds = pendingMessages
               .filter(msg => (now - msg.millisecondsSinceLastDelivery) > getRedisConfig().eventBus.claimTimeout)
-              .map(msg => msg.id);
+              .map((msg): string => msg.id);
 
             if (claimIds.length > 0) {
               await client.xClaim(

@@ -52,7 +52,7 @@ const MultiUserPicker: React.FC<MultiUserPickerProps> = ({
           {selectedUsers.length === 0 ? (
             <span className="text-gray-500">Select users...</span>
           ) : (
-            selectedUsers.map(user => (
+            selectedUsers.map((user): JSX.Element => (
               <div
                 key={user.user_id}
                 className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
@@ -136,7 +136,7 @@ const MultiUserPicker: React.FC<MultiUserPickerProps> = ({
                 {loading ? 'Loading users...' : 'Select users...'}
               </span>
             ) : (
-              selectedUsers.map(user => (
+              selectedUsers.map((user): JSX.Element => (
                 <div
                   key={user.user_id}
                   className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
@@ -180,7 +180,7 @@ const MultiUserPicker: React.FC<MultiUserPickerProps> = ({
               ) : internalUsers.length === 0 ? (
                 <div className="px-3 py-2 text-sm text-gray-500">No users available</div>
               ) : (
-                internalUsers.map((user) => (
+                internalUsers.map((user): JSX.Element => (
                   <CustomItem key={user.user_id} value={user.user_id} user={user}>
                     {`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}
                   </CustomItem>

@@ -108,9 +108,9 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
     return (
         <div className="w-full">
             <DataTable
-                data={filteredCompanies.map(company => ({
+                data={filteredCompanies.map((company): ICompany => ({
                     ...company,
-                    id: company.company_id
+                    company_id: company.company_id
                 }))}
                 columns={columns}
             />

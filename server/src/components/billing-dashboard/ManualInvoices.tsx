@@ -42,6 +42,7 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
       <h2 className="text-lg font-semibold text-red-800">Something went wrong:</h2>
       <pre className="mt-2 text-sm text-red-600">{error.message}</pre>
       <Button
+        id='try-again-button'
         onClick={resetErrorBoundary}
         className="mt-4"
         variant="secondary"
@@ -216,6 +217,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
 
           <div className="flex justify-between items-center">
             <Button
+              id='add-item-button'
               type="button"
               onClick={handleAddItem}
               variant="secondary"
@@ -228,6 +230,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
           </div>
 
           <Button
+            id='generate-button'
             type="submit"
             disabled={isGenerating || !selectedCompany || items.some(item => !item.service_id || !item.description)}
             className="w-full"

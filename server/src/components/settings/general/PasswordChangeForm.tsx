@@ -74,6 +74,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
               />
               <button
                 type="button"
+                id="toggle-current-password-visibility"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
@@ -98,6 +99,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
               />
               <button
                 type="button"
+                id="toggle-new-password-visibility"
                 onClick={() => setShowNewPassword(!showNewPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
@@ -122,6 +124,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
               />
               <button
                 type="button"
+                id="toggle-confirm-password-visibility"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
               >
@@ -139,7 +142,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
           {passwordSuccess && (
             <div className="text-green-500 text-sm">{passwordSuccess}</div>
           )}
-          <Button type="submit" variant="default">
+          <Button id="change-password-button" type="submit" variant="default">
             Change Password
           </Button>
         </form>

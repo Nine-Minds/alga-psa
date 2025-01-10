@@ -394,6 +394,7 @@ const Companies: React.FC = () => {
         {/* Actions */}
         <div className="flex gap-2">
           <button
+            id="create-client-btn"
             onClick={() => setIsDialogOpen(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
           >
@@ -402,7 +403,7 @@ const Companies: React.FC = () => {
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+              <button id="actions-menu-btn" className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
                 <MoreVertical size={16} />
                 Actions
               </button>
@@ -429,6 +430,7 @@ const Companies: React.FC = () => {
         <div className="flex items-center gap-2 ms-4">
           {/* Grid button */}
           <button
+            id="grid-view-btn"
             onClick={() => handleViewModeChange('grid')}
             className={`p-1 rounded hover:bg-gray-100 ${
               viewMode === 'grid' 
@@ -441,6 +443,7 @@ const Companies: React.FC = () => {
 
           {/* List button */}
           <button
+            id="list-view-btn"
             onClick={() => handleViewModeChange('list')}
             className={`p-1 rounded hover:bg-gray-100 ${
               viewMode === 'list' 
@@ -467,6 +470,7 @@ const Companies: React.FC = () => {
           </span>}
 
         <button
+          id="delete-selected-btn"
           className="flex gap-1 text-sm font-medium text-gray-500"
           disabled={selectedCompanies.length === 0}
           onClick={handleMultiDelete}

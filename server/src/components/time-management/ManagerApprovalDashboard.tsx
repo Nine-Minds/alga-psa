@@ -85,6 +85,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
       <h1 className="text-2xl font-bold mb-6">Time Sheet Approvals</h1>
       <div className="mb-4">
         <Button
+          id="bulk-approve-btn"
           onClick={handleBulkApprove}
           disabled={selectedTimeSheets.length === 0}
         >
@@ -134,7 +135,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                 </span>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
-                <Button onClick={() => handleViewTimeSheet(sheet)}>View</Button>
+                <Button id={`view-timesheet-${sheet.id}-btn`} onClick={() => handleViewTimeSheet(sheet)}>View</Button>
               </td>
             </tr>
           ))}

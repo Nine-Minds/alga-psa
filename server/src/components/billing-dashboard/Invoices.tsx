@@ -72,7 +72,7 @@ const Invoices: React.FC = () => {
       title: 'Action',
       dataIndex: 'invoice_number',
       render: (_, record) => (
-        <Button onClick={() => handleInvoiceSelect(record)}>
+        <Button id='view-button' onClick={() => handleInvoiceSelect(record)}>
           View
         </Button>
       ),

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Switch } from '@/components/ui/Switch';
 import { TextArea } from '@/components/ui/TextArea';
 import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
 import { updateProject } from '@/lib/actions/project-actions/projectActions';
 import { getContactsByCompany, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from '@/lib/actions/user-actions/userActions';
@@ -67,9 +67,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         const contactsData = project.company_id 
           ? await getContactsByCompany(project.company_id)
           : await getAllContacts();
-        setContacts(contactsData.map(contact => ({
-          value: contact.contact_name_id,
-          label: contact.full_name
+          setContacts(contactsData.map((contact): { value: string; label: string } => ({
+            value: contact.contact_name_id,
+            label: contact.full_name
         })));
       } catch (error) {
         console.error('Error fetching contacts:', error);
@@ -209,7 +209,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 setProject(prev => ({ ...prev, assigned_to: value }));
                 setHasChanges(true);
               }}
-              options={users.map(user => ({
+              options={users.map((user): SelectOption => ({
                 value: user.user_id,
                 label: `${user.first_name} ${user.last_name}`
               }))}
@@ -270,6 +270,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 <p className="mb-4">You have unsaved changes. Are you sure you want to cancel?</p>
                 <div className="flex justify-end space-x-3">
                   <Button
+                    id='cancel-button'
                     type="button"
                     variant="outline"
                     onClick={() => setShowCancelConfirm(false)}
@@ -277,6 +278,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                     Continue Editing
                   </Button>
                   <Button
+                    id='discard-button'
                     type="button"
                     onClick={() => {
                       setShowCancelConfirm(false);
@@ -297,6 +299,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                 <p className="mb-4">Are you sure you want to save your changes and close the drawer?</p>
                 <div className="flex justify-end space-x-3">
                   <Button
+                    id='continue-button'
                     type="button"
                     variant="outline"
                     onClick={() => setShowSaveConfirm(false)}
@@ -304,6 +307,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
                     Continue Editing
                   </Button>
                   <Button
+                    id='save-and-close-button'
                     type="button"
                     onClick={(e) => {
                       setShowSaveConfirm(false);
@@ -318,6 +322,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
           )}
 
           <Button
+            id='cancel-button'
             type="button"
             variant="outline"
             onClick={() => {
@@ -332,6 +337,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
             Cancel
           </Button>
           <Button
+            id='save-button'
             type="button"
             onClick={() => setShowSaveConfirm(true)}
             disabled={isSubmitting}

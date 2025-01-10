@@ -52,6 +52,7 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
                 </Table.Cell>
                 <Table.Cell>
                   <Button 
+                    id={`view-period-${period.period_id}`}
                     onClick={() => onSelectTimePeriod(period)}
                     variant="soft"
                     color="purple"

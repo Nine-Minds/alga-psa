@@ -1,8 +1,6 @@
 // server/src/lib/models/project.ts
 import { v4 as uuidv4 } from 'uuid';
-import ProjectTaskModel from './projectTask';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IStatus, IProjectStatusMapping, IStandardStatus, ITaskChecklistItem, ItemType, IProjectTaskCardInfo, IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
+import { IProject, IProjectPhase, IProjectTask, IStatus, IProjectStatusMapping, IStandardStatus, ItemType } from '@/interfaces/project.interfaces';
 import { Knex } from 'knex';
 import { createTenantKnex } from '@/lib/db';
 
@@ -148,7 +146,7 @@ const ProjectModel = {
           .where('project_id', projectId)
           .select('phase_id');
         
-        const phaseIds = phases.map((phase):string => phase.phase_id);
+        const phaseIds = phases.map((phase): string => phase.phase_id);
 
         // Delete checklist items for all tasks in all phases
         if (phaseIds.length > 0) {
@@ -267,7 +265,7 @@ const ProjectModel = {
   getProjectTaskStatuses: async (projectId: string): Promise<(IStatus | IStandardStatus)[]> => {
     try {
       const mappings = await ProjectModel.getProjectStatusMappings(projectId);
-      const statuses = await Promise.all(mappings.map(async (mapping): Promise<IStatus | IStandardStatus | null> => {
+      const statuses = await Promise.all(mappings.map(async (mapping: IProjectStatusMapping): Promise<IStatus | IStandardStatus | null> => {
         if (mapping.is_standard && mapping.standard_status_id) {
           const standardStatus = await ProjectModel.getStandardStatus(mapping.standard_status_id);
           return standardStatus ? {
@@ -392,8 +390,8 @@ const ProjectModel = {
         .orderBy('wbs_code');
       // Sort phases by numeric values in WBS code
       return phases.sort((a, b) => {
-        const aNumbers = a.wbs_code.split('.').map((n: string) => parseInt(n));
-        const bNumbers = b.wbs_code.split('.').map((n: string) => parseInt(n));
+        const aNumbers = a.wbs_code.split('.').map((n: string): number => parseInt(n));
+        const bNumbers = b.wbs_code.split('.').map((n: string): number => parseInt(n));
         
         // Compare each part numerically
         for (let i = 0; i < Math.max(aNumbers.length, bNumbers.length); i++) {
@@ -423,7 +421,6 @@ const ProjectModel = {
       throw error;
     }
   },  
-
 
   updateStructure: async (projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> => {
     try {
@@ -462,7 +459,6 @@ const ProjectModel = {
     }
   },
 
-
   generateNextWbsCode: async (parentWbsCode: string): Promise<string> => {
     try {
       const {knex: db} = await createTenantKnex();
@@ -475,9 +471,9 @@ const ProjectModel = {
         
         if (projects.length === 0) return '1';
         
-        const numbers = projects.map((p) => parseInt(p.wbs_code))
-                .filter((n: number) => !isNaN(n))
-                .sort((a: number, b: number) => b - a);
+        const numbers = projects.map((p): number => parseInt(p.wbs_code))
+                .filter((n: number): boolean => !isNaN(n))
+                .sort((a: number, b: number): number => b - a);
         
         return String(numbers[0] + 1);
       }
@@ -520,12 +516,12 @@ const ProjectModel = {
 
         if (phases.length === 0) return `${parentWbsCode}.1`;
 
-        const numbers = phases.map((phase) => {
+        const numbers = phases.map((phase): number => {
           const parts = phase.wbs_code.split('.');
           return parseInt(parts[parts.length - 1]);
         })
-        .filter((n: number) => !isNaN(n))
-        .sort((a: number, b: number) => b - a);
+        .filter((n: number): boolean => !isNaN(n))
+        .sort((a: number, b: number): number => b - a);
 
         return `${parentWbsCode}.${numbers[0] + 1}`;
       }
@@ -537,12 +533,12 @@ const ProjectModel = {
 
       if (tasks.length === 0) return `${parentWbsCode}.1`;
 
-      const numbers = tasks.map((task) => {
+      const numbers = tasks.map((task): number => {
         const parts = task.wbs_code.split('.');
         return parseInt(parts[parts.length - 1]);
       })
-      .filter((n: number) => !isNaN(n))
-      .sort((a: number, b: number) => b - a);
+      .filter((n: number): boolean => !isNaN(n))
+      .sort((a: number, b: number): number => b - a);
 
       return `${parentWbsCode}.${numbers[0] + 1}`;
     } catch (error) {
@@ -550,7 +546,6 @@ const ProjectModel = {
       throw error;
     }
   },
-
 
   addPhase: async (phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase> => {
     try {

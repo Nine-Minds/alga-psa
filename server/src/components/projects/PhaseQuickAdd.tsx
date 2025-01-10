@@ -85,10 +85,10 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 rows={3}
               />
               <div className="flex justify-between mt-6">
-                <Button variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
+                <Button id="cancel-phase-button" variant="ghost" onClick={handleCancel} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button id="save-phase-button" type="submit" disabled={isSubmitting}>
                   {isSubmitting ? 'Adding...' : 'Save'}
                 </Button>
               </div>

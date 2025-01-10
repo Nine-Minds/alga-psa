@@ -7,10 +7,6 @@ import { CategoryPicker } from './CategoryPicker';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories } from '../../lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { ContainerComponent, FormFieldComponent } from '@/types/ui-reflection/types';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 
 interface TicketInfoProps {
@@ -37,13 +33,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(ticket.title);
-
-  // Register with UI reflection system
-  const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id,
-    type: 'container',
-    label: `Info for ticket ${ticket.ticket_number}`
-  });
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -173,13 +162,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Status</h5>
               <CustomSelect
-                {...useAutomationIdAndRegister<FormFieldComponent>({
-                  id: `${id}-status-select`,
-                  type: 'formField',
-                  fieldType: 'select',
-                  label: 'Status',
-                  value: ticket.status_id || ''
-                }).automationIdProps}
                 value={ticket.status_id || ''}
                 options={statusOptions}
                 onValueChange={(value) => onSelectChange('status_id', value)}
@@ -190,13 +172,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Assigned To</h5>
               <CustomSelect
-                {...useAutomationIdAndRegister<FormFieldComponent>({
-                  id: `${id}-assigned-to-select`,
-                  type: 'formField',
-                  fieldType: 'select',
-                  label: 'Assigned To',
-                  value: ticket.assigned_to || ''
-                }).automationIdProps}
                 value={ticket.assigned_to || ''}
                 options={agentOptions}
                 onValueChange={(value) => onSelectChange('assigned_to', value)}
@@ -207,13 +182,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Channel</h5>
               <CustomSelect
-                {...useAutomationIdAndRegister<FormFieldComponent>({
-                  id: `${id}-channel-select`,
-                  type: 'formField',
-                  fieldType: 'select',
-                  label: 'Channel',
-                  value: ticket.channel_id || ''
-                }).automationIdProps}
                 value={ticket.channel_id || ''}
                 options={channelOptions}
                 onValueChange={(value) => onSelectChange('channel_id', value)}
@@ -224,13 +192,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
               <CustomSelect
-                {...useAutomationIdAndRegister<FormFieldComponent>({
-                  id: `${id}-priority-select`,
-                  type: 'formField',
-                  fieldType: 'select',
-                  label: 'Priority',
-                  value: ticket.priority_id || ''
-                }).automationIdProps}
                 value={ticket.priority_id || ''}
                 options={priorityOptions}
                 onValueChange={(value) => onSelectChange('priority_id', value)}
@@ -253,11 +214,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
           <div className="mb-6">
             <h2 className="text-lg font-semibold mb-2">Description</h2>
-            <p {...useAutomationIdAndRegister<ContainerComponent>({
-              id: `${id}-description`,
-              type: 'container',
-              label: 'Description'
-            }).automationIdProps}>
+            <p>
               {conversations.find(conv => conv.is_initial_description)?.note || 'No initial description found.'}
             </p>
           </div>

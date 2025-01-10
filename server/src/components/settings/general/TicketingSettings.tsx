@@ -104,7 +104,7 @@ function SettingSection<T extends object>({
   };
 
   // Modify columns to include inline editing
-  const modifiedColumns: ColumnDefinition<T>[] = columns.map(column => {
+  const modifiedColumns: ColumnDefinition<T>[] = columns.map((column): ColumnDefinition<T> => {
     if (column.dataIndex === 'channel_name' || column.dataIndex === 'name' || 
         column.dataIndex === 'priority_name' || column.dataIndex === 'category_name') {
       return {
@@ -140,6 +140,7 @@ function SettingSection<T extends object>({
         {editingItem === item ? (
           <>
             <Button 
+              id='save-button'
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -150,6 +151,7 @@ function SettingSection<T extends object>({
               Save
             </Button>
             <Button
+              id='cancel-button'
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -163,6 +165,7 @@ function SettingSection<T extends object>({
         ) : (
           <>
             <Button
+              id='edit-button'
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -173,6 +176,7 @@ function SettingSection<T extends object>({
               <Edit2 className="h-4 w-4" />
             </Button>
             <Button
+              id='delete-button'
               variant="ghost"
               size="sm"
               onClick={(e) => {
@@ -207,7 +211,7 @@ function SettingSection<T extends object>({
           placeholder={getPlaceholder()}
           className="flex-grow"
         />
-        <Button onClick={addItem} className="bg-primary-500 text-white hover:bg-primary-600">
+        <Button id='add-button' onClick={addItem} className="bg-primary-500 text-white hover:bg-primary-600">
           <Plus className="h-4 w-4 mr-2" /> Add
         </Button>
       </div>
@@ -653,6 +657,7 @@ const TicketingSettings = (): JSX.Element => {
               </div>
             ) : hasSubcategories ? (
               <Button
+                id='expand-button'
                 variant="ghost"
                 size="sm"
                 className="p-0 mr-2"
@@ -792,6 +797,7 @@ const TicketingSettings = (): JSX.Element => {
                     {editingCategory === item.category_id ? (
                       <>
                         <Button
+                          id='save-button'
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -802,6 +808,7 @@ const TicketingSettings = (): JSX.Element => {
                           Save
                         </Button>
                         <Button
+                          id='cancel-button'
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -815,6 +822,7 @@ const TicketingSettings = (): JSX.Element => {
                     ) : (
                       <>
                         <Button
+                          id='edit-button'
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -825,6 +833,7 @@ const TicketingSettings = (): JSX.Element => {
                           <Edit2 className="h-4 w-4" />
                         </Button>
                         <Button
+                          id='add-subcategory-button'
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -836,6 +845,7 @@ const TicketingSettings = (): JSX.Element => {
                           <Network className="h-4 w-4" />
                         </Button>
                         <Button
+                          id='delete-button'
                           variant="ghost"
                           size="sm"
                           onClick={(e) => {
@@ -861,6 +871,7 @@ const TicketingSettings = (): JSX.Element => {
                 className="flex-grow"
               />
               <Button 
+                id='add-button'
                 onClick={addCategory} 
                 className="bg-primary-500 text-white hover:bg-primary-600"
                 disabled={!newCategory.trim()}
@@ -872,6 +883,7 @@ const TicketingSettings = (): JSX.Element => {
               <div className="mt-2 text-sm text-gray-500">
                 Adding subcategory to: {categories.find(c => c.category_id === selectedParentCategory)?.category_name}
                 <Button
+                  id='cancel-button'
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedParentCategory('')}

@@ -226,13 +226,7 @@ export default function DocumentSelector({
                                 {/* Action Buttons */}
                                 <div className="flex justify-end space-x-2 pt-4 border-t">
                                     <Button
-                                        {...useAutomationIdAndRegister<ButtonComponent>({
-                                            id: `${id}-cancel-btn`,
-                                            type: 'button',
-                                            label: 'Cancel',
-                                            actions: ['click'],
-                                            disabled: isSaving
-                                        }).automationIdProps}
+                                        id="cancel-document-selection-button"
                                         variant="outline"
                                         onClick={onClose}
                                         disabled={isSaving}
@@ -240,13 +234,7 @@ export default function DocumentSelector({
                                         Cancel
                                     </Button>
                                     <Button
-                                        {...useAutomationIdAndRegister<ButtonComponent>({
-                                            id: `${id}-save-btn`,
-                                            type: 'button',
-                                            label: singleSelect ? 'Select Document' : 'Associate Selected',
-                                            actions: ['click'],
-                                            disabled: selectedDocuments.size === 0 || isSaving
-                                        }).automationIdProps}
+                                        id="save-document-selection-button"
                                         onClick={handleSave}
                                         disabled={selectedDocuments.size === 0 || isSaving}
                                     >

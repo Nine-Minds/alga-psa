@@ -78,7 +78,8 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
   return (
     <Card className="p-4">
       <div className="mb-4 flex justify-end">
-        <Button 
+        <Button
+          id="save-document-button"
           onClick={handleSave}
           disabled={isLoading || isSaving}
         >

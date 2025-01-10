@@ -81,6 +81,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
             render: (value, record) => (
                 <div className="flex items-center space-x-2">
                     <Button
+                        id={`edit-billing-plan-${record.company_billing_plan_id}`}
                         variant="ghost"
                         size="sm"
                         onClick={() => onEdit(record)}
@@ -89,6 +90,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                         <Pencil className="h-4 w-4 text-[rgb(var(--color-text-600))]" />
                     </Button>
                     <Button
+                        id={`delete-billing-plan-${value}`}
                         variant="ghost"
                         size="sm"
                         onClick={() => onDelete(value)}
@@ -108,6 +110,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                     Billing Plans
                 </h3>
                 <Button
+                    id="add-new-billing-plan-btn"
                     onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();

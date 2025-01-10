@@ -282,6 +282,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                         <AlertDialog.Title>Error</AlertDialog.Title>
                         <AlertDialog.Description>{errorMessage}</AlertDialog.Description>
                         <Button 
+                            id="close-error-dialog-btn"
                             onClick={() => setErrorMessage(null)} 
                             variant="secondary"
                         >
@@ -364,12 +365,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
                             <Button
+                                id="cancel-edit-billing-plan-btn"
                                 variant="secondary"
                                 onClick={() => setEditingBillingPlan(null)}
                             >
                                 Cancel
                             </Button>
                             <Button
+                                id="save-billing-plan-changes-btn"
                                 onClick={handleSaveEditBillingPlan}
                             >
                                 Save Changes
@@ -389,6 +392,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
             <div className="flex justify-end">
                 <Button 
+                    id="save-billing-config-btn"
                     type="submit" 
                     variant="default"
                 >

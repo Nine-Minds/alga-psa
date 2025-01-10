@@ -430,6 +430,7 @@ export default function TaskTicketLinks({
         <h3 className="font-semibold">Associated Tickets</h3>
         <div className="flex space-x-2">
           <Button
+            id="show-link-dialog-button"
             type="button"
             variant="soft"
             onClick={() => setShowLinkTicketDialog(true)}
@@ -439,6 +440,7 @@ export default function TaskTicketLinks({
             Link Ticket
           </Button>
           <Button
+            id="show-create-dialog-button"
             type="button"
             variant="soft"
             onClick={() => setShowCreateDialog(true)}
@@ -463,6 +465,7 @@ export default function TaskTicketLinks({
             </div>
             <div className="flex items-center space-x-2">
               <Button
+                id={`view-ticket-${link.ticket_id}-button`}
                 type="button"
                 variant="ghost"
                 onClick={() => onViewTicket(link.ticket_id)}
@@ -471,6 +474,7 @@ export default function TaskTicketLinks({
                 <ExternalLink className="h-4 w-4 mr-1" />
               </Button>
               <Button
+                id={`delete-link-${link.link_id}-button`}
                 type="button"
                 variant="ghost"
                 onClick={() => onDeleteLink(link.link_id)}
@@ -497,6 +501,7 @@ export default function TaskTicketLinks({
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-semibold">Link Existing Ticket</h2>
                     <button
+                      id="close-dialog-button"
                       onClick={() => setShowLinkTicketDialog(false)}
                       className="text-gray-500 hover:text-gray-700"
                     >
@@ -636,6 +641,7 @@ export default function TaskTicketLinks({
                             </span>
                           )}
                           <Button
+                            id="clear-filters-button"
                             variant="ghost"
                             size="sm"
                             onClick={clearAllFilters}
@@ -664,10 +670,10 @@ export default function TaskTicketLinks({
                     </div>
 
                     <div className="flex justify-end space-x-2 mt-6">
-                      <Button variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
+                      <Button id="cancel-link-dialog-button" variant="ghost" onClick={() => setShowLinkTicketDialog(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={onLinkTicket} disabled={!selectedTicketId}>
+                      <Button id="confirm-link-button" onClick={onLinkTicket} disabled={!selectedTicketId}>
                         Link Ticket
                       </Button>
                     </div>

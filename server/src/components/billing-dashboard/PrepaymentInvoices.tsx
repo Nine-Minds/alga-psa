@@ -143,6 +143,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
           </div>
 
           <Button
+            id='generate-button'
             type="submit"
             disabled={isGenerating || !selectedCompany || !amount || !description}
             className="w-full"

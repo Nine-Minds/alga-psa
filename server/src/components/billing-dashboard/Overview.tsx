@@ -130,6 +130,7 @@ const Overview = () => {
               <p><span className="font-semibold">15</span> Active Services</p>
             </div>
             <Button
+              id='manage-service-catalog-button'
               onClick={() => document.querySelector<HTMLButtonElement>('button[data-state="inactive"][value="service-catalog"]')?.click()}
               className="ml-4"
             >

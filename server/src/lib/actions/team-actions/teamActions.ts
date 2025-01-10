@@ -22,7 +22,7 @@ export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: 
     // If members were provided, add them to the team
     if (members && members.length > 0) {
       await Promise.all(
-        members.map(member => Team.addMember(createdTeam.team_id, member.user_id))
+        members.map((member): Promise<void> => Team.addMember(createdTeam.team_id, member.user_id))
       );
     }
     

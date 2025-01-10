@@ -23,12 +23,9 @@ import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from '../../li
 import { getCurrentTimePeriod } from '../../lib/actions/timePeriodsActions';
 import CompanyDetails from '../companies/CompanyDetails';
 import ContactDetailsView from '../contacts/ContactDetailsView';
-import AvatarIcon from '../ui/AvatarIcon';
 import { addTicketResource, getTicketResources, removeTicketResource } from '../../lib/actions/ticketResourceActions';
 import TechnicianDispatchDashboard from '../technician-dispatch/TechnicianDispatchDashboard';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent } from '../../types/ui-reflection/types';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -553,7 +550,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             documents={documents}
                             userMap={userMap}
                             currentUser={session?.user}
-                            newCommentContent={newCommentContent}
                             activeTab={activeTab}
                             isEditing={isEditing}
                             currentComment={currentComment}

@@ -15,9 +15,6 @@ import { TimeEntryDialog } from '../time-management/TimeEntryDialog';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import CustomSelect from '../ui/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface TicketPropertiesProps {
@@ -125,15 +122,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
           <div className="flex justify-center space-x-2">
             {!isRunning ? (
-              <Button {...withDataAutomationId({ id: `${id}-start-btn` })} onClick={onStart} className={`w-24`} variant='soft'>
+              <Button {...withDataAutomationId({ id: `${id}-start-timer-btn` })} onClick={onStart} className={`w-24`} variant='soft'>
                 <Play className="mr-2 h-4 w-4" /> Start
               </Button>
             ) : (
-              <Button {...withDataAutomationId({ id: `${id}-pause-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
+              <Button {...withDataAutomationId({ id: `${id}-pause-timer-btn` })} onClick={onPause} className={`w-24`} variant='soft'>
                 <Pause className="mr-2 h-4 w-4" /> Pause
               </Button>
             )}
-            <Button {...withDataAutomationId({ id: `${id}-reset-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
+            <Button {...withDataAutomationId({ id: `${id}-stop-timer-btn` })} onClick={onStop} className={`w-24`} variant='soft'>
               <StopCircle className="mr-2 h-4 w-4" /> Reset
             </Button>
           </div>
@@ -149,7 +146,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             />
           </div>
           <Button
-            {...withDataAutomationId({ id: `${id}-add-time-btn` })}
+            {...withDataAutomationId({ id: `${id}-add-time-entry-btn` })}
             type="button"
             className={`w-full mt-4 flex items-center justify-center`}
             onClick={onAddTimeEntry}
@@ -178,7 +175,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     {company?.company_name || 'N/A'}
                   </p>
                   <Button
-                    {...withDataAutomationId({ id: `${id}-edit-contact-btn` })}
+                    {...withDataAutomationId({ id: `${id}-toggle-company-picker-btn` })}
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowCompanyPicker(!showCompanyPicker)}
@@ -208,7 +205,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       onValueChange={(value) => {
                         setSelectedContactId(value);
                       }}
-                      options={contacts.map((contact) => ({
+                      options={contacts.map((contact): { value: string; label: string } => ({
                         value: contact.contact_name_id,
                         label: contact.full_name
                       }))}
@@ -217,7 +214,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   </div>
                   <div className="flex justify-end space-x-2">
                     <Button
-                      {...withDataAutomationId({ id: `${id}-cancel-contact-btn` })}
+                      {...withDataAutomationId({ id: `${id}-cancel-contact-picker-btn` })}
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -228,7 +225,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       Cancel
                     </Button>
                     <Button
-                      {...withDataAutomationId({ id: `${id}-save-contact-btn` })}
+                      {...withDataAutomationId({ id: `${id}-save-contact-picker-btn` })}
                       variant="default"
                       size="sm"
                       onClick={() => {
@@ -245,7 +242,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
           <div>
             <h5 className="font-bold">Created By</h5>
-            <p {...withDataAutomationId({ id: `${id}-created-by` })} className="text-sm">
+            <p className="text-sm">
               {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : 'N/A'}
             </p>
           </div>
@@ -254,7 +251,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
                 <p
-                  {...withDataAutomationId({ id: `${id}-company-name` })}
                   className="text-sm text-blue-500 cursor-pointer hover:underline"
                   onClick={onCompanyClick}
                 >
@@ -322,7 +318,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   </div>
                   <div className="flex justify-end space-x-2">
                     <Button
-                      {...withDataAutomationId({ id: `${id}-cancel-company-btn` })}
+                      {...withDataAutomationId({ id: `${id}-cancel-company-picker-btn` })}
                       variant="outline"
                       size="sm"
                       onClick={() => {
@@ -333,7 +329,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       Cancel
                     </Button>
                     <Button
-                      {...withDataAutomationId({ id: `${id}-save-company-btn` })}
+                      {...withDataAutomationId({ id: `${id}-save-company-picker-btn` })}
                       variant="default"
                       size="sm"
                       onClick={() => {
@@ -352,20 +348,20 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
           <div>
             <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Company Phone'}</h5>
-            <p {...withDataAutomationId({ id: `${id}-phone` })} className="text-sm">
+            <p className="text-sm">
               {contactInfo?.phone_number || company?.phone_no || 'N/A'}
             </p>
           </div>
           <div>
             <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Company Email'}</h5>
-            <p {...withDataAutomationId({ id: `${id}-email` })} className="text-sm">
+            <p className="text-sm">
               {contactInfo?.email || company?.email || 'N/A'}
             </p>
           </div>
         </div>
       </div>
 
-      <div {...withDataAutomationId({ id: `${id}-agent-team` })} className={`${styles['card']} p-6 space-y-4`}>
+      <div className={`${styles['card']} p-6 space-y-4`}>
         <h2 className={`${styles['panel-header']}`}>Agent team</h2>
         <div className="space-y-4">
           {/* Primary Agent */}
@@ -373,7 +369,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold mb-2">Primary Agent</h5>
             {ticket.assigned_to ? (
               <div
-                {...withDataAutomationId({ id: `${id}-primary-agent` })}
                 className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
                 onClick={() => onAgentClick(ticket.assigned_to!)}
               >
@@ -398,7 +393,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <div>
             <h5 className="font-bold mb-2">Team</h5>
             {team ? (
-              <div {...withDataAutomationId({ id: `${id}-team-info` })} className="text-sm">
+              <div className="text-sm">
                 <p>{team.team_name}</p>
                 <p className="text-gray-500">
                   Manager: {team.members.find(m => m.user_id === team.manager_id)?.first_name || 'Unknown Manager'}
@@ -414,7 +409,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div className="flex items-center justify-between mb-2">
               <h5 className="font-bold">Additional Agents</h5>
               <Button
-                {...withDataAutomationId({ id: `${id}-add-agent-btn` })}
+                id={`${id}-toggle-agent-picker-btn`}
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowAgentPicker(!showAgentPicker)}
@@ -441,7 +436,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             )}
 
             <div className="space-y-2">
-              {additionalAgents.map((agent) => {
+              {additionalAgents.map((agent): JSX.Element => {
                 const agentUser = availableAgents.find(u => u.user_id === agent.additional_user_id);
                 return (
                   <div
@@ -464,6 +459,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
                     </div>
                     <Button
+                      {...withDataAutomationId({ id: `${id}-remove-agent-${agent.assignment_id}-btn` })}
                       variant="ghost"
                       size="sm"
                       className="opacity-0 group-hover:opacity-100"

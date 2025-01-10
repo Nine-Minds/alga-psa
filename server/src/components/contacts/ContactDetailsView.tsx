@@ -36,16 +36,14 @@ interface TableRowProps {
   label: string;
   value: string;
   onClick?: () => void;
-  automationProps?: Record<string, string>;
 }
 
-const TableRow: React.FC<TableRowProps> = ({ label, value, onClick, automationProps }) => (
+const TableRow: React.FC<TableRowProps> = ({ label, value, onClick }) => (
   <tr>
     <td className="py-2 font-semibold">{label}:</td>
     <td className="py-2">
       {onClick ? (
         <button
-          {...automationProps}
           onClick={onClick}
           className="text-blue-600 hover:underline focus:outline-none"
         >
@@ -73,41 +71,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const { openDrawer, goBack } = useDrawer();
-
-  // Register all components with UI reflection system
-  const { automationIdProps: backButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-back-btn`,
-    type: 'button',
-    label: 'Back',
-    actions: ['click']
-  });
-
-  const { automationIdProps: editButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-edit-btn`,
-    type: 'button',
-    label: 'Edit Contact',
-    actions: ['click']
-  });
-
-  const { automationIdProps: documentsProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-documents-section`,
-    type: 'container',
-    label: 'Documents Section'
-  });
-
-  const { automationIdProps: interactionsProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-interactions-section`,
-    type: 'container',
-    label: 'Interactions Section'
-  });
-
-  // Register table row buttons
-  const companyLinkProps = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-company-link`,
-    type: 'button',
-    label: 'Company Link',
-    actions: ['click']
-  }).automationIdProps;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -219,7 +182,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           <Heading size="6">{contact.full_name}</Heading>
           <div className="flex items-center space-x-2">
             <Button
-              {...backButtonProps}
+              id={`${id}-back-button`}
               onClick={goBack}
               variant="ghost"
               size="sm"
@@ -229,7 +192,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               Back
             </Button>
             <Button
-              {...editButtonProps}
+              id={`${id}-edit-button`}
               variant="soft"
               size="sm"
               onClick={handleEditContact}
@@ -249,7 +212,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               label="Company" 
               value={getCompanyName(contact.company_id!)}
               onClick={handleCompanyClick}
-              automationProps={companyLinkProps}
             />
             <TableRow label="Role" value={contact.role || 'Not set'} />
             <TableRow label="Date of Birth" value={formatDateForDisplay(contact.date_of_birth)} />
@@ -279,7 +241,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         </table>
 
         {userId && (
-          <div {...documentsProps} className="mt-6">
+          <div className="mt-6">
             <Heading size="4" className="mb-4">Documents</Heading>
             <Documents
               id={`${id}-documents`}
@@ -292,7 +254,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           </div>
         )}
 
-        <div {...interactionsProps} className="mt-6">
+        <div className="mt-6">
           <InteractionsFeed 
             id={`${id}-interactions`}
             entityId={contact.contact_name_id} 

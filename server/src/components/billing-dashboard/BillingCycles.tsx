@@ -130,7 +130,7 @@ const BillingCycles: React.FC = () => {
         if (!cycle) return 'Not set';
         
         // Convert to title case for display
-        return cycle.split('-').map(word => 
+        return cycle.split('-').map((word):string => 
           word.charAt(0).toUpperCase() + word.slice(1)
         ).join('-');
       },
@@ -147,6 +147,7 @@ const BillingCycles: React.FC = () => {
             placeholder="Select billing cycle..."
           />
           <Button
+            id='create-next-billing-cycle-button'
             variant="outline"
             size="sm"
             onClick={() => handleCreateNextCycle(value)}

@@ -63,7 +63,7 @@ const Comments: React.FC<{
 
     return (
         <div className="space-y-4">
-            {comments.map((comment) => (
+            {comments.map((comment): JSX.Element => (
                 <div 
                     key={comment.comment_id} 
                     className={`${comment.is_approver ? 'p-3 rounded shadow bg-orange-50 border border-orange-200' : 'p-3 rounded shadow bg-white'}`}
@@ -106,6 +106,7 @@ const Comments: React.FC<{
                         'border-orange-200 focus:border-orange-500' : ''}
                 />
                 <Button
+                    id="add-comment-button"
                     onClick={handleAddComment}
                     disabled={isAddingComment}
                     className={`mt-2 ${timeSheetStatus === 'CHANGES_REQUESTED' ? 
@@ -589,6 +590,7 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
         <div className="h-full overflow-y-auto">
             <div className="flex items-center mb-4">
                 <Button
+                    id="back-button"
                     onClick={onBack}
                     variant="soft"
                     className="mr-4"
@@ -617,6 +619,7 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
                 </span>
                 {isEditable && (
                     <Button 
+                        id="submit-timesheet-button"
                         onClick={handleSubmitTimeSheet}
                         variant="default"
                         className="bg-primary-500 hover:bg-primary-600 text-white"
@@ -624,7 +627,6 @@ const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
                         Submit Time Sheet
                     </Button>
                 )}
-
             </div>
 
             {(timeSheet.approval_status === 'CHANGES_REQUESTED' || comments.length > 0) && (

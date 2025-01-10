@@ -22,6 +22,7 @@ const DocumentDownload: React.FC<DocumentDownloadProps> = ({ document, className
             className="no-underline"
         >
             <Button
+                id="download-button"
                 variant="outline"
                 size="sm"
                 className={`text-gray-600 hover:text-gray-900 ${className || ''}`}

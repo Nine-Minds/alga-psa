@@ -1,8 +1,6 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
-import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { useRegisterChildWithProps } from '@/types/ui-reflection/useRegisterChild';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
@@ -88,19 +86,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     };
 
     return (
-      <div className="mb-4" {...textProps} >
+      <div className="mb-4">
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {label}
           </label>
         )}
         <input
+          {...textProps}
           ref={(element) => {
             inputRef.current = element;
             handleRef(element);
           }}
           className={`w-full px-3 py-2 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className}`}
-          {...withDataAutomationId({ id })}
           value={value}
           disabled={disabled}
           required={required}

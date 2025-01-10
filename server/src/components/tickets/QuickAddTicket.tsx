@@ -75,80 +75,6 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
 
-  // Register all components with UI reflection system
-  const { automationIdProps: titleProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-title-input`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Title',
-    value: title,
-    required: true
-  });
-
-  const { automationIdProps: descriptionProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-description-input`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Description',
-    value: description,
-    required: true
-  });
-
-  const { automationIdProps: assignedToProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-assigned-to-select`,
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Assign To',
-    value: assignedTo
-  });
-
-  const { automationIdProps: statusProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-status-select`,
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Status',
-    value: statusId
-  });
-
-  const { automationIdProps: priorityProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-priority-select`,
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Priority',
-    value: priorityId
-  });
-
-  const { automationIdProps: contactProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-contact-select`,
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Contact',
-    value: contactId || '',
-    disabled: !companyId || selectedCompanyType !== 'company'
-  });
-
-  const { automationIdProps: cancelButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-cancel-btn`,
-    type: 'button',
-    label: 'Cancel',
-    actions: ['click']
-  });
-
-  const { automationIdProps: saveButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-save-btn`,
-    type: 'button',
-    label: 'Save Ticket',
-    disabled: isSubmitting,
-    actions: ['click']
-  });
-
-  const { automationIdProps: closeButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-close-btn`,
-    type: 'button',
-    label: 'Close',
-    actions: ['click']
-  });
-
   useEffect(() => {
     if (!open) {
       setError(null);
@@ -394,14 +320,12 @@ export function QuickAddTicket({
         <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
-              {...titleProps}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ticket Title"
               required
             />
             <TextArea
-              {...descriptionProps}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Description"
@@ -422,7 +346,6 @@ export function QuickAddTicket({
             {selectedCompanyType === 'company' && contacts.length > 0 && (
               <div className="relative z-20">
                 <CustomSelect
-                  {...contactProps}
                   value={contactId || ''}
                   onValueChange={(value) => setContactId(value || null)}
                   options={contacts.map((contact): SelectOption => ({
@@ -437,7 +360,6 @@ export function QuickAddTicket({
 
             <div className="relative z-30">
               <CustomSelect
-                {...assignedToProps}
                 value={assignedTo}
                 onValueChange={setAssignedTo}
                 options={users.map((user): SelectOption => ({
@@ -469,7 +391,6 @@ export function QuickAddTicket({
 
             <div className="relative z-20">
               <CustomSelect
-                {...statusProps}
                 value={statusId}
                 onValueChange={setStatusId}
                 options={statuses.map((status): SelectOption => ({
@@ -482,7 +403,6 @@ export function QuickAddTicket({
 
             <div className="relative z-10">
               <CustomSelect
-                {...priorityProps}
                 value={priorityId}
                 onValueChange={setPriorityId}
                 options={priorities.map((priority): SelectOption => ({
@@ -495,7 +415,7 @@ export function QuickAddTicket({
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button 
-                {...cancelButtonProps}
+                id={`${id}-cancel-btn`}
                 type="button" 
                 variant="outline" 
                 onClick={() => onOpenChange(false)}
@@ -503,7 +423,7 @@ export function QuickAddTicket({
                 Cancel
               </Button>
               <Button 
-                {...saveButtonProps}
+                id={`${id}-submit-btn`}
                 type="submit" 
                 variant="default" 
                 disabled={isSubmitting}
@@ -534,7 +454,7 @@ export function QuickAddTicket({
           {dialogContent}
           <Dialog.Close asChild>
             <Button 
-              {...closeButtonProps}
+              id={`${id}-close-dialog-btn`}
               variant="ghost"
               className="absolute top-4 right-4" 
               aria-label="Close"

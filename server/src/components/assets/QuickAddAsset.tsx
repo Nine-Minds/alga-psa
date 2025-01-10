@@ -411,12 +411,12 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content {...withDataAutomationId({ id: 'quick-add-asset-content' })} className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px]">
+        <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-[480px]">
           <Dialog.Title className="text-lg font-bold mb-4">Add New Asset</Dialog.Title>
           {error && <div className="text-red-500 mb-4">{error}</div>}
-          <form {...withDataAutomationId({ id: 'quick-add-asset-form' })} onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {!companyId && (
-              <div {...withDataAutomationId({ id: 'company-picker-container' })}>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">Company</label>
                 <CompanyPicker
                   {...withDataAutomationId({ id: 'company-picker' })}

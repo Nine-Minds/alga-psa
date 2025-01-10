@@ -48,6 +48,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
       <h2 className="text-xl font-bold mb-2">Project Phases</h2>
       <div className="flex gap-2 mb-4">
         <Button
+          id="add-task-button"
           onClick={onAddTask}
           className="text-sm"
           disabled={!selectedPhase || isAddingTask}
@@ -55,6 +56,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
           {isAddingTask ? 'Adding...' : '+ Add Task'}
         </Button>
         <Button
+          id="add-phase-button"
           onClick={onAddPhase}
           className="text-sm"
         >

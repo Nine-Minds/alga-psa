@@ -183,7 +183,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       title: 'Actions',
       dataIndex: 'service_id',
       render: (value) => (
-        <Button onClick={() => handleRemovePlanService(value)}>Remove</Button>
+        <Button id='remove-button' onClick={() => handleRemovePlanService(value)}>Remove</Button>
       ),
     },
   ];
@@ -230,6 +230,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                   placeholder="Select service..."
                 />
                 <Button
+                  id='add-button'
                   onClick={() => {
                     if (selectedServiceToAdd && selectedServiceToAdd !== 'unassigned') {
                       handleAddPlanService(selectedServiceToAdd);

@@ -88,7 +88,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onTemplateSelect, t
                 rows={10}
             />
             {error && <p className="text-red-500">{error}</p>}
-            <Button onClick={handleSaveCustomTemplate}>Save Custom Template</Button>
+            <Button id='save-custom-template-button' onClick={handleSaveCustomTemplate}>Save Custom Template</Button>
         </div>
     );
 };

@@ -455,12 +455,7 @@ const Documents = ({
                                 />
                                 <div className="flex justify-end space-x-2 mb-4">
                                     <Button
-                                        {...useAutomationIdAndRegister<ButtonComponent>({
-                                            id: `${id}-cancel-new-btn`,
-                                            type: 'button',
-                                            label: 'Cancel',
-                                            actions: ['click']
-                                        }).automationIdProps}
+                                        id="close-drawer-button"
                                         onClick={() => {
                                             setIsDrawerOpen(false);
                                             setIsCreatingNew(false);
@@ -470,13 +465,7 @@ const Documents = ({
                                         Cancel
                                     </Button>
                                     <Button
-                                        {...useAutomationIdAndRegister<ButtonComponent>({
-                                            id: `${id}-save-new-btn`,
-                                            type: 'button',
-                                            label: 'Save',
-                                            actions: ['click'],
-                                            disabled: isSaving
-                                        }).automationIdProps}
+                                        id="save-new-document-button"
                                         onClick={handleSaveNewDocument}
                                         disabled={isSaving}
                                         className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
@@ -499,13 +488,7 @@ const Documents = ({
                                 <div>
                                     <div className="flex justify-end mb-4">
                                         <Button
-                                            {...useAutomationIdAndRegister<ButtonComponent>({
-                                                id: `${id}-save-changes-btn`,
-                                                type: 'button',
-                                                label: 'Save Changes',
-                                                actions: ['click'],
-                                                disabled: isSaving
-                                            }).automationIdProps}
+                                            id="save-changes-button"
                                             onClick={handleSaveChanges}
                                             disabled={isSaving}
                                             className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"

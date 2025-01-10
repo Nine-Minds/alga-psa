@@ -52,7 +52,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
     id: `${id}-table`,
     type: 'dataTable',
-    columns: columns.map(col => ({
+    columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean } => ({
       id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
       title: String(col.title), // Convert ReactNode to string
       dataIndex: col.dataIndex,
@@ -66,15 +66,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       totalPages: Math.ceil((totalItems ?? data.length) / pageSize)
     },
     rowCount: data.length,
-    visibleRows: data.slice(0, pageSize).map(row => ({
+    visibleRows: data.slice(0, pageSize).map((row): { id: string; values: Record<string, unknown> } => ({
       id: ('id' in row) ? (row as { id: string }).id : '',
       values: row as Record<string, unknown>
     })),
     isEditable: !!editableConfig
   }) : undefined;
-
-  // Generate a unique context for this table instance
-  const tableContext = useMemo(() => Math.random().toString(36).substring(7), []);
 
   // Create stable column definitions
   const tableColumns = useMemo<ColumnDef<T>[]>(
@@ -149,7 +146,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           totalPages: Math.ceil((totalItems ?? data.length) / currentPageSize)
         },
         rowCount: data.length,
-        visibleRows: table.getPaginationRowModel().rows.map(row => ({
+        visibleRows: table.getPaginationRowModel().rows.map((row): { id: string; values: Record<string, unknown> } => ({
           id: ('id' in row.original) ? (row.original as { id: string }).id : '',
           values: row.original as Record<string, unknown>
         })),
@@ -178,13 +175,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-white">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={`${tableContext}_headergroup_${headerGroup.id}`}>
-                  {headerGroup.headers.map((header) => {
+              {table.getHeaderGroups().map((headerGroup): JSX.Element => (
+                <tr key={`headergroup_${headerGroup.id}`}>
+                  {headerGroup.headers.map((header): JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                     return (
                     <th 
-                      key={`${tableContext}_header_${columnId}`}
+                      key={`header_${columnId}`}
                       onClick={header.column.getToggleSortingHandler()}
                       className="px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider cursor-pointer hover:bg-gray-50 transition-colors"
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
@@ -205,23 +202,23 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {table.getPaginationRowModel().rows.map((row) => {
+              {table.getPaginationRowModel().rows.map((row): JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 return (
                   <tr
-                    key={`${tableContext}_row_${rowId}`}
+                    key={`row_${rowId}`}
                     onClick={() => handleRowClick(row)}
                     className={`
                     ${row.index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
                     hover:bg-blue-50 transition-colors cursor-pointer
                   `}
                   >
-                    {row.getVisibleCells().map((cell) => {
+                    {row.getVisibleCells().map((cell): JSX.Element => {
                       const columnId = cell.column.columnDef.id || cell.column.id;
                       return (
                         <td
-                          key={`${tableContext}_cell_${rowId}_${columnId}`}
+                          key={`cell_${rowId}_${columnId}`}
                           className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >

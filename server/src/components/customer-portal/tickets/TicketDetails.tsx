@@ -93,6 +93,7 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
 
           <Dialog.Close>
             <Button
+              id="close-ticket-details-button"
               variant="ghost"
               size="sm"
               className="absolute top-4 right-4 p-0 w-6 h-6 flex items-center justify-center"

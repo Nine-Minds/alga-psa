@@ -2,7 +2,7 @@
 
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { IInvoiceTemplate, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel, IInvoiceItem } from '@/interfaces/invoice.interfaces';
+import { IInvoiceTemplate, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { IInvoice } from '@/interfaces/invoice.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
@@ -13,7 +13,6 @@ import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from '@/lib/db';
 import { addDays, format } from 'date-fns';
 import { ISO8601String } from '@/types/types.d';
-import { parseISO, isBefore } from 'date-fns';
 import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -55,6 +54,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
   can_generate: boolean;
+  is_early: boolean;
 })[]> {
   console.log('Starting getAvailableBillingPeriods');
   const { knex } = await createTenantKnex();
@@ -92,6 +92,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
       period_start_date: ISO8601String;
       period_end_date: ISO8601String;
       can_generate: boolean;
+      is_early: boolean;
     }> => {
       console.log(`Processing period for company: ${period.company_name} (${period.company_id})`);
       console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
@@ -106,7 +107,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
           period.billing_cycle_id
         );
         total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
-      } catch (error) {
+      } catch (_error) {
         console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
       }
       console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
@@ -126,9 +127,9 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
     console.log(`Successfully processed ${periodsWithTotals.length} billing periods`);
     return periodsWithTotals;
 
-  } catch (error) {
-    console.error('Error in getAvailableBillingPeriods:', error);
-    throw error;
+  } catch (_error) {
+    console.error('Error in getAvailableBillingPeriods:', _error);
+    throw _error;
   }
 }
 
@@ -189,14 +190,10 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
 }
 
 async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   const company = await knex('companies').where({ company_id: companyId }).first() as ICompany;
   if (!company) {
     throw new Error(`Company with ID ${companyId} not found`);
-  }
-
-  if (!tenant) {
-    throw new Error('No tenant found');
   }
 
   const taxService = new TaxService();
@@ -205,7 +202,6 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   const due_date = await getDueDate(companyId, endDate);
 
   const invoice: Omit<IInvoice, 'invoice_id'> = {
-    tenant,
     company_id: companyId,
     invoice_date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
     due_date,
@@ -238,7 +234,6 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       status: 'completed',
       description: `Generated invoice ${newInvoice.invoice_number}`,
       created_at: new Date().toISOString(),
-      tenant,
       balance_after: currentBalance + newInvoice.total_amount
     });
 
@@ -257,8 +252,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         tax_amount: taxCalculationResult.taxAmount,
         tax_region: charge.tax_region,
         tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount,
-        tenant
+        total_price: netAmount + taxCalculationResult.taxAmount
       };
 
       await trx('invoice_items').insert(invoiceItem);
@@ -268,8 +262,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         await trx('invoice_time_entries').insert({
           invoice_time_entry_id: uuidv4(),
           invoice_id: newInvoice.invoice_id,
-          entry_id: charge.entryId,
-          tenant
+          entry_id: charge.entryId
         });
 
         await trx('time_entries')
@@ -282,8 +275,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         await trx('invoice_usage_records').insert({
           invoice_usage_record_id: uuidv4(),
           invoice_id: newInvoice.invoice_id,
-          usage_id: charge.usageId,
-          tenant
+          usage_id: charge.usageId
         });
 
         await trx('usage_tracking')
@@ -309,8 +301,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         net_amount: netAmount,
         tax_amount: taxCalculationResult.taxAmount,
         tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount,
-        tenant
+        total_price: netAmount + taxCalculationResult.taxAmount
       };
       await trx('invoice_items').insert(discountInvoiceItem);
 
@@ -332,7 +323,6 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         status: 'completed',
         description: `Applied discount: ${discount.discount_name}`,
         created_at: new Date().toISOString(),
-        tenant,
         metadata: { discount_id: discount.discount_id },
         balance_after: currentBalance - (discount.amount || 0)
       });
@@ -594,7 +584,7 @@ export async function getInvoiceAnnotations(_invoiceId: string): Promise<IInvoic
 }
 
 export async function hardDeleteInvoice(invoiceId: string) {
-  const { knex, tenant } = await createTenantKnex();
+  const { knex } = await createTenantKnex();
   
   await knex.transaction(async (trx) => {
     // 1. Get invoice details
@@ -609,7 +599,12 @@ export async function hardDeleteInvoice(invoiceId: string) {
     if (payments.length > 0) {
       // Insert reversal transactions
       await trx('transactions').insert(
-        payments.map(p => ({
+        payments.map((p): {
+          transaction_id: string;
+          type: string;
+          amount: number;
+          description: string;
+        } => ({
           ...p,
           transaction_id: uuidv4(),
           type: 'payment_reversal',

@@ -97,10 +97,10 @@ export function CreateTicketDialog({ open, onClose }: CreateTicketDialogProps) {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button id="cancel-ticket-button" type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit" variant="default">
+              <Button id="submit-ticket-button" type="submit" variant="default">
                 Create Ticket
               </Button>
             </div>
@@ -108,6 +108,7 @@ export function CreateTicketDialog({ open, onClose }: CreateTicketDialogProps) {
 
           <Dialog.Close asChild>
             <Button
+              id="close-dialog-button"
               variant="ghost"
               size="sm"
               className="absolute top-4 right-4 p-0 w-6 h-6 flex items-center justify-center"

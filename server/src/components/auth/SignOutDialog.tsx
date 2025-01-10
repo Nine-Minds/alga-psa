@@ -28,6 +28,7 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
       </DialogHeader>
       <DialogFooter>
         <Button
+          id='cancel-button'
           variant="outline"
           onClick={onClose}
           disabled={isLoading}
@@ -35,6 +36,7 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
           Cancel
         </Button>
         <Button
+          id='sign-out-button'
           onClick={handleSignOut}
           disabled={isLoading}
         >

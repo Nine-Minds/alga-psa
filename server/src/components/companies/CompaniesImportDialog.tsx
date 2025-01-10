@@ -337,6 +337,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                 Optional fields: phone_no, email, url, address, client_type, is_inactive, is_tax_exempt, etc.
               </p>
               <Input
+                id="company-csv-upload"
                 type="file"
                 accept=".csv"
                 onChange={handleFileUpload}
@@ -386,8 +387,8 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
               </div>
               <div className="mt-4">
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                  <Button onClick={handlePreview}>Preview</Button>
+                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')}>Back</Button>
+                  <Button id="mapping-preview-btn" onClick={handlePreview}>Preview</Button>
                 </DialogFooter>
               </div>
             </div>
@@ -482,6 +483,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
               <div className="mt-4">
                 <DialogFooter>
                   <Button 
+                    id="preview-back-btn"
                     variant="outline" 
                     onClick={() => setStep('mapping')}
                     disabled={isProcessing}
@@ -489,6 +491,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                     Back
                   </Button>
                   <Button
+                    id="preview-import-btn"
                     onClick={handleImport}
                     disabled={validationResults.every(result => !result.isValid) || isProcessing}
                   >
@@ -507,7 +510,7 @@ const CompaniesImportDialog: React.FC<CompaniesImportDialogProps> = ({
                 Successfully imported {validationResults.filter(r => r.isValid).length} companies
               </p>
               <DialogFooter>
-                <Button onClick={handleClose}>Close</Button>
+                <Button id="complete-close-btn" onClick={handleClose}>Close</Button>
               </DialogFooter>
             </div>
           )}

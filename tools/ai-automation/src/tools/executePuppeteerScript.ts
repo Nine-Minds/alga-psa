@@ -25,6 +25,14 @@ export const executePuppeteerScript: Tool = {
       return await fn(page);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (errorMessage.includes('Execution context was destroyed')) {
+        return {
+          success: true,
+          message: 'Puppeteer script execution completed, with a navigation to a new page.'
+        }
+      }
+
       console.error('Error executing puppeteer script:', {
         error: errorMessage,
         script: script.slice(0, 100) + (script.length > 100 ? '...' : '')

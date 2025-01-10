@@ -141,6 +141,7 @@ export default function ServicesSection() {
                   <td>{service.nextBillingDate}</td>
                   <td>
                     <Button 
+                      id={`manage-service-${service.id}`}
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleManageService(service)}
@@ -195,6 +196,7 @@ export default function ServicesSection() {
                       <div>
                         {!plan.isCurrentPlan && (
                           <Button
+                            id={`plan-change-${plan.id}`}
                             variant="outline"
                             size="sm"
                             onClick={() => handleServiceChange(
@@ -223,6 +225,7 @@ export default function ServicesSection() {
 
             <div className="flex justify-end">
               <Button
+                id="close-service-dialog-button"
                 variant="ghost"
                 onClick={() => {
                   setIsManaging(false);
@@ -252,7 +255,11 @@ export default function ServicesSection() {
               </p>
               <div className="flex justify-between items-center mt-auto">
                 <span className="text-sm font-medium">Starting at $299/mo</span>
-                <Button variant="outline" size="sm">
+                <Button 
+                  id="learn-more-managed-it"
+                  variant="outline" 
+                  size="sm"
+                >
                   Learn More
                 </Button>
               </div>
@@ -268,7 +275,11 @@ export default function ServicesSection() {
               </p>
               <div className="flex justify-between items-center mt-auto">
                 <span className="text-sm font-medium">Starting at $99/mo</span>
-                <Button variant="outline" size="sm">
+                <Button 
+                  id="learn-more-cloud-backup"
+                  variant="outline" 
+                  size="sm"
+                >
                   Learn More
                 </Button>
               </div>
@@ -284,7 +295,11 @@ export default function ServicesSection() {
               </p>
               <div className="flex justify-between items-center mt-auto">
                 <span className="text-sm font-medium">Starting at $199/mo</span>
-                <Button variant="outline" size="sm">
+                <Button 
+                  id="learn-more-cybersecurity"
+                  variant="outline" 
+                  size="sm"
+                >
                   Learn More
                 </Button>
               </div>

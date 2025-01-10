@@ -83,6 +83,7 @@ export default function ProjectInfo({
           </div>
         </div>
         <Button
+          id="edit-project-button"
           variant="outline"
           size="sm"
           onClick={handleEditClick}

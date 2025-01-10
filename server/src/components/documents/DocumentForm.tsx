@@ -138,7 +138,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
             </div>
 
             <div className="pt-4">
-                <Button type="submit" className="w-full">
+                <Button id="create-document-button" type="submit" className="w-full">
                     Create Document
                 </Button>
             </div>

@@ -61,7 +61,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       setIsLoading(true);
       try {
         const cycles = await getInvoicedBillingCycles();
-        setInvoicedPeriods(cycles.map(cycle => ({
+        setInvoicedPeriods(cycles.map((cycle):Period => ({
           ...cycle,
           can_generate: false // Already invoiced periods can't be generated again
         })));
@@ -122,7 +122,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       setSelectedPeriods(new Set());
       // Refresh the invoiced periods list
       const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(cycles.map(cycle => ({
+      setInvoicedPeriods(cycles.map((cycle):Period => ({
         ...cycle,
         can_generate: false, // Already invoiced periods can't be generated again
         is_early: false // Already invoiced periods can't be early
@@ -141,7 +141,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       await removeBillingCycle(selectedCycleToReverse.id);
       // Refresh both lists after successful reversal
       const cycles = await getInvoicedBillingCycles();
-      setInvoicedPeriods(cycles.map(cycle => ({
+      setInvoicedPeriods(cycles.map((cycle):Period => ({
         ...cycle,
         can_generate: false, // Already invoiced periods can't be generated again
         is_early: false // Already invoiced periods can't be early
@@ -172,6 +172,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 onChange={(e) => setCompanyFilter(e.target.value)}
               />
               <Button
+                id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
                 disabled={selectedPeriods.size === 0 || isGenerating}
                 className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
@@ -185,7 +186,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
               <h4 className="font-semibold mb-2">Errors occurred while generating invoices:</h4>
               <ul className="list-disc pl-5">
-                {Object.entries(errors).map(([company, errorMessage]) => (
+                {Object.entries(errors).map(([company, errorMessage]): JSX.Element => (
                   <li key={company}>
                     <span className="font-medium">{company}:</span> {errorMessage}
                   </li>
@@ -298,6 +299,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                     dataIndex: 'billing_cycle_id',
                     render: (_: unknown, record: Period) => (
                       <Button
+                        id={`reverse-billing-cycle-${record.billing_cycle_id}`}
                         onClick={() => {
                           setSelectedCycleToReverse({
                             id: record.billing_cycle_id || '',
@@ -359,12 +361,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
         <DialogFooter>
           <Button
+            id='cancel-reverse-billing-cycle-button'
             variant="outline"
             onClick={() => setShowReverseDialog(false)}
           >
             Cancel
           </Button>
           <Button
+            id='reverse-billing-cycle-button'
             variant="destructive"
             onClick={handleReverseBillingCycle}
             disabled={isReversing}

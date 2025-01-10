@@ -75,7 +75,12 @@ export default function UserRoleAssignment() {
       render: (userId) => (
         <Flex gap="2">
           {userRoles[userId]?.map((role): JSX.Element => (
-            <Button key={role.role_id} color="red" onClick={() => handleRemoveRole(userId, role.role_id)}>
+            <Button 
+              id={`remove-role-${userId}-${role.role_id}-btn`}
+              key={role.role_id} 
+              color="red" 
+              onClick={() => handleRemoveRole(userId, role.role_id)}
+            >
               Remove {role.role_name}
             </Button>
           ))}
@@ -110,7 +115,7 @@ export default function UserRoleAssignment() {
               placeholder="Select Role"
             />
           </div>
-          <Button onClick={handleAssignRole}>Assign Role</Button>
+          <Button id="assign-role-btn" onClick={handleAssignRole}>Assign Role</Button>
         </Flex>
 
         <DataTable

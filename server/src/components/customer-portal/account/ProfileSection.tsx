@@ -243,6 +243,7 @@ export default function ProfileSection() {
 
           <div className="flex justify-end">
             <Button
+              id="save-profile-button"
               type="submit"
               disabled={isSaving}
             >

@@ -60,7 +60,7 @@ function NotificationCategoriesContent({
         is_enabled: !category.is_enabled
       });
       setCategories(prev => 
-        prev.map(c => c.id === category.id ? updated : c)
+        prev.map((c): NotificationCategory => c.id === category.id ? updated : c)
       );
       
       // If this is the currently expanded category, update its reference
@@ -71,7 +71,7 @@ function NotificationCategoriesContent({
       // If disabling the category, also disable all subtypes
       if (!updated.is_enabled && category.id === expandedCategory) {
         const updatedSubtypes = await Promise.all(
-          subtypes.map(async subtype => {
+          subtypes.map(async (subtype): Promise<NotificationSubtype> => {
             if (subtype.is_enabled) {
               const updated = await updateSubtypeAction(subtype.id, {
                 is_enabled: false
@@ -97,7 +97,7 @@ function NotificationCategoriesContent({
         is_enabled: !subtype.is_enabled
       });
       setSubtypes(prev =>
-        prev.map(s => s.id === subtype.id ? updated : s)
+        prev.map((s): NotificationSubtype => s.id === subtype.id ? updated : s)
       );
     } catch (error) {
       console.error("Failed to update subtype:", error);
@@ -130,12 +130,12 @@ function NotificationCategoriesContent({
     { 
       title: "Description",
       dataIndex: "description",
-      render: (value) => value || "-"
+      render: (value): React.ReactNode => value || "-"
     },
     { 
       title: "Enabled",
       dataIndex: "is_enabled",
-      render: (value, record) => (
+      render: (value, record): React.ReactNode => (
         <Switch
           checked={value}
           onCheckedChange={() => handleToggleCategory(record)}
@@ -145,8 +145,9 @@ function NotificationCategoriesContent({
     {
       title: "Actions",
       dataIndex: "id",
-      render: (value, record) => (
-        <Button 
+      render: (value, record): React.ReactNode => (
+        <Button
+          id={`category-${record.id}`}
           onClick={() => handleExpandCategory(record)}
           variant="outline"
         >
@@ -164,7 +165,7 @@ function NotificationCategoriesContent({
     { 
       title: "Description",
       dataIndex: "description",
-      render: (value) => value || "-"
+      render: (value): React.ReactNode => value || "-"
     },
     { 
       title: "Enabled",

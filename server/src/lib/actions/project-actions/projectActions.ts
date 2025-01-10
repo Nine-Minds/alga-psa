@@ -54,7 +54,7 @@ export async function getProjects(): Promise<IProject[]> {
         const projects = await ProjectModel.getAll(true);
         
         // Fetch assigned user details for each project
-        const projectsWithUsers = await Promise.all(projects.map(async (project) => {
+        const projectsWithUsers = await Promise.all(projects.map(async (project): Promise<IProject> => {
             if (project.assigned_to) {
                 const user = await findUserById(project.assigned_to);
                 return {
@@ -250,7 +250,7 @@ export async function addProjectPhase(phaseData: Omit<IProjectPhase, 'phase_id' 
 
         // Get next phase number
         const phaseNumbers = phases
-            .map(phase => {
+            .map((phase):number => {
                 const parts = phase.wbs_code.split('.');
                 return parseInt(parts[parts.length - 1]);
             })

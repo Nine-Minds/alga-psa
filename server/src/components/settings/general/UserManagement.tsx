@@ -137,7 +137,7 @@ const UserManagement = (): JSX.Element => {
               />
             </div>
           </div>
-          <Button onClick={() => setShowNewUserForm(true)}>Create New User</Button>
+          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>Create New User</Button>
         </div>
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
@@ -189,7 +189,7 @@ const UserManagement = (): JSX.Element => {
                   placeholder="Select Role"
                 />
               </div>
-              <Button onClick={handleCreateUser}>Create User</Button>
+              <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
             </div>
           </div>
         )}

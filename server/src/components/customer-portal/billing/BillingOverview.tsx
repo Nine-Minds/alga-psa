@@ -78,8 +78,8 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
         </div>
       </DialogContent>
       <DialogFooter>
-        <Button variant="outline" onClick={onClose}>Close</Button>
-        <Button>Download</Button>
+        <Button id="close-invoice-dialog-button" variant="outline" onClick={onClose}>Close</Button>
+        <Button id="download-invoice-button">Download</Button>
       </DialogFooter>
     </Dialog>
   );
@@ -183,7 +183,7 @@ export default function BillingOverview() {
                 </div>
                 <Package className="h-5 w-5 text-gray-400" />
               </div>
-              <Button className="mt-4 w-full" variant="outline">
+              <Button id="view-plan-details-button" className="mt-4 w-full" variant="outline">
                 View Plan Details
               </Button>
             </Card>
@@ -205,7 +205,7 @@ export default function BillingOverview() {
                 </div>
                 <CreditCard className="h-5 w-5 text-gray-400" />
               </div>
-              <Button className="mt-4 w-full" variant="outline">
+              <Button id="manage-payment-methods-button" className="mt-4 w-full" variant="outline">
                 Manage Payment Methods
               </Button>
             </Card>
@@ -225,7 +225,7 @@ export default function BillingOverview() {
                 </div>
                 <FileText className="h-5 w-5 text-gray-400" />
               </div>
-              <Button className="mt-4 w-full" variant="outline">
+              <Button id="view-all-invoices-button" className="mt-4 w-full" variant="outline">
                 View All Invoices
               </Button>
             </Card>
@@ -293,17 +293,17 @@ export default function BillingOverview() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm">
+                    <Button id={`edit-payment-${method.payment_method_id}`} variant="outline" size="sm">
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button id={`remove-payment-${method.payment_method_id}`} variant="outline" size="sm">
                       Remove
                     </Button>
                   </div>
                 </div>
               </Card>
             ))}
-            <Button className="w-full">Add Payment Method</Button>
+            <Button id="add-payment-method-button" className="w-full">Add Payment Method</Button>
           </div>
         </div>
       ),

@@ -97,7 +97,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
           <CustomSelect
             value={selectedManagerId}
             onValueChange={setSelectedManagerId}
-            options={allUsers.map(user => ({
+            options={allUsers.map((user): { value: string; label: string } => ({
               value: user.user_id,
               label: `${user.first_name} ${user.last_name}`
             }))}

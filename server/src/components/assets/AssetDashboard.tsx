@@ -297,7 +297,7 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Recent Assets</h3>
         <DataTable
           {...withDataAutomationId({ id: 'recent-assets-table' })}
-          columns={columns.map(col => ({
+          columns={columns.map((col): ColumnDefinition<Asset> => ({
             ...col,
             render: col.render ? 
               (value: unknown, record: Asset, index: number) => (
@@ -306,9 +306,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
                 </div>
               ) : undefined
           }))}
-          data={assets.slice(0, 5).map(asset => ({
+          data={assets.slice(0, 5).map((asset):Asset => ({
             ...asset,
-            id: asset.asset_id // Add id property for unique keys
+            asset_id: asset.asset_id // Add id property for unique keys
           }))}
           pagination={false}
           onRowClick={(asset) => router.push(`/msp/assets/${asset.asset_id}`)}

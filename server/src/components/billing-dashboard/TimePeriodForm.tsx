@@ -322,6 +322,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                         <div className="flex justify-between">
                             {mode === 'edit' && selectedPeriod && (
                                 <Button 
+                                    id='delete-period-button'
                                     variant="destructive" 
                                     onClick={() => setShowDeleteConfirm(true)}
                                 >
@@ -329,10 +330,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                                 </Button>
                             )}
                             <div className="flex ml-auto">
-                                <Button variant="outline" onClick={onClose} className="mr-2">
+                                <Button id="close-button" variant="outline" onClick={onClose} className="mr-2">
                                     Cancel
                                 </Button>
-                                <Button onClick={handleSubmit}>
+                                <Button id="submit-button" onClick={handleSubmit}>
                                     {mode === 'create' ? 'Create' : 'Save'}
                                 </Button>
                             </div>
@@ -348,6 +349,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                                 <p className="mb-4">Are you sure you want to delete this time period? This action cannot be undone.</p>
                                 <div className="flex justify-end">
                                     <Button
+                                        id="cancel-delete-button"
                                         variant="outline"
                                         onClick={() => setShowDeleteConfirm(false)}
                                         className="mr-2"
@@ -355,6 +357,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                                         Cancel
                                     </Button>
                                     <Button
+                                        id="confirm-delete-button"
                                         variant="destructive"
                                         onClick={async () => {
                                             try {
@@ -377,7 +380,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                     </>
                 ) : (
                     <div className="text-center">
-                        <Button variant="outline" onClick={onClose} className="mt-4">
+                        <Button id="settings-close-button" variant="outline" onClick={onClose} className="mt-4">
                             Close
                         </Button>
                     </div>

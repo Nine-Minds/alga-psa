@@ -1,4 +1,4 @@
-module.exports = {
+export default {
     create: function (context) {
       return {
         CallExpression(node) {
@@ -23,4 +23,3 @@ module.exports = {
       };
     },
   };
-  

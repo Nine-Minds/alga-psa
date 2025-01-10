@@ -311,6 +311,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
 
         <div className="flex justify-end gap-2 mt-6">
           <Button
+            id='cancel-button'
             type="button"
             variant="outline"
             onClick={onClose}
@@ -319,6 +320,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
             Cancel
           </Button>
           <Button
+            id='create-button'
             type="submit"
             disabled={isSubmitting || isLoadingCompanies || !formData.asset_type}
           >

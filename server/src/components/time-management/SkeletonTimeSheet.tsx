@@ -10,7 +10,7 @@ export function SkeletonTimeSheet() {
       </div>
 
       {/* Time periods skeleton */}
-      {Array.from({ length: 3 }).map((_, i) => (
+      {Array.from({ length: 3 }).map((_, i): JSX.Element => (
         <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
           <Skeleton className="h-16 w-full" />
         </div>

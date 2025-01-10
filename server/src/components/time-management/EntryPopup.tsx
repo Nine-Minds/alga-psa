@@ -379,10 +379,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
       )}
       <div className="mt-6 flex justify-end space-x-3">
-        <Button onClick={onClose} variant="outline">
+        <Button id="cancel-entry-btn" onClick={onClose} variant="outline">
           Cancel
         </Button>
-        <Button onClick={handleSave}>Save</Button>
+        <Button id="save-entry-btn" onClick={handleSave}>Save</Button>
       </div>
     </DialogContent>
   );

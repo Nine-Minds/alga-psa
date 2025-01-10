@@ -52,7 +52,12 @@ const EditableField: React.FC<EditableFieldProps> = ({ label, value, onSave, ico
       <div className="flex items-center justify-between">
         <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
         {!isEditing && (
-          <Button variant="ghost" size="sm" onClick={() => setIsEditing(true)}>
+          <Button 
+            id={`edit-field-${label.toLowerCase().replace(/\s+/g, '-')}`}
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setIsEditing(true)}
+          >
             <Pen className="h-4 w-4" />
           </Button>
         )}
@@ -68,11 +73,11 @@ const EditableField: React.FC<EditableFieldProps> = ({ label, value, onSave, ico
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <div className="flex justify-end mt-2">
-              <Button variant="outline" size="sm" onClick={handleCancel} className="mr-2">
+              <Button id='cancel-button' variant="outline" size="sm" onClick={handleCancel}>
                 <X className="h-4 w-4 mr-1" />
                 Cancel
               </Button>
-              <Button variant="default" size="sm" onClick={handleSave}>
+              <Button id="save-button" variant="default" size="sm" onClick={handleSave}>
                 <Check className="h-4 w-4 mr-1" />
                 Save
               </Button>
@@ -174,6 +179,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
   return (
     <div className="p-6 relative bg-white shadow rounded-lg">
       <Button
+        id="back-button"
         onClick={goBack}
         variant="ghost"
         size="sm"
@@ -242,6 +248,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
       <Flex justify="end" align="center" className="mt-6">
         <Button
+          id="add-ticket-button"
           onClick={() => setIsQuickAddTicketOpen(true)}
           className="bg-purple-600 hover:bg-purple-700 text-white"
         >

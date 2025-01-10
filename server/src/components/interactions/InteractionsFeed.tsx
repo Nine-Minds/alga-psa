@@ -54,77 +54,11 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
 
-  // Register all components with UI reflection system
+  // // Register all components with UI reflection system
   const { automationIdProps: titleProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `${id}-title`,
     type: 'container',
     label: 'Interactions Title'
-  });
-
-  const { automationIdProps: addButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-add-btn`,
-    type: 'button',
-    label: 'Add Interaction',
-    actions: ['click']
-  });
-
-  const { automationIdProps: searchProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-search`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Search Interactions',
-    value: searchTerm
-  });
-
-  const { automationIdProps: filterButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-filter-btn`,
-    type: 'button',
-    label: 'Filter',
-    actions: ['click']
-  });
-
-  const { automationIdProps: listProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: `${id}-list`,
-    type: 'container',
-    label: 'Interactions List'
-  });
-
-  const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-type-select`,
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Interaction Type',
-    value: selectedType
-  });
-
-  const { automationIdProps: startDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-start-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Start Date',
-    value: startDate
-  });
-
-  const { automationIdProps: endDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-end-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'End Date',
-    value: endDate
-  });
-
-  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-reset-btn`,
-    type: 'button',
-    label: 'Reset Filters',
-    actions: ['click']
-  });
-
-  const { automationIdProps: applyButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: `${id}-apply-btn`,
-    type: 'button',
-    label: 'Apply Filters',
-    actions: ['click']
   });
 
   useEffect(() => {
@@ -223,7 +157,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               Interactions
             </h2>
             <Button 
-              {...addButtonProps}
+              id='add-interaction-button'
               onClick={() => setIsQuickAddOpen(true)} 
               size="default"
               className="bg-purple-600 hover:bg-purple-700 text-white"
@@ -233,7 +167,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           </div>
           <div className="flex flex-wrap gap-4 mb-4">
             <Input
-              {...searchProps}
+              id='search-input'
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
@@ -241,7 +175,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               className="flex-grow"
             />
             <Button 
-              {...filterButtonProps}
+              id="open-filter-button"
               onClick={() => setIsFilterDialogOpen(true)} 
               variant="outline"
               size="default"
@@ -253,7 +187,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           </div>
         </div>
         <CardContent>
-          <ul {...listProps} className="space-y-2">
+          <ul className="space-y-2">
             {filteredInteractions.map((interaction): JSX.Element => (
               <li 
                 key={interaction.interaction_id} 
@@ -281,7 +215,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         <DialogContent>
           <div className="space-y-4">
             <CustomSelect
-              {...typeSelectProps}
+              id='type-select'
               options={[
                 { value: '', label: 'All Types' },
                 ...interactionTypes.map((type): { value: string; label: string } => ({
@@ -294,14 +228,14 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               placeholder="Interaction Type"
             />
             <Input
-              {...startDateProps}
+              id='start-date-input'
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               placeholder="Start Date"
             />
             <Input
-              {...endDateProps}
+              id='end-date-input'
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -309,7 +243,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
             />
             <div className="flex justify-between">
               <Button 
-                {...resetButtonProps}
+                id='reset-filters-button'
                 onClick={resetFilters} 
                 variant="outline" 
                 className="flex items-center"
@@ -318,7 +252,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
                 Reset Filters
               </Button>
               <Button 
-                {...applyButtonProps}
+                id='apply-filters-button'
                 onClick={handleApplyFilters}
               >
                 Apply Filters

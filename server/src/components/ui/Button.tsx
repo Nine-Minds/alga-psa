@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister'
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background relative',
@@ -45,7 +46,7 @@ export interface ButtonProps
   asChild?: boolean;
   tooltipText?: string;
   /** Unique identifier for UI reflection system */
-  id?: string;
+  id: string;
   /** Label text for UI reflection system */
   label?: string;
 }
@@ -67,43 +68,43 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     }, [label, children]);
 
     // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<ButtonComponent>({
+    const { automationIdProps: buttonProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
       type: 'button',
       id,
       label: currentLabel,
       disabled,
       variant: variant || undefined,
       actions: ['click']
-    }) : undefined;
+    });
 
     // Update metadata when disabled state or label changes
-    React.useEffect(() => {
-      if (updateMetadata) {
-        updateMetadata({
-          disabled,
-          label: currentLabel,
-          variant: variant || undefined,
-          actions: ['click']
-        });
-      }
-    }, [disabled, currentLabel, variant, updateMetadata]);
+    // React.useEffect(() => {
+    //   if (updateMetadata) {
+    //     updateMetadata({
+    //       disabled,
+    //       label: currentLabel,
+    //       variant: variant || undefined,
+    //       actions: ['click']
+    //     });
+    //   }
+    // }, [disabled, currentLabel, variant, updateMetadata]);
 
     // Tooltip position effect
-    React.useEffect(() => {
-      if (tooltipText && buttonRef.current) {
-        const button = buttonRef.current
-        const handleMouseEnter = () => {
-          const rect = button.getBoundingClientRect()
-          setTooltipPosition({
-            x: rect.left + rect.width / 2,
-            y: rect.top
-          })
-        }
+    // React.useEffect(() => {
+    //   if (tooltipText && buttonRef.current) {
+    //     const button = buttonRef.current
+    //     const handleMouseEnter = () => {
+    //       const rect = button.getBoundingClientRect()
+    //       setTooltipPosition({
+    //         x: rect.left + rect.width / 2,
+    //         y: rect.top
+    //       })
+    //     }
         
-        button.addEventListener('mouseenter', handleMouseEnter)
-        return () => button.removeEventListener('mouseenter', handleMouseEnter)
-      }
-    }, [tooltipText])
+    //     button.addEventListener('mouseenter', handleMouseEnter)
+    //     return () => button.removeEventListener('mouseenter', handleMouseEnter)
+    //   }
+    // }, [tooltipText])
 
     const content = (
       <>
@@ -141,7 +142,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           }
           buttonRef.current = node
         }}
-        {...withDataAutomationId({ id })}
+        {...buttonProps}
         disabled={disabled}
         {...props}
       >

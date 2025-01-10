@@ -100,7 +100,8 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                 <div className="flex items-center space-x-2">
                     {editingId === record.service_id ? (
                         <>
-                            <Button 
+                            <Button
+                                id={`save-service-${record.service_id}`}
                                 variant="ghost" 
                                 size="1" 
                                 onClick={() => handleSaveEdit(record)}
@@ -109,6 +110,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                                 <Check className="h-4 w-4 text-[rgb(var(--color-primary-600))]" />
                             </Button>
                             <Button 
+                                id={`cancel-edit-service-${record.service_id}`}
                                 variant="ghost" 
                                 size="1" 
                                 onClick={handleCancelEdit}
@@ -120,6 +122,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                     ) : (
                         <>
                             <Button 
+                                id={`edit-service-${record.service_id}`}
                                 variant="ghost" 
                                 size="1" 
                                 onClick={() => handleStartEdit(record)}
@@ -128,6 +131,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                                 <Pencil className="h-4 w-4 text-[rgb(var(--color-text-600))]" />
                             </Button>
                             <Button 
+                                id={`delete-service-${record.service_id}`}
                                 variant="ghost" 
                                 size="1" 
                                 onClick={() => {
@@ -152,6 +156,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
                     Service Catalog
                 </h3>
                 <Button 
+                    id="add-new-service-button"
                     onClick={onAdd} 
                     size="2"
                     className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"

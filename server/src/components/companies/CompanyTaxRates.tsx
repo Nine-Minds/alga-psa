@@ -62,6 +62,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
             dataIndex: 'tax_rate_id',
             render: (_, record) => (
                 <Button 
+                    id={`remove-tax-rate-${record.tax_rate_id}`}
                     variant="destructive"
                     size="sm"
                     onClick={() => onRemove(record.tax_rate_id)}
@@ -99,6 +100,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                     />
                 </div>
                 <Button 
+                    id="add-tax-rate-button"
                     onClick={onAdd}
                     size="default"
                 >

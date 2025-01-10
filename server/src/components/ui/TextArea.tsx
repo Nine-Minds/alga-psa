@@ -2,6 +2,7 @@ import React, { forwardRef, useLayoutEffect, useEffect, useRef } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
   label?: string;
@@ -64,7 +65,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
     }, [value]);
 
     // Register with UI reflection system if id is provided
-    const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+    const { automationIdProps: textAreaProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
       type: 'formField',
       fieldType: 'textField',
       id,
@@ -72,7 +73,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       value: typeof value === 'string' ? value : undefined,
       disabled,
       required
-    }) : undefined;
+    });
 
     // Update metadata when field props change
     useEffect(() => {
@@ -127,7 +128,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           value={value}
           disabled={disabled}
           required={required}
-          {...withDataAutomationId({ id })}
+          {...textAreaProps}
           {...props}
         />
       </div>

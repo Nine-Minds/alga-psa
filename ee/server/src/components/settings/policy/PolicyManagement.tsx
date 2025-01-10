@@ -90,6 +90,7 @@ export default function PolicyManagement() {
       render: (value, record) => (
         <Flex gap="2">
           <Button
+            id='edit-policy-button'
             size="sm"
             onClick={() => {
               setEditingPolicy(record);
@@ -99,6 +100,7 @@ export default function PolicyManagement() {
             Edit
           </Button>
           <Button
+            id='delete-policy-button'
             size="sm"
             variant="destructive"
             onClick={() => handleDeletePolicy(value)}
@@ -122,7 +124,7 @@ export default function PolicyManagement() {
             rows={4}
           />
           <div>
-            <Button size="sm" onClick={handleCreatePolicy}>Create Policy</Button>
+            <Button id='create-policy-button' size="sm" onClick={handleCreatePolicy}>Create Policy</Button>
           </div>
         </div>
         {error && <Text color="red">{error}</Text>}
@@ -142,7 +144,7 @@ export default function PolicyManagement() {
               rows={4}
             />
             <div>
-              <Button size="sm" onClick={handleUpdatePolicy}>Update Policy</Button>
+              <Button id='update-policy-button' size="sm" onClick={handleUpdatePolicy}>Update Policy</Button>
             </div>
           </div>
         )}
