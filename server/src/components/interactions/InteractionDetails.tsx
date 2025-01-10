@@ -251,6 +251,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       </Flex>
 
       <QuickAddTicket
+        id='quick-add-ticket'
         open={isQuickAddTicketOpen}
         onOpenChange={setIsQuickAddTicketOpen}
         onTicketAdded={handleTicketAdded}

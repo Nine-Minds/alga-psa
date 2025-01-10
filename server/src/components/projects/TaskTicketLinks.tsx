@@ -516,6 +516,7 @@ export default function TaskTicketLinks({
                       </div>
                       <div className="flex-1">
                         <CategoryPicker
+                          id='category-picker'
                           categories={categories}
                           selectedCategories={selectedCategories}
                           onSelect={setSelectedCategories}
@@ -681,6 +682,7 @@ export default function TaskTicketLinks({
       {showCreateDialog && (
         <div className="relative z-[80]">
           <QuickAddTicket
+            id='quick-add-ticket'
             open={showCreateDialog}
             onOpenChange={(open) => {
               if (!open) {
