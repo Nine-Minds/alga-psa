@@ -25,7 +25,7 @@ import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId
 import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
 
 interface QuickAddTicketProps {
-  id: string;
+  id?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded: (ticket: ITicket) => void;
@@ -42,7 +42,7 @@ interface QuickAddTicketProps {
 }
 
 export function QuickAddTicket({ 
-  id,
+  id = 'ticket-quick-add',
   open, 
   onOpenChange, 
   onTicketAdded, 

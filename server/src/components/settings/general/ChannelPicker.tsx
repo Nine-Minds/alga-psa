@@ -11,7 +11,7 @@ import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../.
 import { ReflectionContainer } from '../../../types/ui-reflection/ReflectionContainer';
 
 interface ChannelPickerProps {
-  id: string; // Made required since it's needed for reflection registration
+  id?: string;
   channels: IChannel[];
   onSelect: (channelId: string) => void;
   selectedChannelId: string | null;
@@ -21,7 +21,7 @@ interface ChannelPickerProps {
 }
 
 export const ChannelPicker: React.FC<ChannelPickerProps> = ({
-  id,
+  id = 'channel-picker',
   channels,
   onSelect,
   selectedChannelId,

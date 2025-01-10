@@ -28,7 +28,7 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface DocumentsProps {
-    id: string; // Made required since it's needed for reflection registration
+    id?: string; 
     documents: IDocument[];
     gridColumns?: 3 | 4;
     userId: string;
@@ -39,7 +39,7 @@ interface DocumentsProps {
 }
 
 const Documents = ({
-    id,
+    id = 'documents',
     documents: initialDocuments,
     gridColumns,
     userId,
