@@ -299,7 +299,6 @@ export function QuickAddTicket({
   }
 
   const dialogContent = (
-
       <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[90vh] overflow-y-auto">
         <Dialog.Title className="text-xl font-bold mb-4">Quick Add Ticket</Dialog.Title>
         <Dialog.Description className="sr-only">
