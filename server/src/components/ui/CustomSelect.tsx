@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
@@ -44,6 +44,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   required = false,
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
+  const [opts, setOpts] = useState<SelectOption[]>(options);
   const { automationIdProps: selectProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
@@ -72,11 +73,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }))
       });
     }
-  }, [value, label, disabled, required, options]);
+  }, [value, disabled, label, required, options]);
 
   // Ensure value is never undefined/null/empty string for Radix
   const safeValue = value || 'placeholder';
-  const selectedOption = options.find(option => option.value === value);
+  const selectedOption = opts.find(option => option.value === value);
 
   return (
     <div className={label ? 'mb-4' : ''} {...selectProps}>
@@ -134,7 +135,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             
             <RadixSelect.Viewport className="p-1">
               {/* Add a placeholder option if needed */}
-              {!options.some(opt => opt.value === 'placeholder') && (
+              {!opts.some(opt => opt.value === 'placeholder') && (
                 <RadixSelect.Item
                   value="placeholder"
                   className={`
@@ -148,7 +149,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                   <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
-              {options.map((option): JSX.Element => (
+              {opts.map((option): JSX.Element => (
                 <RadixSelect.Item
                   key={option.value}
                   value={option.value}
