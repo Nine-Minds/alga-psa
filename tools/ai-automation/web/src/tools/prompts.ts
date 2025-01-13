@@ -44,11 +44,15 @@ You have access to the following tools that can be called using XML-style syntax
 </func-def>
 
 <func-def name="execute_puppeteer_script">
-  <description>Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function. The response is a diff object showing what changed.</description>
+  <description>Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function. The script receives both the page object and a helper object with utility functions. The helper includes fillRadixSelect(automationId: string, optionValue: string) for interacting with Radix UI select components. The response is a diff object showing what changed.</description>
   <usage>
     <func-call name="execute_puppeteer_script">
       <script>
 (async () => {
+  // Example using helper function for Radix select
+  await helper.clickRadixSelectOption('status-select', 'active');
+  
+  // Regular Puppeteer actions still work
   await page.click('[data-automation-id="submit-button"]');
   await page.waitForNavigation();
 })();
@@ -82,6 +86,7 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
 - Use the get_ui_state function to get information about the current page in almost all cases.
 - To determine the current page, use a Puppeteer script instead of inferring it from page content.
 - ONLY if you cannot find the information you are looking for via the get_ui_state, then start with exploratory CSS queries to understand the page structure before retrieving full page content.
+- If you feel lost, and need to re-orient yourself, use the get_ui_state with $.components[*][id, type] to get an overview of the page structure.
 
 ## get_ui_state information:
  - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute. Use a puppeteer selector to find the element by its data-automation-id attribute.
@@ -96,6 +101,7 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
 ## Filling out fields
  - When filling out a form, write scripts to full out the form fields ONE BY ONE. Do not write a script to fill out all fields at once.
  - Use puppeteer to type into the fields. Do not use the script tool to inject text into the fields.
+ - When you are working with a select element, use the helper function fillRadixSelect to select an option by its value or text. DO NOT attempt to use the puppeteer functions on the select element directly.
 
 ## Logging In
  - When logging in, use your observe tool to find the username and password fields, and then use the script tool to fill out the fields with the provided credentials.

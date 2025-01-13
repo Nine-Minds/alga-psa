@@ -202,7 +202,11 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                 />
               </div>
             </div>
-            <div className="max-h-60 overflow-y-auto border-t bg-white">
+            <div 
+              className="max-h-60 overflow-y-auto border-t bg-white"
+              role="listbox"
+              aria-label="Companies"
+            >
               {isOpen && filteredCompanies.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No clients found</div>
               ) : (
@@ -214,6 +218,8 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                     onClick={(e) => handleSelect(company.company_id, e)}
                     className={`w-full justify-start ${company.company_id === selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
                     label={company.company_name}
+                    role="option"
+                    aria-selected={company.company_id === selectedCompanyId}
                   >
                     {company.company_name}
                     {company.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}

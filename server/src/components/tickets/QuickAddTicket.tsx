@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
 import { Button } from '../ui/Button';
-import { X, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { addTicket } from '../../lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from '../../lib/actions/user-actions/userActions';
 import { getContactsByCompany } from '../../lib/actions/contact-actions/contactActions';
@@ -41,13 +41,13 @@ interface QuickAddTicketProps {
   isEmbedded?: boolean;
 }
 
-export function QuickAddTicket({ 
+export function QuickAddTicket({
   id = 'ticket-quick-add',
-  open, 
-  onOpenChange, 
-  onTicketAdded, 
-  prefilledCompany, 
-  prefilledContact, 
+  open,
+  onOpenChange,
+  onTicketAdded,
+  prefilledCompany,
+  prefilledContact,
   prefilledDescription,
   isEmbedded = false
 }: QuickAddTicketProps) {
@@ -82,13 +82,13 @@ export function QuickAddTicket({
       setIsLoading(false);
       return;
     }
-    
+
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const formData = await getTicketFormData(prefilledCompany?.id);
-        
+
         setUsers(formData.users);
         setChannels(formData.channels);
         setPriorities(formData.priorities);
@@ -153,7 +153,7 @@ export function QuickAddTicket({
         setContacts([]);
       }
     };
-    
+
     if (companyId) {
       fetchContacts();
     }
@@ -186,10 +186,10 @@ export function QuickAddTicket({
     setCompanyId(newCompanyId);
     setContactId(null);
     setError(null);
-  
+
     if (newCompanyId) {
       const selectedCompany = companies.find(company => company.company_id === newCompanyId);
-      
+
       if (selectedCompany?.client_type === 'company') {
         setSelectedCompanyType('company');
       } else if (selectedCompany?.client_type === 'individual') {
@@ -206,7 +206,7 @@ export function QuickAddTicket({
     setChannelId(newChannelId);
     setSelectedCategories([]);
   };
-    
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -234,7 +234,7 @@ export function QuickAddTicket({
       formData.append('status_id', statusId);
       formData.append('priority_id', priorityId);
       formData.append('company_id', companyId);
-      
+
       if (selectedCompanyType === 'company' && contactId) {
         formData.append('contact_name_id', contactId);
       }
@@ -254,9 +254,9 @@ export function QuickAddTicket({
       if (!newTicket) {
         throw new Error('Failed to create ticket');
       }
-      
+
       await onTicketAdded(newTicket);
-      
+
       setTitle('');
       setDescription('');
       setAssignedTo('');
@@ -268,7 +268,7 @@ export function QuickAddTicket({
       setSelectedCompanyType(null);
       setSelectedCategories([]);
       setError(null);
-      
+
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating ticket:', error);
@@ -285,186 +285,153 @@ export function QuickAddTicket({
     return true;
   });
 
-  if (isLoading) {
-    return (
-      <Dialog.Root open={open} onOpenChange={onOpenChange}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 animate-fade-in" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-scale-in">
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
-              </div>
-            </div>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
-    );
-  }
-
-  const dialogContent = (
-    <ReflectionContainer id={id} label="Quick Add Ticket Form">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96 max-h-[90vh] overflow-y-auto">
-        <Dialog.Title className="text-xl font-bold mb-4">Quick Add Ticket</Dialog.Title>
-        <Dialog.Description className="sr-only">
-          Form to create a new ticket with fields for title, description, company, contact, assignee, channel, category, status, and priority.
-        </Dialog.Description>
-        
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-            <span className="text-red-700 text-sm">{error}</span>
+  return (
+    <Dialog
+      id={`${id}-dialog`}
+      isOpen={open}
+      onClose={() => onOpenChange(false)}
+    >
+      <DialogHeader>
+        <DialogTitle>Quick Add Ticket</DialogTitle>
+      </DialogHeader>
+      <DialogContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-6">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
           </div>
-        )}
-
-        <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ticket Title"
-              required
-            />
-            <TextArea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Description"
-              required
-            />
-
-            <CompanyPicker
-              id={`${id}-company-picker`}
-              companies={filteredCompanies}
-              onSelect={handleCompanyChange}
-              selectedCompanyId={companyId}
-              filterState={companyFilterState}
-              onFilterStateChange={setCompanyFilterState}
-              clientTypeFilter={clientTypeFilter}
-              onClientTypeFilterChange={setClientTypeFilter}
-            />
-
-            {selectedCompanyType === 'company' && contacts.length > 0 && (
-              <div className="relative z-20">
-                <CustomSelect
-                  value={contactId || ''}
-                  onValueChange={(value) => setContactId(value || null)}
-                  options={contacts.map((contact): SelectOption => ({
-                    value: contact.contact_name_id,
-                    label: contact.full_name
-                  }))}
-                  placeholder="Select Contact"
-                  disabled={!companyId || selectedCompanyType !== 'company'}
-                />
+        ) : (
+          <>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <span className="text-red-700 text-sm">{error}</span>
               </div>
             )}
 
-            <div className="relative z-30">
-              <CustomSelect
-                value={assignedTo}
-                onValueChange={setAssignedTo}
-                options={users.map((user): SelectOption => ({
-                  value: user.user_id,
-                  label: `${user.first_name} ${user.last_name}`
-                }))}
-                placeholder="Assign To"
-              />
-            </div>
+            <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <Input
+                  id={`${id}-title`}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ticket Title"
+                  required
+                />
+                <TextArea
+                  id={`${id}-description`}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Description"
+                  required
+                />
 
-            <ChannelPicker
-              id={`${id}-channel-picker`}
-              channels={channels}
-              onSelect={handleChannelChange}
-              selectedChannelId={channelId}
-              onFilterStateChange={() => {}}
-              filterState="all"
-            />
+                <CompanyPicker
+                  id={`${id}-company-picker`}
+                  companies={filteredCompanies}
+                  onSelect={handleCompanyChange}
+                  selectedCompanyId={companyId}
+                  filterState={companyFilterState}
+                  onFilterStateChange={setCompanyFilterState}
+                  clientTypeFilter={clientTypeFilter}
+                  onClientTypeFilterChange={setClientTypeFilter}
+                />
 
-            <CategoryPicker
-              id={`${id}-category-picker`}
-              categories={categories}
-              selectedCategories={selectedCategories}
-              onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
-              placeholder={channelId ? "Select category" : "Select a channel first"}
-              multiSelect={false}
-              className="w-full"
-            />
+                {selectedCompanyType === 'company' && contacts.length > 0 && (
+                  <div className="relative z-20">
+                    <CustomSelect
+                      id={`${id}-contact`}
+                      value={contactId || ''}
+                      onValueChange={(value) => setContactId(value || null)}
+                      options={contacts.map((contact): SelectOption => ({
+                        value: contact.contact_name_id,
+                        label: contact.full_name
+                      }))}
+                      placeholder="Select Contact"
+                      disabled={!companyId || selectedCompanyType !== 'company'}
+                    />
+                  </div>
+                )}
 
-            <div className="relative z-20">
-              <CustomSelect
-                value={statusId}
-                onValueChange={setStatusId}
-                options={statuses.map((status): SelectOption => ({
-                  value: status.status_id!,
-                  label: status.name ?? ""
-                }))}
-                placeholder="Select Status"
-              />
-            </div>
+                <div className="relative z-30">
+                  <CustomSelect
+                    id={`${id}-assigned-to`}
+                    value={assignedTo}
+                    onValueChange={setAssignedTo}
+                    options={users.map((user): SelectOption => ({
+                      value: user.user_id,
+                      label: `${user.first_name} ${user.last_name}`
+                    }))}
+                    placeholder="Assign To"
+                  />
+                </div>
 
-            <div className="relative z-10">
-              <CustomSelect
-                value={priorityId}
-                onValueChange={setPriorityId}
-                options={priorities.map((priority): SelectOption => ({
-                  value: priority.priority_id,
-                  label: priority.priority_name
-                }))}
-                placeholder="Select Priority"
-              />
-            </div>
+                <ChannelPicker
+                  id={`${id}-channel-picker`}
+                  channels={channels}
+                  onSelect={handleChannelChange}
+                  selectedChannelId={channelId}
+                  filterState="all"
+                />
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                id={`${id}-cancel-btn`}
-                type="button" 
-                variant="outline" 
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                id={`${id}-submit-btn`}
-                type="submit" 
-                variant="default" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Saving...' : 'Save Ticket'}
-              </Button>
-            </div>
-          </form>
-        </ReflectionContainer>
-      </div>
-    </ReflectionContainer>
-  );
+                <CategoryPicker
+                  id={`${id}-category-picker`}
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
+                  placeholder={channelId ? "Select category" : "Select a channel first"}
+                  multiSelect={false}
+                  className="w-full"
+                />
 
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay 
-          className="fixed inset-0 bg-black/50 animate-fade-in"
-          onClick={() => onOpenChange(false)}
-        />
-        <Dialog.Content 
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-scale-in"
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
-        >
-          {dialogContent}
-          <Dialog.Close asChild>
-            <Button 
-              id={`${id}-close-dialog-btn`}
-              variant="ghost"
-              className="absolute top-4 right-4" 
-              aria-label="Close"
-              tabIndex={-1}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </Dialog.Close>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+                <div className="relative z-20">
+                  <CustomSelect
+                    id={`${id}-status`}
+                    value={statusId}
+                    onValueChange={setStatusId}
+                    options={statuses.map((status): SelectOption => ({
+                      value: status.status_id,
+                      label: status.name ?? ""
+                    }))}
+                    placeholder="Select Status"
+                  />
+                </div>
+
+                <div className="relative z-10">
+                  <CustomSelect
+                    id={`${id}-priority`}
+                    value={priorityId}
+                    onValueChange={setPriorityId}
+                    options={priorities.map((priority): SelectOption => ({
+                      value: priority.priority_id,
+                      label: priority.priority_name
+                    }))}
+                    placeholder="Select Priority"
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button
+                    id={`${id}-cancel-btn`}
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    id={`${id}-submit-btn`}
+                    type="submit"
+                    variant="default"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Ticket'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </ReflectionContainer>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

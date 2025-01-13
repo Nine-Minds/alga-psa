@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Eye } from 'lucide-react';
+import { ArrowRight, Eye, Code } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
@@ -120,6 +120,8 @@ export default function ControlPanel() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showContext, setShowContext] = useState(false);
   const [showUIState, setShowUIState] = useState(false);
+  const [showCodeExecution, setShowCodeExecution] = useState(false);
+  const [codeToExecute, setCodeToExecute] = useState('');
   const [uiStateData, setUIStateData] = useState<UIStateResponse | null>(null);
   const [expandedState, setExpandedState] = useState<ExpandedState>({});
   const [url, setUrl] = useState('http://server:3000');
@@ -489,6 +491,16 @@ export default function ControlPanel() {
                   <Flex justify="between" align="center">
                     <Text size="5" weight="bold">Chat with AI</Text>
                     <Flex gap="2">
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowCodeExecution(true)}
+                        style={{ 
+                          padding: '6px',
+                          color: '#ff4d4f'
+                        }}
+                      >
+                        <Code size={16} />
+                      </Button>
                       <Button 
                         variant="ghost" 
                         onClick={() => setShowContext(true)}
@@ -768,6 +780,66 @@ export default function ControlPanel() {
                       Close
                     </Button>
                   </Dialog.Close>
+                </Flex>
+              </Dialog.Content>
+            </Dialog.Root>
+
+            {/* Code Execution Dialog */}
+            <Dialog.Root open={showCodeExecution} onOpenChange={setShowCodeExecution}>
+              <Dialog.Content style={{ maxWidth: 600 }}>
+                <Dialog.Title>Execute JavaScript Code</Dialog.Title>
+                <Box my="4">
+                  <TextArea
+                    value={codeToExecute}
+                    onChange={(e) => setCodeToExecute(e.target.value)}
+                    rows={10}
+                    placeholder="Enter JavaScript code to execute..."
+                    style={{ 
+                      backgroundColor: 'var(--color-panel)',
+                      fontFamily: 'monospace',
+                      fontSize: '14px'
+                    }}
+                  />
+                </Box>
+                <Flex gap="3" justify="end">
+                  <Dialog.Close>
+                    <Button variant="soft" color="gray">
+                      Cancel
+                    </Button>
+                  </Dialog.Close>
+                  <Button 
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('http://localhost:4000/api/puppeteer', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            script: codeToExecute
+                          })
+                        });
+                        if (!response.ok) {
+                          throw new Error('Code execution failed');
+                        }
+                        setLog(prev => [...prev, {
+                          type: 'tool_use',
+                          title: 'Code Execution',
+                          content: `Executed code:\n${codeToExecute}`,
+                          timestamp: new Date().toISOString()
+                        }]);
+                        setShowCodeExecution(false);
+                      } catch (error: unknown) {
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+                        setLog(prev => [...prev, {
+                          type: 'error',
+                          title: 'Code Execution Error',
+                          content: errorMessage,
+                          timestamp: new Date().toISOString()
+                        }]);
+                      }
+                    }}
+                  >
+                    Execute
+                  </Button>
                 </Flex>
               </Dialog.Content>
             </Dialog.Root>

@@ -393,8 +393,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <div className="flex items-center gap-3">
               <div className="w-fit">
                 <ChannelPicker
-                  id='channel-picker'
-                  data-automation-id={`${id}-channel-picker`}
+                  id={`${id}-channel-picker`}
                   channels={channels}
                   onSelect={handleChannelSelect}
                   selectedChannelId={selectedChannel}

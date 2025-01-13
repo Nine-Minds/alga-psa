@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
+import { PuppeteerHelper } from './puppeteerHelper';
 
 class PuppeteerManager {
   private static instance: PuppeteerManager;
@@ -110,12 +111,23 @@ class PuppeteerManager {
     }
     
     try {
-      // First evaluate the script to get the function
-      const evaluatedFunc = eval(`(${script})`);
+      // Create helper instance
+      const helper = new PuppeteerHelper(this.page);
       
-      // Then execute the function with the page parameter
-      console.log('Executing function with page parameter...');
-      const result = await evaluatedFunc(this.page);
+      // Execute the script directly in Node.js context
+      // where page and helper are available
+      const scriptFn = new Function('page', 'helper', `
+        return (async () => {
+          try {
+            return ${script}
+          } catch (error) {
+            console.error('Error in Puppeteer script execution:', error);
+            return { error: error.message };
+          }
+        })();
+      `);
+      
+      const result = await Promise.resolve(scriptFn(this.page, helper));
       console.log('Function execution result:', result);
       
       return result;
