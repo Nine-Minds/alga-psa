@@ -2,9 +2,11 @@ import express, { Request, Response, RequestHandler } from 'express';
 import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
-import { puppeteerManager } from './puppeteerManager';
-import { toolManager } from './tools/toolManager';
-import { uiStateManager } from './uiStateManager';
+import { puppeteerManager } from './puppeteerManager.js';
+import { toolManager } from './tools/toolManager.js';
+import { uiStateManager } from './uiStateManager.js';
+import { computeDiff } from './utils/diffUtils.js';
+import { PageState } from './types/ui-reflection.js';
 
 interface ScriptRequest {
   code: string;
@@ -127,7 +129,7 @@ app.get('/api/ui-state', (async (req: Request, res: Response) => {
       
       console.log('state before jsonpath:', JSON.stringify(state));
       
-      result = JSONPath({ path: jsonpath, json: state });
+      result = JSONPath({ path: jsonpath, json: state, ignoreEvalErrors: true, wrap: false });
     }
     
     const response = {
@@ -257,6 +259,16 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
   console.log('Request body:', req.body);
   const startTime = Date.now();
 
+  // Default empty state that matches PageState type
+  const emptyState: PageState = {
+    id: 'empty',
+    title: 'Empty State',
+    components: []
+  };
+
+  // Get the OLD state before running the script
+  const oldState = JSON.parse(JSON.stringify(uiStateManager.getCurrentState() ?? emptyState));
+
   try {
     const { script } = req.body;
     console.log('Script:', script);
@@ -266,30 +278,44 @@ app.post('/api/puppeteer', (async (req: Request, res: Response) => {
     }
 
     const page = puppeteerManager.getPage();
-    
+
     // Ensure script execution is properly awaited
     let result;
     try {
       result = await toolManager.executeTool('execute_puppeteer_script', page, { script });
-      // Wait for any pending promises to settle
-      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)));
+      // Wait for any pending promises to settle and UI updates to propagate
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 200)));
     } catch (error) {
       console.error('Error executing puppeteer script:', error);
       throw error;
     }
+
+    // Get the NEW state after script execution
+    const newState = uiStateManager.getCurrentState() ?? emptyState;
+
+    // Compute the diff
+    const diff = await computeDiff(oldState, newState);
     
     console.log('Puppeteer script result:', result);
     console.log(`Completed in ${Date.now() - startTime}ms`);
-    if (!result) {
-      return res.json({});
-    }
     
-    res.json(JSON.parse(JSON.stringify(result, null, 0)));
+    // Send response with script result, diff, and new state
+    res.json(JSON.parse(JSON.stringify({
+      status: 'success',
+      scriptResult: result || {},
+      diff
+    }, null, 0)));
   } catch (error) {
     console.error('Error in /api/puppeteer:', error);
     console.log(`Failed in ${Date.now() - startTime}ms`);
+
+    // Even on error, get the new state and compute diff
+    const newState = uiStateManager.getCurrentState() ?? emptyState;
+    const diff = await computeDiff(oldState, newState);
+
     res.status(500).json(JSON.parse(JSON.stringify({
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : String(error),
+      diff
     }, null, 0)));
   }
 }) as RequestHandler);

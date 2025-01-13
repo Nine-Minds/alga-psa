@@ -1,6 +1,6 @@
 import { Page } from 'puppeteer';
-import { Tool } from './Tool';
-import * as tools from './index';
+import { Tool } from './Tool.js';
+import * as tools from './index.js';
 
 class ToolManager {
   private toolMap: Map<string, Tool>;

@@ -59,6 +59,7 @@ export const getUIState: Tool = {
         const result = JSONPath({
           path: args.jsonpath,
           json: state,
+          ignoreEvalErrors: true,
           wrap: false // Don't wrap single results in an array
         });
 

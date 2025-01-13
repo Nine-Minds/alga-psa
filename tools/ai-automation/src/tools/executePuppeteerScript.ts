@@ -1,5 +1,5 @@
-import { Tool } from './Tool';
-import { Page } from 'puppeteer';
+import { Tool } from './Tool.js';
+import type { Page } from 'puppeteer';
 
 interface ExecutePuppeteerScriptArgs {
   script: string;
@@ -37,7 +37,7 @@ export const executePuppeteerScript: Tool = {
         error: errorMessage,
         script: script.slice(0, 100) + (script.length > 100 ? '...' : '')
       });
-      throw error;
+      return errorMessage;
     }
   }
 };

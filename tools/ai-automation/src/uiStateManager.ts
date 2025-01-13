@@ -1,4 +1,4 @@
-import { PageState } from './types/ui-reflection';
+import { PageState } from './types/ui-reflection.js';
 
 class UIStateManager {
   private currentState: PageState | null = null;

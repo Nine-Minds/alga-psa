@@ -2,9 +2,10 @@
   "name": "ai-automation",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "ts-node src/index.ts"
+    "dev": "node --loader ts-node/esm src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -14,6 +15,7 @@
     "@types/socket.io": "^3.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "jsondiffpatch": "^0.6.0",
     "jsonpath-plus": "^10.2.0",
     "puppeteer": "^23.11.1",
     "socket.io": "^4.8.1"

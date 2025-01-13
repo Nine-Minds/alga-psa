@@ -132,8 +132,14 @@ export async function executePuppeteerScript(script: string): Promise<ToolExecut
     });
 
     if (!response.ok) {
+      const result = await response.json();
       const error = `Failed to execute puppeteer script: ${await response.text()}`;
-      throw new Error(error);
+      console.log('Error response:', error);
+      
+      return {
+        success: false,
+        result: result
+      };
     }
 
     const result = await response.json();

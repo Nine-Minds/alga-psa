@@ -1,4 +1,5 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer from 'puppeteer';
+import type { Browser, Page } from 'puppeteer';
 
 class PuppeteerManager {
   private static instance: PuppeteerManager;
@@ -48,8 +49,8 @@ class PuppeteerManager {
         console.log('Browser launched successfully. Creating new page...');
         try {
           this.page = await this.browser.newPage();
-          this.page.setDefaultNavigationTimeout(30000);
-          this.page.setDefaultTimeout(5000);
+          // this.page.setDefaultNavigationTimeout(30000);
+          // this.page.setDefaultTimeout(5000);
           
           if (!this.page) {
             throw new Error('Page creation returned null');
@@ -121,7 +122,7 @@ class PuppeteerManager {
     } catch (error: unknown) {
       console.error('Error executing Puppeteer script:', error);
       const message = error instanceof Error ? error.message : 'Unknown error occurred';
-      throw new Error(`Failed to execute Puppeteer script: ${error}`);
+      return message;
     }
   }
 

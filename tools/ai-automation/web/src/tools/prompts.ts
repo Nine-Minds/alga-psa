@@ -44,7 +44,7 @@ You have access to the following tools that can be called using XML-style syntax
 </func-def>
 
 <func-def name="execute_puppeteer_script">
-  <description>Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function.</description>
+  <description>Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function. The response is a diff object showing what changed.</description>
   <usage>
     <func-call name="execute_puppeteer_script">
       <script>
@@ -86,6 +86,12 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
 ## get_ui_state information:
  - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute. Use a puppeteer selector to find the element by its data-automation-id attribute.
  - Available component types: button, dialog, form, formField, dataTable, navigation, container, card, drawer
+ - This is a hierarchy of components, and many have a children property that contains an array of child components. If you are looking for a particular type of component, use a recursive jsonPath expression to find it.
+ INCORRECT FIELD TYPE SEARCH EXAMPLE:
+ $.components[?(@.type==\"formField\")
+
+ CORRECT FIELD TYPE SEARCH EXAMPLE:
+ $..[?(@.type=="formField")]
 
 ## Filling out fields
  - When filling out a form, write scripts to full out the form fields ONE BY ONE. Do not write a script to fill out all fields at once.
@@ -120,6 +126,22 @@ d. Consider potential challenges or edge cases
 ## Scripting guidelines
 - Do not use page.waitForTimeout, as that is not a valid function. Use waitForSelector, waitForNavigation, etc. instead.
 - After taking an action, use get_ui_state again to retrieve an updated UI state, rather than relying on the previous state.
+- You DO NOT need to wait for an expected selector in your script. Instead, just wait for navigation to complete. The response will include a diff object showing what changed. If you receive an error, but the diff shows the expected change, then you can assume that the navigation was successful.
+
+INCORRECT EXAMPLE:
+\`\`\`javascript
+(async () => {
+  await page.click('[data-automation-id="add-ticket-button"]');
+  await page.waitForSelector('[data-automation-id="ticketing-dashboard-quick-add-form"]');
+})();
+\`\`\`
+
+CORRECT EXAMPLE:
+\`\`\`javascript
+(async () => {
+  await page.click('[data-automation-id="add-ticket-button"]');
+  await page.waitForNavigation();
+})
 
 ## Gathering Information
 1. When you are looking at or looking for UI elements, PREFER to use the get_ui_state function to get information about the current page. 
