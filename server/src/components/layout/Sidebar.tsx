@@ -144,12 +144,27 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }): JSX.E
         <ul className="space-y-1">
           {bottomMenuItems.map((item):JSX.Element => (
             <li key={item.name}>
-              <SidebarBottomMenuItem
+              <SidebarMenuItem
                 id={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
                 item={item}
                 isActive={isActive}
                 sidebarOpen={sidebarOpen}
+                openSubmenu={openSubmenu}
+                onToggleSubmenu={toggleSubmenu}
               />
+              {item.subItems && openSubmenu === item.name && (
+                <ul className="ml-4 mt-2 space-y-1">
+                  {item.subItems.map((subItem: MenuItem):JSX.Element => (
+                    <li key={subItem.name}>
+                      <SidebarSubMenuItem
+                        item={subItem}
+                        parentId={`bottom-menu-${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        isActive={isActive}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
             </li>
           ))}
         </ul>
