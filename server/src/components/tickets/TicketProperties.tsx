@@ -257,12 +257,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   {company?.company_name || 'N/A'}
                 </p>                  
                 <Button
-                  {...withDataAutomationId({ id: `${id}-edit-company-btn` })}
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAgentPicker(!showAgentPicker)}
+                  onClick={() => setShowCompanyPicker(!showCompanyPicker)}
+                  className="p-1 h-auto"
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <Edit2 className="h-3 w-3" />
                 </Button>
               </div>
               {showCompanyPicker && (
