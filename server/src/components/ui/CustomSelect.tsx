@@ -44,9 +44,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   required = false,
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
-  const [opts, setOpts] = useState<SelectOption[]>(options);
-  // const [origId, setOrigId] = useState(id);
-
   // Memoize the mapped options to prevent recreating on every render
   const mappedOptions = useMemo(() => options.map((opt): { value: string; label: string } => ({
     value: opt.value,
@@ -80,7 +77,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
   // Ensure value is never undefined/null/empty string for Radix
   const safeValue = value || 'placeholder';
-  const selectedOption = opts.find(option => option.value === value);
+  const selectedOption = options.find(option => option.value === value);
 
   return (
     <div className={label ? 'mb-4' : ''} id={`${id}`}>
@@ -138,7 +135,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             
             <RadixSelect.Viewport className="p-1">
               {/* Add a placeholder option if needed */}
-              {!opts.some(opt => opt.value === 'placeholder') && (
+              {!options.some(opt => opt.value === 'placeholder') && (
                 <RadixSelect.Item
                   value="placeholder"
                   className={`
@@ -152,7 +149,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                   <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
-              {opts.map((option): JSX.Element => (
+              {options.map((option): JSX.Element => (
                 <RadixSelect.Item
                   key={option.value}
                   value={option.value}
