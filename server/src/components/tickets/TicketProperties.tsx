@@ -254,42 +254,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   className="text-sm text-blue-500 cursor-pointer hover:underline"
                   onClick={onCompanyClick}
                 >
-                  <AvatarIcon
-                    userId={ticket.assigned_to!}
-                    firstName={availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || ''}
-                    lastName={availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || ''}
-                    size="sm"
-                  />
-                  <span className="text-sm">
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || 'Unknown'}{' '}
-                    {availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || 'Agent'}
-                  </span>
-                </p>
-              </div>
-              ) : (
-              <p className="text-sm text-gray-500">No primary agent assigned</p>
-              )
-            </div>
-
-            {/* Team */}
-            <div>
-              <h5 className="font-bold mb-2">Team</h5>
-              {team ? (
-                <div className="text-sm">
-                  <p>{team.team_name}</p>
-                  <p className="text-gray-500">
-                    Manager: {team.members.find(m => m.user_id === team.manager_id)?.first_name || 'Unknown Manager'}
-                  </p>
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">No team assigned</p>
-              )}
-            </div>
-
-            {/* Additional Agents */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h5 className="font-bold">Additional Agents</h5>
+                  {company?.company_name || 'N/A'}
+                </p>                  
                 <Button
                   {...withDataAutomationId({ id: `${id}-edit-company-btn` })}
                   variant="ghost"
