@@ -42,17 +42,17 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     id,
     type: 'formField',
     fieldType: 'select',
-    value: selectedCategories.join(','),
-    label: placeholder
+    // value: selectedCategories.join(','),
+    // label: placeholder
   });
 
-  const { automationIdProps: selectProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-select`,
-    type: 'formField',
-    fieldType: 'select',
-    value: selectedCategories.join(','),
-    label: 'Category Select'
-  });
+  // const { automationIdProps: selectProps } = useAutomationIdAndRegister<FormFieldComponent>({
+  //   id: `${id}-select`,
+  //   type: 'formField',
+  //   fieldType: 'select',
+  //   value: selectedCategories.join(','),
+  //   label: 'Category Select'
+  // });
 
   // Transform categories into TreeSelect format
   const treeOptions = useMemo((): TreeSelectOption<CategoryType>[] => {
@@ -226,7 +226,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     <ReflectionContainer id={id} label="Category Picker">
       <div {...containerProps}>
         <TreeSelect
-          {...selectProps}
+          // {...selectProps}
           options={treeOptions}
           value={currentValue}
           onValueChange={handleValueChange}

@@ -22,6 +22,9 @@ export interface BaseComponent {
   
   /** Whether the component is currently disabled */
   disabled?: boolean;
+
+  /** Helper text to provide additional context or instructions */
+  helperText?: string;
   
   /** List of valid actions that can be performed on this component */
   actions?: string[];
@@ -53,7 +56,7 @@ export interface DialogComponent extends BaseComponent {
   type: "dialog";
   
   /** Whether the dialog is currently open */
-  open: boolean;
+  open?: boolean;
   
   /** Dialog title text */
   title: string;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { FormFieldComponent } from '../../types/ui-reflection/types';
@@ -45,21 +45,27 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
   const [opts, setOpts] = useState<SelectOption[]>(options);
+  // const [origId, setOrigId] = useState(id);
+
+  // Memoize the mapped options to prevent recreating on every render
+  const mappedOptions = useMemo(() => options.map((opt): { value: string; label: string } => ({
+    value: opt.value,
+    label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
+  })), [options]);
+  
+  
   const { automationIdProps: selectProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
-    id,
+    id: id,
     label,
     value: value || '',
     disabled,
     required,
-    options: options.map((opt): { value: string; label: string } => ({
-      value: opt.value,
-      label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
-    }))
+    options: mappedOptions
   });
 
-  // Update metadata when field props change
+  // Update metadata when field props change - intentionally omitting updateMetadata from deps
   useEffect(() => {
     if (updateMetadata) {
       updateMetadata({
@@ -67,20 +73,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         label,
         disabled,
         required,
-        options: options.map((opt): { value: string; label: string } => ({
-          value: opt.value,
-          label: typeof opt.label === 'string' ? opt.label : 'Complex Label'
-        }))
+        options: mappedOptions
       });
     }
-  }, [value, disabled, label, required, options]);
+  }, [value, disabled, label, required, mappedOptions]); // updateMetadata intentionally omitted
 
   // Ensure value is never undefined/null/empty string for Radix
   const safeValue = value || 'placeholder';
   const selectedOption = opts.find(option => option.value === value);
 
   return (
-    <div className={label ? 'mb-4' : ''} {...selectProps}>
+    <div className={label ? 'mb-4' : ''} id={`${id}`}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}

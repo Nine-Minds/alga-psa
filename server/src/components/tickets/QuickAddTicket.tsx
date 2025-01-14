@@ -75,6 +75,23 @@ export function QuickAddTicket({
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
 
+  const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
+    id: 'quick-add-ticket-dialog',
+    type: 'dialog',
+    label: 'Quick Add Ticket Dialog',
+    helperText: "",
+    // open: open,
+    title: 'Quick Add Ticket',
+  });
+
+  // const updateMetadata = useRegisterUIComponent<DialogComponent>({
+  //   id: 'quick-add-ticket-dialog',
+  //   type: 'dialog',
+  //   label: 'Quick Add Ticket Dialog',
+  //   // open: open,
+  //   title: 'Quick Add Ticket',
+  // })
+
   useEffect(() => {
     if (!open) {
       setError(null);
@@ -179,6 +196,16 @@ export function QuickAddTicket({
       fetchCategories();
     }
   }, [channelId]);
+
+  // Update dialog metadata when error or open state changes
+  useEffect(() => {
+    if (!updateMetadata) return;
+
+    updateMetadata({
+      helperText: error || undefined,
+      open: open,
+    });
+  }, [error, open]);
 
   const handleCompanyChange = async (newCompanyId: string) => {
     if (isPrefilledCompany) return;
@@ -285,153 +312,179 @@ export function QuickAddTicket({
     return true;
   });
 
+  const memoizedUserOptions = useMemo(
+    () =>
+      users.map((user) => ({
+        value: user.user_id,
+        label: user.first_name + ' ' + user.last_name,
+      })),
+    [users]
+  );
+
+  const memoizedStatusOptions = useMemo(
+    () =>
+      statuses.map((status): SelectOption => ({
+        value: status.status_id,
+        label: status.name ?? ""
+      })),
+    [statuses]
+  );
+
+  const memoizedContactOptions = useMemo(
+    () =>
+      contacts.map((contact): SelectOption => ({
+        value: contact.contact_name_id,
+        label: contact.full_name
+      })),
+    [contacts]
+  );
+
+  const memoizedPriorityOptions = useMemo(
+    () =>
+      priorities.map((priority): SelectOption => ({
+        value: priority.priority_id,
+        label: priority.priority_name
+      })),
+    [priorities]
+  );
+
   return (
-    <Dialog
-      id={`${id}-dialog`}
-      isOpen={open}
-      onClose={() => onOpenChange(false)}
-    >
-      <DialogHeader>
-        <DialogTitle>Quick Add Ticket</DialogTitle>
-      </DialogHeader>
-      <DialogContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
-          </div>
-        ) : (
-          <>
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
-                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <span className="text-red-700 text-sm">{error}</span>
-              </div>
-            )}
+    <div>
+      <Dialog
+        id={`${id}-dialog`}
+        isOpen={open}
+        onClose={() => onOpenChange(false)}
+      >
+        <DialogHeader>
+          <DialogTitle>Quick Add Ticket</DialogTitle>
+        </DialogHeader>
+        <DialogContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center p-6">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+            </div>
+          ) : (
+            <>
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md flex items-start space-x-2">
+                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-red-700 text-sm">{error}</span>
+                </div>
+              )}
 
-            <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  id={`${id}-title`}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ticket Title"
-                  required
-                />
-                <TextArea
-                  id={`${id}-description`}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Description"
-                  required
-                />
+              <ReflectionContainer id={`${id}-form`} label="Quick Add Ticket Form">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <Input
+                    id={`${id}-title`}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ticket Title"
+                    required
+                  />
+                  <TextArea
+                    id={`${id}-description`}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Description"
+                    required
+                  />
 
-                <CompanyPicker
-                  id={`${id}-company-picker`}
-                  companies={filteredCompanies}
-                  onSelect={handleCompanyChange}
-                  selectedCompanyId={companyId}
-                  filterState={companyFilterState}
-                  onFilterStateChange={setCompanyFilterState}
-                  clientTypeFilter={clientTypeFilter}
-                  onClientTypeFilterChange={setClientTypeFilter}
-                />
+                  <CompanyPicker
+                    id={`${id}-company-picker`}
+                    companies={filteredCompanies}
+                    onSelect={handleCompanyChange}
+                    selectedCompanyId={companyId}
+                    filterState={companyFilterState}
+                    onFilterStateChange={setCompanyFilterState}
+                    clientTypeFilter={clientTypeFilter}
+                    onClientTypeFilterChange={setClientTypeFilter}
+                  />
 
-                {selectedCompanyType === 'company' && contacts.length > 0 && (
-                  <div className="relative z-20">
+                  {selectedCompanyType === 'company' && contacts.length > 0 && (
+                    <div className="relative z-20">
+                      <CustomSelect
+                        id={`${id}-contact`}
+                        value={contactId || ''}
+                        onValueChange={(value) => setContactId(value || null)}
+                        options={memoizedContactOptions}
+                        placeholder="Select Contact"
+                        disabled={!companyId || selectedCompanyType !== 'company'}
+                      />
+                    </div>
+                  )}
+
+                  <div className="relative z-30">
                     <CustomSelect
-                      id={`${id}-contact`}
-                      value={contactId || ''}
-                      onValueChange={(value) => setContactId(value || null)}
-                      options={contacts.map((contact): SelectOption => ({
-                        value: contact.contact_name_id,
-                        label: contact.full_name
-                      }))}
-                      placeholder="Select Contact"
-                      disabled={!companyId || selectedCompanyType !== 'company'}
+                      id={`${id}-assigned-to`}
+                      value={assignedTo}
+                      onValueChange={setAssignedTo}
+                      options={memoizedUserOptions}
+                      placeholder="Assign To"
                     />
                   </div>
-                )}
 
-                <div className="relative z-30">
-                  <CustomSelect
-                    id={`${id}-assigned-to`}
-                    value={assignedTo}
-                    onValueChange={setAssignedTo}
-                    options={users.map((user): SelectOption => ({
-                      value: user.user_id,
-                      label: `${user.first_name} ${user.last_name}`
-                    }))}
-                    placeholder="Assign To"
+                  <ChannelPicker
+                    id={`${id}-channel-picker`}
+                    channels={channels}
+                    onSelect={handleChannelChange}
+                    selectedChannelId={channelId}
+                    filterState="all"
                   />
-                </div>
 
-                <ChannelPicker
-                  id={`${id}-channel-picker`}
-                  channels={channels}
-                  onSelect={handleChannelChange}
-                  selectedChannelId={channelId}
-                  filterState="all"
-                />
-
-                <CategoryPicker
-                  id={`${id}-category-picker`}
-                  categories={categories}
-                  selectedCategories={selectedCategories}
-                  onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
-                  placeholder={channelId ? "Select category" : "Select a channel first"}
-                  multiSelect={false}
-                  className="w-full"
-                />
-
-                <div className="relative z-20">
-                  <CustomSelect
-                    id={`${id}-status`}
-                    value={statusId}
-                    onValueChange={setStatusId}
-                    options={statuses.map((status): SelectOption => ({
-                      value: status.status_id,
-                      label: status.name ?? ""
-                    }))}
-                    placeholder="Select Status"
+                  <CategoryPicker
+                    id={`${id}-category-picker`}
+                    categories={categories}
+                    selectedCategories={selectedCategories}
+                    onSelect={(categoryIds) => setSelectedCategories(categoryIds)}
+                    placeholder={channelId ? "Select category" : "Select a channel first"}
+                    multiSelect={false}
+                    className="w-full"
                   />
-                </div>
 
-                <div className="relative z-10">
-                  <CustomSelect
-                    id={`${id}-priority`}
-                    value={priorityId}
-                    onValueChange={setPriorityId}
-                    options={priorities.map((priority): SelectOption => ({
-                      value: priority.priority_id,
-                      label: priority.priority_name
-                    }))}
-                    placeholder="Select Priority"
-                  />
-                </div>
+                  <div className="relative z-20">
+                    <CustomSelect
+                      id={`${id}`}
+                      value={statusId}
+                      onValueChange={setStatusId}
+                      options={memoizedStatusOptions}
+                      placeholder="Select Status"
+                    />
+                  </div>
 
-                <DialogFooter>
-                  <Button
-                    id={`${id}-cancel-btn`}
-                    type="button"
-                    variant="outline"
-                    onClick={() => onOpenChange(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    id={`${id}-submit-btn`}
-                    type="submit"
-                    variant="default"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Saving...' : 'Save Ticket'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </ReflectionContainer>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+                  <div className="relative z-10">
+                    <CustomSelect
+                      id={`${id}-priority`}
+                      value={priorityId}
+                      onValueChange={setPriorityId}
+                      options={memoizedPriorityOptions}
+                      placeholder="Select Priority"
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      id={`${id}-cancel-btn`}
+                      type="button"
+                      variant="outline"
+                      onClick={() => onOpenChange(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      id={`${id}-submit-btn`}
+                      type="submit"
+                      variant="default"
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? 'Saving...' : 'Save Ticket'}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </ReflectionContainer>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

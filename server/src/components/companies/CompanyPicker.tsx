@@ -59,7 +59,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
       filterState,
       clientTypeFilter,
       selectedCompanyId
-    });
+    }, []);
 
     const filtered = companies.filter(company => {
       const matchesSearch = company.company_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -132,6 +132,18 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
     onClientTypeFilterChange(value as 'all' | 'company' | 'individual');
   };
 
+  const opts = useMemo(() => [
+    { value: 'active', label: 'Active Clients' },
+    { value: 'inactive', label: 'Inactive Clients' },
+    { value: 'all', label: 'All Clients' },
+  ], []);
+
+  const clientTypes = useMemo(() => [
+    { value: 'all', label: 'All Types' },
+    { value: 'company', label: 'Companies' },
+    { value: 'individual', label: 'Individuals' },
+  ], []);
+
   return (
     <ReflectionContainer id={`${id}-company-picker`} label="Company Picker">
       <div
@@ -162,14 +174,9 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
               <div className="grid grid-cols-2 gap-2">
                 <div className="w-full">
                   <CustomSelect
-                    id={`${id}-status-filter`}
                     value={filterState}
                     onValueChange={handleFilterStateChange}
-                    options={[
-                      { value: 'active', label: 'Active Clients' },
-                      { value: 'inactive', label: 'Inactive Clients' },
-                      { value: 'all', label: 'All Clients' },
-                    ]}
+                    options={opts}
                     placeholder="Filter by status"
                     label="Status Filter"
                   />
@@ -179,11 +186,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
                     id={`${id}-type-filter`}
                     value={clientTypeFilter}
                     onValueChange={handleClientTypeFilterChange}
-                    options={[
-                      { value: 'all', label: 'All Types' },
-                      { value: 'company', label: 'Companies' },
-                      { value: 'individual', label: 'Individuals' },
-                    ]}
+                    options={clientTypes}
                     placeholder="Filter by client type"
                     label="Client Type Filter"
                   />

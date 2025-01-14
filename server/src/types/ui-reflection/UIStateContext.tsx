@@ -3,7 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { PageState, UIComponent } from './types';
-import { pages } from 'next/dist/build/templates/app-page';
+// import { create } from 'jsondiffpatch';
+
+// Create a jsondiffpatch instance
+// const jsondiffpatch = create();
 
 /**
  * Context value interface containing the page state and methods to manipulate it
@@ -214,10 +217,17 @@ export function UIStateProvider({ children, initialPageState }: {
       // Rebuild the root array from the dictionary
       const newRoot = rebuildTreeFromDictionary(dict);
 
-      return {
+      const nextState = {
         ...prev,
         components: newRoot
-      };
+      }
+
+      // use jsondiffpatch to compare the current state with the next state
+      // and only update the state if there are any changes
+      // const patch = jsondiffpatch.diff(prev, nextState);
+      // console.log('Patch:', JSON.stringify(patch, null, 2));
+
+      return nextState;
     });
   }, []);
 
