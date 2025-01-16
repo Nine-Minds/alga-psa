@@ -25,3 +25,16 @@ export async function createBillingPlan(
         throw new Error('Failed to create billing plan');
     }
 }
+
+export async function updateBillingPlan(
+    planId: string,
+    updateData: Partial<IBillingPlan>
+): Promise<IBillingPlan> {
+    try {
+        const plan = await BillingPlan.update(planId, updateData);
+        return plan;
+    } catch (error) {
+        console.error('Error updating billing plan:', error);
+        throw new Error('Failed to update billing plan');
+    }
+}

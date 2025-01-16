@@ -18,6 +18,15 @@ const BillingPlan = {
     const [createdPlan] = await db<IBillingPlan>('billing_plans').insert(planWithId).returning('*');
     return createdPlan;
   },
+
+  update: async (planId: string, updateData: Partial<IBillingPlan>): Promise<IBillingPlan> => {
+    const {knex: db} = await createTenantKnex();
+    const [updatedPlan] = await db<IBillingPlan>('billing_plans')
+      .where({ plan_id: planId })
+      .update(updateData)
+      .returning('*');
+    return updatedPlan;
+  },
 };
 
 export default BillingPlan;

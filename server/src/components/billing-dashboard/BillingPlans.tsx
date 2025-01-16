@@ -3,14 +3,15 @@ import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import CustomSelect from '@/components/ui/CustomSelect';
-import { QuickAddBillingPlan } from './QuickAddBillingPlan';
+import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { getBillingPlans } from '@/lib/actions/billingPlanAction';
+import { getBillingPlans, updateBillingPlan } from '@/lib/actions/billingPlanAction';
 import { getPlanServices, addPlanService, updatePlanService, removePlanService } from '@/lib/actions/planServiceActions';
 import { IBillingPlan, IPlanService, IService } from '@/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@/constants/billing';
 
 interface BillingPlansProps {
   initialServices: IService[];
@@ -23,6 +24,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string | null>(null);
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
+  const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   const tenant = useTenant();
 
   useEffect(() => {
@@ -120,11 +122,32 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     {
       title: 'Billing Frequency',
       dataIndex: 'billing_frequency',
+      render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
+    },
+    {
+      title: 'Plan Type',
+      dataIndex: 'plan_type',
+      render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
     {
       title: 'Is Custom',
       dataIndex: 'is_custom',
       render: (value) => value ? 'Yes' : 'No',
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'plan_id',
+      render: (value, record) => (
+        <Button 
+          id='edit-button' 
+          onClick={(e) => {
+            e.stopPropagation();
+            setEditingPlan(record);
+          }}
+        >
+          Edit
+        </Button>
+      ),
     },
   ];
 
@@ -199,7 +222,18 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       <Card size="2">
         <Box p="4">
           <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
-          <QuickAddBillingPlan onPlanAdded={fetchBillingPlans} />
+          <div className="mb-4">
+            <BillingPlanDialog 
+              onPlanAdded={fetchBillingPlans} 
+              editingPlan={editingPlan}
+              onClose={() => setEditingPlan(null)}
+              triggerButton={
+                <Button id='add-billing-plan-button'>
+                  Add Plan
+                </Button>
+              }
+            />
+          </div>
           <DataTable
             data={billingPlans.filter(plan => plan.plan_id !== undefined)}
             columns={billingPlanColumns}
