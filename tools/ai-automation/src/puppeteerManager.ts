@@ -1,6 +1,5 @@
 import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
-import { PuppeteerHelper } from './puppeteerHelper';
 
 class PuppeteerManager {
   private static instance: PuppeteerManager;
@@ -103,31 +102,45 @@ class PuppeteerManager {
     return this.page;
   }
 
-  public async execute_puppeteer_script(script: string): Promise<any> {
-    console.log('Executing Puppeteer script:', script);
+  public async execute_automation_script(script: string): Promise<any> {
+    console.log('Executing automation script:', script);
     
     if (!this.page) {
       throw new Error('Puppeteer page not initialized yet');
     }
     
     try {
-      // Create helper instance
+      // Dynamically import helper with cache busting
+      let PuppeteerHelper;
+      try {
+        const helperUrl = new URL('./puppeteerHelper.ts', import.meta.url);
+        helperUrl.searchParams.set('t', Date.now().toString());
+        console.log('[Module Loading] Importing PuppeteerHelper from:', helperUrl.href);
+        const module = await import(helperUrl.href);
+        PuppeteerHelper = module.PuppeteerHelper;
+        if (!PuppeteerHelper) {
+          throw new Error('PuppeteerHelper not found in module');
+        }
+      } catch (importError) {
+        console.error('[Module Loading] Failed to import PuppeteerHelper:', importError);
+        throw new Error(`Failed to load PuppeteerHelper: ${importError instanceof Error ? importError.message : String(importError)}`);
+      }
+
       const helper = new PuppeteerHelper(this.page);
       
-      // Execute the script directly in Node.js context
-      // where page and helper are available
-      const scriptFn = new Function('page', 'helper', `
+      // Execute the script with only helper available
+      const scriptFn = new Function('helper', `
         return (async () => {
           try {
             return ${script}
           } catch (error) {
-            console.error('Error in Puppeteer script execution:', error);
+            console.error('Error in automation script execution:', error);
             return { error: error.message };
           }
         })();
       `);
       
-      const result = await Promise.resolve(scriptFn(this.page, helper));
+      const result = await Promise.resolve(scriptFn(helper));
       console.log('Function execution result:', result);
       
       return result;

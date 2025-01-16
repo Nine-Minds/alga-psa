@@ -6,7 +6,7 @@ import { SessionProvider } from "next-auth/react";
 import { Theme } from '@radix-ui/themes';
 
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { DrawerComponent, UIComponent } from '../../types/ui-reflection/types';
+import { DrawerComponent, UIComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 export interface DrawerProps {
@@ -20,7 +20,7 @@ export interface DrawerProps {
   reflectionChildren?: UIComponent[];
 }
 
-const Drawer: React.FC<DrawerProps> = ({ 
+const Drawer: React.FC<DrawerProps & AutomationProps> = ({ 
   isOpen, 
   onClose, 
   children, 

@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
-interface BackNavProps {
+interface BackNavProps extends AutomationProps {
   children: React.ReactNode;
   href?: string;
 }

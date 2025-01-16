@@ -4,7 +4,7 @@ import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
-import { DialogComponent } from '../../types/ui-reflection/types';
+import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
@@ -19,7 +19,7 @@ interface DialogProps {
   id?: string;
 }
 
-export const Dialog: React.FC<DialogProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog' }) => {
+export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog' }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
     type: 'dialog',

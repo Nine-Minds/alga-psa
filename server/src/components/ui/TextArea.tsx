@@ -1,6 +1,6 @@
 import React, { forwardRef, useLayoutEffect, useEffect, useRef } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
@@ -12,7 +12,7 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
   required?: boolean;
 }
 
-export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
+export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & AutomationProps>(
   ({ label, onChange, className, value = '', id, disabled, required, ...props }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const combinedRef = (node: HTMLTextAreaElement) => {

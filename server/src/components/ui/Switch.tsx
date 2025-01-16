@@ -1,7 +1,7 @@
 import * as React from 'react';
 import * as SwitchPrimitives from '@radix-ui/react-switch';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface SwitchProps extends Omit<React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root>, 'id'> {
@@ -15,7 +15,7 @@ interface SwitchProps extends Omit<React.ComponentPropsWithoutRef<typeof SwitchP
 
 const Switch = React.forwardRef<
   React.ElementRef<typeof SwitchPrimitives.Root>,
-  SwitchProps
+  SwitchProps & AutomationProps
 >(({ className, label, id, required, checked, disabled, ...props }, ref) => {
   // Register with UI reflection system if id is provided
   const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({

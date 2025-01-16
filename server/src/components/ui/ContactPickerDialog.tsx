@@ -9,7 +9,7 @@ import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '@/components/ui/Button';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { DialogComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { DialogComponent, ButtonComponent, FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface ContactPickerDialogProps {
@@ -22,7 +22,7 @@ interface ContactPickerDialogProps {
   id?: string;
 }
 
-const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
+const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> = ({
   isOpen,
   onClose,
   onSelect,
@@ -70,7 +70,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps> = ({
   }, [searchTerm, updateSearchInput]);
 
   useEffect(() => {
-    const filtered = contacts.filter(contact => {
+    const filtered = contacts.filter((contact: IContact) => {
       const matchesCompany = !prefilledCompanyId || contact.company_id === prefilledCompanyId;
       const matchesSearch = !searchTerm || (
         contact.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||

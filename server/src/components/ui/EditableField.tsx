@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import CustomSelect from '@/components/ui/CustomSelect';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface EditableFieldProps {
   label: string;
@@ -15,7 +16,7 @@ interface StyleProps {
   itemIndicator: string;
 }
 
-const EditableField: React.FC<EditableFieldProps> = ({ label, value, options, onValueChange }) => {
+const EditableField: React.FC<EditableFieldProps & AutomationProps> = ({ label, value, options, onValueChange }) => {
   const [isEditing, setIsEditing] = useState(false);
   const fieldRef = useRef<HTMLDivElement>(null);
 

@@ -7,6 +7,8 @@ ENV CHROME_PATH=/usr/bin/chromium
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DISPLAY=:99
 ENV NODE_OPTIONS="--max-http-header-size=26214400"
+ENV CHOKIDAR_USEPOLLING=true
+ENV CHOKIDAR_INTERVAL=300
 
 # Update package list and install essential dependencies
 RUN apt-get update -qq && \
@@ -27,7 +29,9 @@ RUN apt-get install -qq -y --no-install-recommends \
       xvfb \
       fonts-ipafont-gothic \
       fonts-wqy-zenhei \
-      curl && \
+      curl \
+      vim \
+      nano && \
     rm -rf /var/lib/apt/lists/*
 
 # Create and switch to non-root user

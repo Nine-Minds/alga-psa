@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { DataTableComponent } from '@/types/ui-reflection/types';
+import { DataTableComponent, AutomationProps } from '@/types/ui-reflection/types';
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,7 +29,7 @@ const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
   }, obj);
 };
 
-export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T> {
+export interface ExtendedDataTableProps<T extends object> extends DataTableProps<T>, AutomationProps {
   /** Unique identifier for UI reflection system */
   id?: string;
 }

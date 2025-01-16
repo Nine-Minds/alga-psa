@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
 export interface SelectOption {
@@ -31,7 +31,7 @@ interface CustomSelectProps {
   required?: boolean;
 }
 
-const CustomSelect: React.FC<CustomSelectProps> = ({
+const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   options,
   value,
   onValueChange,
@@ -41,6 +41,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   customStyles,
   label,
   id,
+  "data-automation-type": dataAutomationType = 'select',
   required = false,
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
@@ -80,7 +81,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   const selectedOption = options.find(option => option.value === value);
 
   return (
-    <div className={label ? 'mb-4' : ''} id={`${id}`}>
+    <div className={label ? 'mb-4' : ''} id={`${id}`} data-automation-type={dataAutomationType}>
       {label && (
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label}

@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface TooltipProps {
   content: string;
   children: React.ReactNode;
 }
 
-export const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
+export const Tooltip: React.FC<TooltipProps & AutomationProps> = ({ content, children }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   return (

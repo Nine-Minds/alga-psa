@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
 import { Button } from './Button';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { DialogComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { DialogComponent, ButtonComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface ConfirmationDialogProps {
@@ -18,7 +18,7 @@ interface ConfirmationDialogProps {
   id?: string;
 }
 
-export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
+export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationProps> = ({
   isOpen,
   onClose,
   onConfirm,

@@ -9,6 +9,7 @@ import { withUIReflectionId } from './withDataAutomationId';
 interface ReflectionContainerProps extends PropsWithChildren {
   id: string;
   label?: string;
+  'data-automation-type'?: string;
 }
 
 /**
@@ -17,7 +18,12 @@ interface ReflectionContainerProps extends PropsWithChildren {
  * 2) Automatically provides its ID as the "parent" for any child components
  * 3) Automatically sets data-automation-id for testing
  */
-function ReflectionContainerBase({ id, label, children }: ReflectionContainerProps) {
+function ReflectionContainerBase({ 
+  id, 
+  label, 
+  children,
+  'data-automation-type': dataAutomationType 
+}: ReflectionContainerProps) {
   // Get parent ID from context (if any)
   // Convert null to undefined for type compatibility
   const parentId = useReflectionParent() ?? undefined;
@@ -36,7 +42,10 @@ function ReflectionContainerBase({ id, label, children }: ReflectionContainerPro
 
   return (
     <ReflectionParentContext.Provider value={id}>
-      <div data-automation-id={id}>
+      <div 
+        data-automation-id={id}
+        data-automation-type={dataAutomationType}
+      >
         {children}
       </div>
     </ReflectionParentContext.Provider>

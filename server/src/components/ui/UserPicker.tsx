@@ -4,6 +4,7 @@ import AvatarIcon from '@/components/ui/AvatarIcon';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown } from 'lucide-react';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface UserPickerProps {
   label?: string;
@@ -13,7 +14,7 @@ interface UserPickerProps {
   users: IUserWithRoles[];
 }
 
-const UserPicker: React.FC<UserPickerProps> = ({ label, value, onValueChange, size = 'sm', users }) => {
+const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({ label, value, onValueChange, size = 'sm', users }) => {
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   

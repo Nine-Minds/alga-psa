@@ -1,6 +1,6 @@
 import React, { forwardRef, InputHTMLAttributes } from 'react';
 import { Search } from 'lucide-react';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
@@ -11,7 +11,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
   className?: string;
 }
 
-export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps & AutomationProps>(
   ({ className, value, onChange, id, ...props }, ref) => {
     const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
       id: `${id}-search-input`,

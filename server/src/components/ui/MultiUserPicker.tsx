@@ -4,6 +4,7 @@ import AvatarIcon from './AvatarIcon';
 import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, X } from 'lucide-react';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface MultiUserPickerProps {
   label?: string;
@@ -15,7 +16,7 @@ interface MultiUserPickerProps {
   error?: string | null;
 }
 
-const MultiUserPicker: React.FC<MultiUserPickerProps> = ({ 
+const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({ 
   label, 
   values = [], 
   onValuesChange, 

@@ -556,7 +556,7 @@ export default function ControlPanel() {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({
-                                script: `(async () => { await page.goto('http://server:3000'); })();`
+                                script: `(async () => { await helper.navigate('http://server:3000'); })();`
                               })
                             });
                             if (!response.ok) {

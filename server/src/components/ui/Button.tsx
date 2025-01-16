@@ -5,7 +5,7 @@ import { Slot } from '@radix-ui/react-slot'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { ButtonComponent } from '../../types/ui-reflection/types';
+import { ButtonComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister'
 
@@ -51,7 +51,7 @@ export interface ButtonProps
   label?: string;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps>(
   ({ className, variant, size, asChild = false, tooltipText, tooltip, id, label, disabled, children, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     const buttonRef = React.useRef<HTMLButtonElement | null>(null)

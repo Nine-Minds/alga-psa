@@ -8,6 +8,14 @@
  */
 
 /**
+ * Interface for components that support automation testing IDs.
+ */
+export interface AutomationProps {
+  /** Optional automation Type for testing purposes */
+  'data-automation-type'?: string;
+}
+
+/**
  * Base interface for all UI components in the reflection system.
  */
 export interface BaseComponent {
