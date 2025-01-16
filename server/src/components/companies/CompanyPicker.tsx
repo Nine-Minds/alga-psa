@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Input } from '../ui/Input';
-import CustomSelect from '../ui/CustomSelect';
+import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { Button } from '../ui/Button';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@/types/ui-reflection/types';
+import { AutomationProps, ContainerComponent, FormFieldComponent } from '@/types/ui-reflection/types';
+import { up } from 'migrations/20241125124900_add_credit_system.cjs';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface CompanyPickerProps {
   id?: string;
@@ -22,7 +24,7 @@ interface CompanyPickerProps {
   fitContent?: boolean;
 }
 
-export const CompanyPicker: React.FC<CompanyPickerProps> = ({
+export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   id = 'company-picker',
   companies = [],
   onSelect,
@@ -32,6 +34,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
   clientTypeFilter,
   onClientTypeFilterChange,
   fitContent = false,
+  "data-automation-type": dataAutomationType = 'picker',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -144,11 +147,89 @@ export const CompanyPicker: React.FC<CompanyPickerProps> = ({
     { value: 'individual', label: 'Individuals' },
   ], []);
 
+  const mappedOptions = useMemo(() => companies.map((opt): { value: string; label: string } => ({
+    value: opt.company_name,
+    label: opt.company_name
+  })), [companies]);  
+
+  const { automationIdProps: companyPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType: 'select',
+    id: `${id}-picker`,
+    value: selectedCompanyId || '',
+    disabled: false,
+    required: false,
+    options: mappedOptions
+  });
+
+  // Setup for storing previous metadata
+  const prevMetadataRef = useRef<{
+    value: string;
+    label: string;
+    disabled: boolean;
+    required: boolean;
+    options: { value: string; label: string }[];
+  } | null>(null);  
+
+  useEffect(() => {
+    if (!updateMetadata) return;
+
+    // Construct the new metadata
+    const newMetadata = {
+      value: selectedCompanyId || '',
+      label: selectedCompany?.company_name || '',
+      disabled: false,
+      required: false,
+      options: mappedOptions
+    };
+
+    // Compare with previous metadata
+    // Custom equality check for options arrays
+    const areOptionsEqual = (prev: { value: string; label: string }[] | undefined, 
+                           curr: { value: string; label: string }[]) => {
+      if (!prev) return false;
+      if (prev.length !== curr.length) return false;
+      
+      // Create sets of values for comparison
+      const prevValues = new Set(prev.map((o): string => `${o.value}:${o.label}`));
+      const currValues = new Set(curr.map((o): string => `${o.value}:${o.label}`));
+      
+      // Check if all values exist in both sets
+      for (const value of prevValues) {
+        if (!currValues.has(value)) return false;
+      }
+      return true;
+    };
+
+    // Custom equality check for the entire metadata object
+    const isMetadataEqual = () => {
+      if (!prevMetadataRef.current) return false;
+      
+      const prev = prevMetadataRef.current;
+      
+      return prev.value === newMetadata.value &&
+             prev.label === newMetadata.label &&
+             prev.disabled === newMetadata.disabled &&
+             prev.required === newMetadata.required &&
+             areOptionsEqual(prev.options, newMetadata.options);
+    };
+
+    if (!isMetadataEqual()) {
+      // Update metadata since it's different
+      updateMetadata(newMetadata);
+
+      // Update the ref with the new metadata
+      prevMetadataRef.current = newMetadata;
+    }
+  }, [selectedCompanyId, companies, updateMetadata]); // updateMetadata intentionally omitted  
+
   return (
-    <ReflectionContainer id={`${id}-company-picker`} label="Company Picker">
+    <ReflectionContainer id={`${id}`} label="Company Picker">
       <div
         className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`}
         ref={dropdownRef}
+        {...withDataAutomationId({ id: `${id}-picker` })}
+        data-automation-type={dataAutomationType} 
       >
         <Button
           id={`${id}-toggle`}

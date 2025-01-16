@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Command } from 'cmdk';
 import { Check, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface TimezoneOption {
   value: string;
@@ -11,7 +12,7 @@ interface TimezoneOption {
   region: string;
 }
 
-interface TimezonePickerProps {
+interface TimezonePickerProps extends AutomationProps {
   value: string;
   onValueChange: (value: string) => void;
   className?: string;

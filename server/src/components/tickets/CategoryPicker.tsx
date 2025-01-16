@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { ITicketCategory } from '../../interfaces/ticket.interfaces';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '../ui/TreeSelect';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface CategoryPickerProps {
@@ -24,7 +24,7 @@ interface CategoryPickerProps {
 
 type CategoryType = 'parent' | 'child';
 
-export const CategoryPicker: React.FC<CategoryPickerProps> = ({
+export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = ({
   id = 'category-picker',
   categories,
   selectedCategories,
@@ -36,6 +36,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
   showExclude = false,
   showReset = false,
   allowEmpty = false,
+  "data-automation-type": dataAutomationType = 'custom',
 }) => {
   // Register components with UI reflection system
   const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({

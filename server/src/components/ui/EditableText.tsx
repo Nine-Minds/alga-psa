@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Input } from './Input';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface EditableTextProps {
   value: string;
@@ -8,7 +9,7 @@ interface EditableTextProps {
   className?: string;
 }
 
-const EditableText: React.FC<EditableTextProps> = ({ value, onChange, placeholder, className }) => {
+const EditableText: React.FC<EditableTextProps & AutomationProps> = ({ value, onChange, placeholder, className }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tempValue, setTempValue] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);

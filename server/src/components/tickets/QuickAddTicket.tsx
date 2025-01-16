@@ -390,7 +390,7 @@ export function QuickAddTicket({
                   />
 
                   <CompanyPicker
-                    id={`${id}-company-picker`}
+                    id={`${id}-company`}
                     companies={filteredCompanies}
                     onSelect={handleCompanyChange}
                     selectedCompanyId={companyId}
@@ -428,6 +428,7 @@ export function QuickAddTicket({
                     channels={channels}
                     onSelect={handleChannelChange}
                     selectedChannelId={channelId}
+                    onFilterStateChange={() => {}}
                     filterState="all"
                   />
 

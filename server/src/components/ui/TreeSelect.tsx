@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 export interface TreeSelectOption<T extends string = string> {
   label: string;
@@ -15,7 +16,7 @@ export interface TreeSelectPath {
   [key: string]: string;
 }
 
-interface TreeSelectProps<T extends string = string> {
+interface TreeSelectProps<T extends string = string> extends AutomationProps {
   options: TreeSelectOption<T>[];
   value: string;
   onValueChange: (value: string, type: T, excluded: boolean, path?: TreeSelectPath) => void;

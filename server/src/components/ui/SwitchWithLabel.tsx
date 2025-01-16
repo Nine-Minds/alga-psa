@@ -1,6 +1,7 @@
 import React from 'react'
 import { Switch } from './Switch'
 import { Label } from './Label'
+import { AutomationProps } from '../../types/ui-reflection/types'
 
 interface SwitchWithLabelProps {
   label: string
@@ -10,7 +11,7 @@ interface SwitchWithLabelProps {
   disabled?: boolean
 }
 
-const SwitchWithLabel: React.FC<SwitchWithLabelProps> = ({
+const SwitchWithLabel: React.FC<SwitchWithLabelProps & AutomationProps> = ({
   label,
   checked,
   onCheckedChange,

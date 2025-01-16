@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import * as Popover from '@radix-ui/react-popover';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Input } from '../../../components/ui/Input';
-import CustomSelect, { SelectOption } from '../../../components/ui/CustomSelect';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import { IChannel } from '../../../interfaces';
-import { ChevronDownIcon, Cross2Icon } from '@radix-ui/react-icons';
+import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { useAutomationIdAndRegister } from '../../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../../types/ui-reflection/types';
+import { ContainerComponent, AutomationProps, FormFieldComponent } from '../../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../../types/ui-reflection/ReflectionContainer';
 import { Button } from '@/components/ui/Button';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface ChannelPickerProps {
   id?: string;
@@ -17,157 +17,229 @@ interface ChannelPickerProps {
   onSelect: (channelId: string) => void;
   selectedChannelId: string | null;
   filterState: 'active' | 'inactive' | 'all';
-  onFilterStateChange?: (state: 'active' | 'inactive' | 'all') => void;
-  className?: string;
+  onFilterStateChange: (state: 'active' | 'inactive' | 'all') => void;
+  fitContent?: boolean;
 }
 
-export const ChannelPicker: React.FC<ChannelPickerProps> = ({
+export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   id = 'channel-picker',
-  channels,
+  channels = [],
   onSelect,
   selectedChannelId,
   filterState,
   onFilterStateChange,
-  className = 'w-full'
+  fitContent = false,
+  "data-automation-type": dataAutomationType = 'picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredChannels, setFilteredChannels] = useState<IChannel[]>([]);
-  const [currentFilterState, setCurrentFilterState] = useState<'active' | 'inactive' | 'all'>(filterState);
-  const [selectedChannel, setSelectedChannel] = useState<IChannel | null>(null);
-  const [options, setOptions] = useState<SelectOption[]>([
-    { value: 'active', label: 'Active Channels' },
-    { value: 'inactive', label: 'Inactive Channels' },
-    { value: 'all', label: 'All Channels' },
-  ]);
 
-  // Register components with UI reflection system
-  const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
-    id: id + '-container',
-    type: 'container',
-    label: 'Channel Picker'
+  const mappedOptions = useMemo(() => 
+    channels.map(channel => ({
+      value: channel.channel_id || '',
+      label: channel.channel_name || ''
+    })), 
+    [channels]
+  );
+
+  const { automationIdProps: channelPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType: 'select',
+    id: `${id}-picker`,
+    value: selectedChannelId || '',
+    disabled: false,
+    required: false,
+    options: mappedOptions
   });
 
+  // Setup for storing previous metadata
+  const prevMetadataRef = useRef<{
+    value: string;
+    label: string;
+    disabled: boolean;
+    required: boolean;
+    options: { value: string; label: string }[];
+  } | null>(null);  
+
   useEffect(() => {
-    const filtered = channels.filter((channel) => {
-      const matchesSearch = (channel.channel_name as string).toLowerCase().includes(searchTerm.toLowerCase());
+    if (!updateMetadata) return;
+
+    const selectedChannel = channels.find(c => c.channel_id === selectedChannelId);
+
+    // Construct the new metadata
+    const newMetadata = {
+      value: selectedChannelId || '',
+      label: selectedChannel?.channel_name || '',
+      disabled: false,
+      required: false,
+      options: mappedOptions
+    };
+
+    // Compare with previous metadata
+    // Custom equality check for options arrays
+    const areOptionsEqual = (prev: { value: string; label: string }[] | undefined, 
+                           curr: { value: string; label: string }[]) => {
+      if (!prev) return false;
+      if (prev.length !== curr.length) return false;
+      
+      // Create sets of values for comparison
+      const prevValues = new Set(prev.map((o): string => `${o.value}:${o.label}`));
+      const currValues = new Set(curr.map((o): string => `${o.value}:${o.label}`));
+      
+      // Check if all values exist in both sets
+      for (const value of prevValues) {
+        if (!currValues.has(value)) return false;
+      }
+      return true;
+    };
+
+    // Custom equality check for the entire metadata object
+    const isMetadataEqual = () => {
+      if (!prevMetadataRef.current) return false;
+      
+      const prev = prevMetadataRef.current;
+      
+      return prev.value === newMetadata.value &&
+             prev.label === newMetadata.label &&
+             prev.disabled === newMetadata.disabled &&
+             prev.required === newMetadata.required &&
+             areOptionsEqual(prev.options, newMetadata.options);
+    };
+
+    if (!isMetadataEqual()) {
+      // Update metadata since it's different
+      updateMetadata(newMetadata);
+
+      // Update the ref with the new metadata
+      prevMetadataRef.current = newMetadata;
+    }
+  }, [selectedChannelId, channels, updateMetadata]); // updateMetadata intentionally omitted
+  const [searchTerm, setSearchTerm] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const selectedChannel = useMemo(() =>
+    channels.find((c) => c.channel_id === selectedChannelId),
+    [channels, selectedChannelId]
+  );
+
+  const filteredChannels = useMemo(() => {
+    return channels.filter(channel => {
+      const matchesSearch = (channel.channel_name || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesState =
-      currentFilterState === 'all' || (currentFilterState === 'active' ? !channel.is_inactive : channel.is_inactive);
+        filterState === 'all' ? true :
+          filterState === 'active' ? !channel.is_inactive :
+            filterState === 'inactive' ? channel.is_inactive :
+              true;
+
       return matchesSearch && matchesState;
     });
+  }, [channels, filterState, searchTerm]);
 
-    setFilteredChannels(filtered);
-  }, [channels, currentFilterState, searchTerm]);
-
-  // Separate useEffect to handle selectedChannelId changes
   useEffect(() => {
-    setSelectedChannel(channels.find(c => c.channel_id === selectedChannelId) || null);
-  }, [selectedChannelId, channels]);
+    if (!isOpen) return;
 
-  const handleSelect = (channelId: string): void => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!dropdownRef.current?.contains(target) && target.nodeName !== 'SELECT') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const handleSelect = (channelId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
     onSelect(channelId);
     setIsOpen(false);
   };
 
-  const getButtonLabel = (): string|undefined => {
-    if (selectedChannel) {
-      return selectedChannel.channel_name;
-    }
+  const opts = useMemo(() => [
+    { value: 'active', label: 'Active Channels' },
+    { value: 'inactive', label: 'Inactive Channels' },
+    { value: 'all', label: 'All Channels' },
+  ], []);
 
-    switch (filterState) {
-      case 'inactive':
-        return 'All Inactive Channels';
-      case 'active':
-        return 'All Active Channels';
-      case 'all':
-        return 'All Channels';
-      default:
-        return 'All Channels';
-    }
-  };
 
+  
   return (
-    <ReflectionContainer {...containerProps} label="Channel Picker">
-      <div>
-        <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-          <Popover.Trigger asChild>
-            <Button
-              id={`${id}-button`}
-              type="button"
-              className={`min-h-[38px] px-3 py-2 border border-gray-200 rounded-md shadow-sm flex justify-between items-center bg-white text-left text-base hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className}`}
-            >
-              <span className="text-gray-700">{getButtonLabel()}</span>
-              <ChevronDownIcon className="w-4 h-4 text-gray-400 ml-2" />
-            </Button>
-          </Popover.Trigger>
+    <ReflectionContainer id={`${id}-channel`} data-automation-type={dataAutomationType} label="Channel Picker">
+      <div
+        className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`}
+        ref={dropdownRef}
+        {...withDataAutomationId({ id: `${id}-picker` })}
+        data-automation-type={dataAutomationType}
+      >
+        <Button
+          id={`${id}-toggle`}
+          variant="outline"
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full justify-between"
+          label={selectedChannel?.channel_name || 'Select Channel'}
+        >
+          <span>{selectedChannel?.channel_name || 'Select Channel'}</span>
+          <ChevronDownIcon className="ml-2 h-4 w-4" />
+        </Button>
 
-          <Popover.Portal>
-            <Popover.Content
-              className="bg-white rounded-lg shadow-lg border border-gray-200 w-[300px] z-[100]"
-              sideOffset={5}
-              align="start"
-              onOpenAutoFocus={(e) => e.preventDefault()}
-              onCloseAutoFocus={(e) => e.preventDefault()}
-            >
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold">Select Channel</h3>
-                  <Popover.Close 
-                    className="rounded-full p-1 hover:bg-gray-100" 
-                    aria-label="Close"
-                  >
-                    <Cross2Icon className="w-4 h-4" />
-                  </Popover.Close>
-                </div>
-
-                <div className="mb-4">
-                  <CustomSelect
-                    id={`${id}-filter`}
-                    value={filterState}
-                    onValueChange={(value) =>{}
-                      // onFilterStateChange(value as 'active' | 'inactive' | 'all')
-                    }
-                    options={options}
-                    placeholder="Filter channels"
-                  />
-                </div>
-
+        {isOpen && (
+          <div
+            className={`absolute z-[100] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
+            style={{
+              top: '100%',
+              left: 0
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <div className="p-3 space-y-3 bg-white">
+              <div className="w-full">
+                <CustomSelect
+                  value={filterState}
+                  onValueChange={(value) => onFilterStateChange(value as 'active' | 'inactive' | 'all')}
+                  options={opts}
+                  placeholder="Filter by status"
+                  label="Status Filter"
+                />
+              </div>
+              <div className="whitespace-nowrap">
                 <Input
                   id={`${id}-search`}
-                  placeholder="Search channels"
+                  placeholder="Search channels..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="mb-4"
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    setSearchTerm(e.target.value);
+                  }}
+                  label="Search Channels"
                 />
-
-                <div className="max-h-60 overflow-y-auto" role="listbox">
-                  {filteredChannels.map((channel): JSX.Element => (
-                    <Button
-                      id={`${id}-channel-${channel.channel_id}`}
-                      key={channel.channel_id}
-                      onClick={() => handleSelect(channel.channel_id!)}
-                      variant="ghost"
-                      role="option"
-                      aria-selected={channel.channel_id === selectedChannelId}
-                      className={`w-full justify-start text-left px-4 py-2 h-auto font-normal ${
-                        channel.channel_id === selectedChannelId 
-                          ? 'bg-blue-100 hover:bg-blue-200 text-blue-900' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-center">
-                        <span>{channel.channel_name}</span>
-                        {channel.is_inactive && (
-                          <span className="ml-2 text-sm text-gray-500">(Inactive)</span>
-                        )}
-                      </div>
-                    </Button>
-                  ))}
-                </div>
               </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
+            </div>
+            <div 
+              className="max-h-60 overflow-y-auto border-t bg-white"
+              role="listbox"
+              aria-label="Channels"
+            >
+              {isOpen && filteredChannels.length === 0 ? (
+                <div className="px-4 py-2 text-gray-500">No channels found</div>
+              ) : (
+                filteredChannels.map((channel): JSX.Element => (
+                  <Button
+                    key={channel.channel_id}
+                    id={`${id}-channel-picker-channel-${channel.channel_id}`}
+                    variant="ghost"
+                    onClick={(e) => handleSelect(channel.channel_id!, e)}
+                    className={`w-full justify-start ${channel.channel_id === selectedChannelId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
+                    label={channel.channel_name || ''}
+                    role="option"
+                    aria-selected={channel.channel_id === selectedChannelId}
+                  >
+                    {channel.channel_name || ''}
+                    {channel.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
+                  </Button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </ReflectionContainer>
   );

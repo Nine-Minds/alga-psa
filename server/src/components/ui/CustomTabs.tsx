@@ -1,6 +1,7 @@
 // server/src/components/ui/CustomTabs.tsx
 import React from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 export interface TabContent {
   label: string;
@@ -20,7 +21,7 @@ export interface CustomTabsProps {
   };
 }
 
-export const CustomTabs: React.FC<CustomTabsProps> = ({ 
+export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({ 
   tabs, 
   defaultTab, 
   onTabChange,

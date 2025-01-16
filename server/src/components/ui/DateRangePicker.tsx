@@ -1,6 +1,7 @@
 import React from 'react';
 import { Label } from './Label';
 import { Input } from './Input';
+import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface DateRange {
   from: string;
@@ -13,7 +14,7 @@ interface DateRangePickerProps {
   onChange: (range: DateRange) => void;
 }
 
-export const DateRangePicker: React.FC<DateRangePickerProps> = ({
+export const DateRangePicker: React.FC<DateRangePickerProps & AutomationProps> = ({
   label,
   value,
   onChange

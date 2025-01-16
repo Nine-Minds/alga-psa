@@ -113,7 +113,7 @@ export async function wait(seconds: number): Promise<ToolExecutionResult> {
 }
 
 // 4) Execute Puppeteer Script
-export async function executePuppeteerScript(script: string): Promise<ToolExecutionResult> {
+export async function executeAutomationScript(script: string): Promise<ToolExecutionResult> {
   if (script.indexOf('{username}') !== -1 || script.indexOf('{password}') !== -1) {
     return {
       success: false,
@@ -134,7 +134,7 @@ export async function executePuppeteerScript(script: string): Promise<ToolExecut
 
     if (!response.ok) {
       const result = await response.json();
-      const error = `Failed to execute puppeteer script: ${await response.text()}`;
+      const error = `Failed to execute puppeteer script: ${result}`;
       console.log('Error response:', error);
 
       console.log(result);
@@ -183,11 +183,11 @@ export const invokeTool = async (toolName: string, args: ToolArgs) => {
         throw new Error('seconds argument is required for wait');
       }
       return wait(args.seconds);
-    case 'execute_puppeteer_script':
+    case 'execute_automation_script':
       if (!args.script) {
-        throw new Error('script argument is required for execute_puppeteer_script');
+        throw new Error('script argument is required for execute_automation_script');
       }
-      return executePuppeteerScript(args.script);
+      return executeAutomationScript(args.script);
     default:
       throw new Error(`Unknown tool: ${toolName}`);
   }

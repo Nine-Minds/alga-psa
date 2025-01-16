@@ -1,5 +1,5 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 
@@ -14,7 +14,7 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   className?: string;
 }
 
-export const Input = forwardRef<HTMLInputElement, InputProps>(
+export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
   ({ 
     label, 
     className, 
@@ -24,6 +24,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     value, 
     disabled, 
     onChange,
+    "data-automation-type": dataAutomationType = 'input',
     ...props 
   }, forwardedRef) => {
     const inputRef = useRef<HTMLInputElement | null>(null);

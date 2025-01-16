@@ -1,25 +1,17 @@
-import { AnthropicClient } from './anthropic-client';
 import { OpenAIClient } from './openai-client';
 import { CustomOpenAIClient } from './custom-openai-client';
 import { LLMClient } from './types';
 
-export type LLMProvider = 'anthropic' | 'openai' | 'custom-openai';
+export type LLMProvider = 'openai' | 'custom-openai';
 
 export function getLLMClient(): LLMClient {
-  const provider = process.env.LLM_PROVIDER as LLMProvider || 'anthropic';
-  const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  const provider = process.env.LLM_PROVIDER as LLMProvider || 'openai';
   const openaiApiKey = process.env.OPENAI_API_KEY;
   const customOpenaiApiKey = process.env.CUSTOM_OPENAI_API_KEY;
   const customOpenaiBaseURL = process.env.CUSTOM_OPENAI_BASE_URL;
   const customOpenaiModel = process.env.CUSTOM_OPENAI_MODEL;
 
   switch (provider) {
-    case 'anthropic':
-      if (!anthropicApiKey) {
-        throw new Error('ANTHROPIC_API_KEY environment variable is required when using Anthropic');
-      }
-      return new AnthropicClient(anthropicApiKey);
-    
     case 'openai':
       if (!openaiApiKey) {
         throw new Error('OPENAI_API_KEY environment variable is required when using OpenAI');

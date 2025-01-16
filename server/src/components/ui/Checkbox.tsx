@@ -1,6 +1,6 @@
 import React, { InputHTMLAttributes, useEffect } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
-import { FormFieldComponent } from '../../types/ui-reflection/types';
+import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'id'> {
@@ -11,7 +11,7 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
   required?: boolean;
 }
 
-export const Checkbox: React.FC<CheckboxProps> = ({ 
+export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
   label, 
   className, 
   id,

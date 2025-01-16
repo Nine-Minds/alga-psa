@@ -4,7 +4,7 @@ import React, { ReactNode } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { DialogComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { DialogComponent, ButtonComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface GenericDialogProps {
@@ -16,7 +16,7 @@ interface GenericDialogProps {
   id?: string; // Made required since it's needed for reflection registration
 }
 
-const GenericDialog: React.FC<GenericDialogProps> = ({ 
+const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({ 
   isOpen, 
   onClose, 
   title, 

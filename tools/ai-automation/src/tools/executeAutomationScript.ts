@@ -2,21 +2,21 @@ import { Tool } from './Tool.js';
 import type { Page } from 'puppeteer';
 import { puppeteerManager } from '../puppeteerManager.js';
 
-interface ExecutePuppeteerScriptArgs {
+interface ExecuteAutomationScriptArgs {
   script: string;
 }
 
-export const executePuppeteerScript: Tool = {
-  name: 'execute_puppeteer_script',
+export const executeAutomationScript: Tool = {
+  name: 'execute_automation_script',
   description: 'Execute a Puppeteer script in the browser context',
   
-  async execute(page: Page, args: ExecutePuppeteerScriptArgs): Promise<any> {
+  async execute(page: Page, args: ExecuteAutomationScriptArgs): Promise<any> {
     if (!args.script) {
       throw new Error('Script is required');
     }
 
     try {
-      return await puppeteerManager.execute_puppeteer_script(args.script);
+      return await puppeteerManager.execute_automation_script(args.script);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Error executing puppeteer script:', {

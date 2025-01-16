@@ -1,6 +1,4 @@
-import { Tool as AnthropicTool } from '@anthropic-ai/sdk/resources/messages/messages';
-
-interface Tool extends AnthropicTool {
+export interface Tool {
   name: string;
   description: string;
   parameters: {
@@ -90,7 +88,7 @@ export const tools: Tool[] = [
     }
   },
   {
-    name: 'execute_puppeteer_script',
+    name: 'execute_automation_script',
     description: 'Execute a Puppeteer script for browser automation, passing in a script argument as a self-executing function.',
     parameters: {
       type: 'object',
