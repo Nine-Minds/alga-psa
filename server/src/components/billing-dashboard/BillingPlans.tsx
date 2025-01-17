@@ -246,8 +246,32 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     {
       title: 'Actions',
       dataIndex: 'service_id',
-      render: (value) => (
-        <Button id='remove-button' onClick={() => handleRemovePlanService(value)}>Remove</Button>
+      render: (value, record) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="plan-service-actions-menu"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id="remove-plan-service-menu-item"
+              className="text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRemovePlanService(value);
+              }}
+            >
+              Remove
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -289,11 +313,13 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           {selectedPlan ? (
             <>
               <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
-              <DataTable
-                data={planServices}
-                columns={planServiceColumns}
-                pagination={false}
-              />
+              <div className="overflow-x-auto">
+                <DataTable
+                  data={planServices}
+                  columns={planServiceColumns}
+                  pagination={false}
+                />
+              </div>
               <div className="flex space-x-2 mt-4">
                 <CustomSelect
                   options={availableServices.map((s): { value: string; label: string } => ({
