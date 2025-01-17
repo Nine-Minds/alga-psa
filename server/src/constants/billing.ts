@@ -1,8 +1,8 @@
 export const PLAN_TYPE_DISPLAY: Record<string, string> = {
-  'fixed': 'Fixed',
-  'bucket': 'Bucket',
-  'time-based': 'Time Based',
-  'usage-based': 'Usage Based'
+  'Fixed': 'Fixed',
+  'Bucket': 'Bucket',
+  'Hourly': 'Time Based',
+  'Usage': 'Usage Based'
 };
 
 export const PLAN_TYPE_OPTIONS = Object.entries(PLAN_TYPE_DISPLAY).map(([value, label]) => ({

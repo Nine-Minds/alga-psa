@@ -124,7 +124,7 @@ export interface IBillingPlan extends TenantEntity {
   billing_frequency: string;
   is_custom: boolean;
   service_category?: string;
-  plan_type: 'fixed' | 'time-based' | 'usage-based' | 'bucket';
+  plan_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
 }
 
 export interface IPlanService extends TenantEntity {

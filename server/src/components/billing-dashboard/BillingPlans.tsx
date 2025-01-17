@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from '@/components/ui/Button';
+import { MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu';
 import { Input } from '@/components/ui/Input';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { getBillingPlans, updateBillingPlan } from '@/lib/actions/billingPlanAction';
+import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from '@/lib/actions/billingPlanAction';
 import { getPlanServices, addPlanService, updatePlanService, removePlanService } from '@/lib/actions/planServiceActions';
 import { IBillingPlan, IPlanService, IService } from '@/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
@@ -138,15 +145,49 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       title: 'Actions',
       dataIndex: 'plan_id',
       render: (value, record) => (
-        <Button 
-          id='edit-button' 
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditingPlan(record);
-          }}
-        >
-          Edit
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="billing-plan-actions-menu"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id="edit-billing-plan-menu-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingPlan({...record});
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id="delete-billing-plan-menu-item"
+              className="text-red-600 focus:text-red-600"
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await deleteBillingPlan(record.plan_id!);
+                  fetchBillingPlans();
+                } catch (error) {
+                  if (error instanceof Error) {
+                    alert(error.message);
+                  } else {
+                    alert('Failed to delete plan');
+                  }
+                }
+              }}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

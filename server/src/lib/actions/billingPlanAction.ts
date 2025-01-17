@@ -38,3 +38,15 @@ export async function updateBillingPlan(
         throw new Error('Failed to update billing plan');
     }
 }
+
+export async function deleteBillingPlan(planId: string): Promise<void> {
+    try {
+        await BillingPlan.delete(planId);
+    } catch (error) {
+        console.error('Error deleting billing plan:', error);
+        if (error instanceof Error && error.message.includes('in use')) {
+            throw new Error('Cannot delete plan that is currently in use by companies');
+        }
+        throw new Error('Failed to delete billing plan');
+    }
+}

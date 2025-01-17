@@ -6,7 +6,7 @@ import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '../ui/Button';
 
-type PlanType = 'fixed' | 'bucket' | 'time-based' | 'usage-based';
+type PlanType = 'Fixed' | 'Bucket' | 'Hourly' | 'Usage';
 import { createBillingPlan, updateBillingPlan } from '@/lib/actions/billingPlanAction';
 import { IBillingPlan } from '@/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
@@ -21,12 +21,13 @@ interface BillingPlanDialogProps {
 
 export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: BillingPlanDialogProps) {
   const [open, setOpen] = useState(false);
-  const [planName, setPlanName] = useState('');
-  const [billingFrequency, setBillingFrequency] = useState('');
-  const [planType, setPlanType] = useState<PlanType>('fixed');
-  const [isCustom, setIsCustom] = useState(false);
+  const [planName, setPlanName] = useState(editingPlan?.plan_name || '');
+  const [billingFrequency, setBillingFrequency] = useState(editingPlan?.billing_frequency || '');
+  const [planType, setPlanType] = useState<PlanType>(editingPlan?.plan_type as PlanType || 'Fixed');
+  const [isCustom, setIsCustom] = useState(editingPlan?.is_custom || false);
   const tenant = useTenant()!;
 
+  // Update form when editingPlan changes
   useEffect(() => {
     if (editingPlan) {
       setPlanName(editingPlan.plan_name);
@@ -38,7 +39,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   }, [editingPlan]);
 
   const isPlanType = (value: string): value is PlanType => {
-    return ['fixed', 'bucket', 'time-based', 'usage-based'].includes(value);
+    return ['Fixed', 'Bucket', 'Hourly', 'Usage'].includes(value);
   };
 
   const handlePlanTypeChange = (value: string) => {
@@ -67,7 +68,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       // Clear form fields and close dialog
       setPlanName('');
       setBillingFrequency('');
-      setPlanType('fixed');
+      setPlanType('Fixed');
       setIsCustom(false);
       setOpen(false);
       onPlanAdded();
@@ -81,6 +82,11 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   };
 
   const handleClose = () => {
+    // Reset form state when closing
+    setPlanName('');
+    setBillingFrequency('');
+      setPlanType('Fixed');
+    setIsCustom(false);
     setOpen(false);
     if (onClose) {
       onClose();
@@ -88,7 +94,20 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   };
 
   return (
-    <Dialog.Root open={open || !!editingPlan} onOpenChange={setOpen}>
+    <Dialog.Root 
+      open={open || !!editingPlan} 
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          handleClose();
+        } else if (editingPlan) {
+          setPlanName(editingPlan.plan_name);
+          setBillingFrequency(editingPlan.billing_frequency);
+          setPlanType(editingPlan.plan_type as PlanType);
+          setIsCustom(editingPlan.is_custom);
+        }
+        setOpen(isOpen);
+      }}
+    >
       {triggerButton && (
         <Dialog.Trigger asChild>
           {triggerButton}
@@ -142,9 +161,20 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               />
               Is Custom Plan
             </label>
-            <Button id='save-billing-plan-button' type="submit" className="mt-2">
-              {editingPlan ? 'Update Plan' : 'Save Plan'}
-            </Button>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button 
+                id="cancel-billing-plan-button"
+                type="button" 
+                variant="outline" 
+                onClick={handleClose}
+                className="bg-white hover:bg-gray-50"
+              >
+                Cancel
+              </Button>
+              <Button id='save-billing-plan-button' type="submit">
+                {editingPlan ? 'Update Plan' : 'Save Plan'}
+              </Button>
+            </div>
           </form>
         </Dialog.Content>
       </Dialog.Portal>
