@@ -3,10 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { PageState, UIComponent, DatePickerComponent } from './types';
-// import { create } from 'jsondiffpatch';
+import { create } from 'jsondiffpatch';
 
 // Create a jsondiffpatch instance
-// const jsondiffpatch = create();
+const jsondiffpatch = create();
 
 /**
  * Context value interface containing the page state and methods to manipulate it
@@ -105,6 +105,8 @@ interface UIStateProviderProps {
   initialPageState: PageState;
 }
 
+let pageState: PageState | null = null;
+
 /**
  * Provider component that manages the UI reflection state
  */
@@ -112,7 +114,7 @@ export function UIStateProvider({ children, initialPageState }: {
   children: React.ReactNode;
   initialPageState: PageState;
 }) {
-  const [pageState, setPageState] = useState<PageState>(initialPageState);
+  // const [pageState, setPageState] = useState<PageState>(initialPageState);
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -186,61 +188,63 @@ export function UIStateProvider({ children, initialPageState }: {
   // Track the next available ordinal for deterministic ordering
   const nextOrdinalRef = useRef(0);
 
+  const setPageState = (state: PageState) => {
+    pageState = state;
+  }
+
   /**
    * Registers or updates a component in the dictionary,
    * then rebuilds the entire tree.
    */
-  const registerComponent = useCallback((component: UIComponent) => {
+  const registerComponent = useCallback((component: UIComponent | undefined) => {
+    if (!component) {
+      console.warn('Attempted to register undefined component');
+      return;
+    }
+
     if (componentDictRef.current[component.id]) {
       console.warn(`Component with ID ${component.id} already exists. Skipping registration.`);
       return;
     }
 
-    setPageState((prev) => {
-      const dict = { ...componentDictRef.current };
-      const existing = dict[component.id];
+    const dict = { ...componentDictRef.current };
+    const existing = dict[component.id];
 
-      if (!existing) {
-        // New component: assign an ordinal for deterministic ordering
-        dict[component.id] = {
-          ...component,
-          ordinal: nextOrdinalRef.current,
-        };
-        nextOrdinalRef.current++;
-      } else {
-        // Existing component: preserve its ordinal
-        // Create a new object with the correct type by preserving existing type-specific properties
-        dict[component.id] = {
-          ...existing,
-          ...component,
-          ordinal: existing.ordinal,
-          // Preserve type-specific properties from existing component
-          ...(existing.type === 'datePicker' && {
-            value: typeof (component as DatePickerComponent).value === 'string' 
-              ? (component as DatePickerComponent).value 
-              : (existing as DatePickerComponent).value
-          })
-        } as UIComponent;
-      }
+    // Set the ordinal based on whether this is a new or existing component
+    const ordinal = !existing ? nextOrdinalRef.current : existing.ordinal;
 
-      // Commit the updated dict
-      componentDictRef.current = dict;
+    // Create the component entry
+    dict[component.id] = {
+      ...(existing || {}),
+      ...component,
+      ordinal
+    } as UIComponent;
 
-      // Rebuild the root array from the dictionary
-      const newRoot = rebuildTreeFromDictionary(dict);
+    // Increment ordinal for new components
+    if (!existing) {
+      nextOrdinalRef.current++;
+    }
 
-      const nextState = {
-        ...prev,
-        components: newRoot
-      }
+    // Commit the updated dict
+    componentDictRef.current = dict;
 
-      // use jsondiffpatch to compare the current state with the next state
-      // and only update the state if there are any changes
-      // const patch = jsondiffpatch.diff(prev, nextState);
-      // console.log('Patch:', JSON.stringify(patch, null, 2));
+    // Rebuild the root array from the dictionary
+    const newRoot = rebuildTreeFromDictionary(dict);
 
-      return nextState;
-    });
+    const nextState: PageState = {
+      id: pageState?.id || 'page',
+      title: pageState?.title || '',
+      components: newRoot
+    };
+
+    // use jsondiffpatch to compare the current state with the next state
+    // and only update if there are changes
+    const patch = jsondiffpatch.diff(pageState, nextState);
+    if (!patch) {
+      return;
+    }
+
+    setPageState(nextState);
   }, []);
 
   /**
@@ -253,58 +257,59 @@ export function UIStateProvider({ children, initialPageState }: {
       return;
     }
 
-    setPageState((prev) => {
-      // Make a copy of the dictionary
-      const dict = { ...componentDictRef.current };
+    // Make a copy of the dictionary
+    const dict = { ...componentDictRef.current };
 
-      // We can do a DFS or BFS in the dictionary to find all descendants
-      const idsToRemove = getAllDescendants(dict, id);
+    // We can do a DFS or BFS in the dictionary to find all descendants
+    const idsToRemove = getAllDescendants(dict, id);
 
-      // Remove them all
-      for (const removeId of idsToRemove) {
-        delete dict[removeId];
-      }
+    // Remove them all
+    for (const removeId of idsToRemove) {
+      delete dict[removeId];
+    }
 
-      // Commit changes
-      componentDictRef.current = dict;
-      const newRoot = rebuildTreeFromDictionary(dict);
+    // Commit changes
+    componentDictRef.current = dict;
+    const newRoot = rebuildTreeFromDictionary(dict);
 
-      return {
-        ...prev,
-        components: newRoot
-      };
-    });
+    const nextState: PageState = {
+      id: pageState?.id || 'page',
+      title: pageState?.title || '',
+      components: newRoot
+    };
+
+    setPageState(nextState);
   }, []);
 
   /**
    * Update a component's metadata by partial fields.
    */
   const updateComponent = useCallback((id: string, partial: Partial<UIComponent>) => {
-    setPageState((prev) => {
-      const dict = { ...componentDictRef.current };
-      const existing = dict[id];
-      if (!existing) {
-        // If the component doesn't exist yet, we might choose to create it
-        // or just ignore. For now, let's ignore.
-        return prev;
-      }
-      
-      // Merge partial update, but preserve type, children & ordinal
-      dict[id] = {
-        ...existing,
-        ...partial,
-        type: existing.type,
-        children: existing.children,
-        ordinal: existing.ordinal
-      } as UIComponent;
+    const dict = { ...componentDictRef.current };
+    const existing = dict[id];
 
-      componentDictRef.current = dict;
-      const newRoot = rebuildTreeFromDictionary(dict);
-      return {
-        ...prev,
-        components: newRoot
-      };
-    });
+    if (!existing) {
+      return;
+    }
+    
+    // Merge partial update, but preserve type, children & ordinal
+    dict[id] = {
+      ...existing,
+      ...partial,
+      type: existing.type,
+      children: existing.children,
+      ordinal: existing.ordinal
+    } as UIComponent;
+
+    componentDictRef.current = dict;
+    const newRoot = rebuildTreeFromDictionary(dict);
+    var newPageState: PageState | null = {
+      id: pageState?.id || 'page',
+      title: pageState?.title || '',
+      components: newRoot
+    };
+
+    setPageState(newPageState);
   }, []);
 
   // Provide context
