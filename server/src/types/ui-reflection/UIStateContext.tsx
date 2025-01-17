@@ -191,6 +191,11 @@ export function UIStateProvider({ children, initialPageState }: {
    * then rebuilds the entire tree.
    */
   const registerComponent = useCallback((component: UIComponent) => {
+    if (componentDictRef.current[component.id]) {
+      console.warn(`Component with ID ${component.id} already exists. Skipping registration.`);
+      return;
+    }
+
     setPageState((prev) => {
       const dict = { ...componentDictRef.current };
       const existing = dict[component.id];
@@ -236,6 +241,11 @@ export function UIStateProvider({ children, initialPageState }: {
    * Also removes its descendants, if desired.
    */
   const unregisterComponent = useCallback((id: string) => {
+    if (!componentDictRef.current[id]) {
+      console.warn(`Component with ID ${id} does not exist. Skipping unregistration.`);
+      return;
+    }
+
     setPageState((prev) => {
       // Make a copy of the dictionary
       const dict = { ...componentDictRef.current };
@@ -308,16 +318,41 @@ export function UIStateProvider({ children, initialPageState }: {
 function getAllDescendants(dict: ComponentDict, id: string): string[] {
   const result: string[] = [];
   const stack = [id];
+  const visited = new Set<string>();
   
-  while (stack.length > 0) {
+  let maxIterations = 100;
+  while (stack.length > 0 && maxIterations > 0) {
+    maxIterations--;
     const current = stack.pop()!;
+    
+    // Skip if component doesn't exist in dictionary
     if (!dict[current]) continue;
     
+    // Check for circular reference
+    if (visited.has(current)) {
+      console.error(
+        `Circular reference detected: Component ${current} has already been processed. ` +
+        `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
+      );
+      continue;
+  }
+
+    // Mark as visited and add to result
+    visited.add(current);
     result.push(current);
+    
     // Add children to stack
     const childIds = dict[current].children?.map((c): string => c.id) || [];
     stack.push(...childIds);
   }
+
+  if (maxIterations <= 0 && stack.length > 0) {
+    console.error(
+      'Maximum iterations exceeded while gathering descendants. ' +
+      'This indicates either a very deep component tree or a circular reference. ' +
+      `Processed components: ${Array.from(visited).join(' -> ')}`
+    );
+}
 
   return result;
 }

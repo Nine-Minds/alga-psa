@@ -11,7 +11,6 @@ import TimePeriods from './TimePeriods';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import ServiceCatalog from './ServiceCatalog';
-import Reports from './Reports';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
@@ -29,15 +28,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   const tabs = [
     'overview',
-    'plans',
-    'time-periods',
-    'invoices',
     'generate-invoices',
+    'invoices',
     'invoice-templates',
-    'billing-cycles',
-    'reports',
+    'tax-rates',
+    'plans',
     'service-catalog',
-    'tax-rates'
+    'billing-cycles',
+    'time-periods'
   ];
 
   return (
@@ -66,40 +64,36 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <Overview />
         </Tabs.Content>
 
-        <Tabs.Content value="plans">
-          <BillingPlans initialServices={initialServices} />
-        </Tabs.Content>
-
-        <Tabs.Content value="time-periods">
-          <TimePeriods initialTimePeriods={initialTimePeriods} />
+        <Tabs.Content value="generate-invoices">
+          <GenerateInvoices />
         </Tabs.Content>
 
         <Tabs.Content value="invoices">
           <Invoices />
         </Tabs.Content>
 
-        <Tabs.Content value="generate-invoices">
-          <GenerateInvoices />
-        </Tabs.Content>
-
         <Tabs.Content value="invoice-templates">
           <InvoiceTemplates />
+        </Tabs.Content>
+
+        <Tabs.Content value="tax-rates">
+          <TaxRates />
+        </Tabs.Content>
+
+        <Tabs.Content value="plans">
+          <BillingPlans initialServices={initialServices} />
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">
           <ServiceCatalog />
         </Tabs.Content>
 
-        <Tabs.Content value="reports">
-          <Reports />
-        </Tabs.Content>
-
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
         </Tabs.Content>
 
-        <Tabs.Content value="tax-rates">
-          <TaxRates />
+        <Tabs.Content value="time-periods">
+          <TimePeriods initialTimePeriods={initialTimePeriods} />
         </Tabs.Content>
       </Tabs.Root>
     </div>
