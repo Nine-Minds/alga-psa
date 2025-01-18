@@ -549,10 +549,12 @@ export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tena
     ...template,                // Keep all existing fields
     template_id: uuidv4(),      // Generate new ID for clone
     isStandard: false,         // Reset standard flag
-    isClone: false             // Reset clone flag
   } : template;
+
+  // Remove the temporary isClone flag before saving
+  const { isClone, isStandard, parsed, ...templateToSaveWithoutCloneFlag } = templateToSave;
   
-  const savedTemplate = await Invoice.saveTemplate(templateToSave);
+  const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutCloneFlag);
   return {
     ...savedTemplate,
     parsed: savedTemplate.dsl ? parseInvoiceTemplate(savedTemplate.dsl) : null

@@ -19,7 +19,8 @@ const InvoiceTemplates: React.FC = () => {
       const clonedTemplate = {
         ...template,
         name: `${template.name} (Copy)`,
-        isClone: true
+        isClone: true,
+        isStandard: false
       };
       const savedTemplate = await saveInvoiceTemplate(clonedTemplate);
       await fetchTemplates();

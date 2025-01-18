@@ -159,7 +159,7 @@ export default class Invoice {
     const { knex, tenant } = await createTenantKnex();
     const [savedTemplate] = await knex('invoice_templates')
       .insert({ ...template, tenant: tenant })
-      .onConflict('template_id')
+      .onConflict(['tenant', 'template_id'])
       .merge()
       .returning('*');
     return savedTemplate;
