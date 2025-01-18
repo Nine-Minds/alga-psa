@@ -8,15 +8,22 @@ import { timeSheetApprovalSchema, timeSheetCommentSchema, timeEntrySchema, timeS
 import { WorkItemType } from '@/interfaces/workItem.interfaces';
 import { validateArray, validateData } from '../utils/validation';
 
-export async function fetchTimeSheetsForApproval(teamIds: string[]): Promise<ITimeSheetApproval[]> {
+export async function fetchTimeSheetsForApproval(
+  teamIds: string[],
+  includeApproved: boolean = false
+): Promise<ITimeSheetApproval[]> {
   try {
     const {knex: db} = await createTenantKnex();
+    const statuses = includeApproved
+      ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
+      : ['SUBMITTED', 'CHANGES_REQUESTED'];
+
     const timeSheets = await db('time_sheets')
       .join('users', 'time_sheets.user_id', 'users.user_id')
       .join('team_members', 'users.user_id', 'team_members.user_id')
       .join('time_periods', 'time_sheets.period_id', 'time_periods.period_id')
       .whereIn('team_members.team_id', teamIds)
-      .whereIn('time_sheets.approval_status', ['SUBMITTED', 'CHANGES_REQUESTED'])
+      .whereIn('time_sheets.approval_status', statuses)
       .select(
         'time_sheets.*',
         'users.user_id',
@@ -109,6 +116,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
           throw new Error(`Unauthorized: Not a manager for time sheet ${id}`);
         }
 
+        // Update time sheet status
         await trx('time_sheets')
           .where('id', id)
           .update({
@@ -116,6 +124,11 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
             approved_by: managerId,
             approved_at: new Date()
           });
+
+        // Update all time entries to approved status
+        await trx('time_entries')
+          .where({ time_sheet_id: id })
+          .update({ approval_status: 'APPROVED' });
       }
     });
 
@@ -264,6 +277,7 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
         throw new Error('Time sheet not found');
       }
 
+      // Update time sheet status
       await trx('time_sheets')
         .where({ id: timeSheetId })
         .update({
@@ -271,6 +285,11 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
           approved_at: trx.fn.now(),
           approved_by: approverId
         });
+
+      // Update all time entries to approved status
+      await trx('time_entries')
+        .where({ time_sheet_id: timeSheetId })
+        .update({ approval_status: 'APPROVED' });
 
       await trx('time_sheet_comments').insert({
         time_sheet_id: timeSheetId,
@@ -319,5 +338,68 @@ export async function requestChangesForTimeSheet(timeSheetId: string, approverId
   } catch (error) {
     console.error('Error requesting changes for time sheet:', error);
     throw new Error('Failed to request changes for time sheet');
+  }
+}
+
+export async function reverseTimeSheetApproval(
+  timeSheetId: string,
+  approverId: string,
+  reason: string
+): Promise<void> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    await db.transaction(async (trx) => {
+      // Check if time sheet exists and is approved
+      const timeSheet = await trx('time_sheets')
+        .where({ id: timeSheetId })
+        .first();
+
+      if (!timeSheet) {
+        throw new Error('Time sheet not found');
+      }
+
+      if (timeSheet.approval_status !== 'APPROVED') {
+        throw new Error('Time sheet is not in an approved state');
+      }
+
+      // Check if any entries are invoiced
+      const invoicedEntries = await trx('time_entries')
+        .where({
+          time_sheet_id: timeSheetId,
+          invoiced: true
+        })
+        .first();
+        
+      if (invoicedEntries) {
+        throw new Error('Cannot reverse approval: time entries have been invoiced');
+      }
+
+      // Update time sheet status
+      await trx('time_sheets')
+        .where({ id: timeSheetId })
+        .update({
+          approval_status: 'SUBMITTED' as TimeSheetStatus,
+          approved_at: null,
+          approved_by: null
+        });
+
+      // Update time entries status
+      await trx('time_entries')
+        .where({ time_sheet_id: timeSheetId })
+        .update({ approval_status: 'SUBMITTED' });
+
+      // Add comment for audit trail
+      await trx('time_sheet_comments').insert({
+        time_sheet_id: timeSheetId,
+        user_id: approverId,
+        comment: `Approval reversed: ${reason}`,
+        created_at: trx.fn.now(),
+        is_approver: true,
+        tenant
+      });
+    });
+  } catch (error) {
+    console.error('Error reversing time sheet approval:', error);
+    throw error;
   }
 }

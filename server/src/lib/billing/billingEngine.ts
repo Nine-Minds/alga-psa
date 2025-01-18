@@ -35,7 +35,9 @@ import {
 } from 'date-fns';
 import { ISO8601String } from '@/types/types.d';
 import { getCompanyTaxRate } from '@/lib/actions/invoiceActions';
+import { getCompanyById } from '@/lib/actions/companyActions';
 import { ICompany } from '@/interfaces';
+import { get } from 'http';
 
 export class BillingEngine {
   private knex: Knex;
@@ -62,7 +64,8 @@ export class BillingEngine {
 
   async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult> {
     await this.initKnex();
-    console.log(`Calculating billing for company ${companyId} from ${startDate} to ${endDate}`);
+    const company = await getCompanyById(companyId);
+    console.log(`Calculating billing for company ${company?.company_name} (${companyId}) from ${startDate} to ${endDate}`);
     
     // Check for existing invoice in this billing cycle
     const hasExistingInvoice = await this.hasExistingInvoiceForCycle(companyId, billingCycleId);
@@ -92,7 +95,7 @@ export class BillingEngine {
     let totalCharges: IBillingCharge[] = [];
 
     for (const companyBillingPlan of companyBillingPlans) {
-      console.log(`Processing billing plan: ${companyBillingPlan.plan_id}`);
+      console.log(`Processing billing plan: ${companyBillingPlan.plan_name}`);
       const [fixedPriceCharges, timeBasedCharges, usageBasedCharges, bucketPlanCharges] = await Promise.all([
         this.calculateFixedPriceCharges(companyId, billingPeriod, companyBillingPlan),
         this.calculateTimeBasedCharges(companyId, billingPeriod, companyBillingPlan),
@@ -163,12 +166,14 @@ export class BillingEngine {
     await this.initKnex();
     const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
     const companyBillingPlans = await this.knex('company_billing_plans')
-      .where({ company_id: companyId, is_active: true })
-      .where('start_date', '<=', billingPeriod.endDate)
+      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
+      .where({ 'company_billing_plans.company_id': companyId, 'company_billing_plans.is_active': true })
+      .where('company_billing_plans.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
-        this.where('end_date', '>=', billingPeriod.startDate).orWhereNull('end_date');
+        this.where('company_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('company_billing_plans.end_date');
       })
-      .orderBy('start_date', 'desc');
+      .select('company_billing_plans.*', 'billing_plans.plan_name')
+      .orderBy('company_billing_plans.start_date', 'desc');
 
     companyBillingPlans.forEach((plan: any) => {
       plan.start_date = plan.start_date.toISOString();
@@ -292,10 +297,10 @@ export class BillingEngine {
 
   private async calculateTimeBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
-    const timeEntries = await this.knex('time_entries')
+    const query = this.knex('time_entries')
       .join('users', 'time_entries.user_id', 'users.user_id')
       .leftJoin('project_ticket_links', 'time_entries.work_item_id', 'project_ticket_links.ticket_id')
-      .leftJoin('project_tasks', 'project_ticket_links.task_id', 'project_tasks.task_id')
+      .leftJoin('project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id')
       .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
       .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
       .leftJoin('tickets', 'time_entries.work_item_id', 'tickets.ticket_id')
@@ -327,6 +332,9 @@ export class BillingEngine {
         'plan_services.custom_rate',
         this.knex.raw('COALESCE(project_tasks.task_name, tickets.title) as work_item_name')
       );
+
+    console.log('Time entries query:', query.toString());
+    const timeEntries = await query;
 
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
       const duration = differenceInHours(entry.end_time, entry.start_time);

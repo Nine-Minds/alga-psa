@@ -16,6 +16,7 @@ interface TimeSheetApprovalProps {
   currentUser: IUser;
   onApprove: () => void;
   onRequestChanges: () => void;
+  onReverseApproval?: () => void;
 }
 
 
@@ -110,7 +111,8 @@ export function TimeSheetApproval({
   timeEntries,
   currentUser,
   onApprove,
-  onRequestChanges
+  onRequestChanges,
+  onReverseApproval
 }: TimeSheetApprovalProps) {
   const [timeSheet, setTimeSheet] = useState<ITimeSheetApproval>(initialTimeSheet);
   const [newComment, setNewComment] = useState('');
@@ -430,8 +432,34 @@ export function TimeSheetApproval({
       </Card>
 
       <div className="flex justify-end space-x-4">
-        <Button id="timesheet-approve-btn" onClick={onApprove} variant="default">Approve</Button>
-        <Button id="timesheet-request-changes-btn" onClick={onRequestChanges} variant="outline">Request Changes</Button>
+        {timeSheet.approval_status === 'APPROVED' && onReverseApproval ? (
+          <Button
+            id="timesheet-reverse-approval-btn"
+            onClick={onReverseApproval}
+            variant="destructive"
+          >
+            Reverse Approval
+          </Button>
+        ) : (
+          <>
+            <Button
+              id="timesheet-approve-btn"
+              onClick={onApprove}
+              variant="default"
+              disabled={timeSheet.approval_status === 'APPROVED'}
+            >
+              Approve
+            </Button>
+            <Button
+              id="timesheet-request-changes-btn"
+              onClick={onRequestChanges}
+              variant="outline"
+              disabled={timeSheet.approval_status === 'APPROVED'}
+            >
+              Request Changes
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

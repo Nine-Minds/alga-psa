@@ -16,6 +16,7 @@ interface BillingPlansProps {
     onDelete: (companyBillingPlanId: string) => void;
     onAdd: (selectedPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant">) => Promise<void>;
     onCompanyPlanChange: (companyBillingPlanId: string, planId: string) => void;
+    onServiceCategoryChange: (companyBillingPlanId: string, categoryId: string) => void;
     formatDateForDisplay: (date: string | Date | null) => string;
 }
 

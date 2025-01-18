@@ -134,6 +134,21 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         }
     };
 
+    const handleServiceCategoryChange = async (companyBillingPlanId: string, categoryId: string) => {
+        try {
+            await updateCompanyBillingPlan(companyBillingPlanId, { service_category: categoryId });
+            const updatedBillingPlans = await getCompanyBillingPlan(company.company_id);
+            const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
+                ...plan,
+                start_date: formatStartDate(plan.start_date),
+                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+            }));
+            setCompanyBillingPlans(updatedBillingPlansWithStringDates);
+        } catch (error) {
+            setErrorMessage('Failed to update service category. Please try again.');
+        }
+    };
+
     const handleAddBillingPlan = async (newBillingPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant">) => {
         try {
             await addCompanyBillingPlan(newBillingPlan);
@@ -317,6 +332,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 onDelete={handleRemoveBillingPlan}
                 onAdd={handleAddBillingPlan}
                 onCompanyPlanChange={handleCompanyPlanChange}
+                onServiceCategoryChange={handleServiceCategoryChange}
                 formatDateForDisplay={formatDateForDisplay}
             />
 

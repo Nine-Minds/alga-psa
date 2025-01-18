@@ -16,6 +16,7 @@ import { ISO8601String } from '@/types/types.d';
 import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { Tent } from 'lucide-react';
 
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex } = await createTenantKnex();
@@ -159,7 +160,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 
   if (billingResult.charges.length === 0) {
-    throw new Error('No active billing plans for this period');
+    throw new Error('Nothing to bill');
   }
 
   for (const charge of billingResult.charges) {
@@ -190,10 +191,14 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
 }
 
 async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies').where({ company_id: companyId }).first() as ICompany;
   if (!company) {
     throw new Error(`Company with ID ${companyId} not found`);
+  }
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
   }
 
   const taxService = new TaxService();
@@ -211,7 +216,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     status: 'draft',
     invoice_number: await generateInvoiceNumber(),
     credit_applied: 0,
-    billing_cycle_id: billing_cycle_id
+    billing_cycle_id: billing_cycle_id,
+    tenant: tenant
   };
 
   const createdInvoice = await knex.transaction(async (trx) => {
@@ -234,7 +240,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       status: 'completed',
       description: `Generated invoice ${newInvoice.invoice_number}`,
       created_at: new Date().toISOString(),
-      balance_after: currentBalance + newInvoice.total_amount
+      balance_after: currentBalance + newInvoice.total_amount,
+      tenant: tenant
     });
 
     // Process each charge and create invoice items
@@ -252,7 +259,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         tax_amount: taxCalculationResult.taxAmount,
         tax_region: charge.tax_region,
         tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount
+        total_price: netAmount + taxCalculationResult.taxAmount,
+        tenant: tenant
       };
 
       await trx('invoice_items').insert(invoiceItem);
@@ -262,7 +270,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         await trx('invoice_time_entries').insert({
           invoice_time_entry_id: uuidv4(),
           invoice_id: newInvoice.invoice_id,
-          entry_id: charge.entryId
+          entry_id: charge.entryId,
+          tenant: tenant
         });
 
         await trx('time_entries')
