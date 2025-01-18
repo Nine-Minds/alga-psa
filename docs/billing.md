@@ -4,6 +4,146 @@
 
 The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of hours/retainer models, **discounts and promotions, multi-currency support, tax handling, service bundling, refunds and adjustments, and approval workflows**. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements.
 
+## Manual Invoicing
+
+### Purpose
+Manual Invoices allow MSPs to create ad-hoc invoices that do not rely on automated billing plans, time entries, or usage records. They are especially useful for:
+
+- One-off charges (e.g., custom project fees, expenses, pass-through costs)
+- Correcting or adjusting client charges before finalization
+- Invoicing for services not represented in the main service catalog or billing plans
+
+### Key Characteristics
+
+#### is_manual Flag
+- Stored in the invoices table.
+- true indicates a manually created invoice.
+
+#### Draft Status
+- By default, new manual invoices have a status of draft.
+- They can be reviewed and edited before being finalized.
+
+#### Line Items
+- Each line item is stored in invoice_items.
+- The user can specify:
+  - A Service (from the catalog) or a placeholder ID
+  - A Quantity
+  - A Description
+  - A Rate (dollars/currency per unit)
+- Tax is computed via the TaxService at line-item level.
+
+#### Transactions
+- Upon creation or update, a corresponding record is inserted into the transactions table with type values like:
+  - invoice_generated (new manual invoice)
+  - invoice_adjustment (manual invoice updates)
+- This ensures a proper audit trail in the financial ledger.
+
+#### Tax Calculation
+- Manual invoices leverage the same TaxService logic used for automated invoices.
+- The system determines the tax region from either:
+  - The service's tax region (if defined)
+  - The company's default tax region (fallback)
+- Tax rates are fetched from tax_rates based on the region and date, producing a taxAmount and taxRate.
+
+### Usage
+- Ad-hoc or single-service charges
+- Quick corrections if no time entries or usage were tracked
+- Custom items not otherwise part of the standard billing engine
+
+### Implementation Details
+
+#### Creation
+```typescript
+import { generateManualInvoice } from 'lib/actions/manualInvoiceActions';
+
+await generateManualInvoice({
+  companyId: '...',  // The client's company ID
+  items: [
+    {
+      service_id: '...',
+      quantity: 2,
+      description: 'Ad-hoc consulting',
+      rate: 150
+    }
+  ]
+});
+```
+- Creates an invoices record with status = 'draft' and is_manual = true.
+- Inserts corresponding invoice_items with calculated tax.
+- Inserts a transactions record of type invoice_generated.
+
+#### Editing/Updates
+```typescript
+import { updateManualInvoice } from 'lib/actions/manualInvoiceActions';
+
+await updateManualInvoice(invoiceId, {
+  companyId: '...',
+  items: [
+    // new or updated items
+  ]
+});
+```
+- Deletes existing items for the invoice, then recreates them based on the provided data.
+- Recomputes tax amounts.
+- Updates totals on the invoices record.
+- Inserts a transactions record of type invoice_adjustment.
+
+#### UI Components
+- ManualInvoices.tsx: A form-based UI that lets users pick a company, add line items, compute a quick total, and create/update the invoice.
+- Invoices.tsx: Lists all invoices (manual or automated). For manual invoices, an "Edit" button is available if the invoice is still in a modifiable state.
+
+#### Database Fields (relevant to manual invoicing):
+- invoices.is_manual (boolean)
+- invoices.status (e.g. draft, open, paid)
+- invoice_items.tax_amount and invoice_items.tax_rate
+- transactions.type (e.g. invoice_generated, invoice_adjustment)
+
+### Best Practices
+- Keep Manual Invoices in "Draft" until reviewed, to avoid confusion or partial data entry.
+- Assign Meaningful Descriptions to line items for future reference or audits.
+- Leverage the Service Catalog to pre-fill default rates and descriptions, ensuring consistency.
+- Use Transactions as the single source of truth for any financial adjustments made via manual invoices.
+
+## TaxService and Dynamic Tax Calculation
+
+While the tax_rates table has been part of the design, the actual computation is performed by a dedicated TaxService class (server/src/lib/services/taxService.ts). This service:
+
+- Looks up a company's tax region (or uses a line item's specific tax region if defined on the service).
+- Queries tax_rates based on region and date to find the current applicable rate.
+- Returns both a taxRate and a taxAmount (for the net amount in cents or minor currency units).
+- Is invoked during both automated invoice generation (by the billing engine) and manual invoice creation/updates.
+
+Example Usage:
+```typescript
+const taxCalculationResult = await taxService.calculateTax(
+  companyId,
+  netAmountInCents,     // e.g., 15000 for $150.00
+  currentDate
+);
+```
+
+Returned Object:
+```typescript
+{
+  taxAmount: number;  // e.g., 975 for 6.5% of 15000
+  taxRate: number;    // e.g., 0.065
+}
+```
+
+When you insert or update invoice items, the system records tax_amount and tax_rate in invoice_items, which are then included in the invoice totals.
+
+## Transactions for Manual Invoices
+
+The transactions table was introduced to log all financial events in the system. For manual invoices, each creation or update writes a corresponding transaction row:
+
+- type:
+  - invoice_generated: Inserted when a new manual invoice is created.
+  - invoice_adjustment: Inserted when line items on an existing manual invoice are updated.
+- balance_after: Reflects the invoice total for reference.
+- description: For example, "Generated manual invoice #1234" or "Updated manual invoice #5678."
+
+This logging mechanism helps keep a consistent ledger of all billing events, whether automatic or manual.
+
 ## Service Types
 
 The billing system uses a strongly-typed service type system to determine how each service will be billed and calculated. There are three main service types:
@@ -77,90 +217,90 @@ This typing ensures that only valid service types can be assigned, maintaining d
    - **Key Fields:** `tenant`, `entry_id` (UUID, PK), `user_id`, `ticket_id`, `service_id`, `start_time`, `end_time`, `duration`, `billable`
 
 10. **`usage_tracking`** *(From Original Plan)*
-     - **Purpose:** Tracks usage for consumption-based billing
-     - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `company_id`, `service_id`, `usage_date`, `quantity`
+    - **Purpose:** Tracks usage for consumption-based billing
+    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `company_id`, `service_id`, `usage_date`, `quantity`
 
 11. **`invoices`** *(From Original Plan, Updated)*
-     - **Purpose:** Stores invoice header information
-     - **Key Fields:** `tenant`, `invoice_id` (UUID, PK), `company_id`, `invoice_date`, `due_date`, `total_amount`, `status`, `currency_code`, `billing_period_start`, `billing_period_end`, `credit_applied`, `finalized_at`
+    - **Purpose:** Stores invoice header information
+    - **Key Fields:** `tenant`, `invoice_id` (UUID, PK), `company_id`, `invoice_date`, `due_date`, `total_amount`, `status`, `currency_code`, `billing_period_start`, `billing_period_end`, `credit_applied`, `finalized_at`
 
 12. **`invoice_items`** *(From Original Plan, Updated)*
-     - **Purpose:** Stores line items for each invoice
-     - **Key Fields:** `tenant`, `invoice_id`, `item_id` (UUID, PK), `service_id`, `description`, `quantity`, `unit_price`, `total_price`, `currency_code`, `tax_rate_id`, `tax_region`, `tax_amount`, `net_amount`
+    - **Purpose:** Stores line items for each invoice
+    - **Key Fields:** `tenant`, `invoice_id`, `item_id` (UUID, PK), `service_id`, `description`, `quantity`, `unit_price`, `total_price`, `currency_code`, `tax_rate_id`, `tax_region`, `tax_amount`, `net_amount`
 
 13. **`bucket_plans`** *(From Original Plan)*
-     - **Purpose:** Defines bucket of hours/retainer plans
-     - **Key Fields:** `tenant`, `bucket_plan_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `total_hours`, `billing_period`, `overage_rate`
+    - **Purpose:** Defines bucket of hours/retainer plans
+    - **Key Fields:** `tenant`, `bucket_plan_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `total_hours`, `billing_period`, `overage_rate`
 
 14. **`bucket_usage`** *(From Original Plan)*
-     - **Purpose:** Tracks usage against bucket of hours/retainer plans
-     - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `bucket_plan_id`, `company_id`, `period_start`, `period_end`, `hours_used`, `overage_hours`
+    - **Purpose:** Tracks usage against bucket of hours/retainer plans
+    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `bucket_plan_id`, `company_id`, `period_start`, `period_end`, `hours_used`, `overage_hours`
 
 15. **`invoice_templates`** *(New)*
-     - **Purpose:** Stores invoice templates with DSL for dynamic generation
-     - **Key Fields:** `tenant`, `template_id` (UUID, PK), `name`, `version`, `dsl`, `is_default`, `created_at`, `updated_at`
+    - **Purpose:** Stores invoice templates with DSL for dynamic generation
+    - **Key Fields:** `tenant`, `template_id` (UUID, PK), `name`, `version`, `dsl`, `is_default`, `created_at`, `updated_at`
 
 16. **`invoice_annotations`** *(New)*
-     - **Purpose:** Stores comments and notes on invoices
-     - **Key Fields:** `tenant`, `annotation_id` (UUID, PK), `invoice_id`, `user_id`, `content`, `is_internal`, `created_at`
+    - **Purpose:** Stores comments and notes on invoices
+    - **Key Fields:** `tenant`, `annotation_id` (UUID, PK), `invoice_id`, `user_id`, `content`, `is_internal`, `created_at`
 
 17. **`invoice_time_entries`** *(New)*
-     - **Purpose:** Links time entries to specific invoice items
-     - **Key Fields:** `invoice_time_entry_id` (UUID, PK), `invoice_id`, `entry_id`, `tenant`, `created_at`
+    - **Purpose:** Links time entries to specific invoice items
+    - **Key Fields:** `invoice_time_entry_id` (UUID, PK), `invoice_id`, `entry_id`, `tenant`, `created_at`
 
 18. **`invoice_usage_records`** *(New)*
-     - **Purpose:** Links usage records to specific invoice items
-     - **Key Fields:** `invoice_usage_record_id` (UUID, PK), `invoice_id`, `usage_id`, `tenant`, `created_at`
+    - **Purpose:** Links usage records to specific invoice items
+    - **Key Fields:** `invoice_usage_record_id` (UUID, PK), `invoice_id`, `usage_id`, `tenant`, `created_at`
 
 ### **New Tables**
 
 15. **`discounts`** *(New)*
-     - **Purpose:** Defines discounts and promotions
-     - **Key Fields:** `tenant`, `discount_id` (UUID, PK), `discount_name`, `discount_type`, `value`, `start_date`, `end_date`, `is_active`
+    - **Purpose:** Defines discounts and promotions
+    - **Key Fields:** `tenant`, `discount_id` (UUID, PK), `discount_name`, `discount_type`, `value`, `start_date`, `end_date`, `is_active`
 
 16. **`plan_discounts`** *(New)*
-     - **Purpose:** Associates discounts with billing plans or clients
-     - **Key Fields:** `tenant`, `plan_id` , `company_id` , `discount_id`
+    - **Purpose:** Associates discounts with billing plans or clients
+    - **Key Fields:** `tenant`, `plan_id` , `company_id` , `discount_id`
 
 17. **`tax_rates`** *(New)*
-     - **Purpose:** Stores tax rates based on regions or services
-     - **Key Fields:** `tenant`, `tax_rate_id` (UUID, PK), `region`, `tax_percentage`, `description`, `start_date`, `end_date`
+    - **Purpose:** Stores tax rates based on regions or services
+    - **Key Fields:** `tenant`, `tax_rate_id` (UUID, PK), `region`, `tax_percentage`, `description`, `start_date`, `end_date`
 
 18. **`currencies`** *(New)*
-     - **Purpose:** Stores currency codes and exchange rates
-     - **Key Fields:** `currency_code` (PK), `currency_name`, `exchange_rate_to_base`, `is_active`
+    - **Purpose:** Stores currency codes and exchange rates
+    - **Key Fields:** `currency_code` (PK), `currency_name`, `exchange_rate_to_base`, `is_active`
 
 19. **`service_dependencies`** *(New)*
-     - **Purpose:** Defines dependencies between services
-     - **Key Fields:** `tenant`, `service_id`, `dependent_service_id`
+    - **Purpose:** Defines dependencies between services
+    - **Key Fields:** `tenant`, `service_id`, `dependent_service_id`
 
 20. **`service_bundles`** *(New)*
-     - **Purpose:** Defines service bundles/packages
-     - **Key Fields:** `tenant`, `bundle_id` (UUID, PK), `bundle_name`, `bundle_description`
+    - **Purpose:** Defines service bundles/packages
+    - **Key Fields:** `tenant`, `bundle_id` (UUID, PK), `bundle_name`, `bundle_description`
 
 21. **`bundle_services`** *(New)*
-     - **Purpose:** Associates services with bundles
-     - **Key Fields:** `tenant`, `bundle_id`, `service_id`
+    - **Purpose:** Associates services with bundles
+    - **Key Fields:** `tenant`, `bundle_id`, `service_id`
 
 22. **`transactions`** *(New)*
-     - **Purpose:** Logs all financial transactions (charges, payments, refunds, credits)
-     - **Key Fields:** `tenant`, `transaction_id` (UUID, PK), `company_id`, `invoice_id` , `transaction_type`, `amount`, `currency_code`, `transaction_date`, `description`
+    - **Purpose:** Logs all financial transactions (charges, payments, refunds, credits)
+    - **Key Fields:** `tenant`, `transaction_id` (UUID, PK), `company_id`, `invoice_id` , `transaction_type`, `amount`, `currency_code`, `transaction_date`, `description`
 
 23. **`approvals`** *(New)*
-     - **Purpose:** Manages items pending approval (e.g., time entries, discounts)
-     - **Key Fields:** `tenant`, `approval_id` (UUID, PK), `item_type`, `item_id`, `requested_by`, `approved_by`, `status`, `request_date`, `approval_date`
+    - **Purpose:** Manages items pending approval (e.g., time entries, discounts)
+    - **Key Fields:** `tenant`, `approval_id` (UUID, PK), `item_type`, `item_id`, `requested_by`, `approved_by`, `status`, `request_date`, `approval_date`
 
 24. **`notifications`** *(New)*
-     - **Purpose:** Tracks communication events and preferences
-     - **Key Fields:** `tenant`, `notification_id` (UUID, PK), `company_id`, `user_id`, `notification_type`, `message`, `sent_date`, `status`
+    - **Purpose:** Tracks communication events and preferences
+    - **Key Fields:** `tenant`, `notification_id` (UUID, PK), `company_id`, `user_id`, `notification_type`, `message`, `sent_date`, `status`
 
 25. **`audit_logs`** *(New)*
-     - **Purpose:** Captures detailed audit trails for all billing-related operations
-     - **Key Fields:** `tenant`, `audit_id` (UUID, PK), `user_id`, `operation`, `table_name`, `record_id`, `changed_data`, `timestamp`
+    - **Purpose:** Captures detailed audit trails for all billing-related operations
+    - **Key Fields:** `tenant`, `audit_id` (UUID, PK), `user_id`, `operation`, `table_name`, `record_id`, `changed_data`, `timestamp`
 
 26. **`client_status`** *(New)*
-     - **Purpose:** Tracks the status of services and plans for each client
-     - **Key Fields:** `tenant`, `company_id`, `plan_id`, `service_id` , `status`, `status_date`, `reason`
+    - **Purpose:** Tracks the status of services and plans for each client
+    - **Key Fields:** `tenant`, `company_id`, `plan_id`, `service_id` , `status`, `status_date`, `reason`
 
 ### Key Relationships (Updated)
 
@@ -239,8 +379,6 @@ An ICompanyBillingPlan determines how IBillingCharges are calculated.
 Multiple IBillingCharges are combined to create IInvoiceItems.
 IInvoiceItems are grouped into an IInvoice for final billing presentation.
 Understanding these data structures is essential for developers working on the billing system, as they dictate how information flows through the various components of the system.
-
-
 
 ## Important Implementation Details
 
