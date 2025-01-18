@@ -1,8 +1,9 @@
-// server/src/components/billing-dashboard/Invoices.tsx
 'use client'
 import React, { useState, useEffect } from 'react';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { fetchAllInvoices, getInvoiceTemplates } from '@/lib/actions/invoiceActions';
+import { getAllCompanies } from '@/lib/actions/companyActions';
+import { getServices } from '@/lib/actions/serviceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
 import TemplateRenderer from './TemplateRenderer';
 import PaperInvoice from './PaperInvoice';
@@ -10,26 +11,51 @@ import CustomSelect from '@/components/ui/CustomSelect';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import ManualInvoices from './ManualInvoices';
+import { ICompany } from '@/interfaces';
+import { IService } from '@/interfaces/billing.interfaces';
+
+interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
+  rate: number;
+}
 
 const Invoices: React.FC = () => {
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<IInvoiceTemplate | null>(null);
+  const [editingInvoice, setEditingInvoice] = useState<InvoiceViewModel | null>(null);
+  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [services, setServices] = useState<ServiceWithRate[]>([]);
+
+  const loadData = async () => {
+    try {
+      const [
+        fetchedInvoices,
+        fetchedTemplates,
+        fetchedCompanies,
+        fetchedServices
+      ] = await Promise.all([
+        fetchAllInvoices(),
+        getInvoiceTemplates(),
+        getAllCompanies(false), // false to get only active companies
+        getServices()
+      ]);
+
+      setInvoices(fetchedInvoices);
+      setTemplates(fetchedTemplates);
+      setCompanies(fetchedCompanies);
+      setServices(fetchedServices.map((service): ServiceWithRate => ({
+        service_id: service.service_id,
+        service_name: service.service_name,
+        rate: service.default_rate
+      })));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const fetchedInvoices = await fetchAllInvoices();
-        setInvoices(fetchedInvoices);
-    
-        const fetchedTemplates = await getInvoiceTemplates();
-        setTemplates(fetchedTemplates);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
-
     loadData();
   }, []);
 
@@ -43,6 +69,12 @@ const Invoices: React.FC = () => {
   const handleTemplateSelect = (templateId: string) => {
     const template = templates.find(t => t.template_id === templateId);
     setSelectedTemplate(template || null);
+  };
+
+  const handleEditClick = (invoice: InvoiceViewModel) => {
+    setEditingInvoice(invoice);
+    setSelectedInvoice(null);
+    setSelectedTemplate(null);
   };
 
   const columns: ColumnDefinition<InvoiceViewModel>[] = [
@@ -72,12 +104,55 @@ const Invoices: React.FC = () => {
       title: 'Action',
       dataIndex: 'invoice_number',
       render: (_, record) => (
-        <Button id='view-button' onClick={() => handleInvoiceSelect(record)}>
-          View
-        </Button>
+        <div className="space-x-2">
+          <Button 
+            id="view-invoice-button"
+            onClick={() => handleInvoiceSelect(record)}
+          >
+            View
+          </Button>
+          {record.is_manual && (
+            <Button 
+              id="edit-invoice-button"
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditClick(record);
+              }}
+            >
+              Edit
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
+
+  if (editingInvoice) {
+    return (
+      <div className="space-y-8">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Edit Invoice {editingInvoice.invoice_number}</h2>
+          <Button 
+            id="cancel-edit-button"
+            variant="ghost" 
+            onClick={() => setEditingInvoice(null)}
+          >
+            Cancel
+          </Button>
+        </div>
+        <ManualInvoices
+          companies={companies}
+          services={services}
+          editingInvoice={editingInvoice}
+          onGenerateSuccess={() => {
+            setEditingInvoice(null);
+            loadData();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

@@ -14,6 +14,7 @@ export interface IInvoice extends TenantEntity {
   finalized_at?: Date | ISO8601String;
   credit_applied: number;
   billing_cycle_id?: string;
+  is_manual: boolean;
 }
 
 export interface IInvoiceItem extends TenantEntity {
@@ -235,4 +236,5 @@ export interface InvoiceViewModel {
   finalized_at?: Date;
   credit_applied: number;
   billing_cycle_id?: string;
+  is_manual: boolean;
 }

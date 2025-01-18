@@ -80,10 +80,11 @@ export default class Invoice {
     const query = knex('invoice_items')
       .select(
         'invoice_id',
+        'service_id',
         'description as name',
         'description',
         'quantity',
-        'unit_price',
+        knex.raw('unit_price::float / 100 as unit_price'), // Convert cents to dollars
         'total_price',
         'tax_amount',
         'net_amount')
@@ -258,7 +259,8 @@ export default class Invoice {
       })),
       custom_fields: invoice.custom_fields,
       finalized_at: invoice.finalized_at,
-      credit_applied: invoice.credit_applied || 0
+      credit_applied: invoice.credit_applied || 0,
+      is_manual: invoice.is_manual,
     };
   }
 

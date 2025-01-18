@@ -1,6 +1,6 @@
 'use client'
 import React, { useState } from 'react';
-import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
+import { generateManualInvoice, updateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { LineItem } from './LineItem';
@@ -8,6 +8,7 @@ import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
+import { InvoiceViewModel } from '@/interfaces/invoice.interfaces';
 import type { JSX } from 'react';
 
 // Use a constant for environment check since process.env is not available
@@ -34,6 +35,7 @@ interface ManualInvoicesProps {
   companies: ICompany[];
   services: ServiceWithRate[];
   onGenerateSuccess: () => void;
+  editingInvoice?: InvoiceViewModel;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -53,14 +55,23 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
   );
 }
 
-const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, services, onGenerateSuccess }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
-  const [items, setItems] = useState<InvoiceItem[]>([{
-    service_id: '',
-    quantity: 1,
-    description: '',
-    rate: 0
-  }]);
+const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, services, onGenerateSuccess, editingInvoice }) => {
+  const [selectedCompany, setSelectedCompany] = useState<string>(
+    editingInvoice?.company_id || ''
+  );
+  const [items, setItems] = useState<InvoiceItem[]>(
+    editingInvoice ? editingInvoice.invoice_items.map(item => ({
+      service_id: item.service_id || '',
+      quantity: item.quantity,
+      description: item.description,
+      rate: item.unit_price
+    })) : [{
+      service_id: '',
+      quantity: 1,
+      description: '',
+      rate: 0
+    }]
+  );
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set([0]));
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -106,9 +117,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
         };
       }
     } else if (field === 'quantity' || field === 'rate') {
+      const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
       newItems[index] = {
         ...newItems[index],
-        [field]: value as number
+        [field]: numericValue
       };
     } else {
       newItems[index] = {
@@ -121,7 +133,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCompany || items.some(item => !item.service_id || !item.description)) {
+    if (!selectedCompany || items.some(item => !item.service_id)) {
       setError('Please fill in all required fields');
       return;
     }
@@ -130,25 +142,23 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
     setError(null);
 
     try {
-      await generateManualInvoice({
-        companyId: selectedCompany,
-        items: items
-      });
-      
-      // Clear form
-      setSelectedCompany('');
-      setItems([{
-        service_id: '',
-        quantity: 1,
-        description: '',
-        rate: 0
-      }]);
+      if (editingInvoice) {
+        await updateManualInvoice(editingInvoice.invoice_id, {
+          companyId: selectedCompany,
+          items: items
+        });
+      } else {
+        await generateManualInvoice({
+          companyId: selectedCompany,
+          items: items
+        });
+      }
       
       onGenerateSuccess();
     } catch (err) {
-      setError('Error generating invoice');
+      setError(`Error ${editingInvoice ? 'updating' : 'generating'} invoice`);
       if (IS_DEVELOPMENT) {
-        globalThis.console.error('Error generating invoice:', err);
+        globalThis.console.error('Error with invoice:', err);
       }
     } finally {
       setIsGenerating(false);
@@ -167,7 +177,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
   return (
     <Card>
       <div className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Generate Manual Invoice</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          {editingInvoice ? 'Edit Manual Invoice' : 'Generate Manual Invoice'}
+        </h2>
 
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
@@ -232,10 +244,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({ companies, servi
           <Button
             id='generate-button'
             type="submit"
-            disabled={isGenerating || !selectedCompany || items.some(item => !item.service_id || !item.description)}
+            disabled={isGenerating || !selectedCompany || items.some(item => !item.service_id)}
             className="w-full"
           >
-            {isGenerating ? 'Generating...' : 'Generate Manual Invoice'}
+            {isGenerating ? 'Processing...' : editingInvoice ? 'Update Manual Invoice' : 'Generate Manual Invoice'}
           </Button>
         </form>
       </div>
