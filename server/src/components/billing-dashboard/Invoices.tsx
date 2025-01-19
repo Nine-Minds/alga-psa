@@ -1,6 +1,14 @@
 'use client'
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
+import { MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/DropdownMenu';
 import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
@@ -20,14 +28,37 @@ interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> 
 }
 
 const Invoices: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState<IInvoiceTemplate | null>(null);
-  const [managingInvoice, setManagingInvoice] = useState<InvoiceViewModel | null>(null);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
   const [loadingItems, setLoadingItems] = useState<boolean>(false);
+
+  // Get state from URL parameters
+  const selectedInvoiceId = searchParams?.get('invoiceId');
+  const selectedTemplateId = searchParams?.get('templateId');
+  const managingInvoiceId = searchParams?.get('managingInvoiceId');
+
+  // Derive selected objects from IDs
+  const selectedInvoice = selectedInvoiceId ? invoices.find(inv => inv.invoice_id === selectedInvoiceId) || null : null;
+  const selectedTemplate = selectedTemplateId ? templates.find(temp => temp.template_id === selectedTemplateId) || null : null;
+  const managingInvoice = managingInvoiceId ? invoices.find(inv => inv.invoice_id === managingInvoiceId) || null : null;
+
+  // Function to update URL parameters
+  const updateUrlParams = (params: { [key: string]: string | null }) => {
+    const newParams = new URLSearchParams(searchParams?.toString() || '');
+    Object.entries(params).forEach(([key, value]) => {
+      if (value === null) {
+        newParams.delete(key);
+      } else {
+        newParams.set(key, value);
+      }
+    });
+    router.push(`/msp/billing?${newParams.toString()}`);
+  };
 
   const loadData = async () => {
     try {
@@ -61,34 +92,43 @@ const Invoices: React.FC = () => {
   }, []);
 
   const handleInvoiceSelect = (invoice: InvoiceViewModel) => {
-    setSelectedInvoice(invoice);
-    if (templates.length > 0) {
-      setSelectedTemplate(templates[0]);
-    }
+    const defaultTemplateId = templates.length > 0 ? templates[0].template_id : null;
+    updateUrlParams({
+      invoiceId: invoice.invoice_id,
+      templateId: defaultTemplateId,
+      managingInvoiceId: null
+    });
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = templates.find(t => t.template_id === templateId);
-    setSelectedTemplate(template || null);
+    updateUrlParams({ templateId });
   };
 
   const handleManageItemsClick = async (invoice: InvoiceViewModel) => {
-      try {
-        setLoadingItems(true);
-        const items = await getInvoiceLineItems(invoice.invoice_id);
-        // Create new invoice object with fetched items
-        const invoiceWithItems = {
-          ...invoice,
-          invoice_items: items
-        };
-        setManagingInvoice(invoiceWithItems);
-        setSelectedInvoice(null);
-        setSelectedTemplate(null);
-      } catch (error) {
-        console.error('Error loading invoice items:', error);
-      } finally {
-        setLoadingItems(false);
-      }
+    try {
+      setLoadingItems(true);
+      const items = await getInvoiceLineItems(invoice.invoice_id);
+      // Create new invoice object with fetched items
+      const invoiceWithItems = {
+        ...invoice,
+        invoice_items: items
+      };
+      updateUrlParams({
+        managingInvoiceId: invoice.invoice_id,
+        invoiceId: null,
+        templateId: null
+      });
+    } catch (error) {
+      console.error('Error loading invoice items:', error);
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  const handleCancelManageItems = () => {
+    updateUrlParams({
+      managingInvoiceId: null
+    });
   };
 
   const columns: ColumnDefinition<InvoiceViewModel>[] = [
@@ -122,24 +162,30 @@ const Invoices: React.FC = () => {
       title: 'Action',
       dataIndex: 'invoice_number',
       render: (_, record) => (
-        <div className="flex gap-2">
-          <Button
-            id="view-invoice-button"
-            onClick={() => handleInvoiceSelect(record)}
-          >
-            View
-          </Button>
-          <Button
-            id="manage-items-button"
-            variant="secondary"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleManageItemsClick(record);
-            }}
-          >
-            {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`invoice-actions-menu-${record.invoice_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`manage-items-menu-item-${record.invoice_id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleManageItemsClick(record);
+              }}
+            >
+              {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];
@@ -156,7 +202,7 @@ const Invoices: React.FC = () => {
           <Button
             id="cancel-manage-items-button"
             variant="ghost"
-            onClick={() => setManagingInvoice(null)}
+            onClick={handleCancelManageItems}
           >
             Cancel
           </Button>
@@ -167,7 +213,9 @@ const Invoices: React.FC = () => {
           invoice={managingInvoice}
           loading={loadingItems}
           onGenerateSuccess={() => {
-            setManagingInvoice(null);
+            updateUrlParams({
+              managingInvoiceId: null
+            });
             loadData();
           }}
         />

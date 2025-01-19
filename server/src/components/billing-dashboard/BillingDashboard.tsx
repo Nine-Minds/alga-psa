@@ -2,6 +2,7 @@
 'use client'
 import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { ITimePeriod, IService } from '@/interfaces';
 
 // Import all the components including the new GenerateInvoices component
@@ -24,7 +25,19 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   initialTimePeriods,
   initialServices
 }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [error] = useState<string | null>(null);
+
+  const handleTabChange = (value: string) => {
+    // Only keep the tab parameter, clearing any other state
+    const params = new URLSearchParams();
+    params.set('tab', value);
+    router.push(`/msp/billing?${params.toString()}`);
+  };
+
+  // Get current tab from URL or default to overview
+  const currentTab = searchParams?.get('tab') || 'overview';
 
   const tabs = [
     'overview',
@@ -47,7 +60,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <span className="block sm:inline">{error}</span>
         </div>
       )}
-      <Tabs.Root defaultValue="overview" className="w-full">
+      <Tabs.Root
+        value={currentTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <Tabs.List className="flex border-b mb-4">
           {tabs.map((tab): JSX.Element => (
             <Tabs.Trigger
