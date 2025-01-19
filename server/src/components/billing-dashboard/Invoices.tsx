@@ -22,6 +22,7 @@ import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import ManualInvoices from './ManualInvoices';
 import { ICompany } from '@/interfaces';
 import { IService } from '@/interfaces/billing.interfaces';
+import BackNav from '../ui/BackNav';
 
 interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
   rate: number;
@@ -35,7 +36,6 @@ const Invoices: React.FC = () => {
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
-  const [loadingItems, setLoadingItems] = useState<boolean>(false);
 
   // Get state from URL parameters
   const selectedInvoiceId = searchParams?.get('invoiceId');
@@ -104,30 +104,11 @@ const Invoices: React.FC = () => {
     updateUrlParams({ templateId });
   };
 
-  const handleManageItemsClick = async (invoice: InvoiceViewModel) => {
-    try {
-      setLoadingItems(true);
-      const items = await getInvoiceLineItems(invoice.invoice_id);
-      // Create new invoice object with fetched items
-      const invoiceWithItems = {
-        ...invoice,
-        invoice_items: items
-      };
-      updateUrlParams({
-        managingInvoiceId: invoice.invoice_id,
-        invoiceId: null,
-        templateId: null
-      });
-    } catch (error) {
-      console.error('Error loading invoice items:', error);
-    } finally {
-      setLoadingItems(false);
-    }
-  };
-
-  const handleCancelManageItems = () => {
+  const handleManageItemsClick = (invoice: InvoiceViewModel) => {
     updateUrlParams({
-      managingInvoiceId: null
+      managingInvoiceId: invoice.invoice_id,
+      invoiceId: null,
+      templateId: null
     });
   };
 
@@ -194,24 +175,19 @@ const Invoices: React.FC = () => {
     return (
       <div className="space-y-8">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">
-            {managingInvoice.is_manual 
-              ? `Manage Items - Invoice ${managingInvoice.invoice_number}`
-              : `Manage Manual Items - Invoice ${managingInvoice.invoice_number}`}
-          </h2>
-          <Button
-            id="cancel-manage-items-button"
-            variant="ghost"
-            onClick={handleCancelManageItems}
-          >
-            Cancel
-          </Button>
+          <div className="flex gap-4">
+          <BackNav>Back to Invoices</BackNav>          
+            <h2 className="text-2xl font-bold">
+              {managingInvoice.is_manual 
+                ? `Manage Items - Invoice ${managingInvoice.invoice_number}`
+                : `Manage Manual Items - Invoice ${managingInvoice.invoice_number}`}
+            </h2>
+          </div>
         </div>
         <ManualInvoices
           companies={companies}
           services={services}
           invoice={managingInvoice}
-          loading={loadingItems}
           onGenerateSuccess={() => {
             updateUrlParams({
               managingInvoiceId: null

@@ -1,7 +1,7 @@
 'use client'
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
-import { updateInvoiceManualItems } from '@/lib/actions/invoiceActions';
+import { updateInvoiceManualItems, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { LineItem } from './LineItem';
@@ -39,7 +39,6 @@ interface ManualInvoicesProps {
   services: ServiceWithRate[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
-  loading?: boolean; // Add loading prop
 }
 
 interface EditableInvoiceItem extends InvoiceItem {
@@ -107,7 +106,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   services,
   onGenerateSuccess,
   invoice,
-  loading = false
 }) => {
   console.log('Initializing ManualInvoices with:', {
     hasCompanies: companies?.length,
@@ -192,6 +190,38 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [loading, setLoading] = useState(false);
+
+  // Fetch invoice items when invoice changes
+  useEffect(() => {
+    const fetchItems = async () => {
+      if (invoice) {
+        try {
+          setLoading(true);
+          const items = await getInvoiceLineItems(invoice.invoice_id);
+          // Update the invoice with fetched items
+          invoice.invoice_items = items;
+          // Re-initialize items state with fetched data
+          setItems(items.filter(item => item.is_manual).map(item => ({
+            item_id: item.item_id,
+            service_id: item.service_id || '',
+            quantity: item.quantity,
+            description: item.description,
+            rate: item.unit_price,
+            isExisting: true,
+            isRemoved: false
+          })));
+        } catch (error) {
+          console.error('Error loading invoice items:', error);
+          setError('Error loading invoice items');
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchItems();
+  }, [invoice?.invoice_id]);
 
   const handleAddItem = () => {
     const newItems = [...items, {
@@ -396,7 +426,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           </div>
         ) : (
           <>
-            <div className="mb-6">
+            <div className="flex items-center gap-4 mb-6">
               <h2 className="text-lg font-semibold">
                 {invoice
                   ? `Manage Items - Invoice ${invoice.invoice_number}`
