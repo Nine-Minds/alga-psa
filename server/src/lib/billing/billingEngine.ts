@@ -38,6 +38,8 @@ import { getCompanyTaxRate } from '@/lib/actions/invoiceActions';
 import { getCompanyById } from '@/lib/actions/companyActions';
 import { ICompany } from '@/interfaces';
 import { get } from 'http';
+import { TaxService } from '@/lib/services/taxService';
+import { v4 as uuidv4 } from 'uuid';
 
 export class BillingEngine {
   private knex: Knex;
@@ -282,7 +284,7 @@ export class BillingEngine {
   
       if (!company.is_tax_exempt && service.is_taxable !== false) {
         charge.tax_rate = service.tax_rate || 0;
-        charge.tax_amount = charge.total * (charge.tax_rate / 100);
+        charge.tax_amount = charge.total * (charge.tax_rate);
       } else {
         charge.tax_rate = 0;
         charge.tax_amount = 0;
@@ -421,7 +423,7 @@ export class BillingEngine {
 
     const overageRate = Math.ceil(bucketPlan.overage_rate);
     const total = Math.ceil(bucketUsage.overage_hours * overageRate);
-    const taxAmount = Math.ceil((taxRate / 100) * total);
+    const taxAmount = Math.ceil((taxRate) * total);
 
     const charge: IBucketCharge = {
       type: 'bucket',
@@ -517,7 +519,7 @@ export class BillingEngine {
     let discountTotal = 0;
     for (const discount of discounts) {
       if (discount.discount_type === 'percentage') {
-        discount.amount = (billingResult.totalAmount * (discount.value / 100));
+        discount.amount = (billingResult.totalAmount * (discount.value));
       } else if (discount.discount_type === 'fixed') {
         discount.amount = discount.value;
       }
@@ -598,5 +600,164 @@ export class BillingEngine {
     }
 
     console.log(`Rolled over ${unapprovedEntries.length} unapproved time entries for company ${companyId}`);
+  }
+
+  /**
+   * Recalculates an entire invoice, including tax amounts and totals.
+   * This is used when updating manual items to ensure all calculations are consistent.
+   */
+  async recalculateInvoice(invoiceId: string): Promise<void> {
+    await this.initKnex();
+    console.log(`Recalculating invoice ${invoiceId}`);
+
+    // Load invoice and company details
+    const invoice = await this.knex('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+
+    if (!invoice) {
+      throw new Error(`Invoice ${invoiceId} not found`);
+    }
+
+    const company = await this.knex('companies')
+      .where({ company_id: invoice.company_id })
+      .first();
+
+    if (!company) {
+      throw new Error(`Company ${invoice.company_id} not found`);
+    }
+
+    const taxService = new TaxService();
+    let subtotal = 0;
+    let totalTax = 0;
+
+    // Process each line item
+    const items = await this.knex('invoice_items')
+      .where({ invoice_id: invoiceId })
+      .orderBy('created_at', 'asc');
+
+    console.log(`Processing ${items.length} invoice items`);
+
+    console.log('Starting invoice recalculation:', {
+      invoiceId,
+      itemCount: items.length,
+      company: {
+        id: company.company_id,
+        name: company.company_name,
+        isTaxExempt: company.is_tax_exempt,
+        taxRegion: company.tax_region
+      }
+    });
+
+    await this.knex.transaction(async (trx) => {
+      for (const item of items) {
+        // Get service details for tax info
+        const service = await trx('service_catalog')
+          .where({ service_id: item.service_id })
+          .first();
+
+        // Ensure netAmount is an integer
+        const netAmount = typeof item.net_amount === 'string' ? parseInt(item.net_amount, 10) : item.net_amount;
+        let taxAmount = 0;
+        let taxRate = 0;
+
+        console.log('Processing item:', {
+          itemId: item.item_id,
+          serviceId: item.service_id,
+          serviceName: service?.service_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          netAmount,
+          netAmountType: typeof netAmount,
+          originalNetAmount: item.net_amount,
+          originalNetAmountType: typeof item.net_amount,
+          isTaxable: service ? service.is_taxable !== false : true,
+          taxRegion: service?.tax_region || company.tax_region
+        });
+
+        // Only calculate tax for taxable items and non-exempt companies
+        if (!company.is_tax_exempt && (!service || service.is_taxable !== false)) {
+          const taxCalculationResult = await taxService.calculateTax(
+            company.company_id,
+            netAmount,
+            new Date().toISOString()
+          );
+          taxAmount = Math.round(taxCalculationResult.taxAmount);
+          taxRate = taxCalculationResult.taxRate;
+        }
+
+        const totalPrice = netAmount + taxAmount;
+
+        console.log('Calculated values:', {
+          itemId: item.item_id,
+          netAmount,
+          taxAmount,
+          totalPrice,
+          taxRate
+        });
+
+        // Update item with new tax calculation
+        await trx('invoice_items')
+          .where({ item_id: item.item_id })
+          .update({
+            tax_amount: taxAmount,
+            tax_rate: taxRate,
+            tax_region: service?.tax_region || company.tax_region,
+            total_price: totalPrice
+          });
+
+        subtotal = Math.round(subtotal + netAmount);
+        totalTax = Math.round(totalTax + taxAmount);
+
+        console.log('Running totals:', {
+          subtotal,
+          totalTax,
+          combined: subtotal + totalTax
+        });
+      }
+
+      // Calculate final totals using Math.round for consistent rounding
+      const finalSubtotal = Math.round(subtotal);
+      const finalTax = Math.round(totalTax);
+      const finalTotal = Math.round(finalSubtotal + finalTax);
+
+      console.log('Final totals:', {
+        finalSubtotal,
+        finalTax,
+        finalTotal,
+        originalSubtotal: subtotal,
+        originalTax: totalTax,
+        originalTotal: subtotal + totalTax
+      });
+
+      // Update invoice totals
+      await trx('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          subtotal: finalSubtotal,
+          tax: finalTax,
+          total_amount: finalTotal
+        });
+
+      // Record adjustment transaction
+      await trx('transactions').insert({
+        transaction_id: uuidv4(),
+        tenant: invoice.tenant,
+        company_id: invoice.company_id,
+        invoice_id: invoiceId,
+        amount: finalTotal,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        description: `Recalculated invoice ${invoice.invoice_number}`,
+        created_at: new Date().toISOString(),
+        balance_after: finalTotal
+      });
+    });
+
+    console.log(`Invoice ${invoiceId} recalculated:`, {
+      subtotal: subtotal,
+      tax: totalTax,
+      total: subtotal + totalTax
+    });
   }
 }

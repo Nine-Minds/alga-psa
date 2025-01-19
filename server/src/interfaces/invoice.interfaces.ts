@@ -29,6 +29,31 @@ export interface IInvoiceItem extends TenantEntity {
   net_amount: number;
   tax_region?: string;
   tax_rate?: number;
+  is_manual: boolean;
+  created_by?: string;
+  updated_by?: string;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+}
+
+/**
+ * Interface for adding manual items to an invoice
+ */
+export interface IManualInvoiceItem {
+  description: string;
+  quantity: number;
+  item_id: string;
+  rate: number;
+  service_id?: string;
+  tax_region?: string;
+}
+
+/**
+ * Request interface for adding manual items to an existing invoice
+ */
+export interface IAddManualItemsRequest {
+  invoice_id: string;
+  items: IManualInvoiceItem[];
 }
 
 

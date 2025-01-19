@@ -264,7 +264,7 @@ export async function createDefaultTaxSettings(companyId: string): Promise<IComp
         tax_component_id,
         tax_rate_id: defaultTaxRate.tax_rate_id,
         name: 'Default Tax',
-        rate: Math.ceil(defaultTaxRate.tax_percentage * 100),
+        rate: Math.ceil(defaultTaxRate.tax_percentage),
         sequence: 1,
         is_compound: false,
         tenant: tenant!

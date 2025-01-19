@@ -76,21 +76,68 @@ export default class Invoice {
   }
 
   static async getInvoiceItems(invoiceId: string): Promise<IInvoiceItem[]> {
+    console.log('Getting invoice items for invoice:', invoiceId);
+    console.log('Getting invoice items for invoice:', invoiceId);
     const { knex } = await createTenantKnex();
     const query = knex('invoice_items')
       .select(
+        'item_id',
         'invoice_id',
         'service_id',
         'description as name',
         'description',
-        'quantity',
-        knex.raw('unit_price::float / 100 as unit_price'), // Convert cents to dollars
-        'total_price',
-        'tax_amount',
-        'net_amount')
+        knex.raw('CAST(quantity AS INTEGER) as quantity'),
+        knex.raw('CAST(unit_price AS INTEGER) as unit_price'),
+        knex.raw('CAST(total_price AS INTEGER) as total_price'),
+        knex.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
+        knex.raw('CAST(net_amount AS INTEGER) as net_amount'),
+        'is_manual')
       .where({ invoice_id: invoiceId });
-    console.log(query.toSQL().sql);
-    return query;
+
+    // Log the raw SQL query
+    const { sql, bindings } = query.toSQL();
+    console.log('Invoice items query:', { sql, bindings });
+
+    const items = await query;
+    console.log('Raw invoice items from DB:', items.map(item => ({
+      id: item.item_id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: {
+        value: item.unit_price,
+        type: typeof item.unit_price
+      },
+      totalPrice: {
+        value: item.total_price,
+        type: typeof item.total_price
+      },
+      taxAmount: {
+        value: item.tax_amount,
+        type: typeof item.tax_amount
+      },
+      netAmount: {
+        value: item.net_amount,
+        type: typeof item.net_amount
+      },
+      calculatedTotal: item.quantity * item.unit_price,
+      matchesTotal: (item.quantity * item.unit_price) === item.total_price ? 'Yes' : 'No'
+    })));
+
+    // Log the processed items
+    console.log('Found invoice items:', {
+      total: items.length,
+      manual: items.filter(item => item.is_manual).length,
+      automated: items.filter(item => !item.is_manual).length,
+      items: items.map(item => ({
+        id: item.item_id,
+        isManual: item.is_manual,
+        serviceId: item.service_id,
+        description: item.description,
+        unitPrice: item.unit_price
+      }))
+    });
+
+    return items;
   }
 
   static async updateInvoiceItem(itemId: string, updateData: Partial<IInvoiceItem>): Promise<IInvoiceItem> {
@@ -215,18 +262,70 @@ export default class Invoice {
   }
 
   static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
+    console.log('Getting full invoice details for:', invoiceId);
     const { knex } = await createTenantKnex();
-    const invoice = await knex('invoices').where({ invoice_id: invoiceId }).first();
+    const invoice = await knex('invoices')
+      .select(
+        '*',
+        knex.raw('CAST(subtotal AS INTEGER) as subtotal'),
+        knex.raw('CAST(tax AS INTEGER) as tax'),
+        knex.raw('CAST(total_amount AS INTEGER) as total_amount'),
+        knex.raw('CAST(credit_applied AS INTEGER) as credit_applied')
+      )
+      .where({ invoice_id: invoiceId })
+      .first();
+    console.log('Found invoice:', {
+      id: invoice?.invoice_id,
+      number: invoice?.invoice_number,
+      isManual: invoice?.is_manual,
+      status: invoice?.status,
+      total: invoice?.total_amount,
+      rawSubtotal: invoice?.subtotal,
+      rawTax: invoice?.tax,
+      rawTotal: invoice?.total_amount,
+      rawCreditApplied: invoice?.credit_applied,
+      subtotalType: typeof invoice?.subtotal,
+      taxType: typeof invoice?.tax,
+      totalType: typeof invoice?.total_amount,
+      creditType: typeof invoice?.credit_applied
+    });
+
     if (!invoice) {
       throw new Error('Invoice not found');
     }
   
     const invoice_items = await this.getInvoiceItems(invoiceId);
+    console.log('Processing invoice items for view model:', {
+      total: invoice_items.length,
+      manual: invoice_items.filter(item => item.is_manual).length,
+      automated: invoice_items.filter(item => !item.is_manual).length,
+      items: invoice_items.map(item => ({
+        id: item.item_id,
+        isManual: item.is_manual,
+        serviceId: item.service_id,
+        description: item.description,
+        unitPrice: item.unit_price
+      }))
+    });
     const company = await knex('companies').where({ company_id: invoice.company_id }).first();
   
-    const totalAmount = typeof invoice.total_amount === 'string' ? parseFloat(invoice.total_amount) : invoice.total_amount;
+    // Ensure all monetary values are integers
+    const subtotal = typeof invoice.subtotal === 'string' ? parseInt(invoice.subtotal, 10) : invoice.subtotal;
+    const tax = typeof invoice.tax === 'string' ? parseInt(invoice.tax, 10) : invoice.tax;
+    const totalAmount = typeof invoice.total_amount === 'string' ? parseInt(invoice.total_amount, 10) : invoice.total_amount;
+    const creditApplied = typeof invoice.credit_applied === 'string' ? parseInt(invoice.credit_applied, 10) : (invoice.credit_applied || 0);
+
+    console.log('Parsed monetary values:', {
+      subtotal,
+      tax,
+      totalAmount,
+      creditApplied,
+      calculatedTotal: subtotal + tax,
+      matches: subtotal + tax === totalAmount ? 'Yes' : 'No'
+    });
+
     // Construct and return the InvoiceViewModel
-    return {
+    const viewModel = {
       invoice_number: invoice.invoice_number,
       company_id: invoice.company_id,
       company: {
@@ -241,27 +340,58 @@ export default class Invoice {
       invoice_date: invoice.invoice_date,
       due_date: invoice.due_date,
       status: invoice.status,
-      subtotal: invoice.subtotal,
-      tax: invoice.tax,
+      subtotal: subtotal,
+      tax: tax,
       total: totalAmount,
       total_amount: totalAmount,
       invoice_id: invoice.invoice_id,
-      invoice_items: invoice_items.map((item): IInvoiceItem => ({
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        tax_amount: item.tax_amount,
-        net_amount: item.net_amount,
-        item_id: '',
-        invoice_id: '',
-        tenant: item.tenant,
-      })),
+      invoice_items: invoice_items.map((item): IInvoiceItem => {
+        console.log('Processing invoice item:', {
+          id: item.item_id,
+          isManual: item.is_manual,
+          serviceId: item.service_id,
+          description: item.description,
+          unitPrice: item.unit_price
+        });
+
+        const mappedItem: IInvoiceItem = {
+          description: item.description,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+          total_price: item.total_price,
+          tax_amount: item.tax_amount,
+          net_amount: item.net_amount,
+          item_id: item.item_id || '',
+          invoice_id: item.invoice_id || '',
+          service_id: item.service_id,
+          is_manual: item.is_manual || false,
+          tenant: item.tenant
+        };
+
+        return mappedItem;
+      }),
       custom_fields: invoice.custom_fields,
       finalized_at: invoice.finalized_at,
-      credit_applied: invoice.credit_applied || 0,
+      credit_applied: creditApplied,
       is_manual: invoice.is_manual,
     };
+
+    console.log('Returning invoice view model:', {
+      id: viewModel.invoice_id,
+      number: viewModel.invoice_number,
+      isManual: viewModel.is_manual,
+      itemCount: viewModel.invoice_items.length,
+      manualItems: viewModel.invoice_items.filter(item => item.is_manual).length,
+      automatedItems: viewModel.invoice_items.filter(item => !item.is_manual).length,
+      items: viewModel.invoice_items.map(item => ({
+        id: item.item_id,
+        isManual: item.is_manual,
+        serviceId: item.service_id,
+        description: item.description
+      }))
+    });
+
+    return viewModel;
   }
 
   static async finalizeInvoice(invoiceId: string): Promise<IInvoice> {

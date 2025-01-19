@@ -2,21 +2,43 @@
 
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { IInvoiceTemplate, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+import {
+  IInvoiceTemplate,
+  ICustomField,
+  IConditionalRule,
+  IInvoiceAnnotation,
+  InvoiceViewModel,
+  IManualInvoiceItem,
+  IInvoiceItem,
+  IInvoice
+} from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
-import { IInvoice } from '@/interfaces/invoice.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
 import { getServerSession } from "next-auth/next";
 import { options } from "@/app/api/auth/[...nextauth]/options";
 import Invoice from '@/lib/models/invoice';
 import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from '@/lib/db';
-import { addDays, format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { ISO8601String } from '@/types/types.d';
 import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Tent } from 'lucide-react';
+
+interface UpdatedManualItem {
+  item_id: string;
+  service_id?: string;
+  description?: string;
+  quantity?: number;
+  rate?: number;
+}
+
+interface ManualItemsUpdate {
+  newItems: IManualInvoiceItem[];
+  updatedItems: UpdatedManualItem[];
+  removedItemIds: string[];
+}
 
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex } = await createTenantKnex();
@@ -217,7 +239,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     invoice_number: await generateInvoiceNumber(),
     credit_applied: 0,
     billing_cycle_id: billing_cycle_id,
-    tenant: tenant
+    tenant: tenant,
+    is_manual: false
   };
 
   const createdInvoice = await knex.transaction(async (trx) => {
@@ -260,6 +283,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         tax_region: charge.tax_region,
         tax_rate: taxCalculationResult.taxRate,
         total_price: netAmount + taxCalculationResult.taxAmount,
+        is_manual: false,
         tenant: tenant
       };
 
@@ -399,6 +423,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     invoice_items: await knex('invoice_items').where({ invoice_id: createdInvoice.invoice_id }),
     credit_applied: invoice.credit_applied,
     billing_cycle_id: billing_cycle_id,
+    is_manual: false
   };
 
   return viewModel;
@@ -504,16 +529,88 @@ export async function getNextBillingDate(companyId: string, currentEndDate: ISO8
   return nextDate.toISOString();
 }
 
+// Helper function to create basic invoice view model
+async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promise<InvoiceViewModel> {
+  return {
+    invoice_id: invoice.invoice_id,
+    invoice_number: invoice.invoice_number,
+    company_id: invoice.company_id,
+    company: {
+      name: company.company_name,
+      logo: company.logo || '',
+      address: company.address || ''
+    },
+    contact: {
+      name: '',  // Contact info not stored in invoice
+      address: ''
+    },
+    invoice_date: parseISO(invoice.invoice_date.toString()),
+    due_date: parseISO(invoice.due_date.toString()),
+    status: invoice.status,
+    subtotal: invoice.subtotal,
+    tax: invoice.tax,
+    total: invoice.total_amount,
+    total_amount: invoice.total_amount,
+    credit_applied: (invoice.credit_applied || 0),
+    is_manual: invoice.is_manual,
+    invoice_items: [] // Empty array initially
+  };
+}
+
 export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
   try {
-    const invoices = await Invoice.getAll();
-    const fullInvoices = await Promise.all(invoices.map(async (invoice): Promise<InvoiceViewModel> => {
-      return await Invoice.getFullInvoiceById(invoice.invoice_id);
+    console.log('Fetching basic invoice info');
+    const { knex } = await createTenantKnex();
+    
+    // Get invoices with company info in a single query
+    const invoices = await knex('invoices')
+      .join('companies', 'invoices.company_id', 'companies.company_id')
+      .select(
+        'invoices.invoice_id',
+        'invoices.company_id',
+        'invoices.invoice_number',
+        'invoices.invoice_date',
+        'invoices.due_date',
+        'invoices.status',
+        'invoices.is_manual',
+        'invoices.finalized_at',
+        'invoices.billing_cycle_id',
+        knex.raw('CAST(invoices.subtotal AS INTEGER) as subtotal'),
+        knex.raw('CAST(invoices.tax AS INTEGER) as tax'),
+        knex.raw('CAST(invoices.total_amount AS INTEGER) as total_amount'),
+        knex.raw('CAST(invoices.credit_applied AS INTEGER) as credit_applied'),
+        'companies.company_name',
+        'companies.address',
+        'companies.properties'
+      );
+
+    console.log(`Got ${invoices.length} invoices`);
+
+    // Map to view models without line items
+    return Promise.all(invoices.map(invoice => {
+      const companyProperties = invoice.properties as { logo?: string } || {};
+      return getBasicInvoiceViewModel(invoice, {
+        company_name: invoice.company_name,
+        logo: companyProperties.logo || '',
+        address: invoice.address || ''
+      });
     }));
-    return fullInvoices;
   } catch (error) {
     console.error('Error fetching invoices:', error);
     throw new Error('Error fetching invoices');
+  }
+}
+
+// New function to get invoice items on demand
+export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceItem[]> {
+  try {
+    console.log('Fetching line items for invoice:', invoiceId);
+    const items = await Invoice.getInvoiceItems(invoiceId);
+    console.log(`Got ${items.length} line items`);
+    return items;
+  } catch (error) {
+    console.error('Error fetching invoice items:', error);
+    throw new Error('Error fetching invoice items');
   }
 }
 
@@ -551,10 +648,18 @@ export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tena
     isStandard: false,         // Reset standard flag
   } : template;
 
-  // Remove the temporary isClone flag before saving
-  const { isClone, isStandard, parsed, ...templateToSaveWithoutCloneFlag } = templateToSave;
+  // Parse the DSL before saving
+  const parsedTemplate = templateToSave.dsl ? parseInvoiceTemplate(templateToSave.dsl) : null;
+
+  // Remove the temporary flags before saving
+  const { isClone, isStandard, parsed, ...templateToSaveWithoutFlags } = templateToSave;
   
-  const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutCloneFlag);
+  const templateWithParsed = {
+    ...templateToSaveWithoutFlags,
+    parsed: parsedTemplate
+  };
+  
+  const savedTemplate = await Invoice.saveTemplate(templateWithParsed);
   return {
     ...savedTemplate,
     parsed: savedTemplate.dsl ? parseInvoiceTemplate(savedTemplate.dsl) : null
@@ -592,6 +697,302 @@ export async function addInvoiceAnnotation(annotation: Omit<IInvoiceAnnotation, 
 export async function getInvoiceAnnotations(_invoiceId: string): Promise<IInvoiceAnnotation[]> {
   // Implementation to fetch annotations for an invoice
   return [];
+}
+
+interface ManualInvoiceUpdate {
+  service_id?: string;
+  description?: string;
+  quantity?: number;
+  rate?: number;
+  item_id: string;
+}
+
+interface ManualItemsUpdate {
+  newItems: IManualInvoiceItem[];
+  updatedItems: ManualInvoiceUpdate[];
+  removedItemIds: string[];
+}
+
+export async function updateInvoiceManualItems(
+  invoiceId: string,
+  changes: ManualItemsUpdate
+): Promise<InvoiceViewModel> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+  const billingEngine = new BillingEngine();
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Load and validate invoice
+  const invoice = await knex('invoices')
+    .where({ invoice_id: invoiceId })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({ company_id: invoice.company_id })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  const currentDate = new Date().toISOString();
+
+  await knex.transaction(async (trx) => {
+    // Delete all existing manual items
+    await trx('invoice_items')
+      .where({
+        invoice_id: invoiceId,
+        is_manual: true
+      })
+      .delete();
+
+    // Process new items
+    for (const item of changes.newItems) {
+      const unitPriceInCents = Math.round(item.rate);
+      const netAmount = Math.round(item.quantity * unitPriceInCents);
+      
+      let taxRegion = company.tax_region;
+      if (item.service_id) {
+        const service = await trx('service_catalog')
+          .where({ service_id: item.service_id })
+          .first();
+        taxRegion = service?.tax_region || taxRegion;
+      }
+
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id || null,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: unitPriceInCents,
+        net_amount: netAmount,
+        tax_amount: 0, // Will be calculated by recalculateInvoice
+        tax_rate: 0, // Will be calculated by recalculateInvoice
+        tax_region: taxRegion,
+        total_price: netAmount, // Will be updated by recalculateInvoice
+        is_manual: true,
+        created_by: session.user.id,
+        created_at: currentDate,
+        tenant
+      };
+
+      await trx('invoice_items').insert(invoiceItem);
+    }
+
+    // Process updated items that weren't removed
+    for (const item of changes.updatedItems.filter(item => !changes.removedItemIds.includes(item.item_id))) {
+      // Only include rate and quantity if they were provided
+      const unitPriceInCents = item.rate !== undefined ? Math.round(item.rate) : 0;
+      const quantity = item.quantity !== undefined ? item.quantity : 0;
+      const netAmount = Math.round(quantity * unitPriceInCents);
+      
+      let taxRegion = company.tax_region;
+      if (item.service_id) {
+        const service = await trx('service_catalog')
+          .where({ service_id: item.service_id })
+          .first();
+        taxRegion = service?.tax_region || taxRegion;
+      }
+
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id || null,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: unitPriceInCents,
+        net_amount: netAmount,
+        tax_amount: 0, // Will be calculated by recalculateInvoice
+        tax_rate: 0, // Will be calculated by recalculateInvoice
+        tax_region: taxRegion,
+        total_price: netAmount, // Will be updated by recalculateInvoice
+        is_manual: true,
+        created_by: session.user.id,
+        created_at: currentDate,
+        tenant
+      };
+
+      await trx('invoice_items').insert(invoiceItem);
+    }
+
+    // Update invoice timestamp
+    await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        updated_at: currentDate
+      });
+  });
+
+  // Recalculate the entire invoice
+  await billingEngine.recalculateInvoice(invoiceId);
+
+  return Invoice.getFullInvoiceById(invoiceId);
+}
+
+export async function addManualItemsToInvoice(
+  invoiceId: string,
+  items: IManualInvoiceItem[]
+): Promise<InvoiceViewModel> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Load and validate invoice
+  const invoice = await knex('invoices')
+    .where({ invoice_id: invoiceId })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({ company_id: invoice.company_id })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  const taxService = new TaxService();
+  const currentDate = new Date().toISOString();
+
+  // Calculate current totals
+  const oldTotal = invoice.total_amount;
+  let newSubtotal = invoice.subtotal;
+  let newTotalTax = invoice.tax;
+
+  await knex.transaction(async (trx) => {
+    // Process each new manual item
+    for (const item of items) {
+      const unitPriceInCents = Math.round(item.rate);
+      const netAmount = Math.round(item.quantity * unitPriceInCents);
+
+      // console log the items
+      console.log('Processing item:', {
+        id: item.item_id,
+        serviceId: item.service_id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPriceInCents,
+        netAmount
+      });
+
+      // Get tax info from service if provided, otherwise company default
+      let taxRegion = item.tax_region;
+      if (!taxRegion && item.service_id) {
+        const service = await trx('service_catalog')
+          .where({ service_id: item.service_id })
+          .first();
+        taxRegion = service?.tax_region;
+      }
+      if (!taxRegion) {
+        taxRegion = company.tax_region;
+      }
+
+      const taxCalculation = await taxService.calculateTax(
+        invoice.company_id,
+        netAmount,
+        currentDate
+      );
+
+      // Create invoice item
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id || null,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: unitPriceInCents,
+        net_amount: netAmount,
+        tax_amount: taxCalculation.taxAmount,
+        tax_region: taxRegion,
+        tax_rate: taxCalculation.taxRate,
+        total_price: netAmount + taxCalculation.taxAmount,
+        is_manual: true,
+        created_by: session.user.id,
+        created_at: currentDate,
+        tenant
+      };
+
+      await trx('invoice_items').insert(invoiceItem);
+
+      newSubtotal += netAmount;
+      newTotalTax += taxCalculation.taxAmount;
+    }
+
+    const newTotal = newSubtotal + newTotalTax;
+    const difference = newTotal - oldTotal;
+
+    // Update invoice totals
+    await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        subtotal: newSubtotal,
+        tax: newTotalTax,
+        total_amount: newTotal,
+        updated_at: currentDate
+      });
+
+    // Record adjustment transaction
+    if (difference !== 0) {
+      const lastTx = await trx('transactions')
+        .where({ company_id: invoice.company_id })
+        .orderBy('created_at', 'desc')
+        .first();
+
+      const currentBalance = lastTx?.balance_after ?? 0;
+
+      await trx('transactions').insert({
+        transaction_id: uuidv4(),
+        company_id: invoice.company_id,
+        invoice_id: invoiceId,
+        amount: difference,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        description: `Added manual items to invoice ${invoice.invoice_number}`,
+        created_at: currentDate,
+        tenant,
+        balance_after: currentBalance + difference
+      });
+    }
+
+    // Handle credit if needed
+    if (invoice.credit_applied > 0) {
+      const remainingCredit = invoice.credit_applied;
+      const additionalDue = Math.max(0, newTotal - oldTotal - remainingCredit);
+
+      if (additionalDue > 0) {
+        await trx('invoices')
+          .where({ invoice_id: invoiceId })
+          .update({
+            credit_applied: remainingCredit
+          });
+      }
+    }
+  });
+
+  // Return updated invoice view
+  return Invoice.getFullInvoiceById(invoiceId);
 }
 
 export async function hardDeleteInvoice(invoiceId: string) {

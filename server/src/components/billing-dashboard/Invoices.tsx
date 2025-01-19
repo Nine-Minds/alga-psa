@@ -1,7 +1,7 @@
 'use client'
 import React, { useState, useEffect } from 'react';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
-import { fetchAllInvoices, getInvoiceTemplates } from '@/lib/actions/invoiceActions';
+import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
@@ -24,9 +24,10 @@ const Invoices: React.FC = () => {
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<IInvoiceTemplate | null>(null);
-  const [editingInvoice, setEditingInvoice] = useState<InvoiceViewModel | null>(null);
+  const [managingInvoice, setManagingInvoice] = useState<InvoiceViewModel | null>(null);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
+  const [loadingItems, setLoadingItems] = useState<boolean>(false);
 
   const loadData = async () => {
     try {
@@ -71,10 +72,23 @@ const Invoices: React.FC = () => {
     setSelectedTemplate(template || null);
   };
 
-  const handleEditClick = (invoice: InvoiceViewModel) => {
-    setEditingInvoice(invoice);
-    setSelectedInvoice(null);
-    setSelectedTemplate(null);
+  const handleManageItemsClick = async (invoice: InvoiceViewModel) => {
+      try {
+        setLoadingItems(true);
+        const items = await getInvoiceLineItems(invoice.invoice_id);
+        // Create new invoice object with fetched items
+        const invoiceWithItems = {
+          ...invoice,
+          invoice_items: items
+        };
+        setManagingInvoice(invoiceWithItems);
+        setSelectedInvoice(null);
+        setSelectedTemplate(null);
+      } catch (error) {
+        console.error('Error loading invoice items:', error);
+      } finally {
+        setLoadingItems(false);
+      }
   };
 
   const columns: ColumnDefinition<InvoiceViewModel>[] = [
@@ -89,7 +103,11 @@ const Invoices: React.FC = () => {
     {
       title: 'Amount',
       dataIndex: 'total',
-      render: (value) => `$${value?.toFixed(2)}`,
+      render: (value) => {
+        // Convert cents to dollars and handle potential null/undefined
+        const amount = typeof value === 'number' ? value / 100 : 0;
+        return `$${amount.toFixed(2)}`;
+      },
     },
     {
       title: 'Status',
@@ -104,39 +122,41 @@ const Invoices: React.FC = () => {
       title: 'Action',
       dataIndex: 'invoice_number',
       render: (_, record) => (
-        <div className="space-x-2">
-          <Button 
+        <div className="flex gap-2">
+          <Button
             id="view-invoice-button"
             onClick={() => handleInvoiceSelect(record)}
           >
             View
           </Button>
-          {record.is_manual && (
-            <Button 
-              id="edit-invoice-button"
-              variant="secondary"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEditClick(record);
-              }}
-            >
-              Edit
-            </Button>
-          )}
+          <Button
+            id="manage-items-button"
+            variant="secondary"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleManageItemsClick(record);
+            }}
+          >
+            {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
+          </Button>
         </div>
       ),
     },
   ];
 
-  if (editingInvoice) {
+  if (managingInvoice) {
     return (
       <div className="space-y-8">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-bold">Edit Invoice {editingInvoice.invoice_number}</h2>
-          <Button 
-            id="cancel-edit-button"
-            variant="ghost" 
-            onClick={() => setEditingInvoice(null)}
+          <h2 className="text-2xl font-bold">
+            {managingInvoice.is_manual 
+              ? `Manage Items - Invoice ${managingInvoice.invoice_number}`
+              : `Manage Manual Items - Invoice ${managingInvoice.invoice_number}`}
+          </h2>
+          <Button
+            id="cancel-manage-items-button"
+            variant="ghost"
+            onClick={() => setManagingInvoice(null)}
           >
             Cancel
           </Button>
@@ -144,9 +164,10 @@ const Invoices: React.FC = () => {
         <ManualInvoices
           companies={companies}
           services={services}
-          editingInvoice={editingInvoice}
+          invoice={managingInvoice}
+          loading={loadingItems}
           onGenerateSuccess={() => {
-            setEditingInvoice(null);
+            setManagingInvoice(null);
             loadData();
           }}
         />
