@@ -27,6 +27,91 @@ Prefer radix components over other libraries
     - [Table](../server/src/components/ui/Table.tsx)
     - [TextArea](../server/src/components/ui/TextArea.tsx)
 
+## DataTable Action Menus
+
+When implementing action menus in DataTable components, follow these guidelines:
+
+1. **Component Structure**
+   - Use Radix UI's DropdownMenu components from '@/components/ui/DropdownMenu':
+     ```tsx
+     import {
+       DropdownMenu,
+       DropdownMenuTrigger,
+       DropdownMenuContent,
+       DropdownMenuItem,
+     } from '@/components/ui/DropdownMenu';
+     ```
+
+2. **Trigger Button Implementation**
+   - Use the Button component from '@/components/ui/Button'
+   - Import MoreVertical icon from 'lucide-react'
+   ```tsx
+   <DropdownMenuTrigger asChild>
+     <Button
+       variant="ghost"
+       className="h-8 w-8 p-0"
+       onClick={(e) => e.stopPropagation()}
+     >
+       <span className="sr-only">Open menu</span>
+       <MoreVertical className="h-4 w-4" />
+     </Button>
+   </DropdownMenuTrigger>
+   ```
+
+3. **ID Naming Convention**
+   Follow the component ID guidelines with these specific patterns:
+   - Menu trigger: `{object}-actions-menu`
+   - Menu items: `{action}-{object}-menu-item`
+   Example:
+   ```tsx
+   <Button id="billing-plan-actions-menu">
+   <DropdownMenuItem id="edit-billing-plan-menu-item">
+   ```
+
+4. **Event Handling**
+   - Always use stopPropagation() to prevent row selection when clicking menu items
+   - Handle async operations with proper error management
+   ```tsx
+   onClick={(e) => {
+     e.stopPropagation();
+     handleAction();
+   }}
+   ```
+
+5. **Styling Guidelines**
+   - Use theme-aware styling for destructive actions:
+     ```tsx
+     // For destructive actions (delete, remove)
+     <DropdownMenuItem 
+       className="text-red-600 focus:text-red-600"
+     >
+       Delete
+     </DropdownMenuItem>
+     ```
+   - Position dropdown content:
+     ```tsx
+     <DropdownMenuContent align="end">
+     ```
+
+6. **Menu Content Organization**
+   - Order items by frequency of use
+   - Place destructive actions last
+   - Use clear, concise action names
+   Example structure:
+   ```tsx
+   <DropdownMenuContent align="end">
+     <DropdownMenuItem>Edit</DropdownMenuItem>
+     <DropdownMenuItem className="text-red-600 focus:text-red-600">
+       Delete
+     </DropdownMenuItem>
+   </DropdownMenuContent>
+   ```
+
+7. **Accessibility**
+   - Include sr-only text for screen readers
+   - Ensure keyboard navigation works properly
+   - Maintain focus states for all interactive elements
+
 Lucide icons can (and should) be used from the `lucide` package.
 
 ## Server Communication
