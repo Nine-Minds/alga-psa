@@ -1,4 +1,3 @@
-'use client'
 import React, { useState, useEffect } from 'react';
 import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { updateInvoiceManualItems, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
@@ -9,9 +8,10 @@ import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+import { InvoiceViewModel, DiscountType } from '@/interfaces/invoice.interfaces';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' && 
@@ -32,6 +32,10 @@ interface InvoiceItem {
   description: string;
   rate: number;
   item_id?: string;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
 }
 
 interface ManualInvoicesProps {
@@ -46,6 +50,17 @@ interface EditableInvoiceItem extends InvoiceItem {
   isExisting?: boolean;
   isRemoved?: boolean;
 }
+
+const defaultItem: EditableInvoiceItem = {
+  service_id: '',
+  quantity: 1,
+  description: '',
+  rate: 0,
+  is_discount: false,
+  isExisting: false,
+  isRemoved: false
+};
+
 
 const AutomatedItemsTable: React.FC<{
   items: Array<{
@@ -107,23 +122,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   onGenerateSuccess,
   invoice,
 }) => {
-  console.log('Initializing ManualInvoices with:', {
-    hasCompanies: companies?.length,
-    hasServices: services?.length,
-    invoice: invoice ? {
-      id: invoice.invoice_id,
-      number: invoice.invoice_number,
-      isManual: invoice.is_manual,
-      itemCount: invoice.invoice_items?.length,
-      items: invoice.invoice_items?.map(item => ({
-        id: item.item_id,
-        isManual: item.is_manual,
-        serviceId: item.service_id,
-        description: item.description
-      }))
-    } : null
-  });
-
   const [selectedCompany, setSelectedCompany] = useState<string>(
     invoice?.company_id || ''
   );
@@ -143,46 +141,39 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           console.log('Checking item:', {
             id: item.item_id,
             isManual: item.is_manual,
-            description: item.description
+            description: item.description,
+            isDiscount: item.is_discount
           });
           return item.is_manual;
         })
-        .map(item => ({
-          item_id: item.item_id,
-          service_id: item.service_id || '',
-          quantity: item.quantity,
-          description: item.description,
-          rate: item.unit_price,
-          isExisting: true,
-          isRemoved: false
-        }));
+        .map(item => {
+          const mappedItem: EditableInvoiceItem = {
+            item_id: item.item_id,
+            service_id: item.service_id || '',
+            quantity: item.quantity,
+            description: item.description,
+            rate: item.unit_price,
+            is_discount: !!item.is_discount,
+            discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+            applies_to_item_id: item.applies_to_item_id,
+            isExisting: true,
+            isRemoved: false
+          };
+          return mappedItem;
+        });
 
       console.log('Found manual items:', manualItems.length);
 
       // For new invoices or when no manual items exist, add empty item
       if (manualItems.length === 0) {
-        return [{
-          service_id: '',
-          quantity: 1,
-          description: '',
-          rate: 0,
-          isExisting: false,
-          isRemoved: false
-        }];
+        return [defaultItem];
       }
 
       return manualItems;
     }
     
     // New manual invoice
-    return [{
-      service_id: '',
-      quantity: 1,
-      description: '',
-      rate: 0,
-      isExisting: false,
-      isRemoved: false
-    }];
+    return [defaultItem];
   });
   
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -202,15 +193,28 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // Update the invoice with fetched items
           invoice.invoice_items = items;
           // Re-initialize items state with fetched data
-          setItems(items.filter(item => item.is_manual).map(item => ({
-            item_id: item.item_id,
-            service_id: item.service_id || '',
-            quantity: item.quantity,
-            description: item.description,
-            rate: item.unit_price,
-            isExisting: true,
-            isRemoved: false
-          })));
+          setItems(items.filter(item => item.is_manual).map(item => {
+            console.log('Loading item:', {
+              id: item.item_id,
+              isManual: item.is_manual,
+              isDiscount: item.is_discount,
+              description: item.description,
+              rate: item.unit_price
+            });
+            
+            return {
+              item_id: item.item_id,
+              service_id: item.service_id || '',
+              quantity: item.quantity,
+              description: item.description,
+              rate: item.unit_price,
+              is_discount: !!item.is_discount,
+              discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+              applies_to_item_id: item.applies_to_item_id,
+              isExisting: true,
+              isRemoved: false
+            };
+          }));
         } catch (error) {
           console.error('Error loading invoice items:', error);
           setError('Error loading invoice items');
@@ -223,15 +227,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     fetchItems();
   }, [invoice?.invoice_id]);
 
-  const handleAddItem = () => {
-    const newItems = [...items, {
-      service_id: '',
-      quantity: 1,
-      description: '',
+  const handleAddItem = (isDiscount: boolean = false) => {
+    const newItem: EditableInvoiceItem = {
+      ...defaultItem,
+      is_discount: isDiscount,
+      discount_type: isDiscount ? ('fixed' as DiscountType) : undefined,
       rate: 0,
-      isExisting: false,
-      isRemoved: false
-    }];
+      quantity: 1,
+      description: isDiscount ? 'Discount' : ''
+    };
+    const newItems = [...items, newItem];
     setItems(newItems);
     // Expand only the new item
     setExpandedItems(new Set([newItems.length - 1]));
@@ -268,7 +273,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     }
   };
 
-  const handleItemChange = (index: number, field: keyof InvoiceItem, value: string | number) => {
+  const handleItemChange = (index: number, field: string, value: string | number | boolean) => {
     console.log('Changing item:', {
       index,
       field,
@@ -277,37 +282,47 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     });
 
     const newItems = [...items];
-    if (field === 'service_id') {
-      const service = services.find(s => s.service_id === value);
-      if (!service) {
-        if (IS_DEVELOPMENT) {
-          console.warn(`Service not found for ID: ${value}`);
+    const currentItem = { ...newItems[index] };
+
+    switch (field) {
+      case 'service_id': {
+        const service = services.find(s => s.service_id === value);
+        if (!service) {
+          if (IS_DEVELOPMENT) {
+            console.warn(`Service not found for ID: ${value}`);
+          }
+          currentItem.service_id = value as string;
+        } else {
+          // Always update rate when service changes
+          currentItem.service_id = value as string;
+          currentItem.rate = service.rate;
+          currentItem.description = service.service_name; // Optionally pre-fill description
         }
-        newItems[index] = {
-          ...newItems[index],
-          [field]: value as string
-        };
-      } else {
-        // Always update rate when service changes
-        newItems[index] = {
-          ...newItems[index],
-          [field]: value as string,
-          rate: service.rate,
-          description: service.service_name // Optionally pre-fill description
-        };
+        break;
       }
-    } else if (field === 'quantity' || field === 'rate') {
-      const numericValue = typeof value === 'string' ? parseFloat(value) || 0 : value;
-      newItems[index] = {
-        ...newItems[index],
-        [field]: numericValue
-      };
-    } else {
-      newItems[index] = {
-        ...newItems[index],
-        [field]: value as string
-      };
+      case 'discount_type':
+        currentItem.discount_type = value as DiscountType;
+        // Reset rate when switching discount types
+        currentItem.rate = 0;
+        break;
+      case 'quantity':
+        currentItem.quantity = value as number;
+        break;
+      case 'rate':
+        currentItem.rate = value as number;
+        break;
+      case 'description':
+        currentItem.description = value as string;
+        break;
+      case 'is_discount':
+        currentItem.is_discount = value as boolean;
+        break;
+      case 'applies_to_item_id':
+        currentItem.applies_to_item_id = value as string;
+        break;
     }
+
+    newItems[index] = currentItem;
     setItems(newItems);
   };
 
@@ -319,7 +334,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     }
 
     const nonRemovedItems = items.filter(item => !item.isRemoved);
-    if (nonRemovedItems.some(item => !item.service_id)) {
+    if (nonRemovedItems.some(item => !item.is_discount && !item.service_id)) {
       setError('Please fill in all required fields');
       return;
     }
@@ -344,19 +359,31 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           .map(item => item.item_id!);
 
         await updateInvoiceManualItems(invoice.invoice_id, {
-          newItems: newItems.map(({ service_id, description, quantity, rate }) => ({
+          newItems: newItems.map(({ 
+            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
+          }) => ({
             service_id,
             description,
             quantity,
-            rate: rate, // Convert to cents
-            item_id: uuidv4() // Add required item_id field
+            rate,
+            is_discount,
+            discount_type,
+            applies_to_item_id,
+            discount_percentage,
+            item_id: uuidv4()
           })),
-          updatedItems: updatedItems.map(({ item_id, service_id, description, quantity, rate }) => ({
+          updatedItems: updatedItems.map(({ 
+            item_id, service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
+          }) => ({
             item_id: item_id!,
             service_id,
             description,
             quantity,
-            rate: rate // Convert to cents
+            rate,
+            is_discount,
+            discount_type,
+            discount_percentage,
+            applies_to_item_id
           })),
           removedItemIds
         });
@@ -368,12 +395,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         await generateManualInvoice({
           companyId: selectedCompany,
-          items: items.filter(item => !item.isRemoved).map(({ service_id, description, quantity, rate }) => ({
+          items: items.filter(item => !item.isRemoved).map(({ 
+            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage 
+          }) => ({
             service_id,
             description,
             quantity,
-            rate: rate, // Convert to cents
-            item_id: uuidv4() // Add required item_id field
+            rate,
+            is_discount,
+            discount_type,
+            applies_to_item_id,
+            discount_percentage,
+            item_id: uuidv4()
           }))
         });
       }
@@ -396,9 +429,20 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const calculateTotal = () => {
     // Calculate total in cents
+    // Since discounts are stored as negative values, we can just sum everything
     return items
       .filter(item => !item.isRemoved)
-      .reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+      .reduce((sum, item) => {
+        const amount = item.quantity * item.rate;
+        // For percentage discounts, calculate based on current subtotal
+        if (item.is_discount && item.discount_type === 'percentage') {
+          const subtotal = items
+            .filter(i => !i.isRemoved && !i.is_discount)
+            .reduce((s, i) => s + (i.quantity * i.rate), 0);
+          return sum - (subtotal * (Math.abs(item.rate) / 100));
+        }
+        return sum + amount;
+      }, 0);
   };
 
   const getButtonText = () => {
@@ -485,8 +529,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       index={index}
                       isExpanded={expandedItems.has(index)}
                       serviceOptions={serviceOptions}
+                      invoiceItems={items
+                        .filter(i => !i.is_discount && !i.isRemoved)
+                        .map(i => ({
+                          item_id: i.item_id || uuidv4(),
+                          description: i.description
+                        }))}
                       onRemove={() => handleRemoveItem(index)}
-                      onChange={(field, value) => handleItemChange(index, field as keyof InvoiceItem, value)}
+                      onChange={(updatedItem) => {
+                        const newItems = [...items];
+                        newItems[index] = updatedItem;
+                        setItems(newItems);
+                      }}
                       onToggleExpand={() => {
                         const newExpanded = new Set(expandedItems);
                         if (newExpanded.has(index)) {
@@ -502,14 +556,26 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </div>
 
               <div className="flex justify-between items-center">
-                <Button
-                  id='add-item-button'
-                  type="button"
-                  onClick={handleAddItem}
-                  variant="secondary"
-                >
-                  Add Line Item
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    id='add-line-item-button'
+                    type="button"
+                    onClick={() => handleAddItem(false)}
+                    variant="secondary"
+                  >
+                    <PlusIcon className="w-4 h-4 mr-2" />
+                    Add Line Item
+                  </Button>
+                  <Button
+                    id='add-discount-button'
+                    type="button"
+                    onClick={() => handleAddItem(true)}
+                    variant="secondary"
+                  >
+                    <MinusCircleIcon className="w-4 h-4 mr-2" />
+                    Add Discount
+                  </Button>
+                </div>
                 <div className="text-lg font-semibold">
                   Total: ${(calculateTotal() / 100).toFixed(2)}
                 </div>
@@ -518,7 +584,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <Button
                 id='save-changes-button'
                 type="submit"
-                disabled={isGenerating || (!invoice && !selectedCompany) || items.some(item => !item.service_id)}
+                disabled={isGenerating || (!invoice && !selectedCompany) || items.some(item => !item.is_discount && !item.service_id)}
                 className="w-full"
               >
                 {getButtonText()}

@@ -3,6 +3,7 @@
 import { createTenantKnex } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 import { format } from 'date-fns';
+import { is } from 'date-fns/locale';
 
 export default class Invoice {
   static async create(invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
@@ -86,6 +87,7 @@ export default class Invoice {
         'service_id',
         'description as name',
         'description',
+        'is_discount',
         knex.raw('CAST(quantity AS INTEGER) as quantity'),
         knex.raw('CAST(unit_price AS INTEGER) as unit_price'),
         knex.raw('CAST(total_price AS INTEGER) as total_price'),
@@ -133,7 +135,7 @@ export default class Invoice {
         isManual: item.is_manual,
         serviceId: item.service_id,
         description: item.description,
-        unitPrice: item.unit_price
+        unitPrice: item.unit_price,
       }))
     });
 

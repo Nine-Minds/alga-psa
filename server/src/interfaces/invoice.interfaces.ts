@@ -30,11 +30,17 @@ export interface IInvoiceItem extends TenantEntity {
   tax_region?: string;
   tax_rate?: number;
   is_manual: boolean;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
   created_by?: string;
   updated_by?: string;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }
+
+export type DiscountType = 'percentage' | 'fixed';
 
 /**
  * Interface for adding manual items to an invoice
@@ -46,6 +52,10 @@ export interface IManualInvoiceItem {
   rate: number;
   service_id?: string;
   tax_region?: string;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
 }
 
 /**
@@ -55,7 +65,6 @@ export interface IAddManualItemsRequest {
   invoice_id: string;
   items: IManualInvoiceItem[];
 }
-
 
 export type BlockType = 'text' | 'dynamic' | 'image';
 
@@ -212,18 +221,10 @@ export interface IInvoiceDesignerState {
 
 export interface IConditionalRule {
   rule_id: string;
-  condition: string; // This could be a complex type for advanced conditions
+  condition: string;
   action: 'show' | 'hide' | 'format';
-  target: string; // Field or section to apply the action to
-  format?: any; // Formatting options if action is 'format'
-}
-export interface IInvoiceAnnotation {
-  annotation_id: string;
-  invoice_id: string;
-  user_id: string;
-  content: string;
-  is_internal: boolean;
-  created_at: Date;
+  target: string;
+  format?: any;
 }
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';

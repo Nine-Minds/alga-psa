@@ -650,7 +650,9 @@ export class BillingEngine {
     });
 
     await this.knex.transaction(async (trx) => {
-      for (const item of items) {
+      // First process non-discount items
+      const regularItems = items.filter(item => !item.is_discount);
+      for (const item of regularItems) {
         // Get service details for tax info
         const service = await trx('service_catalog')
           .where({ service_id: item.service_id })
@@ -661,16 +663,13 @@ export class BillingEngine {
         let taxAmount = 0;
         let taxRate = 0;
 
-        console.log('Processing item:', {
+        console.log('Processing regular item:', {
           itemId: item.item_id,
           serviceId: item.service_id,
           serviceName: service?.service_name,
           quantity: item.quantity,
           unitPrice: item.unit_price,
           netAmount,
-          netAmountType: typeof netAmount,
-          originalNetAmount: item.net_amount,
-          originalNetAmountType: typeof item.net_amount,
           isTaxable: service ? service.is_taxable !== false : true,
           taxRegion: service?.tax_region || company.tax_region
         });
@@ -688,14 +687,6 @@ export class BillingEngine {
 
         const totalPrice = netAmount + taxAmount;
 
-        console.log('Calculated values:', {
-          itemId: item.item_id,
-          netAmount,
-          taxAmount,
-          totalPrice,
-          taxRate
-        });
-
         // Update item with new tax calculation
         await trx('invoice_items')
           .where({ item_id: item.item_id })
@@ -708,12 +699,84 @@ export class BillingEngine {
 
         subtotal = Math.round(subtotal + netAmount);
         totalTax = Math.round(totalTax + taxAmount);
+      }
 
-        console.log('Running totals:', {
-          subtotal,
-          totalTax,
-          combined: subtotal + totalTax
+      // Then process discount items (which should already have negative amounts)
+      const discountItems = items.filter(item => item.is_discount);
+      for (const item of discountItems) {
+        console.log('item:', item);
+        let netAmount: number;
+        // Ensure netAmount is an integer and is negative
+        netAmount = typeof item.net_amount === 'string' ?
+          -Math.abs(parseInt(item.net_amount, 10)) :
+          -Math.abs(item.net_amount);
+
+        console.log('Processing discount item:', {
+          itemId: item.item_id,
+          discountType: item.discount_type,
+          netAmount,
+          appliesTo: item.applies_to_item_id || 'entire invoice'
         });
+
+        // No tax calculation needed for discounts
+        const taxAmount = 0;
+        const taxRate = 0;
+
+        if (item.discount_type === 'percentage') {
+          // For percentage discounts, calculate based on applicable amount and stored percentage
+          const applicableAmount = item.applies_to_item_id
+            ? (await trx('invoice_items')
+                .where({ item_id: item.applies_to_item_id })
+                .first())?.net_amount || 0
+            : subtotal;
+          
+          // Use discount_percentage field instead of rate for percentage calculation
+          const percentage = item.discount_percentage || 0;
+          netAmount = -Math.round((applicableAmount * percentage) / 100);
+
+          console.log('Processing percentage discount:', {
+            itemId: item.item_id,
+            percentage,
+            applicableAmount,
+            calculatedDiscount: netAmount,
+            appliesTo: item.applies_to_item_id || 'entire invoice'
+          });
+
+          // Update discount item, preserving the original percentage
+          await trx('invoice_items')
+            .where({ item_id: item.item_id })
+            .update({
+              net_amount: netAmount,
+              tax_amount: 0,
+              tax_rate: 0,
+              total_price: netAmount,
+              unit_price: netAmount, // Store calculated amount in unit_price
+              discount_percentage: percentage // Preserve the original percentage
+            });
+        } else {
+          // Fixed amount discounts
+          netAmount = Math.round(item.net_amount);
+
+          console.log('Processing fixed discount:', {
+            itemId: item.item_id,
+            fixedAmount: netAmount,
+            appliesTo: item.applies_to_item_id || 'entire invoice'
+          });
+
+          // Update fixed discount item
+          await trx('invoice_items')
+            .where({ item_id: item.item_id })
+            .update({
+              net_amount: netAmount,
+              tax_amount: 0,
+              tax_rate: 0,
+              total_price: netAmount,
+              unit_price: netAmount,
+              discount_percentage: null // Clear any percentage for fixed discounts
+            });
+        }
+
+        subtotal = Math.round(subtotal + netAmount);
       }
 
       // Calculate final totals using Math.round for consistent rounding

@@ -10,7 +10,8 @@ import {
   InvoiceViewModel,
   IManualInvoiceItem,
   IInvoiceItem,
-  IInvoice
+  IInvoice,
+  DiscountType
 } from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
@@ -25,20 +26,12 @@ import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Tent } from 'lucide-react';
-
-interface UpdatedManualItem {
-  item_id: string;
-  service_id?: string;
-  description?: string;
-  quantity?: number;
-  rate?: number;
-}
-
 interface ManualItemsUpdate {
   newItems: IManualInvoiceItem[];
-  updatedItems: UpdatedManualItem[];
+  updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
 }
+
 
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex } = await createTenantKnex();
@@ -705,6 +698,10 @@ interface ManualInvoiceUpdate {
   quantity?: number;
   rate?: number;
   item_id: string;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
 }
 
 interface ManualItemsUpdate {
@@ -720,6 +717,8 @@ export async function updateInvoiceManualItems(
   const { knex, tenant } = await createTenantKnex();
   const session = await getServerSession(options);
   const billingEngine = new BillingEngine();
+
+  console.log('[updateInvoiceManualItems] session:', session);
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -770,19 +769,37 @@ export async function updateInvoiceManualItems(
         taxRegion = service?.tax_region || taxRegion;
       }
 
+      // For percentage discounts, store the percentage in discount_percentage
+      // and calculate the initial monetary value for unit_price
+      let finalUnitPrice = unitPriceInCents;
+      let discountPercentage = null;
+
+      if (item.is_discount && item.discount_type === 'percentage') {
+        discountPercentage = item.discount_percentage;
+        // Set unit_price to 0 initially, will be calculated in recalculateInvoice
+        finalUnitPrice = 0;
+      } else if (item.is_discount) {
+        // For fixed discounts, ensure the amount is negative
+        finalUnitPrice = -Math.abs(unitPriceInCents);
+      }
+
       const invoiceItem = {
         item_id: uuidv4(),
         invoice_id: invoiceId,
         service_id: item.service_id || null,
         description: item.description,
         quantity: item.quantity,
-        unit_price: unitPriceInCents,
-        net_amount: netAmount,
+        unit_price: finalUnitPrice,
+        net_amount: item.is_discount ? -Math.abs(netAmount) : netAmount,
         tax_amount: 0, // Will be calculated by recalculateInvoice
         tax_rate: 0, // Will be calculated by recalculateInvoice
         tax_region: taxRegion,
-        total_price: netAmount, // Will be updated by recalculateInvoice
+        total_price: item.is_discount ? -Math.abs(netAmount) : netAmount, // Will be updated by recalculateInvoice
         is_manual: true,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        discount_percentage: discountPercentage,
+        applies_to_item_id: item.applies_to_item_id,
         created_by: session.user.id,
         created_at: currentDate,
         tenant
@@ -806,19 +823,43 @@ export async function updateInvoiceManualItems(
         taxRegion = service?.tax_region || taxRegion;
       }
 
+      // Get the existing item to check if it's a discount
+      const existingItem = await trx('invoice_items')
+        .where({ item_id: item.item_id })
+        .first();
+
+      // For percentage discounts, preserve the percentage and calculate the initial monetary value
+      let finalUnitPrice = unitPriceInCents;
+      let discountPercentage = existingItem?.discount_percentage;
+      const isDiscount = existingItem?.is_discount || false;
+
+      if (isDiscount && item.discount_type === 'percentage') {
+        // Use the new discount_percentage if provided, otherwise keep existing
+        discountPercentage = item.discount_percentage !== undefined ? item.discount_percentage : discountPercentage;
+        // Set unit_price to 0 initially, will be calculated in recalculateInvoice
+        finalUnitPrice = 0;
+      } else if (isDiscount) {
+        // For fixed discounts, ensure the amount is negative
+        finalUnitPrice = -Math.abs(unitPriceInCents);
+      }
+
       const invoiceItem = {
         item_id: uuidv4(),
         invoice_id: invoiceId,
         service_id: item.service_id || null,
         description: item.description,
         quantity: item.quantity,
-        unit_price: unitPriceInCents,
-        net_amount: netAmount,
+        unit_price: finalUnitPrice,
+        net_amount: isDiscount ? -Math.abs(netAmount) : netAmount,
         tax_amount: 0, // Will be calculated by recalculateInvoice
         tax_rate: 0, // Will be calculated by recalculateInvoice
         tax_region: taxRegion,
-        total_price: netAmount, // Will be updated by recalculateInvoice
+        total_price: isDiscount ? -Math.abs(netAmount) : netAmount, // Will be updated by recalculateInvoice
         is_manual: true,
+        is_discount: isDiscount,
+        discount_type: existingItem?.discount_type,
+        discount_percentage: discountPercentage,
+        applies_to_item_id: existingItem?.applies_to_item_id,
         created_by: session.user.id,
         created_at: currentDate,
         tenant
@@ -894,6 +935,7 @@ export async function addManualItemsToInvoice(
         description: item.description,
         quantity: item.quantity,
         unitPriceInCents,
+        discountPercentage: item.discount_percentage,
         netAmount
       });
 
@@ -931,6 +973,7 @@ export async function addManualItemsToInvoice(
         is_manual: true,
         created_by: session.user.id,
         created_at: currentDate,
+        discount_percentage: item.discount_percentage,
         tenant
       };
 

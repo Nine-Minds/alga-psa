@@ -9,11 +9,16 @@ import { BillingEngine } from '@/lib/billing/billingEngine';
 import { getServerSession } from "next-auth/next";
 import { options } from "@/app/api/auth/[...nextauth]/options";
 
+import { DiscountType } from '@/interfaces/invoice.interfaces';
+
 interface ManualInvoiceItem {
   service_id: string;
   quantity: number;
   description: string;
   rate: number;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  applies_to_item_id?: string;
 }
 
 interface ManualInvoiceRequest {
@@ -80,12 +85,34 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         .where({ service_id: item.service_id })
         .first();
 
-      const netAmount = Math.round(item.quantity * item.rate); // Convert dollars to cents
-      const taxCalculationResult = await taxService.calculateTax(
-        companyId,
-        netAmount,
-        currentDate
-      );
+      let netAmount: number;
+      let taxCalculationResult: { taxAmount: number; taxRate: number };
+
+      if (item.is_discount) {
+        // For discounts, calculate the negative amount
+        if (item.discount_type === 'percentage') {
+          // Calculate percentage of applicable amount
+          const applicableAmount = item.applies_to_item_id
+            ? (await knex('invoice_items')
+                .where({ item_id: item.applies_to_item_id })
+                .first())?.net_amount || 0
+            : subtotal;
+          netAmount = -Math.round((applicableAmount * item.rate) / 100);
+        } else {
+          // Fixed amount discount
+          netAmount = -Math.round(item.rate); // Negative for discounts
+        }
+        // Discounts don't get taxed
+        taxCalculationResult = { taxAmount: 0, taxRate: 0 };
+      } else {
+        // Regular line item
+        netAmount = Math.round(item.quantity * item.rate);
+        taxCalculationResult = await taxService.calculateTax(
+          companyId,
+          netAmount,
+          currentDate
+        );
+      }
 
       // Create invoice item
       const invoiceItem = {
@@ -94,13 +121,16 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         service_id: item.service_id,
         description: item.description,
         quantity: item.quantity,
-        unit_price: Math.round(item.rate), // Convert dollars to cents
-        net_amount: Math.round(item.quantity * item.rate), // Convert dollars to cents
+        unit_price: item.is_discount ? -Math.abs(Math.round(item.rate)) : Math.round(item.rate),
+        net_amount: netAmount,
         tax_amount: taxCalculationResult.taxAmount,
         tax_region: service?.tax_region || company.tax_region,
         tax_rate: taxCalculationResult.taxRate,
         total_price: netAmount + taxCalculationResult.taxAmount,
         is_manual: true,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        applies_to_item_id: item.applies_to_item_id,
         created_by: session?.user?.id,
         created_at: currentDate,
         tenant
@@ -169,6 +199,9 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       net_amount: Math.round(item.quantity * item.rate), // Convert dollars to cents
       tenant,
       is_manual: true,
+      is_discount: item.is_discount || false,
+      discount_type: item.discount_type,
+      applies_to_item_id: item.applies_to_item_id,
       created_by: session.user.id,
       created_at: currentDate
     })),
@@ -225,7 +258,26 @@ await knex.transaction(async (trx) => {
 
   // Insert new items
   for (const item of items) {
-    const netAmount = Math.round(item.quantity * item.rate); // Convert dollars to cents
+    let netAmount: number;
+
+    if (item.is_discount) {
+      // For discounts, calculate the negative amount
+      if (item.discount_type === 'percentage') {
+        // Calculate percentage of applicable amount
+        const applicableAmount = item.applies_to_item_id
+          ? (await trx('invoice_items')
+              .where({ item_id: item.applies_to_item_id })
+              .first())?.net_amount || 0
+          : 0; // Will be properly calculated by recalculateInvoice
+        netAmount = -Math.round((applicableAmount * item.rate) / 100);
+      } else {
+        // Fixed amount discount
+        netAmount = -Math.round(item.rate); // Negative for discounts
+      }
+    } else {
+      // Regular line item
+      netAmount = Math.round(item.quantity * item.rate);
+    }
 
     const invoiceItem = {
       item_id: uuidv4(),
@@ -233,13 +285,16 @@ await knex.transaction(async (trx) => {
       service_id: item.service_id,
       description: item.description,
       quantity: item.quantity,
-      unit_price: Math.round(item.rate), // Convert dollars to cents
+      unit_price: Math.round(item.rate),
       net_amount: netAmount,
       tax_amount: 0, // Will be calculated by recalculateInvoice
       tax_rate: 0, // Will be calculated by recalculateInvoice
       tax_region: company.tax_region,
       total_price: netAmount, // Will be updated by recalculateInvoice
       is_manual: true,
+      is_discount: item.is_discount || false,
+      discount_type: item.discount_type,
+      applies_to_item_id: item.applies_to_item_id,
       created_by: session.user.id,
       created_at: currentDate,
       tenant
@@ -301,6 +356,9 @@ return {
     net_amount: item.net_amount,
     tenant,
     is_manual: true,
+    is_discount: item.is_discount || false,
+    discount_type: item.discount_type,
+    applies_to_item_id: item.applies_to_item_id,
     created_by: session.user.id,
     created_at: item.created_at
   })),
