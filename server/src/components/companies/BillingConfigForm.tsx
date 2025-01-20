@@ -1,27 +1,20 @@
 import React from 'react';
 import { Text } from '@radix-ui/themes';
-import { Switch } from '@/components/ui/Switch';
 import CustomSelect from '@/components/ui/CustomSelect';
 
 interface BillingConfigFormProps {
     billingConfig: {
         payment_terms: string;
         billing_cycle: string;
-        credit_limit: number;
         preferred_payment_method: string;
-        auto_invoice: boolean;
         invoice_delivery_method: string;
     };
-    handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     handleSelectChange: (name: string) => (value: string) => void;
-    handleSwitchChange: (checked: boolean) => void;
 }
 
 const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     billingConfig,
-    handleInputChange,
-    handleSelectChange,
-    handleSwitchChange
+    handleSelectChange
 }) => {
     const paymentTermsOptions = [
         { value: 'net_30', label: 'Net 30' },
@@ -85,28 +78,6 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                 />
             </div>
 
-            <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Credit Limit</Text>
-                <input
-                    type="number"
-                    name="credit_limit"
-                    value={billingConfig.credit_limit}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                />
-            </div>
-
-            <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Auto Invoice</Text>
-                <div className="flex items-center">
-                    <Switch
-                        checked={billingConfig.auto_invoice}
-                        onCheckedChange={handleSwitchChange}
-                        className="data-[state=checked]:bg-primary-500"
-                    />
-                    <Text size="2" className="ml-2">{billingConfig.auto_invoice ? 'Enabled' : 'Disabled'}</Text>
-                </div>
-            </div>
         </div>
     );
 };
