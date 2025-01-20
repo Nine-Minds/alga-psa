@@ -92,7 +92,13 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
   };
 }
 
-export async function createNextBillingCycle(companyId: string): Promise<void> {
+export async function createNextBillingCycle(
+  companyId: string,
+  effectiveDate?: string
+): Promise<{
+  success: boolean;
+  suggestedDate?: string;
+}> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -112,7 +118,7 @@ export async function createNextBillingCycle(companyId: string): Promise<void> {
     throw new Error('Cannot create next billing cycle at this time');
   }
 
-  await createCompanyBillingCycles(conn, company);
+  return await createCompanyBillingCycles(conn, company, { manual: true });
 }
 
 export async function removeBillingCycle(cycleId: string): Promise<void> {

@@ -38,6 +38,12 @@ const BillingCycles: React.FC = () => {
     }
   }>({});
   const [creatingCycle, setCreatingCycle] = useState<{ [companyId: string]: boolean }>({});
+  const [dateConflict, setDateConflict] = useState<{
+    companyId: string;
+    suggestedDate: Date;
+    show: boolean;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -51,7 +57,6 @@ const BillingCycles: React.FC = () => {
         getAllCompanies()
       ]);
 
-      // cycles is already in the correct format
       setBillingCycles(cycles);
       setCompanies(fetchedCompanies);
 
@@ -98,10 +103,22 @@ const BillingCycles: React.FC = () => {
     }
   };
 
-  const handleCreateNextCycle = async (companyId: string) => {
+  const handleCreateNextCycle = async (companyId: string, selectedDate?: Date) => {
     setCreatingCycle(prev => ({ ...prev, [companyId]: true }));
     try {
-      await createNextBillingCycle(companyId);
+      const result = await createNextBillingCycle(
+        companyId,
+        selectedDate?.toISOString()
+      );
+      if (!result.success && result.suggestedDate) {
+        setDateConflict({
+          companyId,
+          suggestedDate: new Date(result.suggestedDate),
+          show: true
+        });
+        return;
+      }
+
       // Update the cycle status after successful creation
       const status = await canCreateNextBillingCycle(companyId);
       setCycleStatus(prev => ({
@@ -192,6 +209,7 @@ const BillingCycles: React.FC = () => {
             pagination={true}
           />
         )}
+
       </CardContent>
     </Card>
   );
