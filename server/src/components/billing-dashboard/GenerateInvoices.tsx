@@ -28,7 +28,7 @@ interface Service {
 const invoiceTypeOptions: SelectOption[] = [
   { value: 'automatic', label: 'Automatic Invoices' },
   { value: 'manual', label: 'Manual Invoices' },
-  { value: 'prepayment', label: 'Prepayment & Credit Memos' }
+  { value: 'prepayment', label: 'Prepayment' }
 ];
 
 const GenerateInvoices: React.FC = () => {
