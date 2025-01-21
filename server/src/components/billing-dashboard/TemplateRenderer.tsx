@@ -1,20 +1,58 @@
 // server/src/components/TemplateRenderer.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calculation, Conditional, Field, List, IInvoiceTemplate, Section, Style, TemplateElement, IInvoice, StaticText, InvoiceViewModel, GlobalCalculation } from '@/interfaces/invoice.interfaces';
+import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from '@/interfaces/invoice.interfaces';
+import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
 import renderstyles from './TemplateRenderer.module.css'
 
 interface TemplateRendererProps {
     template: IInvoiceTemplate;
-    invoiceData: InvoiceViewModel;
+    invoiceId?: string;
 }
 
-const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceData }) => {
+interface List {
+    type: 'list';
+    name: string;
+    groupBy?: string;
+    aggregation?: 'sum' | 'count' | 'avg';
+    aggregationField?: string;
+    content: TemplateElement[];
+    position?: { column: number; row: number };
+    span?: { columnSpan: number; rowSpan: number };
+    id?: string;
+    style?: string;
+}
+
+
+const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceId }) => {
+    const [invoiceData, setInvoiceData] = useState<InvoiceViewModel | null>(null);
     const [globalValues, setGlobalValues] = useState<Record<string, number>>({});
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        console.log('Parsed template:', template.parsed);
-        console.log('Invoice data:', invoiceData);
+        if (!invoiceId) return;
 
+        const fetchInvoiceData = async () => {
+            try {
+                setLoading(true);
+                const data = await getInvoiceForRendering(invoiceId);
+                console.log('Fetched invoice data:', data);
+                setInvoiceData(data);
+                setError(null);
+            } catch (err) {
+                setError('Failed to load invoice details');
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInvoiceData().then(()=>{}).catch(()=>{});
+    }, [invoiceId]);
+
+    useEffect(() => {
+        if (!invoiceData) return;
+        
         const calculatedGlobals: Record<string, number> = {};
         template.parsed.globals.forEach(global => {
             if (global.type === 'calculation') {
@@ -101,64 +139,43 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
         }, 0);
     };
 
-
-
     const calculateListRows = (list: List): number => {
-        // This is a simplified calculation. You might need to adjust this
-        // based on how you want to handle list layouts
+        if (list.groupBy) {
+            // For grouped lists, we need to account for group headers
+            const listData = invoiceData?.[list.name as keyof InvoiceViewModel];
+            if (!Array.isArray(listData)) return 0;
+            
+            const grouped = groupItems(listData, list.groupBy);
+            return Object.values(grouped).reduce((total, group) => 
+                total + 1 + group.length, 0);
+        }
+        
+        // Default calculation for non-grouped lists
         return list.content.reduce((total, item) => {
             if ('position' in item && item.position) {
                 return total + (item.span?.rowSpan || 1);
             }
-            return total + 1; // Default to 1 row for items without position
+            return total + 1;
         }, 0);
     };
 
-    // const renderGroup = (group: Group, index: number) => {
-    //     const groupData = invoiceData[group.groupBy as keyof IInvoice];
-
-    //     if (!groupData || !Array.isArray(groupData)) {
-    //         return <div key={index}>No data for group: {group.name}</div>;
-    //     }
-
-    //     // If no aggregation is specified, render as a list
-    //     if (!group.aggregation) {
-    //         return renderList(groupData, group.name, index);
-    //     }
-
-    //     // If aggregation is specified, render as a group with aggregation
-    //     return renderAggregatedGroup(groupData, group, index);
-    // };
-
-
-    // const renderAggregatedGroup = (items: any[], group: Group, index: number) => {
-    //     let aggregatedValue;
-    //     switch (group.aggregation) {
-    //         case 'sum':
-    //             aggregatedValue = items.reduce((sum, item) => sum + (item[group.aggregationField || 0]), 0);
-    //             break;
-    //         case 'count':
-    //             aggregatedValue = items.length;
-    //             break;
-    //         // Add more aggregation types as needed
-    //     }
-
-    //     return (
-    //         <div key={index} className={`group-${group.name}`}>
-    //             <h4>{group.name}</h4>
-    //             <p>{group.aggregation} of {group.aggregationField}: {aggregatedValue}</p>
-    //             {group.showDetails && renderList(items, `${group.name}-details`, index)}
-    //         </div>
-    //     );
-    // };
+    const groupItems = (items: any[], groupBy: string): Record<string, any[]> => {
+        return items.reduce((acc, item) => {
+            const groupKey = item[groupBy] || 'Uncategorized';
+            acc[groupKey] = [...(acc[groupKey] || []), item];
+            return acc;
+        }, {} as Record<string, any[]>);
+    };
 
     const renderItem = (item: TemplateElement, index: number) : JSX.Element => {
+        if (!invoiceData) return <></>;
+        
         try {
             switch (item.type) {
                 case 'field':
-                    return renderField(item, index);
+                    return renderField(item, index) || <></>;
                 case 'list':
-                    return renderList(item, index);
+                    return renderList(item, index) || <></>;
                 case 'conditional':
                     return renderConditional(item, index);
                 case 'staticText':
@@ -180,7 +197,6 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
             )
             : undefined;
 
-        // Default position and span if not provided
         const defaultPosition = { column: 1, row: 1 };
         const defaultSpan = { columnSpan: 1, rowSpan: 1 };
 
@@ -198,15 +214,16 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
         );
     };
 
-
     const renderField = (field: Field, index: number) => {
+        if (!invoiceData) return null;
+        
         let value;
         if (field.name in globalValues) {
             value = globalValues[field.name];
         } else {
             value = field.name.split('.').reduce((obj: any, key: string) => {
                 return obj && typeof obj === 'object' ? obj[key as keyof typeof obj] : undefined;
-            }, invoiceData as any);
+            }, invoiceData);
         }
 
         return (
@@ -217,16 +234,21 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
                     gridRow: `${field.position?.row || 1} / span ${field.span?.rowSpan || 1}`,
                 }}
             >
-                {renderValue(value)}
+                {renderValue(field.name, invoiceData, value)}
             </div>
         );
     };
 
     const renderList = (list: List, index: number) => {
+        if (!invoiceData) return null;
         const listData = invoiceData[list.name as keyof InvoiceViewModel];
 
         if (!Array.isArray(listData)) {
             return <div key={index}>No data for list: {list.name}</div>;
+        }
+
+        if (list.groupBy) {
+            return renderGroupedList(listData, list, index);
         }
 
         return (
@@ -251,41 +273,56 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
         );
     };
 
+    const renderGroupedList = (items: any[], list: List, index: number) => {
+        const grouped = groupItems(items, list.groupBy!);
+
+        return (
+            <>
+                {Object.entries(grouped).map(([groupName, groupItems], groupIndex) => (
+                    <React.Fragment key={groupIndex}>
+                        <div className={renderstyles.groupHeader}>
+                            {list.groupBy}: {groupName}
+                            {list.aggregation && renderAggregation(groupItems, list)}
+                        </div>
+                        {renderSimpleList(groupItems, list)}
+                    </React.Fragment>
+                ))}</>
+        );
+    };
+
+    const renderAggregation = (items: any[], list: List) => {
+        if (!list.aggregation) return null;
+        
+        const value = items.reduce((total, item) => {
+            switch (list.aggregation) {
+                case 'sum': 
+                    return total + (item[list.aggregationField!] || 0);
+                case 'count':
+                    return total + 1;
+                case 'avg':
+                    return total + (item[list.aggregationField!] || 0);
+            }
+            return total;
+        }, 0);
+
+        if (list.aggregation === 'avg') {
+            return <span className={renderstyles.aggregation}> ({value / items.length})</span>;
+        }
+        
+        return <span className={renderstyles.aggregation}> ({value})</span>;
+    };
+
     const renderSimpleList = (items: any[], list: List) => {
         return (
             <>
-                {items.map((item, itemIndex):JSX.Element => (
-                    <div key={itemIndex} className={renderstyles.listItem}>
-                        {list.content.map((element, elementIndex):JSX.Element =>
-                            renderListItem(element, item, `${itemIndex}-${elementIndex}`)
-                        )}
-                    </div>
+                {items.map((item, itemIndex) => (
+                    list.content.map((element, elementIndex) =>
+                        renderListItem(element, item, `${itemIndex}-${elementIndex}`)
+                    )
                 ))}
             </>
         );
     };
-
-    // const renderGroupedList = (items: any[], list: List) => {
-    //     const groupedItems = items.reduce<Record<string, any[]>>((acc, item) => {
-    //         const groupKey = item[list.groupBy as keyof typeof item] as string;
-    //         if (!acc[groupKey]) {
-    //             acc[groupKey] = [];
-    //         }
-    //         acc[groupKey].push(item);
-    //         return acc;
-    //     }, {});
-
-    //     return (
-    //         <>
-    //             {Object.entries(groupedItems).map(([groupName, groupItems], groupIndex):JSX.Element => (
-    //                 <div key={groupIndex} className="list-group">
-    //                     <h4>{groupName}</h4>
-    //                     {renderSimpleList(groupItems, list)}
-    //                 </div>
-    //             ))}
-    //         </>
-    //     );
-    // };
 
     const renderListItem = (element: TemplateElement, item: any, key: string):JSX.Element => {
         switch (element.type) {
@@ -297,167 +334,49 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
                         style={{
                             gridColumn: `${element.position?.column || 1} / span ${element.span?.columnSpan || 1}`,
                             gridRow: 'auto',
+                            padding: '5px 0'
                         }}
                     >
-                        {renderValue(item[element.name])}
+                        {renderValue(element.name, invoiceData, item[element.name])}
                     </div>
                 );
-            // case 'calculation':
-            //   return (
-            //     <div
-            //       key={key}
-            //       className={renderstyles.listItem}
-            //       style={{
-            //         gridColumn: `${element.position.column} / span ${element.span?.columnSpan || 1}`,
-            //         gridRow: 'auto',
-            //       }}
-            //     >
-            //       {renderListCalculation(element, item, key)}
-            //     </div>
-            //   );
-            // case 'conditional':
-            //   return (
-            //     <div
-            //       key={key}
-            //       className={renderstyles.listItem}
-            //       style={{
-            //         gridColumn: `${element.position.column} / span ${element.span?.columnSpan || 1}`,
-            //         gridRow: 'auto',
-            //       }}
-            //     >
-            //       {renderListConditional(element, item, key)}
-            //     </div>
-            //   );
-            // case 'list':
-            //   // Nested lists are not typically used within list items,
-            //   // but if needed, you can implement it here
-            //   console.warn('Nested lists are not supported in list items');
-            //   return null;
             default:
                 console.warn(`Unsupported element type in list item: ${(element as any).type}`);
                 return <></>;
         }
     };
 
-    const renderListField = (field: Field, item: any, key: string) => {
-        const value = item[field.name];
-        return (
-            <div
-                key={key}
-                className={`list-field-${field.name}`}
-                style={{
-                    gridColumn: `${field.position?.column || 1} / span ${field.span?.columnSpan || 1}`,
-                    gridRow: `${field.position?.row || 1} / span ${field.span?.rowSpan || 1}`,
-                }}
-            >
-                {renderValue(value)}
-            </div>
-        );
-    };
+    const renderValue = (fieldName: string, invoiceData: InvoiceViewModel | null, value?: unknown): React.ReactNode => {
+        if (!invoiceData) return null;
+        
+        const actualValue = value ?? fieldName.split('.').reduce((obj: any, key: string) => {
+            return obj && typeof obj === 'object' ? obj[key as keyof typeof obj] : undefined;
+        }, invoiceData);
 
-    const renderListCalculation = (calculation: Calculation, item: any, key: string) => {
-        // Implement list-specific calculation logic here
-        return (
-            <div key={key} className={`list-calculation-${calculation.name}`}>
-                {calculation.name}: {/* Add calculation result here */}
-            </div>
-        );
-    };
-
-    const renderListConditional = (conditional: Conditional, item: any, key: string) => {
-        const { condition, content } = conditional;
-        const fieldValue = item[condition.field];
-
-        let shouldRender = false;
-
-        switch (condition.op) {
-            case '==':
-                shouldRender = fieldValue == condition.value;
-                break;
-            case '!=':
-                shouldRender = fieldValue != condition.value;
-                break;
-            case '>':
-                shouldRender = fieldValue > condition.value;
-                break;
-            case '<':
-                shouldRender = fieldValue < condition.value;
-                break;
-            case '>=':
-                shouldRender = fieldValue >= condition.value;
-                break;
-            case '<=':
-                shouldRender = fieldValue <= condition.value;
-                break;
-        }
-
-        if (shouldRender) {
-            return (
-                <div key={key} className="list-conditional">
-                    {content.map((contentItem, contentIndex):JSX.Element =>
-                        renderListItem(contentItem, item, `${key}-${contentIndex}`)
-                    )}
-                </div>
-            );
-        }
-
-        return null;
-    };
-
-    const renderValue = (value: unknown): React.ReactNode => {
-        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            return String(value);
-        }
-        if (value === null || value === undefined) {
+        if (actualValue === null || actualValue === undefined) {
+            console.log(`Field ${fieldName} has N/A value`);
             return 'N/A';
         }
-        if (value instanceof Date) {
-            return value.toLocaleDateString(); // or any other date format you prefer
+        if (typeof actualValue === 'string' || typeof actualValue === 'number' || typeof actualValue === 'boolean') {
+            return String(actualValue);
         }
-        if (Array.isArray(value)) {
-            return `[${value.map((v): string => {
+        if (actualValue instanceof Date) {
+            return actualValue.toLocaleDateString();
+        }
+        if (Array.isArray(actualValue)) {
+            return `[${actualValue.map((v): string => {
                 if (v instanceof Date) {
-                    return v.toLocaleDateString(); // or any other date format you prefer
+                    return v.toLocaleDateString();
                 }
-                const renderedValue = renderValue(v);
+                const renderedValue = renderValue(fieldName, invoiceData, v);
                 return typeof renderedValue === 'string' ? renderedValue : String(renderedValue);
             }).join(', ')}]`;
         }
-        if (typeof value === 'object') {
-            return JSON.stringify(value);
+        if (typeof actualValue === 'object') {
+            return JSON.stringify(actualValue);
         }
         return 'Unknown value';
     };
-
-    // const renderCalculation = (calculation: Calculation, index: number) => {
-    //     const listData = calculation.listReference 
-    //       ? invoiceData[calculation.listReference as keyof InvoiceViewModel]
-    //       : invoiceData[calculation.expression.field as keyof InvoiceViewModel];
-      
-    //     let result;
-    //     if (Array.isArray(listData)) {
-    //       switch (calculation.expression.operation) {
-    //         case 'sum':
-    //           result = listData.reduce((sum, item) => sum + (Number(item[calculation.expression.field]) || 0), 0);
-    //           break;
-    //         case 'count':
-    //           result = listData.length;
-    //           break;
-    //         case 'avg':
-    //           result = listData.reduce((sum, item) => sum + (Number(item[calculation.expression.field]) || 0), 0) / listData.length;
-    //           break;
-    //         default:
-    //           result = 'N/A';
-    //       }
-    //     } else {
-    //       result = 'N/A';
-    //     }
-    //     return (
-    //       <div key={index}>
-    //         {calculation.name}: {result}
-    //       </div>
-    //     );
-    //   };
 
     const createStyleString = (style: Style): string => {
         const selector = style.elements.join(', ');
@@ -470,6 +389,7 @@ const TemplateRenderer: React.FC<TemplateRendererProps> = ({ template, invoiceDa
 
     const renderConditional = (conditional: Conditional, index: number): JSX.Element => {
         const { condition, content } = conditional;
+        if (!invoiceData) return <></>;
         const fieldValue = invoiceData[condition.field as keyof InvoiceViewModel];
         if (fieldValue === undefined)
             return <></>;

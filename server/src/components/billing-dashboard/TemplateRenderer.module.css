@@ -14,6 +14,7 @@
   padding: 5px 0;
   border-bottom: 1px solid #eee;
 }
+
 .invoiceTemplate {
   font-family: Arial, sans-serif;
   font-size: 12px;
@@ -22,4 +23,26 @@
 
 .listItem {
   padding: 5px 0;
+}
+
+.groupedList {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+.listGroup {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  gap: 8px;
+}
+
+.groupHeader {
+  grid-column: 1 / -1;
+  font-weight: bold;
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
 }

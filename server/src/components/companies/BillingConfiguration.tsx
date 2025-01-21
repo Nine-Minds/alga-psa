@@ -309,9 +309,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
             <BillingConfigForm
                 billingConfig={billingConfig}
-                handleInputChange={handleInputChange}
+                // handleInputChange={handleInputChange}
                 handleSelectChange={handleSelectChange}
-                handleSwitchChange={handleSwitchChange}
+                // handleSwitchChange={handleSwitchChange}
             />
 
             <CompanyTaxRates

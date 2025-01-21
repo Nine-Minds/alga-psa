@@ -360,7 +360,7 @@ export default class Invoice {
           description: item.description,
           quantity: item.quantity,
           unit_price: item.unit_price,
-          total_price: item.total_price,
+          total_price: item.total_price - item.tax_amount,
           tax_amount: item.tax_amount,
           net_amount: item.net_amount,
           item_id: item.item_id || '',

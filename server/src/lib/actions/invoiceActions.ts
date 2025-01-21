@@ -537,8 +537,8 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
       name: '',  // Contact info not stored in invoice
       address: ''
     },
-    invoice_date: parseISO(invoice.invoice_date.toString()),
-    due_date: parseISO(invoice.due_date.toString()),
+    invoice_date: parseISO(typeof invoice.invoice_date === 'string' ? invoice.invoice_date : invoice.invoice_date.toISOString()),
+    due_date: parseISO(typeof invoice.due_date === 'string' ? invoice.due_date : invoice.due_date.toISOString()),
     status: invoice.status,
     subtotal: invoice.subtotal,
     tax: invoice.tax,
@@ -591,6 +591,16 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
   } catch (error) {
     console.error('Error fetching invoices:', error);
     throw new Error('Error fetching invoices');
+  }
+}
+
+export async function getInvoiceForRendering(invoiceId: string): Promise<InvoiceViewModel> {
+  try {
+    console.log('Fetching full invoice details for rendering:', invoiceId);
+    return Invoice.getFullInvoiceById(invoiceId);
+  } catch (error) {
+    console.error('Error fetching invoice for rendering:', error);
+    throw new Error('Error fetching invoice for rendering');
   }
 }
 
