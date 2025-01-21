@@ -1,7 +1,7 @@
 // server/src/components/InvoiceTemplateManager.tsx
 import React, { useState } from 'react';
 import { IInvoiceTemplate, IInvoice, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
-import TemplateRenderer from './TemplateRenderer';
+import { TemplateRenderer } from './TemplateRenderer';
 import { sampleInvoices } from '@/utils/sampleInvoiceData';
 import PaperInvoice from './PaperInvoice';
 import { TextArea } from '@/components/ui/TextArea';

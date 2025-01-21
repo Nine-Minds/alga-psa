@@ -2,6 +2,7 @@ import { Readable } from 'stream';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from '../../models/storage';
 import { StorageError } from './providers/StorageProvider';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 
 import { 
     getProviderConfig, 
@@ -9,6 +10,7 @@ import {
     validateFileUpload as validateFileConfig
 } from '../../config/storage';
 import { LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
+import { createTenantKnex } from '../db';
 
 export class StorageService {
     private static getTypedProviderConfig<T>(providerType: string): T {
@@ -32,9 +34,15 @@ export class StorageService {
         options: {
             mime_type?: string;
             uploaded_by_id: string;
+            metadata?: Record<string, any>;
         }
     ) {
         try {
+            const currentUser = await getCurrentUser();
+            if (!currentUser) {
+                throw new Error('User not found');
+            }
+
             // Validate file constraints
             if (file instanceof Buffer) {
                 validateFileConfig(options.mime_type || '', file.length);
@@ -58,7 +66,8 @@ export class StorageService {
                 mime_type: uploadResult.mime_type,
                 file_size: uploadResult.size,
                 storage_path: uploadResult.path,
-                uploaded_by_id: options.uploaded_by_id
+                uploaded_by_id: currentUser.user_id,
+                metadata: options.metadata
             });
 
             return fileRecord;
@@ -133,5 +142,32 @@ export class StorageService {
         file_size: number
     ): Promise<void> {
         validateFileConfig(mime_type, file_size);
+    }
+
+    static async storePDF(
+        invoiceId: string,
+        buffer: Buffer,
+        metadata: Record<string, any>
+    ) {
+        var {knex, tenant} = await createTenantKnex();
+        const currentUser = await getCurrentUser();
+
+        if (!tenant) {
+            throw new Error('No tenant found');
+        }
+
+        return this.uploadFile(
+            tenant,
+            buffer,
+            `invoice_${invoiceId}.pdf`,
+            {
+                mime_type: 'application/pdf',
+                uploaded_by_id: metadata.uploaded_by_id || 'system',
+                metadata: {
+                    ...metadata,
+                    invoice_id: invoiceId
+                }
+            }
+        );
     }
 }

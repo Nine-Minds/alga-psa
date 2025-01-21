@@ -9,11 +9,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/DropdownMenu';
-import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
+import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems, generateInvoicePDF } from '@/lib/actions/invoiceActions';
+import { PDFGenerationService } from '@/services/pdf-generation.service';
+import { StorageService } from '@/lib/storage/StorageService';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
-import TemplateRenderer from './TemplateRenderer';
+import { TemplateRenderer } from './TemplateRenderer';
 import PaperInvoice from './PaperInvoice';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Button } from '@/components/ui/Button';
@@ -164,6 +166,28 @@ const Invoices: React.FC = () => {
               }}
             >
               {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`download-pdf-menu-item-${record.invoice_id}`}
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  const { file_id } = await generateInvoicePDF(record.invoice_id);
+                  // Create download link
+                  const url = `/api/files/${file_id}/download`;
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `invoice_${record.invoice_number}.pdf`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } catch (error) {
+                  console.error('Failed to generate PDF:', error);
+                  // TODO: Show error notification
+                }
+              }}
+            >
+              Download PDF
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -21,6 +21,8 @@ import Invoice from '@/lib/models/invoice';
 import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from '@/lib/db';
 import { addDays, format, parseISO } from 'date-fns';
+import { PDFGenerationService } from '@/services/pdf-generation.service';
+import { StorageService } from '@/lib/storage/StorageService';
 import { ISO8601String } from '@/types/types.d';
 import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
@@ -637,6 +639,22 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
     ...template,
     parsed: template.dsl ? parseInvoiceTemplate(template.dsl) : null
   }));
+}
+
+export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: string }> {
+  const storageService = new StorageService();
+  const pdfGenerationService = new PDFGenerationService(
+    storageService,
+    {
+      pdfCacheDir: process.env.PDF_CACHE_DIR
+    }
+  );
+  
+  const fileRecord = await pdfGenerationService.generateAndStore({
+    invoiceId
+  });
+  
+  return { file_id: fileRecord.file_id };
 }
 
 export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tenant'>): Promise<IInvoiceTemplate> {

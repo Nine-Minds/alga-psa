@@ -114,6 +114,9 @@ When implementing action menus in DataTable components, follow these guidelines:
 
 Lucide icons can (and should) be used from the `lucide` package.
 
+## User session handling
+To get the current user on server side actions, use the getCurrentUser function from the server/src/lib/actions/user-actions/userActions.ts file.
+
 ## Server Communication
 
 We use server actions that are located in the `/server/src/lib/actions` folder.

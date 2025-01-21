@@ -84,6 +84,7 @@ export interface FileStore {
     is_deleted: boolean;
     deleted_at?: string;
     deleted_by_id?: string;
+    metadata?: Record<string, any>;
 }
 
 export interface FileUploadRequest {

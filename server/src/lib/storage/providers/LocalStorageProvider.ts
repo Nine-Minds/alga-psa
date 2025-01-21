@@ -1,10 +1,12 @@
 import { Readable } from 'stream';
-import fs from 'fs/promises';
-import path from 'path';
-import { createReadStream, createWriteStream } from 'fs';
+import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
+import path from 'path';
 import { LocalProviderConfig, StorageCapabilities } from '../../../types/storage.d';
 import { BaseStorageProvider, UploadResult, StorageError } from './StorageProvider';
+import fs from 'fs/promises';
+import fsSync from 'fs';
+import { Buffer } from 'buffer';
 
 export class LocalStorageProvider extends BaseStorageProvider {
     private readonly basePath: string;
@@ -29,9 +31,10 @@ export class LocalStorageProvider extends BaseStorageProvider {
             if (file instanceof Buffer) {
                 await fs.writeFile(fullPath, file);
             } else {
+                const writeStream = fsSync.createWriteStream(fullPath);
                 await pipeline(
                     file,
-                    createWriteStream(fullPath)
+                    writeStream
                 );
             }
 
@@ -61,7 +64,12 @@ export class LocalStorageProvider extends BaseStorageProvider {
     } 
 
     async download(storagePath: string): Promise<Buffer> {
+        if (typeof window !== 'undefined') {
+            throw new Error('Local storage operations are only available on the server');
+        }
+
         try {
+            const { default: fs } = await import('fs/promises');
             const fullPath = path.join(this.basePath, storagePath);
             
             if (!await this.exists(storagePath)) {
@@ -89,7 +97,7 @@ export class LocalStorageProvider extends BaseStorageProvider {
             try {
                 const files = await fs.readdir(dirPath);
                 if (files.length === 0) {
-                    await fs.rmdir(dirPath);
+                    await fs.rm(dirPath, { recursive: true });
                 }
             } catch (error) {
                 // Ignore errors when trying to remove directories
@@ -100,7 +108,12 @@ export class LocalStorageProvider extends BaseStorageProvider {
     }
 
     async exists(storagePath: string): Promise<boolean> {
+        if (typeof window !== 'undefined') {
+            throw new Error('Local storage operations are only available on the server');
+        }
+
         try {
+            const { default: fs } = await import('fs/promises');
             const fullPath = path.join(this.basePath, storagePath);
             await fs.access(fullPath);
             return true;
@@ -127,12 +140,20 @@ export class LocalStorageProvider extends BaseStorageProvider {
             
             return files;
         } catch (error) {
-            this.handleError('list', error);
+            if (error instanceof Error) {
+                this.handleError('list', error);
+            }
+            return [];
         }
     }
 
     async getMetadata(storagePath: string): Promise<Record<string, string>> {
+        if (typeof window !== 'undefined') {
+            throw new Error('Local storage operations are only available on the server');
+        }
+
         try {
+            const { default: fs } = await import('fs/promises');
             const fullPath = path.join(this.basePath, storagePath);
             const stats = await fs.stat(fullPath);
             
