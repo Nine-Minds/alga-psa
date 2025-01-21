@@ -120,4 +120,23 @@ export default [
       }
     }
   },
+
+  // Configuration for migration files
+  {
+    files: ["migrations/**/*.cjs"],
+    languageOptions: {
+      globals: {
+        ...globals.node
+      },
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: "script"
+      }
+    },
+    rules: {
+      ...pluginJs.configs.recommended.rules,
+      "no-unused-vars": "warn",
+      "no-undef": "error"
+    }
+  }
 ];
