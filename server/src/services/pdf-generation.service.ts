@@ -3,7 +3,7 @@ import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 import { FileStore } from '../types/storage';
 import { getInvoiceForRendering, getInvoiceTemplates } from '../lib/actions/invoiceActions';
-import { TemplateRenderer } from '../components/billing-dashboard/TemplateRenderer';
+import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
 import React from 'react';
 
 interface PDFGenerationOptions {
@@ -62,12 +62,16 @@ export class PDFGenerationService {
       throw new Error('No invoice templates found');
     }
 
-    // Render template directly using server component
-    const fullHtml = await TemplateRenderer({
-      template,
-      invoiceId
-    });
-    return fullHtml;
+    // Render template using core renderer
+    const rendered = renderTemplateCore(template, invoiceData);
+    return `
+      <html>
+        <head>
+          <style>${rendered.styles}</style>
+        </head>
+        <body>${rendered.html}</body>
+      </html>
+    `;
   }
 
   private async generatePDFBuffer(content: string): Promise<Uint8Array> {

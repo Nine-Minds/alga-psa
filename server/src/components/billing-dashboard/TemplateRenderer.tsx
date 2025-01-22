@@ -1,4 +1,7 @@
-import { IInvoiceTemplate, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+// TemplateRenderer.tsx
+'use client'
+import { useEffect, useState } from 'react';
+import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
 import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
 import { renderTemplateCore } from './TemplateRendererCore';
 
@@ -7,16 +10,29 @@ interface TemplateRendererProps {
   invoiceId: string;
 }
 
-export async function TemplateRenderer({ template, invoiceId }: TemplateRendererProps) {
-  const invoiceData = await getInvoiceForRendering(invoiceId);
-  if (!invoiceData) {
-    throw new Error('Invoice data not found');
-  }
+export function TemplateRenderer({ template, invoiceId }: TemplateRendererProps) {
+  const [content, setContent] = useState<{ html: string; styles: string } | null>(null);
 
-  const { html, styles } = renderTemplateCore(template, invoiceData);
+  useEffect(() => {
+    const loadTemplate = async () => {
+      try {
+        const invoiceData = await getInvoiceForRendering(invoiceId);
+        if (!invoiceData) throw new Error('Invoice data not found');
+        setContent(renderTemplateCore(template, invoiceData));
+      } catch (error) {
+        console.error('Error rendering template:', error);
+      }
+    };
 
-  return `
-    <style>${styles}</style>
-    <div>${html}</div>
-  `;
+    loadTemplate();
+  }, [template, invoiceId]);
+
+  if (!content) return null;
+
+  return (
+    <>
+      <style>{content.styles}</style>
+      <div dangerouslySetInnerHTML={{ __html: content.html }} />
+    </>
+  );
 }
