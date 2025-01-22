@@ -50,8 +50,11 @@ export function renderTemplateCore(
 
   // Generate HTML
   const html = template.parsed.sections
-    .map(section => renderSection(section, invoiceData, globalValues, template))
-    .join('');
+    .map((section, index) => `
+      <!-- Section ${index + 1}: ${section.type} -->
+      ${renderSection(section, invoiceData, globalValues, template)}
+    `)
+    .join('\n');
 
   return { 
     html, 
@@ -96,42 +99,73 @@ function renderSection(section: Section, invoiceData: InvoiceViewModel, globalVa
     .map((item, index) => renderItem(item, index, invoiceData, globalValues, template))
     .join('');
 
-  const emptyRows = [...Array(actualRows - contentRows)]
-    .map((_, index) => `<div key="empty-row-${index}" style="grid-column: 1 / -1; height: 12px;" />`)
-    .join('');
+  // Only add empty rows for non-summary sections
+  const emptyRows = section.type !== 'summary'
+    ? [...Array(actualRows - contentRows)]
+        .map((_, index) => `<div key="empty-row-${index}" style="grid-column: 1 / -1; height: 12px;"></div>`)
+        .join('')
+    : '';
 
-  return `<div style="${styleToString(gridStyle)}">${content}${emptyRows}</div>`;
+  return `
+    <div
+      id="section-${section.type}"
+      class="invoice-section ${section.type}-section"
+      style="${styleToString(gridStyle)}"
+    >
+      ${content}
+      ${emptyRows}
+    </div>
+  `;
 }
 
 function calculateContentRows(content: TemplateElement[], invoiceData: InvoiceViewModel): number {
   return content.reduce((maxRow, item) => {
-    let itemEndRow = 1; // Default to 1 if no position is specified
-
+    let itemEndRow = 1;
+    
+    // Handle positioned elements
     if ('position' in item && item.position) {
       itemEndRow = item.position.row + (item.span?.rowSpan || 1);
-    } else if (item.type === 'list') {
+    }
+    // Handle list elements
+    else if (item.type === 'list') {
       itemEndRow = calculateListRows(item, invoiceData);
     }
+    // Handle elements without explicit position but with rowSpan
+    else if ('span' in item && item.span?.rowSpan) {
+      itemEndRow = (item.position?.row || 1) + item.span.rowSpan;
+    }
 
-    return Math.max(maxRow, itemEndRow);
+    // Always ensure at least 1 row height
+    return Math.max(maxRow, itemEndRow, 1);
   }, 0);
 }
 
 function calculateListRows(list: List, invoiceData: InvoiceViewModel): number {
+  const listData = invoiceData?.[list.name as keyof InvoiceViewModel];
+  if (!Array.isArray(listData)) return 0;
+
+  // Calculate base rows (header + aggregation if present)
+  let baseRows = 1; // Header row
+  if (list.aggregation) baseRows += 1; // Aggregation row
+
+  // Calculate item rows based on grouping
   if (list.groupBy) {
-    const listData = invoiceData?.[list.name as keyof InvoiceViewModel];
-    if (!Array.isArray(listData)) return 0;
-    
     const grouped = groupItems(listData, list.groupBy);
-    return Object.values(grouped).reduce((total, group) => 
-      total + 1 + group.length, 0);
+    return Object.values(grouped).reduce((total, group) => {
+      // Group header + items
+      return total + 1 + group.length;
+    }, baseRows - 1); // Subtract 1 since baseRows already includes header
   }
-  
-  return list.content.reduce((total, item) => {
-    if ('position' in item && item.position) {
-      return total + (item.span?.rowSpan || 1);
-    }
-    return total + 1;
+
+  // Calculate item rows for ungrouped lists
+  return baseRows + listData.reduce((total, item) => {
+    // Find maximum row span in list content
+    const maxRowSpan = list.content.reduce((max, el) => {
+      if (!el.position) return max;
+      return Math.max(max, (el.position.row || 1) + (el.span?.rowSpan || 1) - 1);
+    }, 1);
+    
+    return total + maxRowSpan;
   }, 0);
 }
 

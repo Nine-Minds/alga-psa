@@ -112,11 +112,11 @@ export interface Field extends BaseTemplateElement {
   name: string;
 }
 
-export interface Group {
+export interface Group extends BaseTemplateElement {
   type: 'group';
   name: string;
   groupBy: string;
-  aggregation?: 'sum' | 'count'; 
+  aggregation?: 'sum' | 'count';
   aggregationField?: string;
   showDetails?: boolean;
 }
