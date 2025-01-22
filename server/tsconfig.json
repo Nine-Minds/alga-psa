@@ -35,6 +35,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "src/types/**/*.d.ts",
     ".next/types/**/*.ts",
     "../ee/server/src/interfaces/chat.interface.tsx",
     "../ee/server/src/interfaces/message.interface.ts",

@@ -12,6 +12,7 @@ export interface StorageProviderInterface {
     getCapabilities(): StorageCapabilities;
     upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
     download(path: string): Promise<Buffer>;
+    getReadStream(path: string): Promise<Readable>;
     delete(path: string): Promise<void>;
     exists(path: string): Promise<boolean>;
     getMetadata?(path: string): Promise<Record<string, string>>;
@@ -47,6 +48,15 @@ export abstract class BaseStorageProvider implements StorageProviderInterface {
     abstract getCapabilities(): StorageCapabilities;
     abstract upload(file: Buffer | Readable, path: string, options?: { mime_type?: string; metadata?: Record<string, string> }): Promise<UploadResult>;
     abstract download(path: string): Promise<Buffer>;
+    
+    async getReadStream(path: string): Promise<Readable> {
+        const buffer = await this.download(path);
+        const readable = new Readable();
+        readable.push(buffer);
+        readable.push(null); // Signal end of stream
+        return readable;
+    }
+
     abstract delete(path: string): Promise<void>;
     abstract exists(path: string): Promise<boolean>;
 

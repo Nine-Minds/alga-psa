@@ -9,9 +9,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/DropdownMenu';
-import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems, generateInvoicePDF } from '@/lib/actions/invoiceActions';
-import { PDFGenerationService } from '@/services/pdf-generation.service';
-import { StorageService } from '@/lib/storage/StorageService';
+import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
+import { scheduleInvoiceZipAction } from '@/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
@@ -38,6 +37,8 @@ const Invoices: React.FC = () => {
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
 
   // Get state from URL parameters
   const selectedInvoiceId = searchParams?.get('invoiceId');
@@ -114,7 +115,54 @@ const Invoices: React.FC = () => {
     });
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedInvoices(new Set(invoices.map(inv => inv.invoice_id)));
+    } else {
+      setSelectedInvoices(new Set());
+    }
+  };
+
+  const handleSelectInvoice = (invoiceId: string, checked: boolean) => {
+    const newSelection = new Set(selectedInvoices);
+    if (checked) {
+      newSelection.add(invoiceId);
+    } else {
+      newSelection.delete(invoiceId);
+    }
+    setSelectedInvoices(newSelection);
+  };
+
   const columns: ColumnDefinition<InvoiceViewModel>[] = [
+    {
+      title: (
+        <div className="flex items-center">
+          <div onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              className="w-4 h-4"
+              checked={selectedInvoices.size > 0 && selectedInvoices.size === invoices.length}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSelectAll(e.target.checked);
+              }}
+            />
+          </div>
+        </div>
+      ),
+      dataIndex: 'invoice_id', // Added to satisfy ColumnDefinition interface
+      width: '50px',
+      render: (_, record) => (
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            className="w-4 h-4"
+            checked={selectedInvoices.has(record.invoice_id)}
+            onChange={(e) => handleSelectInvoice(record.invoice_id, e.target.checked)}
+          />
+        </div>
+      ),
+    },
     {
       title: 'Invoice Number',
       dataIndex: 'invoice_number',
@@ -172,15 +220,12 @@ const Invoices: React.FC = () => {
               onClick={async (e) => {
                 e.stopPropagation();
                 try {
-                  const { file_id } = await generateInvoicePDF(record.invoice_id);
-                  // Create download link
-                  const url = `/api/files/${file_id}/download`;
-                  const link = document.createElement('a');
-                  link.href = url;
-                  link.download = `invoice_${record.invoice_number}.pdf`;
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
+                  const { jobId } = await scheduleInvoiceZipAction([record.invoice_id]);
+                  
+                  if (jobId) {
+                    setActiveJobs(prev => new Set(prev).add(jobId));
+                    // TODO: Implement job status polling and download handling
+                  }
                 } catch (error) {
                   console.error('Failed to generate PDF:', error);
                   // TODO: Show error notification
@@ -225,7 +270,54 @@ const Invoices: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-bold">Invoices</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Invoices</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id="invoice-actions-dropdown"
+              variant="outline"
+              disabled={selectedInvoices.size === 0}
+              className="flex items-center gap-2"
+            >
+              Actions
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  const { jobId } = await scheduleInvoiceZipAction(Array.from(selectedInvoices));
+                  
+                  if (jobId) {
+                    setActiveJobs(prev => new Set(prev).add(jobId));
+                    // TODO: Implement job status polling and download handling
+                  }
+                } catch (error) {
+                  console.error('Failed to schedule PDF generation:', error);
+                  // TODO: Show error notification
+                }
+              }}
+            >
+              Download PDFs
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={async () => {
+                try {
+                  // TODO: Implement finalize invoices logic
+                  // TODO: Show success notification
+                } catch (error) {
+                  console.error('Failed to finalize invoices:', error);
+                  // TODO: Show error notification
+                }
+              }}
+            >
+              Finalize Selected Invoices
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <DataTable
         data={invoices}
         columns={columns}

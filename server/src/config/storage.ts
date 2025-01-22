@@ -23,8 +23,8 @@ const config: StorageConfig = {
         local: {
             type: 'local',
             basePath: process.env.STORAGE_LOCAL_BASE_PATH || '/data/files',
-            maxFileSize: parseInt(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '104857600'),
-            allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain').split(','),
+            maxFileSize: parseInt(process.env.STORAGE_LOCAL_MAX_FILE_SIZE || '209715200'), // 200MB
+            allowedMimeTypes: (process.env.STORAGE_LOCAL_ALLOWED_MIME_TYPES || 'image/*,application/pdf,text/plain,application/zip').split(','),
             retentionDays: parseInt(process.env.STORAGE_LOCAL_RETENTION_DAYS || '30'),
         },
         s3: {

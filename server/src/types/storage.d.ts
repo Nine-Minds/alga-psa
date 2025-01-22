@@ -71,20 +71,28 @@ export interface StorageCapabilities {
 }
 
 export interface FileStore {
-    tenant: string;
-    file_id: string;
-    file_name: string;
-    original_name: string;
-    mime_type: string;
-    file_size: number;
-    storage_path: string;
-    uploaded_by_id: string;
-    created_at: string;
-    updated_at: string;
-    is_deleted: boolean;
-    deleted_at?: string;
-    deleted_by_id?: string;
-    metadata?: Record<string, any>;
+  tenant: string;
+  file_id: string;
+  fileId: string;
+  file_name: string;
+  original_name: string;
+  mime_type: string;
+  file_size: number;
+  storage_path: string;
+  uploaded_by_id: string;
+  created_at: string;
+  updated_at: string;
+  is_deleted: boolean;
+  deleted_at?: string;
+  deleted_by_id?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface DocumentSystemEntry {
+  file_id: string;
+  category: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface FileUploadRequest {
@@ -96,7 +104,15 @@ export interface FileUploadRequest {
 export interface FileDownloadRequest {
     file_id: string;
 }
-
 export interface FileDeleteRequest {
     file_id: string;
 }
+
+export class StorageService {
+  createWriteStream(filename: string): Writable;
+  finalizeWriteStream(stream: Writable, metadata: FileMetadata): Promise<FileStore>;
+  getFileStream(path: string): Promise<Readable>;
+  storeFile(tenantId: string, stream: Readable, options: FileMetadata): Promise<FileStore>;
+  createTempFile(tenantId: string, extension: string): Promise<{ file_id: string }>;
+}
+

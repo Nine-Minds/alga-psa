@@ -1,8 +1,11 @@
 import { Readable } from 'stream';
+import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
 import { FileStoreModel } from '../../models/storage';
+import type { FileStore } from '../../types/storage';
 import { StorageError } from './providers/StorageProvider';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import fs from 'fs';
 
 import { 
     getProviderConfig, 
@@ -13,6 +16,15 @@ import { LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
 import { createTenantKnex } from '../db';
 
 export class StorageService {
+  async getFileReadStream(fileId: string): Promise<Readable> {
+    const file = await FileStoreModel.findById(fileId);
+    if (!file) {
+      throw new Error('File not found');
+    }
+    
+    const provider = await StorageProviderFactory.createProvider();
+    return provider.getReadStream(file.storage_path);
+  }
     private static getTypedProviderConfig<T>(providerType: string): T {
         const config = getStorageConfig();
         const providerConfig = getProviderConfig(config.defaultProvider);
@@ -61,6 +73,7 @@ export class StorageService {
 
             // Create file record in database
             const fileRecord = await FileStoreModel.create({
+                fileId: uuidv4(),
                 file_name: storagePath.split('/').pop()!,
                 original_name: originalName,
                 mime_type: uploadResult.mime_type,
@@ -79,7 +92,14 @@ export class StorageService {
         }
     }
 
-    static async downloadFile(tenant: string, file_id: string): Promise<{ buffer: Buffer; metadata: any }> {
+    static async downloadFile(tenant: string, file_id: string): Promise<{
+      buffer: Buffer;
+      metadata: {
+        original_name: string;
+        mime_type: string;
+        size: number;
+      }
+    }> {
         try {
             // Get file record
             const fileRecord = await FileStoreModel.findById(file_id);
@@ -96,7 +116,7 @@ export class StorageService {
             return {
                 buffer,
                 metadata: {
-                    file_name: fileRecord.original_name,
+                    original_name: fileRecord.original_name,
                     mime_type: fileRecord.mime_type,
                     size: fileRecord.file_size,
                 },
@@ -144,10 +164,39 @@ export class StorageService {
         validateFileConfig(mime_type, file_size);
     }
 
+    static async createDocumentSystemEntry(options: {
+      fileId: string;
+      category: string;
+      metadata: Record<string, unknown>;
+    }): Promise<void> {
+      try {
+        await FileStoreModel.createDocumentSystemEntry(options);
+      } catch (error) {
+        throw new Error('Failed to create document system entry: ' + (error as Error).message);
+      }
+    }
+  
+    static async getFileMetadata(fileId: string): Promise<FileStore> {
+      try {
+        return await FileStoreModel.findById(fileId);
+      } catch (error) {
+        throw new Error('Failed to get file metadata: ' + (error as Error).message);
+      }
+    }
+  
+    static async updateFileMetadata(fileId: string, metadata: Record<string, unknown>): Promise<void> {
+      try {
+        await FileStoreModel.updateMetadata(fileId, metadata);
+      } catch (error) {
+        throw new Error('Failed to update file metadata: ' + (error as Error).message);
+      }
+    }
+  
     static async storePDF(
-        invoiceId: string,
-        buffer: Buffer,
-        metadata: Record<string, any>
+      invoiceId: string,
+      invoiceNumber: string,
+      buffer: Buffer,
+      metadata: Record<string, any>
     ) {
         var {knex, tenant} = await createTenantKnex();
         const currentUser = await getCurrentUser();
@@ -159,7 +208,7 @@ export class StorageService {
         return this.uploadFile(
             tenant,
             buffer,
-            `invoice_${invoiceId}.pdf`,
+            `invoice_${invoiceNumber}.pdf`,
             {
                 mime_type: 'application/pdf',
                 uploaded_by_id: metadata.uploaded_by_id || 'system',

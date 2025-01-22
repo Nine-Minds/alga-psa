@@ -6,7 +6,7 @@ import CustomTabs, { TabContent } from "@/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { Label } from "@/components/ui/Label";
+import GeneralSettings from './GeneralSettings';
 import TicketingSettings from './TicketingSettings';
 import UserManagement from './UserManagement';
 import TeamManagement from './TeamManagement';
@@ -18,16 +18,15 @@ import { useSearchParams } from 'next/navigation';
 
 const SettingsPage = (): JSX.Element =>  {
   const router = useRouter();
-  const [companyName, setCompanyName] = React.useState('Your MSP Company');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
   
+
   const tabMap: Record<string, string> = {
     'teams': 'Teams',
     'users': 'Users'
   };
 
-  // Initialize with URL param or default to General
   const [activeTab, setActiveTab] = React.useState<string>(() => {
     if (tabParam) {
       const mappedTab = tabMap[tabParam.toLowerCase()];
@@ -36,12 +35,10 @@ const SettingsPage = (): JSX.Element =>  {
     return 'General';
   });
 
-  // Force update active tab when URL params change
   React.useEffect(() => {
     const mappedTab = tabParam ? tabMap[tabParam.toLowerCase()] : 'General';
     setActiveTab(mappedTab || 'General');
   }, [tabParam]);
-
 
   const tabContent: TabContent[] = [
     {
@@ -50,20 +47,10 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>General Settings</CardTitle>
-            <CardDescription>Manage your company&apos;s general settings</CardDescription>
+            <CardDescription>Manage your organization's settings</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="companyName">Company Name</Label>
-                <Input
-                  id="companyName"
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                />
-              </div>
-              <Button id="save-general-settings-button">Save Changes</Button>
-            </div>
+          <CardContent className="space-y-6">
+            <GeneralSettings />
           </CardContent>
         </Card>
       ),
@@ -146,7 +133,6 @@ const SettingsPage = (): JSX.Element =>  {
           };
           setActiveTab(tab);
           
-          // Update URL without triggering a navigation
           const urlParam = reverseTabMap[tab];
           const newUrl = urlParam 
             ? `/msp/settings?tab=${urlParam}` 

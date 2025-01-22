@@ -8,6 +8,7 @@ import React from 'react';
 
 interface PDFGenerationOptions {
   invoiceId: string;
+  invoiceNumber?: string;
   version?: number;
   cacheKey?: string;
 }
@@ -30,10 +31,14 @@ export class PDFGenerationService {
     
     // Generate PDF buffer
     const pdfBuffer = await this.generatePDFBuffer(htmlContent);
+    if (!options.invoiceNumber) {
+      throw new Error('Invoice number is required');
+    }
     
     // Store PDF
     const fileRecord = await StorageService.storePDF(
-      options.invoiceId,
+      options.invoiceId, // Database ID
+      options.invoiceNumber, // Filename number (fallback to ID)
       Buffer.from(pdfBuffer),
       {
         version: options.version || 1,

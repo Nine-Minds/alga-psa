@@ -73,6 +73,17 @@ export const menuItems: MenuItem[] = [
     name: 'Workflows',
     icon: RadixIcons.ArrowRightIcon,
     href: '/msp/workflows'
+  },
+  {
+    name: 'System',
+    icon: RadixIcons.GearIcon,
+    subItems: [
+      {
+        name: 'Job Monitoring',
+        icon: RadixIcons.DashboardIcon,
+        href: '/msp/jobs'
+      }
+    ]
   }
 ];
 

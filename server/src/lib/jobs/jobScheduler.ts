@@ -1,5 +1,9 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { postgresConnection } from '../db/knexfile';
+import { StorageService } from '@/lib/storage/StorageService';
+import logger from '../../utils/logger';
+import { JobService } from '../../services/job.service';
+import { JobStatus } from '../../types/job.d';
 
 export interface JobFilter {
   state?: 'completed' | 'failed' | 'active' | 'expired';
@@ -11,14 +15,14 @@ export interface JobFilter {
   offset?: number;
 }
 
-interface JobState {
+export interface JobState {
   active: number;
   completed: number;
   failed: number;
   queued: number;
 }
 
-interface JobData {
+export interface JobData {
   id: string;
   name: string;
   data: Record<string, unknown>;
@@ -40,13 +44,18 @@ interface PgBossJobData {
 export class JobScheduler {
   private static instance: JobScheduler | null = null;
   private boss: PgBoss;
-  private handlers: Map<string, (data: Record<string, unknown>) => Promise<void>> = new Map();
+  private handlers: Map<string, (job: Job<Record<string, unknown>>) => Promise<void>> = new Map();
+  private jobService: JobService;
 
-  private constructor(boss: PgBoss) {
+  private storageService: StorageService;
+
+  private constructor(boss: PgBoss, jobService: JobService, storageService: StorageService) {
     this.boss = boss;
+    this.jobService = jobService;
+    this.storageService = storageService;
   }
 
-  public static async getInstance(): Promise<JobScheduler> {
+  public static async getInstance(jobService: JobService, storageService: StorageService): Promise<JobScheduler> {
     if (!JobScheduler.instance) {
       try {
         // Use postgres admin credentials with development environment
@@ -60,6 +69,12 @@ export class JobScheduler {
         }
         
         // Construct connection string using postgres admin credentials
+        console.log('Initializing pgboss with connection:', {
+          host,
+          port,
+          database,
+          user
+        });
         const connectionString = `postgres://${user}:${password}@${host}:${port}/${database}?application_name=pgboss_${env}`;
         
         const boss = new PgBoss({
@@ -75,7 +90,7 @@ export class JobScheduler {
 
         await boss.start();
         
-        JobScheduler.instance = new JobScheduler(boss);
+        JobScheduler.instance = new JobScheduler(boss, jobService, storageService);
       } catch (error) {
         console.error('Failed to initialize job scheduler:', error);
         throw new Error('Failed to initialize job scheduler');
@@ -88,6 +103,11 @@ export class JobScheduler {
     jobName: string,
     data: T
   ): Promise<string | null> {
+    await this.boss.createQueue(jobName);
+    if (!data.tenantId) {
+      throw new Error('tenantId is required in job data');
+    }
+        
     return await this.boss.send(jobName, data);
   }
 
@@ -96,6 +116,10 @@ export class JobScheduler {
     runAt: Date,
     data: T
   ): Promise<string | null> {
+    if (!data.tenantId) {
+      throw new Error('tenantId is required in job data');
+    }
+
     return await this.boss.send(jobName, data, { startAfter: runAt });
   }
 
@@ -115,7 +139,10 @@ export class JobScheduler {
       pgBossInterval = interval;
     }
     
-    return await this.boss.send(jobName, data, { 
+    if (!data.tenantId) {
+      throw new Error('tenantId is required in job data');
+    }
+    return await this.boss.send(jobName, data, {
       startAfter: pgBossInterval,
       retryLimit: 3,
       retryBackoff: true,
@@ -125,21 +152,49 @@ export class JobScheduler {
 
   public registerJobHandler<T extends Record<string, unknown>>(
     jobName: string,
-    handler: (data: T) => Promise<void>
+    handler: (job: Job<T>) => Promise<void>
   ): void {
-    this.handlers.set(jobName, handler as (data: Record<string, unknown>) => Promise<void>);
+    this.handlers.set(jobName, async (job: Job<Record<string, unknown>>) => {
+      await handler(job as Job<T>);
+    });
     void this.boss.work<T>(jobName, async (jobs) => {
       const handler = this.handlers.get(jobName);
       if (handler) {
         // Process each job in the array
         for (const job of jobs) {
-          if (job.data) {
-            await handler(job.data);
-          }
+          await handler(job);
         }
       }
     });
   }
+
+  public registerGenericJobHandler<T extends Record<string, unknown>>(
+    jobType: string,
+    handler: (jobId: string, data: T) => Promise<void>
+  ) {
+    this.registerJobHandler(jobType, async (job: Job<T>) => {
+      const jobId = job.id;
+      const payload = job.data;
+      
+      if (!payload.tenantId) {
+        throw new Error('tenantId is required in job data');
+      }
+      
+      try {
+        await this.jobService.updateJobStatus(jobId, JobStatus.Processing, { tenantId: payload.tenantId });
+        await handler(jobId, payload);
+        await this.jobService.updateJobStatus(jobId, JobStatus.Completed, { tenantId: payload.tenantId });
+      } catch (error) {
+        console.log('Error in job handler:', error);
+        await this.jobService.updateJobStatus(jobId, JobStatus.Failed, {
+          error,
+          tenantId: payload.tenantId
+        });
+        throw error;
+      }
+    });
+  }
+
 
   private mapJobToJobData(job: PgBossJobData): JobData {
     return {

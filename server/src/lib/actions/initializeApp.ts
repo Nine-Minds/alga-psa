@@ -3,12 +3,15 @@ import { hashPassword } from '@/utils/encryption/encryption';
 import logger from '@/utils/logger';
 import crypto from 'crypto';
 import { JobScheduler } from '@/lib/jobs/jobScheduler';
+import { JobService } from '@/services/job.service';
 import { createCompanyBillingCycles } from '@/lib/billing/createBillingCycles';
 import { getConnection } from '@/lib/db/db';
 import { createNextTimePeriod } from './timePeriodsActions';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
 import env from '@/config/envConfig';
 import { initializeEventBus } from '../eventBus/initialize';
+import { StorageService } from '@/lib/storage/StorageService';
+import { initializeScheduler } from '@/lib/jobs';
 
 let isFunctionExecuted = false;
 
@@ -26,6 +29,9 @@ export async function initializeApp() {
         logger.error('Failed to initialize event bus:', error);
         throw error;
     }
+
+    // Initialize storage service
+    const storageService = new StorageService();
 
     // Log environment configuration on startup
     logger.info('Starting application with the following configuration:');
@@ -106,7 +112,12 @@ export async function initializeApp() {
 
     try {
         // Initialize job scheduler and register jobs
-        const jobScheduler = await JobScheduler.getInstance();
+        const rootKnex = await getConnection(null);
+        const jobService = await JobService.create();
+        const jobScheduler = await JobScheduler.getInstance(jobService);
+
+        // Initialize job handlers with storage service
+        await initializeScheduler(storageService);
 
         // Register billing cycles job if it doesn't exist
         const existingBillingJobs = await jobScheduler.getJobs({ jobName: 'createCompanyBillingCycles' });
@@ -146,7 +157,7 @@ export async function initializeApp() {
             await jobScheduler.scheduleRecurringJob(
                 'createCompanyBillingCycles',
                 '24 hours',
-                {}
+                { tenantId: 'system' }
             );
         }
         const existingTimePeriodJobs = await jobScheduler.getJobs({ jobName: 'createNextTimePeriods' });
@@ -187,7 +198,7 @@ export async function initializeApp() {
             await jobScheduler.scheduleRecurringJob(
                 'createNextTimePeriods',
                 '24 hours',
-                {}
+                { tenantId: 'system' }
             );
         }
     } catch (error) {
@@ -224,7 +235,6 @@ export async function initializeApp() {
     +#+    +#+ +#+         +#+   +#+  +#+        +#+       +#+    +#+ +#+        +#+       +#+ +#+        +#+  +#+#+#     +#+          +#+       +#+ +#+    +#+ +#+    +#+ +#+
     #+#    #+# #+#          #+#+#+#   #+#        #+#       #+#    #+# #+#        #+#       #+# #+#        #+#   #+#+#     #+#          #+#       #+# #+#    #+# #+#    #+# #+#
     #########  ##########     ###     ########## ########## ########  ###        ###       ### ########## ###    ####     ###          ###       ###  ########  #########  ##########
-
             `);
         } catch (error) {
             logger.error('Error initializing app:', error);

@@ -8,7 +8,7 @@ import customRules from "../eslint-plugin-custom-rules/index.js";
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   {
-    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
+    files: ["**/*.{js,mjs,ts,jsx,tsx}"],
     ignores: [
       "../eslint-plugin-custom-rules/**/*",
       "eslint.config.js",

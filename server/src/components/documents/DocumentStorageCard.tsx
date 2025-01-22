@@ -15,7 +15,8 @@ import {
     FileSpreadsheet,
     FileType,
     FileCode,
-    Unlink
+    Unlink,
+    EyeOff
 } from 'lucide-react';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
@@ -169,7 +170,10 @@ export default function DocumentStorageCard({
                             <Loader2 className="animate-spin h-8 w-8 text-[rgb(var(--color-primary-400))]" />
                         </div>
                     ) : previewContent.error ? (
-                        <p className="mt-4 text-sm text-red-500">{previewContent.error}</p>
+                        <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
+                            <EyeOff className="w-4 h-4" />
+                            <p className="text-sm">Preview unavailable</p>
+                        </div>
                     ) : (
                         <div className="mt-4 preview-container">
                             {previewContent.previewImage ? (
@@ -201,7 +205,7 @@ export default function DocumentStorageCard({
                 </div>
 
                 {!hideActions && (
-                    <div className="mt-4 pt-3 flex justify-end space-x-2 border-t border-[rgb(var(--color-border-100))]">
+                    <div className="mt-4 pt-3 flex flex-col space-y-1.5 items-end border-t border-[rgb(var(--color-border-100))]">
                         <a
                             href={document.file_id ? getDocumentDownloadUrl(document.file_id) : '#'}
                             target="_blank"
