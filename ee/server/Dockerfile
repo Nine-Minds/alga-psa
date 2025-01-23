@@ -37,6 +37,7 @@ RUN mkdir -p /app/seeds/dev
 COPY ./server/seeds/dev/* /app/seeds/dev/
 
 RUN rm -rf /app/.env
+RUN rm -rf /app/server/.env
 
 # Install any needed packages specified in package.json
 RUN npm install
