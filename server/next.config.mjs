@@ -3,6 +3,9 @@ import process from 'node:process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import console from 'console';
+import { config } from 'dotenv';
+
+config({override: true});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
