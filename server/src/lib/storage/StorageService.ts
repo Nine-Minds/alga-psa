@@ -118,7 +118,7 @@ export class StorageService {
                 metadata: {
                     original_name: fileRecord.original_name,
                     mime_type: fileRecord.mime_type,
-                    size: fileRecord.file_size,
+                    size: fileRecord.file_size
                 },
             };
         } catch (error) {

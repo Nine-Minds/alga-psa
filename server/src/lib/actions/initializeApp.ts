@@ -4,6 +4,8 @@ import logger from '@/utils/logger';
 import crypto from 'crypto';
 import { JobScheduler } from '@/lib/jobs/jobScheduler';
 import { JobService } from '@/services/job.service';
+import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
+import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { createCompanyBillingCycles } from '@/lib/billing/createBillingCycles';
 import { getConnection } from '@/lib/db/db';
 import { createNextTimePeriod } from './timePeriodsActions';
@@ -114,7 +116,17 @@ export async function initializeApp() {
         // Initialize job scheduler and register jobs
         const rootKnex = await getConnection(null);
         const jobService = await JobService.create();
-        const jobScheduler = await JobScheduler.getInstance(jobService);
+        const storageService = new StorageService();
+        const jobScheduler = await JobScheduler.getInstance(jobService, storageService);
+        
+        // Register invoice zip handler once during initialization
+        const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
+        jobScheduler.registerGenericJobHandler<InvoiceZipJobData>(
+          'invoice_zip',
+          (jobId, data: InvoiceZipJobData) =>
+            invoiceZipHandler.handleInvoiceZipJob(jobId, data)
+        );
+        logger.info('Registered invoice zip job handler');
 
         // Initialize job handlers with storage service
         await initializeScheduler(storageService);

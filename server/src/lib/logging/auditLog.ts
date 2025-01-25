@@ -1,5 +1,4 @@
 import { createTenantKnex } from '../db';
-import type { IUserWithRoles } from '../types';
 
 interface AuditLogParams {
   userId?: string;
@@ -9,10 +8,13 @@ interface AuditLogParams {
 }
 
 export async function auditLog(params: AuditLogParams) {
-  const db = createTenantKnex(params.tenantId);
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
   
   try {
-    await db('audit_logs').insert({
+    await knex('audit_logs').insert({
       user_id: params.userId,
       tenant_id: params.tenantId,
       action: params.action,

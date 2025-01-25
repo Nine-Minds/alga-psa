@@ -24,7 +24,7 @@ export async function GET(
         console.log('Setting response headers...');
         const headers = new Headers();
         headers.set('Content-Type', result.metadata.mime_type || 'application/octet-stream');
-        headers.set('Content-Disposition', `attachment; filename="${result.metadata.file_name}"`);
+        headers.set('Content-Disposition', `attachment; filename="${result.metadata.original_name}"`);
         console.log('Headers set:', Object.fromEntries(headers.entries()));
 
         console.log('Sending file response...');

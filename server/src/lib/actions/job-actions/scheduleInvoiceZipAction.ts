@@ -23,12 +23,6 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
   const jobService = await JobService.create();
   const storageService = new StorageService();
   const scheduler = await JobScheduler.getInstance(jobService, storageService);
-  
-  // Create and register invoice zip handler
-  const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
-  scheduler.registerGenericJobHandler<InvoiceZipJobData>('invoice_zip',
-    (jobId, data: InvoiceZipJobData) => invoiceZipHandler.handleInvoiceZipJob(jobId, data)
-  );
 
   try {
     // Create steps for each invoice + zip creation

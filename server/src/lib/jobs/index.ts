@@ -1,5 +1,7 @@
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter } from './jobScheduler';
+import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
+import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
@@ -13,7 +15,8 @@ export const initializeScheduler = async (storageService?: StorageService) => {
   if (!jobScheduler) {
     const rootKnex = await getConnection(null);
     const jobService = await JobService.create();
-    jobScheduler = await JobScheduler.getInstance(jobService);
+    const storageService = new StorageService();
+    jobScheduler = await JobScheduler.getInstance(jobService, storageService);
     
     // Register job handlers
     jobScheduler.registerJobHandler<GenerateInvoiceData>('generate-invoice', async (job: Job<GenerateInvoiceData>) => {
@@ -21,8 +24,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     });
     
     // Register invoice zip handlers if storageService is provided
-    if (storageService) {
-      jobScheduler.registerInvoiceZipHandlers(storageService);
+    if (storageService && jobService) {
+      const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
+      jobScheduler.registerGenericJobHandler<InvoiceZipJobData>('invoice_zip',
+        (jobId, data: InvoiceZipJobData) => invoiceZipHandler.handleInvoiceZipJob(jobId, data));
     }
   }
   return jobScheduler;
