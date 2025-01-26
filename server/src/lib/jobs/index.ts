@@ -61,32 +61,6 @@ export interface JobHistoryFilter {
   offset?: number;
 }
 
-export const getJobHistory = async (
-  tenantId: string,
-  filters: JobHistoryFilter
-): Promise<unknown[]> => {
-  const scheduler = await initializeScheduler();
-  return await scheduler.getJobHistory({
-    tenantId,
-    jobName: filters.jobName,
-    startAfter: filters.startDate,
-    beforeDate: filters.endDate,
-    state: filters.status,
-    limit: filters.limit,
-    offset: filters.offset
-  });
-};
-
-export const getQueueStatus = async (): Promise<{
-  active: number;
-  completed: number;
-  failed: number;
-  queued: number;
-}> => {
-  const scheduler = await initializeScheduler();
-  return await scheduler.getQueueMetrics();
-};
-
 export interface JobDetails {
   id: string;
   name: string;
@@ -97,20 +71,10 @@ export interface JobDetails {
   completedOn?: Date;
 }
 
-export const getJobDetails = async (jobId: string): Promise<JobDetails | null> => {
-  const scheduler = await initializeScheduler();
-  return await scheduler.getJobById(jobId);
-};
-
 export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
   jobName: string,
   data: T
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleImmediateJob(jobName, data);
-};
-
-export const cancelScheduledJob = async (jobId: string): Promise<boolean> => {
-  const scheduler = await initializeScheduler();
-  return await scheduler.cancelJob(jobId);
 };

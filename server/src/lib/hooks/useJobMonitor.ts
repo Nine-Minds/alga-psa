@@ -1,43 +1,44 @@
+'use client';
+
 import { useEffect, useState } from 'react';
-import { JobService } from '@/services/job.service';
-import { getAdminConnection } from '@/lib/db/admin';
-import type { JobHeader, JobDetail, JobMetrics } from '@/services/job.service';
+import { getJobProgressAction, type JobProgressData } from '@/lib/actions/job-actions/getJobProgressAction';
 
 export const useJobMonitor = (jobId: string) => {
-  const [jobService, setJobService] = useState<JobService | null>(null);
+  const [job, setJob] = useState<JobProgressData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const initializeService = async () => {
-      const connection = await getAdminConnection();
-      setJobService(new JobService(connection));
-    };
-    initializeService();
-  }, []);
+    let isMounted = true;
 
-  if (!jobService) {
-    return { header: null, details: [], metrics: null };
-  }
-  const [header, setHeader] = useState<JobHeader | null>(null);
-  const [details, setDetails] = useState<JobDetail[]>([]);
-  const [metrics, setMetrics] = useState<JobMetrics | null>(null);
+    const fetchJob = async () => {
+      if (!jobId) {
+        setJob(null);
+        setError(null);
+        return;
+      }
 
-  useEffect(() => {
-    const fetchProgress = async () => {
       try {
-        const progress = await jobService.getJobProgress(jobId);
-        setHeader(progress.header);
-        setDetails(progress.details);
-        setMetrics(progress.metrics);
+        const jobProgress = await getJobProgressAction(jobId);
+        if (isMounted) {
+          setJob(jobProgress);
+          setError(null);
+        }
       } catch (error) {
-        console.error('Failed to fetch job progress:', error);
+        if (isMounted) {
+          setError(error instanceof Error ? error.message : 'Failed to fetch job');
+          setJob(null);
+        }
       }
     };
 
-    fetchProgress();
-    const interval = setInterval(fetchProgress, 5000);
+    fetchJob();
+    const interval = setInterval(fetchJob, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [jobId]);
 
-  return { header, details, metrics };
+  return { job, error };
 };

@@ -1,3 +1,5 @@
+'use server';
+
 import { JobService } from '@/services/job.service';
 import { JobStatus } from '@/types/job.d';
 import { createTenantKnex } from '@/lib/db';
@@ -40,7 +42,7 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
   };
 }
 
-export async function getJobHistoryAction(filter: {
+export async function getJobDetailsWithHistory(filter: {
   state?: JobStatus;
   startAfter?: Date;
   beforeDate?: Date;

@@ -4,6 +4,7 @@ import { createTenantKnex } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 import { format } from 'date-fns';
 import { is } from 'date-fns/locale';
+import { getAdminConnection } from '../db/admin';
 
 export default class Invoice {
   static async create(invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
@@ -79,8 +80,9 @@ export default class Invoice {
   static async getInvoiceItems(invoiceId: string): Promise<IInvoiceItem[]> {
     console.log('Getting invoice items for invoice:', invoiceId);
     console.log('Getting invoice items for invoice:', invoiceId);
-    const { knex } = await createTenantKnex();
-    const query = knex('invoice_items')
+    const { knex, tenant } = await createTenantKnex();
+    const adminConnection = await getAdminConnection();
+    const query = adminConnection('invoice_items')
       .select(
         'item_id',
         'invoice_id',
@@ -88,13 +90,13 @@ export default class Invoice {
         'description as name',
         'description',
         'is_discount',
-        knex.raw('CAST(quantity AS INTEGER) as quantity'),
-        knex.raw('CAST(unit_price AS INTEGER) as unit_price'),
-        knex.raw('CAST(total_price AS INTEGER) as total_price'),
-        knex.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
-        knex.raw('CAST(net_amount AS INTEGER) as net_amount'),
+        adminConnection.raw('CAST(quantity AS INTEGER) as quantity'),
+        adminConnection.raw('CAST(unit_price AS INTEGER) as unit_price'),
+        adminConnection.raw('CAST(total_price AS INTEGER) as total_price'),
+        adminConnection.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
+        adminConnection.raw('CAST(net_amount AS INTEGER) as net_amount'),
         'is_manual')
-      .where({ invoice_id: invoiceId });
+      .where({ invoice_id: invoiceId, tenant: tenant });
 
     // Log the raw SQL query
     const { sql, bindings } = query.toSQL();
@@ -265,8 +267,10 @@ export default class Invoice {
 
   static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
     console.log('Getting full invoice details for:', invoiceId);
-    const { knex } = await createTenantKnex();
-    const invoice = await knex('invoices')
+    const { knex, tenant } = await createTenantKnex();
+    const adminConnection = await getAdminConnection();
+
+    const invoice = await adminConnection('invoices')
       .select(
         '*',
         knex.raw('CAST(subtotal AS INTEGER) as subtotal'),
@@ -275,6 +279,7 @@ export default class Invoice {
         knex.raw('CAST(credit_applied AS INTEGER) as credit_applied')
       )
       .where({ invoice_id: invoiceId })
+      .where({ tenant: tenant })
       .first();
     console.log('Found invoice:', {
       id: invoice?.invoice_id,

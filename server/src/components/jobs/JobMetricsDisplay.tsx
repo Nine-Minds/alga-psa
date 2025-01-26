@@ -1,63 +1,38 @@
-import { JobState } from '@/lib/jobs/jobScheduler';
 import { Card } from '@/components/ui/Card';
+import { JobMetrics } from '@/lib/actions/job-actions';
 
 interface JobMetricsDisplayProps {
-  metrics: {
-    total: number;
-    completed: number;
-    failed: number;
-    pending: number;
-    active: number;
-    queued: number;
-  };
+  metrics: JobMetrics;
 }
 
-export default function JobMetricsDisplay({
-  metrics
-}: JobMetricsDisplayProps) {
+export default function JobMetricsDisplay({ metrics }: JobMetricsDisplayProps) {
 
   return (
-    <Card>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="text-center">
-          <div className="text-sm font-medium">Total</div>
-          <div className="text-2xl font-bold">
-            {metrics?.total || 0}
+    <Card className="p-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-6">Job Metrics</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <div className="text-sm font-medium text-gray-500 mb-2">Total</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {metrics.total}
           </div>
         </div>
-        
-        <div className="text-center">
-          <div className="text-sm font-medium">Active</div>
-          <div className="text-2xl font-bold">
-            {metrics?.active || 0}
+        <div className="text-center p-4 bg-green-50 rounded-lg">
+          <div className="text-sm font-medium text-green-600 mb-2">Completed</div>
+          <div className="text-2xl font-bold text-green-700">
+            {metrics.completed}
           </div>
         </div>
-
-        <div className="text-center">
-          <div className="text-sm font-medium">Queued</div>
-          <div className="text-2xl font-bold">
-            {metrics?.queued || 0}
+        <div className="text-center p-4 bg-red-50 rounded-lg">
+          <div className="text-sm font-medium text-red-600 mb-2">Failed</div>
+          <div className="text-2xl font-bold text-red-700">
+            {metrics.failed}
           </div>
         </div>
-
-        <div className="text-center">
-          <div className="text-sm font-medium">Completed</div>
-          <div className="text-2xl font-bold">
-            {metrics?.completed || 0}
-          </div>
-        </div>
-
-        <div className="text-center">
-          <div className="text-sm font-medium">Failed</div>
-          <div className="text-2xl font-bold">
-            {metrics?.failed || 0}
-          </div>
-        </div>
-
-        <div className="text-center">
-          <div className="text-sm font-medium">Pending</div>
-          <div className="text-2xl font-bold">
-            {metrics?.pending || 0}
+        <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <div className="text-sm font-medium text-gray-600 mb-2">Pending</div>
+          <div className="text-2xl font-bold text-gray-700">
+            {metrics.pending}
           </div>
         </div>
       </div>

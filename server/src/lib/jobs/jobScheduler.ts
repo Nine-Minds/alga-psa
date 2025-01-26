@@ -1,7 +1,7 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { postgresConnection } from '../db/knexfile';
 import { StorageService } from '@/lib/storage/StorageService';
-import logger from '../../utils/logger';
+// import logger from '../../utils/logger';
 import { JobService } from '../../services/job.service';
 import { JobStatus } from '../../types/job.d';
 
@@ -23,22 +23,13 @@ export interface JobState {
 }
 
 export interface JobData {
-  id: string;
+  job_id: string;
   name: string;
   data: Record<string, unknown>;
-  state: string;
+  status: string;
   createdOn: Date;
   startedOn?: Date;
   completedOn?: Date;
-}
-
-interface PgBossJobData {
-  id: string;
-  name: string;
-  data: unknown;
-  createdOn?: string;
-  startedOn?: string;
-  completedOn?: string;
 }
 
 export class JobScheduler {
@@ -196,19 +187,7 @@ export class JobScheduler {
   }
 
 
-  private mapJobToJobData(job: PgBossJobData): JobData {
-    return {
-      id: job.id,
-      name: job.name,
-      data: job.data as Record<string, unknown>,
-      state: 'completed',
-      createdOn: job.createdOn ? new Date(job.createdOn) : new Date(),
-      startedOn: job.startedOn ? new Date(job.startedOn) : undefined,
-      completedOn: job.completedOn ? new Date(job.completedOn) : undefined
-    };
-  }
-
-  public async getJobs(filter: JobFilter): Promise<JobData[]> {
+  public async getJobs(filter: JobFilter): Promise<PgBoss.Job<unknown>[]> {
     const state = filter.state || 'active';
     const jobs = await this.boss.fetch(state);
 
@@ -222,57 +201,7 @@ export class JobScheduler {
         return matchesName && matchesTenant;
       });
 
-    return filteredJobs.map((job): JobData => this.mapJobToJobData(job as unknown as PgBossJobData));
+    return filteredJobs;
   }
 
-  public async getJobById(jobId: string): Promise<JobData | null> {
-    const jobs = await this.boss.fetch('*');
-    const job = jobs?.find(j => j.id === jobId);
-    return job ? this.mapJobToJobData(job as unknown as PgBossJobData) : null;
-  }
-
-  public async getJobHistory(filter: JobFilter): Promise<JobData[]> {
-    const state = filter.state || 'completed';
-    const jobs = await this.boss.fetch(state);
-
-    const filteredJobs = (jobs || [])
-      .slice(filter.offset || 0, (filter.offset || 0) + (filter.limit || 100))
-      .filter(job => {
-        const matchesName = !filter.jobName || job.name === filter.jobName;
-        const matchesTenant = !filter.tenantId || 
-          (job.data && typeof job.data === 'object' && 'tenantId' in job.data && 
-           (job.data as Record<string, unknown>).tenantId === filter.tenantId);
-        return matchesName && matchesTenant;
-      });
-
-    return filteredJobs.map((job): JobData => this.mapJobToJobData(job as unknown as PgBossJobData));
-  }
-
-  public async cancelJob(jobId: string): Promise<boolean> {
-    // First get the job to get its name
-    const job = await this.getJobById(jobId);
-    if (!job) {
-      return false;
-    }
-
-    // Cancel the job with both name and id
-    await this.boss.cancel(job.name, jobId);
-    return true;
-  }
-
-  public async getQueueMetrics(): Promise<JobState> {
-    const [active, completed, failed, queued] = await Promise.all([
-      this.boss.fetch('active'),
-      this.boss.fetch('completed'),
-      this.boss.fetch('failed'),
-      this.boss.fetch('created')
-    ]);
-
-    return {
-      active: active?.length || 0,
-      completed: completed?.length || 0,
-      failed: failed?.length || 0,
-      queued: queued?.length || 0,
-    };
-  }
 }

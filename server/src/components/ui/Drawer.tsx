@@ -28,12 +28,12 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
   id,
   reflectionChildren
 }) => {
-  // Only register with UI reflection system when drawer is open
-  const updateMetadata = id && isOpen ? useRegisterUIComponent<DrawerComponent>({
+  // Always register drawer when mounted, but track open state
+  const updateMetadata = id ? useRegisterUIComponent<DrawerComponent>({
     type: 'drawer',
     id,
-    open: true,
-    width: 'auto',
+    open: isOpen,
+    width: isInDrawer ? '40%' : '50%',
     children: reflectionChildren
   }) : undefined;
   return (

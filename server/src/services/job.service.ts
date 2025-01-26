@@ -14,6 +14,7 @@ export interface JobHeader {
   status: JobStatus;
   createdAt: Date;
   updatedAt?: Date;
+  metadata?: Record<string, unknown>;
 }
 
 export interface JobDetail {
@@ -23,13 +24,6 @@ export interface JobDetail {
   result?: Record<string, unknown>;
   processedAt?: Date;
   retryCount: number;
-}
-
-export interface JobMetrics {
-  totalSteps: number;
-  completedSteps: number;
-  failedSteps: number;
-  pendingSteps: number;
 }
 
 export class JobService {
