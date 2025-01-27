@@ -15,6 +15,7 @@ import ServiceCatalog from './ServiceCatalog';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
+import UsageTracking from './UsageTracking';
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriod[];
@@ -48,7 +49,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'plans',
     'service-catalog',
     'billing-cycles',
-    'time-periods'
+    'time-periods',
+    'usage-tracking'
   ];
 
   return (
@@ -111,6 +113,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="time-periods">
           <TimePeriods initialTimePeriods={initialTimePeriods} />
+        </Tabs.Content>
+
+        <Tabs.Content value="usage-tracking">
+          <UsageTracking initialServices={initialServices} />
         </Tabs.Content>
       </Tabs.Root>
     </div>

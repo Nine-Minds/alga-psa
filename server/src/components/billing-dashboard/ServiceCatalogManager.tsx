@@ -20,7 +20,15 @@ import { QuickAddService } from './QuickAddService';
 const SERVICE_TYPE_OPTIONS = [
   { value: 'Fixed', label: 'Fixed Price' },
   { value: 'Time', label: 'Time Based' },
-  { value: 'Usage', label: 'Usage Based' }
+  { value: 'Usage', label: 'Usage Based' },
+  { value: 'Product', label: 'Product' },
+  { value: 'License', label: 'Software License' }
+];
+
+const LICENSE_TERM_OPTIONS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'annual', label: 'Annual' },
+  { value: 'perpetual', label: 'Perpetual' }
 ];
 
 const ServiceCatalogManager: React.FC = () => {
@@ -31,6 +39,11 @@ const ServiceCatalogManager: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
+  const [selectedServiceType, setSelectedServiceType] = useState<string>('all');
+
+  const filteredServices = services.filter(service =>
+    selectedServiceType === 'all' || service.service_type === selectedServiceType
+  );
 
   useEffect(() => {
     fetchServices();
@@ -98,39 +111,76 @@ const ServiceCatalogManager: React.FC = () => {
     }
   };
 
-  const columns: ColumnDefinition<IService>[] = [
-    {
-      title: 'Service Name',
-      dataIndex: 'service_name',
-    },
-    {
-      title: 'Service Type',
-      dataIndex: 'service_type',
-    },
-    {
-      title: 'Default Rate',
-      dataIndex: 'default_rate',
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category_id',
-      render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
-    },
-    {
-      title: 'Unit of Measure',
-      dataIndex: 'unit_of_measure',
-    },
-    {
-      title: 'Is Taxable',
-      dataIndex: 'is_taxable',
-      render: (value) => value ? 'Yes' : 'No',
-    },
-    {
-      title: 'Tax Region',
-      dataIndex: 'tax_region',
-      render: (value) => value || 'N/A',
-    },
-    {
+  const getColumns = (): ColumnDefinition<IService>[] => {
+    const baseColumns: ColumnDefinition<IService>[] = [
+      {
+        title: 'Service Name',
+        dataIndex: 'service_name',
+      },
+      {
+        title: 'Service Type',
+        dataIndex: 'service_type',
+      },
+      {
+        title: 'Default Rate',
+        dataIndex: 'default_rate',
+        render: (value) => `$${(value / 100).toFixed(2)}`,
+      },
+      {
+        title: 'Category',
+        dataIndex: 'category_id',
+        render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
+      },
+      {
+        title: 'Unit of Measure',
+        dataIndex: 'unit_of_measure',
+      },
+      {
+        title: 'Is Taxable',
+        dataIndex: 'is_taxable',
+        render: (value) => value ? 'Yes' : 'No',
+      },
+      {
+        title: 'Tax Region',
+        dataIndex: 'tax_region',
+        render: (value) => value || 'N/A',
+      }
+    ];
+
+    // Add product-specific columns if we're filtering by products
+    if (selectedServiceType === 'Product' || selectedServiceType === 'all') {
+      baseColumns.push(
+        {
+          title: 'SKU',
+          dataIndex: 'sku',
+          render: (value, record) => record.service_type === 'Product' ? (value || 'N/A') : '-',
+        },
+        {
+          title: 'Inventory',
+          dataIndex: 'inventory_count',
+          render: (value, record) => record.service_type === 'Product' ? (value || '0') : '-',
+        }
+      );
+    }
+
+    // Add license-specific columns if we're filtering by licenses
+    if (selectedServiceType === 'License' || selectedServiceType === 'all') {
+      baseColumns.push(
+        {
+          title: 'Seat Limit',
+          dataIndex: 'seat_limit',
+          render: (value, record) => record.service_type === 'License' ? (value || 'Unlimited') : '-',
+        },
+        {
+          title: 'License Term',
+          dataIndex: 'license_term',
+          render: (value, record) => record.service_type === 'License' ? (value || 'N/A') : '-',
+        }
+      );
+    }
+
+    // Always add actions column at the end
+    baseColumns.push({
       title: 'Actions',
       dataIndex: 'service_id',
       render: (_, record) => (
@@ -154,8 +204,12 @@ const ServiceCatalogManager: React.FC = () => {
           </Button>
         </div>
       ),
-    },
-  ];
+    });
+
+    return baseColumns;
+  };
+
+  const columns = getColumns();
 
   return (
     <>
@@ -166,9 +220,22 @@ const ServiceCatalogManager: React.FC = () => {
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
           <div className="space-y-4">
-            <QuickAddService onServiceAdded={fetchServices} />
+            <div className="flex justify-between items-center">
+              <div className="w-64">
+                <CustomSelect
+                  options={[
+                    { value: 'all', label: 'All Services' },
+                    ...SERVICE_TYPE_OPTIONS
+                  ]}
+                  value={selectedServiceType}
+                  onValueChange={setSelectedServiceType}
+                  placeholder="Filter by type..."
+                />
+              </div>
+              <QuickAddService onServiceAdded={fetchServices} />
+            </div>
             <DataTable
-              data={services}
+              data={filteredServices}
               columns={columns}
               pagination={true}
             />
@@ -190,7 +257,7 @@ const ServiceCatalogManager: React.FC = () => {
               options={SERVICE_TYPE_OPTIONS}
               value={editingService?.service_type || 'Fixed'}
               onValueChange={(value) => {
-                if (value === 'Fixed' || value === 'Time' || value === 'Usage') {
+                if (value === 'Fixed' || value === 'Time' || value === 'Usage' || value === 'Product' || value === 'License') {
                   setEditingService({ ...editingService!, service_type: value as ServiceType })
                 }
               }}
@@ -229,6 +296,41 @@ const ServiceCatalogManager: React.FC = () => {
               value={editingService?.tax_region || ''}
               onChange={(e) => setEditingService({ ...editingService!, tax_region: e.target.value })}
             />
+
+            {/* Product-specific fields */}
+            {editingService?.service_type === 'Product' && (
+              <>
+                <Input
+                  placeholder="SKU"
+                  value={editingService?.sku || ''}
+                  onChange={(e) => setEditingService({ ...editingService!, sku: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  placeholder="Inventory Count"
+                  value={editingService?.inventory_count || ''}
+                  onChange={(e) => setEditingService({ ...editingService!, inventory_count: parseInt(e.target.value) })}
+                />
+              </>
+            )}
+
+            {/* License-specific fields */}
+            {editingService?.service_type === 'License' && (
+              <>
+                <Input
+                  type="number"
+                  placeholder="Seat Limit"
+                  value={editingService?.seat_limit || ''}
+                  onChange={(e) => setEditingService({ ...editingService!, seat_limit: parseInt(e.target.value) })}
+                />
+                <CustomSelect
+                  options={LICENSE_TERM_OPTIONS}
+                  value={editingService?.license_term || 'monthly'}
+                  onValueChange={(value) => setEditingService({ ...editingService!, license_term: value })}
+                  placeholder="Select license term..."
+                />
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button id='cancel-button' variant="outline" onClick={() => {

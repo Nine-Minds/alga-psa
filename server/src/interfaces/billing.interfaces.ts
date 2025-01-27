@@ -36,7 +36,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usageId: string; // Added field for source usage record ID
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
@@ -105,7 +105,27 @@ export interface IServiceCategory extends TenantEntity {
   description?: string;
 }
 
-export type ServiceType = 'Fixed' | 'Time' | 'Usage';
+export type ServiceType = 'Fixed' | 'Time' | 'Usage' | 'Product' | 'License';
+
+export interface IProductCharge extends IBillingCharge, TenantEntity {
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  rate: number;
+  total: number;
+  type: 'product';
+}
+
+export interface ILicenseCharge extends IBillingCharge, TenantEntity {
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  rate: number;
+  total: number;
+  type: 'license';
+  period_start?: ISO8601String;
+  period_end?: ISO8601String;
+}
 
 export interface IService extends TenantEntity {
   service_id: string;
@@ -113,9 +133,13 @@ export interface IService extends TenantEntity {
   service_type: ServiceType;
   default_rate: number;
   category_id: string | null;
-  unit_of_measure: string;    
+  unit_of_measure: string;
   is_taxable?: boolean;
-  tax_region?: string | null;    
+  tax_region?: string | null;
+  sku?: string;               // For products
+  inventory_count?: number;   // For products
+  seat_limit?: number;        // For licenses
+  license_term?: string;      // For licenses (e.g., 'monthly', 'annual')
 }
 
 export interface IBillingPlan extends TenantEntity {
@@ -172,6 +196,26 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   overageHours: number;
   overageRate: number;
   service_catalog_id: string;
+}
+
+export interface IProductCharge extends IBillingCharge, TenantEntity {
+  type: 'product';
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  rate: number;
+  total: number;
+}
+
+export interface ILicenseCharge extends IBillingCharge, TenantEntity {
+  type: 'license';
+  serviceId: string;
+  serviceName: string;
+  quantity: number;
+  rate: number;
+  total: number;
+  period_start?: ISO8601String;
+  period_end?: ISO8601String;
 }
 
 export type BillingCycleType = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';

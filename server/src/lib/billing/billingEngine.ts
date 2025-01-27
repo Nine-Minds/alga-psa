@@ -13,6 +13,8 @@ import {
   IUsageBasedCharge,
   ITimeBasedCharge,
   IFixedPriceCharge,
+  IProductCharge,
+  ILicenseCharge,
   ICompanyBillingCycle,
   BillingCycleType
 } from '@/interfaces/billing.interfaces';
@@ -98,17 +100,28 @@ export class BillingEngine {
 
     for (const companyBillingPlan of companyBillingPlans) {
       console.log(`Processing billing plan: ${companyBillingPlan.plan_name}`);
-      const [fixedPriceCharges, timeBasedCharges, usageBasedCharges, bucketPlanCharges] = await Promise.all([
+      const [
+        fixedPriceCharges,
+        timeBasedCharges,
+        usageBasedCharges,
+        bucketPlanCharges,
+        productCharges,
+        licenseCharges
+      ] = await Promise.all([
         this.calculateFixedPriceCharges(companyId, billingPeriod, companyBillingPlan),
         this.calculateTimeBasedCharges(companyId, billingPeriod, companyBillingPlan),
         this.calculateUsageBasedCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateBucketPlanCharges(companyId, billingPeriod, companyBillingPlan)
+        this.calculateBucketPlanCharges(companyId, billingPeriod, companyBillingPlan),
+        this.calculateProductCharges(companyId, billingPeriod, companyBillingPlan),
+        this.calculateLicenseCharges(companyId, billingPeriod, companyBillingPlan)
       ]);
 
       console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
       console.log(`Time-based charges: ${timeBasedCharges.length}`);
       console.log(`Usage-based charges: ${usageBasedCharges.length}`);
       console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
+      console.log(`Product charges: ${productCharges.length}`);
+      console.log(`License charges: ${licenseCharges.length}`);
 
       console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
 
@@ -118,7 +131,14 @@ export class BillingEngine {
       console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
 
       // Combine all charges without prorating time-based or usage-based charges
-      totalCharges = totalCharges.concat(proratedFixedCharges, timeBasedCharges, usageBasedCharges, bucketPlanCharges);
+      totalCharges = totalCharges.concat(
+        proratedFixedCharges,
+        timeBasedCharges,
+        usageBasedCharges,
+        bucketPlanCharges,
+        productCharges,
+        licenseCharges
+      );
 
       console.log('Total charges breakdown:');
       proratedFixedCharges.forEach(charge => {
@@ -132,6 +152,12 @@ export class BillingEngine {
       });
       bucketPlanCharges.forEach(charge => {
         console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
+      });
+      productCharges.forEach(charge => {
+        console.log(`product - ${charge.serviceName}: $${charge.total}`);
+      });
+      licenseCharges.forEach(charge => {
+        console.log(`license - ${charge.serviceName}: $${charge.total}`);
       });
 
       console.log('Total charges:', totalCharges);
@@ -388,6 +414,86 @@ export class BillingEngine {
     }));
 
     return usageBasedCharges;
+  }
+
+  private async calculateProductCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IProductCharge[]> {
+    await this.initKnex();
+    const company = await this.knex('companies').where({ company_id: companyId }).first() as ICompany;
+      
+    const planServices = await this.knex('company_billing_plans')
+      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
+      .join('plan_services', 'billing_plans.plan_id', 'plan_services.plan_id')
+      .join('service_catalog', 'plan_services.service_id', 'service_catalog.service_id')
+      .where({
+        'company_billing_plans.company_id': companyId,
+        'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
+        'service_catalog.service_type': 'Product'
+      })
+      .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
+
+    const productCharges: IProductCharge[] = planServices.map((service: any): IProductCharge => {
+      const charge: IProductCharge = {
+        type: 'product',
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        quantity: service.quantity,
+        rate: service.custom_rate || service.default_rate,
+        total: (service.custom_rate || service.default_rate) * service.quantity,
+        tax_amount: 0,
+        tax_rate: 0,
+        tax_region: service.tax_region || company.tax_region
+      };
+
+      if (!company.is_tax_exempt && service.is_taxable !== false) {
+        charge.tax_rate = service.tax_rate || 0;
+        charge.tax_amount = charge.total * (charge.tax_rate);
+      }
+
+      return charge;
+    });
+
+    return productCharges;
+  }
+
+  private async calculateLicenseCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ILicenseCharge[]> {
+    await this.initKnex();
+    const company = await this.knex('companies').where({ company_id: companyId }).first() as ICompany;
+      
+    const planServices = await this.knex('company_billing_plans')
+      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
+      .join('plan_services', 'billing_plans.plan_id', 'plan_services.plan_id')
+      .join('service_catalog', 'plan_services.service_id', 'service_catalog.service_id')
+      .where({
+        'company_billing_plans.company_id': companyId,
+        'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
+        'service_catalog.service_type': 'License'
+      })
+      .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
+
+    const licenseCharges: ILicenseCharge[] = planServices.map((service: any): ILicenseCharge => {
+      const charge: ILicenseCharge = {
+        type: 'license',
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        quantity: service.quantity,
+        rate: service.custom_rate || service.default_rate,
+        total: (service.custom_rate || service.default_rate) * service.quantity,
+        tax_amount: 0,
+        tax_rate: 0,
+        tax_region: service.tax_region || company.tax_region,
+        period_start: billingPeriod.startDate,
+        period_end: billingPeriod.endDate
+      };
+
+      if (!company.is_tax_exempt && service.is_taxable !== false) {
+        charge.tax_rate = service.tax_rate || 0;
+        charge.tax_amount = charge.total * (charge.tax_rate);
+      }
+
+      return charge;
+    });
+
+    return licenseCharges;
   }
 
   private async calculateBucketPlanCharges(companyId: string, period: IBillingPeriod, billingPlan: ICompanyBillingPlan): Promise<IBucketCharge[]> {

@@ -17,12 +17,24 @@ interface QuickAddServiceProps {
 
 interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'service_type'> {
   service_type: string;
+  sku?: string;
+  inventory_count?: number;
+  seat_limit?: number;
+  license_term?: string;
 }
 
 const SERVICE_TYPE_OPTIONS = [
   { value: 'Fixed', label: 'Fixed Price' },
   { value: 'Time', label: 'Time Based' },
-  { value: 'Usage', label: 'Usage Based' }
+  { value: 'Usage', label: 'Usage Based' },
+  { value: 'Product', label: 'Product' },
+  { value: 'License', label: 'Software License' }
+];
+
+const LICENSE_TERM_OPTIONS = [
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'annual', label: 'Annual' },
+  { value: 'perpetual', label: 'Perpetual' }
 ];
 
 export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
@@ -39,7 +51,11 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
     unit_of_measure: '',
     category_id: '',
     is_taxable: true,
-    tax_region: ''
+    tax_region: '',
+    sku: '',
+    inventory_count: 0,
+    seat_limit: 0,
+    license_term: 'monthly'
   })
 
   useEffect(() => {
@@ -68,6 +84,22 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
       if (!serviceData.category_id) {
         setError('Category is required')
         return
+      }
+
+      // Validate product-specific fields
+      if (serviceData.service_type === 'Product') {
+        if (!serviceData.sku) {
+          setError('SKU is required for products')
+          return
+        }
+      }
+
+      // Validate license-specific fields
+      if (serviceData.service_type === 'License') {
+        if (!serviceData.license_term) {
+          setError('License term is required')
+          return
+        }
       }
 
       // Only include valid service type when submitting
@@ -186,6 +218,57 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
                 placeholder="Tax Region"
               />
             </div>
+
+            {/* Product-specific fields */}
+            {serviceData.service_type === 'Product' && (
+              <>
+                <div>
+                  <label htmlFor="sku" className="block text-sm font-medium text-gray-700">SKU</label>
+                  <Input
+                    id="sku"
+                    value={serviceData.sku || ''}
+                    onChange={(e) => setServiceData({ ...serviceData, sku: e.target.value })}
+                    placeholder="SKU"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="inventoryCount" className="block text-sm font-medium text-gray-700">Inventory Count</label>
+                  <Input
+                    id="inventoryCount"
+                    type="number"
+                    value={serviceData.inventory_count || 0}
+                    onChange={(e) => setServiceData({ ...serviceData, inventory_count: parseInt(e.target.value) })}
+                    placeholder="Inventory Count"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* License-specific fields */}
+            {serviceData.service_type === 'License' && (
+              <>
+                <div>
+                  <label htmlFor="seatLimit" className="block text-sm font-medium text-gray-700">Seat Limit</label>
+                  <Input
+                    id="seatLimit"
+                    type="number"
+                    value={serviceData.seat_limit || 0}
+                    onChange={(e) => setServiceData({ ...serviceData, seat_limit: parseInt(e.target.value) })}
+                    placeholder="Seat Limit"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="licenseTerm" className="block text-sm font-medium text-gray-700">License Term</label>
+                  <CustomSelect
+                    options={LICENSE_TERM_OPTIONS}
+                    value={serviceData.license_term || 'monthly'}
+                    onValueChange={(value) => setServiceData({ ...serviceData, license_term: value })}
+                    placeholder="Select license term..."
+                    className="w-full"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex justify-end space-x-2 pt-4">
               <Button id='cancel-button' type="button" variant="outline" onClick={() => setOpen(false)}>
