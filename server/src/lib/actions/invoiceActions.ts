@@ -11,7 +11,8 @@ import {
   IManualInvoiceItem,
   IInvoiceItem,
   IInvoice,
-  DiscountType
+  DiscountType,
+  InvoiceStatus
 } from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
@@ -151,7 +152,76 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
   }
 }
 
-export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
+export async function previewInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
+  const { knex } = await createTenantKnex();
+  
+  // Get billing cycle details
+  const billingCycle = await knex('company_billing_cycles')
+    .where({ billing_cycle_id })
+    .first();
+
+  if (!billingCycle) {
+    throw new Error('Invalid billing cycle');
+  }
+
+  const { company_id, effective_date } = billingCycle;
+
+  // Calculate cycle dates
+  const cycleStart = new Date(effective_date).toISOString().replace('.000', '');
+  const cycleEnd = (await getNextBillingDate(company_id, effective_date)).replace('.000', '');
+
+  const billingEngine = new BillingEngine();
+  const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
+
+  if (billingResult.charges.length === 0) {
+    throw new Error('Nothing to bill');
+  }
+
+  // Create invoice view model without persisting
+  const company = await knex('companies').where({ company_id }).first();
+  const due_date = await getDueDate(company_id, cycleEnd);
+
+  return {
+    invoice_id: 'preview-' + billing_cycle_id,
+    invoice_number: 'PREVIEW',
+    company_id,
+    company: {
+      name: company?.company_name || '',
+      logo: '',
+      address: company?.address || ''
+    },
+    contact: {
+      name: '',
+      address: ''
+    },
+    invoice_date: new Date(),
+    due_date: new Date(due_date),
+    status: 'draft',
+    subtotal: billingResult.totalAmount,
+    tax: 0, // Will be calculated in UI
+    total: billingResult.finalAmount,
+    total_amount: billingResult.finalAmount,
+    credit_applied: 0,
+    billing_cycle_id,
+    is_manual: false,
+    invoice_items: billingResult.charges.map(charge => ({
+      item_id: 'preview-' + uuidv4(),
+      invoice_id: 'preview-' + billing_cycle_id,
+      service_id: charge.serviceId,
+      description: charge.serviceName,
+      quantity: getChargeQuantity(charge),
+      unit_price: getChargeUnitPrice(charge),
+      total_price: charge.total,
+      tax_amount: charge.tax_amount || 0,
+      tax_rate: charge.tax_rate || 0,
+      tax_region: charge.tax_region || '',
+      net_amount: charge.total - (charge.tax_amount || 0),
+      is_manual: false
+    }))
+  };
+}
+
+export async function finalizeInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -481,10 +551,6 @@ async function getDueDate(companyId: string, billingEndDate: ISO8601String): Pro
   return dueDate.toISOString();
 }
 
-export async function finalizeInvoice(invoiceId: string): Promise<IInvoice> {
-  const updatedInvoice = await Invoice.finalizeInvoice(invoiceId);
-  return updatedInvoice;
-}
 
 export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex } = await createTenantKnex();

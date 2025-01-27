@@ -57,13 +57,20 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
 
   try {
     const {knex: db, tenant} = await createTenantKnex();
+    // Build where clause based on provided fields
+    const whereClause: any = {
+      company_id: newBilling.company_id,
+      plan_id: newBilling.plan_id,
+      is_active: true
+    };
+
+    // Only include service_category if it's provided
+    if (newBilling.service_category) {
+      whereClause.service_category = newBilling.service_category;
+    }
+
     const existingBilling = await db('company_billing_plans')
-      .where({
-        company_id: newBilling.company_id,
-        plan_id: newBilling.plan_id,
-        service_category: newBilling.service_category,
-        is_active: true
-      })
+      .where(whereClause)
       .whereNull('end_date')
       .first();
 
@@ -71,10 +78,23 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
       throw new Error('A billing plan with the same details already exists for this company');
     }
 
-    await db('company_billing_plans').insert({...newBilling, tenant});
+    // Only include service_category in insert if it's provided
+    const insertData = { ...newBilling, tenant };
+    if (!newBilling.service_category) {
+      delete insertData.service_category;
+    }
+
+    await db('company_billing_plans').insert(insertData);
   } catch (error: any) {
     console.error('Error adding company billing plan:', error);
-    throw new Error(error);
+    // Provide more specific error message
+    if (error.code === 'ER_NO_SUCH_TABLE') {
+      throw new Error('Database table not found');
+    } else if (error.code === 'ER_BAD_FIELD_ERROR') {
+      throw new Error('Invalid database field');
+    } else {
+      throw new Error(error.message || 'Failed to add company billing plan');
+    }
   }
 }
 

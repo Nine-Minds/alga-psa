@@ -144,6 +144,59 @@ The transactions table was introduced to log all financial events in the system.
 
 This logging mechanism helps keep a consistent ledger of all billing events, whether automatic or manual.
 
+## Invoice Preview System
+
+### Purpose
+The invoice preview system allows users to view and verify invoice calculations before finalization. This provides several benefits:
+- Validation of charges before committing
+- Review of tax calculations and rates
+- Verification of discounts and adjustments
+- Prevention of billing errors
+
+### Design
+The preview system leverages the existing BillingEngine class but operates in a "preview mode" that:
+1. Calculates all charges, taxes, and adjustments
+2. Does not mark any items as invoiced
+3. Does not create database records
+4. Returns the complete invoice structure for display
+
+### Components
+
+#### Preview Action
+```typescript
+// Preview calculation without persistence
+async function previewInvoice(
+  companyId: string,
+  billingCycleId: string
+): Promise<InvoiceViewModel> {
+  // Uses BillingEngine.calculateBilling() but skips persistence
+  // Returns same structure as finalizeInvoice() for consistency
+}
+```
+
+#### UI Integration
+- Add preview button in AutomaticInvoices component
+- Display preview in modal/dialog using existing invoice display components
+- Clearly indicate "PREVIEW" status
+- Allow toggling between preview and edit modes
+
+#### Data Flow
+1. User requests preview for billing cycle
+2. System calculates charges using BillingEngine
+3. Preview displayed without persistence
+4. User can then choose to finalize or make adjustments
+
+### Implementation Notes
+- Reuse existing BillingEngine.calculateBilling() logic
+- Add preview flag to skip persistence operations
+- Ensure consistent calculation between preview and final invoice
+- Maintain separation between preview and finalization workflows
+
+### Security Considerations
+- Preview should respect same permissions as invoice finalization
+- No persistent changes during preview
+- Audit logging of preview requests (optional)
+
 ## Service Types
 
 The billing system uses a strongly-typed service type system to determine how each service will be billed and calculated. There are three main service types:
