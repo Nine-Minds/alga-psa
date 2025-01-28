@@ -3,7 +3,7 @@ import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { updateInvoiceManualItems, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { LineItem } from './LineItem';
+import { LineItem, ServiceOption } from './LineItem';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -422,9 +422,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     }
   };
 
-  const serviceOptions: SelectOption[] = services.map((service): SelectOption => ({
+  const serviceOptions: ServiceOption[] = services.map((service): ServiceOption => ({
     value: service.service_id,
-    label: service.service_name
+    label: service.service_name,
+    rate: service.rate
   }));
 
   const calculateTotal = () => {

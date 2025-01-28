@@ -5,7 +5,7 @@ import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { DiscountType } from '@/interfaces/invoice.interfaces';
 
 // Extend SelectOption to include rate
-interface ServiceOption extends SelectOption {
+export interface ServiceOption extends SelectOption {
   rate?: number;
 }
 
@@ -27,7 +27,7 @@ interface LineItemProps {
   item: EditableItem;
   index: number;
   isExpanded: boolean;
-  serviceOptions: SelectOption[];
+  serviceOptions: ServiceOption[];
   invoiceItems?: Array<{ item_id: string; description: string }>;
   onRemove: () => void;
   onChange: (updatedItem: EditableItem) => void;

@@ -373,7 +373,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         await trx('invoice_usage_records').insert({
           invoice_usage_record_id: uuidv4(),
           invoice_id: newInvoice.invoice_id,
-          usage_id: charge.usageId
+          usage_id: charge.usageId,
+          tenant: tenant,
         });
 
         await trx('usage_tracking')
