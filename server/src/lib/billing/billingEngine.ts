@@ -333,8 +333,10 @@ export class BillingEngine {
       .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
       .leftJoin('tickets', 'time_entries.work_item_id', 'tickets.ticket_id')
       .join('service_catalog', 'time_entries.service_id', 'service_catalog.service_id')
-      .join('plan_services', 'service_catalog.service_id', 'plan_services.service_id')
-      .andWhere('plan_services.plan_id', companyBillingPlan.plan_id)
+      .leftJoin('plan_services', (join) => {
+        join.on('service_catalog.service_id', '=', 'plan_services.service_id')
+            .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
+      })
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
       .where('time_entries.end_time', '<', billingPeriod.endDate)
       .where('time_entries.invoiced', false)
@@ -351,7 +353,6 @@ export class BillingEngine {
         this.where('projects.company_id', companyId)
           .orWhere('tickets.company_id', companyId)
       })
-      .where('service_catalog.category_id', companyBillingPlan.service_category)
       .where('time_entries.approval_status', 'APPROVED')
       .select(
         'time_entries.*',
@@ -366,7 +367,7 @@ export class BillingEngine {
 
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
       const duration = differenceInHours(entry.end_time, entry.start_time);
-      const rate = Math.ceil(entry.custom_rate || entry.default_rate);
+      const rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
       return {
         serviceId: entry.service_id,
         serviceName: entry.service_name,
@@ -387,25 +388,27 @@ export class BillingEngine {
 
   private async calculateUsageBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IUsageBasedCharge[]> {
     await this.initKnex();
-    const usageRecords = await this.knex('usage_tracking')
+    const usageRecordQuery = this.knex('usage_tracking')
       .join('service_catalog', 'usage_tracking.service_id', 'service_catalog.service_id')
-      .join('plan_services', function (this: Knex.JoinClause) {
-        this.on('service_catalog.service_id', '=', 'plan_services.service_id')
+      .leftJoin('plan_services', (join) => {
+        join.on('service_catalog.service_id', '=', 'plan_services.service_id')
+           .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
       })
       .where('usage_tracking.company_id', companyId)
       .where('usage_tracking.invoiced', false)
       .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
       .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
-      .where('service_catalog.category_id', companyBillingPlan.service_category)
-      .where('plan_services.plan_id', companyBillingPlan.plan_id)
       .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'plan_services.custom_rate');
+
+      console.log('Usage record query:', usageRecordQuery.toQuery());
+      const usageRecords = await usageRecordQuery;
 
     const usageBasedCharges: IUsageBasedCharge[] = usageRecords.map((record: any):IUsageBasedCharge => ({
       serviceId: record.service_id,
       serviceName: record.service_name,
       quantity: record.quantity,
-      rate: Math.ceil(record.custom_rate || record.default_rate),
-      total: Math.ceil(record.quantity * (record.custom_rate || record.default_rate)),
+      rate: Math.ceil(record.custom_rate ?? record.default_rate),
+      total: Math.ceil(record.quantity * (record.custom_rate ?? record.default_rate)),
       tax_region: record.tax_region || record.company_tax_region,
       type: 'usage',
       tax_amount: 0,
