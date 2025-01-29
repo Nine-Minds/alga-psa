@@ -7,7 +7,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip';
 import { Info, AlertTriangle } from 'lucide-react';
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel } from '../../interfaces/invoice.interfaces';
+import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 import { finalizeInvoice } from '../../lib/actions/invoiceActions';
 import { getInvoicedBillingCycles, removeBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
@@ -105,22 +105,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
   const handlePreviewInvoice = async (billingCycleId: string) => {
     setIsPreviewLoading(true);
-    try {
-      const preview = await previewInvoice(billingCycleId);
-      setPreviewData(preview);
+    const response = await previewInvoice(billingCycleId);
+    if (response.success) {
+      setPreviewData(response.data);
       setShowPreviewDialog(true);
-    } catch (error) {
-      console.error('Error previewing invoice:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to preview invoice';
-      if (errorMessage.includes('Nothing to bill') || errorMessage.includes('No active billing plans found')) {
-        setErrors({
-          preview: 'Nothing to bill for this period'
-        });
-      } else {
-        setErrors({
-          preview: errorMessage
-        });
-      }
+      setErrors({});
+    } else {
+      setErrors({
+        preview: response.error
+      });
     }
     setIsPreviewLoading(false);
   };

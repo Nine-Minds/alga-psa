@@ -12,7 +12,8 @@ import {
   IInvoiceItem,
   IInvoice,
   DiscountType,
-  InvoiceStatus
+  InvoiceStatus,
+  PreviewInvoiceResponse
 } from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
 import { ICompany } from '@/interfaces/company.interfaces';
@@ -29,12 +30,23 @@ import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Tent } from 'lucide-react';
+interface ManualInvoiceUpdate {
+  service_id?: string;
+  description?: string;
+  quantity?: number;
+  rate?: number;
+  item_id: string;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
+}
+
 interface ManualItemsUpdate {
   newItems: IManualInvoiceItem[];
   updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
 }
-
 
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex } = await createTenantKnex();
@@ -152,7 +164,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
   }
 }
 
-export async function previewInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
+export async function previewInvoice(billing_cycle_id: string): Promise<PreviewInvoiceResponse> {
   const { knex } = await createTenantKnex();
   
   // Get billing cycle details
@@ -161,7 +173,10 @@ export async function previewInvoice(billing_cycle_id: string): Promise<InvoiceV
     .first();
 
   if (!billingCycle) {
-    throw new Error('Invalid billing cycle');
+    return {
+      success: false,
+      error: 'Invalid billing cycle'
+    };
   }
 
   const { company_id, effective_date } = billingCycle;
@@ -171,54 +186,69 @@ export async function previewInvoice(billing_cycle_id: string): Promise<InvoiceV
   const cycleEnd = (await getNextBillingDate(company_id, effective_date)).replace('.000', '');
 
   const billingEngine = new BillingEngine();
-  const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
+  try {
+    const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 
-  if (billingResult.charges.length === 0) {
-    throw new Error('Nothing to bill');
-  }
+    if (billingResult.charges.length === 0) {
+      return {
+        success: false,
+        error: 'Nothing to bill'
+      };
+    }
 
-  // Create invoice view model without persisting
-  const company = await knex('companies').where({ company_id }).first();
-  const due_date = await getDueDate(company_id, cycleEnd);
+    // Create invoice view model without persisting
+    const company = await knex('companies').where({ company_id }).first();
+    const due_date = await getDueDate(company_id, cycleEnd);
 
-  return {
-    invoice_id: 'preview-' + billing_cycle_id,
-    invoice_number: 'PREVIEW',
-    company_id,
-    company: {
-      name: company?.company_name || '',
-      logo: '',
-      address: company?.address || ''
-    },
-    contact: {
-      name: '',
-      address: ''
-    },
-    invoice_date: new Date(),
-    due_date: new Date(due_date),
-    status: 'draft',
-    subtotal: billingResult.totalAmount,
-    tax: 0, // Will be calculated in UI
-    total: billingResult.finalAmount,
-    total_amount: billingResult.finalAmount,
-    credit_applied: 0,
-    billing_cycle_id,
-    is_manual: false,
-    invoice_items: billingResult.charges.map(charge => ({
-      item_id: 'preview-' + uuidv4(),
+    const previewInvoice: InvoiceViewModel = {
       invoice_id: 'preview-' + billing_cycle_id,
-      service_id: charge.serviceId,
-      description: charge.serviceName,
-      quantity: getChargeQuantity(charge),
-      unit_price: getChargeUnitPrice(charge),
-      total_price: charge.total,
-      tax_amount: charge.tax_amount || 0,
-      tax_rate: charge.tax_rate || 0,
-      tax_region: charge.tax_region || '',
-      net_amount: charge.total - (charge.tax_amount || 0),
-      is_manual: false
-    }))
-  };
+      invoice_number: 'PREVIEW',
+      company_id,
+      company: {
+        name: company?.company_name || '',
+        logo: '',
+        address: company?.address || ''
+      },
+      contact: {
+        name: '',
+        address: ''
+      },
+      invoice_date: new Date(),
+      due_date: new Date(due_date),
+      status: 'draft',
+      subtotal: billingResult.totalAmount,
+      tax: 0, // Will be calculated in UI
+      total: billingResult.finalAmount,
+      total_amount: billingResult.finalAmount,
+      credit_applied: 0,
+      billing_cycle_id,
+      is_manual: false,
+      invoice_items: billingResult.charges.map(charge => ({
+        item_id: 'preview-' + uuidv4(),
+        invoice_id: 'preview-' + billing_cycle_id,
+        service_id: charge.serviceId,
+        description: charge.serviceName,
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        total_price: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_rate: charge.tax_rate || 0,
+        tax_region: charge.tax_region || '',
+        net_amount: charge.total - (charge.tax_amount || 0),
+        is_manual: false
+      }))
+    };
+
+    return {
+      success: true,
+      data: previewInvoice
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice'
+    };
+  }
 }
 
 export async function finalizeInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {

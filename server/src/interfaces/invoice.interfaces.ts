@@ -227,6 +227,14 @@ export interface IConditionalRule {
   format?: any;
 }
 
+export type PreviewInvoiceResponse = {
+  success: true;
+  data: InvoiceViewModel;
+} | {
+  success: false;
+  error: string;
+};
+
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';
 
 export interface ICreditAllocation extends TenantEntity {
