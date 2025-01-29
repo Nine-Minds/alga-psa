@@ -6,22 +6,26 @@ import { sampleInvoices } from '@/utils/sampleInvoiceData';
 import PaperInvoice from './PaperInvoice';
 import { TextArea } from '@/components/ui/TextArea';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { saveInvoiceTemplate } from '@/lib/actions/invoiceActions';
 
 interface InvoiceTemplateManagerProps {
   templates: IInvoiceTemplate[];
   onTemplateSelect: (template: IInvoiceTemplate) => void;
+  onTemplateUpdate: (updatedTemplate: IInvoiceTemplate) => void;
   selectedTemplate: IInvoiceTemplate | null;
 }
 
 const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
   templates,
   onTemplateSelect,
+  onTemplateUpdate,
   selectedTemplate
 }) => {
   const [localTemplates, setLocalTemplates] = useState<IInvoiceTemplate[]>(templates);
   const [selectedSampleInvoice, setSelectedSampleInvoice] = useState<InvoiceViewModel>(sampleInvoices[0]);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleTemplatesUpdate = (updatedTemplates: IInvoiceTemplate[]) => {
     setLocalTemplates(updatedTemplates);
@@ -60,29 +64,60 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
         {!selectedTemplate?.isStandard && (
           <div className="mt-8 space-y-4">
             <h3 className="text-xl font-semibold">Edit Template</h3>
-            <TextArea
-              value={selectedTemplate?.dsl || ''}
-              onChange={(e) => {
-                const updatedTemplate = {
-                  ...selectedTemplate!,
-                  dsl: e.target.value,
-                  parsed: parseInvoiceTemplate(e.target.value)
-                };
-                onTemplateSelect(updatedTemplate);
-              }}
-              placeholder="Enter template DSL..."
-              rows={10}
-              className="font-mono"
-            />
-            <Button 
+            <div className="space-y-2">
+              <label htmlFor="template-name" className="block text-sm font-medium text-gray-700">
+                Template Name
+              </label>
+              <Input
+                id="template-name"
+                value={selectedTemplate?.name || ''}
+                onChange={(e) => {
+                  const updatedTemplate = {
+                    ...selectedTemplate!,
+                    name: e.target.value
+                  };
+                  onTemplateSelect(updatedTemplate);
+                }}
+                placeholder="Enter template name..."
+                className="w-full"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="template-dsl" className="block text-sm font-medium text-gray-700">
+                Template DSL
+              </label>
+              <TextArea
+                id="template-dsl"
+                value={selectedTemplate?.dsl || ''}
+                onChange={(e) => {
+                  const updatedTemplate = {
+                    ...selectedTemplate!,
+                    dsl: e.target.value,
+                    parsed: parseInvoiceTemplate(e.target.value)
+                  };
+                  onTemplateSelect(updatedTemplate);
+                }}
+                placeholder="Enter template DSL..."
+                rows={10}
+                className="font-mono"
+              />
+            </div>
+            <Button
               id='save-template-button'
               onClick={async () => {
                 if (selectedTemplate) {
-                  await saveInvoiceTemplate(selectedTemplate);
+                  try {
+                    setIsSaving(true);
+                    const savedTemplate = await saveInvoiceTemplate(selectedTemplate);
+                    onTemplateUpdate(savedTemplate);
+                  } finally {
+                    setIsSaving(false);
+                  }
                 }
               }}
+              disabled={isSaving}
             >
-              Save Template
+              {isSaving ? 'Saving...' : 'Save Template'}
             </Button>
           </div>
         )}
@@ -92,7 +127,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
         <div className="space-y-4">
           <h3 className="text-xl font-semibold">Template Preview</h3>
           <PaperInvoice>
-            <TemplateRenderer template={selectedTemplate} invoiceId={selectedSampleInvoice.invoice_id} />
+            <TemplateRenderer template={selectedTemplate} invoiceData={selectedSampleInvoice} />
           </PaperInvoice>
         </div>
       )}

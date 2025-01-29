@@ -89,7 +89,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   name: string;
   version: number;
   dsl: string;
-  parsed: {
+  parsed?: {
       sections: Section[];
       globals: GlobalCalculation[];
   };

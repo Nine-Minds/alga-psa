@@ -51,6 +51,17 @@ const InvoiceTemplates: React.FC = () => {
     setSelectedTemplate(template);
   };
 
+  const handleTemplateUpdate = async (updatedTemplate: IInvoiceTemplate) => {
+    try {
+      await fetchTemplates();
+      setSelectedTemplate(updatedTemplate);
+      setError(null);
+    } catch (error) {
+      console.error('Error updating templates:', error);
+      setError('Failed to refresh templates');
+    }
+  };
+
 
   return (
     <Card>
@@ -84,7 +95,7 @@ const InvoiceTemplates: React.FC = () => {
                 placeholder="Select invoice template..."
               />
             </div>
-            {selectedTemplate?.isStandard && (
+            {selectedTemplate && (
               <Button
                 id='clone-template-button'
                 onClick={() => handleCloneTemplate(selectedTemplate)}
@@ -99,10 +110,10 @@ const InvoiceTemplates: React.FC = () => {
             <InvoiceTemplateManager
               templates={invoiceTemplates}
               onTemplateSelect={handleTemplateSelect}
+              onTemplateUpdate={handleTemplateUpdate}
               selectedTemplate={selectedTemplate}
             />
           )}
-          <Button id='add-template-button' onClick={() => setSelectedTemplate(null)}></Button>
         </div>
       </CardContent>
     </Card>

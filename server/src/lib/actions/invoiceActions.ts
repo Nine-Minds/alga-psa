@@ -736,21 +736,22 @@ export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tena
     isStandard: false,         // Reset standard flag
   } : template;
 
-  // Parse the DSL before saving
-  const parsedTemplate = templateToSave.dsl ? parseInvoiceTemplate(templateToSave.dsl) : null;
+  // Parse the DSL to validate it before saving
+  if (templateToSave.dsl) {
+    // This will throw if the DSL is invalid
+    parseInvoiceTemplate(templateToSave.dsl);
+  }
 
-  // Remove the temporary flags before saving
+  // Remove the temporary flags and parsed field before saving
   const { isClone, isStandard, parsed, ...templateToSaveWithoutFlags } = templateToSave;
   
-  const templateWithParsed = {
-    ...templateToSaveWithoutFlags,
-    parsed: parsedTemplate
-  };
-  
-  const savedTemplate = await Invoice.saveTemplate(templateWithParsed);
+  const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutFlags);
+
+  // Add the parsed result to the returned object
   return {
     ...savedTemplate,
-    parsed: savedTemplate.dsl ? parseInvoiceTemplate(savedTemplate.dsl) : null
+    parsed: savedTemplate.dsl ? parseInvoiceTemplate(savedTemplate.dsl) : null,
+    isStandard: false // Ensure standard flag is false for saved templates
   };
 }
 

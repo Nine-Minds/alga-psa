@@ -354,7 +354,7 @@ const Invoices: React.FC = () => {
           <PaperInvoice>
             <TemplateRenderer
               template={selectedTemplate}
-              invoiceId={selectedInvoice.invoice_id}
+              invoiceData={selectedInvoice}
             />
           </PaperInvoice>
         </div>
