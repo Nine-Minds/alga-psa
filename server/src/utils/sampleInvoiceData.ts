@@ -22,9 +22,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
         net_amount: 1001.00,
         item_id: 'UNBIRTH-001',
         invoice_id: 'MAD-001',
-        is_manual: false,
-        service_type: 'Planning',
-        category: 'Services'
+        is_manual: false
       },
       {
         description: 'Cheshire Cat Grin Polishing',
@@ -35,49 +33,17 @@ export const sampleInvoices: InvoiceViewModel[] = [
         net_amount: 499.00,
         item_id: 'GRIN-002',
         invoice_id: 'MAD-001',
-        is_manual: false,
-        service_type: 'Maintenance',
-        category: 'Services'
+        is_manual: false
       }
     ],
-    metadata: {
-      project: {
-        name: 'Operation: Madness & Tea',
-        manager: 'The Mad Hatter',
-        status: 'In Progress',
-        priority: 'High'
-      },
-      billing: {
-        terms: 'Net 30',
-        method: 'Bank Transfer',
-        reference: 'PO-123456'
-      }
-    },
     company: {
       name: 'Wonderland Whimsies Ltd.',
       logo: 'https://example.com/cheshire-cat-logo.png',
-      address: {
-        street: '1 Rabbit Hole Lane',
-        city: 'Wonderland',
-        state: 'WL',
-        zip: '12345',
-        country: 'Wonderland'
-      },
-      contact: {
-        name: 'Alice Liddell',
-        title: 'Chief Tea Officer',
-        email: 'alice@wonderland.com',
-        phone: '555-0123'
-      }
+      address: '1 Rabbit Hole Lane, Wonderland, WL 12345, Wonderland'
     },
-    summary: {
-      subtotal_label: 'Subtotal',
-      subtotal: 1500.00,
-      tax_label: 'Tax (10%)',
-      tax: 150.00,
-      total_label: 'Total',
-      total: 1650.00,
-      currency: 'USD'
+    contact: {
+      name: 'Alice Liddell',
+      address: '1 Rabbit Hole Lane, Wonderland, WL 12345, Wonderland'
     },
     company_id: 'WNDR-001',
     credit_applied: 0,
@@ -103,9 +69,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
         net_amount: 2800.00,
         item_id: 'CROQUET-001',
         invoice_id: 'RED-002',
-        is_manual: false,
-        service_type: 'Maintenance',
-        category: 'Grounds'
+        is_manual: false
       },
       {
         description: 'Painting the Roses Red',
@@ -116,49 +80,17 @@ export const sampleInvoices: InvoiceViewModel[] = [
         net_amount: 200.00,
         item_id: 'ROSES-002',
         invoice_id: 'RED-002',
-        is_manual: false,
-        service_type: 'Painting',
-        category: 'Grounds'
+        is_manual: false
       }
     ],
-    metadata: {
-      project: {
-        name: 'Her Majesty\'s Garden Party',
-        manager: 'White Rabbit',
-        status: 'Urgent',
-        priority: 'Critical'
-      },
-      billing: {
-        terms: 'Due Immediately',
-        method: 'Royal Treasury',
-        reference: 'ROYAL-789'
-      }
-    },
     company: {
       name: 'Red Queen Enterprises',
       logo: 'https://example.com/red-queen-logo.png',
-      address: {
-        street: 'Heart Castle, Queen\'s Way',
-        city: 'Card Castle',
-        state: 'WL',
-        zip: '54321',
-        country: 'Wonderland'
-      },
-      contact: {
-        name: 'Knave of Hearts',
-        title: 'Royal Procurement Officer',
-        email: 'knave@redqueen.com',
-        phone: '555-9876'
-      }
+      address: 'Heart Castle, Queen\'s Way, Card Castle, WL 54321, Wonderland'
     },
-    summary: {
-      subtotal_label: 'Subtotal',
-      subtotal: 3000.00,
-      tax_label: 'Tax (10%)',
-      tax: 300.00,
-      total_label: 'Total',
-      total: 3300.00,
-      currency: 'USD'
+    contact: {
+      name: 'Knave of Hearts',
+      address: 'Heart Castle, Queen\'s Way, Card Castle, WL 54321, Wonderland'
     },
     company_id: 'RQE-001',
     credit_applied: 0,

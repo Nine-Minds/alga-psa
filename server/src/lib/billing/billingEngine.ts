@@ -66,128 +66,174 @@ export class BillingEngine {
     return !!existingInvoice;
   }
 
-  async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult> {
-    await this.initKnex();
-    const company = await getCompanyById(companyId);
-    console.log(`Calculating billing for company ${company?.company_name} (${companyId}) from ${startDate} to ${endDate}`);
-    
-    // Check for existing invoice in this billing cycle
-    const hasExistingInvoice = await this.hasExistingInvoiceForCycle(companyId, billingCycleId);
-    if (hasExistingInvoice) {
-      // Return zero-amount billing result if already invoiced
+  async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
+    try {
+      await this.initKnex();
+      const company = await getCompanyById(companyId);
+      console.log(`Calculating billing for company ${company?.company_name} (${companyId}) from ${startDate} to ${endDate}`);
+      
+      // Check for existing invoice in this billing cycle
+      const hasExistingInvoice = await this.hasExistingInvoiceForCycle(companyId, billingCycleId);
+      if (hasExistingInvoice) {
+        // Return zero-amount billing result if already invoiced
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0
+        };
+      }
+
+      // Validate that the billing period doesn't cross a cycle change
+      const validationResult = await this.validateBillingPeriod(companyId, startDate, endDate);
+      if (!validationResult.success) {
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0,
+          error: validationResult.error
+        };
+      }
+      
+      // Initialize all variables we'll need throughout the function
+      const billingPeriod: IBillingPeriod = { startDate, endDate };
+      let totalCharges: IBillingCharge[] = [];
+      
+      // Get billing plans and cycle
+      const plansResult = await this.getCompanyBillingPlansAndCycle(companyId, billingPeriod);
+      
+      // Type assertion to include error property
+      const { companyBillingPlans, billingCycle: cycle, error: plansError } = plansResult as {
+        companyBillingPlans: ICompanyBillingPlan[];
+        billingCycle: string;
+        error?: string;
+      };
+
+      if (plansError) {
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0,
+          error: plansError
+        };
+      }
+
+      if (companyBillingPlans.length === 0) {
+        return {
+          charges: [],
+          totalAmount: 0,
+          discounts: [],
+          adjustments: [],
+          finalAmount: 0,
+          error: `No active billing plans found for company ${companyId} in the given period`
+        };
+      }
+
+      console.log(`Found ${companyBillingPlans.length} active billing plan(s) for company ${companyId}`);
+      console.log(`Billing cycle: ${cycle}`);
+
+      for (const companyBillingPlan of companyBillingPlans) {
+        console.log(`Processing billing plan: ${companyBillingPlan.plan_name}`);
+        const [
+          fixedPriceCharges,
+          timeBasedCharges,
+          usageBasedCharges,
+          bucketPlanCharges,
+          productCharges,
+          licenseCharges
+        ] = await Promise.all([
+          this.calculateFixedPriceCharges(companyId, billingPeriod, companyBillingPlan),
+          this.calculateTimeBasedCharges(companyId, billingPeriod, companyBillingPlan),
+          this.calculateUsageBasedCharges(companyId, billingPeriod, companyBillingPlan),
+          this.calculateBucketPlanCharges(companyId, billingPeriod, companyBillingPlan),
+          this.calculateProductCharges(companyId, billingPeriod, companyBillingPlan),
+          this.calculateLicenseCharges(companyId, billingPeriod, companyBillingPlan)
+        ]);
+
+        console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
+        console.log(`Time-based charges: ${timeBasedCharges.length}`);
+        console.log(`Usage-based charges: ${usageBasedCharges.length}`);
+        console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
+        console.log(`Product charges: ${productCharges.length}`);
+        console.log(`License charges: ${licenseCharges.length}`);
+
+        console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
+
+        // Only prorate fixed price charges
+        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, cycle);
+
+        console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
+
+        // Combine all charges without prorating time-based or usage-based charges
+        totalCharges = totalCharges.concat(
+          proratedFixedCharges,
+          timeBasedCharges,
+          usageBasedCharges,
+          bucketPlanCharges,
+          productCharges,
+          licenseCharges
+        );
+
+        console.log('Total charges breakdown:');
+        proratedFixedCharges.forEach(charge => {
+          console.log(`fixed - ${charge.serviceName}: $${charge.total}`);
+        });
+        timeBasedCharges.forEach(charge => {
+          console.log(`hourly - ${charge.serviceName}: $${charge.total}`);
+        });
+        usageBasedCharges.forEach(charge => {
+          console.log(`usage - ${charge.serviceName}: $${charge.total}`);
+        });
+        bucketPlanCharges.forEach(charge => {
+          console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
+        });
+        productCharges.forEach(charge => {
+          console.log(`product - ${charge.serviceName}: $${charge.total}`);
+        });
+        licenseCharges.forEach(charge => {
+          console.log(`license - ${charge.serviceName}: $${charge.total}`);
+        });
+
+        console.log('Total charges:', totalCharges);
+      }
+
+      const totalAmount = totalCharges.reduce((sum, charge) => sum + charge.total, 0);
+
+
+
+      const finalCharges = await this.applyDiscountsAndAdjustments(
+        {
+          charges: totalCharges,
+          totalAmount,
+          discounts: [],
+          adjustments: [],
+          finalAmount: totalAmount
+        },
+        companyId,
+        billingPeriod
+      );
+
+      console.log(`Discounts applied: ${finalCharges.discounts.length}`);
+      console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
+      console.log(`Final amount after discounts and adjustments: $${finalCharges.finalAmount}`);      
+
+      return finalCharges;
+    } catch (err) {
+      console.error('Error in calculateBilling:', err);
       return {
         charges: [],
         totalAmount: 0,
         discounts: [],
         adjustments: [],
-        finalAmount: 0
+        finalAmount: 0,
+        error: err instanceof Error ? err.message : 'An error occurred while calculating billing'
       };
     }
-
-    // Validate that the billing period doesn't cross a cycle change
-    await this.validateBillingPeriod(companyId, startDate, endDate);
-    
-    const billingPeriod: IBillingPeriod = { startDate, endDate };
-    const { companyBillingPlans, billingCycle: cycle } = await this.getCompanyBillingPlansAndCycle(companyId, billingPeriod);
-    if (companyBillingPlans.length === 0) {
-      throw new Error(`No active billing plans found for company ${companyId} in the given period`);
-    }
-
-    console.log(`Found ${companyBillingPlans.length} active billing plan(s) for company ${companyId}`);
-    console.log(`Billing cycle: ${cycle}`);
-
-    let totalCharges: IBillingCharge[] = [];
-
-    for (const companyBillingPlan of companyBillingPlans) {
-      console.log(`Processing billing plan: ${companyBillingPlan.plan_name}`);
-      const [
-        fixedPriceCharges,
-        timeBasedCharges,
-        usageBasedCharges,
-        bucketPlanCharges,
-        productCharges,
-        licenseCharges
-      ] = await Promise.all([
-        this.calculateFixedPriceCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateTimeBasedCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateUsageBasedCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateBucketPlanCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateProductCharges(companyId, billingPeriod, companyBillingPlan),
-        this.calculateLicenseCharges(companyId, billingPeriod, companyBillingPlan)
-      ]);
-
-      console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
-      console.log(`Time-based charges: ${timeBasedCharges.length}`);
-      console.log(`Usage-based charges: ${usageBasedCharges.length}`);
-      console.log(`Bucket plan charges: ${bucketPlanCharges.length}`);
-      console.log(`Product charges: ${productCharges.length}`);
-      console.log(`License charges: ${licenseCharges.length}`);
-
-      console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
-
-      // Only prorate fixed price charges
-      const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, cycle);
-
-      console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
-
-      // Combine all charges without prorating time-based or usage-based charges
-      totalCharges = totalCharges.concat(
-        proratedFixedCharges,
-        timeBasedCharges,
-        usageBasedCharges,
-        bucketPlanCharges,
-        productCharges,
-        licenseCharges
-      );
-
-      console.log('Total charges breakdown:');
-      proratedFixedCharges.forEach(charge => {
-        console.log(`fixed - ${charge.serviceName}: $${charge.total}`);
-      });
-      timeBasedCharges.forEach(charge => {
-        console.log(`hourly - ${charge.serviceName}: $${charge.total}`);
-      });
-      usageBasedCharges.forEach(charge => {
-        console.log(`usage - ${charge.serviceName}: $${charge.total}`);
-      });
-      bucketPlanCharges.forEach(charge => {
-        console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
-      });
-      productCharges.forEach(charge => {
-        console.log(`product - ${charge.serviceName}: $${charge.total}`);
-      });
-      licenseCharges.forEach(charge => {
-        console.log(`license - ${charge.serviceName}: $${charge.total}`);
-      });
-
-      console.log('Total charges:', totalCharges);
-    }
-
-    const totalAmount = totalCharges.reduce((sum, charge) => sum + charge.total, 0);
-
-    const finalCharges = await this.applyDiscountsAndAdjustments(
-      {
-        charges: totalCharges,
-        totalAmount,
-        discounts: [],
-        adjustments: [],
-        finalAmount: totalAmount
-      },
-      companyId,
-      billingPeriod
-    );
-
-    console.log(`Discounts applied: ${finalCharges.discounts.length}`);
-    console.log(`Adjustments applied: ${finalCharges.adjustments.length}`);
-    console.log(`Final amount after discounts and adjustments: $${finalCharges.finalAmount}`);
-
-    return {
-      charges: finalCharges.charges,
-      totalAmount: finalCharges.totalAmount,
-      discounts: finalCharges.discounts,
-      adjustments: finalCharges.adjustments,
-      finalAmount: finalCharges.finalAmount
-    };
   }
 
   private async getCompanyBillingPlansAndCycle(companyId: string, billingPeriod: IBillingPeriod): Promise<{ companyBillingPlans: ICompanyBillingPlan[], billingCycle: string }> {
@@ -257,24 +303,36 @@ export class BillingEngine {
     return result.billing_cycle as BillingCycleType;
   }
 
-  private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<void> {
-    const cycles = await this.knex('company_billing_cycles')
-      .where({ company_id: companyId })
-      .where('effective_date', '<=', endDate)
-      .orderBy('effective_date', 'asc');
+  private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<{ success: boolean; error?: string }> {
+    try {
+      const cycles = await this.knex('company_billing_cycles')
+        .where({ company_id: companyId })
+        .where('effective_date', '<=', endDate)
+        .orderBy('effective_date', 'asc');
 
-    let currentCycle = null;
-    for (const cycle of cycles) {
-      if (cycle.effective_date <= startDate) {
-        currentCycle = cycle;
-      } else if (cycle.effective_date > startDate && cycle.effective_date < endDate) {
-        throw new Error('Invoice period cannot span billing cycle change');
+      let currentCycle = null;
+      for (const cycle of cycles) {
+        if (cycle.effective_date <= startDate) {
+          currentCycle = cycle;
+        } else if (cycle.effective_date > startDate && cycle.effective_date < endDate) {
+          return {
+            success: false,
+            error: 'Invoice period cannot span billing cycle change'
+          };
+        }
       }
-    }
 
-    if (!currentCycle) {
-      // If no cycle found, create default monthly cycle
-      await this.getBillingCycle(companyId, startDate);
+      if (!currentCycle) {
+        // If no cycle found, create default monthly cycle
+        await this.getBillingCycle(companyId, startDate);
+      }
+
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : 'Failed to validate billing period'
+      };
     }
   }
 

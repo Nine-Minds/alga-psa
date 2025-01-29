@@ -33,7 +33,11 @@ export function renderTemplateCore(
 
   // Calculate global values
   const globalValues: Record<string, number> = {};
-  template.parsed.globals.forEach(global => {
+  if (!template.parsed) {
+    throw new Error('Template parsed data is required for rendering');
+  }
+  
+  template.parsed.globals?.forEach(global => {
     if (global.type === 'calculation') {
       const result = calculateGlobal(global, invoiceData);
       globalValues[global.name] = result;
@@ -198,12 +202,12 @@ function renderItem(item: TemplateElement, index: number, invoiceData: InvoiceVi
 }
 
 function renderStaticText(staticText: StaticText, index: number, template: IInvoiceTemplate): string {
-  const textStyles = staticText.id
+  const textStyles = staticText.id && template.parsed
     ? template.parsed.sections
         .flatMap((section: Section) => section.content)
         .filter((item: TemplateElement): item is Style => item.type === 'style')
         .find((style: Style) =>
-        style.elements.includes(`text:${staticText.id}`) || 
+        style.elements.includes(`text:${staticText.id}`) ||
         style.elements.includes('' + staticText.id)
       )
     : undefined;
