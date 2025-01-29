@@ -111,9 +111,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       setShowPreviewDialog(true);
     } catch (error) {
       console.error('Error previewing invoice:', error);
-      setErrors({
-        preview: error instanceof Error ? error.message : 'Failed to preview invoice'
-      });
+      const errorMessage = error instanceof Error ? error.message : 'Failed to preview invoice';
+      if (errorMessage.includes('Nothing to bill') || errorMessage.includes('No active billing plans found')) {
+        setErrors({
+          preview: 'Nothing to bill for this period'
+        });
+      } else {
+        setErrors({
+          preview: errorMessage
+        });
+      }
     }
     setIsPreviewLoading(false);
   };
@@ -420,7 +427,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         </DialogHeader>
 
         <DialogContent>
-          {previewData && (
+          {errors.preview ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">{errors.preview}</p>
+            </div>
+          ) : previewData && (
             <div className="space-y-4">
               <div className="border-b pb-4">
                 <h3 className="font-semibold">Company Details</h3>
