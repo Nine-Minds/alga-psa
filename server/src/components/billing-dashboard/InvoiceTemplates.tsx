@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { getInvoiceTemplates, saveInvoiceTemplate } from '@/lib/actions/invoiceActions';
+import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from '@/lib/actions/invoiceActions';
 import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
 import InvoiceTemplateManager from './InvoiceTemplateManager';
 import CustomSelect from '../ui/CustomSelect';
@@ -29,6 +29,17 @@ const InvoiceTemplates: React.FC = () => {
     } catch (error) {
       console.error('Error cloning template:', error);
       setError('Failed to clone template');
+    }
+  };
+
+  const handleSetDefaultTemplate = async (template: IInvoiceTemplate) => {
+    try {
+      await setDefaultTemplate(template.template_id);
+      await fetchTemplates();
+      setError(null);
+    } catch (error) {
+      console.error('Error setting default template:', error);
+      setError('Failed to set default template');
     }
   };
 
@@ -85,7 +96,11 @@ const InvoiceTemplates: React.FC = () => {
                       {template.isStandard ? (
                         <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
                       ) : (
-                        <><GearIcon className="w-4 h-4" /> {template.name}</>
+                        <div className="flex items-center gap-1">
+                          <GearIcon className="w-4 h-4" /> 
+                          {template.name}
+                          {template.is_default && <span className="text-blue-500">(Default)</span>}
+                        </div>
                       )}
                     </div>
                   )
@@ -96,14 +111,27 @@ const InvoiceTemplates: React.FC = () => {
               />
             </div>
             {selectedTemplate && (
-              <Button
-                id='clone-template-button'
-                onClick={() => handleCloneTemplate(selectedTemplate)}
-                variant="outline"
-                size="sm"
-              >
-                Clone Template
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  id="clone-template-button"
+                  onClick={() => handleCloneTemplate(selectedTemplate)}
+                  variant="outline"
+                  size="sm"
+                >
+                  Clone Template
+                </Button>
+                {!selectedTemplate.isStandard && (
+                  <Button
+                    id="set-default-template-button"
+                    onClick={() => handleSetDefaultTemplate(selectedTemplate)}
+                    variant="outline"
+                    size="sm"
+                    disabled={selectedTemplate.is_default}
+                  >
+                    {selectedTemplate.is_default ? 'Default Template' : 'Set as Default'}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
           {selectedTemplate && (

@@ -95,6 +95,7 @@ export interface IInvoiceTemplate extends TenantEntity {
   };
   isStandard?: boolean;
   isClone?: boolean;
+  is_default?: boolean;
 }
 
 export interface GlobalCalculation {

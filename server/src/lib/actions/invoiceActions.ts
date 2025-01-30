@@ -745,11 +745,51 @@ export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceT
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-  const templates = await Invoice.getAllTemplates();
-  return templates.map((template): IInvoiceTemplate => ({
+  const { knex } = await createTenantKnex();
+  const templates = await knex('invoice_templates')
+    .select('*')
+    .orderBy('created_at', 'desc');
+  
+  return templates.map(template => ({
     ...template,
     parsed: template.dsl ? parseInvoiceTemplate(template.dsl) : null
   }));
+}
+
+export async function setDefaultTemplate(templateId: string): Promise<void> {
+  const { knex } = await createTenantKnex();
+  
+  await knex.transaction(async (trx) => {
+    // First, unset any existing default template
+    await trx('invoice_templates')
+      .where({ is_default: true })
+      .update({ is_default: false });
+
+    // Then set the new default template
+    await trx('invoice_templates')
+      .where({ template_id: templateId })
+      .update({ is_default: true });
+  });
+}
+
+export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
+  const { knex } = await createTenantKnex();
+  const template = await knex('invoice_templates')
+    .where({ is_default: true })
+    .first();
+  
+  if (template) {
+    template.parsed = template.dsl ? parseInvoiceTemplate(template.dsl) : null;
+  }
+  
+  return template;
+}
+
+export async function setCompanyTemplate(companyId: string, templateId: string | null): Promise<void> {
+  const { knex } = await createTenantKnex();
+  await knex('companies')
+    .where({ company_id: companyId })
+    .update({ invoice_template_id: templateId });
 }
 
 export async function finalizeInvoice(invoiceId: string): Promise<void> {

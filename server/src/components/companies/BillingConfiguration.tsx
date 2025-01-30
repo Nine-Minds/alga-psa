@@ -15,6 +15,7 @@ import { getTaxRates } from '../../lib/actions/taxRateActions';
 import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate } from '../../lib/actions/companyTaxRateActions';
 import { ITaxRate, ICompanyTaxRate } from '../../interfaces/billing.interfaces';
 import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
+import { setCompanyTemplate } from '../../lib/actions/invoiceActions';
 import BillingConfigForm from './BillingConfigForm';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
@@ -39,6 +40,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         preferred_payment_method: company.preferred_payment_method || '',
         auto_invoice: company.auto_invoice || false,
         invoice_delivery_method: company.invoice_delivery_method || '',
+        invoice_template_id: company.invoice_template_id || '',
     });
 
     const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
@@ -113,10 +115,22 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         setBillingConfig(prev => ({ ...prev, auto_invoice: checked }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { billing_cycle, ...restConfig } = billingConfig;
-        onSave(restConfig);
+        try {
+            const { billing_cycle, invoice_template_id, ...restConfig } = billingConfig;
+            
+            // Save company billing config
+            await onSave(restConfig);
+            
+            // Save template selection separately using the dedicated function
+            if (invoice_template_id !== company.invoice_template_id) {
+                await setCompanyTemplate(company.company_id, invoice_template_id || null);
+            }
+        } catch (error) {
+            console.error('Error saving billing configuration:', error);
+            setErrorMessage('Failed to save billing configuration');
+        }
     };
 
     const handleCompanyPlanChange = async (companyBillingPlanId: string, planId: string) => {

@@ -5,7 +5,7 @@ import { FileStore } from '../types/storage';
 import { getInvoiceForRendering, getInvoiceTemplates } from '../lib/actions/invoiceActions';
 import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
 import React from 'react';
-import { runWithTenant } from '../lib/db';
+import { runWithTenant, createTenantKnex } from '../lib/db';
 
 interface PDFGenerationOptions {
   invoiceId: string;
@@ -60,21 +60,40 @@ export class PDFGenerationService {
   private async getInvoiceHtml(invoiceId: string): Promise<string> {
     // Run all database operations with tenant context
     return runWithTenant(this.tenant, async () => {
-      // Fetch invoice data and templates (will use tenant from context)
-      const [invoiceData, templates] = await Promise.all([
-        getInvoiceForRendering(invoiceId),
-        getInvoiceTemplates()
-      ]);
+      // Fetch invoice data and company's template
+    const [invoiceData, templates] = await Promise.all([
+      getInvoiceForRendering(invoiceId),
+      getInvoiceTemplates()
+    ]);
 
-      if (!invoiceData) {
-        throw new Error(`Invoice ${invoiceId} not found`);
-      }
+    if (!invoiceData) {
+      throw new Error(`Invoice ${invoiceId} not found`);
+    }
 
-      // Use first template for now (can be made configurable)
-      const template = templates[0];
-      if (!template) {
-        throw new Error('No invoice templates found');
-      }
+    // Get company's selected template or default template
+    const { knex } = await createTenantKnex();
+    const company = await knex('companies')
+      .where({ company_id: invoiceData.company_id })
+      .first();
+
+    let template;
+    if (company?.invoice_template_id) {
+      template = templates.find(t => t.template_id === company.invoice_template_id);
+    }
+    
+    if (!template) {
+      // Fall back to default template
+      template = templates.find(t => t.is_default);
+    }
+
+    if (!template && templates.length > 0) {
+      // Fall back to first template if no default set
+      template = templates[0];
+    }
+
+    if (!template) {
+      throw new Error('No invoice templates found');
+    }
 
       // Render template using core renderer
       const rendered = renderTemplateCore(template, invoiceData);
