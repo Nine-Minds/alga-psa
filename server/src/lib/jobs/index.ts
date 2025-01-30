@@ -1,5 +1,5 @@
 import { Job } from 'pg-boss';
-import { JobScheduler, JobFilter } from './jobScheduler';
+import { JobScheduler, JobFilter, IJobScheduler } from './jobScheduler';
 import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
 import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
@@ -8,7 +8,7 @@ import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
 
 // Initialize the job scheduler singleton
-let jobScheduler: JobScheduler;
+let jobScheduler: IJobScheduler;
 
 // Initialize function to ensure scheduler is ready
 export const initializeScheduler = async (storageService?: StorageService) => {
@@ -17,6 +17,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     const jobService = await JobService.create();
     const storageService = new StorageService();
     jobScheduler = await JobScheduler.getInstance(jobService, storageService);
+
+    if (!jobScheduler) {
+      throw new Error('Failed to initialize job scheduler');
+    }
     
     // Register job handlers
     jobScheduler.registerJobHandler<GenerateInvoiceData>('generate-invoice', async (job: Job<GenerateInvoiceData>) => {

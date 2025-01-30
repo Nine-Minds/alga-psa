@@ -1,7 +1,6 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { postgresConnection } from '../db/knexfile';
 import { StorageService } from '@/lib/storage/StorageService';
-// import logger from '../../utils/logger';
 import { JobService } from '../../services/job.service';
 import { JobStatus } from '../../types/job.d';
 
@@ -32,12 +31,64 @@ export interface JobData {
   completedOn?: Date;
 }
 
-export class JobScheduler {
+export interface IJobScheduler {
+  scheduleImmediateJob<T extends Record<string, unknown>>(jobName: string, data: T): Promise<string | null>;
+  scheduleScheduledJob<T extends Record<string, unknown>>(jobName: string, runAt: Date, data: T): Promise<string | null>;
+  scheduleRecurringJob<T extends Record<string, unknown>>(jobName: string, interval: string, data: T): Promise<string | null>;
+  registerJobHandler<T extends Record<string, unknown>>(jobName: string, handler: (job: Job<T>) => Promise<void>): void;
+  registerGenericJobHandler<T extends Record<string, unknown>>(jobType: string, handler: (jobId: string, data: T) => Promise<void>): void;
+  getJobs(filter: JobFilter): Promise<PgBoss.Job<unknown>[]>;
+}
+
+// Dummy implementation that logs operations but doesn't actually do anything
+export class DummyJobScheduler implements IJobScheduler {
+  private static instance: DummyJobScheduler | null = null;
+
+  private constructor() {
+    console.warn('Using DummyJobScheduler - job scheduling functionality will be disabled');
+  }
+
+  public static getInstance(): DummyJobScheduler {
+    if (!DummyJobScheduler.instance) {
+      DummyJobScheduler.instance = new DummyJobScheduler();
+    }
+    return DummyJobScheduler.instance;
+  }
+
+  public async scheduleImmediateJob<T extends Record<string, unknown>>(jobName: string, data: T): Promise<string | null> {
+    console.warn(`DummyJobScheduler: Attempted to schedule immediate job "${jobName}"`, data);
+    return null;
+  }
+
+  public async scheduleScheduledJob<T extends Record<string, unknown>>(jobName: string, runAt: Date, data: T): Promise<string | null> {
+    console.warn(`DummyJobScheduler: Attempted to schedule job "${jobName}" for ${runAt}`, data);
+    return null;
+  }
+
+  public async scheduleRecurringJob<T extends Record<string, unknown>>(jobName: string, interval: string, data: T): Promise<string | null> {
+    console.warn(`DummyJobScheduler: Attempted to schedule recurring job "${jobName}" with interval ${interval}`, data);
+    return null;
+  }
+
+  public registerJobHandler<T extends Record<string, unknown>>(jobName: string, handler: (job: Job<T>) => Promise<void>): void {
+    console.warn(`DummyJobScheduler: Attempted to register handler for job "${jobName}"`);
+  }
+
+  public registerGenericJobHandler<T extends Record<string, unknown>>(jobType: string, handler: (jobId: string, data: T) => Promise<void>): void {
+    console.warn(`DummyJobScheduler: Attempted to register generic handler for job type "${jobType}"`);
+  }
+
+  public async getJobs(filter: JobFilter): Promise<PgBoss.Job<unknown>[]> {
+    console.warn('DummyJobScheduler: Attempted to get jobs with filter', filter);
+    return [];
+  }
+}
+
+export class JobScheduler implements IJobScheduler {
   private static instance: JobScheduler | null = null;
   private boss: PgBoss;
   private handlers: Map<string, (job: Job<Record<string, unknown>>) => Promise<void>> = new Map();
   private jobService: JobService;
-
   private storageService: StorageService;
 
   private constructor(boss: PgBoss, jobService: JobService, storageService: StorageService) {
@@ -46,7 +97,7 @@ export class JobScheduler {
     this.storageService = storageService;
   }
 
-  public static async getInstance(jobService: JobService, storageService: StorageService): Promise<JobScheduler> {
+  public static async getInstance(jobService: JobService, storageService: StorageService): Promise<IJobScheduler> {
     if (!JobScheduler.instance) {
       try {
         // Use postgres admin credentials with development environment
@@ -84,7 +135,8 @@ export class JobScheduler {
         JobScheduler.instance = new JobScheduler(boss, jobService, storageService);
       } catch (error) {
         console.error('Failed to initialize job scheduler:', error);
-        throw new Error('Failed to initialize job scheduler');
+        console.warn('Falling back to dummy job scheduler');
+        return DummyJobScheduler.getInstance();
       }
     }
     return JobScheduler.instance;
@@ -186,7 +238,6 @@ export class JobScheduler {
     });
   }
 
-
   public async getJobs(filter: JobFilter): Promise<PgBoss.Job<unknown>[]> {
     const state = filter.state || 'active';
     const jobs = await this.boss.fetch(state);
@@ -203,5 +254,4 @@ export class JobScheduler {
 
     return filteredJobs;
   }
-
 }

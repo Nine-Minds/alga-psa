@@ -2,11 +2,19 @@ import { registerTicketEmailSubscriber, unregisterTicketEmailSubscriber } from '
 import { registerProjectEmailSubscriber, unregisterProjectEmailSubscriber } from './projectEmailSubscriber';
 
 export async function registerAllSubscribers(): Promise<void> {
-  await registerTicketEmailSubscriber();
-  await registerProjectEmailSubscriber();
+  try {
+    await registerTicketEmailSubscriber();
+    await registerProjectEmailSubscriber();
+  } catch (error) {
+    console.error('Failed to register subscribers:', error);
+  }
 }
 
 export async function unregisterAllSubscribers(): Promise<void> {
-  await unregisterTicketEmailSubscriber();
-  await unregisterProjectEmailSubscriber();
+  try {
+    await unregisterTicketEmailSubscriber();
+    await unregisterProjectEmailSubscriber();
+  } catch (error) {
+    console.error('Failed to unregister subscribers:', error);
+  }
 }

@@ -34,9 +34,6 @@ COPY server/entrypoint.sh /app/entrypoint.sh
 # Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
-# Remove any existing .env file to prevent conflicts
-RUN rm -f ./.env
-
 # Make port 3000 available to the world outside this container
 EXPOSE 3000
 

@@ -1,6 +1,6 @@
 'use server'
 
-import { JobScheduler } from '@/lib/jobs/jobScheduler';
+import { JobScheduler, IJobScheduler } from '@/lib/jobs/jobScheduler';
 import { getCurrentUser } from '../user-actions/userActions';
 import logger from '@/utils/logger';
 import { JobService } from '@/services/job.service';
@@ -22,7 +22,7 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
 
   const jobService = await JobService.create();
   const storageService = new StorageService();
-  const scheduler = await JobScheduler.getInstance(jobService, storageService);
+  const scheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
 
   try {
     // Create steps for each invoice + zip creation
