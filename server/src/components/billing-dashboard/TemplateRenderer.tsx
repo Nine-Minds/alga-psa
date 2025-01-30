@@ -2,7 +2,6 @@
 'use client'
 import { useEffect, useState } from 'react';
 import { IInvoiceTemplate, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
-import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
 import { renderTemplateCore } from './TemplateRendererCore';
 
 interface TemplateRendererProps {

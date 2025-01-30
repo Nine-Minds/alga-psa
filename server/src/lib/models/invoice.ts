@@ -267,10 +267,11 @@ export default class Invoice {
 
   static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
     console.log('Getting full invoice details for:', invoiceId);
-    const { knex, tenant } = await createTenantKnex();
-    const adminConnection = await getAdminConnection();
+    const {knex, tenant} = await createTenantKnex();
 
-    const invoice = await adminConnection('invoices')
+    console.log('invoice details for invoiceId:', invoiceId, 'tenant:', tenant);
+
+    const invoice = await knex('invoices')
       .select(
         '*',
         knex.raw('CAST(subtotal AS INTEGER) as subtotal'),
@@ -401,7 +402,7 @@ export default class Invoice {
     return viewModel;
   }
 
-  static async finalizeInvoice(invoiceId: string): Promise<IInvoice> {
+  static async generateInvoice(invoiceId: string): Promise<IInvoice> {
     const { knex } = await createTenantKnex();
     const [updatedInvoice] = await knex('invoices')
       .where({ invoice_id: invoiceId })

@@ -35,8 +35,10 @@ export class InvoiceZipJobHandler {
     this.zipService = new ZipGenerationService(storageService);
   }
 
-  private async processSingleInvoice(invoiceId: string): Promise<{file_id: string, storage_path: string}> {
-    const pdfService = new PDFGenerationService(this.storageService);
+  private async processSingleInvoice(invoiceId: string, tenant: string): Promise<{file_id: string, storage_path: string}> {
+    const pdfService = new PDFGenerationService(this.storageService, {
+      tenant
+    });
     const invoice = await getInvoiceForRendering(invoiceId);
     const fileRecord = await pdfService.generateAndStore({
       invoiceId,
@@ -69,7 +71,7 @@ export class InvoiceZipJobHandler {
           { tenantId: data.tenantId }
         );
         
-        const fileRecord = await this.processSingleInvoice(invoiceId);
+        const fileRecord = await this.processSingleInvoice(invoiceId, data.tenantId);
         fileRecords.push(fileRecord);
         
         await this.jobService.updateStepStatus(

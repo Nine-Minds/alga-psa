@@ -5,6 +5,7 @@ import { FileStore } from '../types/storage';
 import { getInvoiceForRendering, getInvoiceTemplates } from '../lib/actions/invoiceActions';
 import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
 import React from 'react';
+import { runWithTenant } from '../lib/db';
 
 interface PDFGenerationOptions {
   invoiceId: string;
@@ -15,14 +16,20 @@ interface PDFGenerationOptions {
 
 export class PDFGenerationService {
   private readonly pdfCacheDir: string;
+  private readonly tenant: string;
 
   constructor(
     private readonly storageService: StorageService,
     private config: {
       pdfCacheDir?: string;
-    } = {}
+      tenant: string;
+    }
   ) {
+    if (!config.tenant) {
+      throw new Error('Tenant is required for PDF generation');
+    }
     this.pdfCacheDir = config.pdfCacheDir || '/tmp/pdf-cache';
+    this.tenant = config.tenant;
   }
 
   async generateAndStore(options: PDFGenerationOptions): Promise<FileStore> {
@@ -51,32 +58,35 @@ export class PDFGenerationService {
   }
 
   private async getInvoiceHtml(invoiceId: string): Promise<string> {
-    // Fetch invoice data and templates
-    const [invoiceData, templates] = await Promise.all([
-      getInvoiceForRendering(invoiceId),
-      getInvoiceTemplates()
-    ]);
+    // Run all database operations with tenant context
+    return runWithTenant(this.tenant, async () => {
+      // Fetch invoice data and templates (will use tenant from context)
+      const [invoiceData, templates] = await Promise.all([
+        getInvoiceForRendering(invoiceId),
+        getInvoiceTemplates()
+      ]);
 
-    if (!invoiceData) {
-      throw new Error(`Invoice ${invoiceId} not found`);
-    }
+      if (!invoiceData) {
+        throw new Error(`Invoice ${invoiceId} not found`);
+      }
 
-    // Use first template for now (can be made configurable)
-    const template = templates[0];
-    if (!template) {
-      throw new Error('No invoice templates found');
-    }
+      // Use first template for now (can be made configurable)
+      const template = templates[0];
+      if (!template) {
+        throw new Error('No invoice templates found');
+      }
 
-    // Render template using core renderer
-    const rendered = renderTemplateCore(template, invoiceData);
-    return `
-      <html>
-        <head>
-          <style>${rendered.styles}</style>
-        </head>
-        <body>${rendered.html}</body>
-      </html>
-    `;
+      // Render template using core renderer
+      const rendered = renderTemplateCore(template, invoiceData);
+      return `
+        <html>
+          <head>
+            <style>${rendered.styles}</style>
+          </head>
+          <body>${rendered.html}</body>
+        </html>
+      `;
+    });
   }
 
   private async generatePDFBuffer(content: string): Promise<Uint8Array> {

@@ -5,10 +5,10 @@ import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip';
-import { Info, AlertTriangle } from 'lucide-react';
+import { Info, AlertTriangle, X } from 'lucide-react';
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
-import { finalizeInvoice } from '../../lib/actions/invoiceActions';
+import { generateInvoice } from '../../lib/actions/invoiceActions';
 import { getInvoicedBillingCycles, removeBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
@@ -125,7 +125,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     
     for (const billingCycleId of selectedPeriods) {
       try {
-        await finalizeInvoice(billingCycleId);
+        await generateInvoice(billingCycleId);
       } catch (err) {
         // Get company name for the failed billing cycle
         const period = periods.find(p => p.billing_cycle_id === billingCycleId);
@@ -192,7 +192,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 onChange={(e) => setCompanyFilter(e.target.value)}
               />
               <Button
-                id='finalize-invoices-button'
+                id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
                 disabled={selectedPeriods.size === 0 || isGenerating}
                 className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
@@ -204,6 +204,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
           {Object.keys(errors).length > 0 && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+              <button
+                onClick={() => setErrors({})}
+                className="absolute top-2 right-2 p-1 hover:bg-red-200 rounded-full transition-colors"
+                aria-label="Close error message"
+              >
+                <X className="h-5 w-5" />
+              </button>
               <h4 className="font-semibold mb-2">Errors occurred while finalizing invoices:</h4>
               <ul className="list-disc pl-5">
                 {Object.entries(errors).map(([company, errorMessage]): JSX.Element => (

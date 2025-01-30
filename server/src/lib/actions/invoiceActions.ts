@@ -2,6 +2,7 @@
 
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
+import { Knex } from 'knex';
 import {
   IInvoiceTemplate,
   ICustomField,
@@ -30,6 +31,8 @@ import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Tent } from 'lucide-react';
+import { auditLog } from '@/lib/logging/auditLog';
+import { getAdminConnection } from '../db/admin';
 interface ManualInvoiceUpdate {
   service_id?: string;
   description?: string;
@@ -251,14 +254,19 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 }
 
-export async function finalizeInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
+export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
   // Get billing cycle details
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   const billingCycle = await knex('company_billing_cycles')
     .where({ billing_cycle_id })
     .first();
@@ -645,6 +653,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
     total_amount: invoice.total_amount,
     credit_applied: (invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
+    finalized_at: invoice.finalized_at ? parseISO(typeof invoice.finalized_at === 'string' ? invoice.finalized_at : invoice.finalized_at.toISOString()) : undefined,
     invoice_items: [] // Empty array initially
   };
 }
@@ -696,6 +705,11 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
 export async function getInvoiceForRendering(invoiceId: string): Promise<InvoiceViewModel> {
   try {
     console.log('Fetching full invoice details for rendering:', invoiceId);
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
     return Invoice.getFullInvoiceById(invoiceId);
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);
@@ -738,12 +752,129 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
   }));
 }
 
+export async function finalizeInvoice(invoiceId: string): Promise<void> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+  
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  await finalizeInvoiceWithKnex(invoiceId, knex, tenant, session.user.id);
+}
+
+export async function finalizeInvoiceWithKnex(
+  invoiceId: string,
+  knex: Knex,
+  tenant: string,
+  userId: string
+): Promise<void> {
+  await knex.transaction(async (trx) => {
+    // Check if invoice exists and is not already finalized
+    const invoice = await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (invoice.finalized_at) {
+      throw new Error('Invoice is already finalized');
+    }
+
+    await trx('invoices')
+      .where({ invoice_id: invoiceId, tenant: tenant })
+      .update({
+        finalized_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+    // Record audit log
+    await auditLog(
+      trx,
+      {
+        userId: userId,
+        operation: 'invoice_finalized',
+        tableName: 'invoices',
+        recordId: invoiceId,
+        changedData: { finalized_at: new Date().toISOString() },
+        details: {
+          action: 'Invoice finalized',
+          invoiceNumber: invoice.invoice_number
+        }
+      }
+    );
+  });
+}
+
+export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+  
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  await knex.transaction(async (trx) => {
+    // Check if invoice exists and is finalized
+    const invoice = await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (!invoice.finalized_at) {
+      throw new Error('Invoice is not finalized');
+    }
+
+    await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        finalized_at: null,
+        updated_at: new Date().toISOString()
+      });
+
+    // Record audit log
+    await auditLog(
+      trx,
+      {
+        userId: session.user.id,
+        operation: 'invoice_unfinalized',
+        tableName: 'invoices',
+        recordId: invoiceId,
+        changedData: { finalized_at: null },
+        details: {
+          action: 'Invoice unfinalized',
+          invoiceNumber: invoice.invoice_number
+        }
+      }
+    );
+  });
+}
+
 export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: string }> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   const storageService = new StorageService();
   const pdfGenerationService = new PDFGenerationService(
     storageService,
     {
-      pdfCacheDir: process.env.PDF_CACHE_DIR
+      pdfCacheDir: process.env.PDF_CACHE_DIR,
+      tenant
     }
   );
   
@@ -841,6 +972,10 @@ export async function updateInvoiceManualItems(
   changes: ManualItemsUpdate
 ): Promise<InvoiceViewModel> {
   const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   const session = await getServerSession(options);
   const billingEngine = new BillingEngine();
 
@@ -1013,6 +1148,9 @@ export async function addManualItemsToInvoice(
   items: IManualInvoiceItem[]
 ): Promise<InvoiceViewModel> {
   const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
   const session = await getServerSession(options);
 
   if (!session?.user?.id) {

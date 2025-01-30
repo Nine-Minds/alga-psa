@@ -42,7 +42,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   const tabs = [
     'overview',
-    'finalize-invoices',
+    'generate-invoices',
     'invoices',
     'invoice-templates',
     'tax-rates',
@@ -83,7 +83,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <Overview />
         </Tabs.Content>
 
-        <Tabs.Content value="finalize-invoices">
+        <Tabs.Content value="generate-invoices">
           <GenerateInvoices />
         </Tabs.Content>
 

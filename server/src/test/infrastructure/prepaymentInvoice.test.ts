@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
 import { startOfMonth, endOfMonth, subMonths, addMonths, format } from 'date-fns';
-import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
+import { generateInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
 import { createPrepaymentInvoice } from '@/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import knex from 'knex';
@@ -173,7 +173,7 @@ describe('Prepayment Invoice System', () => {
     it('finalizes a prepayment invoice and creates credit', async () => {
       const prepaymentAmount = 100000;
       const invoice = await createPrepaymentInvoice(companyId, prepaymentAmount);
-      const finalizedInvoice = await finalizeInvoice(invoice.invoice_id);
+      const finalizedInvoice = await generateInvoice(invoice.invoice_id);
 
       expect(finalizedInvoice).toMatchObject({
         invoice_id: invoice.invoice_id,
@@ -287,7 +287,7 @@ describe('Prepayment Invoice System', () => {
       // Setup prepayment
       const prepaymentAmount = 100000;
       const prepaymentInvoice = await createPrepaymentInvoice(companyId, prepaymentAmount);
-      await finalizeInvoice(prepaymentInvoice.invoice_id);
+      await generateInvoice(prepaymentInvoice.invoice_id);
 
       const initialCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
@@ -420,11 +420,11 @@ describe('Multiple Credit Applications', () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
     const prepaymentInvoice1 = await createPrepaymentInvoice(companyId, prepaymentAmount1);
-    await finalizeInvoice(prepaymentInvoice1.invoice_id);
+    await generateInvoice(prepaymentInvoice1.invoice_id);
 
     const prepaymentAmount2 = 30000;
     const prepaymentInvoice2 = await createPrepaymentInvoice(companyId, prepaymentAmount2);
-    await finalizeInvoice(prepaymentInvoice2.invoice_id);
+    await generateInvoice(prepaymentInvoice2.invoice_id);
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
@@ -459,11 +459,11 @@ describe('Multiple Credit Applications', () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
     const prepaymentInvoice1 = await createPrepaymentInvoice(companyId, prepaymentAmount1);
-    await finalizeInvoice(prepaymentInvoice1.invoice_id);
+    await generateInvoice(prepaymentInvoice1.invoice_id);
 
     const prepaymentAmount2 = 30000;
     const prepaymentInvoice2 = await createPrepaymentInvoice(companyId, prepaymentAmount2);
-    await finalizeInvoice(prepaymentInvoice2.invoice_id);
+    await generateInvoice(prepaymentInvoice2.invoice_id);
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
@@ -496,11 +496,11 @@ describe('Multiple Credit Applications', () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
     const prepaymentInvoice1 = await createPrepaymentInvoice(companyId, prepaymentAmount1);
-    await finalizeInvoice(prepaymentInvoice1.invoice_id);
+    await generateInvoice(prepaymentInvoice1.invoice_id);
 
     const prepaymentAmount2 = 30000;
     const prepaymentInvoice2 = await createPrepaymentInvoice(companyId, prepaymentAmount2);
-    await finalizeInvoice(prepaymentInvoice2.invoice_id);
+    await generateInvoice(prepaymentInvoice2.invoice_id);
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
@@ -523,7 +523,7 @@ describe('Multiple Credit Applications', () => {
     // Setup a prepayment
     const prepaymentAmount = 1000;
     const prepaymentInvoice = await createPrepaymentInvoice(companyId, prepaymentAmount);
-    const finalizedInvoice = await finalizeInvoice(prepaymentInvoice.invoice_id);
+    const finalizedInvoice = await generateInvoice(prepaymentInvoice.invoice_id);
 
     // Create credit issuance transaction after invoice is finalized
     await db('transactions').insert({

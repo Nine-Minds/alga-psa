@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
-import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
+import { generateInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
 import { v4 as uuidv4 } from 'uuid';
 import knex from 'knex';
 import { parse, addDays, parseISO, differenceInCalendarDays } from 'date-fns';
@@ -610,7 +610,7 @@ describe('Billing Invoice Generation', () => {
       const invoice = await generateInvoice(billingCycle.billing_cycle_id);
 
       // Act
-      const finalizedInvoice = await finalizeInvoice(invoice.invoice_id);
+      const finalizedInvoice = await generateInvoice(invoice.invoice_id);
 
       // Assert
       expect(finalizedInvoice).toMatchObject({

@@ -1,26 +1,30 @@
-import { createTenantKnex } from '../db';
+import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AuditLogParams {
   userId?: string;
-  tenantId: string;
-  action: string;
+  operation: string;
+  tableName: string;
+  recordId: string;
+  changedData: Record<string, unknown>;
   details: Record<string, unknown>;
 }
 
-export async function auditLog(params: AuditLogParams) {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-  
+export async function auditLog(
+  knex: Knex,
+  params: AuditLogParams
+) {
   try {
-    // await knex('audit_logs').insert({
-    //   user_id: params.userId,
-    //   tenant_id: params.tenantId,
-    //   action: params.action,
-    //   details: JSON.stringify(params.details),
-    //   created_at: new Date()
-    // });
+    await knex('audit_logs').insert({
+      audit_id: uuidv4(),
+      user_id: params.userId,
+      operation: params.operation,
+      table_name: params.tableName,
+      record_id: params.recordId,
+      changed_data: params.changedData,
+      details: params.details,
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Failed to write audit log:', error);
     throw new Error('Failed to write audit log');

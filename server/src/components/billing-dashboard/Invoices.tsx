@@ -9,7 +9,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/DropdownMenu';
-import { fetchAllInvoices, getInvoiceTemplates, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
+import {
+  fetchAllInvoices,
+  getInvoiceTemplates,
+  getInvoiceLineItems,
+  finalizeInvoice,
+  unfinalizeInvoice
+} from '@/lib/actions/invoiceActions';
 import { scheduleInvoiceZipAction } from '@/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
@@ -19,6 +25,7 @@ import PaperInvoice from './PaperInvoice';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Button } from '@/components/ui/Button';
 import { DataTable } from '@/components/ui/DataTable';
+import { CustomTabs } from '@/components/ui/CustomTabs';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import ManualInvoices from './ManualInvoices';
 import { ICompany } from '@/interfaces';
@@ -32,16 +39,26 @@ interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> 
 const Invoices: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
-  const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
+
+  const [allInvoices, setAllInvoices] = useState<InvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
 
-  // Get state from URL parameters
+  const [activeTab, setActiveTab] = useState<'Draft' | 'Finalized'>('Draft');
   const selectedInvoiceId = searchParams?.get('invoiceId');
+
+  // Filter invoices based on tab
+  const invoices = activeTab === 'Draft'
+    ? allInvoices.filter(inv => !inv.finalized_at)
+    : allInvoices.filter(inv => inv.finalized_at);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as 'Draft' | 'Finalized');
+    setSelectedInvoices(new Set());
+  };
   const selectedTemplateId = searchParams?.get('templateId');
   const managingInvoiceId = searchParams?.get('managingInvoiceId');
 
@@ -77,7 +94,7 @@ const Invoices: React.FC = () => {
         getServices()
       ]);
 
-      setInvoices(fetchedInvoices);
+      setAllInvoices(fetchedInvoices);
       setTemplates(fetchedTemplates);
       setCompanies(fetchedCompanies);
       setServices(fetchedServices.map((service): ServiceWithRate => ({
@@ -90,9 +107,24 @@ const Invoices: React.FC = () => {
     }
   };
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    loadData();
-  }, []);
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        await loadData();
+      } catch (err) {
+        console.error('Error loading invoices:', err);
+        setError('Failed to load invoices. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [activeTab]); // Refresh when tab changes
 
   const handleInvoiceSelect = (invoice: InvoiceViewModel) => {
     const defaultTemplateId = templates.length > 0 ? templates[0].template_id : null;
@@ -133,7 +165,8 @@ const Invoices: React.FC = () => {
     setSelectedInvoices(newSelection);
   };
 
-  const columns: ColumnDefinition<InvoiceViewModel>[] = [
+  // Define table columns
+  const baseColumns: ColumnDefinition<InvoiceViewModel>[] = [
     {
       title: (
         <div className="flex items-center">
@@ -182,7 +215,8 @@ const Invoices: React.FC = () => {
     },
     {
       title: 'Status',
-      dataIndex: 'status',
+      dataIndex: 'finalized_at',
+      render: (value) => value ? 'Finalized' : 'Draft',
     },
     {
       title: 'Date',
@@ -206,29 +240,34 @@ const Invoices: React.FC = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={`manage-items-menu-item-${record.invoice_id}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleManageItemsClick(record);
-              }}
-            >
-              {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
-            </DropdownMenuItem>
+            {!record.finalized_at && (
+              <DropdownMenuItem
+                id={`manage-items-menu-item-${record.invoice_id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleManageItemsClick(record);
+                }}
+              >
+                {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id={`download-pdf-menu-item-${record.invoice_id}`}
               onClick={async (e) => {
                 e.stopPropagation();
+                setError(null);
                 try {
                   const { jobId } = await scheduleInvoiceZipAction([record.invoice_id]);
                   
                   if (jobId) {
                     setActiveJobs(prev => new Set(prev).add(jobId));
-                    // TODO: Implement job status polling and download handling
+                    // Finalize the invoice when PDF is downloaded
+                    await finalizeInvoice(record.invoice_id);
+                    await loadData();
                   }
                 } catch (error) {
                   console.error('Failed to generate PDF:', error);
-                  // TODO: Show error notification
+                  setError('Failed to generate PDF. Please try again.');
                 }
               }}
             >
@@ -240,14 +279,31 @@ const Invoices: React.FC = () => {
     },
   ];
 
+  // Add finalized date column for finalized tab
+  const finalizedColumns = activeTab === 'Finalized' ? [
+    ...baseColumns.slice(0, -1),
+    {
+      title: 'Finalized Date',
+      dataIndex: 'finalized_at',
+      render: (value: string) => value ? new Date(value).toLocaleDateString() : '',
+    },
+    baseColumns[baseColumns.length - 1], // Action column
+  ] : baseColumns;
+
+  // Redirect to invoice list if trying to manage a finalized invoice
+  if (managingInvoice?.finalized_at) {
+    router.push('/msp/billing');
+    return <></>;
+  }
+
   if (managingInvoice) {
     return (
       <div className="space-y-8">
         <div className="flex justify-between items-center">
           <div className="flex gap-4">
-          <BackNav>Back to Invoices</BackNav>          
+            <BackNav>Back to Invoices</BackNav>
             <h2 className="text-2xl font-bold">
-              {managingInvoice.is_manual 
+              {managingInvoice.is_manual
                 ? `Manage Items - Invoice ${managingInvoice.invoice_number}`
                 : `Manage Manual Items - Invoice ${managingInvoice.invoice_number}`}
             </h2>
@@ -270,95 +326,155 @@ const Invoices: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Invoices</h2>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="invoice-actions-dropdown"
-              variant="outline"
-              disabled={selectedInvoices.size === 0}
-              className="flex items-center gap-2"
-            >
-              Actions
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onClick={async () => {
-                try {
-                  const { jobId } = await scheduleInvoiceZipAction(Array.from(selectedInvoices));
-                  
-                  if (jobId) {
-                    setActiveJobs(prev => new Set(prev).add(jobId));
-                    // TODO: Implement job status polling and download handling
-                  }
-                } catch (error) {
-                  console.error('Failed to schedule PDF generation:', error);
-                  // TODO: Show error notification
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-bold">Invoices</h2>
+          <div className="flex items-center gap-4">
+            <CustomTabs
+              tabs={[
+                {
+                  label: 'Draft',
+                  content: null
+                },
+                {
+                  label: 'Finalized',
+                  content: null
                 }
-              }}
-            >
-              Download PDFs
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={async () => {
-                try {
-                  // TODO: Implement finalize invoices logic
-                  // TODO: Show success notification
-                } catch (error) {
-                  console.error('Failed to finalize invoices:', error);
-                  // TODO: Show error notification
-                }
-              }}
-            >
-              Finalize Selected Invoices
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-      <DataTable
-        data={invoices}
-        columns={columns}
-        pagination={true}
-        onRowClick={handleInvoiceSelect}
-      />
+              ]}
+              defaultTab={activeTab}
+              onTabChange={handleTabChange}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  id="invoice-actions-dropdown"
+                  variant="outline"
+                  disabled={selectedInvoices.size === 0}
+                  className="flex items-center gap-2"
+                >
+                  Actions
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setError(null);
+                    try {
+                      const { jobId } = await scheduleInvoiceZipAction(Array.from(selectedInvoices));
 
-      {selectedInvoice && (
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-4">Select Template</h3>
-          <CustomSelect
-            options={templates.map((template): { value: string; label: JSX.Element } => ({
-              value: template.template_id,
-              label: (
-                <div className="flex items-center gap-2">
-                  {template.isStandard ? (
-                    <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
-                  ) : (
-                    <><GearIcon className="w-4 h-4" /> {template.name}</>
-                  )}
-                </div>
-              )
-            }))}
-            onValueChange={handleTemplateSelect}
-            value={selectedTemplate?.template_id || ''}
-            placeholder="Select invoice template..."
+                      if (jobId) {
+                        setActiveJobs(prev => new Set(prev).add(jobId));
+                        // Finalize all downloaded invoices
+                        for (const invoiceId of selectedInvoices) {
+                          await finalizeInvoice(invoiceId);
+                        }
+                        setSelectedInvoices(new Set());
+                        await loadData();
+                      }
+                    } catch (error) {
+                      console.error('Failed to schedule PDF generation:', error);
+                      setError('Failed to generate PDFs. Please try again.');
+                    }
+                  }}
+                >
+                  Download PDFs
+                </DropdownMenuItem>
+                {activeTab === 'Draft' ? (
+                  <DropdownMenuItem
+                    id="finalize-selected-invoices-menu-item"
+                    onClick={async () => {
+                      setError(null);
+                      try {
+                        for (const invoiceId of selectedInvoices) {
+                          await finalizeInvoice(invoiceId);
+                        }
+                        setSelectedInvoices(new Set());
+                        await loadData();
+                      } catch (error) {
+                        console.error('Failed to finalize invoices:', error);
+                        setError('Failed to finalize invoices. Please try again.');
+                      }
+                    }}
+                  >
+                    Finalize Selected Invoices
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    id="unfinalize-selected-invoices-menu-item"
+                    onClick={async () => {
+                      setError(null);
+                      try {
+                        for (const invoiceId of selectedInvoices) {
+                          await unfinalizeInvoice(invoiceId);
+                        }
+                        setSelectedInvoices(new Set());
+                        await loadData();
+                      } catch (error) {
+                        console.error('Failed to unfinalize invoices:', error);
+                        setError('Failed to unfinalize invoices. Please try again.');
+                      }
+                    }}
+                  >
+                    Unfinalize Selected Invoices
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        {error && (
+          <div className="text-red-500 mb-4">{error}</div>
+        )}
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/50 flex items-center justify-center z-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+          )}
+          <DataTable
+            data={invoices}
+            columns={finalizedColumns}
+            pagination={true}
+            onRowClick={handleInvoiceSelect}
           />
         </div>
-      )}
 
-      {selectedInvoice && selectedTemplate && (
-        <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-4">Invoice Preview</h3>
-          <PaperInvoice>
-            <TemplateRenderer
-              template={selectedTemplate}
-              invoiceData={selectedInvoice}
+        {selectedInvoice && (
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold mb-4">Select Template</h3>
+            <CustomSelect
+              options={templates.map((template): { value: string; label: JSX.Element } => ({
+                value: template.template_id,
+                label: (
+                  <div className="flex items-center gap-2">
+                    {template.isStandard ? (
+                      <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
+                    ) : (
+                      <><GearIcon className="w-4 h-4" /> {template.name}</>
+                    )}
+                  </div>
+                )
+              }))}
+              onValueChange={handleTemplateSelect}
+              value={selectedTemplate?.template_id || ''}
+              placeholder="Select invoice template..."
             />
-          </PaperInvoice>
-        </div>
-      )}
+          </div>
+        )}
+
+        {selectedInvoice && selectedTemplate && (
+          <div className="mt-8">
+            <h3 className="text-xl font-semibold mb-4">Invoice Preview</h3>
+            <PaperInvoice>
+              <TemplateRenderer
+                template={selectedTemplate}
+                invoiceData={selectedInvoice}
+              />
+            </PaperInvoice>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
