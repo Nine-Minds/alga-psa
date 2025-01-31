@@ -15,9 +15,10 @@ const CONSUMER_GROUP = config.eventBus.consumerGroup;
 
 export async function initializeEmailNotificationConsumer(tenantId: string) {
   const config = getRedisConfig();
+  const password = await getSecret('redis_password', 'REDIS_PASSWORD');
   const client = createClient({
     url: config.url,
-    password: getSecret('redis_password', 'REDIS_PASSWORD'),
+    password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {

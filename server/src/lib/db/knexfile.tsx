@@ -21,17 +21,17 @@ setTypeParser(1114, str => new Date(str + 'Z'));
 
 import { getSecret } from '../utils/getSecret';
 
-const getDbPassword = () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
-const getPostgresPassword = () => getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
+const getDbPassword = async () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+const getPostgresPassword = async () => getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
 
 // Special connection config for postgres user (needed for job scheduler)
-export const postgresConnection = {
+export const getPostgresConnection = async () => ({
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 5432,
   user: process.env.DB_USER_ADMIN || 'postgres',
-  password: getPostgresPassword(),
+  password: await getPostgresPassword(),
   database: process.env.DB_NAME_SERVER || 'server'
-} satisfies Knex.PgConnectionConfig;
+} satisfies Knex.PgConnectionConfig);
 
 interface CustomKnexConfig extends Knex.Config {
   connection: Knex.PgConnectionConfig;
@@ -47,6 +47,32 @@ interface CustomKnexConfig extends Knex.Config {
   afterRelease?: (conn: any, done: Function) => void;
 }
 
+export const getKnexConfig = async (env: string): Promise<CustomKnexConfig> => {
+  const password = await getDbPassword();
+  const baseConfig = {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 5432,
+      user: env === 'production' ? 'app_user' : (process.env.DB_USER_SERVER || 'app_user'),
+      password,
+      database: process.env.DB_NAME_SERVER || 'server'
+    },
+    pool: {
+      min: 0,
+      max: 20,
+      idleTimeoutMillis: 1000,
+      reapIntervalMillis: 1000,
+      createTimeoutMillis: 30000,
+      destroyTimeoutMillis: 5000
+    }
+  };
+
+  return baseConfig;
+};
+
+// Export a default config for tools that require synchronous config
+// Sync configuration for tools that require it
 const knexfile: Record<string, CustomKnexConfig> = {
   development: {
     client: 'pg',
@@ -54,7 +80,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: getDbPassword(),
+      password: process.env.DB_PASSWORD_SERVER || '', // Fallback to env var
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -72,7 +98,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: getDbPassword(),
+      password: process.env.DB_PASSWORD_SERVER || '', // Fallback to env var
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -86,9 +112,9 @@ const knexfile: Record<string, CustomKnexConfig> = {
   }
 };
 
-export const getKnexConfigWithTenant = (tenant: string): CustomKnexConfig => {
+export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKnexConfig> => {
   const env = process.env.APP_ENV || 'development';
-  const config = { ...knexfile[env] };
+  const config = await getKnexConfig(env);
   
   return {
     ...config,

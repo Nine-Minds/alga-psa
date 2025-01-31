@@ -1,12 +1,16 @@
-import fs from 'fs';
+'use server'
+
+import { promises as fs } from 'fs';
 import path from 'path';
 
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';
 const LOCAL_SECRETS_PATH = '../secrets';
-const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
 
-console.log('SECRETS_PATH', SECRETS_PATH);
+// Cache the secrets path promise
+const SECRETS_PATH_PROMISE = fs.access(DOCKER_SECRETS_PATH)
+  .then(() => DOCKER_SECRETS_PATH)
+  .catch(() => LOCAL_SECRETS_PATH);
 
 /**
  * Gets a secret value from either a Docker secret file or environment variable
@@ -15,17 +19,18 @@ console.log('SECRETS_PATH', SECRETS_PATH);
  * @param defaultValue - Optional default value if neither source exists
  * @returns The secret value as a string
  */
-export function getSecret(secretName: string, envVar: string, defaultValue: string = ''): string {
-  const secretPath = path.join(SECRETS_PATH, secretName);
+export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   try {
-    return fs.readFileSync(secretPath, 'utf8').trim();
+    const secretsPath = await SECRETS_PATH_PROMISE;
+    const secretPath = path.join(secretsPath, secretName);
+    const value = await fs.readFile(secretPath, 'utf8');
+    return value.trim();
   } catch (error) {
     if (process.env[envVar]) {
       console.warn(`Using ${envVar} environment variable instead of Docker secret`);
       return process.env[envVar] || defaultValue;
     }
-    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
+    console.warn(`Neither secret file nor ${envVar} environment variable found, using default value`);
     return defaultValue;
   }
 }
-

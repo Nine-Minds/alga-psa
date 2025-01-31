@@ -12,16 +12,16 @@ import {
 } from './events';
 
 // Redis client configuration
-const createRedisClient = () => {
+const createRedisClient = async () => {
   const config = getRedisConfig();
-  const password = getSecret('redis_password', 'REDIS_PASSWORD');
+  const password = await getSecret('redis_password', 'REDIS_PASSWORD');
   if (!password) {
     logger.warn('[EventBus] No Redis password configured - this is not recommended for production');
   }
   
   const client = createClient({
     url: config.url,
-    password: password,
+    password,
     socket: {
       reconnectStrategy: (retries) => {
         if (retries > config.eventBus.reconnectStrategy.retries) {
@@ -47,12 +47,12 @@ const createRedisClient = () => {
 };
 
 // Singleton Redis client
-let client: ReturnType<typeof createRedisClient> | null = null;
+let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
 
 async function getClient() {
   if (!client) {
     logger.debug('[EventBus] Creating new Redis client');
-    client = createRedisClient();
+    client = await createRedisClient();
     await client.connect();
   }
   return client;
@@ -361,8 +361,9 @@ export class EventBus {
 
   public async close(): Promise<void> {
     this.processingEvents = false;
-    if (client) {
-      await client.quit();
+    const currentClient = await getClient();
+    if (currentClient) {
+      await currentClient.quit();
       client = null;
     }
     this.initialized = false;

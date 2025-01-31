@@ -381,7 +381,7 @@ export async function changeOwnPassword(
     }
 
     // Update password using the User model's updatePassword method
-    await User.updatePassword(currentUser.email, hashPassword(newPassword));
+    await User.updatePassword(currentUser.email, await hashPassword(newPassword));
 
     return { success: true };
   } catch (error) {
@@ -420,7 +420,7 @@ export async function adminChangeUserPassword(
     }
 
     // Update password using the User model's updatePassword method
-    await User.updatePassword(targetUser.email, hashPassword(newPassword));
+    await User.updatePassword(targetUser.email, await hashPassword(newPassword));
 
     return { success: true };
   } catch (error) {

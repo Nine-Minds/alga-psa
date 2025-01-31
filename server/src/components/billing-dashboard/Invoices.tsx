@@ -17,6 +17,7 @@ import {
   unfinalizeInvoice
 } from '@/lib/actions/invoiceActions';
 import { scheduleInvoiceZipAction } from '@/lib/actions/job-actions/scheduleInvoiceZipAction';
+import { scheduleInvoiceEmailAction } from '@/lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { getAllCompanies } from '@/lib/actions/companyActions';
 import { getServices } from '@/lib/actions/serviceActions';
 import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
@@ -273,6 +274,28 @@ const Invoices: React.FC = () => {
             >
               Download PDF
             </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`send-email-menu-item-${record.invoice_id}`}
+              onClick={async (e) => {
+                e.stopPropagation();
+                setError(null);
+                try {
+                  const { jobId } = await scheduleInvoiceEmailAction([record.invoice_id]);
+                  
+                  if (jobId) {
+                    setActiveJobs(prev => new Set(prev).add(jobId));
+                    // Finalize the invoice when email is sent
+                    await finalizeInvoice(record.invoice_id);
+                    await loadData();
+                  }
+                } catch (error) {
+                  console.error('Failed to send email:', error);
+                  setError('Failed to send invoice email. Please try again.');
+                }
+              }}
+            >
+              Send as Email
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
@@ -379,6 +402,29 @@ const Invoices: React.FC = () => {
                   }}
                 >
                   Download PDFs
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={async () => {
+                    setError(null);
+                    try {
+                      const { jobId } = await scheduleInvoiceEmailAction(Array.from(selectedInvoices));
+
+                      if (jobId) {
+                        setActiveJobs(prev => new Set(prev).add(jobId));
+                        // Finalize all emailed invoices
+                        for (const invoiceId of selectedInvoices) {
+                          await finalizeInvoice(invoiceId);
+                        }
+                        setSelectedInvoices(new Set());
+                        await loadData();
+                      }
+                    } catch (error) {
+                      console.error('Failed to schedule email sending:', error);
+                      setError('Failed to send invoice emails. Please try again.');
+                    }
+                  }}
+                >
+                  Send Emails
                 </DropdownMenuItem>
                 {activeTab === 'Draft' ? (
                   <DropdownMenuItem

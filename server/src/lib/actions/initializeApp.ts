@@ -231,7 +231,7 @@ export async function initializeApp() {
     const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");
     if (glinda) {
         newPassword = generateSecurePassword();
-        const hashedPassword = hashPassword(newPassword);
+        const hashedPassword = await hashPassword(newPassword);
         await User.updatePassword(glinda.email, hashedPassword);
     } else {
         logger.info('Glinda not found. Skipping password update.');

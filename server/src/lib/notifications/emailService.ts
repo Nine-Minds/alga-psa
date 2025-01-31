@@ -43,7 +43,7 @@ class EmailService {
     const host = process.env.EMAIL_HOST;
     const port = parseInt(process.env.EMAIL_PORT || '587', 10);
     const username = process.env.EMAIL_USERNAME;
-    const password = getSecret('email_password', 'EMAIL_PASSWORD');
+    const password = await getSecret('email_password', 'EMAIL_PASSWORD');
     const from = process.env.EMAIL_FROM;
 
     console.log('[EmailService] Email configuration values:', {

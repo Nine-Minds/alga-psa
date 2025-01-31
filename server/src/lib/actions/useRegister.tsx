@@ -72,7 +72,7 @@ export async function setNewPassword(password: string, token: string): Promise<b
     return false;
   }
   if (userInfo && userInfo.email) {
-    const hashedPassword = hashPassword(password);
+    const hashedPassword = await hashPassword(password);
     const dbUser = await User.findUserByEmail(userInfo.email);
     if (!dbUser) {
       logger.error(`User [ ${userInfo.email} ] not found in the database`);
@@ -137,7 +137,7 @@ export async function registerUser({ username, email, password, companyName }: I
     return false;
   }
 
-  const hashedPassword = hashPassword(password);
+  const hashedPassword = await hashPassword(password);
 
   const verificationToken = createToken({
     username: username,

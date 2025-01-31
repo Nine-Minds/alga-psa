@@ -1,5 +1,5 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
-import { postgresConnection } from '../db/knexfile';
+import { getPostgresConnection } from '../db/knexfile';
 import { StorageService } from '@/lib/storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { JobStatus } from '../../types/job.d';
@@ -102,8 +102,8 @@ export class JobScheduler implements IJobScheduler {
       try {
         // Use postgres admin credentials with development environment
         const env = process.env.APP_ENV || 'development';
-        const { host, port, user, database } = postgresConnection;
-        let { password } = postgresConnection;
+        const { host, port, user, database } = await getPostgresConnection();
+        let { password } = await getPostgresConnection();
         
         // Ensure password is properly encoded for URL
         if (password) {

@@ -1,9 +1,9 @@
 'use server'
 
 import { Knex as KnexType } from 'knex';
-import knexfile from './knexfile';
 import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
 import { getConnection } from './db';
+import { getKnexConfig } from './knexfile';
 import { headers } from 'next/headers';
 import { AsyncLocalStorage } from 'async_hooks';
 
@@ -15,12 +15,6 @@ interface TenantConnection {
 }
 
 export async function createTenantKnex(): Promise<TenantConnection> {
-    const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
-    const config = knexfile[environment as keyof typeof knexfile] as KnexType.Config;
-    if (!config) {
-        throw new Error(`Invalid environment: ${environment}`);
-    }
-
     let tenant: string | null = null;
 
     // Try to get tenant from context first
