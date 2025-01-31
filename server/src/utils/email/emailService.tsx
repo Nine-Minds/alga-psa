@@ -16,6 +16,54 @@ interface EmailOptions {
   attachments?: EmailAttachment[];
 }
 
+interface SendEmailOptions {
+  toEmail: string;
+  subject: string;
+  templateName: string;
+  templateData: Record<string, any>;
+}
+
+export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
+  try {
+    const emailService = new EmailService();
+    const template = await getEmailTemplate(options.templateName, options.templateData);
+    await emailService.send({
+      to: options.toEmail,
+      subject: options.subject,
+      html: template
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to send email:', error);
+    return false;
+  }
+}
+
+async function getEmailTemplate(templateName: string, data: Record<string, any>): Promise<string> {
+  // TODO: Load templates from database or files
+  const templates: Record<string, string> = {
+    verify_email: `
+      <p>Hello {{username}},</p>
+      <p>Please verify your email by clicking the link below:</p>
+      <p><a href="{{verificationUrl}}">Verify Email</a></p>
+    `,
+    recover_password_email: `
+      <p>Hello {{username}},</p>
+      <p>Click the link below to reset your password:</p>
+      <p><a href="{{recoverUrl}}">Reset Password</a></p>
+    `
+  };
+
+  const template = templates[templateName];
+  if (!template) {
+    throw new Error(`Email template '${templateName}' not found`);
+  }
+
+  return Object.entries(data).reduce((html, [key, value]) => {
+    return html.replace(new RegExp(`{{${key}}}`, 'g'), value as string);
+  }, template);
+}
+
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private storageService: StorageService;
@@ -42,7 +90,13 @@ export class EmailService {
     });
   }
 
-  async sendInvoiceEmail(invoice: InvoiceViewModel, pdfPath: string) {
+  async sendInvoiceEmail(
+    invoice: InvoiceViewModel & { 
+      contact?: { name: string; address: string };
+      recipientEmail: string; 
+    }, 
+    pdfPath: string
+  ) {
     const template = await this.getInvoiceEmailTemplate();
     const attachments = [{
       filename: `invoice_${invoice.invoice_number}.pdf`,
@@ -51,7 +105,7 @@ export class EmailService {
     }];
 
     return this.send({
-      to: invoice.company.contact_email,
+      to: invoice.recipientEmail,
       subject: template.subject.replace('{{invoice_number}}', invoice.invoice_number),
       html: this.renderInvoiceTemplate(template.body, invoice),
       attachments

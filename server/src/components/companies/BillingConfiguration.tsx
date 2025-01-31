@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { ICompany } from '../../interfaces/company.interfaces';
+import { IContact } from '../../interfaces/contact.interfaces';
 import { AlertDialog } from '@radix-ui/themes';
 import { Button } from '@/components/ui/Button';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import ContactModel from '@/lib/models/contact';
 import { getCompanyBillingPlan, updateCompanyBillingPlan, addCompanyBillingPlan, removeCompanyBillingPlan, editCompanyBillingPlan } from '../../lib/actions/companyBillingPlanActions';
 import { getBillingPlans } from '../../lib/actions/billingPlanAction';
 import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
@@ -23,6 +25,7 @@ import BillingPlans from './BillingPlans';
 interface BillingConfigurationProps {
     company: ICompany;
     onSave: (updatedCompany: Partial<ICompany>) => void;
+    contacts?: IContact[];
 }
 
 type DateString = string;
@@ -32,7 +35,7 @@ interface CompanyBillingPlanWithStringDates extends Omit<ICompanyBillingPlan, 's
     end_date: DateString | null;
 }
 
-const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, onSave }) => {
+const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, onSave, contacts = [] }) => {
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: company.payment_terms || 'net_30',
         billing_cycle: '',
@@ -41,6 +44,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         auto_invoice: company.auto_invoice || false,
         invoice_delivery_method: company.invoice_delivery_method || '',
         invoice_template_id: company.invoice_template_id || '',
+        billing_contact_id: company.billing_contact_id || '',
+        billing_email: company.billing_email || '',
     });
 
     const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
@@ -49,7 +54,6 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [companyBillingPlans, setCompanyBillingPlans] = useState<CompanyBillingPlanWithStringDates[]>([]);
     const [editingBillingPlan, setEditingBillingPlan] = useState<CompanyBillingPlanWithStringDates | null>(null);
     const [billingPlanToDelete, setBillingPlanToDelete] = useState<string | null>(null);
-
     const [services, setServices] = useState<IService[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
@@ -118,10 +122,28 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const { billing_cycle, invoice_template_id, ...restConfig } = billingConfig;
+            // Extract all billing-related fields
+            const {
+                payment_terms,
+                preferred_payment_method,
+                auto_invoice,
+                invoice_delivery_method,
+                billing_contact_id,
+                billing_email,
+                billing_cycle,
+                invoice_template_id,
+                ...rest
+            } = billingConfig;
             
-            // Save company billing config
-            await onSave(restConfig);
+            // Always include billing fields in update data to ensure they're properly nulled
+            await onSave({
+                payment_terms,
+                preferred_payment_method,
+                auto_invoice,
+                invoice_delivery_method,
+                billing_contact_id,  // Pass through as-is, updateCompany will handle empty strings
+                billing_email
+            });
             
             // Save template selection separately using the dedicated function
             if (invoice_template_id !== company.invoice_template_id) {
@@ -323,9 +345,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
             <BillingConfigForm
                 billingConfig={billingConfig}
-                // handleInputChange={handleInputChange}
                 handleSelectChange={handleSelectChange}
-                // handleSwitchChange={handleSwitchChange}
+                contacts={contacts}
+                companyId={company.company_id}
             />
 
             <CompanyTaxRates

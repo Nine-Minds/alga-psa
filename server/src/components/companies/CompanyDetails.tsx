@@ -171,7 +171,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const handleBillingConfigSave = async (updatedBillingConfig: Partial<ICompany>) => {
     try {
       const updatedCompany = await updateCompany(company.company_id, updatedBillingConfig);
-      setEditedCompany(prevCompany => ({ ...prevCompany, ...updatedCompany }));
+      // Update state by explicitly handling each field to ensure nulls are properly handled
+      setEditedCompany(prevCompany => {
+        const newCompany = { ...prevCompany };
+        // Only update fields that are present in updatedCompany
+        Object.keys(updatedBillingConfig).forEach(key => {
+          (newCompany as any)[key] = (updatedCompany as any)[key];
+        });
+        return newCompany;
+      });
     } catch (error) {
       console.error('Error updating company:', error);
     }
@@ -358,7 +366,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     {
       label: "Billing",
       content: (
-        <BillingConfiguration company={editedCompany} onSave={handleBillingConfigSave} />
+        <BillingConfiguration 
+          company={editedCompany} 
+          onSave={handleBillingConfigSave}
+          contacts={contacts}
+        />
       )
     },
     {

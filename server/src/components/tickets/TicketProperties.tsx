@@ -12,7 +12,7 @@ import styles from './TicketDetails.module.css';
 import UserPicker from '../ui/UserPicker';
 import AvatarIcon from '../ui/AvatarIcon';
 import { CompanyPicker } from '../companies/CompanyPicker';
-import CustomSelect from '../ui/CustomSelect';
+import { ContactPicker } from '../contacts/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
@@ -92,6 +92,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -169,15 +170,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   <p
                     {...withDataAutomationId({ id: `${id}-contact-name` })}
                     className="text-sm text-blue-500 cursor-pointer hover:underline"
-                    onClick={onCompanyClick}
+                    onClick={onContactClick}
                   >
-                    {company?.company_name || 'N/A'}
+                    {contactInfo?.full_name || 'No contact selected'}
                   </p>
                   <Button
-                    {...withDataAutomationId({ id: `${id}-toggle-company-picker-btn` })}
+                    {...withDataAutomationId({ id: `${id}-toggle-contact-picker-btn` })}
                     variant="ghost"
                     size="sm"
-                    onClick={() => setShowCompanyPicker(!showCompanyPicker)}
+                    onClick={() => setShowContactPicker(!showContactPicker)}
                     className="p-1 h-auto"
                   >
                     <Edit2 className="h-3 w-3" />
@@ -198,17 +199,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               {showContactPicker && (
                 <div className="space-y-2">
                   <div className="flex items-center group">
-                    <CustomSelect
-                      {...withDataAutomationId({ id: `${id}-contact-select` })}
-                      value={selectedContactId || contactInfo?.contact_name_id || ''}
-                      onValueChange={(value) => {
-                        setSelectedContactId(value);
-                      }}
-                      options={contacts.map((contact): { value: string; label: string } => ({
-                        value: contact.contact_name_id,
-                        label: contact.full_name
-                      }))}
-                      placeholder="Select Contact"
+                    <ContactPicker
+                      {...withDataAutomationId({ id: `${id}-contact-picker` })}
+                      contacts={contacts}
+                      onSelect={setSelectedContactId}
+                      selectedContactId={selectedContactId || contactInfo?.contact_name_id || ''}
+                      companyId={company?.company_id}
+                      filterState={contactFilterState}
+                      onFilterStateChange={setContactFilterState}
+                      fitContent={false}
                     />
                   </div>
                   <div className="flex justify-end space-x-2">

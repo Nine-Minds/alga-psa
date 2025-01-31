@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
 import { Text } from '@radix-ui/themes';
 import CustomSelect from '@/components/ui/CustomSelect';
+import { Input } from '@/components/ui/Input';
 import { getInvoiceTemplates, getDefaultTemplate } from '@/lib/actions/invoiceActions';
 import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
+import { IContact } from '@/interfaces/contact.interfaces';
 import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
+import { useEffect, useState } from 'react';
+import { ContactPicker } from '../contacts/ContactPicker';
 
 interface BillingConfigFormProps {
     billingConfig: {
@@ -13,34 +16,42 @@ interface BillingConfigFormProps {
         preferred_payment_method: string;
         invoice_delivery_method: string;
         invoice_template_id?: string;
+        billing_contact_id?: string;
+        billing_email?: string;
     };
     handleSelectChange: (name: string) => (value: string) => void;
+    companyId: string;
+    contacts: IContact[];
 }
 
 const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     billingConfig,
-    handleSelectChange
+    handleSelectChange,
+    companyId,
+    contacts
 }) => {
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
+    const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const loadTemplates = async () => {
+        const loadData = async () => {
             try {
                 const [loadedTemplates, loadedDefault] = await Promise.all([
                     getInvoiceTemplates(),
                     getDefaultTemplate()
                 ]);
+                
                 setTemplates(loadedTemplates);
                 setDefaultTemplate(loadedDefault);
             } catch (error) {
-                console.error('Error loading templates:', error);
+                console.error('Error loading data:', error);
             } finally {
                 setIsLoading(false);
             }
         };
-        loadTemplates();
+        loadData();
     }, []);
 
     const templateOptions = templates.map(template => ({
@@ -90,6 +101,49 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2 col-span-2">
+                <Text as="div" size="2" mb="1" weight="bold">
+                    Billing Contact Information
+                </Text>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <ContactPicker
+                            id="company-billing-contact-select"
+                            contacts={contacts}
+                            onSelect={(contactId) => {
+                                handleSelectChange('billing_contact_id')(contactId);
+                                // Clear billing email if contact is selected, keep it if contact is cleared
+                                if (contactId) {
+                                    handleSelectChange('billing_email')('');
+                                }
+                            }}
+                            selectedContactId={billingConfig.billing_contact_id || null}
+                            companyId={companyId}
+                            filterState={contactFilterState}
+                            onFilterStateChange={setContactFilterState}
+                            fitContent={false}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Input
+                            id="company-billing-email-input"
+                            label="Alternative Billing Email"
+                            type="email"
+                            value={billingConfig.billing_email || ''}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                const newValue = e.target.value;
+                                handleSelectChange('billing_email')(newValue);
+                                // Clear billing contact if email is entered, keep it if email is cleared
+                                if (newValue) {
+                                    handleSelectChange('billing_contact_id')('');
+                                }
+                            }}
+                            placeholder="Or enter a specific billing email"
+                        />
+                    </div>
+                </div>
+            </div>
+
             <div className="space-y-2">
                 <CustomSelect
                     id="company-invoice-template-select"

@@ -46,6 +46,8 @@ export interface ICompany extends TenantEntity {
   tax_exemption_certificate?: string;
   timezone?: string;
   invoice_template_id?: string;
+  billing_contact_id?: string;
+  billing_email?: string;
 }
 
 export interface ICompanyLocation extends TenantEntity {

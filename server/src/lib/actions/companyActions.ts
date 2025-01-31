@@ -26,21 +26,32 @@ export async function updateCompany(companyId: string, updateData: Partial<IComp
     console.log('Updating company in database:', companyId, updateData);
 
     await db.transaction(async (trx) => {
-      if (updateData.properties) {
-        await trx('companies')
-          .where({ company_id: companyId, tenant })
-          .update({
-            ...updateData,
-            properties: trx.raw('properties || ?::jsonb', JSON.stringify(updateData.properties))
-          });
-      } else {
-        await trx('companies')
-          .where({ company_id: companyId, tenant })
-          .update({
-            ...updateData,
-            updated_at: new Date().toISOString()
-          });
+      // Build update object with explicit null handling
+      const updateObject: any = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Handle each field explicitly
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (key === 'properties' && value) {
+          updateObject.properties = trx.raw('properties || ?::jsonb', JSON.stringify(value));
+        } else {
+          // Always include the field in the update, setting null for undefined/empty values
+          updateObject[key] = (value === undefined || value === '') ? null : value;
+        }
+      });
+
+      // Explicitly set fields to null if they're not in updateData but should be cleared
+      if (!updateData.hasOwnProperty('billing_contact_id')) {
+        updateObject.billing_contact_id = null;
       }
+      if (!updateData.hasOwnProperty('billing_email')) {
+        updateObject.billing_email = null;
+      }
+
+      await trx('companies')
+        .where({ company_id: companyId, tenant })
+        .update(updateObject);
 
       // If the company is being set to inactive, update all associated contacts
       if (updateData.is_inactive === true) {
