@@ -9,12 +9,15 @@ export default async function JobMonitorPage() {
   const jobHistory = await getJobDetailsWithHistory({ limit: 50 });
   
   return (
-    <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Job Monitoring</h1>
+    <div className="space-y-6 p-6">
+      <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">
+        Job Monitoring
+      </h1>
       
-      <JobMetricsDisplay metrics={metrics} />
-      
-      <JobHistoryTable initialData={jobHistory} />
+      <div className="space-y-6">
+        <JobMetricsDisplay metrics={metrics} />
+        <JobHistoryTable initialData={jobHistory} />
+      </div>
     </div>
   );
 }

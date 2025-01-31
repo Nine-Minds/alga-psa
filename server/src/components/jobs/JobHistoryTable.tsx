@@ -11,14 +11,16 @@ const columns: ColumnDefinition<JobData>[] = [
   {
     title: 'Job Name',
     dataIndex: 'type',
+    render: (type: string) => type,
   },
   {
     title: 'Status',
     dataIndex: 'status',
     render: (status: string) => (
       <span className={`font-medium px-2 py-1 rounded ${
-        status === 'completed' ? 'bg-green-100 text-green-700' :
-        status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+        status === 'completed' ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]' :
+        status === 'failed' ? 'bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-600))]' : 
+        'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]'
       }`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
@@ -93,6 +95,7 @@ export default function JobHistoryTable({ initialData = [] }: JobHistoryTablePro
         columns={columns}
         onRowClick={handleRowClick}
         id="job-history-table"
+        rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
       />
 
       <JobDetailsDrawer 
