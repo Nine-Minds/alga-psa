@@ -1,4 +1,4 @@
-import { JobService } from '@/services/job.service';
+import { JobService, JobStepResult } from '@/services/job.service';
 import { getTenantDetails } from '@/lib/actions/tenantActions';
 import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
 import { uploadDocument } from '@/lib/actions/document-actions/documentActions';
@@ -17,6 +17,14 @@ export interface InvoiceZipJobData extends Record<string, unknown> {
   invoiceIds: string[];
   tenantId: string;
   requesterId: string;
+  steps: {
+    stepName: string;
+    type: string;
+    metadata: {
+      invoiceId?: string;
+      tenantId: string;
+    };
+  }[];
   metadata: {
     user_id: string;
     invoice_count: number;
@@ -35,11 +43,18 @@ export class InvoiceZipJobHandler {
     this.zipService = new ZipGenerationService(storageService);
   }
 
-  private async processSingleInvoice(invoiceId: string, tenant: string): Promise<{file_id: string, storage_path: string}> {
+  private async processSingleInvoice(invoiceId: string, tenant: string): Promise<{file_id: string, storage_path: string, invoice_number: string}> {
     const pdfService = new PDFGenerationService(this.storageService, {
       tenant
     });
+    
+    // Get invoice details first
     const invoice = await getInvoiceForRendering(invoiceId);
+    if (!invoice || !invoice.invoice_number) {
+      throw new Error(`Failed to get invoice details or invoice number for invoice ${invoiceId}`);
+    }
+
+    // Generate and store PDF with invoice number
     const fileRecord = await pdfService.generateAndStore({
       invoiceId,
       invoiceNumber: invoice.invoice_number,
@@ -48,49 +63,76 @@ export class InvoiceZipJobHandler {
     
     return {
       file_id: fileRecord.file_id,
-      storage_path: fileRecord.storage_path
+      storage_path: fileRecord.storage_path,
+      invoice_number: invoice.invoice_number
     };
   }
 
-  public async handleInvoiceZipJob(jobId: string, data: InvoiceZipJobData): Promise<void> {
-    const { jobServiceId, invoiceIds, tenantId } = data;
+  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
+    if (!data.jobServiceId) {
+      throw new Error('jobServiceId is required in job data');
+    }
+
+    const { jobServiceId, invoiceIds, tenantId, steps } = data;
     
+    console.log(`Starting ZIP bundle job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
+
     try {
-      const steps = await this.jobService.getJobDetails(jobServiceId);
-      
-      const fileRecords: {file_id: string, storage_path: string}[] = [];
+      const fileRecords: {file_id: string, storage_path: string, invoice_number: string}[] = [];
       
       // Process individual invoices
-      for (const [index, invoiceId] of invoiceIds.entries()) {
-        const step = steps[index];
+      for (let i = 0; i < invoiceIds.length; i++) {
+        const invoiceId = invoiceIds[i];
+        const step = steps[i];
         
-        await this.jobService.updateStepStatus(
-          jobServiceId,
-          step.detail_id,
-          JobStatus.Processing,
-          { tenantId: data.tenantId }
-        );
+        // Start processing invoice
+        const processingResult: JobStepResult = {
+          step: step.type,
+          status: 'started',
+          invoiceId,
+          details: `Processing invoice ${i + 1} of ${invoiceIds.length}`
+        };
         
-        const fileRecord = await this.processSingleInvoice(invoiceId, data.tenantId);
+        await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+          tenantId,
+          pgBossJobId,
+          stepResult: processingResult
+        });
+        
+        const fileRecord = await this.processSingleInvoice(invoiceId, tenantId);
         fileRecords.push(fileRecord);
         
-        await this.jobService.updateStepStatus(
-          jobServiceId,
-          step.detail_id,
-          JobStatus.Completed,
-          { tenantId: data.tenantId }
-        );
+        // Complete invoice processing
+        const completedResult: JobStepResult = {
+          step: step.type,
+          status: 'completed',
+          invoiceId,
+          file_id: fileRecord.file_id,
+          details: `Generated PDF for Invoice #${fileRecord.invoice_number}`
+        };
+        
+        await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+          tenantId,
+          pgBossJobId,
+          stepResult: completedResult
+        });
       }
 
       // Process ZIP creation step
       const zipStep = steps[steps.length - 1];
       
-      await this.jobService.updateStepStatus(
-        jobServiceId,
-        zipStep.detail_id,
-        JobStatus.Processing,
-        { tenantId: data.tenantId }
-      );
+      // Start ZIP creation
+      const zipStartResult: JobStepResult = {
+        step: zipStep.type,
+        status: 'started',
+        details: `Creating ZIP archive for ${fileRecords.length} invoice(s)`
+      };
+      
+      await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+        tenantId,
+        pgBossJobId,
+        stepResult: zipStartResult
+      });
       
       const zipFilePath = await this.zipService.generateZipFromFileRecords(fileRecords);
       
@@ -107,9 +149,10 @@ export class InvoiceZipJobHandler {
       // Create FormData object for upload
       const formData = new FormData();
       const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+      const fileName = `invoice_bundle_${timestamp}.zip`;
       formData.append('file', new Blob([zipBuffer], {
         type: 'application/zip'
-      }), `invoice_bundle_${timestamp}.zip`);
+      }), fileName);
 
       // Upload to document system with company association
       const uploadResult = await uploadDocument(formData, {
@@ -121,36 +164,35 @@ export class InvoiceZipJobHandler {
         throw new Error(uploadResult.error || 'Failed to upload zip document');
       }
 
-      // Update job status with document info
-      await this.jobService.updateStepStatus(
-        jobServiceId,
-        zipStep.detail_id,
-        JobStatus.Completed,
-        {
-          tenantId: data.tenantId,
-          path: zipFilePath,
-          document_id: uploadResult.document.document_id,
-          file_id: uploadResult.document.file_id,
-          company_id: defaultCompany.company_id,
-          storage_path: uploadResult.document.storage_path
-        }
-      );
+      // Complete ZIP creation
+      const zipCompleteResult: JobStepResult = {
+        step: zipStep.type,
+        status: 'completed',
+        file_id: uploadResult.document.file_id,
+        storage_path: uploadResult.document.storage_path,
+        details: `Created and uploaded ZIP archive '${fileName}' containing ${fileRecords.length} invoice(s)`
+      };
       
-      await this.jobService.updateJobStatus(
-        jobServiceId,
-        JobStatus.Completed,
-        { tenantId }
-      );
+      await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+        tenantId,
+        pgBossJobId,
+        stepResult: zipCompleteResult
+      });
+      
+      // Mark entire job as completed
+      await this.jobService.updateJobStatus(jobServiceId, JobStatus.Completed, {
+        tenantId,
+        pgBossJobId,
+        details: `Successfully processed and bundled ${fileRecords.length} invoice(s) into ZIP archive`
+      });
       
     } catch (error) {
-      await this.jobService.updateJobStatus(
-        jobServiceId,
-        JobStatus.Failed,
-        {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          tenantId
-        }
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      await this.jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
+        error: `Failed to create invoice bundle: ${errorMessage}`,
+        tenantId,
+        pgBossJobId
+      });
       throw error;
     }
   }

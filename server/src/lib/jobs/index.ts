@@ -1,6 +1,7 @@
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter, IJobScheduler } from './jobScheduler';
 import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
+import { InvoiceEmailHandler, InvoiceEmailJobData } from '@/lib/jobs/handlers/invoiceEmailHandler';
 import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { JobService } from '../../services/job.service';
@@ -27,11 +28,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     
-    // Register invoice zip handlers if storageService is provided
+    // Register invoice handlers if storageService is provided
     if (storageService && jobService) {
       const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
-      jobScheduler.registerGenericJobHandler<InvoiceZipJobData>('invoice_zip',
-        (jobId, data: InvoiceZipJobData) => invoiceZipHandler.handleInvoiceZipJob(jobId, data));
+      jobScheduler.registerJobHandler<InvoiceZipJobData>('invoice_zip', async (job: Job<InvoiceZipJobData>) => {
+        await invoiceZipHandler.handleInvoiceZipJob(job.id, job.data);
+      });
+        
+      // Register invoice email handler
+      jobScheduler.registerJobHandler<InvoiceEmailJobData>('invoice_email', async (job: Job<InvoiceEmailJobData>) => {
+        if (!job.data || typeof job.data !== 'object') {
+          throw new Error(`Invalid job data received for invoice_email job ${job.id}`);
+        }
+        await InvoiceEmailHandler.handle(job.id, job.data);
+      });
     }
   }
   return jobScheduler;

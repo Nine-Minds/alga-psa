@@ -1,11 +1,26 @@
-import { JobStatus, JobMetadata, JobResult } from '../types/job.d';
-import { Knex } from 'knex';
-import { getAdminConnection } from '@/lib/db/admin';
+import { JobScheduler } from '../lib/jobs/jobScheduler';
+import { StorageService } from '@/lib/storage/StorageService';
+import { JobStatus } from '../types/job.d';
+import { createTenantKnex } from '@/lib/db';
 
-export interface JobDetailInput {
+export interface JobStep {
   stepName: string;
-  initialStatus?: JobStatus;
-  metadata?: Record<string, unknown>;
+  type: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface JobStepResult {
+  step: string;
+  status: 'started' | 'completed' | 'failed';
+  invoiceId?: string;
+  file_id?: string;
+  document_id?: string;
+  storage_path?: string;
+  recipientEmail?: string;
+  error?: string;
+  path?: string;
+  company_id?: string;
+  details?: string;
 }
 
 export interface JobHeader {
@@ -13,147 +28,206 @@ export interface JobHeader {
   type: string;
   status: JobStatus;
   createdAt: Date;
-  updatedAt?: Date;
   metadata?: Record<string, unknown>;
 }
 
 export interface JobDetail {
   id: string;
   stepName: string;
-  status: JobStatus;
-  result?: Record<string, unknown>;
+  type: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
   processedAt?: Date;
   retryCount: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface JobData {
+  id?: string;
+  jobServiceId?: string;
+  tenantId: string;
+  jobName?: string;
+  status?: JobStatus;
+  scheduledJobId?: string | null;
+  error?: string;
+  steps?: JobStep[];
+  stepResults?: JobStepResult[];
+  [key: string]: any;
+}
+
+export type ScheduleType = 'immediate' | 'scheduled' | 'recurring';
+
+export interface ScheduleOptions {
+  runAt?: Date;
+  interval?: string;
+}
+
+export interface JobStatusUpdate {
+  error?: any;
+  tenantId: string;
+  pgBossJobId?: string;
+  stepResult?: JobStepResult;
+  details?: string;
 }
 
 export class JobService {
-  constructor(private readonly knex: Knex) {
-    console.log('JobService initialized with connection:', {
-      client: knex.client.config.client,
-      connection: knex.client.config.connection
-    });
-  }
+  private static instance: JobService | null = null;
 
-  static async create(): Promise<JobService> {
-    const connection = await getAdminConnection(); // null for system connection
-    return new JobService(connection);
+  constructor(private storageService: StorageService) {}
+
+  public static async create(): Promise<JobService> {
+    if (!JobService.instance) {
+      JobService.instance = new JobService(new StorageService());
+    }
+    return JobService.instance;
   }
 
   async createJob(
-    type: string,
-    metadata: Record<string, unknown>,
-    details?: JobDetailInput[]
+    jobName: string,
+    data: Omit<JobData, 'jobName' | 'status'>,
+    steps?: JobStep[]
   ): Promise<string> {
-    if (!metadata.tenantId) {
-      throw new Error('tenantId is required in metadata');
-    }
-
-    const [job] = await this.knex('jobs')
-      .insert({
-        type,
-        metadata,
-        status: JobStatus.Pending,
-        tenant: metadata.tenantId,
-        user_id: metadata.user_id
-      })
-      .returning('job_id');
-
-    if (details && details.length > 0) {
-      await this.knex('job_details').insert(
-        details.map(detail => ({
-          job_id: job.job_id,
-          step_name: detail.stepName,
-          status: detail.initialStatus || JobStatus.Pending,
-          metadata: detail.metadata,
-          tenant: metadata.tenantId
-        }))
-      );
-    }
-
-    return job.job_id;
-  }
-
-  async addJobStep(jobId: string, step: JobDetailInput): Promise<void> {
-    if (!step.metadata?.tenantId) {
-      throw new Error('tenantId is required in step metadata');
-    }
-
-    await this.knex('job_details').insert({
-      job_id: jobId,
-      step_name: step.stepName,
-      status: step.initialStatus || JobStatus.Pending,
-      metadata: step.metadata,
-      tenant: step.metadata.tenantId
+    const jobRecord = await this.createJobRecord({
+      ...data,
+      jobName,
+      steps
     });
+    return jobRecord.id!;
   }
 
-  async updateStepStatus(
-    jobId: string,
-    stepId: string,
-    status: JobStatus,
-    result?: Record<string, unknown>
-  ): Promise<void> {
-    await this.knex('job_details')
-      .where({ detail_id: stepId, job_id: jobId })
-      .update({
-        status,
-        result,
-        processed_at: this.knex.fn.now(),
-        updated_at: this.knex.fn.now()
+  async createAndScheduleJob(
+    jobName: string,
+    data: JobData,
+    scheduleType: ScheduleType = 'immediate',
+    options?: ScheduleOptions
+  ): Promise<{ jobRecord: JobData; scheduledJobId: string | null }> {
+    // Create job record in the database
+    const jobRecord = await this.createJobRecord({
+      ...data,
+      jobName
+    });
+    
+    // Get job scheduler instance
+    const scheduler = await JobScheduler.getInstance(this, this.storageService);
+    let scheduledJobId: string | null = null;
+
+    try {
+      // Include jobServiceId in the data sent to pg-boss
+      const jobData = {
+        ...data,
+        jobServiceId: jobRecord.id
+      };
+
+      switch (scheduleType) {
+        case 'immediate':
+          scheduledJobId = await scheduler.scheduleImmediateJob(jobName, jobData);
+          break;
+        case 'scheduled':
+          if (!options?.runAt) {
+            throw new Error('runAt is required for scheduled jobs');
+          }
+          scheduledJobId = await scheduler.scheduleScheduledJob(jobName, options.runAt, jobData);
+          break;
+        case 'recurring':
+          if (!options?.interval) {
+            throw new Error('interval is required for recurring jobs');
+          }
+          scheduledJobId = await scheduler.scheduleRecurringJob(jobName, options.interval, jobData);
+          break;
+      }
+
+      // Update job record with the scheduled job ID
+      if (scheduledJobId) {
+        await this.updateJobRecord(jobRecord.id, { 
+          scheduledJobId,
+          status: JobStatus.Queued 
+        });
+        jobRecord.scheduledJobId = scheduledJobId;
+        jobRecord.status = JobStatus.Queued;
+      }
+    } catch (error: any) {
+      await this.updateJobRecord(jobRecord.id, { 
+        error: error.message, 
+        status: JobStatus.Failed 
       });
-  }
+      throw error;
+    }
 
-  async getJobDetails(jobId: string) {
-    const details = await this.knex('job_details')
-      .select('*')
-      .where({ job_id: jobId });
-
-    return details.map(detail => ({
-      ...detail,
-      created_at: detail.created_at ? new Date(detail.created_at) : null,
-      processed_at: detail.processed_at ? new Date(detail.processed_at) : null,
-      updated_at: detail.updated_at ? new Date(detail.updated_at) : null
-    }));
-  }
-
-  async getJobProgress(jobId: string) {
-    const [header] = await this.knex('jobs')
-      .select('*')
-      .where({ job_id: jobId });
-
-    const details = await this.getJobDetails(jobId);
-
-    const metrics = {
-      totalSteps: details.length,
-      completedSteps: details.filter((d: { status: JobStatus }) => d.status === JobStatus.Completed).length,
-      failedSteps: details.filter((d: { status: JobStatus }) => d.status === JobStatus.Failed).length,
-      pendingSteps: details.filter((d: { status: JobStatus }) => d.status === JobStatus.Pending).length
-    };
-
-    return {
-      header,
-      details,
-      metrics
-    };
+    return { jobRecord, scheduledJobId };
   }
 
   async updateJobStatus(
-    jobId: string,
-    status: JobStatus,
-    metadata?: Record<string, unknown>
+    jobId: string, 
+    status: JobStatus, 
+    updates: JobStatusUpdate
   ): Promise<void> {
-    if (!metadata?.tenantId) {
-      throw new Error(`tenantId is required in metadata. Received: ${JSON.stringify(metadata)}`);
+    const updateData: Partial<JobData> = {
+      status,
+      scheduledJobId: updates.pgBossJobId
+    };
+
+    if (updates.error) {
+      updateData.error = typeof updates.error === 'string' 
+        ? updates.error 
+        : updates.error.message || JSON.stringify(updates.error);
     }
 
-    await this.knex('jobs')
-      .where({ job_id: jobId, tenant: metadata.tenantId })
-      .update({
-        status,
-        metadata,
-        updated_at: this.knex.fn.now()
-      });
+    if (updates.stepResult) {
+      updateData.stepResults = updateData.stepResults || [];
+      updateData.stepResults.push(updates.stepResult);
+    }
+
+    if (updates.details) {
+      updateData.details = updates.details;
+    }
+
+    await this.updateJobRecord(jobId, updateData);
+  }
+
+  async getJobDetails(jobId: string): Promise<JobDetail[]> {
+    const { knex } = await createTenantKnex();
+    
+    // Get job details from job_details table with correct column names
+    const details = await knex('job_details')
+      .select(
+        'detail_id as id',
+        'step_name as stepName',
+        'step_name as type', // Using step_name for type since there's no type column
+        'status',
+        'processed_at as processedAt',
+        'retry_count as retryCount',
+        'metadata'
+      )
+      .where('job_id', jobId)
+      .orderBy('processed_at', 'asc');
+
+    return details.map(detail => ({
+      ...detail,
+      metadata: detail.metadata ? JSON.parse(detail.metadata) : undefined
+    }));
+  }
+
+  private async createJobRecord(data: Partial<JobData>): Promise<JobData> {
+    // This is a mock implementation, replace with actual DB insertion logic
+    const id = Date.now().toString();
+    const jobRecord: JobData = {
+      id,
+      tenantId: data.tenantId!,
+      status: JobStatus.Pending,
+      stepResults: [],
+      ...data
+    };
+    
+    // TODO: Implement actual database insertion
+    console.log('Job record created:', jobRecord);
+    return jobRecord;
+  }
+
+  private async updateJobRecord(id: string | undefined, updates: Partial<JobData>): Promise<void> {
+    if (!id) {
+      throw new Error('Job ID is required for updates');
+    }
+    
+    // TODO: Implement actual database update
+    console.log(`Job record ${id} updated with:`, updates);
   }
 }
-
-export type { JobService as default };

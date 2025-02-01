@@ -92,7 +92,7 @@ export class StorageService {
         }
     }
 
-    static async downloadFile(tenant: string, file_id: string): Promise<{
+    static async downloadFile(file_id: string): Promise<{
       buffer: Buffer;
       metadata: {
         original_name: string;
@@ -129,7 +129,7 @@ export class StorageService {
         }
     }
 
-    static async deleteFile(tenant: string, file_id: string, deleted_by_id: string): Promise<void> {
+    static async deleteFile(file_id: string, deleted_by_id: string): Promise<void> {
         try {
             // Get file record
             const fileRecord = await FileStoreModel.findById(file_id);

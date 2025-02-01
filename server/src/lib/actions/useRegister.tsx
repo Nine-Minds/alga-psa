@@ -8,7 +8,7 @@ import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@/interface
 
 import { getInfoFromToken, createToken } from '@/utils/tokenizer';
 import { hashPassword } from '@/utils/encryption/encryption';
-import { sendEmail } from '@/utils/email/emailService';
+import { getEmailService } from '@/services/emailService';
 import logger from '@/utils/logger';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
@@ -103,7 +103,8 @@ export async function recoverPassword(email: string): Promise<boolean> {
 
   if (EMAIL_ENABLE) {
     const recoverUrl = `${process.env.HOST}/auth/forgot_password/set_new_password?token=${recoverToken}`;
-    const emailSent = await sendEmail({
+    const emailService = await getEmailService();
+    const emailSent = await emailService.sendTemplatedEmail({
       toEmail: email,
       subject: 'Recover Password',
       templateName: 'recover_password_email',
@@ -149,7 +150,8 @@ export async function registerUser({ username, email, password, companyName }: I
 
   if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
     const verificationUrl = `${process.env.HOST}/auth/verify_email?token=${verificationToken}`;
-    const emailSent = await sendEmail({
+    const emailService = await getEmailService();
+    const emailSent = await emailService.sendTemplatedEmail({
       toEmail: email,
       subject: 'Verify your email',
       templateName: 'verify_email',
@@ -165,7 +167,6 @@ export async function registerUser({ username, email, password, companyName }: I
   } else {
     try {
       await Tenant.insert({
-        
         company_name: companyName,
         email: email.toLowerCase(),
         created_at: new Date(),

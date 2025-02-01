@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StorageService } from '@/lib/storage/StorageService';
 import { createTenantKnex } from '@/lib/db';
+
 export async function GET(
     request: NextRequest,
     { params }: { params: { fileId: string } }
@@ -17,7 +18,9 @@ export async function GET(
 
         const fileId = params.fileId;
         console.log('Attempting to download file with ID:', fileId);
-        const result = await StorageService.downloadFile(tenant, fileId);
+        
+        // Use the static downloadFile method with just the fileId
+        const result = await StorageService.downloadFile(fileId);
         console.log('File downloaded successfully. Metadata:', result.metadata);
 
         // Set appropriate headers for file download

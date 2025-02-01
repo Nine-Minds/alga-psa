@@ -224,14 +224,16 @@ export class JobScheduler implements IJobScheduler {
       }
       
       try {
-        await this.jobService.updateJobStatus(jobId, JobStatus.Processing, { tenantId: payload.tenantId });
+        const tenantId = payload.tenantId as string;
+        await this.jobService.updateJobStatus(jobId, JobStatus.Processing, { tenantId });
         await handler(jobId, payload);
-        await this.jobService.updateJobStatus(jobId, JobStatus.Completed, { tenantId: payload.tenantId });
+        await this.jobService.updateJobStatus(jobId, JobStatus.Completed, { tenantId });
       } catch (error) {
         console.log('Error in job handler:', error);
+        const tenantId = payload.tenantId as string;
         await this.jobService.updateJobStatus(jobId, JobStatus.Failed, {
           error,
-          tenantId: payload.tenantId
+          tenantId
         });
         throw error;
       }

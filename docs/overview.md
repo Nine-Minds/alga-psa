@@ -108,7 +108,7 @@ This document provides a high-level architectural overview of the open-source MS
     - Time Entries (submitted, approved, rejected)
   * Key files:
     - `server/src/lib/notifications/email.ts`: Core notification service
-    - `server/src/lib/notifications/emailService.ts`: SMTP integration
+    - `server/src/services/emailService.ts`: SMTP integration and email service
     - `server/src/lib/models/notification.ts`: Type definitions
     - `server/src/components/settings/notifications/EmailTemplates.tsx`: Template management UI
     - `server/src/components/settings/notifications/NotificationCategories.tsx`: Category/subtype management UI

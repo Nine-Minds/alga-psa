@@ -1,13 +1,23 @@
 'use server'
 
-import { JobScheduler, IJobScheduler } from '@/lib/jobs/jobScheduler';
 import { getCurrentUser } from '../user-actions/userActions';
 import logger from '@/utils/logger';
-import { JobService } from '@/services/job.service';
+import { JobService, type JobData } from '@/services/job.service';
 import { createTenantKnex } from '@/lib/db';
-import { StorageService } from '@/lib/storage/StorageService';
 import { JobStatus } from '@/types/job.d';
-import { InvoiceZipJobHandler, type InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
+import { type InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
+
+// Type for initial job data before we have the jobServiceId
+interface InitialJobData extends JobData {
+  requesterId: string;
+  user_id: string;
+  invoiceIds: string[];
+  metadata: {
+    user_id: string;
+    invoice_count: number;
+    tenantId: string;
+  };
+}
 
 export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
   const user = await getCurrentUser();
@@ -15,64 +25,49 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
     throw new Error('Unauthorized - No user session found');
   }
 
-  const {knex, tenant} = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant ID is required');
   }
 
   const jobService = await JobService.create();
-  const storageService = new StorageService();
-  const scheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
+
+  const steps = [
+    ...invoiceIds.map((id, index) => ({
+      stepName: `Process Invoice ${index + 1}`,
+      type: 'invoice_processing',
+      metadata: { invoiceId: id, tenantId: tenant }
+    })),
+    {
+      stepName: 'Create ZIP Archive',
+      type: 'zip_creation',
+      metadata: { tenantId: tenant }
+    }
+  ];
+
+  const jobData: InitialJobData = {
+    requesterId: user.user_id,
+    user_id: user.user_id,
+    tenantId: tenant,
+    invoiceIds,
+    steps,
+    metadata: {
+      user_id: user.user_id,
+      invoice_count: invoiceIds.length,
+      tenantId: tenant
+    }
+  };
 
   try {
-    // Create steps for each invoice + zip creation
-    const steps = [
-      ...invoiceIds.map((id, index) => ({
-        stepName: `Process Invoice ${index + 1}`,
-        metadata: { invoiceId: id, tenantId: tenant }
-      })),
-      {
-        stepName: 'Create ZIP Archive',
-        metadata: { tenantId: tenant }
-      }
-    ];
-
-    // Create JobService record first
-    const jobServiceId = await jobService.createJob(
+    const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
       'invoice_zip',
-      { 
-        user_id: user.user_id,
-        tenantId: tenant,
-        pgBossJobId: null // Will be updated after scheduling
-      },
-      steps
+      jobData,
+      'immediate'
     );
-
-    // Schedule pg-boss job with JobService ID
-    const jobData: InvoiceZipJobData = {
-      jobServiceId,
-      invoiceIds,
-      requesterId: user.user_id,
-      tenantId: tenant,
-      metadata: {
-        user_id: user.user_id,
-        invoice_count: invoiceIds.length,
-        tenantId: tenant
-      }
-    };
-    
-    const queueJobId = await scheduler.scheduleImmediateJob('invoice_zip', jobData);
-    if (!queueJobId) {
+    if (!scheduledJobId) {
       throw new Error('Failed to schedule job - no job ID returned');
     }
-
-    // Update JobService record with pg-boss job ID
-    await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
-      pgBossJobId: queueJobId,
-      tenantId: tenant
-    });
-
-    return { jobId: jobServiceId };
+    return { jobId: jobRecord.id };
   } catch (error) {
     console.log('Error in scheduleInvoiceZipAction:', error);
     logger.error('Failed to schedule invoice zip job', {

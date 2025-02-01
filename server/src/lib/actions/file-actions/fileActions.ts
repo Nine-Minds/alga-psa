@@ -60,7 +60,7 @@ export async function downloadFile(
             throw new Error('No tenant found');
         }
 
-        const result = await StorageService.downloadFile(tenant, file_id);
+        const result = await StorageService.downloadFile(file_id);
         return { success: true, data: result };
     } catch (error) {
         console.error('Download file error:', error);
@@ -81,7 +81,7 @@ export async function deleteFile(
             throw new Error('No tenant found');
         }
 
-        await StorageService.deleteFile(tenant, file_id, deleted_by_id);
+        await StorageService.deleteFile(file_id, deleted_by_id);
         return { success: true };
     } catch (error) {
         console.error('Delete file error:', error);

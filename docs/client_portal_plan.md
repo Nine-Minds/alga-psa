@@ -283,7 +283,7 @@ Based on your codebase, integration points are:
 ### **3. Email and Notifications**
 
 - **Email Service**:
-  - Use `utils/email/emailService.tsx` to send notifications.
+  - Use `services/emailService.ts` to send notifications.
 - **Notification Preferences**:
   - Allow clients to opt-in or opt-out of certain notifications.
 

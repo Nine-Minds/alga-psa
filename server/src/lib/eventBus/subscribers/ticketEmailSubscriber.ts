@@ -9,7 +9,7 @@ import {
   TicketAssignedEvent,
   TicketCommentAddedEvent
 } from '../events';
-import { getEmailService } from '../../notifications/emailService';
+import { getEmailService } from '@/services/emailService';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
 import logger from '../../../utils/logger';
 import { createTenantKnex } from '../../db';

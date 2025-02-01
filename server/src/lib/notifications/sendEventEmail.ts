@@ -1,4 +1,4 @@
-import { getEmailService } from './emailService';
+import { getEmailService } from '@/services/emailService';
 import { getConnection } from '../db/db';
 import logger from '../../utils/logger';
 
@@ -114,21 +114,15 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     });
 
     // Get email service instance and ensure it's initialized
-    const emailService = getEmailService();
+    const emailService = await getEmailService();
     await emailService.initialize();
 
-    // Compile subject template if it contains handlebars syntax
-    const Handlebars = (await import('handlebars')).default;
-    const compiledSubject = emailSubject.includes('{{') ? 
-      Handlebars.compile(emailSubject)(params.context) : 
-      emailSubject;
-
-    // Send email
-    const success = await emailService.sendEmail({
-      to: params.to,
-      subject: compiledSubject,
-      template: templateContent,
-      data: params.context,
+    // Send email using the new service's templated email method
+    const success = await emailService.sendTemplatedEmail({
+      toEmail: params.to,
+      subject: emailSubject,
+      templateName: params.template,
+      templateData: params.context
     });
 
     if (!success) {
@@ -137,7 +131,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     logger.info('[SendEventEmail] Email sent successfully:', {
       to: params.to,
-      subject: emailSubject, // Log the resolved subject
+      subject: emailSubject,
       tenantId: params.tenantId,
       template: params.template
     });

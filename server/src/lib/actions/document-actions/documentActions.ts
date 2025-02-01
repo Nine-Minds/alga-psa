@@ -192,7 +192,7 @@ export async function getDocumentPreview(
       };
     }
 
-    const result = await StorageService.downloadFile(tenant, file_id);
+    const result = await StorageService.downloadFile(file_id);
     if (!result) {
       throw new Error('File not found');
     }
@@ -369,7 +369,7 @@ export async function downloadDocument(file_id: string) {
         }
 
         // Download file from storage
-        const result = await StorageService.downloadFile(tenant, file_id);
+        const result = await StorageService.downloadFile(file_id);
         if (!result) {
             throw new Error('File not found in storage');
         }

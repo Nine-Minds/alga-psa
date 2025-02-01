@@ -9,7 +9,7 @@ import {
   NotificationLog,
   NotificationService
 } from '../models/notification';
-import { getEmailService } from './emailService';
+import { getEmailService } from '@/services/emailService';
 export class EmailNotificationService implements NotificationService {
   private async compileTemplate(template: string, data: Record<string, any>): Promise<string> {
     // Dynamically import Handlebars only when needed
@@ -244,15 +244,15 @@ export class EmailNotificationService implements NotificationService {
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
       
       // Get email service instance and ensure it's initialized
-      const emailService = getEmailService();
+      const emailService = await getEmailService();
       await emailService.initialize();
 
-      // Send email
-      const success = await emailService.sendEmail({
-        to: params.emailAddress,
+      // Send email using templated email method
+      const success = await emailService.sendTemplatedEmail({
+        toEmail: params.emailAddress,
         subject: compiledSubject,
-        template: template.html_content,
-        data: params.data
+        templateName: params.templateName,
+        templateData: params.data
       });
 
       // Log result
