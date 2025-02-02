@@ -30,7 +30,7 @@ export default [
         ecmaFeatures: {
           jsx: true
         },
-        tsconfigRootDir: ".",
+        tsconfigRootDir: process.cwd(),
       },
     },
 

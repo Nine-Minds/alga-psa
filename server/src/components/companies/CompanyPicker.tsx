@@ -9,7 +9,6 @@ import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, ContainerComponent, FormFieldComponent } from '@/types/ui-reflection/types';
-import { up } from 'migrations/20241125124900_add_credit_system.cjs';
 import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 
 interface CompanyPickerProps {

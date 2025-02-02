@@ -1,54 +1,19 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2020",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": false,
-    "sourceMap": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./src/*"],
-      "@ee/*": [
-        "../ee/server/src/*",
-        "./src/empty/*"
-      ]
-    },
-    "baseUrl": ".",
     "outDir": "dist",
-    "rootDir": "."
+    "strictNullChecks": true
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "src/types/**/*.d.ts",
     ".next/types/**/*.ts",
-    "../ee/server/src/interfaces/chat.interface.tsx",
-    "../ee/server/src/interfaces/message.interface.ts",
-    "../ee/server/src/models/chat.ts",
-    "../ee/server/src/models/message.ts",
-    "migrations/20241125124900_add_credit_system.cjs",
-    "migrations/20241130113000_add_tenant_to_billing_cycles.cjs",
-    "migrations/20241130113200_add_pk_to_billing_cycles.cjs"
+    "migrations/*.cjs"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist"
   ]
 }

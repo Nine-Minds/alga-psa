@@ -8,7 +8,7 @@ import {
   SelectorNodeData,
   DecisionNodeData,
   TicketCreatorNodeData
-} from './workflowTypes';
+} from '@ee/services/flow/types/workflowTypes';
 
 export interface PickerOption {
   id: string;

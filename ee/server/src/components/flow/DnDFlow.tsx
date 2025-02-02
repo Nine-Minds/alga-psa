@@ -21,17 +21,17 @@ import ReactFlow, {
 } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
-import './styles/DarkTheme.css';
-import { NodeTypes, CustomNode } from '../../services/flow/types/nodes';
-import ThinkingNode from './nodes/ThinkingNode';
-import ActionNode from './nodes/ActionNode';
-import Office365ReceiverNode from './nodes/Office365ReceiverNode';
-import ClassifierNode from './nodes/ClassifierNode';
-import TicketCreatorNode from './nodes/TicketCreatorNode';
-import DecisionNode from './nodes/DecisionNode';
-import SelectorNode from './nodes/SelectorNode';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
+import '@ee/components/flow/styles/DarkTheme.css';
+import { NodeTypes, CustomNode } from '@ee/services/flow/types/nodes';
+import ThinkingNode from '@ee/components/flow/nodes/ThinkingNode';
+import ActionNode from '@ee/components/flow/nodes/ActionNode';
+import Office365ReceiverNode from '@ee/components/flow/nodes/Office365ReceiverNode';
+import ClassifierNode from '@ee/components/flow/nodes/ClassifierNode';
+import TicketCreatorNode from '@ee/components/flow/nodes/TicketCreatorNode';
+import DecisionNode from '@ee/components/flow/nodes/DecisionNode';
+import SelectorNode from '@ee/components/flow/nodes/SelectorNode';
+import Sidebar from '@ee/components/flow/Sidebar';
+import TopBar from '@ee/components/flow/TopBar';
 import {
   ThinkingNodeData,
   ActionNodeData,
@@ -42,7 +42,7 @@ import {
   SelectorNodeData,
   Template,
   ConditionType
-} from '../../services/flow/types/workflowTypes';
+} from '@ee/services/flow/types/workflowTypes';
 
 interface WorkflowNode {
   id: string;

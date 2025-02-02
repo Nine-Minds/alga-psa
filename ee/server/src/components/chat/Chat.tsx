@@ -7,10 +7,10 @@ import { Message } from "@ee/components/message/Message";
 import { IChat } from "@ee/interfaces/chat.interface";
 import { createNewChatAction, addMessageToChatAction } from '@ee/lib/chat-actions/chatActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { ChatModelInterface, ChatMessage } from '../../interfaces/ChatModelInterface';
+import { ChatModelInterface, ChatMessage } from '@ee/interfaces/ChatModelInterface';
 import { HfInference } from '@huggingface/inference';
 
-import "./chat.css";
+import "@ee/components/chat/chat.css";
 
 type ChatProps = {
   companyUrl: string,
