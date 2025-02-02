@@ -3,6 +3,8 @@
 import { JobService } from '@/services/job.service';
 import { createTenantKnex } from '@/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
+import { getInvoiceForRendering } from '../invoiceActions';
+import { getCompanyById } from '../companyActions';
 import { JobStatus } from '@/types/job.d';
 import logger from '@/utils/logger';
 
@@ -12,14 +14,33 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
   if (!tenant || !currentUser) throw new Error('Tenant or user not found');
 
   const jobService = await JobService.create();
-  const steps = invoiceIds.flatMap(invoiceId => [
+  // Fetch invoice details for human-readable names
+  const invoiceDetails = await Promise.all(
+    invoiceIds.map(async (invoiceId) => {
+      const invoice = await getInvoiceForRendering(invoiceId);
+      if (!invoice) {
+        throw new Error(`Invoice ${invoiceId} not found`);
+      }
+      const company = await getCompanyById(invoice.company_id);
+      if (!company) {
+        throw new Error(`Company not found for invoice ${invoice.invoice_number}`);
+      }
+      return {
+        invoiceId,
+        invoiceNumber: invoice.invoice_number,
+        companyName: company.company_name
+      };
+    })
+  );
+
+  const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, companyName }) => [
     {
-      stepName: `Generate PDF for Invoice ${invoiceId}`,
+      stepName: `PDF Generation for Invoice #${invoiceNumber} (${companyName})`,
       type: 'pdf_generation',
       metadata: { invoiceId, tenantId: tenant }
     },
     {
-      stepName: `Send Email for Invoice ${invoiceId}`,
+      stepName: `Email Sending for Invoice #${invoiceNumber} (${companyName})`,
       type: 'email_sending',
       metadata: { invoiceId, tenantId: tenant }
     }
@@ -48,11 +69,17 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
     }
     return { jobId: jobRecord.id };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to schedule invoice email job', {
-      error,
+      error: errorMessage,
       userId: currentUser.user_id,
-      invoiceIds
+      invoiceIds,
+      // Include human-readable details in the error log if available
+      invoiceDetails: invoiceDetails?.map(d => ({
+        invoiceNumber: d.invoiceNumber,
+        companyName: d.companyName
+      }))
     });
-    throw new Error('Failed to schedule invoice email job');
+    throw new Error(`Failed to schedule invoice email job: ${errorMessage}`);
   }
 };

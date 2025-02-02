@@ -39,6 +39,10 @@ export class InvoiceEmailHandler {
     if (!tenantId) throw new Error('Tenant ID is required');
     if (!invoiceIds || !invoiceIds.length) throw new Error('No invoice IDs provided');
     
+    // Track job detail IDs for error handling
+    let pdfDetailId: string | undefined;
+    let emailDetailId: string | undefined;
+    
     console.log(`Starting invoice email job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
 
     const storageService = new StorageService();
@@ -68,43 +72,7 @@ export class InvoiceEmailHandler {
             throw new Error(`Company not found for Invoice #${invoice.invoice_number}`);
           }
 
-          // Step 1: Generate PDF
-          const pdfStartResult: JobStepResult = {
-            step: pdfStep.type,
-            status: 'started',
-            invoiceId,
-            details: `Generating PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
-          };
-
-          await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
-            tenantId,
-            pgBossJobId,
-            stepResult: pdfStartResult
-          });
-
-          // Generate PDF with invoice number
-          const { file_id } = await pdfService.generateAndStore({
-            invoiceId,
-            invoiceNumber: invoice.invoice_number,
-            version: 1
-          });
-
-          const pdfCompleteResult: JobStepResult = {
-            step: pdfStep.type,
-            status: 'completed',
-            invoiceId,
-            file_id,
-            details: `Generated PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
-          };
-
-          await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
-            tenantId,
-            pgBossJobId,
-            stepResult: pdfCompleteResult
-          });
-
-          // Step 2: Send Email
-          // Determine recipient email with priority order
+          // Determine recipient email with priority order first
           let recipientEmail = company.email;
           let recipientName = company.company_name;
 
@@ -122,19 +90,102 @@ export class InvoiceEmailHandler {
             throw new Error(`No valid email address found for ${company.company_name} (Invoice #${invoice.invoice_number})`);
           }
 
-          const emailStartResult: JobStepResult = {
-            step: emailStep.type,
-            status: 'started',
+          // Create initial job detail records for both steps
+          pdfDetailId = await jobService.createJobDetail(
+            jobServiceId,
+            pdfStep.stepName,
+            'pending',
+            {
+              invoiceId,
+              details: `Preparing to generate PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
+            }
+          );
+
+          emailDetailId = await jobService.createJobDetail(
+            jobServiceId,
+            emailStep.stepName,
+            'pending',
+            {
+              invoiceId,
+              recipientEmail,
+              details: `Preparing to send Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${company.company_name}`
+            }
+          );
+
+          // Start PDF generation
+          const pdfProcessingDetails = {
             invoiceId,
-            details: `Sending Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${company.company_name}`
+            details: `Generating PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
           };
+
+          await jobService.updateJobDetailRecord(
+            pdfDetailId,
+            'processing',
+            pdfProcessingDetails
+          );
 
           await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
             tenantId,
             pgBossJobId,
-            stepResult: emailStartResult
+            stepResult: {
+              step: pdfStep.type,
+              status: 'started',
+              ...pdfProcessingDetails
+            }
           });
 
+          // Generate PDF with invoice number
+          const { file_id } = await pdfService.generateAndStore({
+            invoiceId,
+            invoiceNumber: invoice.invoice_number,
+            version: 1
+          });
+
+          const pdfCompleteDetails = {
+            invoiceId,
+            file_id,
+            details: `Generated PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
+          };
+
+          // Update the existing job detail record for PDF generation
+          await jobService.updateJobDetailRecord(
+            pdfDetailId,
+            'completed',
+            pdfCompleteDetails
+          );
+
+          await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+            tenantId,
+            pgBossJobId,
+            stepResult: {
+              step: pdfStep.type,
+              status: 'completed',
+              ...pdfCompleteDetails
+            }
+          });
+
+          // Start email sending
+          const emailProcessingDetails = {
+            invoiceId,
+            recipientEmail,
+            details: `Sending Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${company.company_name}`
+          };
+
+          await jobService.updateJobDetailRecord(
+            emailDetailId,
+            'processing',
+            emailProcessingDetails
+          );
+
+          await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
+            tenantId,
+            pgBossJobId,
+            stepResult: {
+              step: emailStep.type,
+              status: 'started',
+              ...emailProcessingDetails
+            }
+          });
           // Update invoice contact info
           invoice.contact = {
             name: recipientName,
@@ -166,18 +217,27 @@ export class InvoiceEmailHandler {
               throw new Error('Failed to send invoice email');
             }
 
-            const emailCompleteResult: JobStepResult = {
-              step: emailStep.type,
-              status: 'completed',
+            const emailCompleteDetails = {
               invoiceId,
               recipientEmail,
               details: `Successfully sent Invoice #${invoice.invoice_number} to ${recipientName} at ${company.company_name}`
             };
 
+            // Update the existing job detail record for email sending
+            await jobService.updateJobDetailRecord(
+              emailDetailId,
+              'completed',
+              emailCompleteDetails
+            );
+
             await jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
               tenantId,
               pgBossJobId,
-              stepResult: emailCompleteResult
+              stepResult: {
+                step: emailStep.type,
+                status: 'completed',
+                ...emailCompleteDetails
+              }
             });
 
           } finally {
@@ -195,6 +255,33 @@ export class InvoiceEmailHandler {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           const contextualError = `Failed to process Invoice #${invoiceNumber} for ${companyName}: ${errorMessage}`;
           
+          // Record the failure in job_details
+          // Update existing job detail records to failed status
+          if (pdfDetailId) {
+            await jobService.updateJobDetailRecord(
+              pdfDetailId,
+              'failed',
+              {
+                error: contextualError,
+                invoiceId,
+                invoiceNumber,
+                companyName
+              }
+            );
+          }
+          if (emailDetailId) {
+            await jobService.updateJobDetailRecord(
+              emailDetailId,
+              'failed',
+              {
+                error: contextualError,
+                invoiceId,
+                invoiceNumber,
+                companyName
+              }
+            );
+          }
+
           await jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
             tenantId,
             pgBossJobId,
@@ -213,6 +300,29 @@ export class InvoiceEmailHandler {
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Update any existing job details to failed status
+      if (pdfDetailId) {
+        await jobService.updateJobDetailRecord(
+          pdfDetailId,
+          'failed',
+          {
+            error: errorMessage,
+            details: 'Failed to process invoice email job'
+          }
+        );
+      }
+      if (emailDetailId) {
+        await jobService.updateJobDetailRecord(
+          emailDetailId,
+          'failed',
+          {
+            error: errorMessage,
+            details: 'Failed to process invoice email job'
+          }
+        );
+      }
+
       await jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
         error: errorMessage,
         tenantId,

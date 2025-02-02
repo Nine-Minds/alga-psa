@@ -58,6 +58,8 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
     }
   };
 
+  console.log('Invoice zip job data:', jobData);
+
   try {
     const { jobRecord, scheduledJobId } = await jobService.createAndScheduleJob(
       'invoice_zip',

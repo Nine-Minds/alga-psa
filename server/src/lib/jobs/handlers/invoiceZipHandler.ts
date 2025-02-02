@@ -69,11 +69,13 @@ export class InvoiceZipJobHandler {
   }
 
   public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
+    debugger;
     if (!data.jobServiceId) {
       throw new Error('jobServiceId is required in job data');
     }
 
     const { jobServiceId, invoiceIds, tenantId, steps } = data;
+    let zipDetailId: string | undefined;
     
     console.log(`Starting ZIP bundle job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
 
@@ -86,52 +88,82 @@ export class InvoiceZipJobHandler {
         const step = steps[i];
         
         // Start processing invoice
-        const processingResult: JobStepResult = {
-          step: step.type,
-          status: 'started',
+        const processingDetails = {
           invoiceId,
           details: `Processing invoice ${i + 1} of ${invoiceIds.length}`
         };
         
+        // Create job detail record and get its ID
+        const detailId = await this.jobService.createJobDetail(
+          jobServiceId,
+          step.stepName,
+          'processing',
+          processingDetails
+        );
+        
         await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
           tenantId,
           pgBossJobId,
-          stepResult: processingResult
+          stepResult: {
+            step: step.type,
+            status: 'started',
+            ...processingDetails
+          }
         });
         
         const fileRecord = await this.processSingleInvoice(invoiceId, tenantId);
         fileRecords.push(fileRecord);
         
         // Complete invoice processing
-        const completedResult: JobStepResult = {
-          step: step.type,
-          status: 'completed',
+        const completedDetails = {
           invoiceId,
           file_id: fileRecord.file_id,
           details: `Generated PDF for Invoice #${fileRecord.invoice_number}`
         };
         
+        // Update the existing job detail record
+        await this.jobService.updateJobDetailRecord(
+          detailId,
+          'completed',
+          completedDetails
+        );
+        
         await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
           tenantId,
           pgBossJobId,
-          stepResult: completedResult
+          stepResult: {
+            step: step.type,
+            status: 'completed',
+            ...completedDetails
+          }
         });
       }
 
       // Process ZIP creation step
       const zipStep = steps[steps.length - 1];
+      let zipDetailId: string | undefined;
       
       // Start ZIP creation
-      const zipStartResult: JobStepResult = {
-        step: zipStep.type,
-        status: 'started',
+      const zipStartDetails = {
         details: `Creating ZIP archive for ${fileRecords.length} invoice(s)`
       };
+
+      // Create job detail record for ZIP creation
+      zipDetailId = await this.jobService.createJobDetail(
+        jobServiceId,
+        zipStep.stepName,
+        'processing',
+        zipStartDetails
+      );
       
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
         tenantId,
         pgBossJobId,
-        stepResult: zipStartResult
+        stepResult: {
+          step: zipStep.type,
+          status: 'started',
+          ...zipStartDetails
+        }
       });
       
       const zipFilePath = await this.zipService.generateZipFromFileRecords(fileRecords);
@@ -165,18 +197,27 @@ export class InvoiceZipJobHandler {
       }
 
       // Complete ZIP creation
-      const zipCompleteResult: JobStepResult = {
-        step: zipStep.type,
-        status: 'completed',
+      const zipCompleteDetails = {
         file_id: uploadResult.document.file_id,
         storage_path: uploadResult.document.storage_path,
         details: `Created and uploaded ZIP archive '${fileName}' containing ${fileRecords.length} invoice(s)`
       };
+
+      // Update the existing job detail record for ZIP creation
+      await this.jobService.updateJobDetailRecord(
+        zipDetailId,
+        'completed',
+        zipCompleteDetails
+      );
       
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Processing, {
         tenantId,
         pgBossJobId,
-        stepResult: zipCompleteResult
+        stepResult: {
+          step: zipStep.type,
+          status: 'completed',
+          ...zipCompleteDetails
+        }
       });
       
       // Mark entire job as completed
@@ -186,10 +227,23 @@ export class InvoiceZipJobHandler {
         details: `Successfully processed and bundled ${fileRecords.length} invoice(s) into ZIP archive`
       });
       
-    } catch (error) {
+    } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const failureDetails = {
+        error: `Failed to create invoice bundle: ${errorMessage}`
+      };
+
+      // Update the ZIP step's job detail record to failed if it exists
+      if (typeof zipDetailId !== 'undefined') {
+        await this.jobService.updateJobDetailRecord(
+          zipDetailId,
+          'failed',
+          failureDetails
+        );
+      }
+
       await this.jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
-        error: `Failed to create invoice bundle: ${errorMessage}`,
+        error: failureDetails.error,
         tenantId,
         pgBossJobId
       });

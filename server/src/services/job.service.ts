@@ -1,7 +1,7 @@
 import { JobScheduler } from '../lib/jobs/jobScheduler';
 import { StorageService } from '@/lib/storage/StorageService';
 import { JobStatus } from '../types/job.d';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
 
 export interface JobStep {
   stepName: string;
@@ -202,32 +202,141 @@ export class JobService {
 
     return details.map(detail => ({
       ...detail,
-      metadata: detail.metadata ? JSON.parse(detail.metadata) : undefined
+      metadata: detail.metadata ?
+        (typeof detail.metadata === 'string' ? JSON.parse(detail.metadata) : detail.metadata)
+        : undefined
     }));
   }
 
   private async createJobRecord(data: Partial<JobData>): Promise<JobData> {
-    // This is a mock implementation, replace with actual DB insertion logic
-    const id = Date.now().toString();
-    const jobRecord: JobData = {
-      id,
-      tenantId: data.tenantId!,
-      status: JobStatus.Pending,
-      stepResults: [],
-      ...data
-    };
+    if (!data.tenantId) {
+      throw new Error('Tenant ID is required for job creation');
+    }
+    return await runWithTenant(data.tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      
+      // Ensure metadata is properly stringified
+      const metadataObj = {
+        ...data.metadata,
+        scheduledJobId: data.scheduledJobId,
+        stepResults: data.stepResults || []
+      };
+  
+      const jobRecord = {
+        tenant: data.tenantId,
+        type: data.jobName,
+        status: JobStatus.Pending,
+        metadata: typeof metadataObj === 'string' ? metadataObj : JSON.stringify(metadataObj),
+        created_at: new Date(),
+        user_id: data.metadata?.user_id
+      };
+
+      const [inserted] = await knex('jobs')
+        .insert(jobRecord)
+        .returning('*');
+
+      const metadata = inserted.metadata ?
+        (typeof inserted.metadata === 'string' ? JSON.parse(inserted.metadata) : inserted.metadata)
+        : {};
+
+      return {
+        id: inserted.job_id,
+        tenantId: inserted.tenant,
+        jobName: inserted.type,
+        status: inserted.status,
+        scheduledJobId: metadata.scheduledJobId,
+        metadata: metadata,
+        stepResults: metadata.stepResults || [],
+        createdAt: inserted.created_at
+      };
+    });
+  }
+
+  async createJobDetail(jobId: string, stepName: string, status: 'pending' | 'processing' | 'completed' | 'failed', metadata?: Record<string, unknown>): Promise<string> {
+    const { knex } = await createTenantKnex();
     
-    // TODO: Implement actual database insertion
-    console.log('Job record created:', jobRecord);
-    return jobRecord;
+    // Get the tenant ID from the job record
+    const job = await knex('jobs')
+      .where('job_id', jobId)
+      .first('tenant');
+      
+    if (!job) {
+      throw new Error(`Job with ID ${jobId} not found`);
+    }
+
+    const [detail] = await knex('job_details')
+      .insert({
+        tenant: job.tenant,
+        job_id: jobId,
+        step_name: stepName,
+        status,
+        processed_at: new Date(),
+        retry_count: 0,
+        metadata: metadata ? JSON.stringify(metadata) : null,
+        result: metadata ? JSON.stringify(metadata) : null // For backward compatibility
+      })
+      .returning('detail_id');
+
+    return detail.detail_id;
+  }
+
+  async updateJobDetailRecord(detailId: string, status: 'pending' | 'processing' | 'completed' | 'failed', metadata?: Record<string, unknown>): Promise<void> {
+    const { knex } = await createTenantKnex();
+    
+    const detail = await knex('job_details')
+      .where('detail_id', detailId)
+      .first();
+      
+    if (!detail) {
+      throw new Error(`Job detail with ID ${detailId} not found`);
+    }
+
+    await knex('job_details')
+      .where('detail_id', detailId)
+      .update({
+        status,
+        processed_at: new Date(),
+        metadata: metadata ? JSON.stringify(metadata) : null,
+        result: metadata ? JSON.stringify(metadata) : null, // For backward compatibility
+        retry_count: status === 'failed' ? knex.raw('retry_count + 1') : detail.retry_count
+      });
   }
 
   private async updateJobRecord(id: string | undefined, updates: Partial<JobData>): Promise<void> {
     if (!id) {
       throw new Error('Job ID is required for updates');
     }
+    const { knex } = await createTenantKnex();
     
-    // TODO: Implement actual database update
-    console.log(`Job record ${id} updated with:`, updates);
+    const currentJob = await knex('jobs')
+      .where('job_id', id)
+      .first();
+
+    if (!currentJob) {
+      throw new Error(`Job with ID ${id} not found`);
+    }
+
+    const currentMetadata = currentJob.metadata ?
+      (typeof currentJob.metadata === 'string' ? JSON.parse(currentJob.metadata) : currentJob.metadata)
+      : {};
+
+    // Add step results directly without modifying their structure
+    const stepResults = updates.stepResults || [];
+
+    const updatedMetadata = {
+      ...currentMetadata,
+      scheduledJobId: updates.scheduledJobId,
+      stepResults: [...(currentMetadata.stepResults || []), ...stepResults]
+    };
+
+    const updateData: Record<string, any> = {
+      status: updates.status,
+      updated_at: new Date(),
+      metadata: JSON.stringify(updatedMetadata)
+    };
+
+    await knex('jobs')
+      .where('job_id', id)
+      .update(updateData);
   }
 }
