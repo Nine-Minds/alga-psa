@@ -6,6 +6,7 @@ import { TimePeriodSettings } from '../models/timePeriodSettings';
 import { v4 as uuidv4 } from 'uuid';
 import { ISO8601String } from '../../types/types.d';
 import { ITimePeriod, ITimePeriodSettings } from '../../interfaces/timeEntry.interfaces';
+import { TimePeriodSuggester } from '../timePeriodSuggester';
 import { addDays, addMonths, format, differenceInHours, parseISO, startOfDay, formatISO, endOfMonth, AddMonthsOptions, differenceInDays } from 'date-fns';
 import { fromZonedTime, toZonedTime } from 'date-fns-tz';
 import { validateData, validateArray } from '../utils/validation';
@@ -477,7 +478,7 @@ export async function generateAndSaveTimePeriods(startDate: ISO8601String, endDa
   }
 }
 
-export async function createNextTimePeriod(settings: ITimePeriodSettings, daysThreshold: number = 5): Promise<ITimePeriod | null> {
+export async function createNextTimePeriod(settings: ITimePeriodSettings[], daysThreshold: number = 5): Promise<ITimePeriod | null> {
   try {
     // Get all existing time periods
     const existingPeriods = await fetchAllTimePeriods();
@@ -486,12 +487,10 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings, daysTh
       throw new Error('No existing time periods found');
     }
 
-    // Sort periods by end_date in descending order and get the latest one
+    // Get the latest period end date
     const lastPeriod = existingPeriods.sort((a, b) =>
       parseISO(b.end_date).getTime() - parseISO(a.end_date).getTime()
     )[0];
-
-    // Use the end date of the last period as the start date for the new period
     const newStartDate = lastPeriod.end_date;
 
     // Check if we're within the threshold days of the new period
@@ -505,14 +504,13 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings, daysTh
       return null;
     }
 
-    // Calculate the end date based on the settings
-    const endDateObj = getEndOfPeriod(newStartDate, settings);
-    const newEndDate = formatUtcDateNoTime(endDateObj);
-
+    // Use TimePeriodSuggester to create the new period
+    const newPeriodData = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+    
     // Create the new time period
     const newPeriod = await createTimePeriod({
-      start_date: newStartDate,
-      end_date: newEndDate
+      start_date: newPeriodData.start_date,
+      end_date: newPeriodData.end_date
     });
 
     return newPeriod;

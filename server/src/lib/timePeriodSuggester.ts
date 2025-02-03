@@ -59,7 +59,7 @@ export class TimePeriodSuggester {
         // if (setting.end_day) {
           // Handle semi-monthly periods
           const daysInMonth = startDate.daysInMonth;
-          const endDay = setting.end_day === 0 ? daysInMonth : Math.min(setting.end_day, daysInMonth);
+          const endDay = setting.end_day === 0 ? daysInMonth : Math.min(setting.end_day || 1, daysInMonth);
           
           // Determine base date for month calculations
           const baseDate = setting.start_day === 1 ?

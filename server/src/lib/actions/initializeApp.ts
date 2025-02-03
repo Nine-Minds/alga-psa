@@ -189,16 +189,14 @@ export async function initializeApp() {
                         // Get active time period settings for this tenant
                         const settings = await TimePeriodSettings.getActiveSettings();
 
-                        // Try to create next time period for each active setting
-                        for (const setting of settings) {
-                            try {
-                                const result = await createNextTimePeriod(setting);
-                                if (result) {
-                                    logger.info(`Created new time period for tenant ${tenant}: ${result.start_date} to ${result.end_date}`);
-                                }
-                            } catch (error) {
-                                logger.error(`Error creating next time period for setting ${setting.time_period_settings_id} in tenant ${tenant}:`, error);
+                        // Create next time period using all active settings
+                        try {
+                            const result = await createNextTimePeriod(settings);
+                            if (result) {
+                                logger.info(`Created new time period for tenant ${tenant}: ${result.start_date} to ${result.end_date}`);
                             }
+                        } catch (error) {
+                            logger.error(`Error creating next time period in tenant ${tenant}:`, error);
                         }
                     } catch (error) {
                         logger.error(`Error processing tenant ${tenant} for time periods:`, error);
