@@ -180,7 +180,9 @@ export class AssetRelationshipModel {
                 FROM asset_relationships ar
                 JOIN assets parent ON ar.parent_asset_id = parent.asset_id AND ar.tenant = parent.tenant
                 JOIN assets child ON ar.child_asset_id = child.asset_id AND ar.tenant = child.tenant
-                WHERE ar.parent_asset_id = ? OR ar.child_asset_id = ?
+                WHERE (ar.parent_asset_id = ? OR ar.child_asset_id = ?)
+                AND ar.tenant = parent.tenant
+                AND ar.tenant = child.tenant
 
                 UNION ALL
 
@@ -194,6 +196,7 @@ export class AssetRelationshipModel {
                 FROM asset_relationships ar
                 JOIN full_hierarchy h ON 
                     (ar.parent_asset_id = h.child_asset_id OR ar.child_asset_id = h.parent_asset_id)
+                    AND ar.tenant = h.tenant
                 JOIN assets parent ON ar.parent_asset_id = parent.asset_id AND ar.tenant = parent.tenant
                 JOIN assets child ON ar.child_asset_id = child.asset_id AND ar.tenant = child.tenant
                 WHERE NOT (ar.child_asset_id = ANY(h.path)) -- Prevent cycles

@@ -479,7 +479,8 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
             .where('assets.tenant', tenant)
             .leftJoin('companies', function(this: Knex.JoinClause) {
                 this.on('companies.company_id', '=', 'assets.company_id')
-                    .andOn('companies.tenant', '=', 'assets.tenant');
+                    .andOn('companies.tenant', '=', 'assets.tenant')
+                    .andOn('companies.tenant', '=', knex.raw('?', [tenant]));
             });
 
         // Apply filters
@@ -867,7 +868,11 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
             .where({ 'asset_maintenance_schedules.tenant': tenant })
             .whereIn('asset_id',
                 knex('assets')
-                    .where({ 'assets.tenant': tenant, company_id })
+                    .where({ 
+                        'assets.tenant': tenant, 
+                        company_id,
+                        tenant 
+                    })
                     .select('asset_id')
             )
             .select(
@@ -892,7 +897,11 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
             .where({ 'asset_maintenance_schedules.tenant': tenant })
             .whereIn('asset_id',
                 knex('assets')
-                    .where({ 'assets.tenant': tenant, company_id })
+                    .where({ 
+                        'assets.tenant': tenant, 
+                        company_id,
+                        tenant 
+                    })
                     .select('asset_id')
             )
             .select('maintenance_type')
@@ -1056,4 +1065,3 @@ export async function removeAssetAssociation(
         throw new Error('Failed to remove asset association');
     }
 }
-

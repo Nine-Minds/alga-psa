@@ -88,7 +88,7 @@ export async function getAssetDocuments(tenant: string, asset_id: string): Promi
             })
             .leftJoin('document_types as dt', function() {
                 this.on('documents.type_id', '=', 'dt.type_id')
-                    .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+                    .andOn('dt.tenant', '=', 'documents.tenant');
             })
             .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
             .where({
