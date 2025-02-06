@@ -5,7 +5,7 @@ import { createTenantKnex } from '../db';
 
 class InteractionModel {
   static async getForEntity(entityId: string, entityType: 'contact' | 'company'): Promise<IInteraction[]> {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
 
     try {
       const query = db('interactions')
@@ -28,9 +28,18 @@ class InteractionModel {
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
         .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
-        .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
-        .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
-        .leftJoin('users', 'interactions.user_id', 'users.user_id')
+        .leftJoin('contacts', function() {
+          this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+            .andOn('interactions.tenant', '=', 'contacts.tenant');
+        })
+        .leftJoin('companies', function() {
+          this.on('interactions.company_id', '=', 'companies.company_id')
+            .andOn('interactions.tenant', '=', 'companies.tenant');
+        })
+        .leftJoin('users', function() {
+          this.on('interactions.user_id', '=', 'users.user_id')
+            .andOn('interactions.tenant', '=', 'users.tenant');
+        })
         .orderBy('interactions.interaction_date', 'desc');
 
       if (entityType === 'contact') {
@@ -60,7 +69,7 @@ class InteractionModel {
     typeId?: string;
     limit?: number;
   }): Promise<IInteraction[]> {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
 
     try {
       const query = db('interactions')
@@ -84,9 +93,18 @@ class InteractionModel {
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
         .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
-        .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
-        .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
-        .leftJoin('users', 'interactions.user_id', 'users.user_id');
+        .leftJoin('contacts', function() {
+          this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+            .andOn('interactions.tenant', '=', 'contacts.tenant');
+        })
+        .leftJoin('companies', function() {
+          this.on('interactions.company_id', '=', 'companies.company_id')
+            .andOn('interactions.tenant', '=', 'companies.tenant');
+        })
+        .leftJoin('users', function() {
+          this.on('interactions.user_id', '=', 'users.user_id')
+            .andOn('interactions.tenant', '=', 'users.tenant');
+        });
 
       if (filters.userId) {
         query.where('interactions.user_id', filters.userId);
@@ -151,11 +169,12 @@ class InteractionModel {
   }
 
   static async getInteractionTypes(): Promise<IInteractionType[]> {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
 
     try {
       const result = await db('interaction_types')
-        .select('type_id', 'type_name', 'icon');
+        .select('type_id', 'type_name', 'icon')
+        .where({ tenant });
 
       return result;
     } catch (error) {
@@ -165,11 +184,14 @@ class InteractionModel {
   }
 
   static async updateInteraction(interactionId: string, updateData: Partial<IInteraction>): Promise<IInteraction> {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
 
     try {
       const [updatedInteraction] = await db('interactions')
-        .where({ interaction_id: interactionId })
+        .where({ 
+          interaction_id: interactionId,
+          tenant
+        })
         .update(updateData)
         .returning('*');
 
@@ -187,10 +209,11 @@ class InteractionModel {
   }
 
   static async getById(interactionId: string): Promise<IInteraction | null> {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
   
     try {
       const result = await db('interactions')
+        .where({ tenant })
         .select(
           'interactions.*',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
@@ -203,9 +226,18 @@ class InteractionModel {
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
         .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
-        .leftJoin('contacts', 'interactions.contact_name_id', 'contacts.contact_name_id')
-        .leftJoin('companies', 'interactions.company_id', 'companies.company_id')
-        .leftJoin('users', 'interactions.user_id', 'users.user_id')
+        .leftJoin('contacts', function() {
+          this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
+            .andOn('interactions.tenant', '=', 'contacts.tenant');
+        })
+        .leftJoin('companies', function() {
+          this.on('interactions.company_id', '=', 'companies.company_id')
+            .andOn('interactions.tenant', '=', 'companies.tenant');
+        })
+        .leftJoin('users', function() {
+          this.on('interactions.user_id', '=', 'users.user_id')
+            .andOn('interactions.tenant', '=', 'users.tenant');
+        })
         .where('interactions.interaction_id', interactionId)
         .first();
   
