@@ -33,8 +33,11 @@ const Team = {
 
     getAll: async (): Promise<ITeam[]> => {
         try {
-            const {knex: db} = await createTenantKnex();
-            const teams = await db<ITeam>('teams').select('*');
+            const {knex: db, tenant} = await createTenantKnex();
+            const teams = await db<ITeam>('teams')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .select('*');
             return teams;
         } catch (error) {
             logger.error('Error getting all teams:', error);
@@ -44,8 +47,13 @@ const Team = {
 
     get: async (team_id: string): Promise<ITeam | undefined> => {
         try {
-            const {knex: db} = await createTenantKnex();
-            const team = await db<ITeam>('teams').select('*').where({ team_id }).first();
+            const {knex: db, tenant} = await createTenantKnex();
+            const team = await db<ITeam>('teams')
+                .select('*')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('team_id', team_id)
+                .first();
             return team;
         } catch (error) {
             logger.error(`Error getting team with id ${team_id}:`, error);
@@ -57,7 +65,9 @@ const Team = {
         try {
             logger.info('Inserting team:', team);
             const {knex: db, tenant} = await createTenantKnex();
-            const [team_id] = await db<ITeam>('teams').insert({...team, tenant: tenant!}).returning('team_id');
+            const [team_id] = await db<ITeam>('teams')
+                .insert({...team, tenant: tenant!})
+                .returning('team_id');
             return team_id;
         } catch (error) {
             logger.error('Error inserting team:', error);
@@ -67,8 +77,12 @@ const Team = {
 
     update: async (team_id: string, team: Partial<ITeam>): Promise<void> => {
         try {
-            const {knex: db} = await createTenantKnex();
-            await db<ITeam>('teams').where({ team_id }).update(team);
+            const {knex: db, tenant} = await createTenantKnex();
+            await db<ITeam>('teams')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('team_id', team_id)
+                .update(team);
         } catch (error) {
             logger.error(`Error updating team with id ${team_id}:`, error);
             throw error;
@@ -77,11 +91,19 @@ const Team = {
 
     delete: async (team_id: string): Promise<void> => {
         try {
-            const {knex: db} = await createTenantKnex();
+            const {knex: db, tenant} = await createTenantKnex();
             // Delete team members first
-            await db('team_members').where({ team_id }).del();
+            await db('team_members')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('team_id', team_id)
+                .del();
             // Then delete the team
-            await db<ITeam>('teams').where({ team_id }).del();
+            await db<ITeam>('teams')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('team_id', team_id)
+                .del();
         } catch (error) {
             logger.error(`Error deleting team with id ${team_id}:`, error);
             throw error;
@@ -92,7 +114,12 @@ const Team = {
         try {
             const {knex: db, tenant} = await createTenantKnex();
             // Check if the user is active
-            const user = await db('users').select('is_inactive').where({ user_id }).first();
+            const user = await db('users')
+                .select('is_inactive')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('user_id', user_id)
+                .first();
             if (!user || user.is_inactive) {
                 throw new Error('Cannot add inactive user to the team');
             }
@@ -106,8 +133,13 @@ const Team = {
 
     removeMember: async (team_id: string, user_id: string): Promise<void> => {
         try {
-            const {knex: db} = await createTenantKnex();
-            await db('team_members').where({ team_id, user_id }).del();
+            const {knex: db, tenant} = await createTenantKnex();
+            await db('team_members')
+                .whereNotNull('tenant')
+                .andWhere('tenant', tenant!)
+                .andWhere('team_id', team_id)
+                .andWhere('user_id', user_id)
+                .del();
         } catch (error) {
             logger.error(`Error removing user ${user_id} from team ${team_id}:`, error);
             throw error;
@@ -116,14 +148,17 @@ const Team = {
 
     getMembers: async (team_id: string): Promise<string[]> => {
         try {
-            const {knex: db} = await createTenantKnex();
+            const {knex: db, tenant} = await createTenantKnex();
             const members = await db('team_members')
                 .select('team_members.user_id')
-                .join('users', 'team_members.user_id', '=', 'users.user_id')
-                .where({ 
-                    'team_members.team_id': team_id,
-                    'users.is_inactive': false
-                });
+                .join('users', function() {
+                    this.on('team_members.user_id', '=', 'users.user_id')
+                        .andOn('team_members.tenant', '=', 'users.tenant');
+                })
+                .whereNotNull('team_members.tenant')
+                .andWhere('team_members.tenant', tenant!)
+                .andWhere('team_members.team_id', team_id)
+                .andWhere('users.is_inactive', false);
             return members.map((member): string => member.user_id);
         } catch (error) {
             logger.error(`Error getting members for team ${team_id}:`, error);
