@@ -29,7 +29,7 @@ interface SearchResult {
 
 export async function searchWorkItems(options: SearchOptions): Promise<SearchResult> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
@@ -38,9 +38,14 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
     // Build base queries using proper parameter binding
     let ticketsQuery = db('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
-      .innerJoin('companies as c', 't.company_id', 'c.company_id')
+      .where('t.tenant', tenant)
+      .innerJoin('companies as c', function() {
+        this.on('t.company_id', '=', 'c.company_id')
+            .andOn('t.tenant', '=', 'c.tenant');
+      })
       .leftJoin(
         db('ticket_resources')
+          .where('tenant', tenant)
           .select('ticket_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('ticket_id')
@@ -70,11 +75,22 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
 
       let projectTasksQuery = db('project_tasks as pt')
       .whereNotIn('pt.task_id', options.availableWorkItemIds || [])
-      .innerJoin('project_phases as pp', 'pt.phase_id', 'pp.phase_id')
-      .innerJoin('projects as p', 'pp.project_id', 'p.project_id')
-      .innerJoin('companies as c', 'p.company_id', 'c.company_id')
+      .where('pt.tenant', tenant)
+      .innerJoin('project_phases as pp', function() {
+        this.on('pt.phase_id', '=', 'pp.phase_id')
+            .andOn('pt.tenant', '=', 'pp.tenant');
+      })
+      .innerJoin('projects as p', function() {
+        this.on('pp.project_id', '=', 'p.project_id')
+            .andOn('pp.tenant', '=', 'p.tenant');
+      })
+      .innerJoin('companies as c', function() {
+        this.on('p.company_id', '=', 'c.company_id')
+            .andOn('p.tenant', '=', 'c.tenant');
+      })
       .leftJoin(
         db('task_resources')
+          .where('tenant', tenant)
           .select('task_id')
           .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
           .groupBy('task_id')
@@ -109,10 +125,12 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
 
       let adHocQuery = db('schedule_entries as se')
       .whereNotIn('se.entry_id', options.availableWorkItemIds || [])
+      .where('se.tenant', tenant)
       .where('work_item_type', 'ad_hoc')
       .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
       .leftJoin(
         db('schedule_entry_assignees')
+          .where('tenant', tenant)
           .select('entry_id')
           .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
           .groupBy('entry_id')
@@ -300,16 +318,24 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
 
 export async function getWorkItemById(workItemId: string, workItemType: WorkItemType): Promise<Omit<IExtendedWorkItem, "tenant"> | null> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     let workItem;
 
     if (workItemType === 'ticket') {
       workItem = await db('tickets as t')
-        .where('t.ticket_id', workItemId)
-      .leftJoin(
-        db.raw('(select ticket_id, array_agg(distinct additional_user_id) as additional_user_ids from ticket_resources group by ticket_id) as tr'),
-        't.ticket_id', 'tr.ticket_id'
-      )
+        .where({
+          't.ticket_id': workItemId,
+          't.tenant': tenant
+        })
+        .leftJoin(
+          db('ticket_resources')
+            .where('tenant', tenant)
+            .select('ticket_id')
+            .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
+            .groupBy('ticket_id')
+            .as('tr'),
+          't.ticket_id', 'tr.ticket_id'
+        )
         .groupBy('t.ticket_id', 't.title', 't.url', 't.ticket_number', 't.assigned_to')
         .select(
           't.ticket_id as work_item_id',
@@ -327,13 +353,27 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         .first();
     } else if (workItemType === 'project_task') {
       workItem = await db('project_tasks as pt')
-        .join('project_phases as pp', 'pt.phase_id', 'pp.phase_id')
-        .join('projects as p', 'pp.project_id', 'p.project_id')
-      .leftJoin(
-        db.raw('(select task_id, array_agg(distinct additional_user_id) as additional_user_ids from task_resources group by task_id) as tr'),
-        'pt.task_id', 'tr.task_id'
-      )
-        .where('pt.task_id', workItemId)
+        .where({
+          'pt.task_id': workItemId,
+          'pt.tenant': tenant
+        })
+        .join('project_phases as pp', function() {
+          this.on('pt.phase_id', '=', 'pp.phase_id')
+              .andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .join('projects as p', function() {
+          this.on('pp.project_id', '=', 'p.project_id')
+              .andOn('pp.tenant', '=', 'p.tenant');
+        })
+        .leftJoin(
+          db('task_resources')
+            .where('tenant', tenant)
+            .select('task_id')
+            .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
+            .groupBy('task_id')
+            .as('tr'),
+          'pt.task_id', 'tr.task_id'
+        )
         .groupBy('pt.task_id', 'pt.task_name', 'pt.description', 'p.project_name', 'pp.phase_name', 'pt.assigned_to')
         .select(
           'pt.task_id as work_item_id',
@@ -351,9 +391,13 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         .first();
     } else if (workItemType === 'ad_hoc') {
       workItem = await db('schedule_entries as se')
-        .where('se.entry_id', workItemId)
+        .where({
+          'se.entry_id': workItemId,
+          'se.tenant': tenant
+        })
         .leftJoin(
           db('schedule_entry_assignees')
+            .where('tenant', tenant)
             .select('entry_id')
             .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
             .groupBy('entry_id')
