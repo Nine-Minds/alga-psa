@@ -24,7 +24,10 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', 'contacts.company_id', 'companies.company_id')
+      .leftJoin('companies', function() {
+        this.on('contacts.company_id', 'companies.company_id')
+           .andOn('companies.tenant', db.raw('?', [tenant]))
+      })
       .where({ 
         'contacts.contact_name_id': contactNameId, 
         'contacts.tenant': tenant 
@@ -222,7 +225,10 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', 'contacts.company_id', 'companies.company_id')
+      .leftJoin('companies', function() {
+        this.on('contacts.company_id', 'companies.company_id')
+           .andOn('companies.tenant', db.raw('?', [tenant]))
+      })
       .where('contacts.company_id', companyId)
       .andWhere('contacts.tenant', tenant)
       .modify(function (queryBuilder) {
