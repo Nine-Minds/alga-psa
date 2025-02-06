@@ -42,11 +42,12 @@ export async function getTicketCategories() {
     throw new Error('Unauthorized');
   }
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   try {
     // Get all categories ordered by name
     const categories = await db<ITicketCategory>('categories')
       .select('*')
+      .where('tenant', tenant!)
       .orderBy('category_name');
 
     // Order them hierarchically
@@ -235,10 +236,11 @@ export async function getTicketCategoriesByChannel(channelId: string) {
     throw new Error('Channel ID is required');
   }
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   try {
     // Get all categories for the channel ordered by name
     const categories = await db<ITicketCategory>('categories')
+      .where('tenant', tenant!)
       .where('channel_id', channelId)
       .orderBy('category_name');
 
