@@ -143,6 +143,8 @@ Migrations should have a .cjs extension and should be located in the /server/mig
 
 Run migrations with the migration environment (env) flag.
 
+Every query should filter on the tenant column (including joins) to ensure compatibility with citusdb.
+
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.
 Most tables require the tenant to be specified in the `tenant` column when inserting.
