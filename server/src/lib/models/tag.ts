@@ -6,8 +6,10 @@ import { v4 as uuidv4 } from 'uuid';
 const Tag = {
   getAll: async (): Promise<ITag[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const tags = await db<ITag>('tags').select('*');
+      const {knex: db, tenant} = await createTenantKnex();
+      const tags = await db<ITag>('tags')
+        .where('tenant', tenant!)
+        .select('*');
       return tags;
     } catch (error) {
       console.error('Error getting all tags:', error);
@@ -17,9 +19,11 @@ const Tag = {
 
   getAllByEntityId: async (tagged_id: string, tagged_type: TaggedEntityType): Promise<ITag[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const tags = await db<ITag>('tags')
-        .where({ tagged_id, tagged_type })
+        .where('tagged_id', tagged_id)
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant!)
         .select('*');
       return tags;
     } catch (error) {
@@ -30,9 +34,10 @@ const Tag = {
 
   get: async (tag_id: string): Promise<ITag | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const tag = await db<ITag>('tags')
-        .where({ tag_id })
+        .where('tag_id', tag_id)
+        .where('tenant', tenant!)
         .first();
       return tag;
     } catch (error) {
@@ -56,9 +61,10 @@ const Tag = {
 
   update: async (tag_id: string, tag: Partial<ITag>): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db<ITag>('tags')
-        .where({ tag_id })
+        .where('tag_id', tag_id)
+        .where('tenant', tenant!)
         .update(tag);
     } catch (error) {
       console.error(`Error updating tag with id ${tag_id}:`, error);
@@ -68,9 +74,10 @@ const Tag = {
 
   delete: async (tag_id: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db<ITag>('tags')
-        .where({ tag_id })
+        .where('tag_id', tag_id)
+        .where('tenant', tenant!)
         .del();
     } catch (error) {
       console.error(`Error deleting tag with id ${tag_id}:`, error);
@@ -80,9 +87,10 @@ const Tag = {
 
   getAllByEntityIds: async (tagged_ids: string[], tagged_type: TaggedEntityType): Promise<ITag[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const tags = await db<ITag>('tags')
-        .where({ tagged_type })
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant!)
         .whereIn('tagged_id', tagged_ids)
         .select('*');
       return tags;
@@ -94,9 +102,10 @@ const Tag = {
 
   getAllUniqueTagTextsByType: async (tagged_type: TaggedEntityType): Promise<string[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const tags = await db<ITag>('tags')
-        .where({ tagged_type })
+        .where('tagged_type', tagged_type)
+        .where('tenant', tenant!)
         .distinct('tag_text')
         .orderBy('tag_text');
       return tags.map((t):string => t.tag_text);
