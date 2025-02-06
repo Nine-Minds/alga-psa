@@ -172,8 +172,14 @@ const ProjectTaskModel = {
     try {
       const {knex: db} = await createTenantKnex();
       const tasks = await db<IProjectTask>('project_tasks')
-        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-        .leftJoin('users', 'project_tasks.assigned_to', 'users.user_id')
+        .join('project_phases', function() {
+          this.on('project_tasks.phase_id', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', 'project_phases.tenant')
+        })
+        .leftJoin('users', function() {
+          this.on('project_tasks.assigned_to', 'users.user_id')
+              .andOn('project_tasks.tenant', 'users.tenant')
+        })
         .where('project_phases.project_id', projectId)
         .andWhere('project_tasks.phase_id', db.ref('project_phases.phase_id')) // Ensure phase matches
         .select(
@@ -291,8 +297,14 @@ const ProjectTaskModel = {
     try {
       const {knex: db} = await createTenantKnex();
       const items = await db('task_checklist_items')
-        .join('project_tasks', 'task_checklist_items.task_id', 'project_tasks.task_id')
-        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
+        .join('project_tasks', function() {
+          this.on('task_checklist_items.task_id', 'project_tasks.task_id')
+              .andOn('task_checklist_items.tenant', 'project_tasks.tenant')
+        })
+        .join('project_phases', function() {
+          this.on('project_tasks.phase_id', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', 'project_phases.tenant')
+        })
         .where('project_phases.project_id', projectId)
         .orderBy('task_checklist_items.order_number', 'asc')
         .select('task_checklist_items.*');
@@ -366,7 +378,10 @@ const ProjectTaskModel = {
           'users.first_name',
           'users.last_name'
         )
-        .leftJoin('users', 'task_resources.additional_user_id', 'users.user_id')
+        .leftJoin('users', function() {
+          this.on('task_resources.additional_user_id', 'users.user_id')
+              .andOn('task_resources.tenant', 'users.tenant')
+        })
         .where('task_id', taskId);
       return resources;
     } catch (error) {
@@ -416,8 +431,14 @@ const ProjectTaskModel = {
       const {knex: db} = await createTenantKnex();
       const links = await db<IProjectTicketLink>('project_ticket_links')
         .where('task_id', taskId)
-        .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-        .leftJoin('statuses', 'tickets.status_id', 'statuses.status_id')
+        .leftJoin('tickets', function() {
+          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
+              .andOn('project_ticket_links.tenant', 'tickets.tenant')
+        })
+        .leftJoin('statuses', function() {
+          this.on('tickets.status_id', 'statuses.status_id')
+              .andOn('tickets.tenant', 'statuses.tenant')
+        })
         .select(
           'project_ticket_links.*',
           'tickets.ticket_number',
@@ -461,8 +482,14 @@ const ProjectTaskModel = {
       const {knex: db} = await createTenantKnex();
       const links = await db('project_ticket_links')
         .where('project_ticket_links.project_id', projectId)
-        .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-        .leftJoin('statuses', 'tickets.status_id', 'statuses.status_id')
+        .leftJoin('tickets', function() {
+          this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
+              .andOn('project_ticket_links.tenant', 'tickets.tenant')
+        })
+        .leftJoin('statuses', function() {
+          this.on('tickets.status_id', 'statuses.status_id')
+              .andOn('tickets.tenant', 'statuses.tenant')
+        })
         .select(
           'project_ticket_links.*',
           'tickets.ticket_number',

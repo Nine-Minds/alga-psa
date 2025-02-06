@@ -35,7 +35,10 @@ const ProjectModel = {
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', 'projects.company_id', 'companies.company_id')
+        .leftJoin('companies', function() {
+          this.on('projects.company_id', 'companies.company_id')
+              .andOn('projects.tenant', 'companies.tenant')
+        })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
              .andOn('projects.tenant', 'users.tenant')
@@ -74,7 +77,10 @@ const ProjectModel = {
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', 'projects.company_id', 'companies.company_id')
+        .leftJoin('companies', function() {
+          this.on('projects.company_id', 'companies.company_id')
+              .andOn('projects.tenant', 'companies.tenant')
+        })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
              .andOn('projects.tenant', 'users.tenant')
@@ -195,7 +201,10 @@ const ProjectModel = {
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', 'projects.company_id', 'companies.company_id')
+        .leftJoin('companies', function() {
+          this.on('projects.company_id', 'companies.company_id')
+              .andOn('projects.tenant', 'companies.tenant')
+        })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
              .andOn('projects.tenant', 'users.tenant')
