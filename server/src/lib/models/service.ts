@@ -42,6 +42,7 @@ const Service = {
 
     try {
       const services = await db<IService>('service_catalog')
+        .where('tenant', tenant || '')
         .select(
           'service_id',
           'service_name',
@@ -74,7 +75,8 @@ const Service = {
 
     try {
       const [service] = await db<IService>('service_catalog')
-        .where({ service_id })
+        .where('service_id', service_id)
+        .andWhere('tenant', tenant || '')
         .select(
           'service_id',
           'service_name',
@@ -138,26 +140,29 @@ const Service = {
   },
 
   update: async (service_id: string, serviceData: Partial<IService>): Promise<IService | null> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const [updatedService] = await db<IService>('service_catalog')
-      .where({ service_id })
+      .where('service_id', service_id)
+      .andWhere('tenant', tenant || '')
       .update(serviceData)
       .returning('*');
     return updatedService || null;
   },
 
   delete: async (service_id: string): Promise<boolean> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const deletedCount = await db<IService>('service_catalog')
-      .where({ service_id })
+      .where('service_id', service_id)
+      .andWhere('tenant', tenant || '')
       .del();
     return deletedCount > 0;
   },
 
   getByCategoryId: async (category_id: string): Promise<IService[]> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     return await db<IService>('service_catalog')
-      .where({ category_id: category_id })
+      .where('category_id', category_id)
+      .andWhere('tenant', tenant || '')
       .select('*');
   },
 };

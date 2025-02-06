@@ -33,6 +33,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Tent } from 'lucide-react';
 import { auditLog } from '@/lib/logging/auditLog';
 import { getAdminConnection } from '../db/admin';
+
 interface ManualInvoiceUpdate {
   service_id?: string;
   description?: string;
@@ -52,9 +53,12 @@ interface ManualItemsUpdate {
 }
 
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const taxRates = await knex('tax_rates')
-    .where('region', taxRegion)
+    .where({ 
+      region: taxRegion,
+      tenant 
+    })
     .andWhere('start_date', '<=', date)
     .andWhere(function () {
       this.whereNull('end_date')
@@ -91,7 +95,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
   is_early: boolean;
 })[]> {
   console.log('Starting getAvailableBillingPeriods');
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const currentDate = new Date().toISOString();
   console.log(`Current date: ${currentDate}`);
 
@@ -99,8 +103,15 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
     // Get all billing cycles that don't have invoices
     console.log('Querying for available billing periods');
     const availablePeriods = await knex('company_billing_cycles as cbc')
-      .join('companies as c', 'c.company_id', 'cbc.company_id')
-      .leftJoin('invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id')
+      .join('companies as c', function() {
+        this.on('c.company_id', '=', 'cbc.company_id')
+            .andOn('c.tenant', '=', 'cbc.tenant');
+      })
+      .leftJoin('invoices as i', function() {
+        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+            .andOn('i.tenant', '=', 'cbc.tenant');
+      })
+      .where('cbc.tenant', tenant)
       .whereNotNull('cbc.period_end_date')
       .whereNull('i.invoice_id')
       .select(
@@ -168,11 +179,14 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 }
 
 export async function previewInvoice(billing_cycle_id: string): Promise<PreviewInvoiceResponse> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   
   // Get billing cycle details
   const billingCycle = await knex('company_billing_cycles')
-    .where({ billing_cycle_id })
+    .where({ 
+      billing_cycle_id,
+      tenant 
+    })
     .first();
 
   if (!billingCycle) {
@@ -200,7 +214,12 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Create invoice view model without persisting
-    const company = await knex('companies').where({ company_id }).first();
+    const company = await knex('companies')
+      .where({ 
+        company_id,
+        tenant 
+      })
+      .first();
     const due_date = await getDueDate(company_id, cycleEnd);
 
     const previewInvoice: InvoiceViewModel = {

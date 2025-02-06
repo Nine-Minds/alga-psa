@@ -14,10 +14,13 @@ export async function getBillingCycle(companyId: string): Promise<BillingCycleTy
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   const result = await conn('companies')
-    .where('company_id', companyId)
+    .where({ 
+      company_id: companyId,
+      tenant 
+    })
     .select('billing_cycle')
     .first();
 
@@ -32,10 +35,13 @@ export async function updateBillingCycle(
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   await conn('companies')
-    .where('company_id', companyId)
+    .where({ 
+      company_id: companyId,
+      tenant 
+    })
     .update({ 
       billing_cycle: billingCycle,
       updated_at: new Date().toISOString()
@@ -51,11 +57,14 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   // Get the company's current billing cycle type
   const company = await conn('companies')
-    .where('company_id', companyId)
+    .where({ 
+      company_id: companyId,
+      tenant 
+    })
     .first();
 
   if (!company) {
@@ -66,7 +75,8 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
   const lastCycle = await conn('company_billing_cycles')
     .where({ 
       company_id: companyId,
-      is_active: true 
+      is_active: true,
+      tenant
     })
     .orderBy('effective_date', 'desc')
     .first();
@@ -103,7 +113,7 @@ export async function createNextBillingCycle(
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   const company = await conn('companies')
     .where('company_id', companyId)
@@ -132,11 +142,14 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
   //   throw new Error('Only admins can remove billing cycles');
   // }
 
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
 
   // Get the billing cycle first to ensure it exists and get company_id
   const billingCycle = await knex('company_billing_cycles')
-    .where({ billing_cycle_id: cycleId })
+    .where({ 
+      billing_cycle_id: cycleId,
+      tenant 
+    })
     .first();
 
   if (!billingCycle) {
@@ -145,7 +158,10 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   // Check for existing invoices
   const invoice = await knex('invoices')
-    .where({ billing_cycle_id: cycleId })
+    .where({ 
+      billing_cycle_id: cycleId,
+      tenant 
+    })
     .first();
 
   if (invoice) {
@@ -155,7 +171,10 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   // Mark billing cycle as inactive instead of deleting
   await knex('company_billing_cycles')
-    .where({ billing_cycle_id: cycleId })
+    .where({ 
+      billing_cycle_id: cycleId,
+      tenant 
+    })
     .update({ 
       is_active: false,
       period_end_date: new Date().toISOString() // Set end date to now
@@ -181,12 +200,19 @@ export async function getInvoicedBillingCycles(): Promise<(ICompanyBillingCycle 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   // Get all billing cycles that have invoices
   const invoicedCycles = await conn('company_billing_cycles as cbc')
-    .join('companies as c', 'c.company_id', 'cbc.company_id')
-    .join('invoices as i', 'i.billing_cycle_id', 'cbc.billing_cycle_id')
+    .join('companies as c', function() {
+      this.on('c.company_id', '=', 'cbc.company_id')
+          .andOn('c.tenant', '=', 'cbc.tenant');
+    })
+    .join('invoices as i', function() {
+      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+          .andOn('i.tenant', '=', 'cbc.tenant');
+    })
+    .where('cbc.tenant', tenant)
     .whereNotNull('cbc.period_end_date')
     .select(
       'cbc.billing_cycle_id',
@@ -208,10 +234,11 @@ export async function getAllBillingCycles(): Promise<{ [companyId: string]: Bill
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
-  const {knex: conn} = await createTenantKnex();
+  const {knex: conn, tenant} = await createTenantKnex();
 
   // Get billing cycles from companies table
   const results = await conn('companies')
+    .where({ tenant })
     .select('company_id', 'billing_cycle');
 
   return results.reduce((acc: { [companyId: string]: BillingCycleType }, row) => {

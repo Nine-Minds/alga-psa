@@ -5,8 +5,10 @@ import { ITaxRate } from '@/interfaces/billing.interfaces';
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
-    const { knex } = await createTenantKnex();
-    return await knex('tax_rates').select('*');
+    const { knex, tenant } = await createTenantKnex();
+    return await knex('tax_rates')
+      .where({ tenant })
+      .select('*');
   } catch (error) {
     console.error('Error fetching tax rates:', error);
     throw new Error('Failed to fetch tax rates');
@@ -26,9 +28,12 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
 
 export async function updateTaxRate(taxRateId: string, taxRateData: Partial<ITaxRate>): Promise<ITaxRate> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     const [updatedTaxRate] = await knex('tax_rates')
-      .where({ tax_rate_id: taxRateId })
+      .where({ 
+        tax_rate_id: taxRateId,
+        tenant 
+      })
       .update(taxRateData)
       .returning('*');
     if (!updatedTaxRate) {
@@ -43,8 +48,13 @@ export async function updateTaxRate(taxRateId: string, taxRateData: Partial<ITax
 
 export async function deleteTaxRate(taxRateId: string): Promise<void> {
   try {
-    const { knex } = await createTenantKnex();
-    const deletedCount = await knex('tax_rates').where({ tax_rate_id: taxRateId }).del();
+    const { knex, tenant } = await createTenantKnex();
+    const deletedCount = await knex('tax_rates')
+      .where({ 
+        tax_rate_id: taxRateId,
+        tenant 
+      })
+      .del();
     if (deletedCount === 0) {
       throw new Error('Tax rate not found');
     }

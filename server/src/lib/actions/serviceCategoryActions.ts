@@ -12,9 +12,11 @@ export async function getServiceCategories() {
     throw new Error('Unauthorized');
   }
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   try {
-    const categories = await db<IServiceCategory>('service_categories').select('*');
+    const categories = await db<IServiceCategory>('service_categories')
+      .where('tenant', tenant || '')
+      .select('*');
     return categories;
   } catch (error) {
     console.error('Error fetching service categories:', error);

@@ -12,9 +12,13 @@ export async function getCompanyBillingPlan(companyId: string): Promise<ICompany
   }
 
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const companyBillingPlan = await db('company_billing_plans')
-      .where({ company_id: companyId, is_active: true })
+      .where({ 
+        company_id: companyId, 
+        is_active: true,
+        tenant 
+      })
       .orderBy('start_date', 'desc');
 
     return companyBillingPlan.map((billing): ICompanyBillingPlan => ({
@@ -35,9 +39,12 @@ export async function updateCompanyBillingPlan(companyBillingPlanId: string, upd
   }
 
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const result = await db('company_billing_plans')
-      .where({ company_billing_plan_id: companyBillingPlanId })
+      .where({ 
+        company_billing_plan_id: companyBillingPlanId,
+        tenant 
+      })
       .update(updates);
 
     if (result === 0) {
@@ -57,11 +64,16 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
 
   try {
     const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
     // Build where clause based on provided fields
     const whereClause: any = {
       company_id: newBilling.company_id,
       plan_id: newBilling.plan_id,
-      is_active: true
+      is_active: true,
+      tenant
     };
 
     // Only include service_category if it's provided
@@ -105,9 +117,12 @@ export async function removeCompanyBillingPlan(companyBillingPlanId: string): Pr
   }
 
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const result = await db('company_billing_plans')
-      .where({ company_billing_plan_id: companyBillingPlanId })
+      .where({ 
+        company_billing_plan_id: companyBillingPlanId,
+        tenant 
+      })
       .update({ is_active: false, end_date: new Date() });
 
     if (result === 0) {
@@ -126,14 +141,17 @@ export async function editCompanyBillingPlan(companyBillingPlanId: string, updat
   }
 
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const updateData: any = { ...updates };
 
     // Assuming start_date and end_date are already in the correct format (ISO string)
     // If they need to be converted, you would do that here
 
     const result = await db('company_billing_plans')
-      .where({ company_billing_plan_id: companyBillingPlanId })
+      .where({ 
+        company_billing_plan_id: companyBillingPlanId,
+        tenant 
+      })
       .update(updateData);
 
     if (result === 0) {
