@@ -5,10 +5,11 @@ import logger from '../../utils/logger';
 const Comment = {
   getAllbyTicketId: async (ticket_id: string): Promise<IComment[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const comments = await db<IComment>('comments')
         .select('*')
         .where('ticket_id', ticket_id)
+        .andWhere('tenant', tenant!)
         .orderBy('created_at', 'asc'); // Order comments by creation time
       return comments;
     } catch (error) {
@@ -19,10 +20,11 @@ const Comment = {
 
   get: async (id: string): Promise<IComment | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const comment = await db<IComment>('comments')
         .select('*')
-        .where({ comment_id: id })
+        .where('comment_id', id)
+        .andWhere('tenant', tenant!)
         .first();
       return comment;
     } catch (error) {
@@ -94,8 +96,10 @@ const Comment = {
         }
       }
 
+      const { tenant } = await createTenantKnex();
       await db<IComment>('comments')
-        .where({ comment_id: id })
+        .where('comment_id', id)
+        .andWhere('tenant', tenant!)
         .update({
           ...comment,
           updated_at: new Date().toISOString()
@@ -108,9 +112,10 @@ const Comment = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db<IComment>('comments')
-        .where({ comment_id: id })
+        .where('comment_id', id)
+        .andWhere('tenant', tenant!)
         .del();
     } catch (error) {
       console.error(`Error deleting comment with id ${id}:`, error);
