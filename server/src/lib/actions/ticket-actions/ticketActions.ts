@@ -283,7 +283,10 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
     const attributes = await getTicketAttributes(validatedTicketId);
 
     const ticketExists = await db('tickets')
-      .where({ ticket_id: validatedTicketId, tenant: tenant })
+      .where({
+        ticket_id: validatedTicketId,
+        tenant: tenant
+      })
       .first();
 
     if (!ticketExists) {
@@ -350,7 +353,10 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 
     // Get the status before and after update to check for closure
     const oldStatus = await db('statuses')
-      .where({ status_id: currentTicket.status_id, tenant })
+      .where({ 
+        status_id: currentTicket.status_id,
+        tenant: tenant
+      })
       .first();
     
     const [updatedTicket] = await db('tickets')
@@ -365,7 +371,10 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
     // Get the new status if it was updated
     const newStatus = updateData.status_id ? 
       await db('statuses')
-        .where({ status_id: updateData.status_id, tenant })
+        .where({ 
+          status_id: updateData.status_id,
+          tenant: tenant
+        })
         .first() :
       oldStatus;
 
@@ -460,7 +469,9 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         this.on('t.entered_by', 'u.user_id')
            .andOn('t.tenant', 'u.tenant')
       })
-      .where('t.tenant', tenant);
+      .where({
+        't.tenant': tenant
+      });
 
     // Apply filters
     if (validatedFilters.channelId) {
@@ -551,7 +562,10 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
 
     // Verify ticket exists
     const ticket = await db('tickets')
-      .where({ ticket_id: ticketId, tenant })
+      .where({
+        ticket_id: ticketId,
+        tenant: tenant
+      })
       .first();
 
     if (!ticket) {
@@ -602,7 +616,10 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
 
     // Verify ticket exists and belongs to tenant
     const ticket = await db('tickets')
-      .where({ ticket_id: ticketId, tenant })
+      .where({
+        ticket_id: ticketId,
+        tenant: tenant
+      })
       .first();
 
     if (!ticket) {
@@ -613,12 +630,18 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
     await db.transaction(async (trx) => {
       // Delete associated comments
       await trx('comments')
-        .where({ ticket_id: ticketId, tenant })
+        .where({ 
+          ticket_id: ticketId,
+          tenant: tenant
+        })
         .delete();
 
       // Delete the ticket
       await trx('tickets')
-        .where({ ticket_id: ticketId, tenant })
+        .where({ 
+          ticket_id: ticketId,
+          tenant: tenant
+        })
         .delete();
 
       // Publish ticket deleted event
@@ -654,9 +677,14 @@ export async function getTicketById(id: string, user: IUser): Promise<ITicket & 
         's.name as status_name',
         's.is_closed'
       )
-      .leftJoin('statuses as s', 't.status_id', 's.status_id')
-      .where('t.ticket_id', id)
-      .where('t.tenant', tenant)
+      .leftJoin('statuses as s', function() {
+        this.on('t.status_id', 's.status_id')
+           .andOn('t.tenant', 's.tenant')
+      })
+      .where({
+        't.ticket_id': id,
+        't.tenant': tenant
+      })
       .first();
 
     if (!ticket) {
