@@ -62,10 +62,16 @@ export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
 
   console.log('Fetching time sheets for user:', currentUserId);
   
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   const query = db('time_sheets')
-    .join('time_periods', 'time_sheets.period_id', '=', 'time_periods.period_id')
-    .where('time_sheets.user_id', currentUserId)
+    .join('time_periods', function() {
+      this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+          .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+    })
+    .where({
+      'time_sheets.user_id': currentUserId,
+      'time_sheets.tenant': tenant
+    })
     .orderBy('time_periods.start_date', 'desc')
     .select(
       'time_sheets.*',
@@ -90,10 +96,13 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   const timeEntries = await db('time_entries')
-    .where({ time_sheet_id: validatedParams.timeSheetId })
+    .where({ 
+      time_sheet_id: validatedParams.timeSheetId,
+      tenant
+    })
     .orderBy('start_time', 'desc')
     .select('*');
 
@@ -103,14 +112,26 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
     switch (entry.work_item_type) {
       case 'ticket':
         [workItem] = await db('tickets')
-          .where({ ticket_id: entry.work_item_id })
+          .where({ 
+            ticket_id: entry.work_item_id,
+            tenant
+          })
           .select('ticket_id as work_item_id', 'title as name', 'url as description', 'ticket_number');
         break;
       case 'project_task':
         [workItem] = await db('project_tasks')
-          .where({ task_id: entry.work_item_id })
-          .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-          .join('projects', 'project_phases.project_id', 'projects.project_id')
+          .where({ 
+            task_id: entry.work_item_id,
+            tenant
+          })
+          .join('project_phases', function() {
+            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+          })
+          .join('projects', function() {
+            this.on('project_phases.project_id', '=', 'projects.project_id')
+                .andOn('project_phases.tenant', '=', 'projects.tenant');
+          })
           .select(
             'task_id as work_item_id',
             'task_name as name',
@@ -130,7 +151,10 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       case 'ad_hoc':
         // For ad_hoc entries, get the title from schedule entries
         const scheduleEntry = await db('schedule_entries')
-          .where({ entry_id: entry.work_item_id })
+          .where({ 
+            entry_id: entry.work_item_id,
+            tenant
+          })
           .first();
         
         workItem = {
@@ -146,7 +170,10 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 
     // Fetch service information
     const [service] = await db('service_catalog')
-      .where({ service_id: entry.service_id })
+      .where({ 
+        service_id: entry.service_id,
+        tenant
+      })
       .select('service_name', 'service_type', 'default_rate');
 
     return {
@@ -181,8 +208,9 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 }
 
 export async function fetchTaxRegions(): Promise<TaxRegion[]> {
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   const regions = await db('tax_rates')
+    .where({ tenant })
     .select('tax_rate_id as id', 'region as name')
     .distinct('region')
     .orderBy('region');
@@ -193,16 +221,20 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
   // Validate input
   const validatedParams = validateData<FetchTimeEntriesParams>(fetchTimeEntriesParamsSchema, { timeSheetId });
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   // Get tickets
   const tickets = await db('tickets')
     .whereIn('ticket_id', function () {
       this.select('work_item_id')
         .from('time_entries')
-        .where('time_entries.work_item_type', 'ticket')
-        .where('time_entries.time_sheet_id', validatedParams.timeSheetId);
+        .where({
+          'time_entries.work_item_type': 'ticket',
+          'time_entries.time_sheet_id': validatedParams.timeSheetId,
+          'time_entries.tenant': tenant
+        });
     })
+    .where('tickets.tenant', tenant)
     .select(
       'ticket_id as work_item_id',
       'title as name',
@@ -216,11 +248,21 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
     .whereIn('task_id', function () {
       this.select('work_item_id')
         .from('time_entries')
-        .where('time_entries.work_item_type', 'project_task')
-        .where('time_entries.time_sheet_id', validatedParams.timeSheetId);
+        .where({
+          'time_entries.work_item_type': 'project_task',
+          'time_entries.time_sheet_id': validatedParams.timeSheetId,
+          'time_entries.tenant': tenant
+        });
     })
-    .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-    .join('projects', 'project_phases.project_id', 'projects.project_id')
+    .join('project_phases', function() {
+      this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+          .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+    })
+    .join('projects', function() {
+      this.on('project_phases.project_id', '=', 'projects.project_id')
+          .andOn('project_phases.tenant', '=', 'projects.tenant');
+    })
+    .where('project_tasks.tenant', tenant)
     .select(
       'task_id as work_item_id',
       'task_name as name',
@@ -235,9 +277,13 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
     .whereIn('entry_id', function () {
       this.select('work_item_id')
         .from('time_entries')
-        .where('time_entries.work_item_type', 'ad_hoc')
-        .where('time_entries.time_sheet_id', validatedParams.timeSheetId);
+        .where({
+          'time_entries.work_item_type': 'ad_hoc',
+          'time_entries.time_sheet_id': validatedParams.timeSheetId,
+          'time_entries.tenant': tenant
+        });
     })
+    .where('schedule_entries.tenant', tenant)
     .select(
       'entry_id as work_item_id',
       'title as name',
@@ -337,9 +383,18 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     switch (resultingEntry.work_item_type) {
       case 'project_task': {
         const [task] = await db('project_tasks')
-          .where({ task_id: resultingEntry.work_item_id })
-          .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-          .join('projects', 'project_phases.project_id', 'projects.project_id')
+          .where({ 
+            task_id: resultingEntry.work_item_id,
+            tenant
+          })
+          .join('project_phases', function() {
+            this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+          })
+          .join('projects', function() {
+            this.on('project_phases.project_id', '=', 'projects.project_id')
+                .andOn('project_phases.tenant', '=', 'projects.tenant');
+          })
           .select(
             'task_id as work_item_id',
             'task_name as name',
@@ -358,7 +413,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       }
       case 'ad_hoc': {
         const schedule = await db('schedule_entries')
-          .where({ entry_id: resultingEntry.work_item_id })
+          .where({ 
+            entry_id: resultingEntry.work_item_id,
+            tenant
+          })
           .first();
         workItemDetails = {
           work_item_id: resultingEntry.work_item_id,
@@ -371,7 +429,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       }
       case 'ticket': {
         const [ticket] = await db('tickets')
-          .where({ ticket_id: resultingEntry.work_item_id })
+          .where({ 
+            ticket_id: resultingEntry.work_item_id,
+            tenant
+          })
           .select(
             'ticket_id as work_item_id',
             'title as name',
@@ -441,13 +502,16 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   try {
     return await db.transaction(async (trx) => {
       // Update the time sheet status
       const [updatedTimeSheet] = await trx('time_sheets')
-        .where({ id: validatedParams.timeSheetId })
+        .where({ 
+          id: validatedParams.timeSheetId,
+          tenant
+        })
         .update({
           approval_status: 'SUBMITTED',
           submitted_at: trx.fn.now()
@@ -456,7 +520,10 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
 
       // Update all time entries associated with this time sheet
       await trx('time_entries')
-        .where({ time_sheet_id: validatedParams.timeSheetId })
+        .where({ 
+          time_sheet_id: validatedParams.timeSheetId,
+          tenant
+        })
         .update({
           approval_status: 'SUBMITTED',
           updated_at: trx.fn.now()
@@ -471,12 +538,16 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
 }
 
 export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   console.log('Fetching all time sheets');
   
   const query = db('time_sheets')
-    .join('time_periods', 'time_sheets.period_id', '=', 'time_periods.period_id')
+    .join('time_periods', function() {
+      this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+          .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+    })
+    .where('time_sheets.tenant', tenant)
     .orderBy('time_periods.start_date', 'desc')
     .select(
       'time_sheets.*',
@@ -501,13 +572,15 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
   // Validate input
   const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   const periods = await db('time_periods as tp')
     .leftJoin('time_sheets as ts', function() {
       this.on('tp.period_id', '=', 'ts.period_id')
+          .andOn('tp.tenant', '=', 'ts.tenant')
           .andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
     })
+    .where('tp.tenant', tenant)
     .orderBy('tp.start_date', 'desc')
     .select(
       'tp.*',
@@ -537,7 +610,8 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
   let timeSheet = await db('time_sheets')
     .where({
       user_id: validatedParams.userId,
-      period_id: validatedParams.periodId
+      period_id: validatedParams.periodId,
+      tenant
     })
     .first();
 
@@ -553,12 +627,18 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
   }
 
   const timePeriod = await db('time_periods')
-    .where({ period_id: validatedParams.periodId })
+    .where({ 
+      period_id: validatedParams.periodId,
+      tenant
+    })
     .first();
 
   // Fetch comments for the time sheet
   const comments = await db('time_sheet_comments')
-    .where({ time_sheet_id: timeSheet.id })
+    .where({ 
+      time_sheet_id: timeSheet.id,
+      tenant
+    })
     .orderBy('created_at', 'desc')
     .select('*');
 
@@ -576,29 +656,53 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
 export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<string | undefined> {
   console.log(`Fetching tax rate for work item ${workItemId} of type ${workItemType}`);
   
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   try {
     let query;
     
     if (workItemType === 'ticket') {
       query = db('tickets')
-        .where('tickets.ticket_id', workItemId)
-        .join('companies', 'tickets.company_id', 'companies.company_id');
+        .where({
+          'tickets.ticket_id': workItemId,
+          'tickets.tenant': tenant
+        })
+        .join('companies', function() {
+          this.on('tickets.company_id', '=', 'companies.company_id')
+              .andOn('tickets.tenant', '=', 'companies.tenant');
+        });
     } else if (workItemType === 'project_task') {
       query = db('project_tasks')
-        .where('project_tasks.task_id', workItemId)
-        .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-        .join('projects', 'project_phases.project_id', 'projects.project_id')
-        .join('companies', 'projects.company_id', 'companies.company_id');
+        .where({
+          'project_tasks.task_id': workItemId,
+          'project_tasks.tenant': tenant
+        })
+        .join('project_phases', function() {
+          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+        })
+        .join('projects', function() {
+          this.on('project_phases.project_id', '=', 'projects.project_id')
+              .andOn('project_phases.tenant', '=', 'projects.tenant');
+        })
+        .join('companies', function() {
+          this.on('projects.company_id', '=', 'companies.company_id')
+              .andOn('projects.tenant', '=', 'companies.tenant');
+        });
     } else {
       console.log(`Unsupported work item type: ${workItemType}`);
       return undefined;
     }
 
     query = query
-      .join('company_tax_rates', 'companies.company_id', 'company_tax_rates.company_id')
-      .join('tax_rates', 'company_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id')
+      .join('company_tax_rates', function() {
+        this.on('companies.company_id', '=', 'company_tax_rates.company_id')
+            .andOn('companies.tenant', '=', 'company_tax_rates.tenant');
+      })
+      .join('tax_rates', function() {
+        this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
+      })
       .select('tax_rates.region');
 
     console.log('Executing query:', query.toString());
@@ -619,7 +723,7 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
 }
 
 export async function deleteTimeEntry(entryId: string): Promise<void> {
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
@@ -627,7 +731,10 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
 
   try {
     await db('time_entries')
-      .where({ entry_id: entryId })
+      .where({ 
+        entry_id: entryId,
+        tenant
+      })
       .delete();
   } catch (error) {
     console.error('Error deleting time entry:', error);
@@ -636,7 +743,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
 }
 
 export async function deleteWorkItem(workItemId: string): Promise<void> {
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
@@ -646,7 +753,10 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
     await db.transaction(async (trx) => {
       // First delete all time entries associated with this work item
       await trx('time_entries')
-        .where({ work_item_id: workItemId })
+        .where({ 
+          work_item_id: workItemId,
+          tenant
+        })
         .delete();
     });
   } catch (error) {
@@ -656,9 +766,10 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
 }
 
 export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; is_taxable: boolean }[]> {
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog')
+    .where({ tenant })
     .select(
       'service_id as id',
       'service_name as name',

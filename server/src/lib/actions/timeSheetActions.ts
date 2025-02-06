@@ -13,17 +13,27 @@ export async function fetchTimeSheetsForApproval(
   includeApproved: boolean = false
 ): Promise<ITimeSheetApproval[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const statuses = includeApproved
       ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED']
       : ['SUBMITTED', 'CHANGES_REQUESTED'];
 
     const timeSheets = await db('time_sheets')
-      .join('users', 'time_sheets.user_id', 'users.user_id')
-      .join('team_members', 'users.user_id', 'team_members.user_id')
-      .join('time_periods', 'time_sheets.period_id', 'time_periods.period_id')
+      .join('users', function() {
+        this.on('time_sheets.user_id', '=', 'users.user_id')
+            .andOn('time_sheets.tenant', '=', 'users.tenant');
+      })
+      .join('team_members', function() {
+        this.on('users.user_id', '=', 'team_members.user_id')
+            .andOn('users.tenant', '=', 'team_members.tenant');
+      })
+      .join('time_periods', function() {
+        this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+      })
       .whereIn('team_members.team_id', teamIds)
       .whereIn('time_sheets.approval_status', statuses)
+      .where('time_sheets.tenant', tenant)
       .select(
         'time_sheets.*',
         'users.user_id',
@@ -94,12 +104,15 @@ export async function addCommentToTimeSheet(
 
 export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: string) {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     await db.transaction(async (trx) => {
       for (const id of timeSheetIds) {
         const timeSheet = await trx('time_sheets')
-          .where('id', id)
-          .where('approval_status', 'SUBMITTED')
+          .where({
+            id: id,
+            approval_status: 'SUBMITTED',
+            tenant
+          })
           .first();
 
         if (!timeSheet) {
@@ -107,9 +120,15 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
         }
 
         const isManager = await trx('teams')
-          .join('team_members', 'teams.team_id', 'team_members.team_id')
-          .where('team_members.user_id', timeSheet.user_id)
-          .where('teams.manager_id', managerId)
+          .join('team_members', function() {
+            this.on('teams.team_id', '=', 'team_members.team_id')
+                .andOn('teams.tenant', '=', 'team_members.tenant');
+          })
+          .where({
+            'team_members.user_id': timeSheet.user_id,
+            'teams.manager_id': managerId,
+            'teams.tenant': tenant
+          })
           .first();
 
         if (!isManager) {
@@ -118,7 +137,10 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
 
         // Update time sheet status
         await trx('time_sheets')
-          .where('id', id)
+          .where({
+            id: id,
+            tenant
+          })
           .update({
             approval_status: 'APPROVED',
             approved_by: managerId,
@@ -127,7 +149,10 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
 
         // Update all time entries to approved status
         await trx('time_entries')
-          .where({ time_sheet_id: id })
+          .where({ 
+            time_sheet_id: id,
+            tenant
+          })
           .update({ approval_status: 'APPROVED' });
       }
     });
@@ -141,10 +166,16 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
 
 export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheet> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const timeSheet = await db('time_sheets')
-      .join('time_periods', 'time_sheets.period_id', 'time_periods.period_id') 
-      .where('time_sheets.id', timeSheetId)
+      .join('time_periods', function() {
+        this.on('time_sheets.period_id', '=', 'time_periods.period_id')
+            .andOn('time_sheets.tenant', '=', 'time_periods.tenant');
+      })
+      .where({
+        'time_sheets.id': timeSheetId,
+        'time_sheets.tenant': tenant
+      })
       .select(
         'time_sheets.*',
         'time_periods.start_date as period_start_date',
@@ -176,12 +207,12 @@ export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheet> {
   }
 }
 
-
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntry[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const timeEntries = await db<ITimeEntry>('time_entries')
-      .where({ time_sheet_id: timeSheetId })
+      .where('time_sheet_id', timeSheetId)
+      .andWhere('tenant', tenant)
       .select(
         'entry_id',
         'work_item_id',
@@ -218,12 +249,18 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 
 export async function fetchTimeSheetComments(timeSheetId: string): Promise<ITimeSheetComment[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     
     // First get the time sheet details to get user info
     const timeSheet = await db('time_sheets')
-      .join('users', 'time_sheets.user_id', 'users.user_id')
-      .where('time_sheets.id', timeSheetId)
+      .join('users', function() {
+        this.on('time_sheets.user_id', '=', 'users.user_id')
+            .andOn('time_sheets.tenant', '=', 'users.tenant');
+      })
+      .where({
+        'time_sheets.id': timeSheetId,
+        'time_sheets.tenant': tenant
+      })
       .select(
         'users.first_name',
         'users.last_name',
@@ -237,8 +274,14 @@ export async function fetchTimeSheetComments(timeSheetId: string): Promise<ITime
 
     // Then get all comments with user info
     const comments = await db('time_sheet_comments')
-      .join('users', 'time_sheet_comments.user_id', 'users.user_id')
-      .where('time_sheet_comments.time_sheet_id', timeSheetId)
+      .join('users', function() {
+        this.on('time_sheet_comments.user_id', '=', 'users.user_id')
+            .andOn('time_sheet_comments.tenant', '=', 'users.tenant');
+      })
+      .where({
+        'time_sheet_comments.time_sheet_id': timeSheetId,
+        'time_sheet_comments.tenant': tenant
+      })
       .select(
         'time_sheet_comments.*',
         'users.first_name',
@@ -270,7 +313,10 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
     const {knex: db, tenant} = await createTenantKnex();
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .first();
 
       if (!timeSheet) {
@@ -279,7 +325,10 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
 
       // Update time sheet status
       await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .update({
           approval_status: 'APPROVED' as TimeSheetStatus,
           approved_at: trx.fn.now(),
@@ -288,7 +337,10 @@ export async function approveTimeSheet(timeSheetId: string, approverId: string):
 
       // Update all time entries to approved status
       await trx('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+        .where({ 
+          time_sheet_id: timeSheetId,
+          tenant
+        })
         .update({ approval_status: 'APPROVED' });
 
       await trx('time_sheet_comments').insert({
@@ -311,7 +363,10 @@ export async function requestChangesForTimeSheet(timeSheetId: string, approverId
     const {knex: db, tenant} = await createTenantKnex();
     await db.transaction(async (trx) => {
       const timeSheet = await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .first();
 
       if (!timeSheet) {
@@ -319,7 +374,10 @@ export async function requestChangesForTimeSheet(timeSheetId: string, approverId
       }
 
       await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .update({
           approval_status: 'CHANGES_REQUESTED' as TimeSheetStatus,
           approved_at: null,
@@ -351,7 +409,10 @@ export async function reverseTimeSheetApproval(
     await db.transaction(async (trx) => {
       // Check if time sheet exists and is approved
       const timeSheet = await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .first();
 
       if (!timeSheet) {
@@ -366,7 +427,8 @@ export async function reverseTimeSheetApproval(
       const invoicedEntries = await trx('time_entries')
         .where({
           time_sheet_id: timeSheetId,
-          invoiced: true
+          invoiced: true,
+          tenant
         })
         .first();
         
@@ -376,7 +438,10 @@ export async function reverseTimeSheetApproval(
 
       // Update time sheet status
       await trx('time_sheets')
-        .where({ id: timeSheetId })
+        .where({ 
+          id: timeSheetId,
+          tenant
+        })
         .update({
           approval_status: 'SUBMITTED' as TimeSheetStatus,
           approved_at: null,
@@ -385,7 +450,10 @@ export async function reverseTimeSheetApproval(
 
       // Update time entries status
       await trx('time_entries')
-        .where({ time_sheet_id: timeSheetId })
+        .where({ 
+          time_sheet_id: timeSheetId,
+          tenant
+        })
         .update({ approval_status: 'SUBMITTED' });
 
       // Add comment for audit trail
