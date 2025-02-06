@@ -230,9 +230,13 @@ export async function deleteCompany(companyId: string): Promise<{
       counts['schedule'] = Number(scheduleCount.count);
     }
 
-    // Check for locations (no tenant field)
+    // Check for locations
     const locationCount = await db('company_locations')
-      .where({ company_id: companyId })
+      .join('companies', 'companies.company_id', 'company_locations.company_id')
+      .where({ 
+        'company_locations.company_id': companyId,
+        'companies.tenant': tenant 
+      })
       .count('* as count')
       .first();
     console.log('Location count result:', locationCount);

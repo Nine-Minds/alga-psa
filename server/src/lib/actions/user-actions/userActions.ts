@@ -253,10 +253,11 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
   try {
     const db = await getAdminConnection();
 
-    // Check if the email exists in contacts table
+    // Check if the email exists in contacts table and verify tenant through company
     const contact = await db('contacts')
-      .where({ email })
-      .select('contact_name_id', 'company_id', 'is_inactive', 'tenant')
+      .join('companies', 'companies.company_id', 'contacts.company_id')
+      .where({ 'contacts.email': email })
+      .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
       .first();
 
     if (!contact) {
