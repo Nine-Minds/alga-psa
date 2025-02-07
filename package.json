@@ -84,7 +84,7 @@
     "pg": "^8.12.0",
     "pg-boss": "^10.1.5",
     "pg-query-stream": "^4.6.0",
-    "puppeteer": "^22.0.0",
+    "puppeteer": "^24.2.0",
     "qrcode": "^1.5.4",
     "radash": "^12.1.0",
     "react": "^18",

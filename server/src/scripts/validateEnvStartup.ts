@@ -9,10 +9,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Generate secure random values
-const generateSecureKey = () => randomBytes(32).toString('hex');
-const generateBase64Key = () => randomBytes(32).toString('base64');
+const generateSecureKey = (): string => randomBytes(32).toString('hex');
+const generateBase64Key = (): string => randomBytes(32).toString('base64');
 
-const requiredSecureKeys = {
+const requiredSecureKeys: Record<string, () => string> = {
   SECRET_KEY: generateSecureKey,
   NEXTAUTH_SECRET: generateBase64Key
 };
@@ -105,7 +105,7 @@ if (result.error) {
 // This script runs before Next.js starts and validates environment variables
 try {
   await import('../config/envConfig.js');
-} catch (error) {
+} catch (error: any) {
   // Only print the error message, not the stack trace
   if (error.message) {
     console.error(error.message);

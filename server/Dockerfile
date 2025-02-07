@@ -1,6 +1,6 @@
 FROM node:20.9-alpine AS server
 
-# Install required system dependencies
+# Install required system dependencies (rarely changes)
 RUN apk add --no-cache \
     graphicsmagick \
     imagemagick \
@@ -10,35 +10,26 @@ RUN apk add --no-cache \
     curl \
     bash
 
-WORKDIR /app/server
-
-# Copy root package.json first (will be copied from the build context)
-COPY package.json package-lock.json /app/
-
-# Copy server package.json
-COPY server/package.json server/package-lock.json ./
-
-# Install dependencies from root package.json
 WORKDIR /app
+
+# Copy only package files first for npm install
+COPY package.json package-lock.json ./
+COPY server/package.json server/package-lock.json ./server/
+
+# Install dependencies (cached unless package files change)
 RUN npm install
 
-# Go back to server directory
+COPY tsconfig.base.json ./
+
 WORKDIR /app/server
 
-# Copy the server directory contents
+# Copy server source code (changes frequently)
 COPY server/ ./
 
-# Copy entrypoint script
+# Copy and make entrypoint executable (rarely changes)
 COPY server/entrypoint.sh /app/entrypoint.sh
-
-# Make entrypoint script executable
 RUN chmod +x /app/entrypoint.sh
 
-# Make port 3000 available to the world outside this container
 EXPOSE 3000
-
-# Define environment variable
 ENV NODE_ENV=production
-
-# Set the entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]
