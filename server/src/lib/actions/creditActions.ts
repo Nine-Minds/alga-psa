@@ -97,10 +97,14 @@ export async function validateCreditBalance(
 export async function validateTransactionBalance(
     companyId: string,
     amount: number,
-    trx: Knex.Transaction
+    trx: Knex.Transaction,
+    tenant: string
 ): Promise<void> {
     const currentBalance = await trx('transactions')
-        .where({ company_id: companyId })
+        .where({ 
+            company_id: companyId,
+            tenant
+        })
         .orderBy('created_at', 'desc')
         .first()
         .then(lastTx => lastTx?.balance_after || 0);
@@ -191,13 +195,16 @@ export async function createPrepaymentInvoice(
 
         // Create credit issuance transaction
         const currentBalance = await trx('transactions')
-            .where({ company_id: companyId })
+            .where({ 
+                company_id: companyId,
+                tenant
+            })
             .orderBy('created_at', 'desc')
             .first()
             .then(lastTx => lastTx?.balance_after || 0);
 
         const newBalance = currentBalance + amount;
-        await validateTransactionBalance(companyId, amount, trx);
+        await validateTransactionBalance(companyId, amount, trx, tenant);
 
         await trx('transactions').insert({
             transaction_id: uuidv4(),
@@ -244,7 +251,7 @@ export async function applyCreditToInvoice(
     await knex.transaction(async (trx) => {
         // Create the main credit application transaction
         const newBalance = await calculateNewBalance(companyId, -amount, trx);
-        await validateTransactionBalance(companyId, -amount, trx);
+        await validateTransactionBalance(companyId, -amount, trx, tenant);
         
         const [creditTransaction] = await trx('transactions').insert({
             transaction_id: uuidv4(),
@@ -285,7 +292,10 @@ export async function applyCreditToInvoice(
         // Update invoice and company credit balance
         await Promise.all([
             trx('invoices')
-                .where({ invoice_id: invoiceId })
+                .where({ 
+                    invoice_id: invoiceId,
+                    tenant
+                })
                 .increment('credit_applied', amount)
                 .decrement('total_amount', amount),
             CompanyBillingPlan.updateCompanyCredit(companyId, -amount)
@@ -298,10 +308,13 @@ export async function getCreditHistory(
     startDate?: string,
     endDate?: string
 ): Promise<ITransaction[]> {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     
     const query = knex('transactions')
-        .where('company_id', companyId)
+        .where({ 
+            company_id: companyId,
+            tenant
+        })
         .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund'])
         .orderBy('created_at', 'desc');
 
@@ -314,4 +327,3 @@ export async function getCreditHistory(
 
     return query;
 }
-

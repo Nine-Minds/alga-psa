@@ -11,9 +11,19 @@ export async function createBucketPlan(bucketPlan: Omit<IBucketPlan, 'bucket_pla
     throw new Error('Unauthorized');
   }
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
+  
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
   try {
-    const [createdPlan] = await db<IBucketPlan>('bucket_plans').insert(bucketPlan).returning('*');
+    const [createdPlan] = await db<IBucketPlan>('bucket_plans')
+      .insert({
+        ...bucketPlan,
+        tenant
+      })
+      .returning('*');
     return createdPlan;
   } catch (error) {
     console.error('Error creating bucket plan:', error);
@@ -27,12 +37,18 @@ export async function getBucketPlanUsage(bucketPlanId: string, companyId: string
     throw new Error('Unauthorized');
   }
 
-  const {knex: db} = await createTenantKnex();
+  const {knex: db, tenant} = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
   try {
     const usage = await db<IBucketUsage>('bucket_usage')
       .where({
         bucket_plan_id: bucketPlanId,
-        company_id: companyId
+        company_id: companyId,
+        tenant
       })
       .whereBetween('period_start', [startDate, endDate])
       .orderBy('period_start', 'asc');

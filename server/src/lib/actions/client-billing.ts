@@ -27,10 +27,14 @@ export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null
         'billing_plans.plan_name',
         'billing_plans.billing_frequency'
       )
-      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
+      .join('billing_plans', function() {
+        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+          .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant')
+      })
       .where({
         'company_billing_plans.company_id': session.user.companyId,
-        'company_billing_plans.is_active': true
+        'company_billing_plans.is_active': true,
+        'company_billing_plans.tenant': session.user.tenant
       })
       .first();
 
@@ -59,7 +63,10 @@ export async function getClientInvoices() {
         'total_amount',
         'status'
       )
-      .where('company_id', session.user.companyId)
+      .where({
+        company_id: session.user.companyId,
+        tenant: session.user.tenant
+      })
       .orderBy('invoice_date', 'desc');
 
     return invoices;
@@ -83,7 +90,8 @@ export async function getClientPaymentMethods(): Promise<PaymentMethod[]> {
       .select('*')
       .where({
         company_id: session.user.companyId,
-        is_deleted: false
+        is_deleted: false,
+        tenant: session.user.tenant
       })
       .orderBy('created_at', 'desc');
 
@@ -112,6 +120,7 @@ export async function getCurrentUsage(): Promise<{
       .select('*')
       .where({
         company_id: session.user.companyId,
+        tenant: session.user.tenant
       })
       .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
       .first();
@@ -119,11 +128,20 @@ export async function getCurrentUsage(): Promise<{
     // Get all services associated with the company's plan
     const services = await knex('service_catalog')
       .select('service_catalog.*')
-      .join('plan_services', 'service_catalog.service_id', 'plan_services.service_id')
-      .join('company_billing_plans', 'plan_services.plan_id', 'company_billing_plans.plan_id')
+      .join('plan_services', function() {
+        this.on('service_catalog.service_id', '=', 'plan_services.service_id')
+          .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
+      })
+      .join('company_billing_plans', function() {
+        this.on('plan_services.plan_id', '=', 'company_billing_plans.plan_id')
+          .andOn('plan_services.tenant', '=', 'company_billing_plans.tenant')
+      })
       .where({
         'company_billing_plans.company_id': session.user.companyId,
-        'company_billing_plans.is_active': true
+        'company_billing_plans.is_active': true,
+        'service_catalog.tenant': session.user.tenant,
+        'plan_services.tenant': session.user.tenant,
+        'company_billing_plans.tenant': session.user.tenant
       });
 
     return {
