@@ -57,10 +57,21 @@ export class BillingEngine {
   }
 
   private async hasExistingInvoiceForCycle(companyId: string, billingCycleId: string): Promise<boolean> {
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) return false;
+
     const existingInvoice = await this.knex('invoices')
       .where({
         company_id: companyId,
-        billing_cycle_id: billingCycleId
+        billing_cycle_id: billingCycleId,
+        tenant: company.tenant
       })
       .first();
     return !!existingInvoice;
@@ -162,12 +173,12 @@ export class BillingEngine {
         console.log(`Product charges: ${productCharges.length}`);
         console.log(`License charges: ${licenseCharges.length}`);
 
-        console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
+        console.log(`Total fixed charges before proration: ${fixedPriceCharges.reduce((sum: number, charge: IFixedPriceCharge) => sum + charge.total, 0)}`);
 
         // Only prorate fixed price charges
         const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, cycle);
 
-        console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum, charge) => sum + charge.total, 0)}`);
+        console.log(`Total fixed charges after proration: ${proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0)}`);
 
         // Combine all charges without prorating time-based or usage-based charges
         totalCharges = totalCharges.concat(
@@ -180,31 +191,29 @@ export class BillingEngine {
         );
 
         console.log('Total charges breakdown:');
-        proratedFixedCharges.forEach(charge => {
+        proratedFixedCharges.forEach((charge: IBillingCharge) => {
           console.log(`fixed - ${charge.serviceName}: $${charge.total}`);
         });
-        timeBasedCharges.forEach(charge => {
+        timeBasedCharges.forEach((charge: ITimeBasedCharge) => {
           console.log(`hourly - ${charge.serviceName}: $${charge.total}`);
         });
-        usageBasedCharges.forEach(charge => {
+        usageBasedCharges.forEach((charge: IUsageBasedCharge) => {
           console.log(`usage - ${charge.serviceName}: $${charge.total}`);
         });
-        bucketPlanCharges.forEach(charge => {
+        bucketPlanCharges.forEach((charge: IBucketCharge) => {
           console.log(`bucket - ${charge.serviceName}: $${charge.total}`);
         });
-        productCharges.forEach(charge => {
+        productCharges.forEach((charge: IProductCharge) => {
           console.log(`product - ${charge.serviceName}: $${charge.total}`);
         });
-        licenseCharges.forEach(charge => {
+        licenseCharges.forEach((charge: ILicenseCharge) => {
           console.log(`license - ${charge.serviceName}: $${charge.total}`);
         });
 
         console.log('Total charges:', totalCharges);
       }
 
-      const totalAmount = totalCharges.reduce((sum, charge) => sum + charge.total, 0);
-
-
+      const totalAmount = totalCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
 
       const finalCharges = await this.applyDiscountsAndAdjustments(
         {
@@ -238,10 +247,29 @@ export class BillingEngine {
 
   private async getCompanyBillingPlansAndCycle(companyId: string, billingPeriod: IBillingPeriod): Promise<{ companyBillingPlans: ICompanyBillingPlan[], billingCycle: string }> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
     const companyBillingPlans = await this.knex('company_billing_plans')
-      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
-      .where({ 'company_billing_plans.company_id': companyId, 'company_billing_plans.is_active': true })
+      .join('billing_plans', function() {
+        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+      })
+      .where({ 
+        'company_billing_plans.company_id': companyId, 
+        'company_billing_plans.is_active': true,
+        'company_billing_plans.tenant': company.tenant
+      })
       .where('company_billing_plans.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
         this.where('company_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('company_billing_plans.end_date');
@@ -259,8 +287,23 @@ export class BillingEngine {
 
   private async getBillingCycle(companyId: string, date: ISO8601String = new Date().toISOString()): Promise<string> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const result = await this.knex('company_billing_cycles')
-      .where({ company_id: companyId })
+      .where({ 
+        company_id: companyId,
+        tenant: company.tenant 
+      })
       .where('effective_date', '<=', date)
       .orderBy('effective_date', 'desc')
       .first() as ICompanyBillingCycle | undefined;
@@ -268,17 +311,14 @@ export class BillingEngine {
     if (!result) {
       // Check again for existing cycle to handle race conditions
       const existingCycle = await this.knex('company_billing_cycles')
-        .where({ company_id: companyId })
+        .where({ 
+          company_id: companyId,
+          tenant: company.tenant 
+        })
         .first();
 
       if (existingCycle) {
         return existingCycle.billing_cycle;
-      }
-
-      // Insert default monthly cycle if none exists
-      const company = await this.knex('companies').where({ company_id: companyId }).first();
-      if (!company) {
-        throw new Error(`Company ${companyId} not found`);
       }
 
       try {
@@ -305,8 +345,26 @@ export class BillingEngine {
 
   private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<{ success: boolean; error?: string }> {
     try {
+      // Get tenant from createTenantKnex
+      const { tenant } = await createTenantKnex();
+      const company = await this.knex('companies')
+        .where({ 
+          company_id: companyId,
+          tenant 
+        })
+        .first();
+      if (!company) {
+        return {
+          success: false,
+          error: `Company ${companyId} not found`
+        };
+      }
+
       const cycles = await this.knex('company_billing_cycles')
-        .where({ company_id: companyId })
+        .where({ 
+          company_id: companyId,
+          tenant: company.tenant 
+        })
         .where('effective_date', '<=', endDate)
         .orderBy('effective_date', 'asc');
 
@@ -338,21 +396,41 @@ export class BillingEngine {
 
   private async calculateFixedPriceCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IFixedPriceCharge[]> {
     await this.initKnex();
-    const company = await this.knex('companies').where({ company_id: companyId }).first() as ICompany;
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first() as ICompany;
+    
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
       
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
-      .join('plan_services', 'billing_plans.plan_id', 'plan_services.plan_id')
-      .join('service_catalog', 'plan_services.service_id', 'service_catalog.service_id')
+      .join('billing_plans', function() {
+        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+      })
+      .join('plan_services', function() {
+        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
+            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      })
+      .join('service_catalog', function() {
+        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+      })
       .where({
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
+        'company_billing_plans.tenant': company.tenant,
         'service_catalog.service_type': 'Fixed',
         'billing_plans.plan_type': 'Fixed' 
       })
       .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
 
-    // Calculate charges for each service in the plan
     const fixedCharges: IFixedPriceCharge[] = planServices.map((service: any):IFixedPriceCharge => {
       const charge: IFixedPriceCharge = {
         serviceId: service.service_id,
@@ -363,7 +441,7 @@ export class BillingEngine {
         type: 'fixed',
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: service.tax_region || company.tax_region // Add this line to set the tax_region
+        tax_region: service.tax_region || company.tax_region
       };
   
       if (!company.is_tax_exempt && service.is_taxable !== false) {
@@ -383,17 +461,56 @@ export class BillingEngine {
 
   private async calculateTimeBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const query = this.knex('time_entries')
-      .join('users', 'time_entries.user_id', 'users.user_id')
-      .leftJoin('project_ticket_links', 'time_entries.work_item_id', 'project_ticket_links.ticket_id')
-      .leftJoin('project_tasks', 'time_entries.work_item_id', 'project_tasks.task_id')
-      .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-      .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
-      .leftJoin('tickets', 'time_entries.work_item_id', 'tickets.ticket_id')
-      .join('service_catalog', 'time_entries.service_id', 'service_catalog.service_id')
+      .join('users', function() {
+        this.on('time_entries.user_id', '=', 'users.user_id')
+            .andOn('users.tenant', '=', 'time_entries.tenant');
+      })
+      .leftJoin('project_ticket_links', function() {
+        this.on('time_entries.work_item_id', '=', 'project_ticket_links.ticket_id')
+            .andOn('project_ticket_links.tenant', '=', 'time_entries.tenant');
+      })
+      .leftJoin('project_tasks', function() {
+        this.on('time_entries.work_item_id', '=', 'project_tasks.task_id')
+            .andOn('project_tasks.tenant', '=', 'time_entries.tenant');
+      })
+      .leftJoin('project_phases', function() {
+        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+            .andOn('project_phases.tenant', '=', 'project_tasks.tenant');
+      })
+      .leftJoin('projects', function() {
+        this.on('project_phases.project_id', '=', 'projects.project_id')
+            .andOn('projects.tenant', '=', 'project_phases.tenant')
+            .andOn('projects.tenant', '=', company.tenant);
+      })
+      .leftJoin('tickets', function() {
+        this.on('time_entries.work_item_id', '=', 'tickets.ticket_id')
+            .andOn('tickets.tenant', '=', 'time_entries.tenant')
+            .andOn('tickets.tenant', '=', company.tenant);
+      })
+      .join('service_catalog', function() {
+        this.on('time_entries.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
+      })
       .leftJoin('plan_services', (join) => {
         join.on('service_catalog.service_id', '=', 'plan_services.service_id')
             .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
+            .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
+      })
+      .where({
+        'time_entries.tenant': company.tenant
       })
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
       .where('time_entries.end_time', '<', billingPeriod.endDate)
@@ -446,14 +563,33 @@ export class BillingEngine {
 
   private async calculateUsageBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IUsageBasedCharge[]> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const usageRecordQuery = this.knex('usage_tracking')
-      .join('service_catalog', 'usage_tracking.service_id', 'service_catalog.service_id')
+      .join('service_catalog', function() {
+        this.on('usage_tracking.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
+      })
       .leftJoin('plan_services', (join) => {
         join.on('service_catalog.service_id', '=', 'plan_services.service_id')
            .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
+           .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
       })
-      .where('usage_tracking.company_id', companyId)
-      .where('usage_tracking.invoiced', false)
+      .where({
+        'usage_tracking.company_id': companyId,
+        'usage_tracking.tenant': company.tenant,
+        'usage_tracking.invoiced': false
+      })
       .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
       .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
       .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'plan_services.custom_rate');
@@ -479,15 +615,36 @@ export class BillingEngine {
 
   private async calculateProductCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IProductCharge[]> {
     await this.initKnex();
-    const company = await this.knex('companies').where({ company_id: companyId }).first() as ICompany;
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first() as ICompany;
+    
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
       
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
-      .join('plan_services', 'billing_plans.plan_id', 'plan_services.plan_id')
-      .join('service_catalog', 'plan_services.service_id', 'service_catalog.service_id')
+      .join('billing_plans', function() {
+        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+      })
+      .join('plan_services', function() {
+        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
+            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      })
+      .join('service_catalog', function() {
+        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+      })
       .where({
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
+        'company_billing_plans.tenant': company.tenant,
         'service_catalog.service_type': 'Product'
       })
       .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
@@ -518,15 +675,36 @@ export class BillingEngine {
 
   private async calculateLicenseCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ILicenseCharge[]> {
     await this.initKnex();
-    const company = await this.knex('companies').where({ company_id: companyId }).first() as ICompany;
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first() as ICompany;
+    
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
       
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', 'company_billing_plans.plan_id', 'billing_plans.plan_id')
-      .join('plan_services', 'billing_plans.plan_id', 'plan_services.plan_id')
-      .join('service_catalog', 'plan_services.service_id', 'service_catalog.service_id')
+      .join('billing_plans', function() {
+        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+      })
+      .join('plan_services', function() {
+        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
+            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      })
+      .join('service_catalog', function() {
+        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+      })
       .where({
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
+        'company_billing_plans.tenant': company.tenant,
         'service_catalog.service_type': 'License'
       })
       .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
@@ -559,8 +737,23 @@ export class BillingEngine {
 
   private async calculateBucketPlanCharges(companyId: string, period: IBillingPeriod, billingPlan: ICompanyBillingPlan): Promise<IBucketCharge[]> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const bucketPlan = await this.knex('bucket_plans')
-      .where('plan_id', billingPlan.plan_id)
+      .where({
+        plan_id: billingPlan.plan_id,
+        tenant: company.tenant
+      })
       .first();
 
     if (!bucketPlan) return [];
@@ -568,22 +761,22 @@ export class BillingEngine {
     const bucketUsage = await this.knex('bucket_usage')
       .where({
         bucket_plan_id: bucketPlan.bucket_plan_id,
-        company_id: companyId
+        company_id: companyId,
+        tenant: company.tenant
       })
       .whereBetween('period_start', [period.startDate, period.endDate])
       .first();
 
     if (!bucketUsage) return [];
 
-    const company = await this.knex('companies')
-      .where({ company_id: companyId })
-      .first();
-
-    if (!company) return [];
-
     const service = await this.knex('service_catalog')
-      .where('service_id', bucketUsage.service_catalog_id)
+      .where({
+        service_id: bucketUsage.service_catalog_id,
+        tenant: company.tenant
+      })
       .first();
+
+    if (!service) return [];
 
     const taxRegion = service.tax_region || company.tax_region;
     const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
@@ -612,13 +805,14 @@ export class BillingEngine {
     return [charge];
   }
 
+
   private applyProrationToPlan(charges: IBillingCharge[], billingPeriod: IBillingPeriod, planStartDate: ISO8601String, billingCycle: string): IBillingCharge[] {
     console.log('Billing period start:', billingPeriod.startDate);
     console.log('Billing period end:', billingPeriod.endDate);
     console.log('Plan start date:', planStartDate);
 
     // Use the later of plan start and period start
-    const effectiveStart = [planStartDate, billingPeriod.startDate].reduce((a, b) => a > b ? a : b);
+    const effectiveStart = [planStartDate, billingPeriod.startDate].reduce((a: string, b: string) => a > b ? a : b);
     console.log('Effective start:', effectiveStart);
 
     let cycleLength: number;
@@ -663,7 +857,7 @@ export class BillingEngine {
     const prorationFactor = actualDays / cycleLength;
     console.log(`Proration factor: ${prorationFactor.toFixed(4)} (${actualDays} / ${cycleLength})`);
 
-    return charges.map((charge):IBillingCharge => {
+    return charges.map((charge: IBillingCharge): IBillingCharge => {
       const proratedTotal = Math.ceil(Math.ceil(charge.total) * prorationFactor);
       console.log(`Prorating charge: ${charge.serviceName}`);
       console.log(`  Original total: $${(charge.total/100).toFixed(2)}`);
@@ -705,15 +899,34 @@ export class BillingEngine {
 
   private async fetchDiscounts(companyId: string, billingPeriod: IBillingPeriod): Promise<IDiscount[]> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
     const { startDate, endDate } = billingPeriod;
     const discounts = await this.knex('discounts')
-      .join('plan_discounts', 'discounts.discount_id', 'plan_discounts.discount_id')
+      .join('plan_discounts', function() {
+        this.on('discounts.discount_id', '=', 'plan_discounts.discount_id')
+            .andOn('plan_discounts.tenant', '=', 'discounts.tenant');
+      })
       .join('company_billing_plans', function (this: Knex.JoinClause) {
         this.on('company_billing_plans.plan_id', '=', 'plan_discounts.plan_id')
-          .andOn('company_billing_plans.company_id', '=', 'plan_discounts.company_id');
+          .andOn('company_billing_plans.company_id', '=', 'plan_discounts.company_id')
+          .andOn('company_billing_plans.tenant', '=', 'plan_discounts.tenant');
       })
-      .where('company_billing_plans.company_id', companyId)
-      .andWhere('discounts.is_active', true)
+      .where({
+        'company_billing_plans.company_id': companyId,
+        'company_billing_plans.tenant': company.tenant,
+        'discounts.is_active': true
+      })
       .andWhere('discounts.start_date', '<=', endDate)
       .andWhere(function (this: Knex.QueryBuilder) {
         this.whereNull('discounts.end_date')
@@ -724,14 +937,44 @@ export class BillingEngine {
     return discounts;
   }
 
+
+
+
   private async fetchAdjustments(companyId: string): Promise<IAdjustment[]> {
     await this.initKnex();
-    const adjustments = await this.knex('adjustments').where({ company_id: companyId });
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
+
+    const adjustments = await this.knex('adjustments')
+      .where({ 
+        company_id: companyId,
+        tenant: company.tenant 
+      });
     return Array.isArray(adjustments) ? adjustments : [];
   }
 
   async rolloverUnapprovedTime(companyId: string, currentPeriodEnd: ISO8601String, nextPeriodStart: ISO8601String): Promise<void> {
     await this.initKnex();
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
+    const company = await this.knex('companies')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+    if (!company) {
+      throw new Error(`Company ${companyId} not found`);
+    }
     // Fetch unapproved time entries
     const knex = this.knex;
     const unapprovedEntries = await this.knex('time_entries')
@@ -742,9 +985,19 @@ export class BillingEngine {
       .leftJoin('project_tasks', function (this: Knex.JoinClause) {
         this.on('time_entries.work_item_id', '=', 'project_tasks.task_id')
           .andOn('time_entries.work_item_type', '=', knex.raw('?', ['project_task']))
+          .andOn('project_tasks.tenant', '=', 'time_entries.tenant')
       })
-      .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-      .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
+      .leftJoin('project_phases', function() {
+        this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+            .andOn('project_phases.tenant', '=', 'project_tasks.tenant')
+      })
+      .leftJoin('projects', function() {
+        this.on('project_phases.project_id', '=', 'projects.project_id')
+            .andOn('projects.tenant', '=', 'project_phases.tenant')
+      })
+      .where({
+        'time_entries.tenant': company.tenant
+      })
       .where(function (this: Knex.QueryBuilder) {
         this.where('tickets.company_id', companyId)
           .orWhere('projects.company_id', companyId)
@@ -778,8 +1031,13 @@ export class BillingEngine {
     console.log(`Recalculating invoice ${invoiceId}`);
 
     // Load invoice and company details
+    // Get tenant from createTenantKnex
+    const { tenant } = await createTenantKnex();
     const invoice = await this.knex('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant 
+      })
       .first();
 
     if (!invoice) {
@@ -787,7 +1045,10 @@ export class BillingEngine {
     }
 
     const company = await this.knex('companies')
-      .where({ company_id: invoice.company_id })
+      .where({ 
+        company_id: invoice.company_id,
+        tenant 
+      })
       .first();
 
     if (!company) {
@@ -822,7 +1083,10 @@ export class BillingEngine {
       for (const item of regularItems) {
         // Get service details for tax info
         const service = await trx('service_catalog')
-          .where({ service_id: item.service_id })
+          .where({ 
+            service_id: item.service_id,
+            tenant: company.tenant 
+          })
           .first();
 
         // Ensure netAmount is an integer
