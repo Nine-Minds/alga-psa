@@ -287,7 +287,10 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   const billingCycle = await knex('company_billing_cycles')
-    .where({ billing_cycle_id })
+    .where({ 
+      billing_cycle_id,
+      tenant 
+    })
     .first();
 
   if (!billingCycle) {
@@ -336,7 +339,12 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
 
 async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
   const { knex, tenant } = await createTenantKnex();
-  const company = await knex('companies').where({ company_id: companyId }).first() as ICompany;
+  const company = await knex('companies')
+    .where({ 
+      company_id: companyId,
+      tenant
+    })
+    .first() as ICompany;
   if (!company) {
     throw new Error(`Company with ID ${companyId} not found`);
   }
@@ -370,7 +378,10 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
 
     // Get current balance
     const currentBalance = await trx('transactions')
-      .where({ company_id: companyId })
+      .where({ 
+        company_id: companyId,
+        tenant
+      })
       .orderBy('created_at', 'desc')
       .first()
       .then(lastTx => lastTx?.balance_after || 0);
@@ -543,7 +554,11 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     tax: Math.ceil(totalTax),
     total: createdInvoice.total_amount,
     total_amount: createdInvoice.total_amount,
-    invoice_items: await knex('invoice_items').where({ invoice_id: createdInvoice.invoice_id }),
+    invoice_items: await knex('invoice_items')
+      .where({ 
+        invoice_id: createdInvoice.invoice_id,
+        tenant
+      }),
     credit_applied: invoice.credit_applied,
     billing_cycle_id: billing_cycle_id,
     is_manual: false
@@ -596,9 +611,12 @@ function getPaymentTermDays(paymentTerms: string): number {
 }
 
 async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies')
-    .where({ company_id: companyId })
+    .where({ 
+      company_id: companyId,
+      tenant
+    })
     .select('payment_terms')
     .first();
 
@@ -611,9 +629,12 @@ async function getDueDate(companyId: string, billingEndDate: ISO8601String): Pro
 
 
 export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const company = await knex('company_billing_cycles')
-    .where({ company_id: companyId })
+    .where({ 
+      company_id: companyId,
+      tenant
+    })
     .select('billing_cycle')
     .first();
 
@@ -680,11 +701,15 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
 export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
   try {
     console.log('Fetching basic invoice info');
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     
     // Get invoices with company info in a single query
     const invoices = await knex('invoices')
-      .join('companies', 'invoices.company_id', 'companies.company_id')
+      .join('companies', function() {
+        this.on('invoices.company_id', '=', 'companies.company_id')
+            .andOn('invoices.tenant', '=', 'companies.tenant');
+      })
+      .where('invoices.tenant', tenant)
       .select(
         'invoices.invoice_id',
         'invoices.company_id',
@@ -750,10 +775,13 @@ export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceIt
 }
 
 export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceTemplate | null> {
-  const { knex } = await createTenantKnex();
-  const template = await knex<IInvoiceTemplate>('invoice_templates')
-    .where({ template_id: _templateId })
-    .first();
+  const { knex, tenant } = await createTenantKnex();
+  const template = await knex('invoice_templates')
+    .where({ 
+      template_id: _templateId,
+      tenant
+    })
+    .first() as IInvoiceTemplate | undefined;
 
   if (template) {
     template.dsl = template.dsl || '';
@@ -764,8 +792,9 @@ export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceT
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const templates = await knex('invoice_templates')
+    .where({ tenant })
     .select('*')
     .orderBy('created_at', 'desc');
   
@@ -776,25 +805,34 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
 }
 
 export async function setDefaultTemplate(templateId: string): Promise<void> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   
   await knex.transaction(async (trx) => {
     // First, unset any existing default template
     await trx('invoice_templates')
-      .where({ is_default: true })
+      .where({ 
+        is_default: true,
+        tenant
+      })
       .update({ is_default: false });
 
     // Then set the new default template
     await trx('invoice_templates')
-      .where({ template_id: templateId })
+      .where({ 
+        template_id: templateId,
+        tenant
+      })
       .update({ is_default: true });
   });
 }
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   const template = await knex('invoice_templates')
-    .where({ is_default: true })
+    .where({ 
+      is_default: true,
+      tenant
+    })
     .first();
   
   if (template) {
@@ -805,9 +843,12 @@ export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
 }
 
 export async function setCompanyTemplate(companyId: string, templateId: string | null): Promise<void> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   await knex('companies')
-    .where({ company_id: companyId })
+    .where({ 
+      company_id: companyId,
+      tenant
+    })
     .update({ invoice_template_id: templateId });
 }
 
@@ -835,7 +876,10 @@ export async function finalizeInvoiceWithKnex(
   await knex.transaction(async (trx) => {
     // Check if invoice exists and is not already finalized
     const invoice = await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .first();
 
     if (!invoice) {
@@ -898,7 +942,10 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
     }
 
     await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .update({
         finalized_at: null,
         updated_at: new Date().toISOString()
@@ -1084,7 +1131,10 @@ export async function updateInvoiceManualItems(
       let taxRegion = company.tax_region;
       if (item.service_id) {
         const service = await trx('service_catalog')
-          .where({ service_id: item.service_id })
+          .where({ 
+            service_id: item.service_id,
+            tenant
+          })
           .first();
         taxRegion = service?.tax_region || taxRegion;
       }
@@ -1138,14 +1188,20 @@ export async function updateInvoiceManualItems(
       let taxRegion = company.tax_region;
       if (item.service_id) {
         const service = await trx('service_catalog')
-          .where({ service_id: item.service_id })
+          .where({ 
+            service_id: item.service_id,
+            tenant
+          })
           .first();
         taxRegion = service?.tax_region || taxRegion;
       }
 
       // Get the existing item to check if it's a discount
       const existingItem = await trx('invoice_items')
-        .where({ item_id: item.item_id })
+        .where({ 
+          item_id: item.item_id,
+          tenant
+        })
         .first();
 
       // For percentage discounts, preserve the percentage and calculate the initial monetary value
@@ -1266,7 +1322,10 @@ export async function addManualItemsToInvoice(
       let taxRegion = item.tax_region;
       if (!taxRegion && item.service_id) {
         const service = await trx('service_catalog')
-          .where({ service_id: item.service_id })
+          .where({ 
+            service_id: item.service_id,
+            tenant
+          })
           .first();
         taxRegion = service?.tax_region;
       }
@@ -1322,8 +1381,11 @@ export async function addManualItemsToInvoice(
     // Record adjustment transaction
     if (difference !== 0) {
       const lastTx = await trx('transactions')
-        .where({ company_id: invoice.company_id })
-        .orderBy('created_at', 'desc')
+      .where({ 
+        company_id: invoice.company_id,
+        tenant
+      })
+      .orderBy('created_at', 'desc')
         .first();
 
       const currentBalance = lastTx?.balance_after ?? 0;
@@ -1349,7 +1411,10 @@ export async function addManualItemsToInvoice(
 
       if (additionalDue > 0) {
         await trx('invoices')
-          .where({ invoice_id: invoiceId })
+          .where({ 
+            invoice_id: invoiceId,
+            tenant
+          })
           .update({
             credit_applied: remainingCredit
           });
@@ -1362,17 +1427,24 @@ export async function addManualItemsToInvoice(
 }
 
 export async function hardDeleteInvoice(invoiceId: string) {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
   
   await knex.transaction(async (trx) => {
     // 1. Get invoice details
     const invoice = await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .first();
       
     // 2. Handle payments
     const payments = await trx('transactions')
-      .where({ invoice_id: invoiceId, type: 'payment' });
+      .where({ 
+        invoice_id: invoiceId, 
+        type: 'payment',
+        tenant
+      });
       
     if (payments.length > 0) {
       // Insert reversal transactions
@@ -1398,7 +1470,8 @@ export async function hardDeleteInvoice(invoiceId: string) {
         transaction_id: uuidv4(),
         type: 'credit_issuance',
         amount: invoice.credit_applied,
-        description: `Credit reissued from deleted invoice ${invoiceId}`
+        description: `Credit reissued from deleted invoice ${invoiceId}`,
+        tenant
       });
       
       await CompanyBillingPlan.updateCompanyCredit(
@@ -1412,7 +1485,10 @@ export async function hardDeleteInvoice(invoiceId: string) {
       .whereIn('entry_id', 
         trx('invoice_time_entries')
           .select('entry_id')
-          .where({ invoice_id: invoiceId })
+          .where({ 
+            invoice_id: invoiceId,
+            tenant
+          })
       )
       .update({ invoiced: false });
       
@@ -1421,32 +1497,50 @@ export async function hardDeleteInvoice(invoiceId: string) {
       .whereIn('usage_id',
         trx('invoice_usage_records')
           .select('usage_id')
-          .where({ invoice_id: invoiceId })
+          .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       )
       .update({ invoiced: false });
       
     // 6. Delete transactions
     await trx('transactions')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .delete();
 
     // 7. Delete join records
     await trx('invoice_time_entries')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .delete();
       
     await trx('invoice_usage_records')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .delete();
       
     // 8. Delete invoice items
     await trx('invoice_items')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .delete();
       
     // 9. Delete invoice record
     await trx('invoices')
-      .where({ invoice_id: invoiceId })
+      .where({ 
+        invoice_id: invoiceId,
+        tenant
+      })
       .delete();
   });
 }

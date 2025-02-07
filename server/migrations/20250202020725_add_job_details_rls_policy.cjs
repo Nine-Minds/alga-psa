@@ -18,3 +18,4 @@ exports.down = async function(knex) {
   // Then disable RLS
   await knex.schema.raw('ALTER TABLE job_details DISABLE ROW LEVEL SECURITY');
 };
+
