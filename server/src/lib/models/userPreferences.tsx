@@ -44,7 +44,7 @@ const UserPreferences = {
                 .onConflict(['tenant', 'user_id', 'setting_name'])
                 .merge({
                     setting_value: preference.setting_value,
-                    updated_at: db.fn.now()
+                    updated_at: new Date(),
                 });
         } catch (error) {
             logger.error(`Error upserting user preference for user ${preference.user_id}, setting ${preference.setting_name}:`, error);
