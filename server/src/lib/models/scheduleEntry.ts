@@ -12,7 +12,7 @@ class ScheduleEntry {
   /**
    * Helper method to fetch assigned user IDs for schedule entries
    */
-  private static async getAssignedUserIds(db: Knex, entryIds: (string | undefined)[]): Promise<Record<string, string[]>> {
+  private static async getAssignedUserIds(db: Knex, tenant: string, entryIds: (string | undefined)[]): Promise<Record<string, string[]>> {
     // Filter out undefined entry IDs
     const validEntryIds = entryIds.filter((id): id is string => id !== undefined);
     
@@ -21,6 +21,7 @@ class ScheduleEntry {
     }
 
     const assignments = await db('schedule_entry_assignees')
+      .where({ tenant })
       .whereIn('entry_id', validEntryIds)
       .select('entry_id', 'user_id');
     
@@ -40,7 +41,7 @@ class ScheduleEntry {
   private static async updateAssignees(db: Knex, tenant: string, entry_id: string, userIds: string[]): Promise<void> {
     // Delete existing assignments
     await db('schedule_entry_assignees')
-      .where({ entry_id })
+      .where({ tenant, entry_id })
       .del();
 
     // Insert new assignments
@@ -55,10 +56,14 @@ class ScheduleEntry {
   }
 
   static async getAll(start: Date, end: Date): Promise<IScheduleEntry[]> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
     
     // Get all non-virtual entries (both regular and master recurring entries)
     const regularEntries = await db('schedule_entries')
+      .where({ tenant })
       .whereNull('original_entry_id') // This ensures we get master entries but not virtual instances
       .andWhere(function() {
         // And fall within our date range
@@ -102,7 +107,7 @@ class ScheduleEntry {
 
     // Get assigned user IDs for all non-virtual entries
     const entryIds = regularEntries.map((e): string => e.entry_id);
-    const assignedUserIds = await this.getAssignedUserIds(db, entryIds);
+    const assignedUserIds = await this.getAssignedUserIds(db, tenant, entryIds);
 
     // Merge assigned user IDs into entries
     const finalEntries = allEntries.map((entry): IScheduleEntry => ({
@@ -128,8 +133,12 @@ class ScheduleEntry {
   }
 
   static async getEarliest(): Promise<IScheduleEntry | undefined> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
     const entry = await db('schedule_entries')
+      .where({ tenant })
       .orderBy('scheduled_start', 'asc')
       .first() as (IScheduleEntry & { entry_id: string }) | undefined;
 
@@ -137,7 +146,7 @@ class ScheduleEntry {
 
     // Get assigned user IDs if entry_id exists
     if (entry.entry_id) {
-      const assignedUserIds = await this.getAssignedUserIds(db, [entry.entry_id]);
+      const assignedUserIds = await this.getAssignedUserIds(db, tenant, [entry.entry_id]);
       return {
         ...entry,
         assigned_user_ids: assignedUserIds[entry.entry_id] || []
@@ -151,14 +160,19 @@ class ScheduleEntry {
   }
 
   static async get(entry_id: string): Promise<IScheduleEntry | undefined> {
-    const {knex: db} = await createTenantKnex();
-    const entry = await db('schedule_entries').where({ entry_id }).first() as (IScheduleEntry & { entry_id: string }) | undefined;
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
+    const entry = await db('schedule_entries')
+      .where({ tenant, entry_id })
+      .first() as (IScheduleEntry & { entry_id: string }) | undefined;
     
     if (!entry) return undefined;
 
     // Get assigned user IDs if entry exists
     if (entry && entry_id) {
-      const assignedUserIds = await this.getAssignedUserIds(db, [entry_id]);
+      const assignedUserIds = await this.getAssignedUserIds(db, tenant, [entry_id]);
       return {
         ...entry,
         assigned_user_ids: assignedUserIds[entry_id] || []
@@ -177,6 +191,9 @@ class ScheduleEntry {
     }
 
     const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
 
     // Start transaction
     const trx = await db.transaction();
@@ -194,7 +211,7 @@ class ScheduleEntry {
         status: entry.status || 'scheduled',
         work_item_id: entry.work_item_type === 'ad_hoc' ? null : entry.work_item_id,
         work_item_type: entry.work_item_type,
-        tenant: tenant || '',
+        tenant,
         recurrence_pattern: (entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
           ? JSON.stringify(entry.recurrence_pattern)
           : null,
@@ -211,7 +228,7 @@ class ScheduleEntry {
       console.log('Created schedule entry:', createdEntry);
 
       // Create assignee records
-      await this.updateAssignees(trx, tenant || '', createdEntry.entry_id, options.assignedUserIds);
+      await this.updateAssignees(trx, tenant, createdEntry.entry_id, options.assignedUserIds);
 
       await trx.commit();
 
@@ -237,6 +254,9 @@ class ScheduleEntry {
     });
 
     const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
 
     // Start transaction
     const trx = await db.transaction();
@@ -260,7 +280,7 @@ class ScheduleEntry {
       // Get the master entry
       console.log('[ScheduleEntry.update] Fetching master entry:', { masterEntryId });
       const originalEntry = await trx('schedule_entries')
-        .where({ entry_id: masterEntryId })
+        .where({ tenant, entry_id: masterEntryId })
         .first();
 
       if (!originalEntry) {
@@ -293,73 +313,73 @@ class ScheduleEntry {
         const originalPattern = parseRecurrencePattern(originalEntry.recurrence_pattern);
         
         if (originalPattern) {
-      // Initialize update data with tenant first
-      let updateData: Partial<IScheduleEntry & { tenant: string }> = {
-        tenant: tenant || ''
-      };
+          // Initialize update data with tenant first
+          let updateData: Partial<IScheduleEntry & { tenant: string }> = {
+            tenant
+          };
 
-      switch (updateType) {
-          case 'single':
-            // Get assigned user IDs for the master entry
-            const assignedUserIds = await this.getAssignedUserIds(trx, [masterEntryId]);
-            
-            // 1. Create concrete standalone entry
-            const standaloneId = uuidv4();
-            await trx('schedule_entries').insert({
-              entry_id: standaloneId,
-              title: entry.title || originalEntry.title,
-              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
-              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-              notes: entry.notes || originalEntry.notes,
-              status: entry.status || originalEntry.status,
-              work_item_id: entry.work_item_id || originalEntry.work_item_id,
-              work_item_type: entry.work_item_type || originalEntry.work_item_type,
-              tenant: tenant || '',
-              is_recurring: false,
-              original_entry_id: null,
-              recurrence_pattern: null
-            });
-
-            // Copy assignments from master to standalone entry
-            await this.updateAssignees(
-              trx,
-              tenant || '',
-              standaloneId,
-              entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
-            );
-
-            // 2. Add UTC exception to master pattern
-            const exceptionDate = new Date(entry.scheduled_start || originalEntry.scheduled_start);
-            exceptionDate.setUTCHours(0, 0, 0, 0);
-            const singleUpdatedPattern = {
-              ...originalPattern,
-              exceptions: [...(originalPattern.exceptions || []), exceptionDate]
-            };
-
-            await trx('schedule_entries')
-              .where({ entry_id: masterEntryId })
-              .update({
-                recurrence_pattern: JSON.stringify(singleUpdatedPattern)
+          switch (updateType) {
+            case 'single':
+              // Get assigned user IDs for the master entry
+              const assignedUserIds = await this.getAssignedUserIds(trx, tenant, [masterEntryId]);
+              
+              // 1. Create concrete standalone entry
+              const standaloneId = uuidv4();
+              await trx('schedule_entries').insert({
+                entry_id: standaloneId,
+                title: entry.title || originalEntry.title,
+                scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
+                scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+                notes: entry.notes || originalEntry.notes,
+                status: entry.status || originalEntry.status,
+                work_item_id: entry.work_item_id || originalEntry.work_item_id,
+                work_item_type: entry.work_item_type || originalEntry.work_item_type,
+                tenant,
+                is_recurring: false,
+                original_entry_id: null,
+                recurrence_pattern: null
               });
 
-            // 3. Return new standalone entry
-            await trx.commit();
-            return {
-              ...originalEntry,
-              entry_id: standaloneId,
-              scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
-              scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
-              is_recurring: false,
-              original_entry_id: null,
-              assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
-            };
+              // Copy assignments from master to standalone entry
+              await this.updateAssignees(
+                trx,
+                tenant,
+                standaloneId,
+                entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
+              );
 
-        case 'future':
-          if (!virtualTimestamp) {
-            throw new Error('Virtual timestamp is required for future updates');
-          }
-          // Split the recurrence into two series
-          const newMasterId = uuidv4();
+              // 2. Add UTC exception to master pattern
+              const exceptionDate = new Date(entry.scheduled_start || originalEntry.scheduled_start);
+              exceptionDate.setUTCHours(0, 0, 0, 0);
+              const singleUpdatedPattern = {
+                ...originalPattern,
+                exceptions: [...(originalPattern.exceptions || []), exceptionDate]
+              };
+
+              await trx('schedule_entries')
+                .where({ tenant, entry_id: masterEntryId })
+                .update({
+                  recurrence_pattern: JSON.stringify(singleUpdatedPattern)
+                });
+
+              // 3. Return new standalone entry
+              await trx.commit();
+              return {
+                ...originalEntry,
+                entry_id: standaloneId,
+                scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
+                scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
+                is_recurring: false,
+                original_entry_id: null,
+                assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
+              };
+
+            case 'future':
+              if (!virtualTimestamp) {
+                throw new Error('Virtual timestamp is required for future updates');
+              }
+              // Split the recurrence into two series
+              const newMasterId = uuidv4();
               
               // 1. Update original master entry to end before the current instance
               const originalEndDate = new Date(virtualTimestamp);
@@ -373,7 +393,7 @@ class ScheduleEntry {
               };
               
               await trx('schedule_entries')
-                .where({ entry_id: masterEntryId })
+                .where({ tenant, entry_id: masterEntryId })
                 .update({
                   recurrence_pattern: JSON.stringify(futureOriginalPattern)
                 });
@@ -403,12 +423,13 @@ class ScheduleEntry {
                 status: entry.status || originalEntry.status,
                 work_item_id: entry.work_item_id || originalEntry.work_item_id,
                 work_item_type: entry.work_item_type || originalEntry.work_item_type,
+                tenant,
                 recurrence_pattern: JSON.stringify(newPattern),
                 is_recurring: true
               };
 
               await trx('schedule_entries').insert(newMasterEntry);
-              await this.updateAssignees(trx, tenant || '', newMasterId, 
+              await this.updateAssignees(trx, tenant, newMasterId, 
                 entry.assigned_user_ids || originalEntry.assigned_user_ids);
               
               await trx.commit();
@@ -428,7 +449,7 @@ class ScheduleEntry {
 
               // Update the entry with all changes
               const [updatedMasterEntry] = await trx('schedule_entries')
-                .where({ entry_id: masterEntryId })
+                .where({ tenant, entry_id: masterEntryId })
                 .update({
                   title: entry.title || originalEntry.title,
                   scheduled_start: entry.scheduled_start || originalEntry.scheduled_start,
@@ -454,7 +475,7 @@ class ScheduleEntry {
 
               // Update assignees if provided
               if (entry.assigned_user_ids) {
-                await this.updateAssignees(trx, tenant || '', masterEntryId, entry.assigned_user_ids);
+                await this.updateAssignees(trx, tenant, masterEntryId, entry.assigned_user_ids);
               }
 
               await trx.commit();
@@ -473,7 +494,7 @@ class ScheduleEntry {
 
       // Initialize update data
       const updateData: Partial<IScheduleEntry & { tenant: string }> = {
-        tenant: tenant || ''
+        tenant
       };
 
       // If removing recurrence, handle cleanup
@@ -544,7 +565,7 @@ class ScheduleEntry {
 
         // Get assigned user IDs for the master entry
         console.log('[ScheduleEntry.update] Fetching assigned users for virtual instance');
-        const assignedUserIds = await this.getAssignedUserIds(trx, [masterEntryId]);
+        const assignedUserIds = await this.getAssignedUserIds(trx, tenant, [masterEntryId]);
 
         // If removing recurrence, update the master pattern
         if (isRemovingRecurrence && virtualTimestamp) {
@@ -563,7 +584,7 @@ class ScheduleEntry {
             });
 
             await trx('schedule_entries')
-              .where('entry_id', masterEntryId)
+              .where({ tenant, entry_id: masterEntryId })
               .update({
                 recurrence_pattern: JSON.stringify(masterPattern)
               });
@@ -604,7 +625,7 @@ class ScheduleEntry {
         });
 
         const [updatedEntry] = await trx('schedule_entries')
-          .where({ entry_id })
+          .where({ tenant, entry_id })
           .update(updateData)
           .returning('*');
 
@@ -620,12 +641,12 @@ class ScheduleEntry {
             entryId: entry_id,
             newAssignees: entry.assigned_user_ids
           });
-          await this.updateAssignees(trx, tenant || '', entry_id, entry.assigned_user_ids);
+          await this.updateAssignees(trx, tenant, entry_id, entry.assigned_user_ids);
           updatedEntry.assigned_user_ids = entry.assigned_user_ids;
         } else {
           // Get existing assigned user IDs
           console.log('[ScheduleEntry.update] Fetching existing assignees');
-          const assignedUserIds = await this.getAssignedUserIds(trx, [entry_id]);
+          const assignedUserIds = await this.getAssignedUserIds(trx, tenant, [entry_id]);
           updatedEntry.assigned_user_ids = assignedUserIds[entry_id] || [];
         }
 
@@ -666,7 +687,10 @@ class ScheduleEntry {
     
     // Get assigned user IDs for all master entries
     const entryIds = entries.map((e): string => e.entry_id);
-    const assignedUserIds = await this.getAssignedUserIds(db, entryIds);
+    if (!entries[0]?.tenant) {
+      throw new Error('Tenant is required');
+    }
+    const assignedUserIds = await this.getAssignedUserIds(db, entries[0].tenant, entryIds);
 
     // Process each recurring entry
     for (const entry of entries) {
@@ -737,11 +761,14 @@ class ScheduleEntry {
   }
 
   static async getRecurringEntriesInRange(start: Date, end: Date): Promise<IScheduleEntry[]> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
     
     // Get master recurring entries that might have occurrences in the range
     const masterEntries = await db('schedule_entries')
-      .where({ is_recurring: true })
+      .where({ tenant, is_recurring: true })
       .whereNotNull('recurrence_pattern')
       .whereNull('original_entry_id') // Only get master entries
       .where('scheduled_start', '<=', end) // Entry must start before the end of our range
@@ -757,6 +784,13 @@ class ScheduleEntry {
       .select('*') as unknown as IScheduleEntry[];
 
     console.log('[ScheduleEntry.getRecurringEntriesInRange] Master entries found:', {
+      count: masterEntries.length,
+      entries: masterEntries.map(e => ({
+        id: e.entry_id,
+        title: e.title,
+        start: e.scheduled_start,
+        hasPattern: !!e.recurrence_pattern
+      }))
     });
 
     if (masterEntries.length === 0) return [];
@@ -778,10 +812,16 @@ class ScheduleEntry {
   }
 
   static async delete(entry_id: string): Promise<boolean> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant is required');
+    }
+    
     // Note: No need to delete from schedule_entry_assignees explicitly
     // due to CASCADE delete in the foreign key constraint
-    const deletedCount = await db('schedule_entries').where({ entry_id }).del();
+    const deletedCount = await db('schedule_entries')
+      .where({ tenant, entry_id })
+      .del();
     return deletedCount > 0;
   }
 }
