@@ -53,7 +53,7 @@ export interface NotificationSubtype {
 
 export interface UserNotificationPreference {
   id: number;
-  user_id: number;
+  user_id: string;
   subtype_id: number;
   is_enabled: boolean;
   email_address: string | null;
@@ -86,6 +86,6 @@ export interface NotificationService {
   getCategories(tenant: string): Promise<NotificationCategory[]>;
   getCategoryWithSubtypes(tenant: string, categoryId: number): Promise<NotificationCategory & { subtypes: NotificationSubtype[] }>;
   updateCategory(tenant: string, id: number, category: Partial<NotificationCategory>): Promise<NotificationCategory>;
-  getUserPreferences(tenant: string, userId: number): Promise<UserNotificationPreference[]>;
-  updateUserPreference(tenant: string, userId: number, preference: Partial<UserNotificationPreference>): Promise<UserNotificationPreference>;
+  getUserPreferences(tenant: string, userId: string): Promise<UserNotificationPreference[]>;
+  updateUserPreference(tenant: string, userId: string, preference: Partial<UserNotificationPreference>): Promise<UserNotificationPreference>;
 }

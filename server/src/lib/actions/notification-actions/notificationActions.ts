@@ -179,7 +179,7 @@ export async function updateSubtypeAction(
 
 export async function getUserPreferencesAction(
   tenant: string,
-  userId: number
+  userId: string
 ): Promise<UserNotificationPreference[]> {
   const notificationService = getEmailNotificationService();
   return notificationService.getUserPreferences(tenant, userId);
@@ -187,7 +187,7 @@ export async function getUserPreferencesAction(
 
 export async function updateUserPreferenceAction(
   tenant: string,
-  userId: number,
+  userId: string,
   preference: Partial<UserNotificationPreference>
 ): Promise<UserNotificationPreference> {
   const notificationService = getEmailNotificationService();

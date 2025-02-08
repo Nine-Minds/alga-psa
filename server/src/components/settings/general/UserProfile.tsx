@@ -98,7 +98,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
           // Update category preference
           return await updateUserPreferenceAction(
             user!.tenant,
-            parseInt(user!.user_id),
+            user!.user_id,
             {
               subtype_id: category.id,
               is_enabled: category.is_enabled,
@@ -108,12 +108,13 @@ export default function UserProfile({ userId }: UserProfileProps) {
           );
 
           // Update subtype preferences
+          // todo - this is unreachable, need to investigate
           const subtypes = subtypesByCategory[category.id] || [];
           await Promise.all(
             subtypes.map((subtype: NotificationSubtype): Promise<UserNotificationPreference> =>
               updateUserPreferenceAction(
                 user!.tenant,
-                parseInt(user!.user_id),
+                user!.user_id,
                 {
                   subtype_id: subtype.id,
                   is_enabled: subtype.is_enabled && category.is_enabled,

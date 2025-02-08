@@ -172,7 +172,7 @@ export class EmailNotificationService implements NotificationService {
   }
 
   // User preferences
-  async getUserPreferences(tenant: string, userId: number): Promise<UserNotificationPreference[]> {
+  async getUserPreferences(tenant: string, userId: string): Promise<UserNotificationPreference[]> {
     const knex = await this.getTenantKnex();
     return knex('user_notification_preferences')
       .where({ user_id: userId })
@@ -181,7 +181,7 @@ export class EmailNotificationService implements NotificationService {
 
   async updateUserPreference(
     tenant: string,
-    userId: number,
+    userId: string,
     preference: Partial<UserNotificationPreference>
   ): Promise<UserNotificationPreference> {
     const knex = await this.getTenantKnex();
@@ -198,7 +198,7 @@ export class EmailNotificationService implements NotificationService {
   // Notification sending
   async sendNotification(params: {
     tenant: string;
-    userId: number;
+    userId: string;
     subtypeId: number;
     emailAddress: string;
     templateName: string;

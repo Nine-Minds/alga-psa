@@ -9,7 +9,7 @@ interface RightSidebarProps {
   companyUrl: string;
   accountId: string;
   messages: any[];
-  userId: number;
+  userId: string;
   userRole: string;
   selectedAccount: string;
   handleSelectAccount: any;
