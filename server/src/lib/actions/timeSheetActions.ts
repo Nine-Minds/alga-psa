@@ -1,17 +1,105 @@
 'use server'
 
-import { ITimeEntry, ITimeSheetApproval, ITimeSheetComment, TimeSheetStatus, ITimePeriod, ITimeSheet } from '@/interfaces';
+import { 
+  ITimeEntry, 
+  ITimeSheetApproval, 
+  ITimeSheetComment, 
+  TimeSheetStatus, 
+  ITimePeriod, 
+  ITimeSheet,
+  ITimeSheetView,
+  ITimeSheetApprovalView,
+  ITimePeriodView
+} from '@/interfaces';
 import { createTenantKnex } from '@/lib/db';
 import TimeSheetComment from '@/interfaces/timeSheetComment';
 import { formatISO } from 'date-fns';
-import { timeSheetApprovalSchema, timeSheetCommentSchema, timeEntrySchema, timeSheetSchema } from '../schemas/timeSheet.schemas';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { 
+  timeSheetApprovalViewSchema, 
+  timeSheetCommentSchema, 
+  timeEntrySchema, 
+  timeSheetViewSchema 
+} from '../schemas/timeSheet.schemas';
 import { WorkItemType } from '@/interfaces/workItem.interfaces';
 import { validateArray, validateData } from '../utils/validation';
+import { Temporal } from '@js-temporal/polyfill';
+
+// Database schema types
+interface DbTimePeriod {
+  period_id: string;
+  start_date: string;
+  end_date: string;
+  tenant: string;
+}
+
+interface DbTimeSheet {
+  id: string;
+  period_id: string;
+  user_id: string;
+  approval_status: TimeSheetStatus;
+  submitted_at?: string;
+  approved_at?: string;
+  approved_by?: string;
+  tenant: string;
+  period_start_date?: string;
+  period_end_date?: string;
+}
+
+// Helper function to convert database time period to interface time period
+function toTimePeriod(dbPeriod: Pick<DbTimePeriod, 'period_id' | 'start_date' | 'end_date' | 'tenant'>): ITimePeriod {
+  const startDate = toPlainDate(dbPeriod.start_date);
+  const endDate = toPlainDate(dbPeriod.end_date);
+
+  if (!(startDate instanceof Temporal.PlainDate) || !(endDate instanceof Temporal.PlainDate)) {
+    throw new Error('Failed to convert dates to Temporal.PlainDate');
+  }
+
+  const timePeriod: ITimePeriod = {
+    period_id: dbPeriod.period_id,
+    tenant: dbPeriod.tenant,
+    start_date: startDate,
+    end_date: endDate
+  };
+
+  return timePeriod;
+}
+
+// Helper function to create time period view from database fields
+function createTimePeriodView(periodId: string, tenant: string, startDate?: string, endDate?: string): ITimePeriodView | undefined {
+  if (!startDate || !endDate) {
+    return undefined;
+  }
+
+  try {
+    const start = toPlainDate(startDate);
+    const end = toPlainDate(endDate);
+
+    if (!(start instanceof Temporal.PlainDate)) {
+      console.error('Failed to convert start_date to Temporal.PlainDate');
+      return undefined;
+    }
+    if (!(end instanceof Temporal.PlainDate)) {
+      console.error('Failed to convert end_date to Temporal.PlainDate');
+      return undefined;
+    }
+
+    return {
+      period_id: periodId,
+      tenant,
+      start_date: start.toString(),
+      end_date: end.toString()
+    };
+  } catch (error) {
+    console.error('Failed to create time period:', error);
+    return undefined;
+  }
+}
 
 export async function fetchTimeSheetsForApproval(
   teamIds: string[],
   includeApproved: boolean = false
-): Promise<ITimeSheetApproval[]> {
+): Promise<ITimeSheetApprovalView[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const statuses = includeApproved
@@ -44,7 +132,7 @@ export async function fetchTimeSheetsForApproval(
         'time_periods.end_date as period_end_date'
       );
 
-    const timeSheetApprovals: ITimeSheetApproval[] = timeSheets.map((sheet): ITimeSheetApproval => ({
+    const timeSheetApprovals: ITimeSheetApprovalView[] = timeSheets.map((sheet): ITimeSheetApprovalView => ({
       id: sheet.id,
       user_id: sheet.user_id,
       period_id: sheet.period_id,
@@ -55,15 +143,11 @@ export async function fetchTimeSheetsForApproval(
       employee_name: `${sheet.first_name} ${sheet.last_name}`,
       employee_email: sheet.email,
       comments: [],
-      time_period: {
-        start_date: formatISO(new Date(sheet.period_start_date)),
-        end_date: formatISO(new Date(sheet.period_end_date)),
-        period_id: sheet.period_id
-      } as ITimePeriod,
+      time_period: createTimePeriodView(sheet.period_id, sheet.tenant, sheet.period_start_date, sheet.period_end_date),
       tenant: sheet.tenant
     }));
 
-    return validateArray(timeSheetApprovalSchema, timeSheetApprovals);
+    return validateArray(timeSheetApprovalViewSchema, timeSheetApprovals);
   } catch (error) {
     console.error('Error fetching time sheets for approval:', error);
     throw new Error('Failed to fetch time sheets for approval');
@@ -164,7 +248,7 @@ export async function bulkApproveTimeSheets(timeSheetIds: string[], managerId: s
   }
 }
 
-export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheet> {
+export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheetView> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const timeSheet = await db('time_sheets')
@@ -193,14 +277,10 @@ export async function fetchTimeSheet(timeSheetId: string): Promise<ITimeSheet> {
       submitted_at: timeSheet.submitted_at ? formatISO(new Date(timeSheet.submitted_at)) : undefined,
       approved_at: timeSheet.approved_at ? formatISO(new Date(timeSheet.approved_at)) : undefined,
       approved_by: timeSheet.approved_by || undefined,
-      time_period: {
-        start_date: formatISO(new Date(timeSheet.period_start_date)),
-        end_date: formatISO(new Date(timeSheet.period_end_date)),
-        period_id: timeSheet.period_id
-      }
+      time_period: createTimePeriodView(timeSheet.period_id, timeSheet.tenant, timeSheet.period_start_date, timeSheet.period_end_date)
     };
 
-    return validateData(timeSheetSchema, result);
+    return validateData(timeSheetViewSchema, result);
   } catch (error) {
     console.error('Error fetching time sheet:', error);
     throw new Error('Failed to fetch time sheet');

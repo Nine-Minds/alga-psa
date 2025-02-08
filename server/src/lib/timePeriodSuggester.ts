@@ -1,34 +1,37 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
 
 
 export type TimePeriodSettings = ITimePeriodSettings;
 
 export class TimePeriodSuggester {
-  private static parseDateString(dateStr: string): Temporal.PlainDate {
-    return Temporal.PlainDate.from(dateStr.split('T')[0]);
+  private static parseDateValue(date: string | Temporal.PlainDate): Temporal.PlainDate {
+    if (date instanceof Temporal.PlainDate) {
+      return date;
+    }
+    return Temporal.PlainDate.from(date.split('T')[0]);
   }  
   static suggestNewTimePeriod(
     settings: TimePeriodSettings[],
     existingPeriods: ITimePeriod[] = []
-  ): ITimePeriod {
+  ): ITimePeriodView {
     let currentDate = Temporal.Now.plainDateISO();
 
     if (existingPeriods.length > 0) {
       const latestEndDate = existingPeriods.reduce((maxDate, period) => {
-        const endDate = this.parseDateString(period.end_date);
+        const endDate = this.parseDateValue(period.end_date);
         return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
-      }, this.parseDateString(existingPeriods[0].end_date));
+      }, this.parseDateValue(existingPeriods[0].end_date));
       currentDate = latestEndDate;
     }
 
     // Find the next applicable setting based on the next period's start date
     const nextPeriodStartDate = existingPeriods.length > 0
       ? existingPeriods.reduce((maxDate, period) => {
-          const endDate = this.parseDateString(period.end_date);
+          const endDate = this.parseDateValue(period.end_date);
           return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
-        }, this.parseDateString(existingPeriods[0].end_date))
+        }, this.parseDateValue(existingPeriods[0].end_date))
       : currentDate;
 
     const applicableSettings = settings.filter(setting => {
@@ -99,12 +102,13 @@ export class TimePeriodSuggester {
     // Find the period with the latest end date to use its ID
     const latestPeriod = existingPeriods.length > 0
       ? existingPeriods.reduce((latest, period) => {
-          const endDate = this.parseDateString(period.end_date);
-          const latestEndDate = this.parseDateString(latest.end_date);
+          const endDate = this.parseDateValue(period.end_date);
+          const latestEndDate = this.parseDateValue(latest.end_date);
           return Temporal.PlainDate.compare(endDate, latestEndDate) > 0 ? period : latest;
         }, existingPeriods[0])
       : null;
 
+    // Return view type with string dates
     return {
       period_id: latestPeriod ? latestPeriod.period_id : uuidv4(),
       start_date: startDate.toString(),

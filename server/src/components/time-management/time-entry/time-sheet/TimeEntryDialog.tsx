@@ -1,13 +1,21 @@
 'use client';
 
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
+import { Temporal } from '@js-temporal/polyfill';
 import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
 import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '@/lib/actions/timeEntryActions';
 import { Button } from '@/components/ui/Button';
-import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, TimeSheetStatus, ITimeEntryWithWorkItemString } from '@/interfaces/timeEntry.interfaces';
+import { 
+  ITimeEntry, 
+  ITimeEntryWithWorkItem, 
+  ITimePeriod,
+  ITimePeriodView, 
+  TimeSheetStatus, 
+  ITimeEntryWithWorkItemString 
+} from '@/interfaces/timeEntry.interfaces';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
@@ -24,7 +32,7 @@ interface TimeEntryDialogProps {
   workItem: Omit<IWorkItem, 'tenant'>;
   date: Date;
   existingEntries?: ITimeEntryWithWorkItem[];
-  timePeriod: ITimePeriod;
+  timePeriod: ITimePeriodView;
   isEditable: boolean;
   defaultStartTime?: Date;
   defaultEndTime?: Date;
@@ -66,6 +74,13 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     setEditingIndex,
     updateTimeInputs,
   } = useTimeEntry();
+
+  // Convert string dates to Temporal.PlainDate for internal use
+  const timePeriod: ITimePeriod = {
+    ...props.timePeriod,
+    start_date: Temporal.PlainDate.from(props.timePeriod.start_date),
+    end_date: Temporal.PlainDate.from(props.timePeriod.end_date)
+  };
 
   const lastNoteInputRef = useRef<HTMLInputElement>(null);
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);

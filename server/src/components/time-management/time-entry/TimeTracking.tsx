@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { TimeSheet } from './time-sheet/TimeSheet';
 import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
-import { ITimeSheet, ITimePeriodWithStatus, ITimeEntry } from '@/interfaces/timeEntry.interfaces';
+import { ITimeSheetView, ITimePeriodWithStatus, ITimeEntry } from '@/interfaces/timeEntry.interfaces';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { fetchTimePeriods, fetchOrCreateTimeSheet, saveTimeEntry } from '@/lib/actions/timeEntryActions';
 import { useTeamAuth } from '@/hooks/useTeamAuth';
@@ -18,7 +18,7 @@ interface TimeTrackingProps {
 
 export default function TimeTracking({ currentUser, isManager }: TimeTrackingProps) {
   const [timePeriods, setTimePeriods] = useState<ITimePeriodWithStatus[]>([]);
-  const [selectedTimeSheet, setSelectedTimeSheet] = useState<ITimeSheet | null>(null);
+  const [selectedTimeSheet, setSelectedTimeSheet] = useState<ITimeSheetView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

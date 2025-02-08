@@ -1,7 +1,16 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ITimeEntry, ITimeSheet, ITimeSheetComment, TimeSheetStatus, ITimeEntryWithWorkItemString, ITimeEntryWithWorkItem } from '@/interfaces/timeEntry.interfaces';
+import { 
+    ITimeEntry, 
+    ITimeSheet, 
+    ITimeSheetView,
+    ITimeSheetComment, 
+    TimeSheetStatus, 
+    ITimeEntryWithWorkItemString, 
+    ITimeEntryWithWorkItem,
+    ITimePeriodView
+} from '@/interfaces/timeEntry.interfaces';
 import { IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
@@ -17,7 +26,7 @@ import { TimeSheetComments } from '@/components/time-management/approvals/TimeSh
 import { WorkItemDrawer } from './WorkItemDrawer';
 
 interface TimeSheetProps {
-    timeSheet: ITimeSheet;
+    timeSheet: ITimeSheetView;
     onSaveTimeEntry: (timeEntry: ITimeEntry) => Promise<void>;
     isManager?: boolean;
     onSubmitTimeSheet: () => Promise<void>;
@@ -27,23 +36,18 @@ interface TimeSheetProps {
     onBack: () => void;
 }
 
-function getDatesInPeriod(timePeriod: { start_date: Date; end_date: Date }): Date[] {
-    const dates: Date[] = [];
-    
-    // Adjust for timezone offset
-    const offset = new Date().getTimezoneOffset() * 60000;
-    
-    // Create start date at beginning of day in local time
-    const currentDate = new Date(new Date(timePeriod.start_date).getTime() + offset);
-    currentDate.setHours(0, 0, 0, 0);
-    
-    // Create end date at end of day in local time
-    const endDate = new Date(new Date(timePeriod.end_date).getTime() + offset);
-    endDate.setHours(23, 59, 59, 999);
+import { Temporal } from '@js-temporal/polyfill';
 
-    while (currentDate <= endDate) {
-        dates.push(new Date(currentDate));
-        currentDate.setDate(currentDate.getDate() + 1);
+function getDatesInPeriod(timePeriod: ITimePeriodView): Date[] {
+    const dates: Date[] = [];
+    let currentDate = Temporal.PlainDate.from(timePeriod.start_date);
+    const endDate = Temporal.PlainDate.from(timePeriod.end_date);
+
+    while (Temporal.PlainDate.compare(currentDate, endDate) < 0) {
+        // Convert PlainDate to Date at midnight UTC
+        const dateStr = `${currentDate.toString()}T00:00:00Z`;
+        dates.push(new Date(dateStr));
+        currentDate = currentDate.add({ days: 1 });
     }
     return dates;
 }
@@ -58,7 +62,7 @@ export function TimeSheet({
     initialDuration,
     onBack
 }: TimeSheetProps): JSX.Element {
-    const [timeSheet, setTimeSheet] = useState<ITimeSheet>(initialTimeSheet);
+    const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
     const [isAddWorkItemDialogOpen, setIsAddWorkItemDialogOpen] = useState(false);
@@ -356,10 +360,12 @@ export function TimeSheet({
         }
     };
 
-    const dates = getDatesInPeriod({
-        start_date: timeSheet.time_period ? new Date(timeSheet.time_period.start_date) : new Date(),
-        end_date: timeSheet.time_period ? new Date(timeSheet.time_period.end_date) : new Date()
-    });
+    const dates = timeSheet.time_period ? getDatesInPeriod({
+        period_id: timeSheet.time_period.period_id,
+        tenant: timeSheet.time_period.tenant,
+        start_date: timeSheet.time_period.start_date,
+        end_date: timeSheet.time_period.end_date
+    }) : [];
 
     const isEditable = timeSheet.approval_status === 'DRAFT' || timeSheet.approval_status === 'CHANGES_REQUESTED';
 

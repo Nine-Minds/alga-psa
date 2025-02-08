@@ -1,13 +1,22 @@
 'use server'
 
 import { createTenantKnex } from '@/lib/db';
-import { ITimeEntry, ITimePeriod, ITimeEntryWithWorkItem, ITimeSheet, ITimePeriodWithStatus, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
+import { 
+  ITimeEntry, 
+  ITimePeriod, 
+  ITimeEntryWithWorkItem, 
+  ITimeSheet, 
+  ITimeSheetView,
+  ITimePeriodWithStatus, 
+  TimeSheetStatus 
+} from '@/interfaces/timeEntry.interfaces';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { getServerSession } from "next-auth/next";
 import { options } from "@/app/api/auth/[...nextauth]/options";
 import { TaxRegion } from '@/types/types.d';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { validateData } from '@/lib/utils/validation';
 import { z } from 'zod';
 import { timeEntrySchema } from '@/lib/schemas/timeSheet.schemas';
@@ -86,8 +95,10 @@ export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
   return timeSheets.map((sheet): ITimeSheet => ({
     ...sheet,
     time_period: {
-      start_date: new Date(sheet.start_date),
-      end_date: new Date(sheet.end_date)
+      period_id: sheet.period_id,
+      start_date: toPlainDate(sheet.start_date).toString(),
+      end_date: toPlainDate(sheet.end_date).toString(),
+      tenant: sheet.tenant
     }
   }));
 }
@@ -562,8 +573,8 @@ export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
   return timeSheets.map((sheet): ITimeSheet => ({
     ...sheet,
     time_period: {
-      start_date: new Date(sheet.start_date),
-      end_date: new Date(sheet.end_date)
+      start_date: toPlainDate(sheet.start_date).toString(),
+      end_date: toPlainDate(sheet.end_date).toString()
     }
   }));
 }
@@ -592,13 +603,13 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
 
   return periods.map((period): ITimePeriodWithStatus => ({
     ...period,
-    start_date: period.start_date.toISOString().split('.')[0] + 'Z',
-    end_date: period.end_date.toISOString().split('.')[0] + 'Z',
+    start_date: toPlainDate(period.start_date).toString(),
+    end_date: toPlainDate(period.end_date).toString(),
     timeSheetStatus: (period.approval_status || period.timeSheetStatus || 'DRAFT') as TimeSheetStatus
   }));
 }
 
-export async function fetchOrCreateTimeSheet(userId: string, periodId: string): Promise<ITimeSheet> {
+export async function fetchOrCreateTimeSheet(userId: string, periodId: string): Promise<ITimeSheetView> {
   // Validate input
   const validatedParams = validateData<FetchOrCreateTimeSheetParams>(
     fetchOrCreateTimeSheetParamsSchema,
@@ -646,8 +657,8 @@ export async function fetchOrCreateTimeSheet(userId: string, periodId: string): 
     ...timeSheet,
     time_period: {
       ...timePeriod,
-      start_date: formatISO(timePeriod.start_date),
-      end_date: formatISO(timePeriod.end_date),
+      start_date: toPlainDate(timePeriod.start_date).toString(),
+      end_date: toPlainDate(timePeriod.end_date).toString()
     },
     comments: comments,
   };

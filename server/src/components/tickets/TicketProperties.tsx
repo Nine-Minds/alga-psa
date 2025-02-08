@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ITicket, ITimeSheet, ITimePeriod, ITimeEntry } from '../../interfaces';
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry } from '../../interfaces';
 import { IUserWithRoles, ITeam } from '../../interfaces/auth.interfaces';
 import { ITicketResource } from '../../interfaces/ticketResource.interfaces';
 import { Button } from '../ui/Button';
@@ -30,7 +30,7 @@ interface TicketPropertiesProps {
   additionalAgents: ITicketResource[];
   availableAgents: IUserWithRoles[];
   currentTimeSheet: ITimeSheet | null;
-  currentTimePeriod: ITimePeriod | null;
+  currentTimePeriod: ITimePeriodView | null;
   userId: string;
   tenant: string;
   contacts: any[];

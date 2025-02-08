@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
 import { TaxRegion } from '@/types/types.d';
 import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
@@ -140,13 +140,13 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Load all required data in parallel
-      const [services, taxRegions, defaultTaxRegionFromCompany] = await Promise.all([
-        fetchServicesForTimeEntry(workItem.type),
-        fetchTaxRegions(),
-        (workItem.type === 'ticket' || workItem.type === 'project_task') 
-          ? fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type)
-          : Promise.resolve(undefined)
-      ]);
+  const [services, taxRegions, defaultTaxRegionFromCompany] = await Promise.all([
+    fetchServicesForTimeEntry(workItem.type),
+    fetchTaxRegions(),
+    (workItem.type === 'ticket' || workItem.type === 'project_task') 
+      ? fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type)
+      : Promise.resolve(undefined)
+  ]);
 
       dispatch({
         type: 'SET_INITIAL_DATA',

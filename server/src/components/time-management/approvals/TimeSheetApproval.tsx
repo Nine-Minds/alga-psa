@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { ITimeSheet, ITimeEntry, ITimeSheetComment, ITimeSheetApproval, ITimeEntryWithWorkItem, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
+import { 
+  ITimeSheet, 
+  ITimeEntry, 
+  ITimeSheetComment, 
+  ITimeSheetApproval, 
+  ITimeSheetApprovalView,
+  ITimeEntryWithWorkItem, 
+  TimeSheetStatus 
+} from '@/interfaces/timeEntry.interfaces';
 import { addCommentToTimeSheet, fetchTimeSheetComments } from '@/lib/actions/timeSheetActions';
 import { FaCheck, FaTimes, FaClock, FaUndo, FaChevronDown, FaChevronUp } from 'react-icons/fa';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
@@ -9,9 +17,10 @@ import { TextArea } from '@/components/ui/TextArea';
 import { IUser } from '@/interfaces/auth.interfaces';
 import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '@/lib/actions/timeEntryActions';
 import { parseISO } from 'date-fns';
+import { Temporal } from '@js-temporal/polyfill';
 
 interface TimeSheetApprovalProps {
-  timeSheet: ITimeSheetApproval;
+  timeSheet: ITimeSheetApprovalView;
   timeEntries: ITimeEntry[];
   currentUser: IUser;
   onApprove: () => void;
@@ -114,7 +123,7 @@ export function TimeSheetApproval({
   onRequestChanges,
   onReverseApproval
 }: TimeSheetApprovalProps) {
-  const [timeSheet, setTimeSheet] = useState<ITimeSheetApproval>(initialTimeSheet);
+  const [timeSheet, setTimeSheet] = useState<ITimeSheetApprovalView>(initialTimeSheet);
   const [newComment, setNewComment] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [workItems, setWorkItems] = useState<IWorkItem[]>([]);
@@ -252,7 +261,7 @@ export function TimeSheetApproval({
           <CardTitle>Time Sheet Approval for {timeSheet.employee_name}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Period: { (timeSheet.time_period?.start_date) ? parseISO(timeSheet.time_period?.start_date).toLocaleDateString() : "N/A"} - { (timeSheet.time_period?.end_date) ? parseISO(timeSheet.time_period?.end_date).toLocaleDateString() : "N/A"}</p>
+          <p>Period: { timeSheet.time_period?.start_date ? timeSheet.time_period.start_date.toString() : "N/A"} - { timeSheet.time_period?.end_date ? timeSheet.time_period.end_date.toString() : "N/A"}</p>
           <p>Status: {timeSheet.approval_status}</p>
           <p>Submitted: {timeSheet.submitted_at?.toLocaleString()}</p>
         </CardContent>

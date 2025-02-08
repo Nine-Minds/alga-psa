@@ -40,10 +40,13 @@ export function getUserTimeZone(): string {
 }
 
 /**
- * Convert a date string or Date object to a Temporal.PlainDate
+ * Convert a date string, Date object, or Temporal.PlainDate to a Temporal.PlainDate
  * Handles both date-only strings and full ISO timestamps
  */
-export function toPlainDate(date: string | Date): Temporal.PlainDate {
+export function toPlainDate(date: string | Date | Temporal.PlainDate): Temporal.PlainDate {
+  if (date instanceof Temporal.PlainDate) {
+    return date;
+  }
   if (typeof date === 'string') {
     // If it's a full ISO timestamp (contains 'T' or 'Z')
     if (date.includes('T') || date.includes('Z')) {

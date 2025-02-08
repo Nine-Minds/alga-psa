@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { iso8601Schema, tenantSchema } from '@/lib/utils/validation';
+import { iso8601Schema, tenantSchema, plainDateSchema } from '@/lib/utils/validation';
 
 export const timeSheetStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
 export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc'] as const);
@@ -7,26 +7,8 @@ export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billabl
 // Core schemas
 export const timePeriodSchema = tenantSchema.extend({
   period_id: z.string(),
-  start_date: iso8601Schema,
-  end_date: iso8601Schema
-});
-
-export const timePeriodSettingsSchema = tenantSchema.extend({
-  time_period_settings_id: z.string(),
-  frequency: z.number().positive(),
-  frequency_unit: z.enum(['day', 'week', 'month', 'year']),
-  is_active: z.boolean(),
-  effective_from: iso8601Schema,
-  effective_to: iso8601Schema.optional(),
-  created_at: iso8601Schema,
-  updated_at: iso8601Schema,
-  tenant_id: z.string(),
-  start_day: z.number().min(1).max(31).optional(),
-  end_day: z.number().min(0).max(31).optional(),
-  start_month: z.number().min(1).max(12).optional(),
-  start_day_of_month: z.number().min(1).max(31).optional(),
-  end_month: z.number().min(1).max(12).optional(),
-  end_day_of_month: z.number().min(0).max(31).optional()
+  start_date: plainDateSchema,
+  end_date: plainDateSchema
 });
 
 export const timeSheetCommentSchema = tenantSchema.extend({
@@ -54,6 +36,39 @@ export const timeSheetApprovalSchema = timeSheetSchema.extend({
   employee_name: z.string(),
   employee_email: z.string(),
   comments: z.array(timeSheetCommentSchema)
+});
+
+// View schemas
+export const timePeriodViewSchema = tenantSchema.extend({
+  period_id: z.string(),
+  start_date: z.string(),
+  end_date: z.string()
+});
+
+export const timeSheetViewSchema = timeSheetSchema.omit({ time_period: true }).extend({
+  time_period: timePeriodViewSchema.optional()
+});
+
+export const timeSheetApprovalViewSchema = timeSheetApprovalSchema.omit({ time_period: true }).extend({
+  time_period: timePeriodViewSchema.optional()
+});
+
+export const timePeriodSettingsSchema = tenantSchema.extend({
+  time_period_settings_id: z.string(),
+  frequency: z.number().positive(),
+  frequency_unit: z.enum(['day', 'week', 'month', 'year']),
+  is_active: z.boolean(),
+  effective_from: iso8601Schema,
+  effective_to: iso8601Schema.optional(),
+  created_at: iso8601Schema,
+  updated_at: iso8601Schema,
+  tenant_id: z.string(),
+  start_day: z.number().min(1).max(31).optional(),
+  end_day: z.number().min(0).max(31).optional(),
+  start_month: z.number().min(1).max(12).optional(),
+  start_day_of_month: z.number().min(1).max(31).optional(),
+  end_month: z.number().min(1).max(12).optional(),
+  end_day_of_month: z.number().min(0).max(31).optional()
 });
 
 export const timeEntrySchema = tenantSchema.extend({

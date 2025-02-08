@@ -1,7 +1,20 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { ITicket, IComment, ITimeSheet, ITimePeriod, ITimeEntry, ICompany, IContact, IUser, IUserWithRoles, ITeam, ITicketResource } from '../../interfaces';
+import { 
+    ITicket, 
+    IComment, 
+    ITimeSheet, 
+    ITimePeriod,
+    ITimePeriodView, 
+    ITimeEntry, 
+    ICompany, 
+    IContact, 
+    IUser, 
+    IUserWithRoles, 
+    ITeam, 
+    ITicketResource 
+} from '../../interfaces';
 import TicketInfo from './TicketInfo';
 import TicketProperties from './TicketProperties';
 import TicketConversation from './TicketConversation';
@@ -69,7 +82,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isRunning, setIsRunning] = useState(true);
     const [timeDescription, setTimeDescription] = useState('');
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
-    const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriod | null>(null);
+    const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>([]);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>([]);
@@ -472,7 +485,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     workItem={workItem}
                     date={new Date()}
                     existingEntries={[]}
-                    timePeriod={currentTimePeriod!}
+                    timePeriod={currentTimePeriod!} // Already a view type from getCurrentTimePeriod
                     isEditable={true}
                     defaultStartTime={startTime}
                     defaultEndTime={endTime}

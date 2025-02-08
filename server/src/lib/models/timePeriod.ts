@@ -1,11 +1,35 @@
 import { createTenantKnex } from '../db';
-import { ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
 import { ISO8601String } from '@/types/types.d';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { Temporal } from '@js-temporal/polyfill';
+import { v4 as uuidv4 } from 'uuid';
+
+// Database representation of time period
+interface DbTimePeriod {
+  period_id: string;
+  start_date: string;
+  end_date: string;
+  tenant: string;
+}
+
+// Helper function to convert Temporal.PlainDate to database format
+function toDbDate(date: Temporal.PlainDate | ISO8601String): string {
+  if (date instanceof Temporal.PlainDate) {
+    return date.toString();
+  }
+  return date;
+}
+
+// Helper function to convert database date to Temporal.PlainDate
+function fromDbDate(date: string): Temporal.PlainDate {
+  return toPlainDate(date);
+}
 
 export class TimePeriod {
   static async getLatest(): Promise<ITimePeriod | null> {
     const {knex: db, tenant} = await createTenantKnex();
-    const latestPeriod = await db<ITimePeriod>('time_periods')
+    const latestPeriod = await db<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .orderBy('end_date', 'desc')
       .first();
@@ -14,93 +38,98 @@ export class TimePeriod {
     
     return {
       ...latestPeriod,
-      start_date: new Date(latestPeriod.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(latestPeriod.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(latestPeriod.start_date),
+      end_date: fromDbDate(latestPeriod.end_date)
     };
   }
 
   static async getAll(): Promise<ITimePeriod[]> {
     const {knex: db, tenant} = await createTenantKnex();
-    const timePeriods = await db<ITimePeriod>('time_periods')
+    const timePeriods = await db<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .select('*')
       .orderBy('start_date', 'desc');
 
     return timePeriods.map((period): ITimePeriod => ({
       ...period,
-      start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(period.start_date),
+      end_date: fromDbDate(period.end_date)
     }));
   }  
 
   static async create(timePeriodData: Omit<ITimePeriod, 'period_id' | 'tenant'>): Promise<ITimePeriod> {
     const {knex: db, tenant} = await createTenantKnex();
-    const [newPeriod] = await db<ITimePeriod>('time_periods')
-      .insert({...timePeriodData, tenant: tenant!})
+    // Create a clean object with only the fields we want to insert
+    const dbData: DbTimePeriod = {
+      tenant: tenant!,
+      period_id: uuidv4(),
+      start_date: toDbDate(timePeriodData.start_date),
+      end_date: toDbDate(timePeriodData.end_date)
+    };
+
+    const [newPeriod] = await db<DbTimePeriod>('time_periods')
+      .insert(dbData)
       .returning('*');
 
-    // Convert dates to ISO strings
     return {
       ...newPeriod,
-      start_date: new Date(newPeriod.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(newPeriod.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(newPeriod.start_date),
+      end_date: fromDbDate(newPeriod.end_date)
     };
   }
 
-  static async findByDate(date: ISO8601String): Promise<ITimePeriod | null> {
+  static async findByDate(date: ISO8601String): Promise<ITimePeriodView | null> {
     const {knex: db, tenant} = await createTenantKnex();
-    const period = await db<ITimePeriod>('time_periods')
+    const period = await db<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .where('start_date', '<=', date)
-      .where('end_date', '>=', date)
+      .where('end_date', '>', date)
       .first();
 
     if (!period) return null;
     
+    // Convert to view type with string dates
     return {
       ...period,
-      start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: period.start_date,
+      end_date: period.end_date
     };
   }
 
   static async findOverlapping(
-    startDate: ISO8601String,
-    endDate: ISO8601String,
+    startDate: Temporal.PlainDate | ISO8601String,
+    endDate: Temporal.PlainDate | ISO8601String,
     excludePeriodId?: string
   ): Promise<ITimePeriod | null> {
     const {knex: db, tenant} = await createTenantKnex();
-    const query = db<ITimePeriod>('time_periods')
+    
+    // Convert inputs to database format
+    const startStr = toDbDate(startDate);
+    const endStr = toDbDate(endDate);
+    
+    // For half-open intervals [A,B), two periods overlap if: existing.start_date < newEnd AND existing.end_date > newStart
+    const period = await db<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
-      .where((qb) => {
-        qb.where((inner) => {
-          inner.where('start_date', '>=', startDate).andWhere('start_date', '<', endDate);
-        })
-        .orWhere((inner) => {
-          inner.where('end_date', '>', startDate).andWhere('end_date', '<=', endDate);
-        })
-        .orWhere((inner) => {
-          inner.where('start_date', '<', startDate).andWhere('end_date', '>', endDate);
-        });
-      });
-
-    if (excludePeriodId) {
-      query.whereNot('period_id', excludePeriodId);
-    }
-
-    const period = await query.first();
+      .andWhere('start_date', '<', endStr)
+      .andWhere('end_date', '>', startStr)
+      .modify(qb => {
+        if (excludePeriodId) {
+          qb.whereNot('period_id', excludePeriodId);
+        }
+      })
+      .first();
     if (!period) return null;
     
     return {
       ...period,
-      start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(period.start_date),
+      end_date: fromDbDate(period.end_date)
     };
   }
 
   static async findById(periodId: string): Promise<ITimePeriod | null> {
     const {knex: db, tenant} = await createTenantKnex();
-    const period = await db<ITimePeriod>('time_periods')
+    const period = await db<DbTimePeriod>('time_periods')
       .where('tenant', tenant)
       .where('period_id', periodId)
       .first();
@@ -109,8 +138,8 @@ export class TimePeriod {
     
     return {
       ...period,
-      start_date: new Date(period.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(period.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(period.start_date),
+      end_date: fromDbDate(period.end_date)
     };
   }
 
@@ -135,10 +164,22 @@ export class TimePeriod {
     updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
   ): Promise<ITimePeriod> {
     const {knex: db, tenant} = await createTenantKnex();
-    const [updatedPeriod] = await db<ITimePeriod>('time_periods')
+    
+    // Create a clean object with only the fields we want to update
+    const dbUpdates: Record<string, string> = {};
+    
+    // Convert dates if they exist
+    if (updates.start_date) {
+      dbUpdates.start_date = toDbDate(updates.start_date);
+    }
+    if (updates.end_date) {
+      dbUpdates.end_date = toDbDate(updates.end_date);
+    }
+
+    const [updatedPeriod] = await db<DbTimePeriod>('time_periods')
       .where('period_id', periodId)
       .where('tenant', tenant)
-      .update(updates)
+      .update(dbUpdates)
       .returning('*');
 
     if (!updatedPeriod) {
@@ -147,8 +188,8 @@ export class TimePeriod {
 
     return {
       ...updatedPeriod,
-      start_date: new Date(updatedPeriod.start_date).toISOString().split('.')[0] + 'Z',
-      end_date: new Date(updatedPeriod.end_date).toISOString().split('.')[0] + 'Z'
+      start_date: fromDbDate(updatedPeriod.start_date),
+      end_date: fromDbDate(updatedPeriod.end_date)
     };
   }
 
