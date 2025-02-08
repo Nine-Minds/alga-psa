@@ -4,8 +4,9 @@ import { ISO8601String } from '@/types/types.d';
 
 export class TimePeriod {
   static async getLatest(): Promise<ITimePeriod | null> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const latestPeriod = await db<ITimePeriod>('time_periods')
+      .where('tenant', tenant)
       .orderBy('end_date', 'desc')
       .first();
 
@@ -19,8 +20,9 @@ export class TimePeriod {
   }
 
   static async getAll(): Promise<ITimePeriod[]> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const timePeriods = await db<ITimePeriod>('time_periods')
+      .where('tenant', tenant)
       .select('*')
       .orderBy('start_date', 'desc');
 
@@ -46,8 +48,9 @@ export class TimePeriod {
   }
 
   static async findByDate(date: ISO8601String): Promise<ITimePeriod | null> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const period = await db<ITimePeriod>('time_periods')
+      .where('tenant', tenant)
       .where('start_date', '<=', date)
       .where('end_date', '>=', date)
       .first();
@@ -62,12 +65,13 @@ export class TimePeriod {
   }
 
   static async findOverlapping(
-    startDate: ISO8601String, 
+    startDate: ISO8601String,
     endDate: ISO8601String,
     excludePeriodId?: string
   ): Promise<ITimePeriod | null> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const query = db<ITimePeriod>('time_periods')
+      .where('tenant', tenant)
       .where((qb) => {
         qb.where((inner) => {
           inner.where('start_date', '>=', startDate).andWhere('start_date', '<', endDate);
@@ -95,8 +99,9 @@ export class TimePeriod {
   }
 
   static async findById(periodId: string): Promise<ITimePeriod | null> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const period = await db<ITimePeriod>('time_periods')
+      .where('tenant', tenant)
       .where('period_id', periodId)
       .first();
     
@@ -110,8 +115,9 @@ export class TimePeriod {
   }
 
   static async hasTimeSheets(periodId: string): Promise<boolean> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const count = await db('time_sheets')
+      .where('tenant', tenant)
       .where('period_id', periodId)
       .count('id as count')
       .first();
@@ -128,11 +134,16 @@ export class TimePeriod {
     periodId: string, 
     updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>>
   ): Promise<ITimePeriod> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const [updatedPeriod] = await db<ITimePeriod>('time_periods')
       .where('period_id', periodId)
+      .where('tenant', tenant)
       .update(updates)
       .returning('*');
+
+    if (!updatedPeriod) {
+      throw new Error('Time period not found or belongs to different tenant');
+    }
 
     return {
       ...updatedPeriod,
@@ -142,9 +153,14 @@ export class TimePeriod {
   }
 
   static async delete(periodId: string): Promise<void> {
-    const {knex: db} = await createTenantKnex();
-    await db('time_periods')
+    const {knex: db, tenant} = await createTenantKnex();
+    const deleted = await db('time_periods')
       .where('period_id', periodId)
+      .where('tenant', tenant)
       .delete();
+    
+    if (!deleted) {
+      throw new Error('Time period not found or belongs to different tenant');
+    }
   }
 }

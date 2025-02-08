@@ -407,10 +407,18 @@ export async function deleteTimePeriod(periodId: string): Promise<void> {
       throw new Error('Cannot delete time period with associated time sheets');
     }
 
-    await TimePeriod.delete(periodId);
-    revalidatePath('/msp/time-entry');
+    try {
+      await TimePeriod.delete(periodId);
+      revalidatePath('/msp/time-entry');
+    } catch (error: any) {
+      if (error.message.includes('belongs to different tenant')) {
+        throw new Error('Access denied: Cannot delete time period');
+      }
+      console.error('Error deleting time period:', error);
+      throw error;
+    }
   } catch (error) {
-    console.error('Error deleting time period:', error);
+    console.error('Error in deleteTimePeriod:', error);
     throw error;
   }
 }
@@ -441,13 +449,21 @@ export async function updateTimePeriod(
       }
     }
 
-    const updatedPeriod = await TimePeriod.update(periodId, updates);
-    const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
+    try {
+      const updatedPeriod = await TimePeriod.update(periodId, updates);
+      const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
 
-    revalidatePath('/msp/time-entry');
-    return validatedPeriod;
+      revalidatePath('/msp/time-entry');
+      return validatedPeriod;
+    } catch (error: any) {
+      if (error.message.includes('belongs to different tenant')) {
+        throw new Error('Access denied: Cannot update time period');
+      }
+      console.error('Error updating time period:', error);
+      throw error;
+    }
   } catch (error) {
-    console.error('Error updating time period:', error);
+    console.error('Error in updateTimePeriod:', error);
     throw error;
   }
 }
