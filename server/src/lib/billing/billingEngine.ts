@@ -18,25 +18,11 @@ import {
   ICompanyBillingCycle,
   BillingCycleType
 } from '@/interfaces/billing.interfaces';
-import {
-  differenceInCalendarDays,
-  differenceInHours,
-  differenceInMilliseconds,
-  max,
-  getDaysInMonth,
-  addMilliseconds,
-  getYear,
-  getMonth,
-  parseISO,
-  toDate,
-  startOfDay,
-  endOfDay,
-  addDays,
-  format,
-  isValid
-} from 'date-fns';
+// Use the Temporal polyfill for all date arithmetic and plain‐date handling
+import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from '@/types/types.d';
 import { getCompanyTaxRate } from '@/lib/actions/invoiceActions';
+import { toPlainDate, toISODate } from '@/lib/utils/dateTimeUtils';
 import { getCompanyById } from '@/lib/actions/companyActions';
 import { ICompany } from '@/interfaces';
 import { get } from 'http';
@@ -277,15 +263,16 @@ export class BillingEngine {
       .select('company_billing_plans.*', 'billing_plans.plan_name')
       .orderBy('company_billing_plans.start_date', 'desc');
 
+    // Convert dates from the DB into plain ISO strings using our date utilities
     companyBillingPlans.forEach((plan: any) => {
-      plan.start_date = plan.start_date.toISOString();
-      plan.end_date = plan.end_date ? plan.end_date.toISOString() : null;
+      plan.start_date = toISODate(toPlainDate(plan.start_date));
+      plan.end_date = plan.end_date ? toISODate(toPlainDate(plan.end_date)) : null;
     });
 
     return { companyBillingPlans, billingCycle };
   }
 
-  private async getBillingCycle(companyId: string, date: ISO8601String = new Date().toISOString()): Promise<string> {
+  private async getBillingCycle(companyId: string, date: ISO8601String = toISODate(Temporal.Now.plainDateISO())): Promise<string> {
     await this.initKnex();
     // Get tenant from createTenantKnex
     const { tenant } = await createTenantKnex();
@@ -370,9 +357,12 @@ export class BillingEngine {
 
       let currentCycle = null;
       for (const cycle of cycles) {
-        if (cycle.effective_date <= startDate) {
+        const cycleDate = toPlainDate(cycle.effective_date);
+        const start = toPlainDate(startDate);
+        const end = toPlainDate(endDate);
+        if (Temporal.PlainDate.compare(cycleDate, start) <= 0) {
           currentCycle = cycle;
-        } else if (cycle.effective_date > startDate && cycle.effective_date < endDate) {
+        } else if (Temporal.PlainDate.compare(cycleDate, start) > 0 && Temporal.PlainDate.compare(cycleDate, end) < 0) {
           return {
             success: false,
             error: 'Invoice period cannot span billing cycle change'
@@ -492,13 +482,11 @@ export class BillingEngine {
       })
       .leftJoin('projects', function() {
         this.on('project_phases.project_id', '=', 'projects.project_id')
-            .andOn('projects.tenant', '=', 'project_phases.tenant')
-            .andOn('projects.tenant', '=', company.tenant);
+            .andOn('projects.tenant', '=', 'project_phases.tenant');
       })
       .leftJoin('tickets', function() {
         this.on('time_entries.work_item_id', '=', 'tickets.ticket_id')
-            .andOn('tickets.tenant', '=', 'time_entries.tenant')
-            .andOn('tickets.tenant', '=', company.tenant);
+            .andOn('tickets.tenant', '=', 'time_entries.tenant');
       })
       .join('service_catalog', function() {
         this.on('time_entries.service_id', '=', 'service_catalog.service_id')
@@ -541,7 +529,9 @@ export class BillingEngine {
     const timeEntries = await query;
 
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
-      const duration = differenceInHours(entry.end_time, entry.start_time);
+      const startDateTime = Temporal.PlainDateTime.from(entry.start_time);
+      const endDateTime = Temporal.PlainDateTime.from(entry.end_time);
+      const duration = Math.floor(startDateTime.until(endDateTime, { largestUnit: 'hours' }).hours);
       const rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
       return {
         serviceId: entry.service_id,
@@ -811,9 +801,11 @@ export class BillingEngine {
     console.log('Billing period end:', billingPeriod.endDate);
     console.log('Plan start date:', planStartDate);
 
-    // Use the later of plan start and period start
-    const effectiveStart = [planStartDate, billingPeriod.startDate].reduce((a: string, b: string) => a > b ? a : b);
-    console.log('Effective start:', effectiveStart);
+    // Use our date utilities to handle the conversion
+    const planStart = toPlainDate(planStartDate);
+    const periodStart = toPlainDate(billingPeriod.startDate);
+    const effectiveStartDate = Temporal.PlainDate.compare(planStart, periodStart) > 0 ? planStart : periodStart;
+    console.log('Effective start:', toISODate(effectiveStartDate));
 
     let cycleLength: number;
     switch (billingCycle) {
@@ -824,8 +816,8 @@ export class BillingEngine {
         cycleLength = 14;
         break;
       case 'monthly': {
-          const cd = parseISO(billingPeriod.startDate);
-          cycleLength = getDaysInMonth(new Date(cd.getUTCFullYear(), cd.getUTCMonth(), 1));
+          const start = toPlainDate(billingPeriod.startDate);
+          cycleLength = start.daysInMonth;
         }
         break;
       case 'quarterly':
@@ -837,20 +829,15 @@ export class BillingEngine {
       case 'annually':
         cycleLength = 365; // Approximation
         break;
-      default:{
-        const cd = parseISO(billingPeriod.startDate);
-        cycleLength = getDaysInMonth(new Date(cd.getUTCFullYear(), cd.getUTCMonth(), 1));
+      default: {
+        const start = toPlainDate(billingPeriod.startDate);
+        cycleLength = start.daysInMonth;
       }
     }
 
-    // Calculate the number of days in the billing period for this plan
-    console.log('Getting days between dates:');
-    console.log('End date:', billingPeriod.endDate);
-    console.log('Start date:', effectiveStart);
-    const actualDays = differenceInCalendarDays(
-      new Date(billingPeriod.endDate), 
-      new Date(effectiveStart)
-    ); // DAYLIGHT SAVINGS TIME WARNING
+    // Calculate the actual number of days in the billing period
+    const periodEnd = toPlainDate(billingPeriod.endDate);
+    const actualDays = effectiveStartDate.until(periodEnd, { largestUnit: 'days' }).days;
     console.log(`Actual days in plan period: ${actualDays}`);
     console.log(`Cycle length: ${cycleLength}`);
 
@@ -1008,14 +995,16 @@ export class BillingEngine {
 
     // Update the start and end times of unapproved entries to the next billing period
     for (const entry of unapprovedEntries) {
-      const duration = differenceInMilliseconds(entry.end_time, entry.start_time);
-      const newStartTime = parseISO(nextPeriodStart);
-      const newEndTime = addMilliseconds(newStartTime, duration);
+      const startInstant = Temporal.Instant.from(entry.start_time);
+      const endInstant = Temporal.Instant.from(entry.end_time);
+      const durationMs = endInstant.epochMilliseconds - startInstant.epochMilliseconds;
+      const newStartInstant = Temporal.Instant.from(nextPeriodStart);
+      const newEndInstant = newStartInstant.add({ milliseconds: durationMs });
       await this.knex('time_entries')
         .where({ entry_id: entry.entry_id })
         .update({
-          start_time: format(newStartTime, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
-          end_time: format(newEndTime, "yyyy-MM-dd'T'HH:mm:ss'Z'")
+          start_time: newStartInstant.toString(),
+          end_time: newEndInstant.toString()
         });
     }
 
@@ -1110,7 +1099,7 @@ export class BillingEngine {
           const taxCalculationResult = await taxService.calculateTax(
             company.company_id,
             netAmount,
-            new Date().toISOString()
+            toISODate(Temporal.Now.plainDateISO())
           );
           taxAmount = Math.round(taxCalculationResult.taxAmount);
           taxRate = taxCalculationResult.taxRate;
@@ -1243,7 +1232,7 @@ export class BillingEngine {
         type: 'invoice_adjustment',
         status: 'completed',
         description: `Recalculated invoice ${invoice.invoice_number}`,
-        created_at: new Date().toISOString(),
+        created_at: toISODate(Temporal.Now.plainDateISO()),
         balance_after: finalTotal
       });
     });

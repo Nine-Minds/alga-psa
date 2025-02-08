@@ -1,5 +1,6 @@
 'use server'
 
+import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from '@/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceActions';
@@ -49,7 +50,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   }
 
   const taxService = new TaxService();
-  const currentDate = new Date().toISOString();
+  const currentDate = Temporal.Now.plainDateISO().toString();
   
   // Calculate totals
   let subtotal = 0;
@@ -180,8 +181,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       name: '',
       address: ''
     },
-    invoice_date: new Date(currentDate),
-    due_date: new Date(currentDate),
+    invoice_date: Temporal.PlainDate.from(currentDate),
+    due_date: Temporal.PlainDate.from(currentDate),
     status: 'draft',
     subtotal: Math.ceil(subtotal),
     tax: Math.ceil(totalTax),
@@ -246,7 +247,7 @@ export async function updateManualInvoice(
   if (!company) {
     throw new Error('Company not found');
   }
-const currentDate = new Date().toISOString();
+const currentDate = Temporal.Now.plainDateISO().toString();
 const billingEngine = new BillingEngine();
 
 // Delete existing items and insert new ones
@@ -337,8 +338,8 @@ return {
     name: '',
     address: ''
   },
-  invoice_date: existingInvoice.invoice_date,
-  due_date: existingInvoice.due_date,
+  invoice_date: Temporal.PlainDate.from(existingInvoice.invoice_date),
+  due_date: Temporal.PlainDate.from(existingInvoice.due_date),
   status: existingInvoice.status,
   subtotal: updatedInvoice.subtotal,
   tax: updatedInvoice.tax,

@@ -2,6 +2,8 @@
 
 import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { parseISO } from 'date-fns';
+import { Temporal } from '@js-temporal/polyfill';
+import { ISO8601String } from '@/types/types.d';
 
 // Function to convert UTC date to local timezone
 export function utcToLocal(utcDate: string, timeZone: string): Date {
@@ -35,6 +37,61 @@ export function formatUtcDateNoTime(date: Date): string {
 // Function to get user's timezone
 export function getUserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
+ * Convert a date string or Date object to a Temporal.PlainDate
+ * Handles both date-only strings and full ISO timestamps
+ */
+export function toPlainDate(date: string | Date): Temporal.PlainDate {
+  if (typeof date === 'string') {
+    // If it's a full ISO timestamp (contains 'T' or 'Z')
+    if (date.includes('T') || date.includes('Z')) {
+      return Temporal.Instant.from(date)
+        .toZonedDateTimeISO('UTC')
+        .toPlainDate();
+    }
+    // If it's already a date-only string (YYYY-MM-DD)
+    return Temporal.PlainDate.from(date);
+  }
+  // If it's a Date object, convert through UTC
+  return Temporal.Instant.from(date.toISOString())
+    .toZonedDateTimeISO('UTC')
+    .toPlainDate();
+}
+
+/**
+ * Convert a Temporal.PlainDate to an ISO date string (YYYY-MM-DD)
+ */
+export function toISODate(date: Temporal.PlainDate): string {
+  return date.toString();
+}
+
+/**
+ * Convert a Temporal.PlainDate to an ISO timestamp at UTC midnight
+ */
+export function toISOTimestamp(date: Temporal.PlainDate): ISO8601String {
+  return `${date.toString()}T00:00:00.000Z`;
+}
+
+/**
+ * Get the current date as a Temporal.PlainDate
+ */
+export function getCurrentDate(): Temporal.PlainDate {
+  return Temporal.Now.plainDateISO();
+}
+
+/**
+ * Parse a date string into a Temporal.PlainDate, with error handling
+ */
+export function parseDateSafe(dateStr: string | null | undefined): Temporal.PlainDate | null {
+  if (!dateStr) return null;
+  try {
+    return toPlainDate(dateStr);
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    return null;
+  }
 }
 
 // Example usage in a component

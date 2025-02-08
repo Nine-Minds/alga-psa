@@ -145,12 +145,124 @@ Run migrations with the migration environment (env) flag.
 
 Every query should filter on the tenant column (including joins) to ensure compatibility with citusdb.
 
+## CitusDB Compatibility
+
+1. **CitusDB UPDATE Restrictions**
+   - CitusDB does not allow column references with any functions (even type casts) in UPDATE queries
+   - This includes IMMUTABLE functions and type casts
+   - Solution: Select values first, then update with parameterized queries
+   Example:
+   ```typescript
+   // Bad - Will fail in CitusDB
+   await knex.raw(`
+     UPDATE table_name 
+     SET new_date = old_date::date
+     WHERE id = 1
+   `);
+
+   // Good - Select and update separately
+   const records = await knex('table_name')
+     .select('id', 'old_date', 'tenant')
+     .where(...);
+
+   for (const record of records) {
+     await knex('table_name')
+       .where('id', record.id)
+       .andWhere('tenant', record.tenant)p
+       .update({
+         new_date: knex.raw('?::date', [record.old_date])
+       });
+   }
+   ```
+
+2. **Date/Time Handling in CitusDB**
+   - Always use parameterized values for type casting
+   - Include tenant in WHERE clauses for updates
+   - Handle NULL values with separate updates
+   Example:
+   ```typescript
+   // First get the records
+   const records = await knex('table_name')
+     .select('id', 'date_column', 'tenant')
+     .whereNotNull('date_column');
+
+   // Then update with parameterized values
+   for (const record of records) {
+     await knex('table_name')
+       .where('id', record.id)
+       .andWhere('tenant', record.tenant)
+       .update({
+         new_date: knex.raw('?::date', [record.date_column])
+       });
+   }
+   ```
+
+3. **Tenant Column Requirements**
+   - Always include tenant column in WHERE clauses
+   - Include tenant in JOIN conditions
+   - Add tenant to unique constraints and indexes
+   Example:
+   ```sql
+   CREATE UNIQUE INDEX my_unique_index 
+   ON my_table (tenant, column1, column2);
+   ```
+
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.
 Most tables require the tenant to be specified in the `tenant` column when inserting.
 
 ## Dates and times in the database:
 Dates and times should use the ISO8601String type in the types.d.tsx file. In the database, we should use the postgres timestamp type. 
+
+## Date Handling Standards
+
+1. **Use Centralized Date Utilities**
+   - Always use `toPlainDate` from `@/lib/utils/dateTimeUtils` for date conversions
+   - Never use `Temporal.PlainDate.from` directly in components
+   - Example:
+     ```tsx
+     // Good
+     import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+     const date = toPlainDate(someDate);
+
+     // Bad
+     import { Temporal } from '@js-temporal/polyfill';
+     const date = Temporal.PlainDate.from(someDate);
+     ```
+
+2. **Date Type Handling**
+   - Use ISO8601String type for dates in interfaces and API responses
+   - Keep Temporal.PlainDate objects for internal state when date arithmetic is needed
+   - Convert to strings when sending to API or database
+   Example:
+   ```tsx
+   // Component state
+   const [startDate, setStartDate] = useState<Temporal.PlainDate | null>(null);
+   
+   // API call
+   await createPeriod({
+     start_date: startDate?.toString() || '',
+     end_date: endDate?.toString() || ''
+   });
+   ```
+
+3. **Date Comparisons**
+   - Use Temporal.PlainDate.compare for date comparisons
+   - Ensure dates are in the correct format before comparison
+   Example:
+   ```tsx
+   if (Temporal.PlainDate.compare(startDate, endDate) >= 0) {
+     setError('Start date must be before end date');
+   }
+   ```
+
+4. **Date Display**
+   - Use toLocaleString() for displaying dates to users
+   - Format dates consistently across the application
+   Example:
+   ```tsx
+   render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
+   ```
 
 # Time Entry Work Item Types
 They can be:

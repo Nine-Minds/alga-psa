@@ -200,9 +200,7 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
       tenant: cycle.tenant
     })
     .first()
-    .select(
-      knex.raw(`to_char(period_end_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as period_end_date`)
-    );
+    .select('period_end_date');
 
   if (existingCycle) {
     // Find next available date starting from period_end_date + 1 day
@@ -292,9 +290,7 @@ export async function createCompanyBillingCycles(
     .where({ company_id: company.company_id })
     .orderBy('effective_date', 'desc')
     .first()
-    .select<{ effective_date: string }>(
-      knex.raw(`to_char(effective_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as effective_date`)
-    ) as ICompanyBillingCycle;
+    .select('effective_date') as ICompanyBillingCycle;
 
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
   

@@ -1,11 +1,12 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { InvoiceViewModel } from '../interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 export const sampleInvoices: InvoiceViewModel[] = [
   {
     invoice_id: uuidv4(),
-    invoice_date: new Date('2023-07-01'),
-    due_date: new Date('2023-07-31'),
+    invoice_date: Temporal.PlainDate.from('2023-07-01'),
+    due_date: Temporal.PlainDate.from('2023-07-31'),
     subtotal: 1500.00,
     tax: 150.00,
     total: 1650.00,
@@ -51,8 +52,8 @@ export const sampleInvoices: InvoiceViewModel[] = [
   },
   {
     invoice_id: uuidv4(),
-    invoice_date: new Date('2023-07-15'),
-    due_date: new Date('2023-08-14'),
+    invoice_date: Temporal.PlainDate.from('2023-07-15'),
+    due_date: Temporal.PlainDate.from('2023-08-14'),
     subtotal: 3000.00,
     tax: 300.00,
     total: 3300.00,

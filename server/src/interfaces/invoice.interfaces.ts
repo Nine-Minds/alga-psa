@@ -1,17 +1,18 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from '../types/types.d';
 import { TenantEntity } from './index';
 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   company_id: string;
-  invoice_date: Date | ISO8601String;
-  due_date: Date | ISO8601String;
+  invoice_date: Temporal.PlainDate | ISO8601String;
+  due_date: Temporal.PlainDate | ISO8601String;
   subtotal: number;
   tax: number;
   total_amount: number;
   status: InvoiceStatus;
   invoice_number: string;
-  finalized_at?: Date | ISO8601String;
+  finalized_at?: Temporal.PlainDate | ISO8601String;
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
@@ -258,9 +259,9 @@ export interface InvoiceViewModel {
     name: string;
     address: string;
   }
-  invoice_date: Date;
+  invoice_date: Temporal.PlainDate;
   invoice_id: string;
-  due_date: Date;
+  due_date: Temporal.PlainDate;
   status: InvoiceStatus;
   subtotal: number;
   tax: number;
@@ -268,7 +269,7 @@ export interface InvoiceViewModel {
   total_amount: number;
   invoice_items: IInvoiceItem[];
   custom_fields?: Record<string, any>;
-  finalized_at?: Date;
+  finalized_at?: Temporal.PlainDate;
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;

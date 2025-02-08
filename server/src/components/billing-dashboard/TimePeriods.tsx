@@ -17,7 +17,7 @@ interface TimePeriodsProps {
 const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [timePeriods, setTimePeriods] = useState<ITimePeriod[]>(initialTimePeriods);
-  const [settings, setSettings] = useState<ITimePeriodSettings | null>(null);
+  const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriod | null>(null);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
@@ -55,7 +55,7 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
     async function fetchSettings() {
       const timePeriodSettings = await getTimePeriodSettings();
       // Assuming we only have one active setting
-      setSettings(timePeriodSettings[0]);
+      setSettings(timePeriodSettings);
     }
     fetchSettings();
   }, []);

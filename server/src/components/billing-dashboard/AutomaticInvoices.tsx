@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
@@ -254,12 +255,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
               {
                 title: 'Period Start',
                 dataIndex: 'period_start_date',
-                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
               },
               {
                 title: 'Period End',
                 dataIndex: 'period_end_date',
-                render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
               },
               {
                 title: 'Status',
@@ -274,7 +275,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                       )}
                       {record.is_early && (
                         <div className="flex items-center">
-                          <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${new Date(record.period_end_date).toLocaleDateString()})`}>
+                            <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${toPlainDate(record.period_end_date).toLocaleString()})`}>
                             <div className="flex items-center">
                               <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded mr-2">
                                 Early Invoice
@@ -322,12 +323,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   {
                     title: 'Period Start',
                     dataIndex: 'period_start_date',
-                    render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
                   },
                   {
                     title: 'Period End',
                     dataIndex: 'period_end_date',
-                    render: (date: ISO8601String) => new Date(date).toLocaleDateString()
+                    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
                   },
                   {
                     title: 'Actions',
@@ -339,7 +340,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                           setSelectedCycleToReverse({
                             id: record.billing_cycle_id || '',
                             company: record.company_name,
-                            period: `${new Date(record.period_start_date).toLocaleDateString()} - ${new Date(record.period_end_date).toLocaleDateString()}`
+                            period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
                           });
                           setShowReverseDialog(true);
                         }}
@@ -448,11 +449,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date</p>
-                    <p>{previewData.invoice_date.toLocaleDateString()}</p>
+                    <p>{previewData.invoice_date.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Due Date</p>
-                    <p>{previewData.due_date.toLocaleDateString()}</p>
+                    <p>{previewData.due_date.toLocaleString()}</p>
                   </div>
                 </div>
               </div>

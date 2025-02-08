@@ -23,8 +23,10 @@ import { options } from "@/app/api/auth/[...nextauth]/options";
 import Invoice from '@/lib/models/invoice';
 import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from '@/lib/db';
-import { addDays, format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
+import { Temporal } from '@js-temporal/polyfill';
 import { PDFGenerationService } from '@/services/pdf-generation.service';
+import { toPlainDate, toISODate } from '@/lib/utils/dateTimeUtils';
 import { StorageService } from '@/lib/storage/StorageService';
 import { ISO8601String } from '@/types/types.d';
 import { TaxService } from '@/lib/services/taxService';
@@ -52,6 +54,14 @@ interface ManualItemsUpdate {
   removedItemIds: string[];
 }
 
+/**
+ * Gets the tax rate for a given region and date.
+ * Uses the business rule for date ranges where:
+ * - start_date is inclusive (>=)
+ * - end_date is exclusive (>)
+ * This ensures that when one tax rate ends and another begins,
+ * there is no overlap or gap in coverage.
+ */
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex, tenant } = await createTenantKnex();
   const taxRates = await knex('tax_rates')
@@ -62,7 +72,7 @@ export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String):
     .andWhere('start_date', '<=', date)
     .andWhere(function () {
       this.whereNull('end_date')
-        .orWhere('end_date', '>=', date);
+        .orWhere('end_date', '>', date);
     })
     .select('tax_percentage');
 
@@ -96,7 +106,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 })[]> {
   console.log('Starting getAvailableBillingPeriods');
   const { knex, tenant } = await createTenantKnex();
-  const currentDate = new Date().toISOString();
+  const currentDate = toISODate(Temporal.Now.plainDateISO());
   console.log(`Current date: ${currentDate}`);
 
   try {
@@ -127,8 +137,6 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
     console.log(`Found ${availablePeriods.length} available billing periods`);
 
-    const currentDate = new Date().toISOString();
-
     // For each period, calculate the total unbilled amount
     console.log('Calculating unbilled amounts for each period');
     const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & {
@@ -139,34 +147,73 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
       can_generate: boolean;
       is_early: boolean;
     }> => {
-      console.log(`Processing period for company: ${period.company_name} (${period.company_id})`);
-      console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
-
-      const billingEngine = new BillingEngine();
-      let total_unbilled = 0;
       try {
-        const billingResult = await billingEngine.calculateBilling(
-          period.company_id,
-          period.period_start_date,
-          period.period_end_date,
-          period.billing_cycle_id
-        );
-        total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
-      } catch (_error) {
-        console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
+        console.log(`Processing period for company: ${period.company_name} (${period.company_id})`);
+        console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
+
+        // Ensure we have valid dates before proceeding
+        if (!period.period_start_date || !period.period_end_date) {
+          console.error(`Invalid dates for company ${period.company_name}: start=${period.period_start_date}, end=${period.period_end_date}`);
+          return {
+            ...period,
+            total_unbilled: 0,
+            can_generate: false,
+            is_early: false
+          };
+        }
+
+        const billingEngine = new BillingEngine();
+        let total_unbilled = 0;
+        
+        try {
+          const billingResult = await billingEngine.calculateBilling(
+            period.company_id,
+            period.period_start_date,
+            period.period_end_date,
+            period.billing_cycle_id
+          );
+          total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
+        } catch (_error) {
+          console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
+        }
+        
+        console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
+
+        // Allow generation of invoices even if period hasn't ended
+        const can_generate = true;
+        
+        // Convert dates using our utility functions with error handling
+        let periodEndDate;
+        try {
+          periodEndDate = toPlainDate(period.period_end_date);
+        } catch (error) {
+          console.error(`Error converting period_end_date for company ${period.company_name}:`, error);
+          return {
+            ...period,
+            total_unbilled: 0,
+            can_generate: false,
+            is_early: false
+          };
+        }
+
+        const currentPlainDate = toPlainDate(currentDate);
+        const is_early = Temporal.PlainDate.compare(periodEndDate, currentPlainDate) > 0;
+
+        return {
+          ...period,
+          total_unbilled,
+          can_generate,
+          is_early
+        };
+      } catch (error) {
+        console.error(`Error processing period for company ${period.company_name}:`, error);
+        return {
+          ...period,
+          total_unbilled: 0,
+          can_generate: false,
+          is_early: false
+        };
       }
-      console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
-
-      // Allow generation of invoices even if period hasn't ended
-      const can_generate = true;
-      const is_early = new Date(period.period_end_date) > new Date(currentDate);
-
-      return {
-        ...period,
-        total_unbilled,
-        can_generate,
-        is_early
-      };
     }));
 
     console.log(`Successfully processed ${periodsWithTotals.length} billing periods`);
@@ -199,8 +246,8 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   const { company_id, effective_date } = billingCycle;
 
   // Calculate cycle dates
-  const cycleStart = new Date(effective_date).toISOString().replace('.000', '');
-  const cycleEnd = (await getNextBillingDate(company_id, effective_date)).replace('.000', '');
+  const cycleStart = toISODate(toPlainDate(effective_date));
+  const cycleEnd = await getNextBillingDate(company_id, effective_date);
 
   const billingEngine = new BillingEngine();
   try {
@@ -235,8 +282,8 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         name: '',
         address: ''
       },
-      invoice_date: new Date(),
-      due_date: new Date(due_date),
+      invoice_date: toPlainDate(toISODate(Temporal.Now.plainDateISO())),
+      due_date: toPlainDate(due_date),
       status: 'draft',
       subtotal: billingResult.totalAmount,
       tax: 0, // Will be calculated in UI
@@ -300,8 +347,8 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   const { company_id, effective_date } = billingCycle;
 
   // Calculate cycle dates based on effective_date and billing cycle
-  const cycleStart = new Date(effective_date).toISOString().replace('.000', '');
-  const cycleEnd = (await getNextBillingDate(company_id, effective_date)).replace('.000', '');
+  const cycleStart = toISODate(toPlainDate(effective_date));
+  const cycleEnd = await getNextBillingDate(company_id, effective_date);
 
   const billingEngine = new BillingEngine();
   const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
@@ -360,7 +407,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
 
   const invoice: Omit<IInvoice, 'invoice_id'> = {
     company_id: companyId,
-    invoice_date: format(new Date(), "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+    invoice_date: toISODate(Temporal.Now.plainDateISO()),
     due_date,
     subtotal: 0,
     tax: 0,
@@ -395,7 +442,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       type: 'invoice_generated',
       status: 'completed',
       description: `Generated invoice ${newInvoice.invoice_number}`,
-      created_at: new Date().toISOString(),
+      created_at: toISODate(Temporal.Now.plainDateISO()),
       balance_after: currentBalance + newInvoice.total_amount,
       tenant: tenant
     });
@@ -489,7 +536,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         type: 'price_adjustment',
         status: 'completed',
         description: `Applied discount: ${discount.discount_name}`,
-        created_at: new Date().toISOString(),
+        created_at: toISODate(Temporal.Now.plainDateISO()),
         metadata: { discount_id: discount.discount_id },
         balance_after: currentBalance - (discount.amount || 0)
       });
@@ -547,8 +594,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       name: '',  // TODO: Add contact info
       address: ''
     },
-    invoice_date: createdInvoice.invoice_date,
-    due_date: createdInvoice.due_date,
+    invoice_date: toPlainDate(createdInvoice.invoice_date),
+    due_date: toPlainDate(createdInvoice.due_date),
     status: createdInvoice.status,
     subtotal: Math.ceil(subtotal),
     tax: Math.ceil(totalTax),
@@ -623,11 +670,18 @@ async function getDueDate(companyId: string, billingEndDate: ISO8601String): Pro
   const paymentTerms = company?.payment_terms || 'net_30';
   const days = getPaymentTermDays(paymentTerms);
   console.log('paymentTerms', paymentTerms, 'days', days);
-  const dueDate = addDays(billingEndDate, days);
-  return dueDate.toISOString();
+  const dueDate = toPlainDate(billingEndDate).add({ days });
+  return toISODate(dueDate);
 }
 
 
+/**
+ * Gets the next billing date based on the current billing cycle.
+ * The returned date serves as both:
+ * 1. The exclusive end date for the current period (< this date)
+ * 2. The inclusive start date for the next period (>= this date)
+ * This ensures continuous coverage with no gaps or overlaps between billing periods.
+ */
 export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('company_billing_cycles')
@@ -639,34 +693,33 @@ export async function getNextBillingDate(companyId: string, currentEndDate: ISO8
     .first();
 
   const billingCycle = (company?.billing_cycle || 'monthly') as BillingCycleType;
-  const currentUTC = new Date(currentEndDate);
-  currentUTC.setUTCHours(0, 0, 0, 0);
-  const nextDate = new Date(currentUTC);
+  const currentDate = toPlainDate(currentEndDate);
+  let nextDate;
 
   switch (billingCycle) {
     case 'weekly':
-      nextDate.setUTCDate(nextDate.getUTCDate() + 7);
+      nextDate = currentDate.add({ days: 7 });
       break;
     case 'bi-weekly':
-      nextDate.setUTCDate(nextDate.getUTCDate() + 14);
+      nextDate = currentDate.add({ days: 14 });
       break;
     case 'monthly':
-      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+      nextDate = currentDate.add({ months: 1 });
       break;
     case 'quarterly':
-      nextDate.setUTCMonth(nextDate.getUTCMonth() + 3);
+      nextDate = currentDate.add({ months: 3 });
       break;
     case 'semi-annually':
-      nextDate.setUTCMonth(nextDate.getUTCMonth() + 6);
+      nextDate = currentDate.add({ months: 6 });
       break;
     case 'annually':
-      nextDate.setUTCFullYear(nextDate.getUTCFullYear() + 1);
+      nextDate = currentDate.add({ years: 1 });
       break;
     default:
-      nextDate.setUTCMonth(nextDate.getUTCMonth() + 1);
+      nextDate = currentDate.add({ months: 1 });
   }
 
-  return nextDate.toISOString();
+  return nextDate.toString();
 }
 
 // Helper function to create basic invoice view model
@@ -684,8 +737,8 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
       name: '',  // Contact info not stored in invoice
       address: ''
     },
-    invoice_date: parseISO(typeof invoice.invoice_date === 'string' ? invoice.invoice_date : invoice.invoice_date.toISOString()),
-    due_date: parseISO(typeof invoice.due_date === 'string' ? invoice.due_date : invoice.due_date.toISOString()),
+    invoice_date: typeof invoice.invoice_date === 'string' ? toPlainDate(invoice.invoice_date) : invoice.invoice_date,
+    due_date: typeof invoice.due_date === 'string' ? toPlainDate(invoice.due_date) : invoice.due_date,
     status: invoice.status,
     subtotal: invoice.subtotal,
     tax: invoice.tax,
@@ -693,7 +746,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
     total_amount: invoice.total_amount,
     credit_applied: (invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
-    finalized_at: invoice.finalized_at ? parseISO(typeof invoice.finalized_at === 'string' ? invoice.finalized_at : invoice.finalized_at.toISOString()) : undefined,
+    finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
     invoice_items: [] // Empty array initially
   };
 }
@@ -893,8 +946,8 @@ export async function finalizeInvoiceWithKnex(
     await trx('invoices')
       .where({ invoice_id: invoiceId, tenant: tenant })
       .update({
-        finalized_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        finalized_at: toISODate(Temporal.Now.plainDateISO()),
+        updated_at: toISODate(Temporal.Now.plainDateISO())
       });
 
     // Record audit log
@@ -905,7 +958,7 @@ export async function finalizeInvoiceWithKnex(
         operation: 'invoice_finalized',
         tableName: 'invoices',
         recordId: invoiceId,
-        changedData: { finalized_at: new Date().toISOString() },
+        changedData: { finalized_at: toISODate(Temporal.Now.plainDateISO()) },
         details: {
           action: 'Invoice finalized',
           invoiceNumber: invoice.invoice_number
@@ -948,7 +1001,7 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
       })
       .update({
         finalized_at: null,
-        updated_at: new Date().toISOString()
+        updated_at: toISODate(Temporal.Now.plainDateISO())
       });
 
     // Record audit log
@@ -1112,7 +1165,7 @@ export async function updateInvoiceManualItems(
     throw new Error('Company not found');
   }
 
-  const currentDate = new Date().toISOString();
+  const currentDate = Temporal.Now.plainDateISO().toString();
 
   await knex.transaction(async (trx) => {
     // Delete all existing manual items
@@ -1294,7 +1347,7 @@ export async function addManualItemsToInvoice(
   }
 
   const taxService = new TaxService();
-  const currentDate = new Date().toISOString();
+  const currentDate = Temporal.Now.plainDateISO().toString();
 
   // Calculate current totals
   const oldTotal = invoice.total_amount;

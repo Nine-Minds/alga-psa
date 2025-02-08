@@ -23,20 +23,26 @@ export class TimePeriodSuggester {
       currentDate = latestEndDate;
     }
 
-    // Find the next applicable setting based on the current date
+    // Find the next applicable setting based on the next period's start date
+    const nextPeriodStartDate = existingPeriods.length > 0
+      ? existingPeriods.reduce((maxDate, period) => {
+          const endDate = this.parseDateString(period.end_date);
+          return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
+        }, this.parseDateString(existingPeriods[0].end_date))
+      : currentDate;
+
     const applicableSettings = settings.filter(setting => {
       if (!setting.start_day) return true;
       
       const startDay = setting.start_day;
-      const currentDay = currentDate.day;
       
-      // If setting has an end_day, check if current date is within range
+      // If setting has an end_day, check if the next period's start date falls within this setting's range
       if (setting.end_day) {
-        const endDay = setting.end_day === 0 ? currentDate.daysInMonth : setting.end_day;
-        return currentDay >= startDay && currentDay <= endDay;
+        const endDay = setting.end_day === 0 ? nextPeriodStartDate.daysInMonth : setting.end_day;
+        return nextPeriodStartDate.day >= startDay && nextPeriodStartDate.day <= endDay;
       }
       
-      return currentDay >= startDay;
+      return nextPeriodStartDate.day >= startDay;
     });
 
     if (applicableSettings.length === 0) {
@@ -90,10 +96,17 @@ export class TimePeriodSuggester {
         throw new Error(`Unsupported frequency unit: ${setting.frequency_unit}`);
     }
 
+    // Find the period with the latest end date to use its ID
+    const latestPeriod = existingPeriods.length > 0
+      ? existingPeriods.reduce((latest, period) => {
+          const endDate = this.parseDateString(period.end_date);
+          const latestEndDate = this.parseDateString(latest.end_date);
+          return Temporal.PlainDate.compare(endDate, latestEndDate) > 0 ? period : latest;
+        }, existingPeriods[0])
+      : null;
+
     return {
-      period_id: existingPeriods.length > 0
-        ? existingPeriods[existingPeriods.length - 1].period_id
-        : uuidv4(),
+      period_id: latestPeriod ? latestPeriod.period_id : uuidv4(),
       start_date: startDate.toString(),
       end_date: endDate.toString()
     };

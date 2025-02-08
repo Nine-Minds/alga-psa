@@ -1,3 +1,4 @@
+import { Temporal } from '@js-temporal/polyfill';
 import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from '@/interfaces/invoice.interfaces';
 
 interface List {
@@ -370,12 +371,12 @@ function renderValue(fieldName: string, invoiceData: InvoiceViewModel | null, va
   if (typeof actualValue === 'string' || typeof actualValue === 'number' || typeof actualValue === 'boolean') {
     return String(actualValue);
   }
-  if (actualValue instanceof Date) {
-    return actualValue.toLocaleDateString();
+  if (actualValue instanceof Temporal.PlainDate) {
+    return actualValue.toLocaleString();
   }
   if (Array.isArray(actualValue)) {
     return `[${actualValue.map(v => {
-      if (v instanceof Date) return v.toLocaleDateString();
+      if (v instanceof Temporal.PlainDate) return v.toLocaleString();
       return String(v);
     }).join(', ')}]`;
   }

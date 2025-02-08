@@ -2,8 +2,7 @@
 
 import { createTenantKnex } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
-import { format } from 'date-fns';
-import { is } from 'date-fns/locale';
+import { Temporal } from '@js-temporal/polyfill';
 import { getAdminConnection } from '../db/admin';
 
 export default class Invoice {
@@ -25,9 +24,9 @@ export default class Invoice {
     const invoice = await query;
     if (invoice) {
       invoice.invoice_items = await this.getInvoiceItems(invoiceId);
-      invoice.due_date = format(invoice.due_date, 'yyyy-MM-dd')+"T00:00:00Z";
+      invoice.due_date = Temporal.PlainDate.from(invoice.due_date);
       if (invoice.finalized_at) {
-        invoice.finalized_at = format(invoice.finalized_at, 'yyyy-MM-dd')+"T00:00:00Z";
+        invoice.finalized_at = Temporal.PlainDate.from(invoice.finalized_at);
       }
     }
     return invoice || null;
@@ -345,8 +344,8 @@ export default class Invoice {
         name: invoice.contact_name || '',
         address: invoice.contact_address || '',
       },
-      invoice_date: invoice.invoice_date,
-      due_date: invoice.due_date,
+      invoice_date: Temporal.PlainDate.from(invoice.invoice_date),
+      due_date: Temporal.PlainDate.from(invoice.due_date),
       status: invoice.status,
       subtotal: subtotal,
       tax: tax,
@@ -379,7 +378,7 @@ export default class Invoice {
         return mappedItem;
       }),
       custom_fields: invoice.custom_fields,
-      finalized_at: invoice.finalized_at,
+      finalized_at: invoice.finalized_at ? Temporal.PlainDate.from(invoice.finalized_at) : undefined,
       credit_applied: creditApplied,
       is_manual: invoice.is_manual,
     };

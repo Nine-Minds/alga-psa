@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { MoreVertical } from 'lucide-react';
@@ -222,7 +223,7 @@ const Invoices: React.FC = () => {
     {
       title: 'Date',
       dataIndex: 'invoice_date',
-      render: (value) => new Date(value).toLocaleDateString(),
+      render: (value) => toPlainDate(value).toLocaleString(),
     },
     {
       title: 'Action',
@@ -308,7 +309,7 @@ const Invoices: React.FC = () => {
     {
       title: 'Finalized Date',
       dataIndex: 'finalized_at',
-      render: (value: string) => value ? new Date(value).toLocaleDateString() : '',
+      render: (value: string) => value ? toPlainDate(value).toLocaleString() : '',
     },
     baseColumns[baseColumns.length - 1], // Action column
   ] : baseColumns;

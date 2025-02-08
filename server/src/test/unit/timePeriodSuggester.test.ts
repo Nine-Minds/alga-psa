@@ -116,6 +116,67 @@ describe('TimePeriodSuggester', () => {
       expect(period.end_date).toBe('2024-02-16');
     });
 
+    it('should select settings based on period start date, not current date', () => {
+      const settings = [
+        createTestSettings('month', 1, 1, 15),  // First half of month
+        createTestSettings('month', 1, 16, 0)   // Second half of month
+      ];
+      const existingPeriods: ITimePeriod[] = [{
+        period_id: 'test-period-1',
+        start_date: '2025-01-01',
+        end_date: '2025-01-15'
+      }];
+
+      // Mock current date to be in the second half of the month
+      const realNow = Temporal.Now.plainDateISO;
+      Temporal.Now.plainDateISO = () => Temporal.PlainDate.from('2025-01-20');
+
+      try {
+        const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        
+        // Should use second half settings since period starts on the 16th,
+        // even though current date is the 20th
+        expect(period.start_date).toBe('2025-01-15');
+        expect(period.end_date).toBe('2025-02-01');
+      } finally {
+        // Restore the real Now.plainDateISO
+        Temporal.Now.plainDateISO = realNow;
+      }
+    });
+
+    it('should handle current date before next period start date in semi-monthly periods', () => {
+      const settings = [
+        createTestSettings('month', 1, 1, 15),  // First half of month
+        createTestSettings('month', 1, 16, 0)   // Second half of month
+      ];
+      const existingPeriods: ITimePeriod[] = [{
+        period_id: 'test-period-1',
+        start_date: '2025-01-01',
+        end_date: '2025-01-15'
+      }];
+
+      // Mock current date to be before the next period's start date (16th)
+      const realNow = Temporal.Now.plainDateISO;
+      Temporal.Now.plainDateISO = () => Temporal.PlainDate.from('2025-01-13');
+
+      try {
+        const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+        
+        // Should use second half settings (16-EOM) for the next period
+        // This verifies that we're not using the current date (14th) to select settings,
+        // because if we were, it would incorrectly use first half settings (1-15)
+        expect(period.start_date).toBe('2025-01-15');
+        expect(period.end_date).toBe('2025-02-01');
+
+        // This test will fail because the current implementation incorrectly uses
+        // the current date (14th) to select settings, which makes it choose
+        // first half settings (1-15) when it should be using second half (16-EOM)
+      } finally {
+        // Restore the real Now.plainDateISO
+        Temporal.Now.plainDateISO = realNow;
+      }
+    });
+
     it('should suggest next period after existing periods', () => {
       const settings = [createTestSettings('month', 1)];
       const existingPeriods: ITimePeriod[] = [
@@ -138,6 +199,22 @@ describe('TimePeriodSuggester', () => {
       const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
 
       expect(period.start_date).toBe('2025-01-14');
+    });
+
+    it('should suggest period starting in the future after current date', () => {
+      const settings = [createTestSettings('month', 1)];
+      const futureDate = '2025-06-01';
+      const existingPeriods: ITimePeriod[] = [
+        {
+          period_id: 'test-period-1',
+          start_date: '2025-05-01',
+          end_date: futureDate
+        }
+      ];
+      const period = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+
+      expect(period.start_date).toBe(futureDate);
+      expect(period.end_date).toBe('2025-07-01');
     });
   });
 });

@@ -11,6 +11,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@js-temporal/polyfill": "^0.4.4",
     "@nestjs/common": "^11.0.4",
     "@nestjs/core": "^11.0.4",
     "@radix-ui/react-dialog": "^1.0.5",
@@ -39,6 +40,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@testing-library/react": "^16.2.0",
     "@typescript-eslint/eslint-plugin": "^8.19.1",
     "@typescript-eslint/parser": "^8.19.1",
     "eslint": "^9.18.0",

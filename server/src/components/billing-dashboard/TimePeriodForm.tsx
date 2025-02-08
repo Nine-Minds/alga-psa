@@ -9,15 +9,16 @@ import { Label } from '@/components/ui/Label';
 import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@/lib/actions/timePeriodsActions';
 import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Temporal } from '@js-temporal/polyfill';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { TimePeriodSuggester } from '@/lib/timePeriodSuggester';
+import { Temporal } from '@js-temporal/polyfill';
 
 interface TimePeriodFormProps {
     isOpen: boolean;
     onClose: () => void;
     onTimePeriodCreated: (newPeriod: ITimePeriod) => void;
     onTimePeriodDeleted?: () => void;
-    settings: ITimePeriodSettings | null;
+    settings: ITimePeriodSettings[] | null;
     existingTimePeriods: ITimePeriod[];
     selectedPeriod?: ITimePeriod | null;
     mode?: 'create' | 'edit';
@@ -42,20 +43,20 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
 
     useEffect(() => {
         if (mode === 'edit' && selectedPeriod) {
-            setStartDate(Temporal.PlainDate.from(selectedPeriod.start_date.split('T')[0]));
-            setEndDate(selectedPeriod.end_date ? Temporal.PlainDate.from(selectedPeriod.end_date.split('T')[0]) : null);
-            setStartDateInput(formatDateForInput(Temporal.PlainDate.from(selectedPeriod.start_date.split('T')[0])));
-            setEndDateInput(formatDateForInput(selectedPeriod.end_date ? Temporal.PlainDate.from(selectedPeriod.end_date.split('T')[0]) : null));
+            setStartDate(toPlainDate(selectedPeriod.start_date));
+            setEndDate(selectedPeriod.end_date ? toPlainDate(selectedPeriod.end_date) : null);
+            setStartDateInput(formatDateForInput(toPlainDate(selectedPeriod.start_date)));
+            setEndDateInput(formatDateForInput(selectedPeriod.end_date ? toPlainDate(selectedPeriod.end_date) : null));
             setError(null);
         } else if (settings) {
             setStartDateInput('');
             setEndDateInput('');
             const { start_date: suggestedStart, end_date: suggestedEnd } =
-                TimePeriodSuggester.suggestNewTimePeriod([settings], existingTimePeriods);
-            setStartDate(Temporal.PlainDate.from(suggestedStart));
-            setEndDate(Temporal.PlainDate.from(suggestedEnd));
-            setStartDateInput(formatDateForInput(Temporal.PlainDate.from(suggestedStart)));
-            setEndDateInput(formatDateForInput(Temporal.PlainDate.from(suggestedEnd)));
+                TimePeriodSuggester.suggestNewTimePeriod(settings, existingTimePeriods);
+            setStartDate(toPlainDate(suggestedStart));
+            setEndDate(toPlainDate(suggestedEnd));
+            setStartDateInput(formatDateForInput(toPlainDate(suggestedStart)));
+            setEndDateInput(formatDateForInput(toPlainDate(suggestedEnd)));
             setError(null);
         } else {
             setStartDate(null);
@@ -72,7 +73,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
     const parseInputToDate = (inputValue: string): Temporal.PlainDate | null => {
         if (!inputValue) return null;
         try {
-            return Temporal.PlainDate.from(inputValue.split('T')[0]);
+            return toPlainDate(inputValue);
         } catch {
             return null;
         }
@@ -95,7 +96,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
 
         if (settings && !override && newStartDate) {
             try {
-                const newEndDate = TimePeriodSuggester.calculateEndDate(Temporal.PlainDate.from(newStartDate), settings);
+                const newEndDate = TimePeriodSuggester.calculateEndDate(newStartDate,settings[0]);
                 setEndDate(newEndDate);
                 setEndDateInput(formatDateForInput(newEndDate));
             } catch {
@@ -123,7 +124,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                 return;
             }
 
-            if (endDate && Temporal.PlainDate.compare(Temporal.PlainDate.from(startDate), Temporal.PlainDate.from(endDate)) >= 0) {
+            if (endDate && Temporal.PlainDate.compare(startDate, endDate) >= 0) {
                 setError('Start date must be before end date.');
                 return;
             }
@@ -133,10 +134,10 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                 if (mode === 'edit' && selectedPeriod && period.period_id === selectedPeriod.period_id) {
                     return false;
                 }
-                const existingStart = Temporal.PlainDate.from(period.start_date.split('T')[0]);
-                const existingEnd = period.end_date ? Temporal.PlainDate.from(period.end_date.split('T')[0]) : existingStart;
-                const newStart = Temporal.PlainDate.from(startDate);
-                const newEnd = endDate ? Temporal.PlainDate.from(endDate) : newStart;
+                const existingStart = toPlainDate(period.start_date);
+                const existingEnd = period.end_date ? toPlainDate(period.end_date) : existingStart;
+                const newStart = startDate;
+                const newEnd = endDate || newStart;
 
                 return (
                     (Temporal.PlainDate.compare(newStart, existingStart) >= 0 && Temporal.PlainDate.compare(newStart, existingEnd) <= 0) ||
@@ -189,7 +190,7 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
                         <div className="mb-4">
                             <p>Based on your settings, the next time period is suggested.</p>
                             <p>
-                                Frequency: {settings.frequency} {settings.frequency_unit}(s)
+                                Frequency: {settings[0].frequency} {settings[0].frequency_unit}(s)
                             </p>
                         </div>
                         <div className="mb-4">
