@@ -1,0 +1,123 @@
+name: Publish Docker Image
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up test environment
+        run: |
+          # Create secrets directory
+          mkdir -p secrets
+
+          # Create sample secrets as shown in setup guide
+          echo "your-secure-admin-password" > secrets/postgres_password
+          echo "your-secure-app-password" > secrets/db_password_server
+          echo "your-secure-hocuspocus-password" > secrets/db_password_hocuspocus
+          echo "your-secure-password" > secrets/redis_password
+          echo "your-32-char-min-key" > secrets/alga_auth_key
+          echo "your-32-char-min-key" > secrets/crypto_key
+          echo "your-32-char-min-key" > secrets/token_secret_key
+          echo "your-32-char-min-key" > secrets/nextauth_secret
+          echo "your-email-password" > secrets/email_password
+          echo "your-client-id" > secrets/google_oauth_client_id
+          echo "your-client-secret" > secrets/google_oauth_client_secret
+
+          # Set permissions
+          chmod 600 secrets/*
+
+          # Copy and configure environment file
+          cp .env.example .env
+
+          # Configure required environment variables
+          cat >> .env << EOL
+          # Required variables from setup guide
+          APP_VERSION=1.0.0
+          APP_NAME=sebastian
+          APP_ENV=development
+          APP_HOST=0.0.0.0
+          APP_PORT=3000
+          APP_EDITION=community
+
+          # Database Configuration
+          DB_TYPE=postgres
+          DB_USER_ADMIN=postgres
+
+          # Logging Configuration
+          LOG_LEVEL=INFO
+          LOG_IS_FORMAT_JSON=false
+          LOG_IS_FULL_DETAILS=false
+
+          # Email Configuration
+          EMAIL_ENABLE=false
+          EMAIL_FROM=noreply@example.com
+          EMAIL_HOST=smtp.gmail.com
+          EMAIL_PORT=587
+          EMAIL_USERNAME=noreply@example.com
+
+          # Authentication Configuration
+          NEXTAUTH_URL=http://localhost:3000
+          NEXTAUTH_SESSION_EXPIRES=86400
+
+          # Optional Configuration
+          REQUIRE_HOCUSPOCUS=false
+          EOL
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: Dockerfile.prod
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/alga-psa:latest
+
+      - name: Test container
+        run: |
+          # Pull the image we just pushed
+          docker pull ghcr.io/${{ github.repository_owner }}/alga-psa:latest
+
+          # Start the containers with community edition configuration
+          docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
+
+          # Wait for services to be ready
+          echo "Waiting for services to start..."
+          sleep 30
+
+          # Check container status
+          docker compose ps
+
+          # Display logs for debugging
+          docker compose logs
+
+          # Basic health checks
+          echo "Checking service health..."
+          
+          # Check if postgres is responding
+          docker compose exec -T postgres pg_isready -U postgres || exit 1
+          
+          # Check if Redis is responding
+          docker compose exec -T redis redis-cli ping || exit 1
+          
+          # Check if the main application is responding
+          curl -f http://localhost:3000/health || exit 1
+
+          echo "All health checks passed successfully"

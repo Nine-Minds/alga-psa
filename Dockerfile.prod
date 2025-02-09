@@ -1,9 +1,6 @@
-FROM node:20.9-alpine
-
-# TODO - remove duplication between this image and the others built during the compose build
-
-# Install required system dependencies
-RUN apk add --no-cache \
+# Start with a base image and install system dependencies
+FROM node:20.9-alpine AS base
+RUN apk add \
     graphicsmagick \
     imagemagick \
     ghostscript \
@@ -11,41 +8,60 @@ RUN apk add --no-cache \
     redis \
     curl \
     bash
-
-WORKDIR /app/server
-
-# Copy root package.json first (will be copied from the build context)
-COPY package.json package-lock.json /app/
-
-# Copy server package.json
-COPY server/package.json server/package-lock.json ./
-
-# Install dependencies from root package.json
 WORKDIR /app
-RUN npm install
 
-# Go back to server directory
+# Stage for installing dependencies (cache-friendly)
+FROM base AS deps
+# Copy package files for both root and server parts of the project
+COPY package.json package-lock.json ./
+COPY server/package.json server/package-lock.json ./server/
+COPY tsconfig.base.json ./
+
+# Use npm ci for a clean install
+RUN npm ci
+
+# Builder stage for compiling the application
+FROM deps AS builder
+# Copy all project files and build the server
+COPY . .
 WORKDIR /app/server
 
-# Copy the server directory contents
-COPY server/ ./
+# Create secrets directory and populate with secure placeholder values
+RUN mkdir -p /app/secrets && \
+    echo "secure-admin-password-placeholder" > /app/secrets/postgres_password && \
+    echo "secure-app-password-placeholder" > /app/secrets/db_password_server && \
+    echo "secure-hocuspocus-password-placeholder" > /app/secrets/db_password_hocuspocus && \
+    echo "secure-redis-password-placeholder" > /app/secrets/redis_password && \
+    echo "secure-32char-auth-key-placeholder-xxxxx" > /app/secrets/alga_auth_key && \
+    echo "secure-32char-crypto-key-placeholder-xxxx" > /app/secrets/crypto_key && \
+    echo "secure-32char-token-key-placeholder-xxxx" > /app/secrets/token_secret_key && \
+    echo "secure-32char-nextauth-key-placeholder-xx" > /app/secrets/nextauth_secret && \
+    echo "secure-email-password-placeholder" > /app/secrets/email_password && \
+    echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
+    echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
+    chmod 600 /app/secrets/*
+# Copy example environment file
+COPY .env.example /app/.env   
+COPY .env.example /app/server/.env  
 
+WORKDIR /app
 RUN npm run build
 
-# Copy entrypoint script from project root
-COPY server/entrypoint.sh /app/entrypoint.sh
+# Final production image with minimal runtime artifacts
+FROM node:20.9-alpine
+RUN apk add --no-cache bash postgresql-client
+WORKDIR /app
+COPY tsconfig.base.json ./
 
-# Make entrypoint script executable
+# Copy built application and node_modules from earlier stages
+COPY --from=builder /app/server/.next ./server/.next
+COPY --from=builder /app/server/public ./server/public
+COPY --from=builder /app/server/next.config.mjs ./server/
+COPY --from=builder /app/server/package.json ./server/
+COPY --from=deps /app/node_modules ./node_modules
+COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Remove any existing .env file to prevent conflicts
-RUN rm -f ./.env
-
-# Make port 3000 available to the world outside this container
 EXPOSE 3000
-
-# Define environment variable
 ENV NODE_ENV=production
-
-# Set the entrypoint script
 ENTRYPOINT ["/app/entrypoint.sh"]

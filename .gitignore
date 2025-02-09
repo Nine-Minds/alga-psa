@@ -84,5 +84,6 @@ cli
 
 prod.config.ini
 secrets/
+.secrets
 .clinerules
 data/
