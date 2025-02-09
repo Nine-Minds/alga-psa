@@ -24,6 +24,9 @@ RUN npm ci
 FROM deps AS builder
 # Copy all project files and build the server
 COPY . .
+COPY server/knexfile.cjs ./server/
+COPY server/migrations/ ./server/migrations/
+COPY server/seeds/ ./server/seeds/
 WORKDIR /app/server
 
 # Create secrets directory and populate with secure placeholder values
