@@ -24,9 +24,6 @@ RUN npm ci
 FROM deps AS builder
 # Copy all project files and build the server
 COPY . .
-COPY server/knexfile.cjs ./server/
-COPY server/migrations/ ./server/migrations/
-COPY server/seeds/ ./server/seeds/
 WORKDIR /app/server
 
 # Create secrets directory and populate with secure placeholder values
@@ -63,6 +60,11 @@ COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/package.json ./server/
 COPY --from=deps /app/node_modules ./node_modules
+
+COPY --from=deps /app/server/knexfile.cjs ./server/
+COPY --from=deps /app/server/migrations/ ./server/migrations/
+COPY --from=deps /app/server/seeds/ ./server/seeds/
+
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
