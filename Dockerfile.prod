@@ -52,6 +52,7 @@ FROM node:20.9-alpine
 RUN apk add --no-cache bash postgresql-client
 WORKDIR /app
 COPY tsconfig.base.json ./
+COPY server/setup /app/server/setup
 
 # Copy built application and node_modules from earlier stages
 COPY --from=builder /app/server/.next ./server/.next

@@ -1,0 +1,93 @@
+x-common-config: &common-config
+  container_name: server
+  ports:
+    - "${EXPOSE_SERVER_PORT:-3000}:3000"
+  environment:
+    # ---- APP -------
+    VERSION: ${VERSION}
+    APP_NAME: ${APP_NAME}
+    APP_ENV: ${APP_ENV:-development}
+    NODE_ENV: ${APP_ENV:-development}
+    HOST: ${HOST}
+    VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED}
+
+    # ---- REDIS ----
+    REDIS_HOST: ${REDIS_HOST:-redis}
+    REDIS_PORT: ${REDIS_PORT:-6379}
+
+    # ---- DATABASE ----
+    DB_TYPE: ${DB_TYPE}
+    DB_HOST: postgres
+    DB_PORT: ${DB_PORT:-5432}
+    DB_NAME_SERVER: ${DB_NAME_SERVER:-server}
+    DB_USER_SERVER: postgres
+
+    # ---- LOGGING ----
+    LOG_LEVEL: ${LOG_LEVEL}
+    LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON}
+    LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS}
+    LOG_ENABLED_FILE_LOGGING: ${LOG_ENABLED_FILE_LOGGING}
+    LOG_DIR_PATH: ${LOG_DIR_PATH}
+    LOG_ENABLED_EXTERNAL_LOGGING: ${LOG_ENABLED_EXTERNAL_LOGGING}
+    LOG_EXTERNAL_HTTP_HOST: ${LOG_EXTERNAL_HTTP_HOST}
+    LOG_EXTERNAL_HTTP_PORT: ${LOG_EXTERNAL_HTTP_PORT}
+    LOG_EXTERNAL_HTTP_PATH: ${LOG_EXTERNAL_HTTP_PATH}
+    LOG_EXTERNAL_HTTP_LEVEL: ${LOG_EXTERNAL_HTTP_LEVEL}
+    LOG_EXTERNAL_HTTP_TOKEN: ${LOG_EXTERNAL_HTTP_TOKEN}
+
+    # ---- HOCUSPOCUS ----
+    HOCUSPOCUS_URL: ${HOCUSPOCUS_URL}
+
+    # ---- EMAIL ----
+    EMAIL_ENABLE: ${EMAIL_ENABLE}
+    EMAIL_FROM: ${EMAIL_FROM}
+    EMAIL_HOST: ${EMAIL_HOST}
+    EMAIL_PORT: ${EMAIL_PORT}
+    EMAIL_USERNAME: ${EMAIL_USERNAME}
+
+    # ---- CRYPTO ----
+    CRYPTO_SALT_BYTES: ${SALT_BYTES}
+    CRYPTO_ITERATION: ${ITERATION}
+    CRYPTO_KEY_LENGTH: ${KEY_LENGTH}
+    CRYPTO_ALGORITHM: ${ALGORITHM}
+
+    # ---- TOKEN ----
+    TOKEN_EXPIRES: ${TOKEN_EXPIRES}
+
+    # ---- AUTH ----
+    NEXTAUTH_URL: ${NEXTAUTH_URL}
+    NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES}
+
+    # ---- DEPLOY INFO  ----
+    EXPOSE_SERVER_PORT: ${EXPOSE_SERVER_PORT}
+
+  develop:
+    watch:
+      - action: sync
+        path: ./src
+        target: /app/src
+        ignore:
+          - node_modules
+      - action: rebuild
+        path: package.json
+  secrets:
+    - postgres_password
+    - db_password_server
+    - redis_password
+    - email_password
+    - crypto_key
+    - token_secret_key
+    - nextauth_secret
+    - google_oauth_client_id
+    - google_oauth_client_secret
+
+services:
+  server:
+    <<: *common-config
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    name: ${PROJECT_NAME}_app-network
+    external: true
