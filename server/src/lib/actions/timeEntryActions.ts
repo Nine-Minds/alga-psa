@@ -7,7 +7,9 @@ import {
   ITimeEntryWithWorkItem, 
   ITimeSheet, 
   ITimeSheetView,
-  ITimePeriodWithStatus, 
+  ITimePeriodWithStatus,
+  ITimePeriodView,
+  ITimePeriodWithStatusView,
   TimeSheetStatus 
 } from '@/interfaces/timeEntry.interfaces';
 import { IWorkItem } from '@/interfaces/workItem.interfaces';
@@ -579,7 +581,7 @@ export async function fetchAllTimeSheets(): Promise<ITimeSheet[]> {
   }));
 }
 
-export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithStatus[]> {
+export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithStatusView[]> {
   // Validate input
   const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
@@ -601,7 +603,7 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
 
   console.log('Fetched periods:', periods);
 
-  return periods.map((period): ITimePeriodWithStatus => ({
+  return periods.map((period): ITimePeriodWithStatusView => ({
     ...period,
     start_date: toPlainDate(period.start_date).toString(),
     end_date: toPlainDate(period.end_date).toString(),

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ITimeSheet, ITimeSheetApproval, ITimeSheetWithUserInfo } from '@/interfaces/timeEntry.interfaces';
+import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from '@/interfaces/timeEntry.interfaces';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 import { Button } from '@/components/ui/Button';
@@ -25,7 +25,7 @@ interface ManagerApprovalDashboardProps {
 }
 
 export default function ManagerApprovalDashboard({ currentUser }: ManagerApprovalDashboardProps) {
-  const [timeSheets, setTimeSheets] = useState<ITimeSheetApproval[]>([]);
+  const [timeSheets, setTimeSheets] = useState<ITimeSheetApprovalView[]>([]);
   const [selectedTimeSheets, setSelectedTimeSheets] = useState<string[]>([]);
   const [showApproved, setShowApproved] = useState(false);
   const { isManager, managedTeams } = useTeamAuth(currentUser);
@@ -45,7 +45,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
     setTimeSheets(sheets);
   };
 
-  const handleReverseApproval = async (timeSheet: ITimeSheetApproval) => {
+  const handleReverseApproval = async (timeSheet: ITimeSheetApprovalView) => {
     if (!confirm('Are you sure you want to reverse the approval of this time sheet?')) {
       return;
     }
@@ -75,7 +75,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
     setSelectedTimeSheets([]);
   };
 
-  const handleViewTimeSheet = async (timeSheet: ITimeSheetApproval) => {
+  const handleViewTimeSheet = async (timeSheet: ITimeSheetApprovalView) => {
     try {
       const [timeEntries, comments] = await Promise.all([
         fetchTimeEntriesForTimeSheet(timeSheet.id),
@@ -213,8 +213,8 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             )
           }
         ]}
-        onRowClick={(row: ITimeSheetApproval) => handleViewTimeSheet(row)}
-        rowClassName={(row: ITimeSheetApproval) => 
+        onRowClick={(row: ITimeSheetApprovalView) => handleViewTimeSheet(row)}
+        rowClassName={(row: ITimeSheetApprovalView) => 
           row.approval_status === 'APPROVED'
             ? 'bg-green-50'
             : row.approval_status === 'CHANGES_REQUESTED'

@@ -97,21 +97,30 @@ export async function createTimePeriod(
   }
 }
 
-export async function fetchAllTimePeriods(): Promise<ITimePeriod[]> {
+export async function fetchAllTimePeriods(): Promise<ITimePeriodView[]> {
   try {
     console.log('Fetching all time periods...');
 
     const timePeriods = await TimePeriod.getAll();
 
-    const periods = timePeriods.map((period: ITimePeriod): ITimePeriod => ({
+    // Convert model types to view types
+    const periods = timePeriods.map((period: ITimePeriod): ITimePeriodView => ({
       ...period,
-      start_date: period.start_date,  // Already a Temporal.PlainDate
-      end_date: period.end_date       // Already a Temporal.PlainDate
+      start_date: period.start_date.toString(),  // Convert to string for view
+      end_date: period.end_date.toString()       // Convert to string for view
     }));
 
     console.log('periods', periods);
 
-    return validateArray(timePeriodSchema, periods);
+    // Validate as model type first
+    const validatedPeriods = validateArray(timePeriodSchema, timePeriods);
+    
+    // Then convert to view type
+    return validatedPeriods.map((period): ITimePeriodView => ({
+      ...period,
+      start_date: period.start_date.toString(),
+      end_date: period.end_date.toString()
+    }));
   } catch (error) {
     console.error('Error fetching all time periods:', error)
     throw new Error('Failed to fetch time periods')
@@ -402,15 +411,22 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings[], days
       throw new Error('No existing time periods found');
     }
 
+    // Convert view types to model types for comparison
+    const modelPeriods = existingPeriods.map(period => ({
+      ...period,
+      start_date: toPlainDate(period.start_date),
+      end_date: toPlainDate(period.end_date)
+    }));
+
     // Get the latest period end date
-    const lastPeriod = existingPeriods.sort((a, b) =>
+    const lastPeriod = modelPeriods.sort((a, b) =>
       Temporal.PlainDate.compare(b.end_date, a.end_date)
     )[0];
     const newStartDate = lastPeriod.end_date;
 
     // Check if we're within the threshold days of the new period
     const currentDate = getCurrentDate();
-    const daysUntilStart = newStartDate.since(currentDate).days;
+    const daysUntilStart = Temporal.PlainDate.compare(newStartDate, currentDate);
 
     // Only create the period if we're within the threshold
     if (daysUntilStart > daysThreshold) {
@@ -419,7 +435,7 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings[], days
     }
 
     // Use TimePeriodSuggester to create the new period
-    const newPeriodData = TimePeriodSuggester.suggestNewTimePeriod(settings, existingPeriods);
+    const newPeriodData = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
     
     // Convert string dates to Temporal.PlainDate
     const newPeriod = await createTimePeriod({

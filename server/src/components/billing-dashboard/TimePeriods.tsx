@@ -4,26 +4,26 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
-import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
 import { getTimePeriodSettings } from '@/lib/actions/timePeriodsActions';
 import { ISO8601String } from '@/types/types.d';
 import { parseISO, format } from 'date-fns'; // Import date-fns functions
 
 interface TimePeriodsProps {
-  initialTimePeriods: ITimePeriod[];
+  initialTimePeriods: ITimePeriodView[];
 }
 
 const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
-  const [timePeriods, setTimePeriods] = useState<ITimePeriod[]>(initialTimePeriods);
+  const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>(initialTimePeriods);
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriod | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriodView | null>(null);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
 
-  const handleTimePeriodCreated = (newPeriod: ITimePeriod) => {
+  const handleTimePeriodCreated = (newPeriod: ITimePeriodView) => {
     if (mode === 'edit') {
-      setTimePeriods(timePeriods.map((p):ITimePeriod => 
+      setTimePeriods(timePeriods.map((p):ITimePeriodView => 
         p.period_id === newPeriod.period_id ? newPeriod : p
       ));
     } else {
@@ -37,7 +37,7 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
     }
   };
 
-  const handleEdit = (period: ITimePeriod) => {
+  const handleEdit = (period: ITimePeriodView) => {
     setSelectedPeriod(period);
     setMode('edit');
     setIsFormOpen(true);

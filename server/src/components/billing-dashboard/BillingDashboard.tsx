@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ITimePeriod, IService } from '@/interfaces';
+import { ITimePeriodView, IService } from '@/interfaces';
 
 // Import all the components including the new GenerateInvoices component
 import Overview from './Overview';
@@ -18,7 +18,7 @@ import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
 
 interface BillingDashboardProps {
-  initialTimePeriods: ITimePeriod[];
+  initialTimePeriods: ITimePeriodView[];
   initialServices: IService[];
 }
 

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Label } from '@/components/ui/Label';
 import { createTimePeriod, updateTimePeriod, deleteTimePeriod } from '@/lib/actions/timePeriodsActions';
-import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { TimePeriodSuggester } from '@/lib/timePeriodSuggester';
@@ -16,11 +16,11 @@ import { Temporal } from '@js-temporal/polyfill';
 interface TimePeriodFormProps {
     isOpen: boolean;
     onClose: () => void;
-    onTimePeriodCreated: (newPeriod: ITimePeriod) => void;
+    onTimePeriodCreated: (newPeriod: ITimePeriodView) => void;
     onTimePeriodDeleted?: () => void;
     settings: ITimePeriodSettings[] | null;
-    existingTimePeriods: ITimePeriod[];
-    selectedPeriod?: ITimePeriod | null;
+    existingTimePeriods: ITimePeriodView[];
+    selectedPeriod?: ITimePeriodView | null;
     mode?: 'create' | 'edit';
 }
 
@@ -51,8 +51,14 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
         } else if (settings) {
             setStartDateInput('');
             setEndDateInput('');
+            // Convert view types to model types for the suggester
+            const modelPeriods = existingTimePeriods.map(period => ({
+                ...period,
+                start_date: toPlainDate(period.start_date),
+                end_date: toPlainDate(period.end_date)
+            }));
             const { start_date: suggestedStart, end_date: suggestedEnd } =
-                TimePeriodSuggester.suggestNewTimePeriod(settings, existingTimePeriods);
+                TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
             setStartDate(toPlainDate(suggestedStart));
             setEndDate(toPlainDate(suggestedEnd));
             setStartDateInput(formatDateForInput(toPlainDate(suggestedStart)));
@@ -154,16 +160,28 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = ({
             let updatedPeriod;
             if (mode === 'edit' && selectedPeriod?.period_id) {
                 // Update existing period
-                updatedPeriod = await updateTimePeriod(selectedPeriod.period_id, {
-                    start_date: startDate?.toString() || '',
-                    end_date: endDate?.toString() || ''
+                const modelPeriod = await updateTimePeriod(selectedPeriod.period_id, {
+                    start_date: startDate,
+                    end_date: endDate!
                 });
+                // Convert model type to view type
+                updatedPeriod = {
+                    ...modelPeriod,
+                    start_date: modelPeriod.start_date.toString(),
+                    end_date: modelPeriod.end_date.toString()
+                };
             } else {
                 // Create new period
-                updatedPeriod = await createTimePeriod({
-                    start_date: startDate?.toString() || '',
-                    end_date: endDate?.toString() || ''
+                const modelPeriod = await createTimePeriod({
+                    start_date: startDate,
+                    end_date: endDate!
                 });
+                // Convert model type to view type
+                updatedPeriod = {
+                    ...modelPeriod,
+                    start_date: modelPeriod.start_date.toString(),
+                    end_date: modelPeriod.end_date.toString()
+                };
             }
 
             onTimePeriodCreated(updatedPeriod);

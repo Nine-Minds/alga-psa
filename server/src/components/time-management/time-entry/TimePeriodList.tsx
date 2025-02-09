@@ -1,12 +1,12 @@
 import React from 'react';
-import { ITimePeriodWithStatus, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodWithStatusView, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
 import { Button } from '@radix-ui/themes';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
 
 interface TimePeriodListProps {
-  timePeriods: ITimePeriodWithStatus[];
-  onSelectTimePeriod: (timePeriod: ITimePeriodWithStatus) => void;
+  timePeriods: ITimePeriodWithStatusView[];
+  onSelectTimePeriod: (timePeriod: ITimePeriodWithStatusView) => void;
 }
 
 const getStatusDisplay = (status: TimeSheetStatus): { text: string; color: string } => {
@@ -73,8 +73,8 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
           }
         ]}
         pagination={false}
-        onRowClick={(row: ITimePeriodWithStatus) => onSelectTimePeriod(row)}
-        rowClassName={(row: ITimePeriodWithStatus) => 
+        onRowClick={(row: ITimePeriodWithStatusView) => onSelectTimePeriod(row)}
+        rowClassName={(row: ITimePeriodWithStatusView) => 
           row.timeSheetStatus === 'APPROVED' 
             ? 'bg-green-50' 
             : row.timeSheetStatus === 'CHANGES_REQUESTED'
