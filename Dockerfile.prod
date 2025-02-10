@@ -7,6 +7,7 @@ RUN apk add \
     postgresql-client \
     redis \
     curl \
+    nano \
     bash
 WORKDIR /app
 
@@ -56,13 +57,16 @@ RUN apk add --no-cache bash \
     imagemagick \
     ghostscript \
     curl \
+    nano \
     bash
 
 WORKDIR /app
 COPY tsconfig.base.json ./
 COPY server/setup /app/server/setup
+COPY .env.example /app/.env   
+COPY .env.example /app/server/.env  
 
-# Copy built application and node_modules from earlier stages
+# Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
@@ -72,7 +76,6 @@ COPY --from=builder /app/server/knexfile.cjs ./server/
 COPY --from=builder /app/server/migrations/ ./server/migrations/
 COPY --from=builder /app/server/seeds/ ./server/seeds/
 COPY --from=builder /app/server/src/scripts/ ./server/src/scripts/
-
 COPY --from=deps /app/node_modules ./node_modules
 
 COPY server/entrypoint.sh /app/entrypoint.sh

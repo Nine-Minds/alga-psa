@@ -4,8 +4,8 @@ x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
   APP_NAME: ${APP_NAME}
-  APP_ENV: ${APP_ENV:-development}
-  NODE_ENV: ${APP_ENV:-development}
+  APP_ENV: ${APP_ENV:-production}
+  NODE_ENV: ${APP_ENV:-production}
   HOST: ${HOST}
   VERIFY_EMAIL_ENABLED: ${VERIFY_EMAIL_ENABLED:-false}
 

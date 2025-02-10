@@ -80,7 +80,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || '', // Fallback to env var
+      password: await getDbPassword() || '', // Fallback to env var
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -98,7 +98,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || '', // Fallback to env var
+      password: await getDbPassword() || '', // Fallback to env var
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -145,5 +145,7 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
     }
   };
 };
+
+// console.log('/lib/db knexfile', knexfile);
 
 export default knexfile;
