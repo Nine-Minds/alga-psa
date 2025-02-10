@@ -109,54 +109,15 @@ REQUIRE_HOCUSPOCUS=false  # Set to "true" to require hocuspocus service
 
 Note: The system performs validation of these environment variables at startup. Missing or invalid values will prevent the system from starting.
 
-## Database Configuration
 
-The system uses a two-user database authentication model for security:
-
-1. Admin User:
-   - Username: postgres
-   - Password: Stored in postgres_password secret
-   - Purpose: Database administration, setup, migrations
-   - Access: Full database access
-   - Used by: Setup scripts, migrations, administrative tasks
-
-2. Application User:
-   - Username: app_user
-   - Password: Stored in db_password_server secret
-   - Purpose: Application database access
-   - Access: Limited by Row Level Security (RLS) policies
-   - Used by: Application services, regular operations
-
-This separation ensures:
-- Principle of least privilege
-- Data access control through RLS
-- Clear separation of administrative and application operations
 
 ## Docker Compose Configuration
 
-### Community Edition (CE)
-
-1. For development:
 ```bash
-docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml up -d
 ```
 
-2. For production:
-```bash
-docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up -d
-```
-
-### Enterprise Edition (EE)
-
-1. For development:
-```bash
-docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
-```
-
-2. For production:
-```bash
-docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml -f docker-compose.prod.yaml up -d
-```
+> Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
 ## Service Initialization
 
@@ -264,14 +225,6 @@ docker compose logs [service-name]
      EMAIL_PASSWORD=your-secure-password
      EMAIL_FROM=noreply@example.com
      ```
-   - Run migrations to set up notification tables:
-     ```bash
-     cd server && npx knex migrate:latest
-     ```
-   - Seed default templates and categories:
-     ```bash
-     cd server && npx knex seed:run
-     ```
    - Features available after setup:
      * System-wide default templates
      * Tenant-specific template customization
@@ -294,9 +247,11 @@ When upgrading from a previous version:
 docker compose exec postgres pg_dump -U postgres server > backup.sql
 ```
 
-2. Update the repository:
+2. Update prebuilt images and restart services:
 ```bash
-git pull origin main
+docker compose pull
+docker compose down
+docker compose up -d
 ```
 
 3. Review changes in:
@@ -309,10 +264,10 @@ git pull origin main
 
 4. Update configurations as needed
 
-5. Rebuild and restart:
+5. Restart services:
 ```bash
 docker compose down
-docker compose up -d --build
+docker compose up -d
 ```
 
 ## Additional Resources
