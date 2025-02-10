@@ -13,7 +13,8 @@ Install components in order:
 ## Docker Configuration
 
 1. Open Docker and go to Settings --> General --> Toggle `Use the WSL 2 based engine` to ON
-2. Select Apply and restart
+2. Go to Resources --> WSL integration --> Toggle `Ubuntu` to ON
+3. Apply and restart
 
 ## Server Setup
 
