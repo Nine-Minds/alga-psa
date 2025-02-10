@@ -127,15 +127,15 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
         [workItem] = await db('tickets')
           .where({ 
             ticket_id: entry.work_item_id,
-            tenant
+            'tickets.tenant': tenant
           })
           .select('ticket_id as work_item_id', 'title as name', 'url as description', 'ticket_number');
         break;
       case 'project_task':
         [workItem] = await db('project_tasks')
-          .where({ 
+          .where({
             task_id: entry.work_item_id,
-            tenant
+            'project_tasks.tenant': tenant
           })
           .join('project_phases', function() {
             this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
@@ -166,7 +166,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
         const scheduleEntry = await db('schedule_entries')
           .where({ 
             entry_id: entry.work_item_id,
-            tenant
+            'schedule_entries.tenant': tenant
           })
           .first();
         
@@ -185,7 +185,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
     const [service] = await db('service_catalog')
       .where({ 
         service_id: entry.service_id,
-        tenant
+        'service_catalog.tenant': tenant
       })
       .select('service_name', 'service_type', 'default_rate');
 
@@ -275,7 +275,7 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
       this.on('project_phases.project_id', '=', 'projects.project_id')
           .andOn('project_phases.tenant', '=', 'projects.tenant');
     })
-    .where('project_tasks.tenant', tenant)
+    .where({ 'project_tasks.tenant': tenant })
     .select(
       'task_id as work_item_id',
       'task_name as name',
@@ -593,7 +593,7 @@ export async function fetchTimePeriods(userId: string): Promise<ITimePeriodWithS
           .andOn('tp.tenant', '=', 'ts.tenant')
           .andOn('ts.user_id', '=', db.raw('?', [validatedParams.userId]));
     })
-    .where('tp.tenant', tenant)
+    .where({ 'tp.tenant': tenant })
     .orderBy('tp.start_date', 'desc')
     .select(
       'tp.*',
@@ -782,7 +782,7 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
   const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog')
-    .where({ tenant })
+    .where({ 'service_catalog.tenant': tenant })
     .select(
       'service_id as id',
       'service_name as name',
