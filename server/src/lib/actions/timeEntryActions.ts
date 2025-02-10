@@ -398,7 +398,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         const [task] = await db('project_tasks')
           .where({ 
             task_id: resultingEntry.work_item_id,
-            tenant
+            'project_tasks.tenant': tenant
           })
           .join('project_phases', function() {
             this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
