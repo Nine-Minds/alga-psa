@@ -1,76 +1,169 @@
-# Provisioning API Overview
+# API Overview
+
+> 👉 **New to our APIs?** Check out our [Getting Started Guide](api_getting_started_guide.md) for a quick introduction to using our APIs.
 
 ## 1. Introduction
-This document outlines the design for a new Provisioning API system for the MSP PSA enterprise edition. The API is intended for use by our partners to provision new customer accounts and is implemented using Next.js for the backend. It is designed as an enterprise-only feature and will reside under the `ee/` folder. The API takes a REST-ish approach and leverages Next.js API routes along with our existing actions system.
+This document outlines the design and architecture of the Alga PSA APIs. Our APIs are implemented using Next.js for the backend and take a REST-ish approach, leveraging Next.js API routes along with our existing actions system.
 
-## 3. Architectural Overview
+> 📝 **Note:** The Alga PSA hosted environment is available at `api.algapsa.com`. If you are running an on-premise installation, replace this with your configured domain.
+
+## 2. API Editions
+
+Our APIs are segmented into two editions:
+
+### Community Edition (CE)
+- Located in the `server/src/api/` directory
+- Available in both CE and EE deployments
+- Core functionality APIs
+- Accessible to all deployments
+
+### Enterprise Edition (EE)
+- Located in the `ee/server/src/api/` directory
+- Only available in EE deployments
+- Advanced/premium features
+- Current EE-only APIs:
+  - Tenant Provisioning API (see [tenant_provisioning_api.md](tenant_provisioning_api.md))
+
+The edition is controlled by the `EDITION` environment variable:
+- `EDITION=community` for CE deployments
+- `EDITION=enterprise` for EE deployments
+
+## 3. Core Architecture
 - **Technology Stack:**
-  - **Next.js:** The API is built using Next.js API routes, which integrate seamlessly into the existing Next.js application.
+  - **Next.js:** APIs are built using Next.js API routes, which integrate seamlessly into the existing Next.js application.
   - **Node.js:** Underlying runtime environment.
   - **Zod:** Used for schema validation of incoming requests.
-  - **NextAuth Augmentation:** Enhancements to our existing NextAuth integration will be applied to support API access. Our current NextAuth setup (defined in `server/src/types/next-auth.ts`) already includes extended fields such as `proToken`, `tenant`, and `user_type`. We will leverage these fields to include role/permission claims in the JWT, and enforce authorization via our RBAC infrastructure.
-  - **Existing Actions:** The API leverages existing server actions for creating and managing customer records.
-- **Structure:** The API code is organized into:
-  - **Controllers:** Contain business logic for provisioning.
-  - **Routes:** Define the Next.js API endpoints.
-  - **Schemas/Validation:** Use Zod to validate request payloads.
-  - **Actions Integration:** Invoke existing server actions to handle customer creation.
-  - **Middleware:** Implemented to handle authentication (via NextAuth) and authorization (via our RBAC module).
+  - **NextAuth Augmentation:** Our NextAuth integration (defined in `server/src/types/next-auth.ts`) includes extended fields such as `proToken`, `tenant`, and `user_type`. These fields support role/permission claims in the JWT for authorization via our RBAC infrastructure.
+  - **Existing Actions:** APIs leverage existing server actions for business logic implementation.
 
-## 5. Security and Authentication
+## 4. Security Framework
 - **Authentication:** 
-  - Use token-based authentication (e.g., JWT) or API keys to ensure only authorized partners can access the endpoints.
-  - The existing NextAuth integration is leveraged to manage user sessions and issue JWTs, which include extended fields such as `proToken`, `tenant`, and `user_type`.
-  - For API requests, a middleware will extract and verify the JWT. The token payload, enhanced during the NextAuth callbacks, can include additional claims like roles.
-  - Consider integration with NextAuth.js callbacks to persist custom claims (e.g., roles) into the JWT, so API routes can validate access.
-- **Augmenting NextAuth for API Access:**
-  - **Current Setup:** Our current NextAuth configuration (see `server/src/types/next-auth.ts`) extends the User, Session, and JWT types with fields such as `username`, `proToken`, `tenant`, and `user_type`.
-  - **Proposed Enhancements:**
-    - **Include Role Claims:** During the NextAuth sign-in or JWT callback, retrieve the user’s role (or roles) from our RBAC system (defined in `@/server/src/lib/auth/rbac.ts`) and embed this information in the JWT.
-    - **Custom API Token:** Consider issuing a dedicated API token (or using the `proToken`) that partners must present when accessing the API. This token will be validated for authenticity and for proper role claims.
-    - **Middleware Enforcement:** API route middleware will validate the JWT and use helper functions from our RBAC module (e.g., `checkRole`) to enforce that the user holds the proper roles (e.g., “partner-admin” or “integration-user”) for the requested operation.
-    - **Fallback and Session Refresh:** Ensure that if token validation fails, the API returns a 401/403 error, prompting re-authentication or token refresh as necessary.
+  - API key-based authentication for all API endpoints
+  - API keys are associated with specific users and tenants
+  - Keys can be created, managed, and revoked through dedicated API endpoints
+  - Middleware validates API keys and attaches user context
+  - API keys can be set to expire and are automatically deactivated
+  - API key management through server actions:
+    - `createApiKey`: Create a new API key
+    - `listApiKeys`: List all API keys for the current user
+    - `deactivateApiKey`: Deactivate an API key
+- **Authorization:**
+  - Role-Based Access Control (RBAC) system integration
+  - NextAuth configuration extends User, Session, and JWT types
+  - Role claims embedded in JWTs during authentication
+  - Middleware enforces role-based permissions
+  - 401/403 responses for authentication/authorization failures
 
-## 7. File Structure and Code Organization
-The proposed file structure for the Provisioning API within the enterprise edition is as follows:
+## 5. Standard Conventions
+### API Structure
+- **Controllers:** Contain business logic
+- **Routes:** Define Next.js API endpoints
+- **Schemas:** Zod validation for request/response payloads
+- **Actions:** Integration with server actions
+- **Middleware:** Authentication and authorization handlers
 
-```
-ee/
- └── server/
-      └── src/
-           └── api/
-                └── provisioning/
-                     ├── customer.controller.ts    // Contains the provisioning business logic
-                     ├── customer.routes.ts        // Defines Next.js API route handlers
-                     ├── customer.schema.ts        // Contains Zod schema for request validation
-                     └── index.ts                  // Aggregates and exports the router for integration
-```
+### Common Patterns
+- RESTful endpoint design
+- Consistent error handling
+- Standard HTTP status codes
+- Structured response formats
 
-This structure ensures the API is modular, encapsulated within the enterprise edition, and distinct from the open source features.
+### API Key Management
+API keys can be managed through the user interface by navigating to your User Profile settings and scrolling to the "API Keys" section. The underlying implementation uses server actions in `server/src/lib/actions/apiKeyActions.ts`:
 
-## 8. Integration with Actions System
-- API endpoints will call existing server actions responsible for customer creation and management.
-- Errors thrown by these actions will be mapped to standardized HTTP error responses.
-- This ensures consistency with the way other parts of the system process business logic.
+- **Creating API Keys:**
+  ```typescript
+  const result = await createApiKey(
+    "Development API key",           // Optional description
+    "2026-02-10T12:00:00Z"          // Optional expiration date
+  );
+  // Returns:
+  {
+    api_key_id: "uuid",
+    api_key: "generated-api-key",    // Only shown once upon creation
+    description: "Development API key",
+    created_at: "2025-02-10T12:00:00Z",
+    expires_at: "2026-02-10T12:00:00Z"
+  }
+  ```
 
-## 9. Logging, Monitoring, and Testing
-- **Logging:** 
-  - Integrate with the current logging framework to record request details and errors.
-- **Monitoring:**
-  - Implement monitoring to track API performance and error rates.
-- **Testing:**
-  - Develop unit and integration tests to validate endpoint behavior using tools like Jest or Vitest.
-  - Ensure endpoints are thoroughly tested for both valid and invalid input scenarios.
+- **Listing API Keys:**
+  ```typescript
+  const keys = await listApiKeys();
+  // Returns:
+  [
+    {
+      api_key_id: "uuid",
+      description: "Development API key",
+      created_at: "2025-02-10T12:00:00Z",
+      last_used_at: "2025-02-10T12:30:00Z",
+      expires_at: "2026-02-10T12:00:00Z",
+      active: true
+    }
+  ]
+  ```
 
-## 10. Future Enhancements
-- **Additional Endpoints:** 
-  - Extend the API to support updating and deletion of customer records.
-- **Webhook Integration:** 
-  - Support asynchronous processing through webhooks for tasks that take longer to complete.
-- **API Documentation:** 
-  - Consider generating API documentation (e.g., via OpenAPI/Swagger) for partner developers.
-- **Security Improvements:** 
-  - Regularly review and improve authentication/authorization mechanisms as new security threats emerge.
+- **Deactivating API Keys:**
+  ```typescript
+  await deactivateApiKey("api-key-id");
+  ```
 
-## 11. Conclusion
-This design provides a clear, modular, and extensible approach to implementing the Provisioning API with Next.js and Zod for the enterprise edition. It addresses key requirements, including robust authentication via an augmented NextAuth strategy, detailed schema validation, and integration with our RBAC system for strict role-based access control. This lays a solid foundation for current business needs and future enhancements.
+- **Using API Keys:**
+  Include the API key in the `x-api-key` header for all API requests:
+  ```http
+  GET /api/some-endpoint
+  x-api-key: your-api-key-here
+  ```
+
+## 6. Available APIs
+
+### Community Edition APIs
+- [Future CE APIs will be documented here]
+
+### Enterprise Edition APIs
+- **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
+
+## 7. Development Guidelines
+
+### Edition-Specific Considerations
+- CE APIs should focus on core functionality
+- EE APIs can depend on CE components but not vice versa
+- Use feature flags for edition-specific functionality
+- Test both editions during development
+- Document edition requirements clearly
+
+### General Guidelines
+### Integration with Actions System
+- APIs should leverage existing server actions where possible
+- Standardized error mapping to HTTP responses
+- Consistent business logic processing
+
+### Logging and Monitoring
+- Request details and error logging
+- Performance monitoring
+- Error rate tracking
+- Audit trail maintenance
+
+### Testing Requirements
+- Unit tests for validation and business logic
+- Integration tests for API endpoints
+- Authentication/authorization test cases
+- Error handling verification
+
+### Documentation Standards
+- API specifications should include:
+  - Endpoint descriptions
+  - Request/response schemas
+  - Authentication requirements
+  - Example requests/responses
+  - Error scenarios and handling
+
+## 8. Future Considerations
+- **API Documentation:** OpenAPI/Swagger integration
+- **Webhook Support:** For asynchronous operations
+- **Rate Limiting:** Request throttling implementation
+- **Versioning Strategy:** API versioning guidelines
+- **Security Reviews:** Regular security assessment and updates
+
+## 9. Conclusion
+This architecture provides a foundation for building secure, maintainable, and extensible APIs across both Community and Enterprise editions. It emphasizes security through robust authentication and authorization, maintainability through consistent patterns and documentation, and extensibility through modular design and standardized interfaces. The edition-based segmentation ensures that advanced features are properly isolated while maintaining a cohesive development experience.

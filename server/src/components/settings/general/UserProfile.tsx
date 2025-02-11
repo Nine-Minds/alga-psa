@@ -16,6 +16,7 @@ import {
   updateUserPreferenceAction 
 } from '@/lib/actions/notification-actions/notificationActions';
 import PasswordChangeForm from './PasswordChangeForm';
+import ApiKeysSetup from '../api/ApiKeysSetup';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -230,6 +231,9 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       {/* Password Change Section */}
       <PasswordChangeForm />
+
+      {/* API Keys Section */}
+      <ApiKeysSetup />
 
       {/* Notification Preferences Section */}
       <Card>

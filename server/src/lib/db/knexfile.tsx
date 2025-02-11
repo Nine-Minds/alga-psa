@@ -47,40 +47,15 @@ interface CustomKnexConfig extends Knex.Config {
   afterRelease?: (conn: any, done: Function) => void;
 }
 
-export const getKnexConfig = async (env: string): Promise<CustomKnexConfig> => {
-  const password = await getDbPassword();
-  const baseConfig = {
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      user: env === 'production' ? 'app_user' : (process.env.DB_USER_SERVER || 'app_user'),
-      password,
-      database: process.env.DB_NAME_SERVER || 'server'
-    },
-    pool: {
-      min: 0,
-      max: 20,
-      idleTimeoutMillis: 1000,
-      reapIntervalMillis: 1000,
-      createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000
-    }
-  };
-
-  return baseConfig;
-};
-
-// Export a default config for tools that require synchronous config
-// Sync configuration for tools that require it
-const knexfile: Record<string, CustomKnexConfig> = {
+// Base configuration without passwords
+const baseConfig: Record<string, CustomKnexConfig> = {
   development: {
     client: 'pg',
     connection: {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: await getDbPassword() || '', // Fallback to env var
+      password: process.env.DB_PASSWORD_SERVER || '', // Fallback for tools that need sync config
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -98,7 +73,7 @@ const knexfile: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: await getDbPassword() || '', // Fallback to env var
+      password: process.env.DB_PASSWORD_SERVER || '', // Fallback for tools that need sync config
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -111,6 +86,23 @@ const knexfile: Record<string, CustomKnexConfig> = {
     }
   }
 };
+
+// Async function to get full config with passwords
+export async function getFullConfig(env: string): Promise<CustomKnexConfig> {
+  const password = await getDbPassword();
+  return {
+    ...baseConfig[env],
+    connection: {
+      ...baseConfig[env].connection,
+      password: password || baseConfig[env].connection.password
+    }
+  };
+}
+
+// Main config getter function
+export async function getKnexConfig(env: string): Promise<CustomKnexConfig> {
+  return getFullConfig(env);
+}
 
 export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKnexConfig> => {
   const env = process.env.APP_ENV || 'development';
@@ -146,6 +138,5 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
   };
 };
 
-// console.log('/lib/db knexfile', knexfile);
-
-export default knexfile;
+// Export base config for tools that require synchronous config
+export default baseConfig;
