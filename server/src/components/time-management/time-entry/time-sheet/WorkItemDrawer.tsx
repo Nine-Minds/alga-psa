@@ -150,7 +150,6 @@ export function WorkItemDrawer({
                     return (
                         <div className="min-w-auto h-full bg-white">
                             <EntryPopup
-                                slot={null}
                                 canAssignMultipleAgents={false}
                                 users={users}
                                 currentUserId={currentUser.user_id}

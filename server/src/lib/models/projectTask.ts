@@ -44,7 +44,7 @@ const ProjectTaskModel = {
 
   updateTask: async (taskId: string, taskData: Partial<IProjectTask>): Promise<IProjectTask> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
 
       // Filter out invalid columns and transform data
       const validColumns = [
@@ -99,6 +99,7 @@ const ProjectTaskModel = {
 
       const [updatedTask] = await db<IProjectTask>('project_tasks')
         .where('task_id', taskId)
+        .andWhere('tenant', tenant!)
         .update(finalTaskData)
         .returning('*');
 
@@ -111,11 +112,12 @@ const ProjectTaskModel = {
 
   updateTaskStatus: async (taskId: string, projectStatusMappingId: string): Promise<IProjectTask> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       
       // Get current task to preserve phase information
       const task = await db<IProjectTask>('project_tasks')
         .where('task_id', taskId)
+        .andWhere('tenant', tenant!)
         .first();
       
       if (!task) {
@@ -128,7 +130,8 @@ const ProjectTaskModel = {
 
       const [updatedTask] = await db<IProjectTask>('project_tasks')
         .where('task_id', taskId)
-        .update({ 
+        .andWhere('tenant', tenant!)
+        .update({
           project_status_mapping_id: projectStatusMappingId,
           wbs_code: newWbsCode,
           updated_at: db.fn.now()
@@ -170,7 +173,7 @@ const ProjectTaskModel = {
 
   getTasks: async (projectId: string): Promise<IProjectTaskCardInfo[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const tasks = await db<IProjectTask>('project_tasks')
         .join('project_phases', function() {
           this.on('project_tasks.phase_id', 'project_phases.phase_id')
@@ -182,6 +185,7 @@ const ProjectTaskModel = {
         })
         .where('project_phases.project_id', projectId)
         .andWhere('project_tasks.phase_id', db.ref('project_phases.phase_id')) // Ensure phase matches
+        .andWhere('project_tasks.tenant', tenant!) // Explicit tenant filter on main table
         .select(
           'project_tasks.*',
           'project_phases.project_id',
@@ -210,10 +214,11 @@ const ProjectTaskModel = {
 
   reorderTasksInStatus: async (tasks: { taskId: string, newWbsCode: string }[]): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
         const taskRecords = await trx('project_tasks')
           .whereIn('task_id', tasks.map((t): string => t.taskId))
+          .andWhere('tenant', tenant!)
           .select('task_id', 'phase_id');
 
         if (taskRecords.length !== tasks.length) {
@@ -228,6 +233,7 @@ const ProjectTaskModel = {
         await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
           trx('project_tasks')
             .where('task_id', taskId)
+            .andWhere('tenant', tenant!)
             .update({
               wbs_code: newWbsCode,
               updated_at: trx.fn.now()
@@ -371,7 +377,7 @@ const ProjectTaskModel = {
     tenant: string;
   }>> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const resources = await db('task_resources')
         .select(
           'task_resources.*',
@@ -382,7 +388,8 @@ const ProjectTaskModel = {
           this.on('task_resources.additional_user_id', 'users.user_id')
               .andOn('task_resources.tenant', 'users.tenant')
         })
-        .where('task_id', taskId);
+        .where('task_id', taskId)
+        .andWhere('task_resources.tenant', tenant!);
       return resources;
     } catch (error) {
       console.error('Error getting task resources:', error);
@@ -428,9 +435,10 @@ const ProjectTaskModel = {
 
   getTaskTicketLinks: async (taskId: string): Promise<IProjectTicketLinkWithDetails[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const links = await db<IProjectTicketLink>('project_ticket_links')
         .where('task_id', taskId)
+        .andWhere('project_ticket_links.tenant', tenant!)
         .leftJoin('tickets', function() {
           this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
               .andOn('project_ticket_links.tenant', 'tickets.tenant')
@@ -479,9 +487,10 @@ const ProjectTaskModel = {
 
   getAllTaskTicketLinks: async (projectId: string): Promise<{ [taskId: string]: IProjectTicketLinkWithDetails[] }> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const links = await db('project_ticket_links')
         .where('project_ticket_links.project_id', projectId)
+        .andWhere('project_ticket_links.tenant', tenant!)
         .leftJoin('tickets', function() {
           this.on('project_ticket_links.ticket_id', 'tickets.ticket_id')
               .andOn('project_ticket_links.tenant', 'tickets.tenant')

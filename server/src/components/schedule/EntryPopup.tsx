@@ -20,7 +20,10 @@ import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
 
 interface EntryPopupProps {
   event: IScheduleEntry | null;
-  slot: any;
+  slot?: {
+    start: Date | string;
+    end: Date | string;
+  };
   onClose: () => void;
   onSave: (entryData: Omit<IScheduleEntry, 'tenant'> & { updateType?: string }) => void;
   onDelete?: (entryId: string, deleteType?: IEditScope) => void;
@@ -86,6 +89,36 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [selectedWorkItem, setSelectedWorkItem] = useState<Omit<IWorkItem, 'tenant'> | null>(null);
   const [recurrencePattern, setRecurrencePattern] = useState<IRecurrencePattern | null>(null);
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
+  const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
+
+  // Fetch available work items when dialog opens
+  useEffect(() => {
+    if (isEditingWorkItem) {
+      const fetchWorkItems = async () => {
+        try {
+          if (!entryData.work_item_id || !entryData.work_item_type) {
+            setAvailableWorkItems([]);
+            return;
+          }
+
+          // Get work items for the current time period
+          const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
+          if (items) {
+            setAvailableWorkItems([items]);
+          } else {
+            setAvailableWorkItems([]);
+            alert('No work items found for the selected period');
+          }
+        } catch (error) {
+          console.error('Error fetching work items:', error);
+          setAvailableWorkItems([]);
+          alert('Failed to fetch work items. Please try again.');
+        }
+      };
+
+      fetchWorkItems();
+    }
+  }, [isEditingWorkItem, entryData.work_item_id, entryData.work_item_type]);
 
   useEffect(() => {
     const initializeData = () => {
@@ -233,10 +266,59 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
 
   const handleSave = () => {
-    // Ensure required fields are present
+    // Validate required fields and dates
     if (!entryData.title) {
       alert('Title is required');
       return;
+    }
+
+    // Validate dates
+    const startDate = new Date(entryData.scheduled_start);
+    const endDate = new Date(entryData.scheduled_end);
+
+    if (isNaN(startDate.getTime())) {
+      alert('Start date is invalid');
+      return;
+    }
+
+    if (isNaN(endDate.getTime())) {
+      alert('End date is invalid');
+      return;
+    }
+
+    if (endDate <= startDate) {
+      alert('End date must be after start date');
+      return;
+    }
+
+    // Validate recurrence pattern dates if present
+    if (recurrencePattern) {
+      // Validate interval
+      if (!Number.isInteger(recurrencePattern.interval) || recurrencePattern.interval < 1) {
+        alert('Recurrence interval must be a positive whole number');
+        return;
+      }
+
+      // Validate count if specified
+      if (recurrencePattern.count !== undefined) {
+        if (!Number.isInteger(recurrencePattern.count) || recurrencePattern.count < 1) {
+          alert('Number of occurrences must be a positive whole number');
+          return;
+        }
+      }
+
+      // Validate end date if specified
+      if (recurrencePattern.endDate) {
+        const patternEndDate = new Date(recurrencePattern.endDate);
+        if (isNaN(patternEndDate.getTime())) {
+          alert('Recurrence end date is invalid');
+          return;
+        }
+        if (patternEndDate <= startDate) {
+          alert('Recurrence end date must be after start date');
+          return;
+        }
+      }
     }
 
     // Prepare entry data
@@ -294,7 +376,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 handleWorkItemSelect(workItem);
                 setIsEditingWorkItem(false);
               }}
-              availableWorkItems={[]}
+              availableWorkItems={availableWorkItems}
+              timePeriod={{
+                period_id: entryData.entry_id || '',
+                start_date: entryData.scheduled_start.toISOString(),
+                end_date: entryData.scheduled_end.toISOString(),
+                tenant: ''  // Required by TenantEntity
+              }}
             />
           </div>
           </div>
@@ -389,10 +477,21 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   id="interval"
                   type="number"
                   value={recurrencePattern.interval}
-                  onChange={(e) => setRecurrencePattern(prev => {
-                    if (prev === null) return null;
-                    return { ...prev, interval: parseInt(e.target.value) };
-                  })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value < 1) {
+                      alert('Interval must be a positive number');
+                      return;
+                    }
+                    if (value > 100) {
+                      alert('Maximum interval is 100');
+                      return;
+                    }
+                    setRecurrencePattern(prev => {
+                      if (prev === null) return null;
+                      return { ...prev, interval: value };
+                    });
+                  }}
                   min={1}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />
@@ -432,10 +531,21 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   id="count"
                   type="number"
                   value={recurrencePattern.count}
-                  onChange={(e) => setRecurrencePattern(prev => {
-                    if (prev === null) return null;
-                    return { ...prev, count: parseInt(e.target.value) };
-                  })}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value);
+                    if (value < 1) {
+                      alert('Number of occurrences must be a positive number');
+                      return;
+                    }
+                    if (value > 100) {
+                      alert('Maximum number of occurrences is 100');
+                      return;
+                    }
+                    setRecurrencePattern(prev => {
+                      if (prev === null) return null;
+                      return { ...prev, count: value };
+                    });
+                  }}
                   min={1}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />

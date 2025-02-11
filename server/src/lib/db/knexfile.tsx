@@ -3,7 +3,8 @@ import { setTypeParser } from 'pg-types';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
-
+import process
+ from 'process';
 type Function = (err: Error | null, connection: Knex.Client) => void;
 
 // Load test environment variables if we're in a test environment
@@ -21,8 +22,8 @@ setTypeParser(1114, str => new Date(str + 'Z'));
 
 import { getSecret } from '../utils/getSecret';
 
-const getDbPassword = async () => getSecret('db_password_server', 'DB_PASSWORD_SERVER');
-const getPostgresPassword = async () => getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
+const getDbPassword = async () => await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
+const getPostgresPassword = async () => await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
 
 // Special connection config for postgres user (needed for job scheduler)
 export const getPostgresConnection = async () => ({
@@ -55,7 +56,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || '', // Fallback for tools that need sync config
+      password: await getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -73,7 +74,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: process.env.DB_PASSWORD_SERVER || '', // Fallback for tools that need sync config
+      password: await getDbPassword(),
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -101,7 +102,7 @@ export async function getFullConfig(env: string): Promise<CustomKnexConfig> {
 
 // Main config getter function
 export async function getKnexConfig(env: string): Promise<CustomKnexConfig> {
-  return getFullConfig(env);
+  return await getFullConfig(env);
 }
 
 export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKnexConfig> => {

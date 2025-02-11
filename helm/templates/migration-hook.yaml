@@ -20,7 +20,7 @@ spec:
         - name: migrate
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
           workingDir: /app
-          command: ["npx", "knex", "--knexfile", "/app/server/knexfile.cjs", "migrate:latest", "--env", "development", "--debug"]
+          command: ["npx", "knex", "--knexfile", "/app/server/knexfile.cjs", "migrate:latest", "--env", "migration", "--debug"]
           env:
             {{- if .Values.db.enabled }}
             - name: DB_HOST

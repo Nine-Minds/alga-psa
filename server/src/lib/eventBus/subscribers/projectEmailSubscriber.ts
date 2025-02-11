@@ -152,7 +152,8 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
         this.on('ct.contact_name_id', '=', 'p.contact_name_id')
           .andOn('ct.tenant', '=', 'p.tenant');
       })
-      .where('p.project_id', payload.projectId);
+      .where('p.project_id', payload.projectId)
+      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
 
     // Log the query for debugging
     logger.info('[ProjectEmailSubscriber] Project query:', {
@@ -319,7 +320,8 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
         this.on('ct.contact_name_id', '=', 'p.contact_name_id')
           .andOn('ct.tenant', '=', 'p.tenant');
       })
-      .where('p.project_id', payload.projectId);
+      .where('p.project_id', payload.projectId)
+      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
 
     // Log the query for debugging
     logger.info('[ProjectEmailSubscriber] Project query:', {
@@ -500,7 +502,8 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
         this.on('ct.contact_name_id', '=', 'p.contact_name_id')
           .andOn('ct.tenant', '=', 'p.tenant');
       })
-      .where('p.project_id', payload.projectId);
+      .where('p.project_id', payload.projectId)
+      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
 
     // Log the query for debugging
     logger.info('[ProjectEmailSubscriber] Project query:', {
@@ -650,7 +653,8 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
             .andOn('au.tenant', '=', 'p.tenant')
             .andOn('au.is_inactive', '=', db.raw('false'));
       })
-      .where('p.project_id', payload.projectId);
+      .where('p.project_id', payload.projectId)
+      .andWhere('p.tenant', tenantId);  // Add explicit tenant filter on main table
 
     // Log the query for debugging
     logger.info('[ProjectEmailSubscriber] Project query:', {
@@ -758,10 +762,8 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             .andOn('au.tenant', '=', 't.tenant')
             .andOn('au.is_inactive', '=', db.raw('false'));
       })
-      .where({
-        't.task_id': payload.taskId,
-        't.tenant': tenantId
-      });
+      .where('t.task_id', payload.taskId)
+      .andWhere('t.tenant', tenantId);  // Explicit tenant filter on main table
 
     logger.debug('[ProjectEmailSubscriber] Task query:', {
       sql: query.toString(),
@@ -787,10 +789,8 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             .andOn('u.tenant', '=', 'tr.tenant')
             .andOn('u.is_inactive', '=', db.raw('false'));
       })
-      .where({
-        'tr.task_id': payload.taskId,
-        'tr.tenant': tenantId
-      })
+      .where('tr.task_id', payload.taskId)
+      .andWhere('tr.tenant', tenantId)  // Explicit tenant filter on main table
       .whereNotNull('tr.additional_user_id');
 
     // Send email to primary assignee

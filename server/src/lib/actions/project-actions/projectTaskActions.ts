@@ -134,7 +134,7 @@ export async function updateTaskStatus(
     position?: number // Optional position to insert the task
 ): Promise<IProjectTask> {
     
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     
     return await db.transaction(async (trx: Knex.Transaction) => {
         const currentUser = await getCurrentUser();
@@ -148,6 +148,7 @@ export async function updateTaskStatus(
             // Get the current task to preserve its phase_id
             const task = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
+                .andWhere('tenant', tenant!)
                 .first();
             if (!task) {
                 throw new Error('Task not found');
@@ -156,6 +157,7 @@ export async function updateTaskStatus(
             // Validate the target status exists in the same project
             const targetStatus = await trx('project_status_mappings')
                 .where('project_status_mapping_id', projectStatusMappingId)
+                .andWhere('tenant', tenant!)
                 .first();
             
             if (!targetStatus) {
@@ -166,6 +168,7 @@ export async function updateTaskStatus(
             const targetStatusTasks = await trx<IProjectTask>('project_tasks')
                 .where('project_status_mapping_id', projectStatusMappingId)
                 .andWhere('phase_id', task.phase_id)
+                .andWhere('tenant', tenant!)
                 .orderBy('wbs_code');
             
         // Generate new WBS codes
@@ -223,6 +226,7 @@ export async function updateTaskStatus(
             await Promise.all(updates.map(({taskId, newWbsCode}): Promise<number> =>
                 trx('project_tasks')
                     .where('task_id', taskId)
+                    .andWhere('tenant', tenant!)
                     .update({
                         wbs_code: newWbsCode,
                         project_status_mapping_id: projectStatusMappingId,
@@ -232,6 +236,7 @@ export async function updateTaskStatus(
 
             const updatedTask = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
+                .andWhere('tenant', tenant!)
                 .first();
             if (!updatedTask) {
                 throw new Error('Task not found after status update');
@@ -544,10 +549,11 @@ export async function moveTaskToPhase(taskId: string, newPhaseId: string, newSta
         const newWbsCode = await ProjectModel.generateNextWbsCode(newPhase.wbs_code);
 
         // Update task with new phase, project, and WBS code
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await createTenantKnex();
         const updatedTask = await db.transaction(async (trx) => {
             const [updatedTask] = await trx<IProjectTask>('project_tasks')
                 .where('task_id', taskId)
+                .andWhere('tenant', tenant!)
                 .update({
                     phase_id: newPhaseId,
                     wbs_code: newWbsCode,
@@ -566,6 +572,7 @@ export async function moveTaskToPhase(taskId: string, newPhaseId: string, newSta
             // Update all ticket links to point to new project and phase
             await trx('project_ticket_links')
                 .where('task_id', taskId)
+                .andWhere('tenant', tenant!)
                 .update({
                     project_id: newPhase.project_id,
                     phase_id: newPhaseId
@@ -605,14 +612,24 @@ export async function getTaskWithDetails(taskId: string, user: IUser) {
     try {
         await checkPermission(user, 'project', 'read');
         
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await createTenantKnex();
         
         // Get task with phase and status details
         const task = await db('project_tasks')
             .where('project_tasks.task_id', taskId)
-            .join('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
-            .join('project_status_mappings', 'project_tasks.project_status_mapping_id', 'project_status_mappings.project_status_mapping_id')
-            .leftJoin('users as assigned_user', 'project_tasks.assigned_to', 'assigned_user.user_id')
+            .andWhere('project_tasks.tenant', tenant!)
+            .join('project_phases', function() {
+                this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                    .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+            })
+            .join('project_status_mappings', function() {
+                this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
+                    .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
+            })
+            .leftJoin('users as assigned_user', function() {
+                this.on('project_tasks.assigned_to', '=', 'assigned_user.user_id')
+                    .andOn('project_tasks.tenant', '=', 'assigned_user.tenant');
+            })
             .select(
                 'project_tasks.*',
                 'project_phases.phase_name',
@@ -655,10 +672,11 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
 
         await checkPermission(currentUser, 'project', 'update');
 
-        const {knex: db} = await createTenantKnex();
+        const {knex: db, tenant} = await createTenantKnex();
         await db.transaction(async (trx: Knex.Transaction) => {
             const taskRecords = await trx('project_tasks')
                 .whereIn('task_id', tasks.map((t): string => t.taskId))
+                .andWhere('tenant', tenant!)
                 .select('task_id', 'phase_id');
 
             if (taskRecords.length !== tasks.length) {
@@ -673,6 +691,7 @@ export async function reorderTasksInStatus(tasks: { taskId: string, newWbsCode: 
             await Promise.all(tasks.map(({taskId, newWbsCode}): Promise<number> =>
                 trx('project_tasks')
                     .where('task_id', taskId)
+                    .andWhere('tenant', tenant!)
                     .update({
                         wbs_code: newWbsCode,
                         updated_at: trx.fn.now()

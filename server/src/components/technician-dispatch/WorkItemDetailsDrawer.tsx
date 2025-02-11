@@ -156,7 +156,6 @@ export function WorkItemDetailsDrawer({
                         <div className="h-full">
                             {currentUser && (
                             <EntryPopup
-                                slot={null}
                                 canAssignMultipleAgents={true}
                                 users={users}
                                 currentUserId={currentUser.user_id}
