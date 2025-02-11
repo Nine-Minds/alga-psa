@@ -146,9 +146,10 @@ const ProjectTaskModel = {
 
   getTaskById: async (taskId: string): Promise<IProjectTask | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const task = await db<IProjectTask>('project_tasks')
         .where('task_id', taskId)
+        .andWhere('tenant', tenant!)
         .first();
       return task || null;
     } catch (error) {
@@ -159,11 +160,20 @@ const ProjectTaskModel = {
 
   deleteTask: async (taskId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
-        await trx('task_resources').where('task_id', taskId).del();
-        await trx('task_checklist_items').where('task_id', taskId).del();
-        await trx<IProjectTask>('project_tasks').where('task_id', taskId).del();
+        await trx('task_resources')
+          .where('task_id', taskId)
+          .andWhere('tenant', tenant!)
+          .del();
+        await trx('task_checklist_items')
+          .where('task_id', taskId)
+          .andWhere('tenant', tenant!)
+          .del();
+        await trx<IProjectTask>('project_tasks')
+          .where('task_id', taskId)
+          .andWhere('tenant', tenant!)
+          .del();
       });
     } catch (error) {
       console.error('Error deleting task:', error);
@@ -273,25 +283,32 @@ const ProjectTaskModel = {
   },
 
   deleteChecklistItem: async (checklistItemId: string): Promise<void> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     await db('task_checklist_items')
-      .where({ checklist_item_id: checklistItemId })
+      .where({
+        checklist_item_id: checklistItemId,
+        tenant: tenant!
+      })
       .delete();
   },
 
   getChecklistItems: async (taskId: string): Promise<ITaskChecklistItem[]> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const items = await db('task_checklist_items')
-      .where({ task_id: taskId })
+      .where({
+        task_id: taskId,
+        tenant: tenant!
+      })
       .orderBy('order_number', 'asc');
     return items;
   },
 
   deleteChecklistItems: async (taskId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db('task_checklist_items')
         .where('task_id', taskId)
+        .andWhere('tenant', tenant!)
         .delete();
     } catch (error) {
       console.error('Error deleting checklist items:', error);
@@ -301,7 +318,7 @@ const ProjectTaskModel = {
 
   getAllTaskChecklistItems: async (projectId: string): Promise<{ [taskId: string]: ITaskChecklistItem[] }> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const items = await db('task_checklist_items')
         .join('project_tasks', function() {
           this.on('task_checklist_items.task_id', 'project_tasks.task_id')
@@ -312,6 +329,7 @@ const ProjectTaskModel = {
               .andOn('project_tasks.tenant', 'project_phases.tenant')
         })
         .where('project_phases.project_id', projectId)
+        .andWhere('task_checklist_items.tenant', tenant!)
         .orderBy('task_checklist_items.order_number', 'asc')
         .select('task_checklist_items.*');
 
@@ -335,6 +353,7 @@ const ProjectTaskModel = {
       
       const task = await db('project_tasks')
         .where('task_id', taskId)
+        .andWhere('tenant', tenant!)
         .first();
       
       if (!task) {
@@ -356,9 +375,10 @@ const ProjectTaskModel = {
 
   removeTaskResource: async (assignmentId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db('task_resources')
         .where('assignment_id', assignmentId)
+        .andWhere('tenant', tenant!)
         .del();
     } catch (error) {
       console.error('Error removing task resource:', error);
@@ -407,7 +427,8 @@ const ProjectTaskModel = {
           project_id: projectId,
           phase_id: phaseId,
           task_id: taskId,
-          ticket_id: ticketId
+          ticket_id: ticketId,
+          tenant: tenant!
         })
         .first();
 
@@ -463,9 +484,10 @@ const ProjectTaskModel = {
 
   deleteTaskTicketLink: async (linkId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db<IProjectTicketLink>('project_ticket_links')
         .where('link_id', linkId)
+        .andWhere('tenant', tenant!)
         .del();
     } catch (error) {
       console.error('Error deleting ticket link:', error);
@@ -475,9 +497,10 @@ const ProjectTaskModel = {
 
   updateTaskTicketLink: async (linkId: string, updateData: { project_id: string; phase_id: string }): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db('project_ticket_links')
         .where('link_id', linkId)
+        .andWhere('tenant', tenant!)
         .update(updateData);
     } catch (error) {
       console.error('Error updating task ticket link:', error);

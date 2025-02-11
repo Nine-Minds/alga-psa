@@ -119,12 +119,13 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       tenantId
     });
 
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     
     logger.info('[ProjectEmailSubscriber] Fetching project details');
     
     // Get project details with debug logging
     const query = db('projects as p')
+      .where('p.tenant', tenant!)
       .select(
         'p.*',
         'c.email as company_email',
@@ -177,7 +178,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenantId
+          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -269,9 +270,10 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
 
   // Check if the status change indicates the project is being closed
   if (changes?.status) {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     const status = await db('statuses')
       .where('status_id', changes.status)
+      .andWhere('tenant', tenant!)
       .first();
     
     if (status?.is_closed) {
@@ -289,10 +291,11 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
   }
 
   try {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     
     // Get project details with debug logging
     const query = db('projects as p')
+      .where('p.tenant', tenant!)
       .select(
         'p.*',
         'c.email as company_email',
@@ -345,7 +348,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenantId
+          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -429,7 +432,8 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
     const updater = await db('users')
       .where({
         user_id: payload.userId,
-        is_inactive: false
+        is_inactive: false,
+        tenant: tenant!
       })
       .first();
 
@@ -471,7 +475,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
   const { tenantId } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     
     // Get project details with debug logging
     const query = db('projects as p')
@@ -527,7 +531,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       const contact = await db('contacts')
         .where({
           contact_name_id: project.contact_name_id,
-          tenant: tenantId
+          tenant: tenant!
         })
         .first();
       logger.info('[ProjectEmailSubscriber] Direct contact lookup:', {
@@ -625,7 +629,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
   const { tenantId, assignedTo } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     
     // Get project and user details
     const query = db('projects as p')
@@ -726,7 +730,7 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
   const { tenantId, assignedTo, additionalUsers = [] } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     
     // Get task, project and user details
     const query = db('project_tasks as t')

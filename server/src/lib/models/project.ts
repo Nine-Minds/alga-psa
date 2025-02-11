@@ -7,9 +7,10 @@ import { createTenantKnex } from '@/lib/db';
 const ProjectModel = {
   updatePhase: async (phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const [updatedPhase] = await db<IProjectPhase>('project_phases')
         .where('phase_id', phaseId)
+        .andWhere('tenant', tenant!)
         .update({
           ...phaseData,
           updated_at: db.fn.now()
@@ -24,8 +25,9 @@ const ProjectModel = {
 
   getAll: async (includeInactive: boolean = false): Promise<IProject[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       let query = db<IProject>('projects')
+        .where('projects.tenant', tenant!)
         .select(
           'projects.*', 
           'companies.company_name as client_name',
@@ -66,8 +68,9 @@ const ProjectModel = {
 
   getById: async (projectId: string): Promise<IProject | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const project = await db<IProject>('projects')
+        .where('projects.tenant', tenant!)
         .select(
           'projects.*', 
           'companies.company_name as client_name',
@@ -105,9 +108,10 @@ const ProjectModel = {
 
   getStatusesByType: async (statusType: ItemType): Promise<IStatus[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const statuses = await db<IStatus>('statuses')
         .where('status_type', statusType)
+        .andWhere('tenant', tenant!)
         .orderBy('order_number');
       return statuses;
     } catch (error) {
@@ -170,9 +174,9 @@ const ProjectModel = {
 
   update: async (projectId: string, projectData: Partial<IProject> & Record<string, any>): Promise<IProject> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       // Remove derived and joined fields before update
-      const { 
+      const {
         status_name, 
         is_closed, 
         client_name,
@@ -228,11 +232,12 @@ const ProjectModel = {
 
   delete: async (projectId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
         // First, get all phases for this project
         const phases = await trx('project_phases')
           .where('project_id', projectId)
+          .andWhere('tenant', tenant!)
           .select('phase_id');
         
         const phaseIds = phases.map((phase): string => phase.phase_id);
@@ -240,11 +245,13 @@ const ProjectModel = {
         // Delete checklist items for all tasks in all phases
         if (phaseIds.length > 0) {
           await trx('task_checklist_items')
-            .whereIn('task_id', 
+            .whereIn('task_id',
               trx('project_tasks')
                 .select('task_id')
                 .whereIn('phase_id', phaseIds)
+                .andWhere('tenant', tenant!)
             )
+            .andWhere('tenant', tenant!)
             .del();
         }
 
@@ -252,27 +259,32 @@ const ProjectModel = {
         if (phaseIds.length > 0) {
           await trx('project_tasks')
             .whereIn('phase_id', phaseIds)
+            .andWhere('tenant', tenant!)
             .del();
         }
 
         // Delete project ticket links
         await trx('project_ticket_links')
           .where('project_id', projectId)
+          .andWhere('tenant', tenant!)
           .del();
 
         // Delete all phases
         await trx('project_phases')
           .where('project_id', projectId)
+          .andWhere('tenant', tenant!)
           .del();
 
         // Delete project status mappings
         await trx('project_status_mappings')
           .where('project_id', projectId)
+          .andWhere('tenant', tenant!)
           .del();
         
         // Finally, delete the project
         await trx('projects')
           .where('project_id', projectId)
+          .andWhere('tenant', tenant!)
           .del();
       });
     } catch (error) {
@@ -283,9 +295,10 @@ const ProjectModel = {
 
   getStandardStatusesByType: async (itemType: ItemType): Promise<IStandardStatus[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const standardStatuses = await db<IStandardStatus>('standard_statuses')
         .where('item_type', itemType)
+        .andWhere('tenant', tenant!)
         .orderBy('display_order');
       return standardStatuses;
     } catch (error) {
@@ -314,9 +327,10 @@ const ProjectModel = {
 
   getProjectStatusMappings: async (projectId: string): Promise<IProjectStatusMapping[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const mappings = await db<IProjectStatusMapping>('project_status_mappings')
         .where('project_id', projectId)
+        .andWhere('tenant', tenant!)
         .orderBy('display_order');
       return mappings;
     } catch (error) {
@@ -327,9 +341,10 @@ const ProjectModel = {
 
   getStandardStatus: async (standardStatusId: string): Promise<IStandardStatus | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const standardStatus = await db<IStandardStatus>('standard_statuses')
         .where('standard_status_id', standardStatusId)
+        .andWhere('tenant', tenant!)
         .first();
       return standardStatus || null;
     } catch (error) {
@@ -340,9 +355,10 @@ const ProjectModel = {
 
   getCustomStatus: async (statusId: string): Promise<IStatus | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const customStatus = await db<IStatus>('statuses')
         .where('status_id', statusId)
+        .andWhere('tenant', tenant!)
         .first();
       return customStatus || null;
     } catch (error) {
@@ -421,10 +437,11 @@ const ProjectModel = {
 
   updateProjectStatus: async (statusId: string, statusData: Partial<IStatus>, mappingData: Partial<IProjectStatusMapping>): Promise<IStatus> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       return await db.transaction(async (trx: Knex.Transaction) => {
         const [updatedStatus] = await trx<IStatus>('statuses')
           .where('status_id', statusId)
+          .andWhere('tenant', tenant!)
           .update({
             ...statusData
           })
@@ -433,6 +450,7 @@ const ProjectModel = {
         if (mappingData) {
           await trx<IProjectStatusMapping>('project_status_mappings')
             .where('status_id', statusId)
+            .andWhere('tenant', tenant!)
             .update(mappingData);
         }
 
@@ -446,7 +464,7 @@ const ProjectModel = {
 
   deleteProjectStatus: async (statusId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
         // First, check if the status is being used by any tasks
         const tasksUsingStatus = await trx<IProjectTask>('project_tasks')
@@ -459,10 +477,12 @@ const ProjectModel = {
 
         await trx<IProjectStatusMapping>('project_status_mappings')
           .where('status_id', statusId)
+          .andWhere('tenant', tenant!)
           .del();
 
         await trx<IStatus>('statuses')
           .where('status_id', statusId)
+          .andWhere('tenant', tenant!)
           .del();
       });
     } catch (error) {
@@ -473,9 +493,10 @@ const ProjectModel = {
 
   getPhases: async (projectId: string): Promise<IProjectPhase[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const phases = await db<IProjectPhase>('project_phases')
         .where('project_id', projectId)
+        .andWhere('tenant', tenant!)
         .orderBy('wbs_code');
       // Sort phases by numeric values in WBS code
       return phases.sort((a, b) => {
@@ -500,9 +521,10 @@ const ProjectModel = {
 
   getPhaseById: async (phaseId: string): Promise<IProjectPhase | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const phase = await db<IProjectPhase>('project_phases')
         .where('phase_id', phaseId)
+        .andWhere('tenant', tenant!)
         .first();
       return phase || null;
     } catch (error) {
@@ -513,7 +535,7 @@ const ProjectModel = {
 
   updateStructure: async (projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx) => {
         for (const phase of updates.phases) {
           if (!phase.phase_id) {
@@ -523,6 +545,7 @@ const ProjectModel = {
           const { wbs_code, ...phaseUpdate } = phase;
           await trx('project_phases')
             .where({ project_id: projectId, phase_id: phase.phase_id })
+            .andWhere('tenant', tenant!)
             .update({
               ...phaseUpdate,
               updated_at: trx.fn.now()
@@ -536,6 +559,7 @@ const ProjectModel = {
           const { wbs_code, ...taskUpdate } = task;
           await trx('project_tasks')
             .where({ task_id: task.task_id })
+            .andWhere('tenant', tenant!)
             .update({
               ...taskUpdate,
               updated_at: trx.fn.now()
@@ -550,12 +574,13 @@ const ProjectModel = {
 
   generateNextWbsCode: async (parentWbsCode: string): Promise<string> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       
       // If no parent code, get next project number
       if (!parentWbsCode) {
         const projects = await db('projects')
           .whereNot('wbs_code', '')
+          .andWhere('tenant', tenant!)
           .select('wbs_code');
         
         if (projects.length === 0) return '1';
@@ -574,6 +599,7 @@ const ProjectModel = {
       if (parts.length === 1) {
         const phases = await db('project_phases')
           .where('wbs_code', 'like', `${parentWbsCode}.%`)
+          .andWhere('tenant', tenant!)
           .select('wbs_code');
 
         if (phases.length === 0) return `${parentWbsCode}.1`;
@@ -592,6 +618,7 @@ const ProjectModel = {
       if (parts.length === 2) {
         const tasks = await db('project_tasks')
           .where('wbs_code', 'like', `${parentWbsCode}.%`)
+          .andWhere('tenant', tenant!)
           .select('wbs_code');
 
         if (tasks.length === 0) return `${parentWbsCode}.1`;
@@ -635,25 +662,28 @@ const ProjectModel = {
 
   deletePhase: async (phaseId: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db.transaction(async (trx: Knex.Transaction) => {
         // First, delete all checklist items for tasks in this phase
-        await trx('task_checklist_items')
+        await trx('task_checklist_items')        
           .whereIn('task_id', 
             trx('project_tasks')
               .select('task_id')
               .where('phase_id', phaseId)
           )
+          .andWhere('tenant', tenant!)
           .del();
 
         // Delete all tasks in the phase
         await trx('project_tasks')
           .where('phase_id', phaseId)
+          .andWhere('tenant', tenant!)
           .del();
 
         // Finally, delete the phase itself
         await trx('project_phases')
           .where('phase_id', phaseId)
+          .andWhere('tenant', tenant!)
           .del();
       });
     } catch (error) {
@@ -664,9 +694,10 @@ const ProjectModel = {
   
   getProjectStatusMapping: async (mappingId: string): Promise<IProjectStatusMapping | null> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const mapping = await db<IProjectStatusMapping>('project_status_mappings')
         .where('project_status_mapping_id', mappingId)
+        .andWhere('tenant', tenant!)
         .first();
       return mapping || null;
     } catch (error) {
