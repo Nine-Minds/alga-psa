@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Block, BlockNoteEditor, PartialBlock } from '@blocknote/core';
+import React, { useState, useEffect } from 'react';
 import { IComment, ITicket } from '../../interfaces';
 import { IDocument } from '../../interfaces/document.interface';
 import { IContact } from '../../interfaces/contact.interfaces';
 import TextEditor from '../editor/TextEditor';
+import { PartialBlock } from '@blocknote/core';
 import CommentItem from './CommentItem';
 import CustomTabs from '../ui/CustomTabs';
 import Documents from '../documents/Documents';
@@ -13,43 +13,28 @@ import styles from './TicketDetails.module.css';
 import { Button } from '@/components/ui/Button';
 import AvatarIcon from '@/components/ui/AvatarIcon';
 import { getContactByContactNameId, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId'
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-
-const DEFAULT_BLOCK: PartialBlock[] = [{
-  id: "1",
-  type: "paragraph",
-  content: "Enter your comment here...",
-}];
-
-type UserInfo = {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-  email?: string;
-  user_type: string;
-};
 
 interface TicketConversationProps {
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
   documents: IDocument[];
-  userMap: Record<string, UserInfo>;
+  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
   currentUser: { id: string; name?: string | null; email?: string | null; } | null | undefined;
-  // TODO: Remove _newCommentContent as it's unused
   activeTab: string;
   isEditing: boolean;
   currentComment: IComment | null;
   editorKey: number;
-  onNewCommentContentChange: (content: string) => void;
+  onNewCommentContentChange: (content: PartialBlock[]) => void;
   onAddNewComment: () => Promise<void>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
   onDelete: (commentId: string) => void;
-  onContentChange: (content: string) => void;
+  onContentChange: (content: PartialBlock[]) => void;
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -59,10 +44,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   documents,
   userMap,
   currentUser,
-  // _newCommentContent is unused
   activeTab,
   isEditing,
   currentComment,
+  editorKey,
   onNewCommentContentChange,
   onAddNewComment,
   onTabChange,
@@ -72,8 +57,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
 }) => {
-  const [editorKey, setEditorKey] = useState(0);
-  const editorRef = useRef<BlockNoteEditor | null>(null);
   const [contactMap, setContactMap] = useState<Record<string, IContact>>({});
   const [loadingContacts, setLoadingContacts] = useState<Record<string, boolean>>({});
   const [contacts, setContacts] = useState<IContact[]>([]);
@@ -137,13 +120,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   const handleAddNewComment = async () => {
     await onAddNewComment();
-    if (editorRef.current) {
-      editorRef.current.replaceBlocks(editorRef.current.document, DEFAULT_BLOCK);
-    }
-    setEditorKey(prev => prev + 1);
   };
 
-  const getAuthorInfo = (conversation: IComment): UserInfo | null => {
+  const getAuthorInfo = (conversation: IComment) => {
     if (conversation.author_type === 'user' && conversation.user_id) {
       return userMap[conversation.user_id] || null;
     }
@@ -161,11 +140,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     return conversation.author_type === 'contact' &&
       conversation.contact_id !== undefined &&
       loadingContacts[conversation.contact_id] === true;
-  };
-
-  const handleNewCommentContentChange = (blocks: Block[]) => {
-    const content = blocks.map((block):any => block.content).join('\n');
-    onNewCommentContentChange(content);
   };
 
   const renderComments = (comments: IComment[]): JSX.Element[] => {
@@ -262,9 +236,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 {...withDataAutomationId({ id: `${id}-editor` })}
                 key={editorKey}
                 roomName={`ticket-${ticket.ticket_id}`}
-                initialContent=""
-                onContentChange={handleNewCommentContentChange}
-                editorRef={editorRef}
+                initialContent={[]}
+                onContentChange={onNewCommentContentChange}
               >
                 {renderButtonBar()}
               </TextEditor>

@@ -1,4 +1,4 @@
-import { TicketAttributeKey, UserAttributeKey } from "@/lib/attributes/EntityAttributes";
+import { UserAttributeKey, TicketAttributeKey } from '@shared/types/attributes';
 import { TenantEntity } from './index';
 
 export interface IUser {

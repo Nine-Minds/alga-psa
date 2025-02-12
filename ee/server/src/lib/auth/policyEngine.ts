@@ -33,7 +33,8 @@ export class PolicyEngine {
   }
 
   private evaluateCondition(condition: ICondition, user: IUserWithRoles, resource: IResource): boolean {
-    const userValue = USER_ATTRIBUTES[condition.userAttribute as UserAttributeKey].getValue(user);
+    const userAttribute = condition.userAttribute as UserAttributeKey;
+    const userValue = USER_ATTRIBUTES[userAttribute].getValue(user);
     const resourceValue = resource.attributes.get(condition.resourceAttribute as string);
 
     switch (condition.operator) {
@@ -50,12 +51,12 @@ export class PolicyEngine {
       case '<=':
         return userValue <= resourceValue;
       case 'contains':
-        if (condition.userAttribute === 'roles') {
+        if (userAttribute === 'roles') {
           return (userValue as IRole[]).some(role => role.role_name === resourceValue);
         }
         return Array.isArray(userValue) && userValue.includes(resourceValue);
       case 'not contains':
-        if (condition.userAttribute === 'roles') {
+        if (userAttribute === 'roles') {
           return !(userValue as IRole[]).some(role => role.role_name === resourceValue);
         }
         return Array.isArray(userValue) && !userValue.includes(resourceValue);

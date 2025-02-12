@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from "next-auth/jwt"
+import { JWT } from 'next-auth/jwt';
+
+interface CustomToken extends JWT {
+  error?: string;
+  isNineMindsUser?: boolean;
+  roles?: string[];
+  tenant?: string;
+}
 
 export async function authorizationMiddleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET }) as CustomToken;
 
   if (!token) {
     // No token found, redirect to sign in
@@ -15,7 +23,6 @@ export async function authorizationMiddleware(req: NextRequest) {
   }
 
   // Set the tenant based on the user's token
-  // Assuming the token contains a 'tenant' field. Adjust this if your token structure is different.
   if (token && token.tenant) {
     const requestHeaders = new Headers(req.headers);
     requestHeaders.set('x-tenant-id', token.tenant.toString());
@@ -32,6 +39,14 @@ export async function authorizationMiddleware(req: NextRequest) {
     console.error('Tenant information not found in the token');
     return NextResponse.redirect(new URL('/auth/signin', req.url));
   }
+}
+
+// Create a middleware matcher configuration
+export const config = {
+  matcher: [
+    // Match all routes except public assets and api routes
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 }
 
 function getResourceTypeFromUrl(url: string): string {

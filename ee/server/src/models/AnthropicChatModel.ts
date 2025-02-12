@@ -1,7 +1,36 @@
 import { ChatModelInterface, ChatMessage } from '../interfaces/ChatModelInterface';
 import Anthropic from '@anthropic-ai/sdk';
-import { Tool, ContentBlockDeltaEvent, RawMessageStreamEvent } from '@anthropic-ai/sdk/resources/messages';
 import { write } from 'fs';
+
+interface Tool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required: string[];
+  };
+}
+
+interface ContentBlockDeltaEvent {
+  type: 'content_block_delta';
+  delta: {
+    type: 'text_delta';
+    text: string;
+  };
+}
+
+interface ContentBlockStartEvent {
+  type: 'content_block_start';
+  content_block: {
+    type: 'tool_use';
+    name: string;
+    input: any;
+    id: string;
+  };
+}
+
+type RawMessageStreamEvent = ContentBlockDeltaEvent | ContentBlockStartEvent;
 
 interface ToolUse {
   type: 'tool_use';

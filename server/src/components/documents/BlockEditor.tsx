@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useCreateBlockNote } from '@blocknote/react';
-import { BlockNoteView } from '@blocknote/mantine';
-import '@blocknote/core/fonts/inter.css';
-import '@blocknote/mantine/style.css';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
 import { getBlockContent, updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -20,7 +18,12 @@ export function BlockEditor({ documentId, userId }: BlockEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   // Initialize the editor
-  const editor = useCreateBlockNote();
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+    ],
+    content: '<p></p>',
+  });
 
   // Load the document content when component mounts
   useEffect(() => {
@@ -30,12 +33,12 @@ export function BlockEditor({ documentId, userId }: BlockEditorProps) {
         const content = await getBlockContent(documentId);
         if (content?.block_data) {
           try {
-            // Parse the JSON string into blocks
-            const blocks = JSON.parse(content.block_data);
-            // Replace the editor content with the loaded blocks
-            editor.replaceBlocks(editor.document, blocks);
+            const parsedContent = typeof content.block_data === 'string'
+              ? JSON.parse(content.block_data)
+              : content.block_data;
+            editor?.commands.setContent(parsedContent);
           } catch (parseError) {
-            console.error('Error parsing block data:', parseError);
+            console.error('Error parsing content:', parseError);
             setError('Failed to parse document content');
           }
         }
@@ -46,18 +49,22 @@ export function BlockEditor({ documentId, userId }: BlockEditorProps) {
       }
     };
 
-    loadContent();
+    if (editor) {
+      loadContent();
+    }
   }, [documentId, editor]);
 
   // Save the document content
   const handleSave = async () => {
+    if (!editor) return;
+
     try {
       setIsSaving(true);
-      // Get the current editor content and stringify
-      const blocks = editor.document;
+      // Get the current editor content as JSON
+      const content = editor.getJSON();
       
       await updateBlockContent(documentId, {
-        block_data: JSON.stringify(blocks),
+        block_data: JSON.stringify(content),
         user_id: userId
       });
     } catch (err) {
@@ -92,7 +99,7 @@ export function BlockEditor({ documentId, userId }: BlockEditorProps) {
           Loading...
         </div>
       ) : (
-        <BlockNoteView editor={editor} />
+        <EditorContent editor={editor} />
       )}
     </Card>
   );

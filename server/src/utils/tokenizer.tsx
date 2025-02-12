@@ -1,27 +1,30 @@
-import jwt, { TokenExpiredError, JsonWebTokenError, NotBeforeError } from 'jsonwebtoken'; 
+import jwt, { TokenExpiredError, JsonWebTokenError, NotBeforeError, SignOptions, Secret } from 'jsonwebtoken'; 
 
 import { IUserRegister, TokenResponse } from '@/interfaces'; 
 
 import logger from '@/utils/logger';
 
 
-const secretKey = process.env.SECRET_KEY || 'default';
-const token_expires = process.env.TOKEN_EXPIRES || '1h';
+const secretKey: Secret = process.env.SECRET_KEY || 'default';
 
 
-export function createToken(userRegister: IUserRegister ) {
+export function createToken(userRegister: IUserRegister) {
     logger.system('Creating token');
     const { username, email, password, companyName } = userRegister;
 
-    const token = jwt.sign({ username, email, password, companyName }, secretKey, {
-        expiresIn: token_expires, 
-    });
+    const token = jwt.sign(
+        { username, email, password, companyName },
+        secretKey,
+        { 
+            expiresIn: process.env.TOKEN_EXPIRES ? parseInt(process.env.TOKEN_EXPIRES) : 3600 // 1 hour in seconds
+        }
+    );
 
     return token;
 }
 
 
-export function getInfoFromToken(token: string): TokenResponse{
+export function getInfoFromToken(token: string): TokenResponse {
     try {
         logger.system('Getting user info from token');
         const decoded = jwt.verify(token, secretKey) as IUserRegister;

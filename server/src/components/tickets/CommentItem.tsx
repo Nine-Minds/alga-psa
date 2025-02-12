@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Block } from '@blocknote/core';
 import TextEditor from '../editor/TextEditor';
+import { PartialBlock } from '@blocknote/core';
 import ReactMarkdown from 'react-markdown';
 import { Pencil2Icon, TrashIcon } from '@radix-ui/react-icons';
 import AvatarIcon from '@/components/ui/AvatarIcon';
@@ -32,14 +32,14 @@ interface CommentItemProps {
   userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
   contacts: IContact[];
   companyId?: string;
-  onContentChange: (content: string) => void;
+  onContentChange: (content: PartialBlock[]) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
   onEdit: (conversation: IComment) => void;
   onDelete: (commentId: string) => void;
 }
 
-  const CommentItem: React.FC<CommentItemProps> = ({
+const CommentItem: React.FC<CommentItemProps> = ({
   id,
   conversation,
   user,
@@ -61,7 +61,19 @@ interface CommentItemProps {
   const [selectedUserId, setSelectedUserId] = useState(conversation.user_id || '');
   const [selectedContactId, setSelectedContactId] = useState(conversation.contact_id || '');
   const [isContactPickerOpen, setIsContactPickerOpen] = useState(false);
-  const [editedContent, setEditedContent] = useState(conversation.note || '');
+  const [editedContent, setEditedContent] = useState<PartialBlock[]>([{
+    type: "paragraph",
+    props: {
+      textAlignment: "left",
+      backgroundColor: "default",
+      textColor: "default"
+    },
+    content: [{
+      type: "text",
+      text: conversation.note || '',
+      styles: {}
+    }]
+  }]);
 
   const commentId = useMemo(() => 
     conversation.comment_id || currentComment?.comment_id || id || 'unknown',
@@ -114,7 +126,7 @@ interface CommentItemProps {
   const handleSave = () => {
     const updates: Partial<IComment> = {
       author_type: authorType,
-      note: editedContent,
+      note: JSON.stringify(editedContent),
     };
 
     if (authorType === 'user' && selectedUserId) {
@@ -128,10 +140,9 @@ interface CommentItemProps {
     onSave(updates);
   };
 
-  const handleContentChange = (blocks: Block[]) => {
-    const content = blocks.map((block):any => block.content).join('\n');
-    setEditedContent(content);
-    onContentChange(content);
+  const handleContentChange = (blocks: PartialBlock[]) => {
+    setEditedContent(blocks);
+    onContentChange(blocks);
   };
 
   const selectedContact = contacts.find(c => c.contact_name_id === selectedContactId);
@@ -162,8 +173,7 @@ interface CommentItemProps {
                 label="Select User"
                 value={selectedUserId}
                 onValueChange={setSelectedUserId}
-                users={Object.entries(userMap).map(([id, user]): IUserWithRoles => {
-                  return {
+                users={Object.entries(userMap).map(([id, user]): IUserWithRoles => ({
                   user_id: id,
                   username: id,
                   first_name: user.first_name,
@@ -177,8 +187,7 @@ interface CommentItemProps {
                   two_factor_enabled: false,
                   is_google_user: false,
                   user_type: user.user_type
-                  };
-                })}
+                }))}
               />
             ) : (
               <div>

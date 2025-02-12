@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { 
-    ITicket, 
-    IComment, 
-    ITimeSheet, 
+import {
+    ITicket,
+    IComment,
+    ITimeSheet,
     ITimePeriod,
-    ITimePeriodView, 
-    ITimeEntry, 
-    ICompany, 
-    IContact, 
-    IUser, 
-    IUserWithRoles, 
-    ITeam, 
-    ITicketResource 
+    ITimePeriodView,
+    ITimeEntry,
+    ICompany,
+    IContact,
+    IUser,
+    IUserWithRoles,
+    ITeam,
+    ITicketResource
 } from '../../interfaces';
 import TicketInfo from './TicketInfo';
 import TicketProperties from './TicketProperties';
@@ -39,6 +39,7 @@ import { addTicketResource, getTicketResources, removeTicketResource } from '../
 import TechnicianDispatchDashboard from '../technician-dispatch/TechnicianDispatchDashboard';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import TimeEntryDialog from '@/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { PartialBlock, StyledText } from '@blocknote/core';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -73,7 +74,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>>({});
 
-    const [newCommentContent, setNewCommentContent] = useState('');
+    const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
+        type: "paragraph",
+        props: {
+            textAlignment: "left",
+            backgroundColor: "default",
+            textColor: "default"
+        },
+        content: [{
+            type: "text",
+            text: "",
+            styles: {}
+        }]
+    }]);
     const [activeTab, setActiveTab] = useState('Comments');
     const [isEditing, setIsEditing] = useState(false);
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
@@ -317,7 +330,23 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [editorKey, setEditorKey] = useState(0);
 
     const handleAddNewComment = async () => {
-        if (!newCommentContent.trim()) {
+        // Check if content is empty
+        const contentStr = JSON.stringify(newCommentContent);
+        const hasContent = contentStr !== JSON.stringify([{
+            type: "paragraph",
+            props: {
+                textAlignment: "left",
+                backgroundColor: "default",
+                textColor: "default"
+            },
+            content: [{
+                type: "text",
+                text: "",
+                styles: {}
+            }]
+        }]);
+
+        if (!hasContent) {
             console.log("Cannot add empty note");
             return;
         }
@@ -330,7 +359,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
             const newComment: Omit<IComment, 'tenant'> = {
                 ticket_id: ticket.ticket_id || '',
-                note: newCommentContent,
+                note: JSON.stringify(newCommentContent),
                 user_id: userId,
                 author_type: 'user',
                 is_internal: activeTab === 'Internal',
@@ -348,7 +377,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
     
                 setConversations(prevConversations => [...prevConversations, newlyCreatedComment]);
-                setNewCommentContent('');
+                setNewCommentContent([{
+                    type: "paragraph",
+                    props: {
+                        textAlignment: "left",
+                        backgroundColor: "default",
+                        textColor: "default"
+                    },
+                    content: [{
+                        type: "text",
+                        text: "",
+                        styles: {}
+                    }]
+                }]);
                 console.log("New note added successfully");
             }
         } catch (error) {
@@ -400,9 +441,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleContentChange = (content: string) => {
+    const handleContentChange = (blocks: PartialBlock[]) => {
         if (currentComment) {
-            setCurrentComment({ ...currentComment, note: content });
+            setCurrentComment({ ...currentComment, note: JSON.stringify(blocks) });
         }
     };
 

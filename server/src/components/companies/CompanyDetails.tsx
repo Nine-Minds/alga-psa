@@ -1,10 +1,11 @@
-'use client'
+'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { ICompany } from '@/interfaces/company.interfaces';
+import React, { useState, useEffect } from 'react';
 import { IDocument } from '@/interfaces/document.interface';
-import Documents from '@/components/documents/Documents';
+import { PartialBlock } from '@blocknote/core';
 import { IContact } from '@/interfaces/contact.interfaces';
+import { BillingCycleType } from '@/interfaces/billing.interfaces';
+import Documents from '@/components/documents/Documents';
 import Contacts from '@/components/contacts/Contacts';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from '@/components/ui/Switch';
@@ -22,28 +23,47 @@ import TimezonePicker from '@/components/ui/TimezonePicker';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-
 import CompanyAssets from './CompanyAssets';
-import TextEditor from '@/components/editor/TextEditor';
-import { Block } from '@blocknote/core';
-import DocumentSelector from '@/components/documents/DocumentSelector';
+import TextEditor from '../editor/TextEditor';
 import { ITicket } from '@/interfaces';
-import { 
-  addDocument, 
-  createDocumentAssociations
-} from '@/lib/actions/document-actions/documentActions';
-import { updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 
-interface CompanyDetailsProps {
-  id?: string; // Made optional to maintain backward compatibility
-  company: ICompany;
-  documents?: IDocument[];
-  contacts?: IContact[];
-  isInDrawer?: boolean;
+interface ICompany {
+  company_id: string;
+  company_name: string;
+  notes_document_id?: string | null;
+  properties?: {
+    account_manager_name?: string;
+    industry?: string;
+    website?: string;
+    company_size?: string;
+    annual_revenue?: string;
+    tax_id?: string;
+    payment_terms?: string;
+    parent_company_name?: string;
+    last_contact_date?: string;
+  };
+  phone_no: string;
+  email: string;
+  address: string;
+  is_inactive: boolean;
+  timezone?: string;
+  tenant?: string;
+  credit_balance: number;
+  url: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string;
+  status?: string;
+  billing_cycle: BillingCycleType;
+  is_tax_exempt: boolean;
 }
 
-const SwitchDetailItem: React.FC<{ 
-  value: boolean; 
+const SwitchDetailItem: React.FC<{
+  value: boolean;
   onEdit: (value: boolean) => void;
 }> = ({ value, onEdit }) => {
   return (
@@ -66,9 +86,9 @@ const SwitchDetailItem: React.FC<{
   );
 };
 
-const TextDetailItem: React.FC<{ 
-  label: string; 
-  value: string; 
+const TextDetailItem: React.FC<{
+  label: string;
+  value: string;
   onEdit: (value: string) => void;
 }> = ({ label, value, onEdit }) => {
   const [localValue, setLocalValue] = useState(value);
@@ -93,10 +113,18 @@ const TextDetailItem: React.FC<{
   );
 };
 
-const CompanyDetails: React.FC<CompanyDetailsProps> = ({ 
+interface CompanyDetailsProps {
+  id?: string;
+  company: ICompany;
+  documents?: IDocument[];
+  contacts?: IContact[];
+  isInDrawer?: boolean;
+}
+
+const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   id = 'company-details',
-  company, 
-  documents = [], 
+  company,
+  documents = [],
   contacts = [],
   isInDrawer = false
 }) => {
@@ -107,12 +135,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
-  const [currentNoteBlocks, setCurrentNoteBlocks] = useState<Block[]>([]);
+  const [currentContent, setCurrentContent] = useState<PartialBlock[]>([]); // Direct PartialBlock[] array
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const drawer = useDrawer();
-
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -171,10 +198,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const handleBillingConfigSave = async (updatedBillingConfig: Partial<ICompany>) => {
     try {
       const updatedCompany = await updateCompany(company.company_id, updatedBillingConfig);
-      // Update state by explicitly handling each field to ensure nulls are properly handled
       setEditedCompany(prevCompany => {
         const newCompany = { ...prevCompany };
-        // Only update fields that are present in updatedCompany
         Object.keys(updatedBillingConfig).forEach(key => {
           (newCompany as any)[key] = (updatedCompany as any)[key];
         });
@@ -196,78 +221,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         index === self.findIndex((t) => t.interaction_id === interaction.interaction_id)
       );
     });
-  }
-
-  const handleCreateNewNoteDocument = async () => {
-    try {
-      if (!currentUser?.user_id) {
-        console.error('No user ID available');
-        return;
-      }
-
-      const documentInput = {
-        document_name: `${editedCompany.company_name} - Notes`,
-        user_id: currentUser.user_id,
-        created_by: currentUser.user_id,
-        type_id: null,
-        order_number: 0,
-        tenant: editedCompany.tenant
-      };
-
-      const result = await addDocument(documentInput);
-      if (result._id) {
-        // Create document association
-        await createDocumentAssociations(
-          company.company_id,
-          'company',
-          [result._id]
-        );
-        
-        // Initialize empty block content
-        await updateBlockContent(result._id, {
-          block_data: [{
-            type: "paragraph",
-            content: [{
-              type: "text",
-              text: "",
-              styles: {}
-            }],
-            props: {
-              textAlignment: "left",
-              backgroundColor: "default",
-              textColor: "default"
-            }
-          }],
-          user_id: currentUser.user_id
-        });
-        
-        // Update company with the new note document
-        await handleDocumentSelected({
-          document_id: result._id,
-          ...documentInput
-        } as IDocument);
-      }
-    } catch (error) {
-      console.error('Error creating new note document:', error);
-    }
   };
 
-  const handleDocumentCreated = async (): Promise<void> => {
-    // Handle the newly created document if needed
-    console.log('New document created');
-  };
-
-  const handleDocumentSelected = async (document: IDocument) => {
-    try {
-      await updateCompany(company.company_id, { notes_document_id: document.document_id });
-      setIsDocumentSelectorOpen(false);
-      setEditedCompany(prev => ({
-        ...prev,
-        notes_document_id: document.document_id
-      }));
-    } catch (error) {
-      console.error('Error updating company notes document:', error);
-    }
+  const handleContentChange = (blocks: PartialBlock[]) => {
+    setCurrentContent(blocks);
+    setHasUnsavedNoteChanges(true);
   };
 
   const handleTabChange = async (tabValue: string) => {
@@ -281,13 +239,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          <TextDetailItem 
-            label="Client Name" 
+          <TextDetailItem
+            label="Client Name"
             value={editedCompany.company_name}
             onEdit={(value) => handleFieldChange('company_name', value)}
           />
-          <TextDetailItem 
-            label="Account Manager" 
+          <TextDetailItem
+            label="Account Manager"
             value={editedCompany.properties?.account_manager_name || ''}
             onEdit={(value) => handleFieldChange('properties.account_manager_name', value)}
           />
@@ -298,57 +256,57 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               <Text size="2" className="text-gray-500">Someone who you should contact if problems occur</Text>
             </div>
           </div>
-          <TextDetailItem 
-            label="Industry" 
+          <TextDetailItem
+            label="Industry"
             value={editedCompany.properties?.industry || ''}
             onEdit={(value) => handleFieldChange('properties.industry', value)}
           />
-          <TextDetailItem 
-            label="Phone" 
+          <TextDetailItem
+            label="Phone"
             value={editedCompany.phone_no || ''}
             onEdit={(value) => handleFieldChange('phone_no', value)}
           />
-          <TextDetailItem 
-            label="Email" 
+          <TextDetailItem
+            label="Email"
             value={editedCompany.email || ''}
             onEdit={(value) => handleFieldChange('email', value)}
           />
-          <TextDetailItem 
-            label="Website" 
+          <TextDetailItem
+            label="Website"
             value={editedCompany.properties?.website || ''}
             onEdit={(value) => handleFieldChange('properties.website', value)}
           />
-          <TextDetailItem 
-            label="Address" 
+          <TextDetailItem
+            label="Address"
             value={editedCompany.address || ''}
             onEdit={(value) => handleFieldChange('address', value)}
           />
-          <TextDetailItem 
-            label="Company Size" 
+          <TextDetailItem
+            label="Company Size"
             value={editedCompany.properties?.company_size || ''}
             onEdit={(value) => handleFieldChange('properties.company_size', value)}
           />
-          <TextDetailItem 
-            label="Annual Revenue" 
+          <TextDetailItem
+            label="Annual Revenue"
             value={editedCompany.properties?.annual_revenue || ''}
             onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
           />
-          <SwitchDetailItem 
-            value={editedCompany.is_inactive}
+          <SwitchDetailItem
+            value={editedCompany.is_inactive || false}
             onEdit={(value) => handleFieldChange('is_inactive', value)}
           />
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
-            <Button 
+            <Button
               id="save-company-changes-btn"
-              onClick={handleSave} 
+              onClick={handleSave}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               Save Changes
             </Button>
-            <Button 
+            <Button
               id="add-ticket-btn"
-              onClick={() => setIsQuickAddTicketOpen(true)} 
+              onClick={() => setIsQuickAddTicketOpen(true)}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
             >
               Add Ticket
@@ -366,8 +324,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     {
       label: "Billing",
       content: (
-        <BillingConfiguration 
-          company={editedCompany} 
+        <BillingConfiguration
+          company={editedCompany}
           onSave={handleBillingConfigSave}
           contacts={contacts}
         />
@@ -375,7 +333,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     },
     {
       label: "Contacts",
-      content: currentUser ? ( // Only render if we have the current user
+      content: currentUser ? (
         <Contacts
           initialContacts={contacts}
           companyId={company.company_id}
@@ -395,7 +353,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           userId={currentUser.user_id}
           entityId={company.company_id}
           entityType="company"
-          onDocumentCreated={handleDocumentCreated}
+          onDocumentCreated={async () => {
+            // Handle document creation if needed
+            return Promise.resolve();
+          }}
         />
       ) : (
         <div>Loading...</div>
@@ -412,39 +373,39 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       content: (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
-          <TextDetailItem 
-            label="Tax ID" 
-            value={editedCompany.properties?.tax_id ?? ""} 
-            onEdit={(value) => handleFieldChange('properties.tax_id', value)}
-          />
-          <TextDetailItem 
-            label="Payment Terms" 
-            value={editedCompany.properties?.payment_terms ?? ""} 
-            onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
-          />
-          <TextDetailItem 
-            label="Parent Company" 
-            value={editedCompany.properties?.parent_company_name ?? ""} 
-            onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
-          />
-          <div className="space-y-2">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
-            <TimezonePicker
-              value={editedCompany.timezone ?? ""}
-              onValueChange={(value) => handleFieldChange('timezone', value)}
+            <TextDetailItem
+              label="Tax ID"
+              value={editedCompany.properties?.tax_id ?? ""}
+              onEdit={(value) => handleFieldChange('properties.tax_id', value)}
             />
-          </div>
-          <TextDetailItem 
-            label="Last Contact Date" 
-            value={editedCompany.properties?.last_contact_date ?? ""} 
-            onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
-          />
+            <TextDetailItem
+              label="Payment Terms"
+              value={editedCompany.properties?.payment_terms ?? ""}
+              onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
+            />
+            <TextDetailItem
+              label="Parent Company"
+              value={editedCompany.properties?.parent_company_name ?? ""}
+              onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
+            />
+            <div className="space-y-2">
+              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+              <TimezonePicker
+                value={editedCompany.timezone ?? ""}
+                onValueChange={(value) => handleFieldChange('timezone', value)}
+              />
+            </div>
+            <TextDetailItem
+              label="Last Contact Date"
+              value={editedCompany.properties?.last_contact_date ?? ""}
+              onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
+            />
           </div>
           
           <Flex gap="4" justify="end" align="center">
-            <Button 
+            <Button
               id="save-additional-info-btn"
-              onClick={handleSave} 
+              onClick={handleSave}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
               disabled={!hasUnsavedChanges}
             >
@@ -458,59 +419,25 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Notes",
       content: (
         <div className="space-y-4">
-          {editedCompany.notes_document_id ? (
-            <>
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">
-                  {documents.find(d => d.document_id === editedCompany.notes_document_id)?.document_name || 'Notes'}
-                </h2>
-                <div className="flex gap-2">
-                  <Button 
-                    id="save-note-btn"
-                    onClick={async () => {
-                      try {
-                        if (!currentUser?.user_id) {
-                          console.error('No user ID available');
-                          return;
-                        }
-                        await updateBlockContent(editedCompany.notes_document_id!, {
-                          block_data: currentNoteBlocks,
-                          user_id: currentUser.user_id
-                        });
-                        setHasUnsavedNoteChanges(false);
-                      } catch (error) {
-                        console.error('Error saving note:', error);
-                      }
-                    }}
-                    disabled={!hasUnsavedNoteChanges}
-                    className={`text-white transition-colors ${
-                      hasUnsavedNoteChanges 
-                        ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]" 
-                        : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
-                    }`}
-                  >
-                    Save Note
-                  </Button>
-                  <Button id="change-note-document-btn" onClick={() => setIsDocumentSelectorOpen(true)}>Change Note Document</Button>
-                </div>
-              </div>
-              <TextEditor
-                documentId={editedCompany.notes_document_id}
-                onContentChange={(blocks: Block[]) => {
-                  setCurrentNoteBlocks(blocks);
-                  setHasUnsavedNoteChanges(true);
-                }}
-              />
-            </>
-          ) : (
-            <div className="space-y-4">
-              <p>No note document selected.</p>
-              <div className="flex gap-4">
-                <Button id="create-note-document-btn" onClick={handleCreateNewNoteDocument}>Create New Note Document</Button>
-                <Button id="select-existing-document-btn" onClick={() => setIsDocumentSelectorOpen(true)}>Select Existing Document</Button>
-              </div>
-            </div>
-          )}
+          <TextEditor
+            id={`${id}-editor`}
+            initialContent={currentContent}
+            onContentChange={handleContentChange}
+          />
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${id}-save-note-btn`}
+              onClick={handleSave}
+              disabled={!hasUnsavedNoteChanges}
+              className={`text-white transition-colors ${
+                hasUnsavedNoteChanges
+                  ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"
+                  : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
+              }`}
+            >
+              Save Note
+            </Button>
+          </div>
         </div>
       )
     },
@@ -518,8 +445,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Interactions",
       content: (
         <div>
-          <InteractionsFeed 
-            entityId={company.company_id} 
+          <InteractionsFeed
+            entityId={company.company_id}
             entityType="company"
             interactions={interactions}
             setInteractions={setInteractions}
@@ -540,46 +467,38 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto bg-gray-50 p-6 relative">
-      <Button
-        id="back-to-companies-btn"
-        onClick={handleBack}
-        variant="ghost"
-        size="sm"
-        className="absolute top-2 right-2 flex items-center gap-2"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        {isInDrawer ? 'Back' : 'Back to Companies'}
-      </Button>
-      <Heading size="6" className="mb-6 mt-12">{editedCompany.company_name}</Heading>
+    <ReflectionContainer id={id} label="Company Details">
+      <div className="max-w-4xl mx-auto bg-gray-50 p-6 relative">
+        <Button
+          id="back-to-companies-btn"
+          onClick={handleBack}
+          variant="ghost"
+          size="sm"
+          className="absolute top-2 right-2 flex items-center gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {isInDrawer ? 'Back' : 'Back to Companies'}
+        </Button>
+        <Heading size="6" className="mb-6 mt-12">{editedCompany.company_name}</Heading>
 
-      <CustomTabs 
-        tabs={tabContent} 
-        defaultTab={findTabLabel(searchParams?.get('tab'))}
-        onTabChange={handleTabChange}
-      />
+        <CustomTabs
+          tabs={tabContent}
+          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          onTabChange={handleTabChange}
+        />
 
-      <QuickAddTicket 
-        id={`${id}-quick-add-ticket`}
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledCompany={{
-          id: company.company_id,
-          name: company.company_name
-        }}
-      />
-
-      <DocumentSelector
-        id={`${id}-document-selector`}
-        isOpen={isDocumentSelectorOpen}
-        onClose={() => setIsDocumentSelectorOpen(false)}
-        entityId={company.company_id}
-        entityType="company"
-        singleSelect={true}
-        onDocumentSelected={handleDocumentSelected}
-      />
-    </div>
+        <QuickAddTicket
+          id={`${id}-quick-add-ticket`}
+          open={isQuickAddTicketOpen}
+          onOpenChange={setIsQuickAddTicketOpen}
+          onTicketAdded={handleTicketAdded}
+          prefilledCompany={{
+            id: company.company_id,
+            name: company.company_name
+          }}
+        />
+      </div>
+    </ReflectionContainer>
   );
 };
 

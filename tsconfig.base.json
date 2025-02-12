@@ -22,7 +22,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["server/src/*"],
-      "@ee/*": ["ee/server/src/*"]
+      "@ee/*": ["ee/server/src/*"],
+      "@shared/*": ["shared/*"]
     }
   }
 }

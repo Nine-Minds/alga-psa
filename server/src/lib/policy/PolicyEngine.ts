@@ -25,11 +25,12 @@ export class PolicyEngine {
 
   private evaluateConditions(user: IUserWithRoles, resource: any, conditions: ICondition[]): boolean {
     return conditions.every(condition => {
-      const userValue = USER_ATTRIBUTES[condition.userAttribute as UserAttributeKey].getValue(user);
-    const resourceValue = TICKET_ATTRIBUTES[condition.resourceAttribute as TicketAttributeKey].getValue(resource);
+      const userAttribute = condition.userAttribute as UserAttributeKey;
+      const userValue = USER_ATTRIBUTES[userAttribute].getValue(user);
+      const resourceValue = TICKET_ATTRIBUTES[condition.resourceAttribute as TicketAttributeKey].getValue(resource);
 
       // Special handling for roles
-      if (condition.userAttribute === 'roles') {
+      if (userAttribute === 'roles' as UserAttributeKey) {
         switch (condition.operator) {
           case 'contains':
             return (userValue as IRole[]).some(role => role.role_name === resourceValue as string);

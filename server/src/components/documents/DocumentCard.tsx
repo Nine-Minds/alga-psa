@@ -1,97 +1,142 @@
-"use client";
-import { useState } from 'react';
-import { Block } from '@blocknote/core';
+'use client';
+
+import React, { useState } from 'react';
 import { IDocument } from '@/interfaces/document.interface';
-import TextEditor from '@/components/editor/TextEditor';
-import { updateDocument } from '@/lib/actions/document-actions/documentActions';
-import { updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
+import TextEditor from '../editor/TextEditor';
+import { PartialBlock } from '@blocknote/core';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { FileText, Link2, Trash2 } from 'lucide-react';
+import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
 
 interface DocumentCardProps {
-    document: IDocument;
-    documentContent?: {
-        block_data: {
-            blocks: Block[];
-            version: number;
-            time: string;
-        };
-    };
+  id?: string;
+  document: IDocument;
+  onDelete?: () => void;
+  onDisassociate?: () => void;
+  showDisassociate?: boolean;
+  onClick?: () => void;
+  isContentDocument?: boolean;
 }
 
-const DocumentCard = ({ document, documentContent }: DocumentCardProps) => {
-    const roomName = "document-room-" + document.document_id;
-    const [isEditorOpen, setIsEditorOpen] = useState(false);
+const DocumentCard: React.FC<DocumentCardProps> = ({
+  id = 'document-card',
+  document,
+  onDelete,
+  onDisassociate,
+  showDisassociate = false,
+  onClick,
+  isContentDocument = false
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(document.document_name);
+  const [editedContent, setEditedContent] = useState<PartialBlock[]>([]);
 
-    // Turn date into Month Day, Year format
-    const formatDate = (date: Date | undefined) => {
-        if (!date) return "";
-        return new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const handleSave = async () => {
+    // Save logic here
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedName(document.document_name);
+    setEditedContent([]);
+    setIsEditing(false);
+  };
+
+  const handleContentChange = (blocks: PartialBlock[]) => {
+    setEditedContent(blocks);
+  };
+
+  const renderContent = () => {
+    if (isEditing) {
+      return (
+        <div className="space-y-4">
+          <Input
+            data-automation-id={`${id}-name-input`}
+            type="text"
+            value={editedName}
+            onChange={(e) => setEditedName(e.target.value)}
+            className="w-full"
+          />
+          <TextEditor
+            id={`${id}-editor`}
+            initialContent={editedContent}
+            onContentChange={handleContentChange}
+          />
+          <div className="flex justify-end space-x-2">
+            <Button
+              id={`${id}-save-btn`}
+              data-automation-id={`${id}-save-btn`}
+              onClick={handleSave}
+              className="bg-green-500 hover:bg-green-600 text-white"
+            >
+              Save
+            </Button>
+            <Button
+              id={`${id}-cancel-btn`}
+              data-automation-id={`${id}-cancel-btn`}
+              onClick={handleCancel}
+              variant="outline"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      );
     }
-
-    const handleEditorToggle = () => {
-        setIsEditorOpen(!isEditorOpen);
-    }
-
-    // Save document content
-    const handleContentChange = async (blocks: Block[]) => {
-        try {
-            if (document.document_id && document) {
-                // Update document with edited_by field
-                await updateDocument(document.document_id, {
-                    edited_by: document.user_id
-                });
-
-                // Update document content with block format
-                await updateBlockContent(document.document_id, {
-                    block_data: {
-                        blocks,
-                        version: 1,
-                        time: new Date().toISOString()
-                    },
-                    user_id: document.user_id
-                });
-            }
-        } catch (error) {
-            console.error('Error saving document:', error);
-        }
-    };
 
     return (
-        <div key={document.document_id} className="rounded overflow-hidden">
-            <button onClick={handleEditorToggle} className="w-full text-left">
-                {/* Document image */}
-                <div className="h-40 bg-gray-200 relative">
-                    {/* <Image
-                        src="/images/avatar-purple-background.png"
-                        alt="Document"
-                        layout="fill"
-                        objectFit="cover"
-                    /> */}
-                </div>
-
-                {/* Document details */}
-                <div className="py-4">
-                    <div className="text-sm text-gray-500 mb-1">Collaborative document</div>
-                    <h3 className="text-md font-semibold mb-1">{document.document_name}</h3>
-                    <div className="text-sm">
-                        <span className="text-gray-600 font-medium me-2">{document.createdByFullName}</span>
-                        <span className="text-gray-500">{formatDate(document.entered_at)}</span>
-                    </div>
-                </div>
-            </button>
-
-            {/* Editor */}
-            {isEditorOpen &&
-                <div className="mt-4 max-h-96 overflow-y-scroll overflow-x-hidden">
-                    <TextEditor
-                        key={"document-" + document.document_id}
-                        roomName={roomName}
-                        initialContent={documentContent?.block_data?.blocks || []}
-                        onContentChange={handleContentChange}
-                    />
-                </div>
-            }
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <FileText className="w-5 h-5 text-gray-500" />
+          <div>
+            <h3 className="text-sm font-medium text-gray-900">{document.document_name}</h3>
+            <p className="text-sm text-gray-500">
+              {document.entered_at ? new Date(document.entered_at).toLocaleDateString() : 'No date'}
+            </p>
+          </div>
         </div>
+        <div className="flex space-x-2">
+          {onDelete && (
+            <Button
+              id={`${id}-delete-btn`}
+              data-automation-id={`${id}-delete-btn`}
+              onClick={onDelete}
+              variant="ghost"
+              className="text-red-600 hover:text-red-800"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+          {showDisassociate && onDisassociate && (
+            <Button
+              id={`${id}-disassociate-btn`}
+              data-automation-id={`${id}-disassociate-btn`}
+              onClick={onDisassociate}
+              variant="ghost"
+              className="text-gray-600 hover:text-gray-800"
+            >
+              <Link2 className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
+      </div>
     );
+  };
+
+  return (
+    <ReflectionContainer id={id} label="Document Card">
+      <Card
+        data-automation-id={`${id}-container`}
+        className={`p-4 ${onClick && !isEditing ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+        onClick={!isEditing && onClick ? onClick : undefined}
+      >
+        {renderContent()}
+      </Card>
+    </ReflectionContainer>
+  );
 };
 
 export default DocumentCard;

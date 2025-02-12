@@ -21,7 +21,7 @@
     "@aws-sdk/client-s3": "^3.682.0",
     "@blocknote/core": "^0.22.0",
     "@blocknote/mantine": "^0.22.0",
-    "@blocknote/react": "^0.22.0",
+    "@blocknote/react": "^0.8.0",
     "@hello-pangea/dnd": "^16.6.0",
     "@hocuspocus/provider": "^2.13.5",
     "@huggingface/inference": "^2.8.0",
@@ -84,8 +84,10 @@
     "pg": "^8.12.0",
     "pg-boss": "^10.1.5",
     "pg-query-stream": "^4.6.0",
+    "prosemirror-view": "1.37.2",
     "puppeteer": "^24.2.0",
     "qrcode": "^1.5.4",
+    "querystring-es3": "^0.2.1",
     "radash": "^12.1.0",
     "react": "^18",
     "react-beautiful-dnd": "^13.1.1",
@@ -163,5 +165,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "resolutions": {
+    "prosemirror-view": "1.30.2"
+  }
 }

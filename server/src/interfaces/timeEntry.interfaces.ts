@@ -1,8 +1,7 @@
 import { IUser } from './auth.interfaces';
 import { WorkItemType, IWorkItem } from './workItem.interfaces';
 import { TenantEntity } from '.';
-import { ISO8601String } from '../types/types.d';
-import { Temporal } from '@js-temporal/polyfill';
+import { DateValue, ISO8601String } from '@shared/types/temporal';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 
@@ -57,8 +56,8 @@ export interface ITimeSheetComment extends TenantEntity  {
 
 export interface ITimePeriod extends TenantEntity  {
   period_id: string;
-  start_date: Temporal.PlainDate;
-  end_date: Temporal.PlainDate;
+  start_date: DateValue;
+  end_date: DateValue;
 }
 
 export interface ITimePeriodWithStatus extends ITimePeriod {
