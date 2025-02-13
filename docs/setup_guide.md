@@ -114,7 +114,7 @@ Note: The system performs validation of these environment variables at startup. 
 ## Docker Compose Configuration
 
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml up -d
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml up --env-file server/.env -d
 ```
 
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.

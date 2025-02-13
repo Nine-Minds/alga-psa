@@ -109,7 +109,7 @@ Note: The system performs validation of these environment variables at startup. 
 ## Docker Compose Configuration
 
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml up -d
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml up --env-file server/.env -d
 ```
 This will build, deploy, and start the server which you can get to at http://localhost:3000
 
