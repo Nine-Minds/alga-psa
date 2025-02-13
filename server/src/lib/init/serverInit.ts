@@ -1,7 +1,7 @@
-import env from '../../config/envConfig';
+import {validateEnv} from '../../config/envConfig';
 
 // Initialize and validate environment configuration
-const validatedEnv = env;
+const validatedEnv = validateEnv();
 
 // Export the validated environment configuration
 export default validatedEnv;

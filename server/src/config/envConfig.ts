@@ -197,7 +197,7 @@ export class EnvValidationError extends Error {
   }
 }
 
-function validateEnv(): EnvConfig {
+export function validateEnv(): EnvConfig {
   try {
     return envSchema.parse(process.env);
   } catch (error) {
@@ -208,5 +208,5 @@ function validateEnv(): EnvConfig {
   }
 }
 
-const env = validateEnv();
-export default env;
+//const env = validateEnv();
+//export default env;
