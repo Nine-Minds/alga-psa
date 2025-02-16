@@ -7,10 +7,14 @@ export async function getAdminConnection() {
     const dbPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
     const config = {
         ...knexfile[environment],
-        connection: `pg://${process.env.DB_USER_ADMIN}:${dbPassword}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME_SERVER}`
+        connection: {
+            host: process.env.DB_HOST,
+            port: Number(process.env.DB_PORT),
+            user: process.env.DB_USER_ADMIN,
+            password: dbPassword,
+            database: process.env.DB_NAME_SERVER
+        }
     };
 
-    // console.log('config', config);
-    
     return Knex(config);
 }

@@ -5,9 +5,10 @@ import { BillingCycleType } from '@/interfaces';
 
 const Company = {
   async getById(companyId: string): Promise<ICompany | null> {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
     const company = await db<ICompany>('companies')
       .where({ company_id: companyId })
+      .andWhere('tenant', tenant)
       .first();
     return company || null;
   },

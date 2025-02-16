@@ -2,6 +2,7 @@ import { initializeEmailNotificationConsumer } from './consumers/emailNotificati
 import { registerAllSubscribers } from './subscribers';
 import logger from '../../utils/logger';
 import { getConnection } from '../db/db';
+import { getAdminConnection } from '../db/admin';
 
 // Store cleanup functions at module scope for access by cleanupEventBus
 let cleanupFunctions: Array<() => Promise<void>> = [];
@@ -14,7 +15,7 @@ export async function initializeEventBus(): Promise<void> {
     await registerAllSubscribers();
 
     // Get all tenants
-    const systemDb = await getConnection('system');
+    const systemDb = await getAdminConnection();
     const tenants = await systemDb('tenants')
       .select('tenant');
 

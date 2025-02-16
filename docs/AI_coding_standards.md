@@ -198,14 +198,33 @@ Every query should filter on the tenant column (including joins) to ensure compa
    ```
 
 3. **Tenant Column Requirements**
-   - Always include tenant column in WHERE clauses
-   - Include tenant in JOIN conditions
-   - Add tenant to unique constraints and indexes
-   Example:
-   ```sql
-   CREATE UNIQUE INDEX my_unique_index 
-   ON my_table (tenant, column1, column2);
-   ```
+    - Always include tenant column in WHERE clauses
+    - Include tenant in JOIN conditions
+    - Add tenant to unique constraints and indexes
+    Example:
+    ```sql
+    CREATE UNIQUE INDEX my_unique_index
+    ON my_table (tenant, column1, column2);
+    ```
+
+4. **Tenant Context in Distributed Queries**
+    - Connection-specific tenant context (`app.current_tenant`) does not propagate to all shards
+    - Queries without shard key (tenant) are broadcast to all shards
+    - Each shard connection needs its own tenant context
+    - Security policies checking `app.current_tenant` will fail on shards without context
+    Example of potential issues:
+    ```typescript
+    // This could fail if broadcast to all shards
+    const results = await knex('some_table')
+      .select('*')
+      .where('some_column', 'value');
+    
+    // Always include tenant to avoid broadcast
+    const results = await knex('some_table')
+      .select('*')
+      .where('tenant', currentTenant)
+      .andWhere('some_column', 'value');
+    ```
 
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.

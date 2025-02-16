@@ -7,7 +7,7 @@ import { createTenantKnex } from '@/lib/db';
 import { unparseCSV } from '@/lib/utils/csvParser';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -24,13 +24,13 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function() {
+      .leftJoin('companies', function () {
         this.on('contacts.company_id', 'companies.company_id')
-           .andOn('companies.tenant', db.raw('?', [tenant]))
+          .andOn('companies.tenant', 'contacts.tenant')
       })
-      .where({ 
-        'contacts.contact_name_id': contactNameId, 
-        'contacts.tenant': tenant 
+      .where({
+        'contacts.contact_name_id': contactNameId,
+        'contacts.tenant': tenant
       })
       .first();
 
@@ -40,23 +40,23 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
   } catch (err) {
     // Log the error for debugging
     console.error('Error getting contact by contact_name_id:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contact information');
   }
@@ -89,10 +89,10 @@ export async function deleteContact(contactId: string) {
 
     // Check for tickets
     const ticketCount = await db('tickets')
-      .where({ 
-        contact_name_id: contactId, 
+      .where({
+        contact_name_id: contactId,
         is_closed: false,
-        tenant 
+        tenant
       })
       .count('* as count')
       .first();
@@ -103,9 +103,9 @@ export async function deleteContact(contactId: string) {
 
     // Check for interactions
     const interactionCount = await db('interactions')
-      .where({ 
+      .where({
         contact_name_id: contactId,
-        tenant 
+        tenant
       })
       .count('* as count')
       .first();
@@ -116,10 +116,10 @@ export async function deleteContact(contactId: string) {
 
     // Check for document associations
     const documentCount = await db('document_associations')
-      .where({ 
+      .where({
         entity_id: contactId,
         entity_type: 'contact',
-        tenant 
+        tenant
       })
       .count('* as count')
       .first();
@@ -130,9 +130,9 @@ export async function deleteContact(contactId: string) {
 
     // Check for schedules
     const scheduleCount = await db('schedules')
-      .where({ 
+      .where({
         contact_name_id: contactId,
-        tenant 
+        tenant
       })
       .count('* as count')
       .first();
@@ -152,7 +152,11 @@ export async function deleteContact(contactId: string) {
       try {
         // Delete associated tags first
         await trx('tags')
-          .where({ tagged_id: contactId, tagged_type: 'contact' })
+          .where({
+            tagged_id: contactId,
+            tagged_type: 'contact',
+            tenant
+          })
           .delete();
 
         // Delete the contact
@@ -174,23 +178,23 @@ export async function deleteContact(contactId: string) {
   } catch (err) {
     // Log the error for debugging
     console.error('Error deleting contact:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('violates foreign key constraint')) {
         throw new Error('VALIDATION_ERROR: Cannot delete contact because it has associated records');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while deleting the contact');
   }
@@ -199,7 +203,7 @@ export async function deleteContact(contactId: string) {
 type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
 export async function getContactsByCompany(companyId: string, status: ContactFilterStatus = 'active'): Promise<IContact[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -225,9 +229,9 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function() {
+      .leftJoin('companies', function () {
         this.on('contacts.company_id', 'companies.company_id')
-           .andOn('companies.tenant', db.raw('?', [tenant]))
+          .andOn('companies.tenant', 'contacts.tenant')
       })
       .where('contacts.company_id', companyId)
       .andWhere('contacts.tenant', tenant)
@@ -243,30 +247,30 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
   } catch (err) {
     // Log the error for debugging
     console.error('Error fetching contacts for company:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving company contacts');
   }
 }
 
 export async function getAllCompanies(): Promise<ICompany[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -285,30 +289,30 @@ export async function getAllCompanies(): Promise<ICompany[]> {
   } catch (err) {
     // Log the error for debugging
     console.error('Error fetching all companies:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving companies');
   }
 }
 
 export async function getAllContacts(status: ContactFilterStatus = 'active'): Promise<IContact[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -325,9 +329,9 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function() {
+      .leftJoin('companies', function () {
         this.on('contacts.company_id', 'companies.company_id')
-           .andOn('companies.tenant', db.raw('?', [tenant]))
+          .andOn('companies.tenant', 'contacts.tenant')
       })
       .where('contacts.tenant', tenant)
       .modify(function (queryBuilder) {
@@ -342,85 +346,85 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
   } catch (err) {
     // Log the error for debugging
     console.error('Error fetching all contacts:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contacts');
   }
 }
 
 export async function addContact(contactData: Partial<IContact>): Promise<IContact> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
 
-    // Validate required fields with specific messages
-    if (!contactData.full_name?.trim() && !contactData.email?.trim()) {
-      throw new Error('VALIDATION_ERROR: Full name and email address are required');
-    }
-    if (!contactData.full_name?.trim()) {
-      throw new Error('VALIDATION_ERROR: Full name is required');
-    }
-    if (!contactData.email?.trim()) {
-      throw new Error('VALIDATION_ERROR: Email address is required');
-    }
+  // Validate required fields with specific messages
+  if (!contactData.full_name?.trim() && !contactData.email?.trim()) {
+    throw new Error('VALIDATION_ERROR: Full name and email address are required');
+  }
+  if (!contactData.full_name?.trim()) {
+    throw new Error('VALIDATION_ERROR: Full name is required');
+  }
+  if (!contactData.email?.trim()) {
+    throw new Error('VALIDATION_ERROR: Email address is required');
+  }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(contactData.email.trim())) {
-      throw new Error('VALIDATION_ERROR: Please enter a valid email address');
-    }
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(contactData.email.trim())) {
+    throw new Error('VALIDATION_ERROR: Please enter a valid email address');
+  }
 
 
-    // Check if email already exists
-    const existingContact = await db('contacts')
-      .where({ email: contactData.email.trim().toLowerCase(), tenant })
+  // Check if email already exists
+  const existingContact = await db('contacts')
+    .where({ email: contactData.email.trim().toLowerCase(), tenant })
+    .first();
+
+  if (existingContact) {
+    throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+  }
+
+  // If company_id is provided, verify it exists
+  if (contactData.company_id) {
+    const company = await db('companies')
+      .where({ company_id: contactData.company_id, tenant })
       .first();
-  
-    if (existingContact) {
-      throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
+
+    if (!company) {
+      throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
     }
+  }
 
-    // If company_id is provided, verify it exists
-    if (contactData.company_id) {
-      const company = await db('companies')
-        .where({ company_id: contactData.company_id, tenant })
-        .first();
-
-      if (!company) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
-      }
-    }
-
-    // Prepare contact data with proper sanitization
-    const contactWithTenant = {
-      ...contactData,
-      full_name: contactData.full_name.trim(),
-      email: contactData.email.trim().toLowerCase(),
-      phone_number: contactData.phone_number?.trim() || null,
-      role: contactData.role?.trim() || null,
-      notes: contactData.notes?.trim() || null,
-      tenant: tenant,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+  // Prepare contact data with proper sanitization
+  const contactWithTenant = {
+    ...contactData,
+    full_name: contactData.full_name.trim(),
+    email: contactData.email.trim().toLowerCase(),
+    phone_number: contactData.phone_number?.trim() || null,
+    role: contactData.role?.trim() || null,
+    notes: contactData.notes?.trim() || null,
+    tenant: tenant,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
   try {
     const [newContact] = await db('contacts').insert(contactWithTenant).returning('*');
@@ -433,41 +437,41 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
   } catch (err) {
     // Log the error for debugging
     console.error('Error creating contact:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('EMAIL_EXISTS:') ||
-          message.includes('FOREIGN_KEY_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('EMAIL_EXISTS:') ||
+        message.includes('FOREIGN_KEY_ERROR:') ||
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
         throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
       }
-      
+
       if (message.includes('violates not-null constraint')) {
         const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
         throw new Error(`VALIDATION_ERROR: The ${field} is required`);
       }
-      
+
       if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
         throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
   }
 }
 
 export async function updateContact(contactData: Partial<IContact>): Promise<IContact> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -487,9 +491,9 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 
       // Check if new email already exists for another contact
       const existingContact = await db('contacts')
-        .where({ 
-          email: contactData.email.trim().toLowerCase(), 
-          tenant 
+        .where({
+          email: contactData.email.trim().toLowerCase(),
+          tenant
         })
         .whereNot({ contact_name_id: contactData.contact_name_id })
         .first();
@@ -557,41 +561,41 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
   } catch (err) {
     // Log the error for debugging
     console.error('Error updating contact:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('EMAIL_EXISTS:') ||
-          message.includes('FOREIGN_KEY_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('EMAIL_EXISTS:') ||
+        message.includes('FOREIGN_KEY_ERROR:') ||
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
         throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
       }
-      
+
       if (message.includes('violates not-null constraint')) {
         const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
         throw new Error(`VALIDATION_ERROR: The ${field} is required`);
       }
-      
+
       if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
         throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating the contact');
   }
 }
 
 export async function updateContactsForCompany(companyId: string, updateData: Partial<IContact>): Promise<void> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -627,7 +631,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     // Sanitize update data
     const sanitizedData = Object.entries(updateData).reduce<Partial<IContact>>((acc, [key, value]) => {
       const contactKey = key as keyof IContact;
-      
+
       // Skip undefined values
       if (value === undefined) {
         return acc;
@@ -645,7 +649,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
             acc[contactKey] = acc[contactKey].toLowerCase();
           }
           break;
-          
+
         case 'notes':
         case 'date_of_birth':
           // These fields are optional strings
@@ -655,17 +659,17 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
             acc[contactKey] = typeof value === 'string' ? value.trim() : String(value);
           }
           break;
-          
+
         case 'company_id':
           // This field is string | null
           acc[contactKey] = value === null ? null : String(value);
           break;
-          
+
         case 'is_inactive':
           // This field is boolean
           acc[contactKey] = Boolean(value);
           break;
-          
+
         case 'created_at':
         case 'updated_at':
           // These fields are strings (ISO dates)
@@ -678,7 +682,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
           }
           break;
       }
-      
+
       return acc;
     }, {});
 
@@ -698,34 +702,34 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
   } catch (err) {
     // Log the error for debugging
     console.error('Error updating contacts for company:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('EMAIL_EXISTS:') ||
-          message.includes('FOREIGN_KEY_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('EMAIL_EXISTS:') ||
+        message.includes('FOREIGN_KEY_ERROR:') ||
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
         throw new Error('EMAIL_EXISTS: One or more contacts already have this email address');
       }
-      
+
       if (message.includes('violates not-null constraint')) {
         const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
         throw new Error(`VALIDATION_ERROR: The ${field} is required`);
       }
-      
+
       if (message.includes('violates foreign key constraint')) {
         throw new Error('FOREIGN_KEY_ERROR: Invalid reference in update data');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating company contacts');
   }
@@ -742,7 +746,7 @@ export async function exportContactsToCSV(
     const company = companies.find(c => c.company_id === contact.company_id);
     const tags = contactTags[contact.contact_name_id] || [];
     const tagText = tags.map((tag: ITag) => tag.tag_text).join(', ');
-    
+
     return {
       full_name: contact.full_name || '',
       email: contact.email || '',
@@ -761,7 +765,7 @@ export async function importContactsFromCSV(
   contactsData: Array<Partial<IContact>>,
   updateExisting: boolean = false
 ): Promise<ImportContactResult[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -804,10 +808,10 @@ export async function importContactsFromCSV(
 
           // Check for existing contact
           const existingContact = await trx('contacts')
-            .where({ 
+            .where({
               full_name: contactData.full_name.trim(),
               tenant,
-              company_id: contactData.company_id 
+              company_id: contactData.company_id
             })
             .first();
 
@@ -876,16 +880,16 @@ export async function importContactsFromCSV(
         } catch (err) {
           // Log the error for debugging
           console.error('Error processing contact:', contactData, err);
-          
+
           // Handle known error types
           if (err instanceof Error) {
             const message = err.message;
-            
+
             // If it's already one of our formatted errors, use it
             if (message.includes('VALIDATION_ERROR:') ||
-                message.includes('EMAIL_EXISTS:') ||
-                message.includes('FOREIGN_KEY_ERROR:') ||
-                message.includes('SYSTEM_ERROR:')) {
+              message.includes('EMAIL_EXISTS:') ||
+              message.includes('FOREIGN_KEY_ERROR:') ||
+              message.includes('SYSTEM_ERROR:')) {
               results.push({
                 success: false,
                 message: message,
@@ -893,7 +897,7 @@ export async function importContactsFromCSV(
               });
               continue;
             }
-            
+
             // Handle database-specific errors
             if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
               results.push({
@@ -903,7 +907,7 @@ export async function importContactsFromCSV(
               });
               continue;
             }
-            
+
             if (message.includes('violates not-null constraint')) {
               const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
               results.push({
@@ -914,7 +918,7 @@ export async function importContactsFromCSV(
               continue;
             }
           }
-          
+
           // For unexpected errors
           results.push({
             success: false,
@@ -929,23 +933,23 @@ export async function importContactsFromCSV(
   } catch (err) {
     // Log the error for debugging
     console.error('Error importing contacts:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while importing contacts');
   }
@@ -954,7 +958,7 @@ export async function importContactsFromCSV(
 export async function checkExistingEmails(
   emails: string[]
 ): Promise<string[]> {
-  const {knex: db, tenant} = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
@@ -986,23 +990,23 @@ export async function checkExistingEmails(
   } catch (err) {
     // Log the error for debugging
     console.error('Error checking existing emails:', err);
-    
+
     // Handle known error types
     if (err instanceof Error) {
       const message = err.message;
-      
+
       // If it's already one of our formatted errors, rethrow it
       if (message.includes('VALIDATION_ERROR:') ||
-          message.includes('SYSTEM_ERROR:')) {
+        message.includes('SYSTEM_ERROR:')) {
         throw err;
       }
-      
+
       // Handle database-specific errors
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
     }
-    
+
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while checking existing emails');
   }

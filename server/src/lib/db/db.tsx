@@ -1,61 +1,90 @@
 import Knex, { Knex as KnexType } from 'knex';
 import { getKnexConfig } from './knexfile';
-
-const knexInstances: { [key: string]: KnexType } = {};
+import { AsyncLocalStorage } from 'async_hooks';
+import { validate as uuidValidate } from 'uuid';
 
 interface PoolConfig extends KnexType.PoolConfig {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
 }
 
+// Create a map to store tenant-specific Knex instances
+const knexInstances: Map<string, KnexType> = new Map();
+const asyncLocalStorage = new AsyncLocalStorage<string>();
+
+
+function isValidTenantId(tenantId: string | null | undefined): boolean {
+  if (!tenantId) return true; // null/undefined is allowed
+  if (tenantId === 'default') return true;
+  return uuidValidate(tenantId);
+}
+
+async function setTenantContext(conn: any, tenantId?: string | null): Promise<void> {
+  if (!isValidTenantId(tenantId)) {
+    throw new Error('Invalid tenant ID format');
+  }
+
+  if (tenantId) {
+    await new Promise<void>((resolve, reject) => {
+      conn.query(`SET app.current_tenant = '${tenantId}'`, [], (err: Error | null) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  } else {
+    await new Promise<void>((resolve, reject) => {
+      resolve();
+    });
+  }
+}
+
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
-  // For non-tenant connections, create a new instance each time
-  if (!tenantId) {
+  const effectiveTenantId = tenantId || 'default';
+  
+  // Check if we already have an instance for this tenant
+  let knexInstance = knexInstances.get(effectiveTenantId);
+  
+  if (!knexInstance) {
+    console.log('Creating new knex instance for tenant', effectiveTenantId);
     const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
     const config = await getKnexConfig(environment);
-    return Knex(config);
-  }
+    const poolConfig: PoolConfig = config.pool as PoolConfig || {};
 
-  // For tenant connections, use cached instance if available
-  if (knexInstances[tenantId]) {
-    return knexInstances[tenantId];
-  }
-
-  // Create new tenant connection
-  const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
-  const config = await getKnexConfig(environment);
-  const poolConfig: PoolConfig = config.pool as PoolConfig || {};
-
-  const tenantConfig = {
-    ...config,
-    pool: {
-      ...config.pool,
-      afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
-        const originalAfterCreate = poolConfig.afterCreate;
-        
-        const setTenant = () => {
-          conn.query(`SET app.current_tenant = '${tenantId}'`, (err: Error | null) => {
-            done(err, conn);
-          });
-        };
-
-        if (originalAfterCreate) {
-          originalAfterCreate(conn, (err: Error | null) => {
-            if (err) {
-              done(err, conn);                
-            } else {
-              setTenant();
+    const finalConfig = {
+      ...config,
+      pool: {
+        ...config.pool,
+        afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
+          const originalAfterCreate = poolConfig.afterCreate;
+          
+          const setupConnection = async () => {
+            try {
+              await setTenantContext(conn, tenantId);
+              done(null, conn);
+            } catch (err) {
+              done(err as Error, conn);
             }
-          });
-        } else {
-          setTenant();
-        }
-      },
-    },
-  };
+          };
 
-  // Cache the new instance
-  knexInstances[tenantId] = Knex(tenantConfig);
-  return knexInstances[tenantId];
+          if (originalAfterCreate) {
+            originalAfterCreate(conn, (err: Error | null) => {
+              if (err) {
+                done(err, conn);
+              } else {
+                setupConnection();
+              }
+            });
+          } else {
+            setupConnection();
+          }
+        },
+      },
+    };
+
+    knexInstance = Knex(finalConfig);
+    knexInstances.set(effectiveTenantId, knexInstance);
+  }
+
+  return knexInstance;
 }
 
 export async function withTransaction<T>(
@@ -67,12 +96,19 @@ export async function withTransaction<T>(
 }
 
 export async function destroyConnection(tenantId?: string): Promise<void> {
-  if (tenantId && knexInstances[tenantId]) {
-    await knexInstances[tenantId].destroy();
-    delete knexInstances[tenantId];
-  } else if (!tenantId) {
-    await Promise.all(Object.values(knexInstances).map((instance): Promise<void> => instance.destroy()));
-    Object.keys(knexInstances).forEach(key => delete knexInstances[key]);
+  if (tenantId) {
+    // Destroy specific tenant connection
+    const instance = knexInstances.get(tenantId);
+    if (instance) {
+      await instance.destroy();
+      knexInstances.delete(tenantId);
+    }
+  } else {
+    // Destroy all connections
+    for (const [id, instance] of knexInstances) {
+      await instance.destroy();
+    }
+    knexInstances.clear();
   }
 }
 

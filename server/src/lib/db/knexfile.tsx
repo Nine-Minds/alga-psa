@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import process
  from 'process';
+ import { validate as uuidValidate } from 'uuid';
+
 type Function = (err: Error | null, connection: Knex.Client) => void;
 
 // Load test environment variables if we're in a test environment
@@ -105,7 +107,17 @@ export async function getKnexConfig(env: string): Promise<CustomKnexConfig> {
   return await getFullConfig(env);
 }
 
+function isValidTenantId(tenantId: string): boolean {
+  if (!tenantId) return true;
+  if (tenantId === 'default') return true;
+  return uuidValidate(tenantId);
+}
+
 export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKnexConfig> => {
+  if (!isValidTenantId(tenant)) {
+    throw new Error('Invalid tenant ID format');
+  }
+
   const env = process.env.APP_ENV || 'development';
   const config = await getKnexConfig(env);
   

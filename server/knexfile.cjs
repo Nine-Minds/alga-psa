@@ -56,7 +56,19 @@ const getClient = () => {
   return externals[DatabaseType.postgres];
 };
 
+const { validate: uuidValidate } = require('uuid');
+
+function isValidTenantId(tenantId) {
+  if (!tenantId) return true;
+  if (tenantId === 'default') return true;
+  return uuidValidate(tenantId);
+}
+
 const createConnectionWithTenant = (config, tenant) => {
+  if (!isValidTenantId(tenant)) {
+    throw new Error('Invalid tenant ID format');
+  }
+
   return {
     ...config,
     pool: {

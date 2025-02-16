@@ -9,7 +9,7 @@ export async function cleanupDatabaseConnection() {
 
   if (cleanupTenantId) {
     try {
-      await destroyConnection(cleanupTenantId);
+      // await destroyConnection();
       console.log(`Connection destroyed for tenant: ${cleanupTenantId}`);
     } catch (error) {
       console.error(`Error destroying connection for tenant ${cleanupTenantId}:`, error);

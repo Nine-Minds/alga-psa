@@ -1,11 +1,12 @@
 import { createTenantKnex } from '@/lib/db';
 import { IContact } from '@/interfaces/contact.interfaces';
+import { te } from 'date-fns/locale';
 
 const ContactModel = {
   getAll: async (includeInactive: boolean = false): Promise<IContact[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      let query = db<IContact>('contacts').select('*');
+      const {knex: db, tenant} = await createTenantKnex();
+      let query = db<IContact>('contacts').where('tenant', tenant).select('*');
       if (!includeInactive) {
         query = query.where({ is_inactive: false });
       }
@@ -19,10 +20,11 @@ const ContactModel = {
 
   get: async (contact_name_id: string): Promise<IContact | undefined> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       const contact = await db<IContact>('contacts')
         .select('*')
-        .where({ contact_name_id })
+        .where('contact_name_id', contact_name_id)
+        .where('tenant', tenant)
         .first();
       return contact;
     } catch (error) {
@@ -33,9 +35,10 @@ const ContactModel = {
 
   updateMany: async (companyId: string, updateData: Partial<IContact>): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
+      const {knex: db, tenant} = await createTenantKnex();
       await db<IContact>('contacts')
         .where({ company_id: companyId })
+        .where('tenant', tenant)
         .update(updateData);
     } catch (error) {
       console.error(`Error updating contacts for company ${companyId}:`, error);
