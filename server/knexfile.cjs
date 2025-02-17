@@ -96,7 +96,7 @@ const migrationConfig = {
     database: process.env.DB_NAME_SERVER,
   },
   pool: {
-    min: 2,
+    min: 0,
     max: 20,
   },
   migrations: {
