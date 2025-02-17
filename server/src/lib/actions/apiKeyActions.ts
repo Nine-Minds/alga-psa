@@ -15,7 +15,6 @@ export async function createApiKey(description?: string, expiresAt?: string) {
 
   const apiKey = await ApiKeyService.createApiKey(
     user.user_id,
-    user.tenant,
     description,
     expiresAt ? new Date(expiresAt) : undefined
   );
@@ -39,7 +38,7 @@ export async function listApiKeys() {
     throw new Error('Unauthorized');
   }
 
-  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, user.tenant);
+  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id);
   
   // Remove sensitive information from the response
   return apiKeys.map(key => ({
@@ -62,14 +61,14 @@ export async function deactivateApiKey(apiKeyId: string) {
   }
 
   // Verify the API key exists and belongs to the user
-  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, user.tenant);
+  const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id);
   const keyExists = apiKeys.some(key => key.api_key_id === apiKeyId);
 
   if (!keyExists) {
     throw new Error('API key not found');
   }
 
-  await ApiKeyService.deactivateApiKey(apiKeyId, user.tenant);
+  await ApiKeyService.deactivateApiKey(apiKeyId);
 }
 
 /**
@@ -89,7 +88,7 @@ export async function adminListApiKeys() {
     throw new Error('Forbidden: Admin access required');
   }
 
-  const apiKeys = await ApiKeyService.listAllApiKeys(user.tenant);
+  const apiKeys = await ApiKeyService.listAllApiKeys();
   
   // Remove sensitive information from the response
   return apiKeys.map(key => ({
@@ -120,5 +119,5 @@ export async function adminDeactivateApiKey(apiKeyId: string) {
     throw new Error('Forbidden: Admin access required');
   }
 
-  await ApiKeyService.adminDeactivateApiKey(apiKeyId, user.tenant);
+  await ApiKeyService.adminDeactivateApiKey(apiKeyId);
 }

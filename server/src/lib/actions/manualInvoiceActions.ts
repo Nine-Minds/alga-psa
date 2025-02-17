@@ -42,11 +42,14 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
   // Get company details
   const company = await knex('companies')
-    .where({ company_id: companyId })
+    .where({
+      company_id: companyId,
+      tenant
+    })
     .first();
 
   if (!company) {
-    throw new Error('Company not found');
+    throw new Error(`Company not found for tenant ${tenant}`);
   }
 
   const taxService = new TaxService();
@@ -83,7 +86,10 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     for (const item of items) {
       // Get service details for tax info
       const service = await trx('service_catalog')
-        .where({ service_id: item.service_id })
+        .where({
+          service_id: item.service_id,
+          tenant
+        })
         .first();
 
       let netAmount: number;
@@ -241,11 +247,14 @@ export async function updateManualInvoice(
 
   // Get company details
   const company = await knex('companies')
-    .where({ company_id: companyId })
+    .where({
+      company_id: companyId,
+      tenant
+    })
     .first();
 
   if (!company) {
-    throw new Error('Company not found');
+    throw new Error(`Company not found for tenant ${tenant}`);
   }
 const currentDate = Temporal.Now.plainDateISO().toString();
 const billingEngine = new BillingEngine();
@@ -254,7 +263,10 @@ const billingEngine = new BillingEngine();
 await knex.transaction(async (trx) => {
   // Delete existing items
   await trx('invoice_items')
-    .where({ invoice_id: invoiceId })
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
     .delete();
 
   // Insert new items
@@ -267,7 +279,11 @@ await knex.transaction(async (trx) => {
         // Calculate percentage of applicable amount
         const applicableAmount = item.applies_to_item_id
           ? (await trx('invoice_items')
-              .where({ item_id: item.applies_to_item_id })
+              .where({
+                item_id: item.applies_to_item_id,
+                tenant,
+                invoice_id: invoiceId
+              })
               .first())?.net_amount || 0
           : 0; // Will be properly calculated by recalculateInvoice
         netAmount = -Math.round((applicableAmount * item.rate) / 100);
@@ -317,11 +333,21 @@ await billingEngine.recalculateInvoice(invoiceId);
 
 // Fetch the updated invoice with new totals
 const updatedInvoice = await knex('invoices')
-  .where({ invoice_id: invoiceId })
+  .where({
+    invoice_id: invoiceId,
+    tenant
+  })
   .first();
 
+if (!updatedInvoice) {
+  throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
+}
+
 const updatedItems = await knex('invoice_items')
-  .where({ invoice_id: invoiceId })
+  .where({
+    invoice_id: invoiceId,
+    tenant
+  })
   .orderBy('created_at', 'asc');
 
 // Return updated invoice view model

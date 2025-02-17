@@ -28,6 +28,9 @@ export async function validateCreditBalance(
     expectedBalance?: number
 ): Promise<{isValid: boolean, actualBalance: number, lastTransaction: ITransaction}> {
     const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error('Tenant context is required for credit balance validation');
+    }
     
     return await knex.transaction(async (trx) => {
         const transactions = await trx('transactions')
@@ -56,7 +59,8 @@ export async function validateCreditBalance(
         const isValid = Number(calculatedBalance) === Number(company.credit_balance);
         
         if (!isValid) {
-            console.error('Credit balance mismatch:', {
+            console.error(`Credit balance mismatch for tenant ${tenant}:`, {
+                tenant,
                 companyId,
                 expectedBalance: company.credit_balance,
                 actualBalance: calculatedBalance,
@@ -223,10 +227,13 @@ export async function createPrepaymentInvoice(
         await trx('companies')
             .where({ company_id: companyId, tenant })
             .update({
-                credit_balance: knex.raw('COALESCE(credit_balance, 0) + ?', [amount]),
+                credit_balance: knex('companies')
+                    .where({ company_id: companyId, tenant })
+                    .select(knex.raw('COALESCE(credit_balance, 0)'))
+                    .first()
+                    .then((result) => result + amount),
                 updated_at: new Date().toISOString()
-            })
-            .update('updated_at', new Date().toISOString());
+            });
         
         console.log('increased company', companyId, 'credit balance by', amount);
 
@@ -289,10 +296,19 @@ export async function applyCreditToInvoice(
             tenant
         });
 
+        // Verify company billing plan exists before update
+        const billingPlan = await trx('company_billing_plans')
+            .where({ company_id: companyId, tenant })
+            .first();
+        
+        if (!billingPlan) {
+            throw new Error(`No billing plan found for company ${companyId}`);
+        }
+
         // Update invoice and company credit balance
         await Promise.all([
             trx('invoices')
-                .where({ 
+                .where({
                     invoice_id: invoiceId,
                     tenant
                 })

@@ -458,7 +458,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
 
     // Generate ticket number
     const numberingService = new NumberingService();
-    const ticketNumber = await numberingService.getNextTicketNumber(tenant);
+    const ticketNumber = await numberingService.getNextTicketNumber();
 
     // Validate input data
     const validatedData = validateData(clientTicketSchema, {

@@ -9,18 +9,29 @@ export class TaxService {
   }
 
   async calculateTax(companyId: string, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
-    console.log(`Calculating tax for company ${companyId}, net amount ${netAmount}, date ${date}`);
-
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax calculation');
+    }
+
+    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}`);
+
     // Check if company is tax exempt
     const company = await knex('companies')
-      .where({ company_id: companyId })
+      .where({
+        company_id: companyId,
+        tenant
+      })
       .select('is_tax_exempt')
       .first();
 
-    if (company?.is_tax_exempt) {
-      console.log(`Company ${companyId} is tax exempt. Returning zero tax.`);
+    if (!company) {
+      throw new Error(`Company ${companyId} not found in tenant ${tenant}`);
+    }
+
+    if (company.is_tax_exempt) {
+      console.log(`Company ${companyId} in tenant ${tenant} is tax exempt. Returning zero tax.`);
       return { taxAmount: 0, taxRate: 0 };
     }
 
@@ -33,11 +44,12 @@ export class TaxService {
     }
 
     const taxRate = await CompanyTaxSettings.getTaxRate(taxSettings.tax_rate_id);
-    console.log(`Tax rate retrieved for tax_rate_id ${taxSettings.tax_rate_id}:`, taxRate);
+    console.log(`Tax rate retrieved for tax_rate_id ${taxSettings.tax_rate_id} in tenant ${tenant}:`, taxRate);
 
     if (!taxRate) {
-      console.error(`Tax rate not found for tax_rate_id ${taxSettings.tax_rate_id}`);
-      throw new Error(`Tax rate not found for tax_rate_id ${taxSettings.tax_rate_id}`);
+      const error = `Tax rate not found for tax_rate_id ${taxSettings.tax_rate_id} in tenant ${tenant}`;
+      console.error(error);
+      throw new Error(error);
     }
 
     let result: ITaxCalculationResult;
@@ -163,10 +175,17 @@ export class TaxService {
   }
 
   private async getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings> {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax settings lookup');
+    }
+
     const taxSettings = await CompanyTaxSettings.get(companyId);
 
     if (!taxSettings) {
-      throw new Error(`Tax settings not found for company ${companyId}`);
+      const error = `Tax settings not found for company ${companyId} in tenant ${tenant}`;
+      console.error(error);
+      throw new Error(error);
     }
 
     return taxSettings;
@@ -178,11 +197,18 @@ export class TaxService {
   }
 
   async getTaxType(companyId: string): Promise<string> {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax type lookup');
+    }
+
     const taxSettings = await this.getCompanyTaxSettings(companyId);
     const taxRate = await CompanyTaxSettings.getTaxRate(taxSettings.tax_rate_id);
 
     if (!taxRate) {
-      throw new Error(`Tax rate not found for company ${companyId}`);
+      const error = `Tax rate not found for company ${companyId} in tenant ${tenant}`;
+      console.error(error);
+      throw new Error(error);
     }
 
     return taxRate.tax_type;

@@ -9,6 +9,7 @@ class InteractionModel {
 
     try {
       const query = db('interactions')
+        .where('interactions.tenant', tenant)
         .select(
           'interactions.interaction_id',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
@@ -27,7 +28,10 @@ class InteractionModel {
           this.on('interactions.type_id', '=', 'it.type_id')
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
-        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
+        .leftJoin('system_interaction_types as sit', function() {
+          this.on('interactions.type_id', '=', 'sit.type_id')
+            .andOn('interactions.tenant', '=', 'sit.tenant');
+        })
         .leftJoin('contacts', function() {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');
@@ -73,6 +77,7 @@ class InteractionModel {
 
     try {
       const query = db('interactions')
+        .where('interactions.tenant', tenant)
         .select(
           'interactions.interaction_id',
           'interactions.type_id',
@@ -92,7 +97,10 @@ class InteractionModel {
           this.on('interactions.type_id', '=', 'it.type_id')
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
-        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
+        .leftJoin('system_interaction_types as sit', function() {
+          this.on('interactions.type_id', '=', 'sit.type_id')
+            .andOn('interactions.tenant', '=', 'sit.tenant');
+        })
         .leftJoin('contacts', function() {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');
@@ -213,7 +221,7 @@ class InteractionModel {
   
     try {
       const result = await db('interactions')
-        .where({ tenant })
+        .where('interactions.tenant', tenant)
         .select(
           'interactions.*',
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
@@ -225,7 +233,10 @@ class InteractionModel {
           this.on('interactions.type_id', '=', 'it.type_id')
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
-        .leftJoin('system_interaction_types as sit', 'interactions.type_id', 'sit.type_id')
+        .leftJoin('system_interaction_types as sit', function() {
+          this.on('interactions.type_id', '=', 'sit.type_id')
+            .andOn('interactions.tenant', '=', 'sit.tenant');
+        })
         .leftJoin('contacts', function() {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');

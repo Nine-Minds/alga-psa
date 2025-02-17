@@ -52,6 +52,9 @@ export async function getProjects(): Promise<IProject[]> {
         if (!currentUser) {
             throw new Error("user not found");
         }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
         await checkPermission(currentUser, 'project', 'read');
         const projects = await ProjectModel.getAll(true);
         
@@ -337,6 +340,9 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         if (!currentUser) {
             throw new Error("user not found");
         }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
         await checkPermission(currentUser, 'project', 'create');
 
         const validatedData = validateData(createProjectSchema, projectData);
@@ -344,13 +350,15 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         // Ensure we're passing all fields including assigned_to and contact_name_id
         const wbsCode = await ProjectModel.generateNextWbsCode('');
         const defaultStatus = projectStatuses[0];
+        // Remove tenant field if present in validatedData
+        const { tenant: _, ...safeValidatedData } = validatedData;
         const projectDataWithStatus = {
-            ...validatedData,
+            ...safeValidatedData,
             status: defaultStatus.status_id,
             status_name: defaultStatus.name,
             is_closed: defaultStatus.is_closed,
-            assigned_to: validatedData.assigned_to || null,
-            contact_name_id: validatedData.contact_name_id || null,
+            assigned_to: safeValidatedData.assigned_to || null,
+            contact_name_id: safeValidatedData.contact_name_id || null,
             wbs_code: wbsCode
         };
         console.log('Project data with status:', projectDataWithStatus); // Debug log
@@ -380,13 +388,19 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
             throw new Error('Failed to fetch created project details');
         }
 
+        // Ensure tenant exists before publishing event
+        if (!currentUser.tenant) {
+            throw new Error("tenant context required for event publishing");
+        }
+
         // Publish project created event
         await publishEvent({
             eventType: 'PROJECT_CREATED',
             payload: {
                 tenantId: currentUser.tenant,
                 projectId: fullProject.project_id,
-                userId: currentUser.user_id
+                userId: currentUser.user_id,
+                timestamp: new Date().toISOString()
             }
         });
 
@@ -406,13 +420,19 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
 
         await checkPermission(currentUser, 'project', 'update');
 
-        const validatedData = validateData(updateProjectSchema, projectData);
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
+
+        // Remove tenant field if present in projectData
+        const { tenant: tenantField, ...safeProjectData } = projectData;
+        const validatedData = validateData(updateProjectSchema, safeProjectData);
         
         let updatedProject = await ProjectModel.update(projectId, validatedData);
 
         // If status was updated, fetch the status details
-        if ('status' in projectData && projectData.status) {
-            const status = await ProjectModel.getCustomStatus(projectData.status);
+        if ('status' in safeProjectData && safeProjectData.status) {
+            const status = await ProjectModel.getCustomStatus(safeProjectData.status);
             if (status) {
                 updatedProject = await ProjectModel.update(projectId, {
                     ...updatedProject,
@@ -428,6 +448,11 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
                 const user = await findUserById(updatedProject.assigned_to);
                 updatedProject.assigned_user = user || null;
 
+                // Ensure tenant exists before publishing event
+                if (!currentUser.tenant) {
+                    throw new Error("tenant context required for event publishing");
+                }
+
                 // Publish project assigned event only if assigned_to actually changed
                 await publishEvent({
                     eventType: 'PROJECT_ASSIGNED',
@@ -435,7 +460,8 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
                         tenantId: currentUser.tenant,
                         projectId: projectId,
                         userId: currentUser.user_id,
-                        assignedTo: updatedProject.assigned_to
+                        assignedTo: updatedProject.assigned_to,
+                        timestamp: new Date().toISOString()
                     }
                 });
             } else {
@@ -453,6 +479,14 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
             }
         }
 
+        // Ensure tenant exists before publishing event
+        if (!currentUser.tenant) {
+            throw new Error("tenant context required for event publishing");
+        }
+
+        // Remove tenant field from changes if present
+        const { tenant: omittedTenant, ...safeChanges } = validatedData;
+
         // Publish project updated event
         await publishEvent({
             eventType: 'PROJECT_UPDATED',
@@ -460,7 +494,8 @@ export async function updateProject(projectId: string, projectData: Partial<IPro
                 tenantId: currentUser.tenant,
                 projectId: projectId,
                 userId: currentUser.user_id,
-                changes: validatedData
+                changes: safeChanges,
+                timestamp: new Date().toISOString()
             }
         });
 

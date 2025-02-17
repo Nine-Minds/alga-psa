@@ -116,7 +116,10 @@ export async function createNextBillingCycle(
   const {knex: conn, tenant} = await createTenantKnex();
 
   const company = await conn('companies')
-    .where('company_id', companyId)
+    .where({
+      company_id: companyId,
+      tenant
+    })
     .first();
 
   if (!company) {

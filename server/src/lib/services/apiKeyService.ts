@@ -40,119 +40,197 @@ export class ApiKeyService {
    * Create a new API key for a user
    * @returns The record with the plaintext API key (only available at creation time)
    */
-  static async createApiKey(userId: string, tenant: string, description?: string, expiresAt?: Date): Promise<ApiKey> {
-    const { knex } = await createTenantKnex();
+  static async createApiKey(userId: string, description?: string, expiresAt?: Date): Promise<ApiKey> {
+    const { knex, tenant } = await createTenantKnex();
     
-    const plaintextKey = this.generateApiKey();
-    const hashedKey = this.hashApiKey(plaintextKey);
-    
-    const [record] = await knex('api_keys')
-      .insert({
-        api_key: hashedKey, // Store the hash in the database
-        user_id: userId,
-        tenant,
-        description,
-        expires_at: expiresAt,
-      })
-      .returning('*');
-    
-    // Return the record with the plaintext key (only time it's available)
-    return {
-      ...record,
-      api_key: plaintextKey
-    };
+    if (!tenant) {
+      throw new Error('Tenant context is required for API key creation');
+    }
+
+    try {
+      const plaintextKey = this.generateApiKey();
+      const hashedKey = this.hashApiKey(plaintextKey);
+      
+      const [record] = await knex('api_keys')
+        .insert({
+          api_key: hashedKey, // Store the hash in the database
+          user_id: userId,
+          tenant,
+          description,
+          expires_at: expiresAt,
+        })
+        .returning('*');
+      
+      if (!record) {
+        throw new Error(`Failed to create API key for user ${userId} in tenant ${tenant}`);
+      }
+
+      // Return the record with the plaintext key (only time it's available)
+      return {
+        ...record,
+        api_key: plaintextKey
+      };
+    } catch (error) {
+      console.error(`Error creating API key for user ${userId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to create API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * Validate an API key and return the associated user and tenant information
    */
   static async validateApiKey(plaintextKey: string): Promise<ApiKey | null> {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     
-    const hashedKey = this.hashApiKey(plaintextKey);
-    
-    // Find the API key record using the hashed value
-    const record = await knex('api_keys')
-      .where({
-        api_key: hashedKey,
-        active: true,
-      })
-      .whereRaw('(expires_at IS NULL OR expires_at > NOW())')
-      .first();
-    
-    if (!record) {
+    if (!tenant) {
+      console.error('Tenant context is required for API key validation');
       return null;
     }
     
-    // Update last_used_at timestamp
-    await knex('api_keys')
-      .where('api_key_id', record.api_key_id)
-      .update({
-        last_used_at: knex.fn.now(),
-        updated_at: knex.fn.now(),
-      });
+    const hashedKey = this.hashApiKey(plaintextKey);
     
-    return record;
+    try {
+      // Find the API key record using the hashed value
+      const record = await knex('api_keys')
+        .where({
+          api_key: hashedKey,
+          active: true,
+          tenant
+        })
+        .where((builder) => {
+          builder.whereNull('expires_at')
+            .orWhere('expires_at', '>', knex.fn.now());
+        })
+        .first();
+      
+      if (!record) {
+        console.log(`Invalid or expired API key attempt in tenant ${tenant}`);
+        return null;
+      }
+      
+      // Update last_used_at timestamp
+      await knex('api_keys')
+        .where({
+          api_key_id: record.api_key_id,
+          tenant
+        })
+        .update({
+          last_used_at: knex.fn.now(),
+          updated_at: knex.fn.now(),
+        });
+      
+      return record;
+    } catch (error) {
+      console.error(`Error validating API key in tenant ${tenant}:`, error);
+      return null;
+    }
   }
 
   /**
    * Deactivate an API key
    */
-  static async deactivateApiKey(apiKeyId: string, tenant: string): Promise<void> {
-    const { knex } = await createTenantKnex();
+  static async deactivateApiKey(apiKeyId: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex();
     
-    await knex('api_keys')
-      .where({
-        api_key_id: apiKeyId,
-        tenant,
-      })
-      .update({
-        active: false,
-        updated_at: knex.fn.now(),
-      });
+    if (!tenant) {
+      throw new Error('Tenant context is required for deactivating API key');
+    }
+
+    try {
+      const result = await knex('api_keys')
+        .where({
+          api_key_id: apiKeyId,
+          tenant,
+        })
+        .update({
+          active: false,
+          updated_at: knex.fn.now(),
+        });
+
+      if (result === 0) {
+        throw new Error(`API key ${apiKeyId} not found in tenant ${tenant}`);
+      }
+    } catch (error) {
+      console.error(`Error deactivating API key ${apiKeyId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to deactivate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * List all API keys for a user
    */
-  static async listUserApiKeys(userId: string, tenant: string): Promise<ApiKey[]> {
-    const { knex } = await createTenantKnex();
+  static async listUserApiKeys(userId: string): Promise<ApiKey[]> {
+    const { knex, tenant } = await createTenantKnex();
     
-    return knex('api_keys')
-      .where({
-        user_id: userId,
-        tenant,
-      })
-      .orderBy('created_at', 'desc');
+    if (!tenant) {
+      throw new Error('Tenant context is required for listing user API keys');
+    }
+
+    try {
+      return await knex('api_keys')
+        .where({
+          user_id: userId,
+          tenant,
+        })
+        .orderBy('created_at', 'desc');
+    } catch (error) {
+      console.error(`Error listing API keys for user ${userId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to list user API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenant: string): Promise<(ApiKey & { username: string })[]> {
-    const { knex } = await createTenantKnex();
+  static async listAllApiKeys(): Promise<(ApiKey & { username: string })[]> {
+    const { knex, tenant } = await createTenantKnex();
     
-    return knex('api_keys')
-      .select('api_keys.*', 'users.username')
-      .join('users', 'api_keys.user_id', 'users.user_id')
-      .where('api_keys.tenant', tenant)
-      .orderBy('api_keys.created_at', 'desc');
+    if (!tenant) {
+      throw new Error('Tenant context is required for listing API keys');
+    }
+
+    try {
+      return await knex('api_keys')
+        .select('api_keys.*', 'users.username')
+        .join('users', function() {
+          this.on('api_keys.user_id', '=', 'users.user_id')
+              .andOn('users.tenant', '=', 'api_keys.tenant');
+        })
+        .where('api_keys.tenant', tenant)
+        .orderBy('api_keys.created_at', 'desc');
+    } catch (error) {
+      console.error(`Error listing API keys in tenant ${tenant}:`, error);
+      throw new Error(`Failed to list API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
    * Admin deactivate any API key
    */
-  static async adminDeactivateApiKey(apiKeyId: string, tenant: string): Promise<void> {
-    const { knex } = await createTenantKnex();
+  static async adminDeactivateApiKey(apiKeyId: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex();
     
-    await knex('api_keys')
-      .where({
-        api_key_id: apiKeyId,
-        tenant,
-      })
-      .update({
-        active: false,
-        updated_at: knex.fn.now(),
-      });
+    if (!tenant) {
+      throw new Error('Tenant context is required for admin deactivating API key');
+    }
+
+    try {
+      const result = await knex('api_keys')
+        .where({
+          api_key_id: apiKeyId,
+          tenant,
+        })
+        .update({
+          active: false,
+          updated_at: knex.fn.now(),
+        });
+
+      if (result === 0) {
+        throw new Error(`API key ${apiKeyId} not found in tenant ${tenant}`);
+      }
+    } catch (error) {
+      console.error(`Error admin deactivating API key ${apiKeyId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to admin deactivate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

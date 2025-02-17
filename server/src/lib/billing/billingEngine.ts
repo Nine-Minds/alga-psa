@@ -31,33 +31,45 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class BillingEngine {
   private knex: Knex;
+  private tenant: string | null;
 
   constructor() {
     this.knex = null as any;
+    this.tenant = null;
   }
 
   private async initKnex() {
     if (!this.knex) {
-      this.knex = (await createTenantKnex()).knex;
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error("tenant context not found");
+      }
+      this.knex = knex;
+      this.tenant = tenant;
     }
   }
 
   private async hasExistingInvoiceForCycle(companyId: string, billingCycleId: string): Promise<boolean> {
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
-    if (!company) return false;
+    if (!company) {
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    }
 
     const existingInvoice = await this.knex('invoices')
       .where({
         company_id: companyId,
         billing_cycle_id: billingCycleId,
-        tenant: company.tenant
+        tenant: this.tenant
       })
       .first();
     return !!existingInvoice;
@@ -233,34 +245,40 @@ export class BillingEngine {
 
   private async getCompanyBillingPlansAndCycle(companyId: string, billingPeriod: IBillingPeriod): Promise<{ companyBillingPlans: ICompanyBillingPlan[], billingCycle: string }> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
     const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
+    const tenant = this.tenant; // Capture tenant value here
     const companyBillingPlans = await this.knex('company_billing_plans')
       .join('billing_plans', function() {
         this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
             .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
       })
-      .where({ 
-        'company_billing_plans.company_id': companyId, 
+      .where({
+        'company_billing_plans.company_id': companyId,
         'company_billing_plans.is_active': true,
-        'company_billing_plans.tenant': company.tenant
+        'company_billing_plans.tenant': this.tenant
       })
       .where('company_billing_plans.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
         this.where('company_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('company_billing_plans.end_date');
       })
-      .select('company_billing_plans.*', 'billing_plans.plan_name')
+      .select(
+        'company_billing_plans.*',
+        'billing_plans.plan_name'
+      )
       .orderBy('company_billing_plans.start_date', 'desc');
 
     // Convert dates from the DB into plain ISO strings using our date utilities
@@ -274,22 +292,24 @@ export class BillingEngine {
 
   private async getBillingCycle(companyId: string, date: ISO8601String = toISODate(Temporal.Now.plainDateISO())): Promise<string> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
     const result = await this.knex('company_billing_cycles')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant: company.tenant 
+        tenant: this.tenant
       })
       .where('effective_date', '<=', date)
       .orderBy('effective_date', 'desc')
@@ -298,9 +318,9 @@ export class BillingEngine {
     if (!result) {
       // Check again for existing cycle to handle race conditions
       const existingCycle = await this.knex('company_billing_cycles')
-        .where({ 
+        .where({
           company_id: companyId,
-          tenant: company.tenant 
+          tenant: this.tenant
         })
         .first();
 
@@ -313,15 +333,23 @@ export class BillingEngine {
           company_id: companyId,
           billing_cycle: 'monthly',
           effective_date: '2023-01-01T00:00:00Z',
-          tenant: company.tenant
+          tenant: this.tenant
         };
         
         await this.knex('company_billing_cycles').insert(defaultCycle);
       } catch (error) {
         // If insert fails due to race condition, get the existing record
         const cycle = await this.knex('company_billing_cycles')
-          .where({ company_id: companyId })
+          .where({
+            company_id: companyId,
+            tenant: this.tenant
+          })
           .first();
+        
+        if (!cycle) {
+          throw new Error(`Failed to create or retrieve billing cycle for company ${companyId} in tenant ${this.tenant}`);
+        }
+        
         return cycle.billing_cycle;
       }
       return 'monthly' as BillingCycleType;
@@ -332,25 +360,31 @@ export class BillingEngine {
 
   private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<{ success: boolean; error?: string }> {
     try {
-      // Get tenant from createTenantKnex
-      const { tenant } = await createTenantKnex();
+      await this.initKnex();
+      if (!this.tenant) {
+        return {
+          success: false,
+          error: "tenant context not found"
+        };
+      }
+
       const company = await this.knex('companies')
-        .where({ 
+        .where({
           company_id: companyId,
-          tenant 
+          tenant: this.tenant
         })
         .first();
       if (!company) {
         return {
           success: false,
-          error: `Company ${companyId} not found`
+          error: `Company ${companyId} not found in tenant ${this.tenant}`
         };
       }
 
       const cycles = await this.knex('company_billing_cycles')
-        .where({ 
+        .where({
           company_id: companyId,
-          tenant: company.tenant 
+          tenant: this.tenant
         })
         .where('effective_date', '<=', endDate)
         .orderBy('effective_date', 'asc');
@@ -386,19 +420,22 @@ export class BillingEngine {
 
   private async calculateFixedPriceCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IFixedPriceCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first() as ICompany;
     
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
       
+    const tenant = this.tenant; // Capture tenant value for joins
     const planServices = await this.knex('company_billing_plans')
       .join('billing_plans', function() {
         this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
@@ -451,18 +488,21 @@ export class BillingEngine {
 
   private async calculateTimeBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
+    const tenant = this.tenant; // Capture tenant value for joins
     const query = this.knex('time_entries')
       .join('users', function() {
         this.on('time_entries.user_id', '=', 'users.user_id')
@@ -553,18 +593,21 @@ export class BillingEngine {
 
   private async calculateUsageBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IUsageBasedCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
+    const tenant = this.tenant; // Capture tenant value for joins
     const usageRecordQuery = this.knex('usage_tracking')
       .join('service_catalog', function() {
         this.on('usage_tracking.service_id', '=', 'service_catalog.service_id')
@@ -572,12 +615,12 @@ export class BillingEngine {
       })
       .leftJoin('plan_services', (join) => {
         join.on('service_catalog.service_id', '=', 'plan_services.service_id')
-           .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
-           .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
+            .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
+            .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
       })
       .where({
         'usage_tracking.company_id': companyId,
-        'usage_tracking.tenant': company.tenant,
+        'usage_tracking.tenant': this.tenant,
         'usage_tracking.invoiced': false
       })
       .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
@@ -605,19 +648,22 @@ export class BillingEngine {
 
   private async calculateProductCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IProductCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first() as ICompany;
     
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
       
+    const tenant = this.tenant; // Capture tenant value for joins
     const planServices = await this.knex('company_billing_plans')
       .join('billing_plans', function() {
         this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
@@ -665,17 +711,19 @@ export class BillingEngine {
 
   private async calculateLicenseCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ILicenseCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first() as ICompany;
     
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
       
     const planServices = await this.knex('company_billing_plans')
@@ -727,16 +775,18 @@ export class BillingEngine {
 
   private async calculateBucketPlanCharges(companyId: string, period: IBillingPeriod, billingPlan: ICompanyBillingPlan): Promise<IBucketCharge[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
     const bucketPlan = await this.knex('bucket_plans')
@@ -886,16 +936,18 @@ export class BillingEngine {
 
   private async fetchDiscounts(companyId: string, billingPeriod: IBillingPeriod): Promise<IDiscount[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
     const { startDate, endDate } = billingPeriod;
@@ -929,16 +981,18 @@ export class BillingEngine {
 
   private async fetchAdjustments(companyId: string): Promise<IAdjustment[]> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
     const adjustments = await this.knex('adjustments')
@@ -951,16 +1005,18 @@ export class BillingEngine {
 
   async rolloverUnapprovedTime(companyId: string, currentPeriodEnd: ISO8601String, nextPeriodStart: ISO8601String): Promise<void> {
     await this.initKnex();
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: companyId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
     if (!company) {
-      throw new Error(`Company ${companyId} not found`);
+      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
     // Fetch unapproved time entries
     const knex = this.knex;
@@ -1019,29 +1075,30 @@ export class BillingEngine {
     await this.initKnex();
     console.log(`Recalculating invoice ${invoiceId}`);
 
-    // Load invoice and company details
-    // Get tenant from createTenantKnex
-    const { tenant } = await createTenantKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
     const invoice = await this.knex('invoices')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
-        tenant 
+        tenant: this.tenant
       })
       .first();
 
     if (!invoice) {
-      throw new Error(`Invoice ${invoiceId} not found`);
+      throw new Error(`Invoice ${invoiceId} not found in tenant ${this.tenant}`);
     }
 
     const company = await this.knex('companies')
-      .where({ 
+      .where({
         company_id: invoice.company_id,
-        tenant 
+        tenant: this.tenant
       })
       .first();
 
     if (!company) {
-      throw new Error(`Company ${invoice.company_id} not found`);
+      throw new Error(`Company ${invoice.company_id} not found in tenant ${this.tenant}`);
     }
 
     const taxService = new TaxService();
@@ -1225,7 +1282,7 @@ export class BillingEngine {
       // Record adjustment transaction
       await trx('transactions').insert({
         transaction_id: uuidv4(),
-        tenant: invoice.tenant,
+        tenant: this.tenant,
         company_id: invoice.company_id,
         invoice_id: invoiceId,
         amount: finalTotal,

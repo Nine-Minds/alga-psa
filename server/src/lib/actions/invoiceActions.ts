@@ -634,8 +634,13 @@ async function calculateChargeDetails(
 }
 
 export async function generateInvoiceNumber(): Promise<string> {
-  const { knex } = await createTenantKnex();
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   const result = await knex('invoices')
+    .where({ tenant })
     .max('invoice_number as lastInvoiceNumber')
     .first();
 
@@ -1251,17 +1256,22 @@ export async function updateInvoiceManualItems(
 
       // Get the existing item to check if it's a discount
       const existingItem = await trx('invoice_items')
-        .where({ 
+        .where({
           item_id: item.item_id,
-          tenant
+          tenant,
+          invoice_id: invoiceId
         })
         .first();
-
+    
+      if (!existingItem) {
+        throw new Error(`Invoice item ${item.item_id} not found for tenant ${tenant}`);
+      }
+    
       // For percentage discounts, preserve the percentage and calculate the initial monetary value
       let finalUnitPrice = unitPriceInCents;
-      let discountPercentage = existingItem?.discount_percentage;
-      const isDiscount = existingItem?.is_discount || false;
-
+      let discountPercentage = existingItem.discount_percentage;
+      const isDiscount = existingItem.is_discount || false;
+    
       if (isDiscount && item.discount_type === 'percentage') {
         // Use the new discount_percentage if provided, otherwise keep existing
         discountPercentage = item.discount_percentage !== undefined ? item.discount_percentage : discountPercentage;
@@ -1271,7 +1281,7 @@ export async function updateInvoiceManualItems(
         // For fixed discounts, ensure the amount is negative
         finalUnitPrice = -Math.abs(unitPriceInCents);
       }
-
+    
       const invoiceItem = {
         item_id: uuidv4(),
         invoice_id: invoiceId,
@@ -1286,9 +1296,9 @@ export async function updateInvoiceManualItems(
         total_price: isDiscount ? -Math.abs(netAmount) : netAmount, // Will be updated by recalculateInvoice
         is_manual: true,
         is_discount: isDiscount,
-        discount_type: existingItem?.discount_type,
+        discount_type: existingItem.discount_type,
         discount_percentage: discountPercentage,
-        applies_to_item_id: existingItem?.applies_to_item_id,
+        applies_to_item_id: existingItem.applies_to_item_id,
         created_by: session.user.id,
         created_at: currentDate,
         tenant
@@ -1327,7 +1337,10 @@ export async function addManualItemsToInvoice(
 
   // Load and validate invoice
   const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId })
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
     .first();
 
   if (!invoice) {
@@ -1339,7 +1352,10 @@ export async function addManualItemsToInvoice(
   }
 
   const company = await knex('companies')
-    .where({ company_id: invoice.company_id })
+    .where({
+      company_id: invoice.company_id,
+      tenant
+    })
     .first();
 
   if (!company) {
@@ -1453,7 +1469,11 @@ export async function addManualItemsToInvoice(
         description: `Added manual items to invoice ${invoice.invoice_number}`,
         created_at: currentDate,
         tenant,
-        balance_after: currentBalance + difference
+        balance_after: currentBalance + difference,
+        metadata: {
+          action: 'manual_items_added',
+          company_id: invoice.company_id
+        }
       });
     }
 

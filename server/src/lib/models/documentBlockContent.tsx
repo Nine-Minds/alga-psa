@@ -15,8 +15,8 @@ class DocumentBlockContent {
     static async getWithDocument(document_id: string): Promise<DocumentWithBlockContent | undefined> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting document block content');
             }
             
             // Get document
@@ -26,7 +26,10 @@ class DocumentBlockContent {
             // Get block content
             const blockContent = await db<IDocumentBlockContent>('document_block_content')
                 .select('*')
-                .whereRaw('document_id = ? AND tenant = ?', [document_id, tenant])
+                .where({
+                    document_id,
+                    tenant
+                })
                 .first();
 
             // Create result with explicit non-null document
@@ -45,8 +48,8 @@ class DocumentBlockContent {
     static async getWithVersions(document_id: string): Promise<DocumentWithVersions | undefined> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting document versions');
             }
             
             // Get document with block content
@@ -56,7 +59,10 @@ class DocumentBlockContent {
             // Get versions
             const versions = await db<IDocumentVersion>('document_versions')
                 .select('*')
-                .whereRaw('document_id = ? AND tenant = ?', [document_id, tenant])
+                .where({
+                    document_id,
+                    tenant
+                })
                 .orderBy('version_number', 'desc');
 
             const result: DocumentWithVersions = {
@@ -75,8 +81,8 @@ class DocumentBlockContent {
     static async getVersionedContent(document_id: string, version_id?: string): Promise<DocumentWithBlockContent | undefined> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting versioned content');
             }
             
             // Get document
@@ -91,7 +97,7 @@ class DocumentBlockContent {
             
             if (version_id) {
                 // Handle specific version
-                query = query.andWhere('document_block_content.version_id', db.raw('?::uuid', [version_id]));
+                query = query.andWhere('document_block_content.version_id', version_id);
             } else {
                 // If no version specified, get content for active version
                 query = query.leftJoin('document_versions', function() {
@@ -121,12 +127,17 @@ class DocumentBlockContent {
     static async insert(content: DocumentBlockContentInput): Promise<Pick<IDocumentBlockContent, "content_id">> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for inserting document block content');
             }
-                        
+            
+            // Remove any tenant from input data to prevent conflicts
+            const { tenant: _, ...contentData } = content;
             const [content_id] = await db<IDocumentBlockContent>('document_block_content')
-                .insert({...content, tenant})
+                .insert({
+                    ...contentData,
+                    tenant
+                })
                 .returning('content_id');
             return content_id;
         } catch (error) {
@@ -138,15 +149,19 @@ class DocumentBlockContent {
     static async update(document_id: string, content: Partial<IDocumentBlockContent>): Promise<void> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for updating document block content');
             }
 
+            // Remove tenant from update data to prevent modification
+            const { tenant: _, ...updateData } = content;
             await db<IDocumentBlockContent>('document_block_content')
-                .where('document_id', document_id)
-                .andWhere('tenant', tenant)
+                .where({
+                    document_id,
+                    tenant
+                })
                 .update({
-                    ...content,
+                    ...updateData,
                     updated_at: db.fn.now()
                 });
         } catch (error) {
@@ -158,13 +173,15 @@ class DocumentBlockContent {
     static async delete(document_id: string): Promise<void> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for deleting document block content');
             }
 
             await db<IDocumentBlockContent>('document_block_content')
-                .where('document_id', document_id)
-                .andWhere('tenant', tenant)
+                .where({
+                    document_id,
+                    tenant
+                })
                 .del();
         } catch (error) {
             logger.error(`Error deleting block content for document ${document_id}:`, error);
@@ -176,21 +193,29 @@ class DocumentBlockContent {
     static async createVersion(version: DocumentVersionInput): Promise<Pick<IDocumentVersion, "version_id">> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for creating document version');
             }
 
             // Start a transaction
             const version_id = await db.transaction(async trx => {
                 // Set all versions to inactive
                 await trx('document_versions')
-                    .where('document_id', version.document_id)
-                    .andWhere('tenant', tenant)
+                    .where({
+                        document_id: version.document_id,
+                        tenant
+                    })
                     .update({ is_active: false });
 
+                // Remove any tenant from input data to prevent conflicts
+                const { tenant: _, ...versionData } = version;
+                
                 // Insert new version
                 const [newVersion] = await trx<IDocumentVersion>('document_versions')
-                    .insert({...version, tenant})
+                    .insert({
+                        ...versionData,
+                        tenant
+                    })
                     .returning('version_id');
                 
                 return newVersion;
@@ -206,15 +231,17 @@ class DocumentBlockContent {
     static async getActiveVersion(document_id: string): Promise<IDocumentVersion | undefined> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting active document version');
             }
 
             const version = await db<IDocumentVersion>('document_versions')
                 .select('*')
-                .where('document_id', document_id)
-                .andWhere('tenant', tenant)
-                .andWhere('is_active', true)
+                .where({
+                    document_id,
+                    tenant,
+                    is_active: true
+                })
                 .first();
             
             return version ?? undefined;
@@ -227,21 +254,25 @@ class DocumentBlockContent {
     static async setActiveVersion(document_id: string, version_id: string): Promise<void> {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            if (tenant == null) {
-                throw new Error('No tenant found');
+            if (!tenant) {
+                throw new Error('Tenant context is required for setting active document version');
             }
             
             await db.transaction(async trx => {
                 // Set all versions to inactive
                 await trx('document_versions')
-                    .where('document_id', document_id)
-                    .andWhere('tenant', tenant)
+                    .where({
+                        document_id,
+                        tenant
+                    })
                     .update({ is_active: false });
 
                 // Set specified version to active
                 await trx('document_versions')
-                    .where('version_id', trx.raw('?::uuid', [version_id]))
-                    .andWhere('tenant', tenant)
+                    .where({
+                        version_id,
+                        tenant
+                    })
                     .update({ is_active: true });
             });
         } catch (error) {

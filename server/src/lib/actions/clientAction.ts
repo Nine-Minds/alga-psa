@@ -5,7 +5,11 @@ import { createTenantKnex } from '@/lib/db';
 
 export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
     const clients = await db('companies')
       .select(
         'companies.company_id',
@@ -16,8 +20,15 @@ export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
         'billing_plans.is_custom',
         'billing_plans.plan_type'
       )
-      .leftJoin('client_billing', 'companies.company_id', 'client_billing.company_id')
-      .leftJoin('billing_plans', 'client_billing.plan_id', 'billing_plans.plan_id');
+      .where('companies.tenant', tenant)
+      .leftJoin('client_billing', function() {
+        this.on('companies.company_id', '=', 'client_billing.company_id')
+            .andOn('companies.tenant', '=', 'client_billing.tenant');
+      })
+      .leftJoin('billing_plans', function() {
+        this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('client_billing.tenant', '=', 'billing_plans.tenant');
+      });
     
     return clients.map((company): Omit<IClient, "tenant"> => ({
       id: company.company_id,

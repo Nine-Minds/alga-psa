@@ -5,9 +5,17 @@ import { createTenantKnex } from '../db';
 const Status = {
   getAll: async (): Promise<IStatus[]> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      const statuses = await db<IStatus>('statuses').select('*');
-      console.log(statuses);
+      const {knex: db, tenant} = await createTenantKnex();
+      
+      if (!tenant) {
+        console.error('Tenant context is required for getting statuses');
+        throw new Error('Tenant context is required for getting statuses');
+      }
+
+      const statuses = await db<IStatus>('statuses')
+        .select('*')
+        .where({ tenant });
+        
       return statuses;
     } catch (error) {
       console.error('Error getting all statuses:', error);
@@ -16,10 +24,22 @@ const Status = {
   },
 
   get: async (id: string, trx?: Knex.Transaction): Promise<IStatus | undefined> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      console.error('Tenant context is required for getting status');
+      throw new Error('Tenant context is required for getting status');
+    }
+
     const queryBuilder = trx || db;
     try {
-      const status = await queryBuilder<IStatus>('statuses').select('*').where({ status_id: id }).first();
+      const status = await queryBuilder<IStatus>('statuses')
+        .select('*')
+        .where({
+          status_id: id,
+          tenant
+        })
+        .first();
       return status;
     } catch (error) {
       console.error(`Error getting status with id ${id}:`, error);
@@ -40,15 +60,35 @@ const Status = {
   },
 
   update: async (id: string, status: Partial<IStatus>): Promise<IStatus> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      console.error('Tenant context is required for updating status');
+      throw new Error('Tenant context is required for updating status');
+    }
+
     try {
-      await db<IStatus>('statuses').where({ status_id: id }).update(status);
-      const query = db<IStatus>('statuses').where({ status_id: id });
-      console.log('DEBUG query:', query.toSQL().sql);
-      const updatedStatus = await query.first();
+      // Remove tenant from update data to prevent modification
+      const { tenant: _, ...updateData } = status;
+
+      await db<IStatus>('statuses')
+        .where({
+          status_id: id,
+          tenant
+        })
+        .update(updateData);
+
+      const updatedStatus = await db<IStatus>('statuses')
+        .where({
+          status_id: id,
+          tenant
+        })
+        .first();
+
       if (!updatedStatus) {
         throw new Error(`Status with id ${id} not found after update`);
       }
+
       return updatedStatus;
     } catch (error) {
       console.error(`Error updating status with id ${id}:`, error);
@@ -58,8 +98,23 @@ const Status = {
 
   delete: async (id: string): Promise<void> => {
     try {
-      const {knex: db} = await createTenantKnex();
-      await db<IStatus>('statuses').where({ status_id: id }).del();
+      const {knex: db, tenant} = await createTenantKnex();
+      
+      if (!tenant) {
+        console.error('Tenant context is required for deleting status');
+        throw new Error('Tenant context is required for deleting status');
+      }
+
+      const result = await db<IStatus>('statuses')
+        .where({
+          status_id: id,
+          tenant
+        })
+        .del();
+      
+      if (result === 0) {
+        throw new Error(`Status with id ${id} not found or belongs to different tenant`);
+      }
     } catch (error) {
       console.error(`Error deleting status with id ${id}:`, error);
       throw error;
@@ -67,18 +122,25 @@ const Status = {
   },
 
   getMaxOrderNumber: async (trx?: Knex.Transaction): Promise<number> => {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      console.error('Tenant context is required for getting max order number');
+      throw new Error('Tenant context is required for getting max order number');
+    }
+
     const queryBuilder = trx || db;
     try {
       // Build the query
       const query = queryBuilder('statuses')
         .max('order_number as maxOrder')
-        .where('item_type', 'ticket');
+        .where({
+          item_type: 'ticket',
+          tenant
+        });
 
       // Execute the query
       const result = await query.first<{ maxOrder: number | null }>();
-
-      console.log('DEBUG result:', result);
 
       if (!result || result.maxOrder === null) {
         return 0;

@@ -13,7 +13,10 @@ export async function getAllInteractionTypes(): Promise<(IInteractionType | ISys
       throw new Error('User not authenticated');
     }
 
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     
     // Get system interaction types
     const systemTypes = await db('system_interaction_types')
@@ -36,7 +39,10 @@ export async function getAllInteractionTypes(): Promise<(IInteractionType | ISys
 
 export async function getSystemInteractionTypes(): Promise<ISystemInteractionType[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     return await db('system_interaction_types')
       .select('*')
       .orderBy('type_name');
@@ -48,7 +54,10 @@ export async function getSystemInteractionTypes(): Promise<ISystemInteractionTyp
 
 export async function getSystemInteractionTypeById(typeId: string): Promise<ISystemInteractionType | null> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required');
+    }
     const type = await db('system_interaction_types')
       .where({ type_id: typeId })
       .first();
@@ -80,9 +89,14 @@ export async function createInteractionType(
       }
     }
 
+    // Extract only the allowed fields from interactionType
+    const { type_name, icon, system_type_id } = interactionType;
+    
     const [newType] = await db('interaction_types')
       .insert({
-        ...interactionType,
+        type_name,
+        icon,
+        system_type_id,
         tenant: currentUser.tenant
       })
       .returning('*');

@@ -4,9 +4,14 @@ import { ITicketCategory } from '@/interfaces/ticket.interfaces';
 const TicketCategory = {
   getAll: async (): Promise<ITicketCategory[]> => {
     try {
-      const { knex: db } = await createTenantKnex();
-      // RLS will automatically filter categories based on the current user's tenant
-      const categories = await db<ITicketCategory>('categories').select('*');
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for getting ticket categories');
+      }
+      // Add explicit tenant filtering in addition to RLS
+      const categories = await db<ITicketCategory>('categories')
+        .where({ tenant })
+        .select('*');
       return categories;
     } catch (error) {
       console.error('Error getting all ticket categories:', error);
@@ -15,18 +20,53 @@ const TicketCategory = {
   },
 
   get: async (id: string): Promise<ITicketCategory> => {
-    const { knex: db } = await createTenantKnex();
-    // RLS will ensure that only categories from the current user's tenant are accessible
-    const [category] = await db<ITicketCategory>('categories')
-      .where('category_id', id);
-    return category;
+    try {
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for getting ticket category');
+      }
+      // Add explicit tenant filtering in addition to RLS
+      const [category] = await db<ITicketCategory>('categories')
+        .where({
+          category_id: id,
+          tenant
+        });
+      
+      if (!category) {
+        throw new Error(`Ticket category with id ${id} not found in tenant ${tenant}`);
+      }
+      
+      return category;
+    } catch (error) {
+      console.error(`Error getting ticket category with id ${id}:`, error);
+      throw error;
+    }
   },
 
   getByChannel: async (channelId: string): Promise<ITicketCategory[]> => {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for getting channel categories');
+      }
+
+      // Verify channel exists in the current tenant
+      const channel = await db('channels')
+        .where({
+          channel_id: channelId,
+          tenant
+        })
+        .first();
+
+      if (!channel) {
+        throw new Error(`Channel with id ${channelId} not found in tenant ${tenant}`);
+      }
+
       const categories = await db<ITicketCategory>('categories')
-        .where('channel_id', channelId);
+        .where({
+          channel_id: channelId,
+          tenant
+        });
       return categories;
     } catch (error) {
       console.error('Error getting ticket categories by channel:', error);
@@ -37,7 +77,30 @@ const TicketCategory = {
   insert: async (category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
       const { knex: db, tenant } = await createTenantKnex();
-      
+      if (!tenant) {
+        throw new Error('Tenant context is required for creating ticket category');
+      }
+
+      if (!category.category_name) {
+        throw new Error('Category name is required');
+      }
+
+      if (!category.channel_id) {
+        throw new Error('Channel ID is required');
+      }
+
+      // Verify channel exists in the current tenant
+      const channel = await db('channels')
+        .where({
+          channel_id: category.channel_id,
+          tenant
+        })
+        .first();
+
+      if (!channel) {
+        throw new Error(`Channel with id ${category.channel_id} not found in tenant ${tenant}`);
+      }
+
       // Check if category with same name exists in the channel
       const existingCategory = await db('categories')
         .where({
@@ -48,13 +111,24 @@ const TicketCategory = {
         .first();
 
       if (existingCategory) {
-        throw new Error('A ticket category with this name already exists in this channel');
+        throw new Error(`A ticket category with name "${category.category_name}" already exists in this channel in tenant ${tenant}`);
       }
 
-      // RLS will automatically set the tenant for the new category
+      // Ensure tenant is set and cannot be overridden
+      const categoryData = {
+        ...category,
+        tenant
+      };
+
+      // Insert with explicit tenant
       const [insertedCategory] = await db<ITicketCategory>('categories')
-        .insert({ ...category, tenant: tenant! })
+        .insert(categoryData)
         .returning('*');
+
+      if (!insertedCategory) {
+        throw new Error(`Failed to create ticket category in tenant ${tenant}`);
+      }
+
       return insertedCategory;
     } catch (error) {
       console.error('Error inserting ticket category:', error);
@@ -65,28 +139,68 @@ const TicketCategory = {
   update: async (id: string, category: Partial<ITicketCategory>): Promise<ITicketCategory> => {
     try {
       const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for updating ticket category');
+      }
+
+      // Verify category exists in the current tenant
+      const existingCategory = await db('categories')
+        .where({
+          category_id: id,
+          tenant
+        })
+        .first();
+
+      if (!existingCategory) {
+        throw new Error(`Ticket category with id ${id} not found in tenant ${tenant}`);
+      }
+
+      // If channel_id is being updated, verify the new channel exists in the current tenant
+      if (category.channel_id && category.channel_id !== existingCategory.channel_id) {
+        const newChannel = await db('channels')
+          .where({
+            channel_id: category.channel_id,
+            tenant
+          })
+          .first();
+
+        if (!newChannel) {
+          throw new Error(`Channel with id ${category.channel_id} not found in tenant ${tenant}`);
+        }
+      }
 
       // If name is being updated, check for duplicates in the same channel
       if (category.category_name) {
-        const existingCategory = await db('categories')
+        const duplicateCategory = await db('categories')
           .where({
             tenant,
             category_name: category.category_name,
-            channel_id: category.channel_id || (await db('categories').where({ category_id: id }).first()).channel_id
+            channel_id: category.channel_id || existingCategory.channel_id
           })
           .whereNot('category_id', id)
           .first();
 
-        if (existingCategory) {
-          throw new Error('A ticket category with this name already exists in this channel');
+        if (duplicateCategory) {
+          throw new Error(`A ticket category with name "${category.category_name}" already exists in this channel in tenant ${tenant}`);
         }
       }
 
-      // RLS will ensure that only categories from the current user's tenant can be updated
+      // Ensure tenant cannot be changed
+      delete category.tenant;
+
+      // Update with explicit tenant check
       const [updatedCategory] = await db<ITicketCategory>('categories')
-        .where({ category_id: id })
+        .where({
+          category_id: id,
+          tenant
+        })
         .update(category)
         .returning('*');
+
+      if (!updatedCategory) {
+        throw new Error(`Failed to update ticket category with id ${id} in tenant ${tenant}`);
+      }
+
       return updatedCategory;
     } catch (error) {
       console.error(`Error updating ticket category with id ${id}:`, error);
@@ -97,6 +211,21 @@ const TicketCategory = {
   delete: async (id: string): Promise<void> => {
     try {
       const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for deleting ticket category');
+      }
+
+      // Verify category exists in the current tenant
+      const category = await db('categories')
+        .where({
+          category_id: id,
+          tenant
+        })
+        .first();
+
+      if (!category) {
+        throw new Error(`Ticket category with id ${id} not found in tenant ${tenant}`);
+      }
 
       // Check if category has subcategories
       const hasSubcategories = await db('categories')
@@ -107,30 +236,38 @@ const TicketCategory = {
         .first();
 
       if (hasSubcategories) {
-        throw new Error('Cannot delete ticket category that has subcategories');
+        throw new Error(`Cannot delete ticket category that has subcategories in tenant ${tenant}`);
       }
 
-      // Check if category is in use by tickets
+      // Check if category is in use by tickets using a proper tenant-aware query
       const inUseCount = await db('tickets')
-        .where({
-          tenant,
-          category_id: id
-        })
-        .orWhere({
-          tenant,
-          subcategory_id: id
+        .where(function() {
+          this.where({
+            tenant,
+            category_id: id
+          }).orWhere({
+            tenant,
+            subcategory_id: id
+          });
         })
         .count('ticket_id as count')
         .first();
 
       if (inUseCount && Number(inUseCount.count) > 0) {
-        throw new Error('Cannot delete ticket category that is in use by tickets');
+        throw new Error(`Cannot delete ticket category that is in use by tickets in tenant ${tenant}`);
       }
 
-      // RLS will ensure that only categories from the current user's tenant can be deleted
-      await db<ITicketCategory>('categories')
-        .where({ category_id: id })
+      // Add explicit tenant check in deletion
+      const deletedCount = await db<ITicketCategory>('categories')
+        .where({
+          category_id: id,
+          tenant
+        })
         .del();
+
+      if (deletedCount === 0) {
+        throw new Error(`Failed to delete ticket category with id ${id} in tenant ${tenant}`);
+      }
     } catch (error) {
       console.error(`Error deleting ticket category with id ${id}:`, error);
       throw error;

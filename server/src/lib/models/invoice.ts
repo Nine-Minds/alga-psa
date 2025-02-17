@@ -18,33 +18,86 @@ export default class Invoice {
   }
 
   static async getById(invoiceId: string): Promise<IInvoice | null> {
-    const { knex } = await createTenantKnex();
-    const query = knex('invoices').where({ invoice_id: invoiceId }).first();
-    console.log('SQL Query:', query.toSQL().sql);
-    const invoice = await query;
-    if (invoice) {
-      invoice.invoice_items = await this.getInvoiceItems(invoiceId);
-      invoice.due_date = Temporal.PlainDate.from(invoice.due_date);
-      if (invoice.finalized_at) {
-        invoice.finalized_at = Temporal.PlainDate.from(invoice.finalized_at);
-      }
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting invoice');
     }
-    return invoice || null;
+
+    try {
+      const invoice = await knex('invoices')
+        .where({
+          invoice_id: invoiceId,
+          tenant
+        })
+        .first();
+
+      if (invoice) {
+        invoice.invoice_items = await this.getInvoiceItems(invoiceId);
+        invoice.due_date = Temporal.PlainDate.from(invoice.due_date);
+        if (invoice.finalized_at) {
+          invoice.finalized_at = Temporal.PlainDate.from(invoice.finalized_at);
+        }
+      }
+
+      return invoice || null;
+    } catch (error) {
+      console.error(`Error getting invoice ${invoiceId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to get invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async update(invoiceId: string, updateData: Partial<IInvoice>): Promise<IInvoice> {
-    const { knex } = await createTenantKnex();
-    const [updatedInvoice] = await knex('invoices')
-      .where({ invoice_id: invoiceId })
-      .update(updateData)
-      .returning('*');
-    return updatedInvoice;
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating invoice');
+    }
+
+    try {
+      const [updatedInvoice] = await knex('invoices')
+        .where({
+          invoice_id: invoiceId,
+          tenant
+        })
+        .update(updateData)
+        .returning('*');
+
+      if (!updatedInvoice) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      return updatedInvoice;
+    } catch (error) {
+      console.error(`Error updating invoice ${invoiceId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to update invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async delete(invoiceId: string): Promise<boolean> {
-    const { knex } = await createTenantKnex();
-    const deleted = await knex('invoices').where({ invoice_id: invoiceId }).del();
-    return deleted > 0;
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for deleting invoice');
+    }
+
+    try {
+      const deleted = await knex('invoices')
+        .where({
+          invoice_id: invoiceId,
+          tenant
+        })
+        .del();
+
+      if (deleted === 0) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error deleting invoice ${invoiceId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to delete invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async addInvoiceItem(invoiceItem: Omit<IInvoiceItem, 'item_id' | 'tenant'>): Promise<IInvoiceItem> {
@@ -77,85 +130,100 @@ export default class Invoice {
   }
 
   static async getInvoiceItems(invoiceId: string): Promise<IInvoiceItem[]> {
-    console.log('Getting invoice items for invoice:', invoiceId);
-    console.log('Getting invoice items for invoice:', invoiceId);
     const { knex, tenant } = await createTenantKnex();
-    const adminConnection = await getAdminConnection();
-    const query = adminConnection('invoice_items')
-      .select(
-        'item_id',
-        'invoice_id',
-        'service_id',
-        'description as name',
-        'description',
-        'is_discount',
-        adminConnection.raw('CAST(quantity AS INTEGER) as quantity'),
-        adminConnection.raw('CAST(unit_price AS INTEGER) as unit_price'),
-        adminConnection.raw('CAST(total_price AS INTEGER) as total_price'),
-        adminConnection.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
-        adminConnection.raw('CAST(net_amount AS INTEGER) as net_amount'),
-        'is_manual')
-      .where({ invoice_id: invoiceId, tenant: tenant });
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting invoice items');
+    }
 
-    // Log the raw SQL query
-    const { sql, bindings } = query.toSQL();
-    console.log('Invoice items query:', { sql, bindings });
+    try {
+      console.log(`Getting invoice items for invoice ${invoiceId} in tenant ${tenant}`);
+      
+      const query = knex('invoice_items')
+        .select(
+          'item_id',
+          'invoice_id',
+          'service_id',
+          'description as name',
+          'description',
+          'is_discount',
+          knex.raw('CAST(quantity AS INTEGER) as quantity'),
+          knex.raw('CAST(unit_price AS INTEGER) as unit_price'),
+          knex.raw('CAST(total_price AS INTEGER) as total_price'),
+          knex.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
+          knex.raw('CAST(net_amount AS INTEGER) as net_amount'),
+          'is_manual')
+        .where({
+          invoice_id: invoiceId,
+          tenant
+        });
 
-    const items = await query;
-    console.log('Raw invoice items from DB:', items.map(item => ({
-      id: item.item_id,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: {
-        value: item.unit_price,
-        type: typeof item.unit_price
-      },
-      totalPrice: {
-        value: item.total_price,
-        type: typeof item.total_price
-      },
-      taxAmount: {
-        value: item.tax_amount,
-        type: typeof item.tax_amount
-      },
-      netAmount: {
-        value: item.net_amount,
-        type: typeof item.net_amount
-      },
-      calculatedTotal: item.quantity * item.unit_price,
-      matchesTotal: (item.quantity * item.unit_price) === item.total_price ? 'Yes' : 'No'
-    })));
+      const items = await query;
+      
+      console.log(`Found ${items.length} invoice items for invoice ${invoiceId} in tenant ${tenant}:`, {
+        total: items.length,
+        manual: items.filter(item => item.is_manual).length,
+        automated: items.filter(item => !item.is_manual).length
+      });
 
-    // Log the processed items
-    console.log('Found invoice items:', {
-      total: items.length,
-      manual: items.filter(item => item.is_manual).length,
-      automated: items.filter(item => !item.is_manual).length,
-      items: items.map(item => ({
-        id: item.item_id,
-        isManual: item.is_manual,
-        serviceId: item.service_id,
-        description: item.description,
-        unitPrice: item.unit_price,
-      }))
-    });
-
-    return items;
+      return items;
+    } catch (error) {
+      console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async updateInvoiceItem(itemId: string, updateData: Partial<IInvoiceItem>): Promise<IInvoiceItem> {
-    const { knex } = await createTenantKnex();
-    const [updatedItem] = await knex('invoice_items')
-      .where({ item_id: itemId })
-      .update(updateData)
-      .returning('*');
-    return updatedItem;
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating invoice item');
+    }
+
+    try {
+      const [updatedItem] = await knex('invoice_items')
+        .where({
+          item_id: itemId,
+          tenant
+        })
+        .update(updateData)
+        .returning('*');
+
+      if (!updatedItem) {
+        throw new Error(`Invoice item ${itemId} not found in tenant ${tenant}`);
+      }
+
+      return updatedItem;
+    } catch (error) {
+      console.error(`Error updating invoice item ${itemId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to update invoice item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async deleteInvoiceItem(itemId: string): Promise<boolean> {
-    const { knex } = await createTenantKnex();
-    const deleted = await knex('invoice_items').where({ item_id: itemId }).del();
-    return deleted > 0;
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for deleting invoice item');
+    }
+
+    try {
+      const deleted = await knex('invoice_items')
+        .where({
+          item_id: itemId,
+          tenant
+        })
+        .del();
+
+      if (deleted === 0) {
+        throw new Error(`Invoice item ${itemId} not found in tenant ${tenant}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error deleting invoice item ${itemId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to delete invoice item: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async getTemplates(): Promise<IInvoiceTemplate[]> {
@@ -163,6 +231,10 @@ export default class Invoice {
     return knex('invoice_templates').where({ tenant }).select('*');
   }
 
+  /**
+   * Get standard invoice templates. This is intentionally tenant-less as these are system-wide templates
+   * that are available to all tenants. This is a valid exception to the tenant filtering requirement.
+   */
   static async getStandardTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
     return knex('standard_invoice_templates')
@@ -260,8 +332,21 @@ export default class Invoice {
   }
 
   static async getAll(): Promise<IInvoice[]> {
-    const { knex } = await createTenantKnex();
-    return knex('invoices').select('*');
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for listing invoices');
+    }
+
+    try {
+      const invoices = await knex('invoices')
+        .where({ tenant })
+        .select('*');
+      return invoices;
+    } catch (error) {
+      console.error(`Error getting all invoices in tenant ${tenant}:`, error);
+      throw new Error(`Failed to get invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
@@ -402,19 +487,32 @@ export default class Invoice {
   }
 
   static async generateInvoice(invoiceId: string): Promise<IInvoice> {
-    const { knex } = await createTenantKnex();
-    const [updatedInvoice] = await knex('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({
-        status: 'sent',
-        finalized_at: knex.fn.now()
-      })
-      .returning('*');
+    const { knex, tenant } = await createTenantKnex();
     
-    if (!updatedInvoice) {
-      throw new Error('Invoice not found');
+    if (!tenant) {
+      throw new Error('Tenant context is required for generating invoice');
     }
 
-    return updatedInvoice;
+    try {
+      const [updatedInvoice] = await knex('invoices')
+        .where({ 
+          invoice_id: invoiceId,
+          tenant 
+        })
+        .update({
+          status: 'sent',
+          finalized_at: knex.fn.now()
+        })
+        .returning('*');
+      
+      if (!updatedInvoice) {
+        throw new Error(`Invoice ${invoiceId} not found in tenant ${tenant}`);
+      }
+
+      return updatedInvoice;
+    } catch (error) {
+      console.error(`Error generating invoice ${invoiceId} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to generate invoice: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }

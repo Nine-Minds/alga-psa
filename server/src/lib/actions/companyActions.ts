@@ -445,9 +445,10 @@ export async function importCompaniesFromCSV(
 
         if (existingCompany && updateExisting) {
           // Keep the existing tenant when updating
+          const { tenant: _, ...safeCompanyData } = companyData; // Remove tenant from spread to prevent override
           const updateData = {
-            ...companyData,
-            tenant: existingCompany.tenant,
+            ...safeCompanyData,
+            tenant: existingCompany.tenant, // Explicitly set correct tenant
             updated_at: new Date().toISOString()
           };
 

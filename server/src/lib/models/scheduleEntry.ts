@@ -13,6 +13,10 @@ class ScheduleEntry {
    * Helper method to fetch assigned user IDs for schedule entries
    */
   private static async getAssignedUserIds(db: Knex, tenant: string, entryIds: (string | undefined)[]): Promise<Record<string, string[]>> {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting schedule entry assignees');
+    }
+
     // Filter out undefined entry IDs
     const validEntryIds = entryIds.filter((id): id is string => id !== undefined);
     
@@ -20,10 +24,27 @@ class ScheduleEntry {
       return {};
     }
 
+    // Verify entries exist in the correct tenant
+    const validEntries = await db('schedule_entries')
+      .where({ tenant })
+      .whereIn('entry_id', validEntryIds)
+      .select('entry_id');
+
+    const validEntrySet = new Set(validEntries.map(e => e.entry_id));
+    const invalidEntryIds = validEntryIds.filter(id => !validEntrySet.has(id));
+
+    if (invalidEntryIds.length > 0) {
+      throw new Error(`Schedule entries ${invalidEntryIds.join(', ')} not found in tenant ${tenant}`);
+    }
+
     const assignments = await db('schedule_entry_assignees')
       .where({ tenant })
       .whereIn('entry_id', validEntryIds)
-      .select('entry_id', 'user_id');
+      .join('users', function() {
+        this.on('schedule_entry_assignees.user_id', '=', 'users.user_id')
+          .andOn('schedule_entry_assignees.tenant', '=', 'users.tenant');
+      })
+      .select('entry_id', 'schedule_entry_assignees.user_id');
     
     // Group by entry_id
     return assignments.reduce((acc: Record<string, string[]>, curr: { entry_id: string; user_id: string }) => {
@@ -39,6 +60,19 @@ class ScheduleEntry {
    * Helper method to update assignee records for a schedule entry
    */
   private static async updateAssignees(db: Knex, tenant: string, entry_id: string, userIds: string[]): Promise<void> {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating schedule entry assignees');
+    }
+
+    // Verify entry exists in the correct tenant
+    const entryExists = await db('schedule_entries')
+      .where({ tenant, entry_id })
+      .first();
+
+    if (!entryExists) {
+      throw new Error(`Schedule entry ${entry_id} not found in tenant ${tenant}`);
+    }
+
     // Delete existing assignments
     await db('schedule_entry_assignees')
       .where({ tenant, entry_id })
@@ -46,6 +80,19 @@ class ScheduleEntry {
 
     // Insert new assignments
     if (userIds.length > 0) {
+      // Verify all users exist in the correct tenant
+      const validUsers = await db('users')
+        .where({ tenant })
+        .whereIn('user_id', userIds)
+        .select('user_id');
+
+      const validUserIds = validUsers.map(u => u.user_id);
+      const invalidUserIds = userIds.filter(id => !validUserIds.includes(id));
+
+      if (invalidUserIds.length > 0) {
+        throw new Error(`Users ${invalidUserIds.join(', ')} not found in tenant ${tenant}`);
+      }
+
       const assignments = userIds.map((user_id): { tenant: string; entry_id: string; user_id: string; } => ({
         tenant,
         entry_id,

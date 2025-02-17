@@ -1,3 +1,21 @@
+/**
+ * Email Notification Service
+ *
+ * This service handles both system-wide and tenant-specific email notifications.
+ *
+ * Table Structure:
+ * - System-wide tables (shared across all tenants):
+ *   - system_email_templates: Base templates that can be customized per tenant
+ *
+ * - Tenant-specific tables (filtered by tenant):
+ *   - notification_settings: Tenant-specific notification configuration
+ *   - tenant_email_templates: Tenant customizations of system templates
+ *   - notification_categories: Tenant-specific notification groupings
+ *   - notification_subtypes: Tenant-specific notification types
+ *   - user_notification_preferences: User preferences for each tenant
+ *   - notification_logs: Record of notifications sent per tenant
+ */
+
 import { createTenantKnex } from '../db';
 import { 
   NotificationSettings,
@@ -69,6 +87,10 @@ export class EmailNotificationService implements NotificationService {
   }
 
   async getTenantTemplate(tenant: string, name: string): Promise<TenantEmailTemplate | null> {
+    if (!tenant) {
+      throw new Error('Tenant is required for tenant-specific templates');
+    }
+
     const knex = await this.getTenantKnex();
     return knex('tenant_email_templates')
       .where({ tenant, name })
@@ -149,7 +171,10 @@ export class EmailNotificationService implements NotificationService {
     }
     
     const subtypes = await knex('notification_subtypes')
-      .where({ category_id: categoryId })
+      .where({
+        category_id: categoryId,
+        tenant
+      })
       .orderBy('name');
       
     return {
@@ -175,7 +200,10 @@ export class EmailNotificationService implements NotificationService {
   async getUserPreferences(tenant: string, userId: string): Promise<UserNotificationPreference[]> {
     const knex = await this.getTenantKnex();
     return knex('user_notification_preferences')
-      .where({ user_id: userId })
+      .where({
+        tenant,
+        user_id: userId
+      })
       .orderBy('id');
   }
 
@@ -187,6 +215,7 @@ export class EmailNotificationService implements NotificationService {
     const knex = await this.getTenantKnex();
     const [updated] = await knex('user_notification_preferences')
       .where({
+        tenant,
         user_id: userId,
         subtype_id: preference.subtype_id
       })
@@ -219,10 +248,11 @@ export class EmailNotificationService implements NotificationService {
         user_id: params.userId
       })
       .where('created_at', '>', new Date(Date.now() - 60000))
-      .count('id as count')
-      .first();
+      .count('id')
+      .first()
+      .then(result => Number(result?.count));
       
-    if (Number(recentCount?.count) >= settings.rate_limit_per_minute) {
+    if (recentCount >= settings.rate_limit_per_minute) {
       throw new Error('Rate limit exceeded');
     }
     

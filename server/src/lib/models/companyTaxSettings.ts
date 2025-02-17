@@ -5,9 +5,17 @@ import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ICompositeTaxMapping, ITa
 const CompanyTaxSettings = {
   async get(companyId: string): Promise<ICompanyTaxSettings | null> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax settings operations');
+      }
+
       const taxSettings = await db<ICompanyTaxSettings>('company_tax_settings')
-        .where({ company_id: companyId })
+        .where({
+          company_id: companyId,
+          tenant
+        })
         .first();
 
       if (taxSettings) {
@@ -39,9 +47,17 @@ const CompanyTaxSettings = {
 
   async update(companyId: string, taxSettings: Partial<ICompanyTaxSettings>): Promise<ICompanyTaxSettings> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax settings operations');
+      }
+
       const [updatedSettings] = await db<ICompanyTaxSettings>('company_tax_settings')
-        .where({ company_id: companyId })
+        .where({
+          company_id: companyId,
+          tenant
+        })
         .update(taxSettings)
         .returning('*');
 
@@ -54,9 +70,15 @@ const CompanyTaxSettings = {
 
   async getTaxRate(tax_rate_id: string): Promise<ITaxRate | undefined> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax rate lookup');
+      }
       const taxRate = await db<ITaxRate>('tax_rates')
-        .where({ tax_rate_id })
+        .where({
+          tax_rate_id,
+          tenant
+        })
         .first();
       return taxRate;
     } catch (error) {
@@ -67,10 +89,17 @@ const CompanyTaxSettings = {
 
   async getCompositeTaxComponents(tax_rate_id: string): Promise<ITaxComponent[]> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax components lookup');
+      }
       const components = await db<ITaxComponent>('tax_components')
         .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
-        .where('composite_tax_mappings.composite_tax_id', tax_rate_id)
+        .where({
+          'composite_tax_mappings.composite_tax_id': tax_rate_id,
+          'tax_components.tenant': tenant,
+          'composite_tax_mappings.tenant': tenant
+        })
         .orderBy('composite_tax_mappings.sequence')
         .select('tax_components.*');
       return components;
@@ -82,9 +111,15 @@ const CompanyTaxSettings = {
 
   async getTaxRateThresholds(tax_rate_id: string): Promise<ITaxRateThreshold[]> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax rate thresholds lookup');
+      }
       const thresholds = await db<ITaxRateThreshold>('tax_rate_thresholds')
-        .where({ tax_rate_id })
+        .where({
+          tax_rate_id,
+          tenant
+        })
         .orderBy('min_amount');
       return thresholds;
     } catch (error) {
@@ -95,9 +130,13 @@ const CompanyTaxSettings = {
 
   async getTaxHolidays(tax_rate_id: string): Promise<ITaxHoliday[]> {
     try {
-      const { knex: db } = await createTenantKnex();
+      const { knex: db, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant context is required for tax holidays lookup');
+      }
       const holidays = await db<ITaxHoliday>('tax_holidays')
         .where('tax_rate_id', tax_rate_id)
+        .where('tenant', tenant)
         .orderBy('start_date');
       return holidays;
     } catch (error) {
@@ -108,6 +147,11 @@ const CompanyTaxSettings = {
 
   async createCompositeTax(taxRate: Omit<ITaxRate, 'tenant'>, components: ITaxComponent[]): Promise<ITaxRate> {
     const { knex: db, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for composite tax operations');
+    }
+
     const trx = await db.transaction();
     try {
       const [createdTaxRate] = await trx<ITaxRate>('tax_rates')
@@ -134,15 +178,26 @@ const CompanyTaxSettings = {
 
   async updateCompositeTax(tax_rate_id: string, taxRate: Partial<ITaxRate>, components: ITaxComponent[]): Promise<ITaxRate> {
     const { knex: db, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for composite tax operations');
+    }
+
     const trx = await db.transaction();
     try {
       const [updatedTaxRate] = await trx<ITaxRate>('tax_rates')
-        .where({ tax_rate_id })
+        .where({
+          tax_rate_id,
+          tenant
+        })
         .update(taxRate)
         .returning('*');
 
       await trx<ICompositeTaxMapping>('composite_tax_mappings')
-        .where({ composite_tax_id: tax_rate_id })
+        .where({
+          composite_tax_id: tax_rate_id,
+          tenant
+        })
         .del();
 
       const compositeMappings = components.map((component, index): ICompositeTaxMapping => ({

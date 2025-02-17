@@ -73,7 +73,7 @@ export async function createTicketFromAsset(data: CreateTicketFromAssetData, use
 
         const numberingService = new NumberingService();
         const result = await db.transaction(async (trx) => {
-            const ticketNumber = await numberingService.getNextTicketNumber(tenant);
+            const ticketNumber = await numberingService.getNextTicketNumber();
             
             // Create the ticket
             const ticketData: Partial<ITicket> = {
@@ -201,7 +201,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
 
           const validatedData = validateData(ticketFormSchema, formData);
 
-          const ticketNumber = await numberingService.getNextTicketNumber(tenant);
+          const ticketNumber = await numberingService.getNextTicketNumber();
             
           const ticketData: Partial<ITicket> = {
             ticket_number: ticketNumber,

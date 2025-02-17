@@ -5,8 +5,13 @@ import { ITicketCategory } from '@/interfaces/ticket.interfaces';
 
 export async function getServiceCategories(): Promise<IServiceCategory[]> {
   try {
-    const {knex: db} = await createTenantKnex();
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
     const categories = await db('service_categories')
+      .where({ tenant })
       .select('category_id', 'category_name', 'description');
 
     return categories;

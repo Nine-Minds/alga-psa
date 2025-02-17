@@ -11,14 +11,22 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
     throw new Error('Unauthorized');
   }
 
+  const {knex: db, tenant} = await createTenantKnex();
+    
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   try {
-    const {knex: db} = await createTenantKnex();
     const planServices = await db('plan_services')
-      .where({ plan_id: planId });
+      .where({
+        plan_id: planId,
+        tenant
+      });
     return planServices;
   } catch (error) {
-    console.error('Error fetching plan services:', error);
-    throw new Error('Failed to fetch plan services');
+    console.error(`Error fetching plan services for tenant ${tenant}:`, error);
+    throw new Error(`Failed to fetch plan services for tenant ${tenant}`);
   }
 }
 
@@ -30,14 +38,25 @@ export async function addPlanService(planService: IPlanService): Promise<number>
 
   console.log('Inserting plan service:', planService);
 
+  const {knex: db, tenant} = await createTenantKnex();
+    
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   try {
-    const {knex: db} = await createTenantKnex();
-    const result = await db('plan_services').insert(planService);
+    // Ensure tenant is included in the plan service
+    const planServiceWithTenant = {
+      ...planService,
+      tenant
+    };
+
+    const result = await db('plan_services').insert(planServiceWithTenant);
     const insertedId = result[0];
     return insertedId;
   } catch (error) {
-    console.error('Error adding plan service:', error);
-    throw new Error('Failed to add plan service');
+    console.error(`Error adding plan service for tenant ${tenant}:`, error);
+    throw new Error(`Failed to add plan service for tenant ${tenant}`);
   }
 }
 
@@ -47,14 +66,29 @@ export async function updatePlanService(planId: string, serviceId: string, updat
     throw new Error('Unauthorized');
   }
 
+  const {knex: db, tenant} = await createTenantKnex();
+    
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   try {
-    const {knex: db} = await createTenantKnex();
+    // Ensure tenant is included in both WHERE clause and updates
+    const updatesWithTenant = {
+      ...updates,
+      tenant
+    };
+
     await db('plan_services')
-      .where({ plan_id: planId, service_id: serviceId })
-      .update(updates);
+      .where({
+        plan_id: planId,
+        service_id: serviceId,
+        tenant
+      })
+      .update(updatesWithTenant);
   } catch (error) {
-    console.error('Error updating plan service:', error);
-    throw new Error('Failed to update plan service');
+    console.error(`Error updating plan service for tenant ${tenant}:`, error);
+    throw new Error(`Failed to update plan service for tenant ${tenant}`);
   }
 }
 
@@ -64,13 +98,22 @@ export async function removePlanService(planId: string, serviceId: string): Prom
     throw new Error('Unauthorized');
   }
 
+  const {knex: db, tenant} = await createTenantKnex();
+    
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
   try {
-    const {knex: db} = await createTenantKnex();
     await db('plan_services')
-      .where({ plan_id: planId, service_id: serviceId })
+      .where({
+        plan_id: planId,
+        service_id: serviceId,
+        tenant
+      })
       .del();
   } catch (error) {
-    console.error('Error removing plan service:', error);
-    throw new Error('Failed to remove plan service');
+    console.error(`Error removing plan service for tenant ${tenant}:`, error);
+    throw new Error(`Failed to remove plan service for tenant ${tenant}`);
   }
 }

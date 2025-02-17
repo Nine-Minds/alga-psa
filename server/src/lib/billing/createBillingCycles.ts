@@ -287,7 +287,10 @@ export async function createCompanyBillingCycles(
   });
 
   const lastCycle = await knex('company_billing_cycles')
-    .where({ company_id: company.company_id })
+    .where({
+      company_id: company.company_id,
+      tenant: company.tenant
+    })
     .orderBy('effective_date', 'desc')
     .first()
     .select('effective_date') as ICompanyBillingCycle;

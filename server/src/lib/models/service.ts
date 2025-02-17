@@ -21,6 +21,7 @@ const log = {
 
 export const serviceSchema = z.object({
   service_id: z.string(),
+  tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
   service_type: z.enum(['Fixed', 'Time', 'Usage']),
   default_rate: z.number(),
@@ -38,11 +39,18 @@ export const createServiceSchema = serviceSchema.omit({ service_id: true });
 const Service = {
   getAll: async (): Promise<IService[]> => {
     const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      const error = new Error('Tenant context is required for fetching services');
+      log.error(`[Service.getAll] ${error.message}`);
+      throw error;
+    }
+
     log.info(`[Service.getAll] Fetching all services for tenant: ${tenant}`);
 
     try {
       const services = await db<IService>('service_catalog')
-        .where('tenant', tenant || '')
+        .where({ tenant })
         .select(
           'service_id',
           'service_name',
@@ -51,17 +59,16 @@ const Service = {
           'unit_of_measure',
           'category_id',
           'is_taxable',
-          'tax_region'
+          'tax_region',
+          'tenant'
         );
       log.info(`[Service.getAll] Found ${services.length} services`);
       
-      const validatedServices = services.map((service): IService => 
+      const validatedServices = services.map((service): IService =>
         validateData(serviceSchema, service)
       );
       log.info(`[Service.getAll] Services data validated successfully`);
 
-      log.info(`[Service.getAll] Returning ${validatedServices.length} services: ${validatedServices}`);
-      
       return validatedServices;
     } catch (error) {
       log.error(`[Service.getAll] Error fetching services:`, error);
@@ -71,12 +78,21 @@ const Service = {
 
   getById: async (service_id: string): Promise<IService | null> => {
     const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      const error = new Error('Tenant context is required for fetching service');
+      log.error(`[Service.getById] ${error.message}`);
+      throw error;
+    }
+
     log.info(`[Service.getById] Fetching service with ID: ${service_id} for tenant: ${tenant}`);
 
     try {
       const [service] = await db<IService>('service_catalog')
-        .where('service_id', service_id)
-        .andWhere('tenant', tenant || '')
+        .where({
+          service_id,
+          tenant
+        })
         .select(
           'service_id',
           'service_name',
@@ -85,11 +101,12 @@ const Service = {
           'unit_of_measure',
           'category_id',
           'is_taxable',
-          'tax_region'
+          'tax_region',
+          'tenant'
         );
 
       if (!service) {
-        log.info(`[Service.getById] No service found with ID: ${service_id}`);
+        log.info(`[Service.getById] No service found with ID: ${service_id} for tenant: ${tenant}`);
         return null;
       }
 
@@ -141,29 +158,105 @@ const Service = {
 
   update: async (service_id: string, serviceData: Partial<IService>): Promise<IService | null> => {
     const {knex: db, tenant} = await createTenantKnex();
-    const [updatedService] = await db<IService>('service_catalog')
-      .where('service_id', service_id)
-      .andWhere('tenant', tenant || '')
-      .update(serviceData)
-      .returning('*');
-    return updatedService || null;
+    
+    if (!tenant) {
+      const error = new Error('Tenant context is required for updating service');
+      log.error(`[Service.update] ${error.message}`);
+      throw error;
+    }
+
+    try {
+      // Remove tenant from update data to prevent modification
+      const { tenant: _, ...updateData } = serviceData;
+
+      const [updatedService] = await db<IService>('service_catalog')
+        .where({
+          service_id,
+          tenant
+        })
+        .update(updateData)
+        .returning([
+          'service_id',
+          'service_name',
+          'service_type',
+          db.raw('CAST(default_rate AS FLOAT) as default_rate'),
+          'unit_of_measure',
+          'category_id',
+          'is_taxable',
+          'tax_region',
+          'tenant'
+        ]);
+
+      if (!updatedService) {
+        log.info(`[Service.update] No service found with ID: ${service_id} for tenant: ${tenant}`);
+        return null;
+      }
+
+      return validateData(serviceSchema, updatedService);
+    } catch (error) {
+      log.error(`[Service.update] Error updating service ${service_id}:`, error);
+      throw error;
+    }
   },
 
   delete: async (service_id: string): Promise<boolean> => {
     const {knex: db, tenant} = await createTenantKnex();
-    const deletedCount = await db<IService>('service_catalog')
-      .where('service_id', service_id)
-      .andWhere('tenant', tenant || '')
-      .del();
-    return deletedCount > 0;
+    
+    if (!tenant) {
+      const error = new Error('Tenant context is required for deleting service');
+      log.error(`[Service.delete] ${error.message}`);
+      throw error;
+    }
+
+    try {
+      const deletedCount = await db<IService>('service_catalog')
+        .where({
+          service_id,
+          tenant
+        })
+        .del();
+
+      log.info(`[Service.delete] Deleted service ${service_id} for tenant ${tenant}. Affected rows: ${deletedCount}`);
+      return deletedCount > 0;
+    } catch (error) {
+      log.error(`[Service.delete] Error deleting service ${service_id}:`, error);
+      throw error;
+    }
   },
 
   getByCategoryId: async (category_id: string): Promise<IService[]> => {
     const {knex: db, tenant} = await createTenantKnex();
-    return await db<IService>('service_catalog')
-      .where('category_id', category_id)
-      .andWhere('tenant', tenant || '')
-      .select('*');
+    
+    if (!tenant) {
+      const error = new Error('Tenant context is required for fetching services by category');
+      log.error(`[Service.getByCategoryId] ${error.message}`);
+      throw error;
+    }
+
+    try {
+      const services = await db<IService>('service_catalog')
+        .where({
+          category_id,
+          tenant
+        })
+        .select(
+          'service_id',
+          'service_name',
+          'service_type',
+          db.raw('CAST(default_rate AS FLOAT) as default_rate'),
+          'unit_of_measure',
+          'category_id',
+          'is_taxable',
+          'tax_region',
+          'tenant'
+        );
+
+      log.info(`[Service.getByCategoryId] Found ${services.length} services for category ${category_id}`);
+      return services.map(service => validateData(serviceSchema, service));
+    } catch (error) {
+      log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);
+      throw error;
+    }
   },
 };
 

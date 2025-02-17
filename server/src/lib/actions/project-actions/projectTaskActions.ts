@@ -33,6 +33,9 @@ export async function updateTaskWithChecklist(
         if (!currentUser) {
             throw new Error("user not found");
         }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
 
         await checkPermission(currentUser, 'project', 'update');
 
@@ -41,7 +44,8 @@ export async function updateTaskWithChecklist(
             throw new Error("Task not found");
         }
 
-        const { checklist_items, ...taskUpdateData } = taskData;
+        // Remove tenant field if present in taskData
+        const { checklist_items, tenant: _, ...taskUpdateData } = taskData;
         const validatedTaskData = validateData(updateTaskSchema, taskUpdateData);
 
         const updatedTask = await ProjectTaskModel.updateTask(taskId, validatedTaskData);
@@ -50,6 +54,11 @@ export async function updateTaskWithChecklist(
         if ('assigned_to' in taskData && updatedTask.assigned_to) {
             const phase = await ProjectModel.getPhaseById(updatedTask.phase_id);
             if (phase) {
+                // Ensure tenant exists before publishing event
+                if (!currentUser.tenant) {
+                    throw new Error("tenant context required for event publishing");
+                }
+
                 await publishEvent({
                     eventType: 'PROJECT_TASK_ASSIGNED',
                     payload: {
@@ -58,7 +67,8 @@ export async function updateTaskWithChecklist(
                         taskId: taskId,
                         userId: currentUser.user_id,
                         assignedTo: updatedTask.assigned_to,
-                        additionalUsers: [] // No additional users in this case
+                        additionalUsers: [], // No additional users in this case
+                        timestamp: new Date().toISOString()
                     }
                 });
             }
@@ -93,6 +103,9 @@ export async function addTaskToPhase(
         if (!currentUser) {
             throw new Error("user not found");
         }
+        if (!currentUser.tenant) {
+            throw new Error("tenant context not found");
+        }
 
         await checkPermission(currentUser, 'project', 'update');
 
@@ -110,7 +123,8 @@ export async function addTaskToPhase(
                         taskId: newTask.task_id,
                         userId: currentUser.user_id,
                         assignedTo: taskData.assigned_to,
-                        additionalUsers: [] // No additional users in initial creation
+                        additionalUsers: [], // No additional users in initial creation
+                        timestamp: new Date().toISOString()
                     }
                 });
             }
@@ -613,8 +627,13 @@ export async function getTaskWithDetails(taskId: string, user: IUser) {
         await checkPermission(user, 'project', 'read');
         
         const {knex: db, tenant} = await createTenantKnex();
+        if (!tenant) {
+            throw new Error("tenant context not found");
+        }
         
-        // Get task with phase and status details
+        // Example of proper tenant handling in JOINs:
+        // Each JOIN includes an andOn clause to match tenants across tables,
+        // ensuring data isolation between tenants even in complex queries
         const task = await db('project_tasks')
             .where('project_tasks.task_id', taskId)
             .andWhere('project_tasks.tenant', tenant!)

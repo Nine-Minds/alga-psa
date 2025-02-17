@@ -9,8 +9,13 @@ const Team = {
             if (!teamData.manager_id) {
                 throw new Error('manager_id is required when creating a team');
             }
-            logger.info('Creating new team:', teamData);
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for team creation');
+            }
+            
+            logger.info(`Creating new team in tenant ${tenant}:`, teamData);
             const [createdTeam] = await db<ITeam>('teams')
                 .insert({
                     ...teamData,
@@ -20,7 +25,7 @@ const Team = {
                 .returning('*');
             
             if (!createdTeam) {
-                throw new Error('Failed to create team');
+                throw new Error(`Failed to create team in tenant ${tenant}`);
             }
 
             logger.info('Team created successfully:', createdTeam);
@@ -63,8 +68,13 @@ const Team = {
 
     insert: async (team: Omit<ITeam, 'team_id'>): Promise<Pick<ITeam, "team_id">> => {
         try {
-            logger.info('Inserting team:', team);
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for team insertion');
+            }
+            
+            logger.info(`Inserting team in tenant ${tenant}:`, team);
             const [team_id] = await db<ITeam>('teams')
                 .insert({...team, tenant: tenant!})
                 .returning('team_id');
@@ -78,6 +88,12 @@ const Team = {
     update: async (team_id: string, team: Partial<ITeam>): Promise<void> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for team updates');
+            }
+            
+            logger.info(`Updating team ${team_id} in tenant ${tenant}`);
             await db<ITeam>('teams')
                 .whereNotNull('tenant')
                 .andWhere('tenant', tenant!)
@@ -92,6 +108,12 @@ const Team = {
     delete: async (team_id: string): Promise<void> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for team deletion');
+            }
+            
+            logger.info(`Deleting team ${team_id} and its members in tenant ${tenant}`);
             // Delete team members first
             await db('team_members')
                 .whereNotNull('tenant')
@@ -113,6 +135,10 @@ const Team = {
     addMember: async (team_id: string, user_id: string): Promise<void> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for team member operations');
+            }
             // Check if the user is active
             const user = await db('users')
                 .select('is_inactive')
@@ -121,10 +147,10 @@ const Team = {
                 .andWhere('user_id', user_id)
                 .first();
             if (!user || user.is_inactive) {
-                throw new Error('Cannot add inactive user to the team');
+                throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
             }
 
-            await db('team_members').insert({ team_id, user_id, tenant });
+            await db('team_members').insert({ team_id, user_id, tenant: tenant! });
         } catch (error) {
             logger.error(`Error adding user ${user_id} to team ${team_id}:`, error);
             throw error;
@@ -149,6 +175,12 @@ const Team = {
     getMembers: async (team_id: string): Promise<string[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
+            
+            if (!tenant) {
+                throw new Error('Tenant context is required for getting team members');
+            }
+            
+            logger.info(`Getting members for team ${team_id} in tenant ${tenant}`);
             const members = await db('team_members')
                 .select('team_members.user_id')
                 .join('users', function() {
