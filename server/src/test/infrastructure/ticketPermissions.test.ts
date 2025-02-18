@@ -1,136 +1,106 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import knex from 'knex';
-import dotenv from 'dotenv';
-import { IUserWithRoles, IRole, IRoleWithPermissions, IPermission } from '../../interfaces/auth.interfaces';
 import { ITicket } from '../../interfaces/ticket.interfaces';
 import * as ticketActions from '../../lib/actions/ticket-actions/ticketActions';
-
-dotenv.config();
-
-let db: knex.Knex;
-
-// Create a more complete mock Headers implementation
-const mockHeaders = {
-  get: vi.fn((key: string) => {
-    if (key === 'x-tenant-id') {
-      return '11111111-1111-1111-1111-111111111111';
-    }
-    return null;
-  }),
-  append: vi.fn(),
-  delete: vi.fn(),
-  entries: vi.fn(),
-  forEach: vi.fn(),
-  has: vi.fn(),
-  keys: vi.fn(),
-  set: vi.fn(),
-  values: vi.fn(),
-};
-
-// Mock next/headers
-vi.mock('next/headers', () => ({
-  headers: vi.fn(() => mockHeaders)
-}));
-
-// Mock next-auth with tenant information
-vi.mock("next-auth/next", () => ({
-  getServerSession: vi.fn(() => Promise.resolve({
-    user: {
-      id: 'mock-user-id',
-      tenant: '11111111-1111-1111-1111-111111111111'
-    },
-  })),
-}));
-
-vi.mock("@/app/api/auth/[...nextauth]/options", () => ({
-  options: {},
-}));
-
-beforeAll(async () => {
-  db = knex({
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER_SERVER,
-      password: process.env.DB_PASSWORD_SERVER,
-      database: process.env.DB_NAME_SERVER
-    },
-    migrations: {
-      directory: "./migrations"
-    },
-    seeds: {
-      directory: "./seeds/dev"
-    }
-  });
-
-  // Drop all tables
-  await db.raw('DROP SCHEMA public CASCADE');
-  await db.raw('CREATE SCHEMA public');
-
-  // Ensure the database is set up correctly
-  await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-
-  await db.migrate.latest();
-  await db.seed.run();  
-});
-
-vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-}));
-
-afterAll(async () => {
-  await db.destroy();
-});
+import { TestContext } from '../../../test-utils/testContext';
+import {
+  setupCommonMocks,
+  mockNextHeaders,
+  mockNextAuth,
+  mockRBAC,
+  createMockUser
+} from '../../../test-utils/testMocks';
+import {
+  createTenant,
+  createCompany,
+  createUser,
+  createTestEnvironment
+} from '../../../test-utils/testDataFactory';
+import {
+  resetDatabase,
+  createCleanupHook,
+  cleanupTables
+} from '../../../test-utils/dbReset';
+import {
+  expectPermissionDenied,
+  expectError
+} from '../../../test-utils/errorUtils';
 
 describe('Ticket Permissions Infrastructure', () => {
-  let tenantId: string;
-  let companyId: string;
-  let categoryId: string;
+  const context = new TestContext({
+    cleanupTables: ['tickets', 'categories', 'channels', 'contacts', 'companies', 'users', 'roles', 'permissions'],
+    runSeeds: true
+  });
+  let testTicket: ITicket;
+  let regularUser: any;
+  let adminUser: any;
   let channelId: string;
+  let categoryId: string;
   let contactId: string;
   let statusId: string;
   let priorityId: string;
-  let viewTicketPermission: IPermission;
-  let updateTicketPermission: IPermission;
-  let createTicketPermission: IPermission;
-  let deleteTicketPermission: IPermission;
-  let userRole: IRoleWithPermissions;
-  let adminRole: IRoleWithPermissions;
-  let regularUser: IUserWithRoles;
-  let adminUser: IUserWithRoles;
-  let testTicket: ITicket | undefined;
+
+  // Set up test context with database connection
+  beforeAll(async () => {
+    await context.initialize();
+  });
+
+  afterAll(async () => {
+    await context.cleanup();
+  });
 
   beforeEach(async () => {
-    // Drop and recreate the database for each test
-    await db.raw('DROP SCHEMA public CASCADE');
-    await db.raw('CREATE SCHEMA public');
-    await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-    await db.migrate.latest();
-    await db.seed.run();
+    // Reset database state
+    await resetDatabase(context.db);
 
-    // Create test data for each test
-    ({ tenant: tenantId } = await db('tenants').select("tenant").first());
-
-    companyId = uuidv4();
-    await db('companies').insert({
-      company_id: companyId,
-      company_name: 'Test Company',
-      tenant: tenantId,
+    // Set up common test environment
+    const { tenantId, companyId } = await createTestEnvironment(context.db, {
+      companyName: 'Test Company'
     });
 
-    // Create a channel
+    // Create users with different roles
+    const regularUserId = await createUser(context.db, tenantId, {
+      username: 'johndoe',
+      first_name: 'John',
+      last_name: 'Doe',
+      email: 'john@example.com',
+      user_type: 'user'
+    });
+
+    const adminUserId = await createUser(context.db, tenantId, {
+      username: 'janeadmin',
+      first_name: 'Jane',
+      last_name: 'Admin',
+      email: 'jane@example.com',
+      user_type: 'admin'
+    });
+
+    // Get complete user objects from database
+    regularUser = await context.db('users')
+      .select('users.*')
+      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
+      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
+      .where('users.user_id', regularUserId)
+      .first();
+
+    adminUser = await context.db('users')
+      .select('users.*')
+      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
+      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
+      .where('users.user_id', adminUserId)
+      .first();
+
+    // Create channel
     channelId = uuidv4();
-    await db('channels').insert({
+    await context.db('channels').insert({
       channel_id: channelId,
       channel_name: 'Test Channel',
       tenant: tenantId,
     });
 
-    // Create a contact
+    // Create contact
     contactId = uuidv4();
-    await db('contacts').insert({
+    await context.db('contacts').insert({
       contact_name_id: contactId,
       full_name: 'Test Contact',
       email: 'test@example.com',
@@ -138,132 +108,12 @@ describe('Ticket Permissions Infrastructure', () => {
       tenant: tenantId,
     });
 
-    priorityId = (await db('priorities'))[0].priority_id;
+    // Get priority ID from seeded data
+    priorityId = (await context.db('priorities'))[0].priority_id;
 
-    // Create permissions
-    viewTicketPermission = {
-      permission_id: uuidv4(),
-      resource: 'ticket',
-      action: 'read',
-      tenant: tenantId
-    };
-    updateTicketPermission = {
-      permission_id: uuidv4(),
-      resource: 'ticket',
-      action: 'update',
-      tenant: tenantId
-    };
-    createTicketPermission = {
-      permission_id: uuidv4(),
-      resource: 'ticket',
-      action: 'create',
-      tenant: tenantId
-    };
-    deleteTicketPermission = {
-      permission_id: uuidv4(),
-      resource: 'ticket',
-      action: 'delete',
-      tenant: tenantId
-    };
-
-    // Insert permissions into the database
-    await db('permissions').insert([
-      viewTicketPermission,
-      updateTicketPermission,
-      createTicketPermission,
-      deleteTicketPermission
-    ]);
-
-    // Create roles
-    const baseUserRole: IRole = {
-      role_id: uuidv4(),
-      role_name: 'User',
-      description: 'Regular user role',
-      tenant: tenantId
-    };
-
-    const baseAdminRole: IRole = {
-      role_id: uuidv4(),
-      role_name: 'Admin',
-      description: 'Administrator role',
-      tenant: tenantId
-    };
-
-    userRole = {
-      ...baseUserRole,
-      permissions: [viewTicketPermission]
-    };
-
-    adminRole = {
-      ...baseAdminRole,
-      permissions: [viewTicketPermission, updateTicketPermission, createTicketPermission, deleteTicketPermission]
-    };
-
-    // Insert roles into the database
-    await db('roles').insert([
-      baseUserRole,
-      baseAdminRole
-    ]);
-
-    // Insert role-permission mappings
-    await db('role_permissions').insert([
-      { tenant: tenantId, role_id: userRole.role_id, permission_id: viewTicketPermission.permission_id },
-      { tenant: tenantId, role_id: adminRole.role_id, permission_id: viewTicketPermission.permission_id },
-      { tenant: tenantId, role_id: adminRole.role_id, permission_id: updateTicketPermission.permission_id },
-      { tenant: tenantId, role_id: adminRole.role_id, permission_id: createTicketPermission.permission_id },
-      { tenant: tenantId, role_id: adminRole.role_id, permission_id: deleteTicketPermission.permission_id }
-    ]);
-
-    // Create users
-    const baseRegularUser = {
-      user_id: uuidv4(),
-      tenant: tenantId,
-      username: 'johndoe',
-      first_name: 'John',
-      last_name: 'Doe',
-      email: 'john@example.com',
-      hashed_password: 'hashed_password_here',
-      is_inactive: false,
-      role: 'user' // Add required role field for database
-    };
-
-    const baseAdminUser = {
-      user_id: uuidv4(),
-      tenant: tenantId,
-      username: 'janeadmin',
-      first_name: 'Jane',
-      last_name: 'Admin',
-      email: 'jane@example.com',
-      hashed_password: 'hashed_password_here',
-      is_inactive: false,
-      role: 'admin' // Add required role field for database
-    };
-
-    regularUser = {
-      ...baseRegularUser,
-      roles: [baseUserRole]
-    };
-
-    adminUser = {
-      ...baseAdminUser,
-      roles: [baseAdminRole]
-    };
-
-    // Insert users into the database
-    await db('users').insert([
-      baseRegularUser,
-      baseAdminUser
-    ]);
-
-    // Insert user-role mappings
-    await db('user_roles').insert([
-      { tenant: tenantId, user_id: regularUser.user_id, role_id: userRole.role_id },
-      { tenant: tenantId, user_id: adminUser.user_id, role_id: adminRole.role_id }
-    ]);
-
-    // Create a category
+    // Create category
     categoryId = uuidv4();
-    await db('categories').insert({
+    await context.db('categories').insert({
       category_id: categoryId,
       category_name: 'Test Category',
       tenant: tenantId,
@@ -271,10 +121,10 @@ describe('Ticket Permissions Infrastructure', () => {
       created_by: adminUser.user_id,
     });
 
-    // Create a test status with a unique order_number
+    // Create status
     statusId = uuidv4();
     const uniqueOrderNumber = Math.floor(Date.now() / 1000) % 1000000 + Math.floor(Math.random() * 1000);
-    await db('statuses').insert({
+    await context.db('statuses').insert({
       status_id: statusId,
       name: `Test Status ${uniqueOrderNumber}`,
       tenant: tenantId,
@@ -283,7 +133,20 @@ describe('Ticket Permissions Infrastructure', () => {
       order_number: uniqueOrderNumber
     });
 
-    // Create a test ticket in the database
+    // Set up mocks
+    setupCommonMocks({
+      tenantId,
+      user: createMockUser('admin')
+    });
+
+    // Mock RBAC with proper type annotations
+    mockRBAC((user: { username: string }, resource: string, action: string): boolean => {
+      if (user.username === 'janeadmin') return true;
+      if (user.username === 'johndoe' && resource === 'ticket' && action === 'read') return true;
+      return false;
+    });
+
+    // Create test ticket
     testTicket = {
       tenant: tenantId,
       ticket_id: uuidv4(),
@@ -307,13 +170,20 @@ describe('Ticket Permissions Infrastructure', () => {
       priority_id: priorityId
     };
 
-    await db('tickets').insert(testTicket);
+    await context.db('tickets').insert(testTicket);
   });
 
+  // Use cleanup hook for test isolation
+  const cleanup = createCleanupHook(context.db, [
+    'tickets', 'categories', 'channels', 'contacts',
+    'companies', 'users', 'roles', 'permissions'
+  ]);
+  afterEach(cleanup);
+
   it('should allow regular user to view tickets', async () => {
-    const tickets = (await ticketActions.getTickets(regularUser));
+    const tickets = await ticketActions.getTickets(regularUser);
     expect(tickets.length).toBeGreaterThanOrEqual(1);
-    expect(tickets.map((ticket): string => ticket.ticket_id!)).toContain(testTicket?.ticket_id);
+    expect(tickets.map((ticket): string => ticket.ticket_id!)).toContain(testTicket.ticket_id);
   });
 
   it('should allow admin user to update a ticket', async () => {
@@ -321,10 +191,10 @@ describe('Ticket Permissions Infrastructure', () => {
       status_id: statusId,
       updated_by: adminUser.user_id,
     };
-    const result = await ticketActions.updateTicket(testTicket!.ticket_id!, updateData, adminUser);
+    const result = await ticketActions.updateTicket(testTicket.ticket_id!, updateData, adminUser);
     expect(result).toBe('success');
 
-    const updatedTicket = await db('tickets').where('ticket_id', testTicket!.ticket_id).first();
+    const updatedTicket = await context.db('tickets').where('ticket_id', testTicket.ticket_id).first();
     expect(updatedTicket.status_id).toBe(updateData.status_id);
   });
 
@@ -333,11 +203,13 @@ describe('Ticket Permissions Infrastructure', () => {
       status_id: statusId,
       updated_by: regularUser.user_id,
     };
-    await expect(ticketActions.updateTicket(testTicket!.ticket_id!, updateData, regularUser))
-      .rejects.toThrow('Permission denied: Cannot update ticket');
 
-    const unchangedTicket = await db('tickets').where('ticket_id', testTicket!.ticket_id).first();
-    expect(unchangedTicket.status_id).toBe(testTicket!.status_id);
+    await expectPermissionDenied(
+      () => ticketActions.updateTicket(testTicket.ticket_id!, updateData, regularUser)
+    );
+
+    const unchangedTicket = await context.db('tickets').where('ticket_id', testTicket.ticket_id).first();
+    expect(unchangedTicket.status_id).toBe(testTicket.status_id);
   });
 
   it('should allow admin user to create a ticket', async () => {
@@ -346,7 +218,7 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('ticket_number', 'TKT-002');
     mockFormData.append('status_id', statusId);
     mockFormData.append('channel_id', channelId);
-    mockFormData.append('company_id', companyId);
+    mockFormData.append('company_id', testTicket.company_id);
     mockFormData.append('contact_name_id', contactId);
     mockFormData.append('category_id', categoryId);
     mockFormData.append('priority_id', priorityId);
@@ -355,8 +227,8 @@ describe('Ticket Permissions Infrastructure', () => {
     expect(newTicket).toBeDefined();
     expect(newTicket?.title).toBe('New Test Ticket');
 
-    if (newTicket && newTicket.ticket_id) {
-      const retrievedTicket = await db('tickets').where('ticket_id', newTicket.ticket_id).first();
+    if (newTicket?.ticket_id) {
+      const retrievedTicket = await context.db('tickets').where('ticket_id', newTicket.ticket_id).first();
       expect(retrievedTicket.ticket_id).toEqual(newTicket.ticket_id);
     } else {
       throw new Error('New ticket was not created successfully');
@@ -369,12 +241,13 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('ticket_number', 'TKT-002');
     mockFormData.append('status_id', statusId);
     mockFormData.append('channel_id', channelId);
-    mockFormData.append('company_id', companyId);
+    mockFormData.append('company_id', testTicket.company_id);
     mockFormData.append('contact_name_id', contactId);
     mockFormData.append('category_id', categoryId);
     mockFormData.append('priority_id', priorityId);
 
-    await expect(ticketActions.addTicket(mockFormData, regularUser))
-      .rejects.toThrow('Permission denied: Cannot create ticket');
+    await expectPermissionDenied(
+      () => ticketActions.addTicket(mockFormData, regularUser)
+    );
   });
 });

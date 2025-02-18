@@ -1,9 +1,19 @@
-// server/src/test/infrastructure/projectManagement.test.ts
-import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import knex from 'knex';
-import dotenv from 'dotenv';
 import { TextEncoder } from 'util';
+import { Knex } from 'knex';
+import { TestContext } from '../../../test-utils/testContext';
+import {
+    setupCommonMocks,
+    mockNextHeaders,
+    mockNextAuth,
+    mockRBAC,
+    mockGetCurrentUser,
+    createMockUser
+} from '../../../test-utils/testMocks';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestEnvironment, createCompany } from '../../../test-utils/testDataFactory';
+import { resetDatabase, cleanupTables, createCleanupHook } from '../../../test-utils/dbReset';
 import {
     createProject,
     addProjectPhase,
@@ -24,99 +34,53 @@ import ProjectTaskModel from '@/lib/models/projectTask';
 
 global.TextEncoder = TextEncoder;
 
-// Mock getCurrentUser
-vi.mock('../../lib/actions/user-actions/userActions', () => ({
-    getCurrentUser: vi.fn(() => Promise.resolve({
-        id: 'mock-user-id',
-        tenant: '11111111-1111-1111-1111-111111111111',
-        email: 'test@example.com',
-        name: 'Test User'
-    }))
-}));
-
-// Mock hasPermission
-vi.mock('../../lib/auth/rbac', () => ({
-    hasPermission: vi.fn(() => Promise.resolve(true))
-}));
-
-// Mock next/headers
-const mockHeaders = {
-    get: vi.fn((key: string) => {
-        if (key === 'x-tenant-id') {
-            return '11111111-1111-1111-1111-111111111111';
-        }
-        return null;
-    }),
-    append: vi.fn(),
-    delete: vi.fn(),
-    entries: vi.fn(),
-    forEach: vi.fn(),
-    has: vi.fn(),
-    keys: vi.fn(),
-    set: vi.fn(),
-    values: vi.fn(),
-};
-
-vi.mock('next/headers', () => ({
-    headers: vi.fn(() => mockHeaders)
-}));
-
-// Mock next-auth with tenant information
-vi.mock("next-auth/next", () => ({
-    getServerSession: vi.fn(() => Promise.resolve({
-        user: {
-            id: 'mock-user-id',
-            tenant: '11111111-1111-1111-1111-111111111111',
-            email: 'test@example.com',
-            name: 'Test User'
-        }
-    })),
-}));
+// Type definitions for create operations
+type CreateProjectInput = Omit<IProject, 'project_id' | 'created_at' | 'updated_at'>;
+type CreatePhaseInput = Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>;
+type CreateTaskInput = Omit<IProjectTask, 'task_id' | 'created_at' | 'updated_at' | 'tenant' | 'phase_id'>;
 
 // Mock ProjectModel
-vi.mock('../../lib/models/project', () => {
+vi.mock('@/lib/models/project', () => {
     const taskStore = new Map();
     
     return {
         default: {
             getAll: vi.fn(),
             getById: vi.fn(),
-            create: vi.fn((data) => ({
+            create: vi.fn((data: any) => ({
                 ...data,
                 project_id: uuidv4(),
                 created_at: new Date(),
                 updated_at: new Date()
             })),
-            update: vi.fn((id, data) => ({
+            update: vi.fn((id: string, data: any) => ({
                 project_id: id,
                 ...data,
                 updated_at: new Date()
             })),
             delete: vi.fn(),
             getPhases: vi.fn(() => []),
-            getPhaseById: vi.fn((id) => ({
+            getPhaseById: vi.fn((id: string) => ({
                 phase_id: id,
                 project_id: 'test-project-id',
                 phase_name: 'Test Phase',
                 wbs_code: '1.1'
             })),
-            addPhase: vi.fn((data) => ({
+            addPhase: vi.fn((data: any) => ({
                 ...data,
                 phase_id: uuidv4(),
                 created_at: new Date(),
                 updated_at: new Date()
             })),
-            updatePhase: vi.fn((id, data) => ({
+            updatePhase: vi.fn((id: string, data: any) => ({
                 phase_id: id,
                 ...data,
                 updated_at: new Date()
             })),
             deletePhase: vi.fn(),
             getTasks: vi.fn(() => []),
-            getTaskById: vi.fn((id) => {
-                return taskStore.get(id) || null;
-            }),
-            addTask: vi.fn((phaseId, data) => {
+            getTaskById: vi.fn((id: string) => taskStore.get(id) || null),
+            addTask: vi.fn((phaseId: string, data: any) => {
                 const task = {
                     task_id: uuidv4(),
                     phase_id: phaseId,
@@ -135,7 +99,7 @@ vi.mock('../../lib/models/project', () => {
                 taskStore.set(task.task_id, task);
                 return task;
             }),
-            updateTask: vi.fn((id, data) => {
+            updateTask: vi.fn((id: string, data: any) => {
                 const task = {
                     task_id: id,
                     ...data,
@@ -144,21 +108,19 @@ vi.mock('../../lib/models/project', () => {
                 taskStore.set(id, task);
                 return task;
             }),
-            deleteTask: vi.fn((id) => {
+            deleteTask: vi.fn((id: string) => {
                 taskStore.delete(id);
             }),
-            getProjectStatusMappings: vi.fn((projectId) => {
-                return [{
-                    project_status_mapping_id: 'test-status-mapping-id',
-                    project_id: projectId,
-                    standard_status_id: 'test-standard-status-id',
-                    is_standard: true,
-                    custom_name: null,
-                    display_order: 1,
-                    is_visible: true
-                }];
-            }),
-            getProjectStatusMapping: vi.fn((id) => ({
+            getProjectStatusMappings: vi.fn((projectId: string) => [{
+                project_status_mapping_id: 'test-status-mapping-id',
+                project_id: projectId,
+                standard_status_id: 'test-standard-status-id',
+                is_standard: true,
+                custom_name: null,
+                display_order: 1,
+                is_visible: true
+            }]),
+            getProjectStatusMapping: vi.fn((id: string) => ({
                 project_status_mapping_id: id,
                 project_id: 'test-project-id',
                 standard_status_id: 'test-standard-status-id',
@@ -209,7 +171,7 @@ vi.mock('../../lib/models/project', () => {
                     order_number: 2
                 }
             ]),
-            generateNextWbsCode: vi.fn((parentWbsCode) => {
+            generateNextWbsCode: vi.fn((parentWbsCode: string) => {
                 const parts = parentWbsCode.split('.');
                 const lastPart = parseInt(parts[parts.length - 1]);
                 parts[parts.length - 1] = (lastPart + 1).toString();
@@ -228,69 +190,7 @@ vi.mock('../../lib/models/project', () => {
     };
 });
 
-let db: knex.Knex;
-
-// Ensure we're using a test database
-if (process.env.DB_NAME_SERVER === 'server') {
-    throw new Error('Please use a test database for testing.');
-}
-
-beforeAll(async () => {
-    dotenv.config();
-    db = knex({
-        client: 'pg',
-        connection: {
-            host: process.env.DB_HOST,
-            port: Number(process.env.DB_PORT),
-            user: process.env.DB_USER_SERVER,
-            password: process.env.DB_PASSWORD_SERVER,
-            database: process.env.DB_NAME_SERVER
-        },
-        migrations: {
-            directory: "./migrations"
-        },
-        seeds: {
-            directory: "./seeds/dev"
-        }
-    });
-
-    // Initial database setup
-    await db.raw('DROP SCHEMA public CASCADE');
-    await db.raw('CREATE SCHEMA public');
-    await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-    await db.migrate.latest();
-    
-    // Run seeds and verify they completed
-    await db.seed.run();
-    const standardStatuses = await db('standard_statuses').select('*');
-    if (standardStatuses.length === 0) {
-        throw new Error('Standard statuses seed failed - database is not properly initialized');
-    }
-});
-
-afterAll(async () => {
-    await db.destroy();
-});
-
-afterEach(async () => {
-    // Reset the database to a clean state between tests
-    await db.raw('DROP SCHEMA public CASCADE');
-    await db.raw('CREATE SCHEMA public');
-    await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-    await db.migrate.latest();
-    
-    // Run seeds and verify they completed
-    await db.seed.run();
-    const standardStatuses = await db('standard_statuses').select('*');
-    if (standardStatuses.length === 0) {
-        throw new Error('Standard statuses seed failed - database is not properly initialized');
-    }
-
-    // Clear all mocks
-    vi.clearAllMocks();
-});
-
-async function getNextWbsCode(db: knex.Knex, tenantId: string): Promise<string> {
+async function getNextWbsCode(db: Knex, tenantId: string): Promise<string> {
     const maxProject = await db('projects')
         .where({ tenant: tenantId })
         .max('wbs_code as max')
@@ -300,7 +200,7 @@ async function getNextWbsCode(db: knex.Knex, tenantId: string): Promise<string> 
     return (currentMax + 1).toString();
 }
 
-async function getNextPhaseWbsCode(db: knex.Knex, projectWbsCode: string): Promise<string> {
+async function getNextPhaseWbsCode(db: Knex, projectWbsCode: string): Promise<string> {
     const maxPhase = await db('project_phases')
         .where('wbs_code', 'like', `${projectWbsCode}.%`)
         .max('wbs_code as max')
@@ -315,21 +215,32 @@ async function getNextPhaseWbsCode(db: knex.Knex, projectWbsCode: string): Promi
 }
 
 describe('Project Management', () => {
+    let db: Knex;
     let tenantId: string;
     let companyId: string;
     let initialStatusId: string;
 
-    beforeEach(async () => {
-        // Get tenant ID
-        ({ tenant: tenantId } = await db('tenants').select("tenant").first());
+    beforeAll(async () => {
+        // Initialize database with tenant context
+        db = await createTestDbConnection();
+        await resetDatabase(db);
+    });
 
-        // Create a test company
-        companyId = uuidv4();
-        await db('companies').insert({
-            company_id: companyId,
-            company_name: 'Test Company',
-            tenant: tenantId,
+    afterAll(async () => {
+        await db.destroy();
+    });
+
+    beforeEach(async () => {
+        await resetDatabase(db);
+        
+        // Set up common mocks
+        const { tenantId: mockTenantId } = setupCommonMocks({
+            user: createMockUser('admin')
         });
+        tenantId = mockTenantId;
+
+        // Create test company
+        companyId = await createCompany(db, tenantId, 'Test Company');
 
         // Get initial status ID
         const status = await db('statuses')
@@ -341,7 +252,7 @@ describe('Project Management', () => {
     describe('Project Creation and Management', () => {
         it('should create a new project with initial status', async () => {
             const wbsCode = await getNextWbsCode(db, tenantId);
-            const projectData = {
+            const projectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'Test Project',
                 description: 'Test Project Description',
@@ -370,8 +281,7 @@ describe('Project Management', () => {
 
         it('should update project details', async () => {
             const wbsCode = await getNextWbsCode(db, tenantId);
-            // First create a project
-            const project = await createProject({
+            const projectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'Initial Project',
                 description: 'Initial Description',
@@ -381,9 +291,10 @@ describe('Project Management', () => {
                 is_inactive: false,
                 tenant: tenantId,
                 status: initialStatusId
-            });
+            };
 
-            // Update the project
+            const project = await createProject(projectData);
+
             const updateData = {
                 project_name: 'Updated Project',
                 description: 'Updated Description',
@@ -407,7 +318,7 @@ describe('Project Management', () => {
 
         beforeEach(async () => {
             projectWbsCode = await getNextWbsCode(db, tenantId);
-            const project = await createProject({
+            const projectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'Test Project',
                 description: 'Test Description',
@@ -417,13 +328,14 @@ describe('Project Management', () => {
                 is_inactive: false,
                 tenant: tenantId,
                 status: initialStatusId
-            });
+            };
+            const project = await createProject(projectData);
             projectId = project.project_id;
         });
 
         it('should create a new phase in a project', async () => {
             const phaseWbsCode = await getNextPhaseWbsCode(db, projectWbsCode);
-            const phaseData = {
+            const phaseData: CreatePhaseInput = {
                 project_id: projectId,
                 phase_name: 'Test Phase',
                 description: 'Test Phase Description',
@@ -450,8 +362,7 @@ describe('Project Management', () => {
 
         it('should update phase details', async () => {
             const phaseWbsCode = await getNextPhaseWbsCode(db, projectWbsCode);
-            // First create a phase
-            const phase = await addProjectPhase({
+            const phaseData: CreatePhaseInput = {
                 project_id: projectId,
                 phase_name: 'Initial Phase',
                 description: 'Initial Description',
@@ -460,9 +371,10 @@ describe('Project Management', () => {
                 status: 'active',
                 wbs_code: phaseWbsCode,
                 order_number: 1
-            });
+            };
 
-            // Update the phase
+            const phase = await addProjectPhase(phaseData);
+
             const updateData = {
                 phase_name: 'Updated Phase',
                 description: 'Updated Description',
@@ -490,7 +402,7 @@ describe('Project Management', () => {
         beforeEach(async () => {
             // Create project
             projectWbsCode = await getNextWbsCode(db, tenantId);
-            const project = await createProject({
+            const projectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'Test Project',
                 description: 'Test Description',
@@ -500,12 +412,13 @@ describe('Project Management', () => {
                 is_inactive: false,
                 tenant: tenantId,
                 status: initialStatusId
-            });
+            };
+            const project = await createProject(projectData);
             projectId = project.project_id;
 
             // Create phase
             phaseWbsCode = await getNextPhaseWbsCode(db, projectWbsCode);
-            const phase = await addProjectPhase({
+            const phaseData: CreatePhaseInput = {
                 project_id: projectId,
                 phase_name: 'Test Phase',
                 description: 'Test Phase Description',
@@ -514,7 +427,8 @@ describe('Project Management', () => {
                 status: 'active',
                 wbs_code: phaseWbsCode,
                 order_number: 1
-            });
+            };
+            const phase = await addProjectPhase(phaseData);
             phaseId = phase.phase_id;
 
             // Get status mapping
@@ -524,7 +438,7 @@ describe('Project Management', () => {
 
         it('should create a new task in a phase', async () => {
             const taskWbsCode = `${phaseWbsCode}.1`;
-            const taskData = {
+            const taskData: CreateTaskInput = {
                 task_name: 'Test Task',
                 description: 'Test Task Description',
                 estimated_hours: 8,
@@ -551,8 +465,7 @@ describe('Project Management', () => {
 
         it('should update task details', async () => {
             const taskWbsCode = `${phaseWbsCode}.1`;
-            // First create a task
-            const task = await addTaskToPhase(phaseId, {
+            const taskData: CreateTaskInput = {
                 task_name: 'Initial Task',
                 description: 'Initial Description',
                 estimated_hours: 8,
@@ -561,11 +474,12 @@ describe('Project Management', () => {
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
                 wbs_code: taskWbsCode
-            }, []);
+            };
+
+            const task = await addTaskToPhase(phaseId, taskData, []);
 
             if (!task) throw new Error('Task creation failed');
 
-            // Update the task
             const updateData = {
                 task_name: 'Updated Task',
                 description: 'Updated Description',
@@ -585,7 +499,7 @@ describe('Project Management', () => {
         it('should move task to a different phase', async () => {
             // Create another phase
             const newPhaseWbsCode = await getNextPhaseWbsCode(db, projectWbsCode);
-            const newPhase = await addProjectPhase({
+            const newPhaseData: CreatePhaseInput = {
                 project_id: projectId,
                 phase_name: 'New Phase',
                 description: 'New Phase Description',
@@ -594,11 +508,12 @@ describe('Project Management', () => {
                 status: 'active',
                 wbs_code: newPhaseWbsCode,
                 order_number: 2
-            });
+            };
+            const newPhase = await addProjectPhase(newPhaseData);
 
             // Create a task
             const taskWbsCode = `${phaseWbsCode}.1`;
-            const task = await addTaskToPhase(phaseId, {
+            const taskData: CreateTaskInput = {
                 task_name: 'Test Task',
                 description: 'Test Task Description',
                 estimated_hours: 8,
@@ -607,7 +522,9 @@ describe('Project Management', () => {
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
                 wbs_code: taskWbsCode
-            }, []);
+            };
+
+            const task = await addTaskToPhase(phaseId, taskData, []);
 
             if (!task) throw new Error('Task creation failed');
 
@@ -629,7 +546,7 @@ describe('Project Management', () => {
         it('should move task to a different project', async () => {
             // Create another project
             const newProjectWbsCode = await getNextWbsCode(db, tenantId);
-            const newProject = await createProject({
+            const newProjectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'New Project',
                 description: 'New Project Description',
@@ -639,11 +556,12 @@ describe('Project Management', () => {
                 is_inactive: false,
                 tenant: tenantId,
                 status: initialStatusId
-            });
+            };
+            const newProject = await createProject(newProjectData);
 
             // Create phase in new project
             const newPhaseWbsCode = await getNextPhaseWbsCode(db, newProjectWbsCode);
-            const newPhase = await addProjectPhase({
+            const newPhaseData: CreatePhaseInput = {
                 project_id: newProject.project_id,
                 phase_name: 'New Phase',
                 description: 'New Phase Description',
@@ -652,7 +570,8 @@ describe('Project Management', () => {
                 status: 'active',
                 wbs_code: newPhaseWbsCode,
                 order_number: 1
-            });
+            };
+            const newPhase = await addProjectPhase(newPhaseData);
 
             // Get status mapping for new project
             const newStatusMappings = await ProjectModel.getProjectStatusMappings(newProject.project_id);
@@ -660,7 +579,7 @@ describe('Project Management', () => {
 
             // Create a task
             const taskWbsCode = `${phaseWbsCode}.1`;
-            const task = await addTaskToPhase(phaseId, {
+            const taskData: CreateTaskInput = {
                 task_name: 'Test Task',
                 description: 'Test Task Description',
                 estimated_hours: 8,
@@ -669,7 +588,9 @@ describe('Project Management', () => {
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
                 wbs_code: taskWbsCode
-            }, []);
+            };
+
+            const task = await addTaskToPhase(phaseId, taskData, []);
 
             if (!task) throw new Error('Task creation failed');
 
@@ -689,6 +610,7 @@ describe('Project Management', () => {
             });
         });
     });
+
     describe('Deletion Operations', () => {
         let projectId: string;
         let projectWbsCode: string;
@@ -699,7 +621,7 @@ describe('Project Management', () => {
         beforeEach(async () => {
             // Create project
             projectWbsCode = await getNextWbsCode(db, tenantId);
-            const project = await createProject({
+            const projectData: CreateProjectInput = {
                 company_id: companyId,
                 project_name: 'Test Project',
                 description: 'Test Description',
@@ -709,12 +631,13 @@ describe('Project Management', () => {
                 is_inactive: false,
                 tenant: tenantId,
                 status: initialStatusId
-            });
+            };
+            const project = await createProject(projectData);
             projectId = project.project_id;
 
             // Create phase
             phaseWbsCode = await getNextPhaseWbsCode(db, projectWbsCode);
-            const phase = await addProjectPhase({
+            const phaseData: CreatePhaseInput = {
                 project_id: projectId,
                 phase_name: 'Test Phase',
                 description: 'Test Phase Description',
@@ -723,7 +646,8 @@ describe('Project Management', () => {
                 status: 'active',
                 wbs_code: phaseWbsCode,
                 order_number: 1
-            });
+            };
+            const phase = await addProjectPhase(phaseData);
             phaseId = phase.phase_id;
 
             // Get status mapping
@@ -732,7 +656,7 @@ describe('Project Management', () => {
 
             // Create task
             const taskWbsCode = `${phaseWbsCode}.1`;
-            const task = await addTaskToPhase(phaseId, {
+            const taskData: CreateTaskInput = {
                 task_name: 'Test Task',
                 description: 'Test Task Description',
                 estimated_hours: 8,
@@ -741,7 +665,9 @@ describe('Project Management', () => {
                 due_date: null,
                 project_status_mapping_id: statusMappingId,
                 wbs_code: taskWbsCode
-            }, []);
+            };
+
+            const task = await addTaskToPhase(phaseId, taskData, []);
 
             if (!task) throw new Error('Task creation failed');
             taskId = task.task_id;
@@ -761,4 +687,5 @@ describe('Project Management', () => {
             await deleteProject(projectId);
             expect(ProjectModel.delete).toHaveBeenCalledWith(projectId);
         });
-    })})
+    });
+});

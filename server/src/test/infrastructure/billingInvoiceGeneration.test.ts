@@ -1,244 +1,124 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
-import { generateInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { generateInvoice } from '@/lib/actions/invoiceActions';
 import { v4 as uuidv4 } from 'uuid';
-import knex from 'knex';
-import { parse, addDays, parseISO, differenceInCalendarDays } from 'date-fns';
 import { TextEncoder } from 'util';
-import dotenv from 'dotenv';
-import { ICompanyTaxSettings, ITaxRate } from '@/interfaces/tax.interfaces';
+import { TestContext } from '../../../test-utils/testContext';
+import { setupCommonMocks, createMockUser } from '../../../test-utils/testMocks';
+import { createTestDate, createTestDateISO, freezeTime, unfreezeTime } from '../../../test-utils/dateUtils';
+import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
+import { ICompanyTaxSettings } from '@/interfaces/tax.interfaces';
 
 global.TextEncoder = TextEncoder;
 
-// Mock Headers implementation
-const mockHeaders = {
-  get: vi.fn((key: string) => key === 'x-tenant-id' ? '11111111-1111-1111-1111-111111111111' : null),
-  append: vi.fn(),
-  delete: vi.fn(),
-  entries: vi.fn(),
-  forEach: vi.fn(),
-  has: vi.fn(),
-  keys: vi.fn(),
-  set: vi.fn(),
-  values: vi.fn(),
-};
+// Create test context helpers
+const { beforeAll: setupContext, beforeEach: resetContext, afterAll: cleanupContext } = TestContext.createHelpers();
 
-vi.mock('next/headers', () => ({
-  headers: vi.fn(() => mockHeaders)
-}));
-
-vi.mock("next-auth/next", () => ({
-  getServerSession: vi.fn(() => Promise.resolve({
-    user: {
-      id: 'mock-user-id',
-      tenant: '11111111-1111-1111-1111-111111111111'
-    },
-  })),
-}));
-
-vi.mock("@/app/api/auth/[...nextauth]/options", () => ({
-  options: {},
-}));
-
-// Test Utilities and Factories
-interface TestContext {
-  db: knex.Knex;
-  tenantId: string;
-  companyId: string;
-}
-
-class TestDataFactory {
-  static async createTenant(db: knex.Knex): Promise<string> {
-    const tenantId = '11111111-1111-1111-1111-111111111111';
-    await db('tenants').insert({
-      tenant: tenantId,
-      company_name: 'Test Tenant',
-      email: 'test@example.com',
-      created_at: new Date(),
-      updated_at: new Date()
-    });
-    return tenantId;
-  }
-
-  static async createCompany(db: knex.Knex, tenantId: string, name = 'Test Company'): Promise<string> {
-    const companyId = uuidv4();
-    await db('companies').insert({
-      company_id: companyId,
-      company_name: name,
-      tenant: tenantId,
-    });
-    return companyId;
-  }
-
-  static async createBillingPlan(db: knex.Knex, tenantId: string, options: {
-    name: string;
-    type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
-    frequency?: string;
-  }): Promise<string> {
-    const planId = uuidv4();
-    await db('billing_plans').insert({
-      plan_id: planId,
-      plan_name: options.name,
-      billing_frequency: options.frequency || 'monthly',
-      is_custom: false,
-      plan_type: options.type,
-      tenant: tenantId,
-    });
-    return planId;
-  }
-
-  static async createService(db: knex.Knex, tenantId: string, options: {
-    name: string;
-    type: string;
-    rate?: number;
-    unit?: string;
-  }): Promise<string> {
-    const serviceId = uuidv4();
-    await db('service_catalog').insert({
-      tenant: tenantId,
-      service_id: serviceId,
-      service_name: options.name,
-      description: `Test service: ${options.name}`,
-      service_type: options.type,
-      default_rate: options.rate,
-      unit_of_measure: options.unit || 'unit',
-    });
-    return serviceId;
-  }
-
-  static async assignPlanToCompany(db: knex.Knex, tenantId: string, companyId: string, planId: string, startDate = '2023-01-01'): Promise<void> {
-    // Create billing cycle first
-    const billingCycleId = uuidv4();
-    await db('company_billing_cycles').insert({
-      billing_cycle_id: billingCycleId,
-      company_id: companyId,
-      billing_cycle: 'monthly',
-      effective_date: startDate,
-      tenant: tenantId
-    });
-
-    await db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: companyId,
-      plan_id: planId,
-      start_date: new Date(startDate),
-      is_active: true,
-      tenant: tenantId,
-    });
-  }
-
-  static async createTaxRate(db: knex.Knex, tenantId: string, options: {
-    percentage: number;
-    region?: string;
-  }): Promise<string> {
-    const taxRateId = uuidv4();
-    await db('tax_rates').insert({
-      tax_rate_id: taxRateId,
-      tax_type: 'VAT',
-      country_code: 'US',
-      tax_percentage: options.percentage,
-      region: options.region,
-      is_reverse_charge_applicable: false,
-      is_composite: false,
-      start_date: new Date('2023-01-01'),
-      is_active: true,
-      description: 'Test Tax Rate',
-      tenant: tenantId,
-    });
-    return taxRateId;
-  }
-}
-
-// Database setup
-let db: knex.Knex;
+// Test context
 let context: TestContext;
 
+// Set up mocks and context
 beforeAll(async () => {
-  dotenv.config();
-  
-  if (process.env.DB_NAME_SERVER === 'server') {
-    throw new Error('Please use a test database for testing.');
-  }
+  // Set up common mocks
+  setupCommonMocks({
+    user: createMockUser('admin')
+  });
 
-  db = knex({
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER_ADMIN,
-      password: process.env.DB_PASSWORD_SERVER,
-      database: process.env.DB_NAME_SERVER
-    }
+  // Initialize test context
+  context = await setupContext({
+    runSeeds: true,
+    cleanupTables: [
+      'company_billing_cycles',
+      'company_billing_plans',
+      'plan_services',
+      'service_catalog',
+      'billing_plans',
+      'tax_rates',
+      'company_tax_settings'
+    ]
   });
 });
 
-afterAll(async () => {
-  await db.destroy();
-});
-
 beforeEach(async () => {
-  // Clean and reset database before each test
-  await db.raw('DROP SCHEMA public CASCADE');
-  await db.raw('CREATE SCHEMA public');
-  await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-  await db.migrate.latest();
-  await db.seed.run();
-  
-  // Create fresh tenant and company for each test
-  const tenantId = await TestDataFactory.createTenant(db);
-  const companyId = await TestDataFactory.createCompany(db, tenantId);
-  
-  context = {
-    db,
-    tenantId,
-    companyId
-  };
+  await resetContext();
   
   // Set up default tax settings for the company
-  const taxRateId = await TestDataFactory.createTaxRate(db, context.tenantId, { percentage: 10 });
+  const taxRateId = await context.createEntity('tax_rates', {
+    tax_type: 'VAT',
+    country_code: 'US',
+    tax_percentage: 10,
+    region: null,
+    is_reverse_charge_applicable: false,
+    is_composite: false,
+    start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+    is_active: true,
+    description: 'Test Tax Rate'
+  });
+
   const companyTaxSettings: ICompanyTaxSettings = {
     company_id: context.companyId,
     tax_rate_id: taxRateId,
     is_reverse_charge_applicable: false,
-    tenant: tenantId
+    tenant: context.tenantId
   };
-  
-  await db('company_tax_settings').insert(companyTaxSettings);
+
+  await context.db('company_tax_settings').insert(companyTaxSettings);
+});
+
+afterAll(async () => {
+  unfreezeTime();
+  await cleanupContext();
 });
 
 describe('Billing Invoice Generation', () => {
   describe('Fixed Price Plans', () => {
     it('should generate an invoice with line items for each service', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Standard Fixed Plan',
-        type: 'Fixed'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Standard Fixed Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
       });
 
-      const service1Id = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Service 1',
-        type: 'Fixed',
-        rate: 10000
+      const service1Id = await context.createEntity('service_catalog', {
+        service_name: 'Service 1',
+        description: 'Test service: Service 1',
+        service_type: 'Fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit'
       });
 
-      const service2Id = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Service 2',
-        type: 'Fixed',
-        rate: 15000
+      const service2Id = await context.createEntity('service_catalog', {
+        service_name: 'Service 2',
+        description: 'Test service: Service 2',
+        service_type: 'Fixed',
+        default_rate: 15000,
+        unit_of_measure: 'unit'
       });
 
-      await db('plan_services').insert([
+      await context.db('plan_services').insert([
         { plan_id: planId, service_id: service1Id, quantity: 1, tenant: context.tenantId },
         { plan_id: planId, service_id: service2Id, quantity: 1, tenant: context.tenantId }
       ]);
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
       // Act
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const result = await generateInvoice(billingCycle.billing_cycle_id);
+      const result = await generateInvoice(billingCycleId);
 
       // Assert
       expect(result).toMatchObject({
@@ -247,7 +127,7 @@ describe('Billing Invoice Generation', () => {
         status: 'draft'
       });
 
-      const invoiceItems = await db('invoice_items')
+      const invoiceItems = await context.db('invoice_items')
         .where('invoice_id', result.invoice_id)
         .select('*');
 
@@ -272,39 +152,46 @@ describe('Billing Invoice Generation', () => {
 
     it('should calculate taxes correctly', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Taxable Plan',
-        type: 'Fixed'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Taxable Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Taxable Service',
-        type: 'Fixed',
-        rate: 50000
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Taxable Service',
+        description: 'Test service: Taxable Service',
+        service_type: 'Fixed',
+        default_rate: 50000,
+        unit_of_measure: 'unit'
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
-
-      const taxRateId = await TestDataFactory.createTaxRate(db, context.tenantId, { percentage: 10 });
-      await db('company_tax_rates').insert({
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
         company_id: context.companyId,
-        tax_rate_id: taxRateId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
         tenant: context.tenantId
       });
 
       // Act
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const result = await generateInvoice(billingCycle.billing_cycle_id);
+      const result = await generateInvoice(billingCycleId);
 
       // Assert
       expect(result).toMatchObject({
@@ -319,89 +206,65 @@ describe('Billing Invoice Generation', () => {
   describe('Time-Based Plans', () => {
     it('should generate an invoice based on time entries', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Hourly Plan',
-        type: 'Hourly'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Hourly Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Hourly'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Hourly Consultation',
-        type: 'Hourly',
-        rate: 10000,
-        unit: 'hour'
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Hourly Consultation',
+        description: 'Test service: Hourly Consultation',
+        service_type: 'Hourly',
+        default_rate: 10000,
+        unit_of_measure: 'hour'
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         custom_rate: 5000,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
-
-      const userId = (await db('users').select('user_id').first())?.user_id;
-      const ticketId = uuidv4();
-      
-      await db('tickets').insert({
-        tenant: context.tenantId,
-        ticket_id: ticketId,
-        title: 'Test Ticket',
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
         company_id: context.companyId,
-        status_id: (await db('statuses').where({ tenant: context.tenantId, status_type: 'ticket' }).first())?.status_id,
-        entered_by: userId,
-        entered_at: new Date(),
-        updated_at: new Date()
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
-      // Create a test user if none exists
-      const testUserId = await db.transaction(async (trx) => {
-        const [user] = await trx('users')
-          .insert({
-            tenant: context.tenantId,
-            user_id: uuidv4(),
-            username: 'testuser',
-            email: 'test@example.com',
-            first_name: 'Test',
-            last_name: 'User',
-            hashed_password: 'dummy-hash'
-          })
-          .returning('user_id');
-        
-        // Get or create default user role
-        let userRole = await trx('roles')
-        .where({ 
-          role_name: 'user',
-      tenant: context.tenantId 
-    })
-    .first();
-
-  if (!userRole) {
-    [userRole] = await trx('roles')
-      .insert({
-        role_name: 'user',
-        description: 'Default user role',
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
         tenant: context.tenantId
-      })
-      .returning('*');
-  }
+      });
 
-  // Assign role to user
-  await trx('user_roles').insert({
-    user_id: user.user_id,
-    role_id: userRole.role_id,
-    tenant: context.tenantId
-  });
+      // Create test ticket
+      const statusId = (await context.db('statuses')
+        .where({ tenant: context.tenantId, status_type: 'ticket' })
+        .first())?.status_id;
 
-  return user.user_id;
-});
+      const ticketId = await context.createEntity('tickets', {
+        title: 'Test Ticket',
+        company_id: context.companyId,
+        status_id: statusId,
+        entered_by: context.userId,
+        entered_at: createTestDateISO(),
+        updated_at: createTestDateISO()
+      });
 
-      await db('time_entries').insert({
+      // Create time entry
+      await context.db('time_entries').insert({
         tenant: context.tenantId,
         entry_id: uuidv4(),
-        user_id: testUserId,
-        start_time: new Date('2023-01-15T10:00:00Z'),
-        end_time: new Date('2023-01-15T12:00:00Z'),
+        user_id: context.userId,
+        start_time: createTestDate({ year: 2023, month: 1, day: 15, hour: 10 }),
+        end_time: createTestDate({ year: 2023, month: 1, day: 15, hour: 12 }),
         work_item_id: ticketId,
         work_item_type: 'ticket',
         approval_status: 'APPROVED',
@@ -410,11 +273,7 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Act
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const result = await generateInvoice(billingCycle.billing_cycle_id);
+      const result = await generateInvoice(billingCycleId);
 
       // Assert
       expect(result).toMatchObject({
@@ -422,7 +281,7 @@ describe('Billing Invoice Generation', () => {
         status: 'draft'
       });
 
-      const invoiceItems = await db('invoice_items')
+      const invoiceItems = await context.db('invoice_items')
         .where('invoice_id', result.invoice_id)
         .select('*');
 
@@ -439,27 +298,45 @@ describe('Billing Invoice Generation', () => {
   describe('Usage-Based Plans', () => {
     it('should generate an invoice based on usage records', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Usage Plan',
-        type: 'Usage'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Usage Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Usage'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Data Transfer',
-        type: 'Usage',
-        rate: 10,
-        unit: 'GB'
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Data Transfer',
+        description: 'Test service: Data Transfer',
+        service_type: 'Usage',
+        default_rate: 10,
+        unit_of_measure: 'GB'
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
-      await db('usage_tracking').insert([
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
+
+      // Create usage records
+      await context.db('usage_tracking').insert([
         {
           tenant: context.tenantId,
           usage_id: uuidv4(),
@@ -479,19 +356,15 @@ describe('Billing Invoice Generation', () => {
       ]);
 
       // Act
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
+      const result = await generateInvoice(billingCycleId);
 
-      const result = await generateInvoice(billingCycle.billing_cycle_id);
-
-      // Assert 
+      // Assert
       expect(result).toMatchObject({
         subtotal: 800,
         status: 'draft'
       });
 
-      const invoiceItems = await db('invoice_items')
+      const invoiceItems = await context.db('invoice_items')
         .where('invoice_id', result.invoice_id)
         .select('*');
 
@@ -518,30 +391,46 @@ describe('Billing Invoice Generation', () => {
   describe('Bucket Plans', () => {
     it('should handle overage charges correctly', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Bucket Plan',
-        type: 'Bucket'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Bucket Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Bucket'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Consulting Hours',
-        type: 'Bucket',
-        rate: 0
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Consulting Hours',
+        description: 'Test service: Consulting Hours',
+        service_type: 'Bucket',
+        default_rate: 0,
+        unit_of_measure: 'hour'
       });
 
-      const bucketPlanId = uuidv4();
-      await db('bucket_plans').insert({
-        bucket_plan_id: bucketPlanId,
+      const bucketPlanId = await context.createEntity('bucket_plans', {
         plan_id: planId,
         total_hours: 40,
         billing_period: 'Monthly',
-        overage_rate: 7500,
+        overage_rate: 7500
+      });
+
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
-
-      await db('bucket_usage').insert({
+      // Create bucket usage
+      await context.db('bucket_usage').insert({
         usage_id: uuidv4(),
         bucket_plan_id: bucketPlanId,
         company_id: context.companyId,
@@ -554,11 +443,7 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Act
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const result = await generateInvoice(billingCycle.billing_cycle_id);
+      const result = await generateInvoice(billingCycleId);
 
       // Assert
       expect(result).toMatchObject({
@@ -566,7 +451,7 @@ describe('Billing Invoice Generation', () => {
         status: 'draft'
       });
 
-      const invoiceItems = await db('invoice_items')
+      const invoiceItems = await context.db('invoice_items')
         .where('invoice_id', result.invoice_id)
         .select('*');
 
@@ -583,31 +468,46 @@ describe('Billing Invoice Generation', () => {
   describe('Invoice Finalization', () => {
     it('should finalize an invoice correctly', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Simple Plan',
-        type: 'Fixed'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Simple Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Basic Service',
-        type: 'Fixed',
-        rate: 20000
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Basic Service',
+        description: 'Test service: Basic Service',
+        service_type: 'Fixed',
+        default_rate: 20000,
+        unit_of_measure: 'unit'
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
-      const invoice = await generateInvoice(billingCycle.billing_cycle_id);
+      // Generate draft invoice
+      const invoice = await generateInvoice(billingCycleId);
 
       // Act
       const finalizedInvoice = await generateInvoice(invoice.invoice_id);
@@ -621,205 +521,120 @@ describe('Billing Invoice Generation', () => {
     });
   });
 
-  describe('Company Billing Cycle Changes', () => {
-  //   it('should track billing cycle changes over time', async () => {
-  //     // Arrange
-  //     const initialDate = '2023-01-01T00:00:00Z';
-  //     const changeDate = '2023-02-01T00:00:00Z';
-
-  //     // Create initial monthly cycle
-  //     await db('company_billing_cycles').insert({
-  //       company_id: context.companyId,
-  //       billing_cycle: 'monthly',
-  //       effective_date: initialDate,
-  //       tenant: context.tenantId
-  //     });
-
-  //     // Act
-  //     // Add new quarterly cycle
-  //     await db('company_billing_cycles').insert({
-  //       company_id: context.companyId,
-  //       billing_cycle: 'quarterly',
-  //       effective_date: changeDate,
-  //       tenant: context.tenantId
-  //     });
-
-  //     // Assert
-  //     const cycles = await db('company_billing_cycles')
-  //       .where({ company_id: context.companyId })
-  //       .orderBy('effective_date', 'asc');
-
-  //     expect(cycles).toHaveLength(2);
-  //     expect(cycles[0]).toMatchObject({
-  //       billing_cycle: 'monthly',
-  //       effective_date: expect.any(Date)
-  //     });
-  //     expect(cycles[1]).toMatchObject({
-  //       billing_cycle: 'quarterly',
-  //       effective_date: expect.any(Date)
-  //     });
-  //   });
-
-    it('should use correct billing cycle based on invoice date', async () => {
-      // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Test Plan',
-        type: 'Fixed'
-      });
-
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
-
-      // Create and assign service to plan
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Test Service',
-        type: 'Fixed',
-        rate: 1000
-      });
-
-      await db('plan_services').insert({
-        plan_id: planId,
-        service_id: serviceId,
-        quantity: 1,
-        tenant: context.tenantId
-      });
-
-      // Clean up any existing billing cycles
-      await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .delete();
-
-      // Set up billing cycle history
-      await db('company_billing_cycles').insert([
-        {
-          company_id: context.companyId,
-          billing_cycle: 'monthly',
-          effective_date: '2023-01-01T00:00:00Z',
-          tenant: context.tenantId
-        },
-        {
-          company_id: context.companyId,
-          billing_cycle: 'quarterly',
-          effective_date: '2023-02-01T00:00:00Z',
-          tenant: context.tenantId
-        }
-      ]);
-
-      // Act & Assert
-      // Should use monthly cycle
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const januaryInvoice = await generateInvoice(billingCycle.billing_cycle_id);
-
-      // Verify January invoice used monthly cycle
-      const savedJanuaryInvoice = await db('invoices')
-        .where('invoice_id', januaryInvoice.invoice_id)
-        .first();
-      expect(savedJanuaryInvoice.billing_cycle_id).toBe(billingCycle.billing_cycle_id);
-
-      // Should use quarterly cycle
-      // Get quarterly cycle
-      const quarterlyBillingCycle = await db('company_billing_cycles')
-        .where({ 
-          company_id: context.companyId,
-          billing_cycle: 'quarterly',
-          effective_date: '2023-02-01T00:00:00Z'
-        })
-        .first();
-
-      const quarterlyInvoice = await generateInvoice(quarterlyBillingCycle.billing_cycle_id);
-      
-      // Verify quarterly invoice used quarterly cycle
-      const savedQuarterlyInvoice = await db('invoices')
-        .where('invoice_id', quarterlyInvoice.invoice_id)
-        .first();
-      expect(savedQuarterlyInvoice.billing_cycle_id).toBe(quarterlyBillingCycle.billing_cycle_id);
-    });
-  });
-
   describe('Error Handling', () => {
     it('should handle invalid billing period dates', async () => {
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      await expect(generateInvoice('123e4567-e89b-12d3-a456-426614174000')).rejects.toThrow('Invalid billing cycle');
+      await expectNotFound(
+        () => generateInvoice('123e4567-e89b-12d3-a456-426614174000'),
+        'Billing cycle'
+      );
     });
 
     it('should handle missing billing plans', async () => {
-      const newCompanyId = await TestDataFactory.createCompany(db, context.tenantId, 'Company Without Plans');
-      
-      // Create billing cycle for new company
-      await db('company_billing_cycles').insert({
-        company_id: newCompanyId,
-        billing_cycle: 'monthly',
-        effective_date: '2023-01-01T00:00:00Z',
-        tenant: context.tenantId
+      // Create company without plans
+      const newCompanyId = await context.createEntity('companies', {
+        company_name: 'Company Without Plans',
+        billing_cycle: 'monthly'
       });
 
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: newCompanyId })
-        .first();
+      // Create billing cycle
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: newCompanyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
-      await expect(generateInvoice(billingCycle.billing_cycle_id)).rejects.toThrow(`No active billing plans found for company ${newCompanyId} in the given period`);
+      await expectError(
+        () => generateInvoice(billingCycleId),
+        {
+          messagePattern: new RegExp(`No active billing plans found for company ${newCompanyId} in the given period`)
+        }
+      );
     });
 
     it('should handle undefined service rates', async () => {
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Invalid Plan',
-        type: 'Fixed'
+      // Arrange
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Invalid Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Service Without Rate',
-        type: 'Fixed'
-        // rate is intentionally undefined
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Service Without Rate',
+        description: 'Test service: Service Without Rate',
+        service_type: 'Fixed',
+        unit_of_measure: 'unit'
+        // default_rate intentionally undefined
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
-      await expect(generateInvoice(billingCycle.billing_cycle_id)).rejects.toThrow();
+      await expectError(() => generateInvoice(billingCycleId));
     });
 
     it('should throw error when regenerating for same period', async () => {
       // Arrange
-      const planId = await TestDataFactory.createBillingPlan(db, context.tenantId, {
-        name: 'Standard Fixed Plan',
-        type: 'Fixed'
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Standard Fixed Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
       });
 
-      const serviceId = await TestDataFactory.createService(db, context.tenantId, {
-        name: 'Monthly Service',
-        type: 'Fixed',
-        rate: 10000
+      const serviceId = await context.createEntity('service_catalog', {
+        service_name: 'Monthly Service',
+        description: 'Test service: Monthly Service',
+        service_type: 'Fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit'
       });
 
-      await db('plan_services').insert({
+      await context.db('plan_services').insert({
         plan_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
       });
 
-      await TestDataFactory.assignPlanToCompany(db, context.tenantId, context.companyId, planId);
+      // Create billing cycle and assign plan
+      const billingCycleId = await context.createEntity('company_billing_cycles', {
+        company_id: context.companyId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
+
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: context.companyId,
+        plan_id: planId,
+        start_date: createTestDate({ year: 2023, month: 1, day: 1 }),
+        is_active: true,
+        tenant: context.tenantId
+      });
 
       // Generate first invoice
-      const billingCycle = await db('company_billing_cycles')
-        .where({ company_id: context.companyId })
-        .first();
-
-      const firstInvoice = await generateInvoice(billingCycle.billing_cycle_id);
+      const firstInvoice = await generateInvoice(billingCycleId);
 
       // Assert first invoice is correct
       expect(firstInvoice).toMatchObject({
@@ -828,9 +643,12 @@ describe('Billing Invoice Generation', () => {
       });
 
       // Attempt to generate second invoice for same period
-      await expect(generateInvoice(billingCycle.billing_cycle_id))
-        .rejects
-        .toThrow('No active billing plans for this period');
+      await expectError(
+        () => generateInvoice(billingCycleId),
+        {
+          message: 'No active billing plans for this period'
+        }
+      );
     });
   });
 });

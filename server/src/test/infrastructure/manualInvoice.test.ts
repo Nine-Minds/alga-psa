@@ -1,40 +1,42 @@
-import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { v4 as uuidv4 } from 'uuid';
-import knex from 'knex';
 import { TextEncoder } from 'util';
-import dotenv from 'dotenv';
+import { TestContext } from '../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../test-utils/testMocks';
+import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
 
-dotenv.config();
 global.TextEncoder = TextEncoder;
 
-// Mock Headers implementation
-const mockHeaders = {
-  get: vi.fn((key: string) => key === 'x-tenant-id' ? '11111111-1111-1111-1111-111111111111' : null),
-  append: vi.fn(), delete: vi.fn(), entries: vi.fn(), forEach: vi.fn(),
-  has: vi.fn(), keys: vi.fn(), set: vi.fn(), values: vi.fn(),
-};
+// Create test context helpers
+const { beforeAll: setupContext, beforeEach: resetContext, afterAll: cleanupContext } = TestContext.createHelpers();
 
-vi.mock('next/headers', () => ({
-  headers: vi.fn(() => mockHeaders)
-}));
+let context: TestContext;
 
-vi.mock("next-auth/next", () => ({
-  getServerSession: vi.fn(() => Promise.resolve({
-    user: { id: 'mock-user-id', tenant: '11111111-1111-1111-1111-111111111111' },
-  })),
-}));
+beforeAll(async () => {
+  // Initialize test context and set up mocks
+  context = await setupContext({
+    cleanupTables: ['service_catalog', 'tax_rates', 'company_tax_settings', 'transactions']
+  });
+  setupCommonMocks({ tenantId: context.tenantId });
+});
 
-vi.mock("@/app/api/auth/[...nextauth]/options", () => ({
-  options: {},
-}));
+beforeEach(async () => {
+  await resetContext();
+});
 
-// Test Data Factory Functions
-const createTestService = async (db: knex.Knex, overrides = {}) => {
+afterAll(async () => {
+  await cleanupContext();
+});
+
+/**
+ * Helper to create a test service
+ */
+async function createTestService(overrides = {}) {
   const serviceId = uuidv4();
   const defaultService = {
     service_id: serviceId,
-    tenant: '11111111-1111-1111-1111-111111111111',
+    tenant: context.tenantId,
     service_name: 'Test Service',
     service_type: 'Fixed',
     default_rate: 1000,
@@ -43,78 +45,42 @@ const createTestService = async (db: knex.Knex, overrides = {}) => {
     tax_region: 'US-NY'
   };
 
-  await db('service_catalog').insert({ ...defaultService, ...overrides });
+  await context.db('service_catalog').insert({ ...defaultService, ...overrides });
   return serviceId;
-};
+}
 
-const setupTaxConfiguration = async (db: knex.Knex, companyId: string) => {
+/**
+ * Helper to set up tax configuration
+ */
+async function setupTaxConfiguration() {
   const taxRateId = uuidv4();
-  await db('tax_rates').insert({
+  await context.db('tax_rates').insert({
     tax_rate_id: taxRateId,
-    tenant: '11111111-1111-1111-1111-111111111111',
+    tenant: context.tenantId,
     region: 'US-NY',
     tax_percentage: 8.875,
     description: 'NY State + City Tax',
     start_date: new Date().toISOString()
   });
 
-  await db('company_tax_settings').insert({
-    company_id: companyId,
-    tenant: '11111111-1111-1111-1111-111111111111',
+  await context.db('company_tax_settings').insert({
+    company_id: context.companyId,
+    tenant: context.tenantId,
     tax_rate_id: taxRateId,
     is_reverse_charge_applicable: false
   });
 
   return taxRateId;
-};
-
-let db: knex.Knex;
-let companyId: string;
-
-beforeAll(async () => {
-  db = knex({
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST,
-      port: Number(process.env.DB_PORT),
-      user: process.env.DB_USER_ADMIN,
-      password: process.env.DB_PASSWORD_SERVER,
-      database: process.env.DB_NAME_SERVER
-    },
-    migrations: { directory: "./migrations" },
-    seeds: { directory: "./seeds/dev" }
-  });
-});
-
-afterAll(async () => {
-  await db.destroy();
-});
-
-beforeEach(async () => {
-  // Reset database
-  await db.raw('DROP SCHEMA public CASCADE');
-  await db.raw('CREATE SCHEMA public');
-  await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
-  await db.migrate.latest();
-  await db.seed.run();
-
-  // Get test company
-  const company = await db('companies')
-    .where({ tenant: '11111111-1111-1111-1111-111111111111' })
-    .first();
-  
-  if (!company) throw new Error('No seeded company found for testing');
-  companyId = company.company_id;
-});
+}
 
 describe('Manual Invoice Generation', () => {
   describe('Basic Invoice Creation', () => {
     it('creates a manual invoice with single line item', async () => {
-      const serviceId = await createTestService(db);
-      await setupTaxConfiguration(db, companyId);
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId,
+        companyId: context.companyId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -124,7 +90,7 @@ describe('Manual Invoice Generation', () => {
       });
 
       expect(result).toMatchObject({
-        company_id: companyId,
+        company_id: context.companyId,
         invoice_number: expect.stringMatching(/^INV-\d{6}$/),
         status: 'draft'
       });
@@ -135,12 +101,12 @@ describe('Manual Invoice Generation', () => {
     });
 
     it('creates a manual invoice with multiple line items', async () => {
-      const service1Id = await createTestService(db);
-      const service2Id = await createTestService(db, { service_name: 'Second Service' });
-      await setupTaxConfiguration(db, companyId);
+      const service1Id = await createTestService();
+      const service2Id = await createTestService({ service_name: 'Second Service' });
+      await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId,
+        companyId: context.companyId,
         items: [
           {
             service_id: service1Id,
@@ -165,47 +131,53 @@ describe('Manual Invoice Generation', () => {
 
   describe('Validation and Error Handling', () => {
     it('rejects invalid company IDs', async () => {
-      const serviceId = await createTestService(db);
-      const invalidCompanyId = '12345678-1234-1234-1234-123456789012';
+      const serviceId = await createTestService();
+      const invalidCompanyId = uuidv4();
       
-      await expect(generateManualInvoice({
-        companyId: invalidCompanyId,
-        items: [{
-          service_id: serviceId,
-          quantity: 1,
-          description: 'Test Service',
-          rate: 1000
-        }]
-      })).rejects.toThrow('Company not found');
+      await expectNotFound(
+        () => generateManualInvoice({
+          companyId: invalidCompanyId,
+          items: [{
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Test Service',
+            rate: 1000
+          }]
+        }),
+        'Company'
+      );
     });
 
     it('rejects invalid service IDs', async () => {
       const invalidServiceId = uuidv4();
       
-      await expect(generateManualInvoice({
-        companyId,
-        items: [{
-          service_id: invalidServiceId,
-          quantity: 1,
-          description: 'Test Service',
-          rate: 1000
-        }]
-      })).rejects.toThrow();
+      await expectNotFound(
+        () => generateManualInvoice({
+          companyId: context.companyId,
+          items: [{
+            service_id: invalidServiceId,
+            quantity: 1,
+            description: 'Test Service',
+            rate: 1000
+          }]
+        }),
+        'Service'
+      );
     });
   });
 
   describe('Tax Calculations', () => {
     it('applies correct tax rates based on region', async () => {
-      const serviceId = await createTestService(db);
-      const taxRateId = await setupTaxConfiguration(db, companyId);
+      const serviceId = await createTestService();
+      const taxRateId = await setupTaxConfiguration();
 
       // Update tax rate to a different percentage
-      await db('tax_rates')
+      await context.db('tax_rates')
         .where({ tax_rate_id: taxRateId })
         .update({ tax_percentage: 10 });
 
       const result = await generateManualInvoice({
-        companyId,
+        companyId: context.companyId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -219,16 +191,16 @@ describe('Manual Invoice Generation', () => {
     });
 
     it('handles tax exempt companies correctly', async () => {
-      const serviceId = await createTestService(db);
-      await setupTaxConfiguration(db, companyId);
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
 
       // Make company tax exempt
-      await db('companies')
-        .where({ company_id: companyId })
+      await context.db('companies')
+        .where({ company_id: context.companyId })
         .update({ is_tax_exempt: true });
 
       const result = await generateManualInvoice({
-        companyId,
+        companyId: context.companyId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -244,11 +216,11 @@ describe('Manual Invoice Generation', () => {
 
   describe('Transaction Recording', () => {
     it('creates appropriate transaction records', async () => {
-      const serviceId = await createTestService(db);
-      await setupTaxConfiguration(db, companyId);
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId,
+        companyId: context.companyId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -257,15 +229,15 @@ describe('Manual Invoice Generation', () => {
         }]
       });
 
-      const transactions = await db('transactions')
+      const transactions = await context.db('transactions')
         .where({ 
           invoice_id: result.invoice_id,
-          tenant: '11111111-1111-1111-1111-111111111111'
+          tenant: context.tenantId
         });
 
       expect(transactions).toHaveLength(1);
       expect(transactions[0]).toMatchObject({
-        company_id: companyId,
+        company_id: context.companyId,
         type: 'invoice_generated',
         status: 'completed',
         amount: 1089 // Including tax

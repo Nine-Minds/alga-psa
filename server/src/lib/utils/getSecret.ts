@@ -1,7 +1,5 @@
-'use server'
-
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';
