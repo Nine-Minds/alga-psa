@@ -1,10 +1,14 @@
 exports.seed = function (knex) {
-    return knex('resources').del()
-        .then(() => {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('resources').insert([
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    user_id: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
+                    tenant: tenant.tenant,
+                    user_id: knex('users').where({ 
+                        tenant: tenant.tenant, 
+                        username: 'glinda' 
+                    }).select('user_id').first(),
                     availability: JSON.stringify([
                         {
                             monday: true,

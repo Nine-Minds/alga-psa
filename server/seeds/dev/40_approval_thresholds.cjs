@@ -1,9 +1,26 @@
 exports.seed = function (knex) {
-    return knex('approval_thresholds').del()
-        .then(() => {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('approval_thresholds').insert([
-                { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type: 'OVERTIME', threshold: 40, approval_level_id: knex('approval_levels').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Team Lead' }).select('id').first() },
-                { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type: 'HIGH_VALUE', threshold: 1000, approval_level_id: knex('approval_levels').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Manager' }).select('id').first() }
+                {
+                    tenant: tenant.tenant,
+                    type: 'OVERTIME',
+                    threshold: 40,
+                    approval_level_id: knex('approval_levels').where({ 
+                        tenant: tenant.tenant, 
+                        name: 'Team Lead' 
+                    }).select('id').first()
+                },
+                {
+                    tenant: tenant.tenant,
+                    type: 'HIGH_VALUE',
+                    threshold: 1000,
+                    approval_level_id: knex('approval_levels').where({ 
+                        tenant: tenant.tenant, 
+                        name: 'Manager' 
+                    }).select('id').first()
+                }
             ]);
         });
 };

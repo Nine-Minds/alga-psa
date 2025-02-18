@@ -1,10 +1,14 @@
 exports.seed = function (knex) {
-    return knex('tenant_time_period_settings').del()
-        .then(() => {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('tenant_time_period_settings').insert([
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    type_id: knex('time_period_types').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type_name: 'Weekly' }).select('type_id').first(),
+                    tenant: tenant.tenant,
+                    type_id: knex('time_period_types').where({ 
+                        tenant: tenant.tenant, 
+                        type_name: 'Weekly' 
+                    }).select('type_id').first(),
                     start_day: 1,
                     start_month: 1,
                     frequency: 1,
@@ -13,8 +17,11 @@ exports.seed = function (knex) {
                     effective_from: knex.raw("CURRENT_DATE - INTERVAL '1 year'")
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    type_id: knex('time_period_types').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type_name: 'Monthly' }).select('type_id').first(),
+                    tenant: tenant.tenant,
+                    type_id: knex('time_period_types').where({ 
+                        tenant: tenant.tenant, 
+                        type_name: 'Monthly' 
+                    }).select('type_id').first(),
                     start_day: 1,
                     start_month: 1,
                     frequency: 1,

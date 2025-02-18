@@ -5,7 +5,7 @@ exports.seed = function(knex) {
         // Inserts seed entries
         return knex('tenants').insert([
           {
-            tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            tenant: knex.raw('gen_random_uuid()'),
             company_name: 'Oz',
             phone_number: '123-456-7899',
             email: 'oz@example.com',

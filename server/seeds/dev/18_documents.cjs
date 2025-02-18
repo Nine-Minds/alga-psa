@@ -1,35 +1,89 @@
 exports.seed = async function (knex) {
-    // First clear both tables
-    await knex('document_associations').del();
-    await knex('documents').del();
+    // Get tenant first
+    const tenant = await knex('tenants').select('tenant').first();
+    if (!tenant) return;
 
-    // Insert documents first
+    // Insert documents
     const documents = await knex('documents')
         .insert([
             {
-                tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                tenant: tenant.tenant,
                 document_name: 'Alice Lost White Rabbit',
-                type_id: knex('document_types').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type_name: 'Ticket' }).select('type_id').first(),
-                user_id: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
-                created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
+                type_id: knex('document_types')
+                    .where({
+                        tenant: tenant.tenant,
+                        type_name: 'Ticket'
+                    })
+                    .select('type_id')
+                    .first(),
+                user_id: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
+                created_by: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
                 entered_at: knex.fn.now(),
                 content: 'Searched for White Rabbit in Wonderland. No luck yet.'
             },
             {
-                tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                tenant: tenant.tenant,
                 document_name: 'Company Profile',
-                type_id: knex('document_types').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type_name: 'Company' }).select('type_id').first(),
-                user_id: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
-                created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
+                type_id: knex('document_types')
+                    .where({
+                        tenant: tenant.tenant,
+                        type_name: 'Company'
+                    })
+                    .select('type_id')
+                    .first(),
+                user_id: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
+                created_by: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
                 entered_at: knex.fn.now(),
                 content: 'Wonderland Company Profile and Details'
             },
             {
-                tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                tenant: tenant.tenant,
                 document_name: 'White Rabbit Search Plan',
-                type_id: knex('document_types').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', type_name: 'Ticket' }).select('type_id').first(),
-                user_id: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
-                created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first(),
+                type_id: knex('document_types')
+                    .where({
+                        tenant: tenant.tenant,
+                        type_name: 'Ticket'
+                    })
+                    .select('type_id')
+                    .first(),
+                user_id: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
+                created_by: knex('users')
+                    .where({
+                        tenant: tenant.tenant,
+                        username: 'glinda'
+                    })
+                    .select('user_id')
+                    .first(),
                 entered_at: knex.fn.now(),
                 content: `Further actions for White Rabbit search:
                     1. Check the rabbit hole near the old oak tree.
@@ -49,7 +103,7 @@ exports.seed = async function (knex) {
     // Get the ticket ID we want to associate with
     const ticketId = await knex('tickets')
         .where({
-            tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            tenant: tenant.tenant,
             title: 'Lost White Rabbit'
         })
         .select('ticket_id')
@@ -58,7 +112,7 @@ exports.seed = async function (knex) {
     // Get the company ID we want to associate with
     const companyId = await knex('companies')
         .where({
-            tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            tenant: tenant.tenant,
             company_name: 'Wonderland Inc'
         })
         .select('company_id')
@@ -70,13 +124,13 @@ exports.seed = async function (knex) {
     if (ticketId) {
         associations.push(
             {
-                tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                tenant: tenant.tenant,
                 document_id: documents[0].document_id,
                 entity_id: ticketId.ticket_id,
                 entity_type: 'ticket'
             },
             {
-                tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                tenant: tenant.tenant,
                 document_id: documents[2].document_id,
                 entity_id: ticketId.ticket_id,
                 entity_type: 'ticket'
@@ -86,7 +140,7 @@ exports.seed = async function (knex) {
 
     if (companyId) {
         associations.push({
-            tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+            tenant: tenant.tenant,
             document_id: documents[1].document_id,
             entity_id: companyId.company_id,
             entity_type: 'company'

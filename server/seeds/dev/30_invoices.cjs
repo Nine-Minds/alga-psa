@@ -1,16 +1,23 @@
 exports.seed = function (knex) {
-    return knex('invoices').del()
-        .then(() => {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('invoices').insert([
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    company_id: knex('companies').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', company_name: 'Emerald City' }).select('company_id').first(),
+                    tenant: tenant.tenant,
+                    company_id: knex('companies').where({ 
+                        tenant: tenant.tenant, 
+                        company_name: 'Emerald City' 
+                    }).select('company_id').first(),
                     invoice_number: 'INV-003',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),
                     total_amount: 5000.00,
                     status: 'Unpaid',
-                    template_id: knex('invoice_templates').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Detailed Template' }).select('template_id').first(),
+                    template_id: knex('invoice_templates').where({ 
+                        tenant: tenant.tenant, 
+                        name: 'Detailed Template' 
+                    }).select('template_id').first(),
                     custom_fields: JSON.stringify([
                         {
                             name: 'Payment Terms',
@@ -20,14 +27,20 @@ exports.seed = function (knex) {
                         }])
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    company_id: knex('companies').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', company_name: 'Emerald City' }).select('company_id').first(),
+                    tenant: tenant.tenant,
+                    company_id: knex('companies').where({ 
+                        tenant: tenant.tenant, 
+                        company_name: 'Emerald City' 
+                    }).select('company_id').first(),
                     invoice_number: 'INV-004',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),
                     total_amount: 10000.00,
                     status: 'Unpaid',
-                    template_id: knex('invoice_templates').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Detailed Template' }).select('template_id').first(),
+                    template_id: knex('invoice_templates').where({ 
+                        tenant: tenant.tenant, 
+                        name: 'Detailed Template' 
+                    }).select('template_id').first(),
                     custom_fields: JSON.stringify([
                         {
                             name: 'Payment Terms',
@@ -37,14 +50,20 @@ exports.seed = function (knex) {
                         }])
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-                    company_id: knex('companies').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', company_name: 'Emerald City' }).select('company_id').first(),
+                    tenant: tenant.tenant,
+                    company_id: knex('companies').where({ 
+                        tenant: tenant.tenant, 
+                        company_name: 'Emerald City' 
+                    }).select('company_id').first(),
                     invoice_number: 'INV-005',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),
                     total_amount: 7500.00,
                     status: 'Unpaid',
-                    template_id: knex('invoice_templates').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Detailed Template' }).select('template_id').first(),
+                    template_id: knex('invoice_templates').where({ 
+                        tenant: tenant.tenant, 
+                        name: 'Detailed Template' 
+                    }).select('template_id').first(),
                     custom_fields: JSON.stringify([
                         {
                             name: 'Payment Terms',

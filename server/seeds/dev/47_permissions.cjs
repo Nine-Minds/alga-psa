@@ -3,42 +3,42 @@ exports.seed = function (knex) {
         .then(() => {
             return knex('permissions').insert([
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'ticket',
                     action: 'create'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'ticket',
                     action: 'read'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'ticket',
                     action: 'update'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'ticket',
                     action: 'delete'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'user',
                     action: 'create'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'user',
                     action: 'read'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'user',
                     action: 'update'
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: knex('tenants').select('tenant').first(),
                     resource: 'user',
                     action: 'delete'
                 }                

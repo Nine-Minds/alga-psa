@@ -3,18 +3,19 @@
  * @returns { Promise<void> } 
  */
 exports.seed = async function(knex) {
-  const tenant = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
-// Pull a user with the given tenant
-const user = await knex('users')
-  .where('tenant', tenant)
-  .first();
+  // Get the tenant ID
+  const tenant = await knex('tenants').select('tenant').first();
+  if (!tenant) return;
 
-if (!user) {
-  throw new Error('No user found for the given tenant');
-}
+  // Pull a user with the given tenant
+  const user = await knex('users')
+    .where('tenant', tenant.tenant)
+    .first();
 
+  if (!user) {
+    throw new Error('No user found for the given tenant');
+  }
 
-  
   // Define the statuses
   const statuses = [
     {
@@ -22,7 +23,7 @@ if (!user) {
       is_closed: false,
       order_number: 10,
       status_type: 'project',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -30,7 +31,7 @@ if (!user) {
       is_closed: false,
       order_number: 20,
       status_type: 'project',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -38,7 +39,7 @@ if (!user) {
       is_closed: false,
       order_number: 30,
       status_type: 'project',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -46,7 +47,7 @@ if (!user) {
       is_closed: true,
       order_number: 40,
       status_type: 'project',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -54,7 +55,7 @@ if (!user) {
       is_closed: true,
       order_number: 50,
       status_type: 'project',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -62,7 +63,7 @@ if (!user) {
       is_closed: false,
       order_number: 10,
       status_type: 'project_task',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -70,7 +71,7 @@ if (!user) {
       is_closed: false,
       order_number: 20,
       status_type: 'project_task',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -78,7 +79,7 @@ if (!user) {
       is_closed: false,
       order_number: 30,
       status_type: 'project_task',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -86,7 +87,7 @@ if (!user) {
       is_closed: true,
       order_number: 40,
       status_type: 'project_task',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     },
     {
@@ -94,7 +95,7 @@ if (!user) {
       is_closed: true,
       order_number: 50,
       status_type: 'project_task',
-      tenant: tenant,
+      tenant: tenant.tenant,
       created_by: user.user_id,
     }
   ];

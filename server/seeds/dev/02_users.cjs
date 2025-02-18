@@ -1,12 +1,10 @@
-// -- Users
-exports.seed = async function (knex) {
-    // Users
-    await knex('users').del()
-        .then(function () {
-            // Inserts seed entries
+exports.seed = function(knex) {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('users').insert([
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'glinda',
                     hashed_password: 'KIXQJZT7qLBlZB6rHn9e1uuEIYVVbIilJ', 
                     first_name: 'Glinda',
@@ -16,7 +14,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'dorothy',
                     hashed_password: 'LMNOQRST8pMCmD7sIn0f2vvFJZWWcJjmK',
                     first_name: 'Dorothy', 
@@ -26,7 +24,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'scarecrow',
                     hashed_password: 'PQRSTUVW9qNDnE8tJo1g3wwGKAXXdKknL',
                     first_name: 'Scarecrow',
@@ -36,7 +34,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'tinman',
                     hashed_password: 'H34rtL3ssT1n',
                     first_name: 'Tin',
@@ -46,7 +44,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'madhatter',
                     hashed_password: 'T34T1m3P4rty!',
                     first_name: 'Mad',
@@ -56,7 +54,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 
+                    tenant: tenant.tenant,
                     username: 'cheshire',
                     hashed_password: 'Gr1nC4t789!',
                     first_name: 'Cheshire',
@@ -66,7 +64,7 @@ exports.seed = async function (knex) {
                     created_at: knex.fn.now()
                 },
                 {
-                    tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                    tenant: tenant.tenant,
                     username: 'queenhearts', 
                     hashed_password: 'H34d50ff123!',
                     first_name: 'Queen',

@@ -1,10 +1,41 @@
 exports.seed = function(knex) {
-    return knex('severities').del()
-        .then(() => {
+    return knex('tenants').select('tenant').first()
+        .then((tenant) => {
+            if (!tenant) return;
             return knex('severities').insert([
-                { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', severity_name: 'Trifling Trouble', created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first() },
-                { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', severity_name: 'Moderate Muddle', created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first() },
-                { tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', severity_name: 'Serious Snarl', created_by: knex('users').where({ tenant: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', username: 'glinda' }).select('user_id').first() }
+                {
+                    tenant: tenant.tenant,
+                    severity_name: 'Trifling Trouble',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id')
+                        .first()
+                },
+                {
+                    tenant: tenant.tenant,
+                    severity_name: 'Moderate Muddle',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id')
+                        .first()
+                },
+                {
+                    tenant: tenant.tenant,
+                    severity_name: 'Serious Snarl',
+                    created_by: knex('users')
+                        .where({
+                            tenant: tenant.tenant,
+                            username: 'glinda'
+                        })
+                        .select('user_id')
+                        .first()
+                }
             ]);
         });
 };
