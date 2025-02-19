@@ -16,6 +16,7 @@ WORKDIR /app
 COPY ./package.json ./package.json 
 RUN npm install
 
+
 # Copy source code files that are less likely to change the dependency tree
 RUN mkdir -p /app/ee/server/src/app 
 COPY ./server /app/server 

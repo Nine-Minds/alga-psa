@@ -13,7 +13,6 @@ import {
   IInvoiceItem,
   IInvoice,
   DiscountType,
-  InvoiceStatus,
   PreviewInvoiceResponse
 } from '@/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
@@ -23,18 +22,15 @@ import { options } from "@/app/api/auth/[...nextauth]/options";
 import Invoice from '@/lib/models/invoice';
 import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
 import { createTenantKnex } from '@/lib/db';
-import { format } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 import { PDFGenerationService } from '@/services/pdf-generation.service';
-import { toPlainDate, toISODate } from '@/lib/utils/dateTimeUtils';
+import { toPlainDate, toISODate, toISOTimestamp } from '@/lib/utils/dateTimeUtils';
 import { StorageService } from '@/lib/storage/StorageService';
 import { ISO8601String } from '@/types/types.d';
 import { TaxService } from '@/lib/services/taxService';
 import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { Tent } from 'lucide-react';
 import { auditLog } from '@/lib/logging/auditLog';
-import { getAdminConnection } from '../db/admin';
 
 interface ManualInvoiceUpdate {
   service_id?: string;
@@ -341,17 +337,45 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     .first();
 
   if (!billingCycle) {
-    throw new Error('Invalid billing cycle');
+    throw new Error('Billing cycle not found');
   }
 
-  const { company_id, effective_date } = billingCycle;
+  let cycleStart: ISO8601String;
+  let cycleEnd: ISO8601String;
+  const { company_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
-  // Calculate cycle dates based on effective_date and billing cycle
-  const cycleStart = toISODate(toPlainDate(effective_date));
-  const cycleEnd = await getNextBillingDate(company_id, effective_date);
+  if (period_start_date && period_end_date) {
+    // Use the billing cycle's period dates if provided, ensuring UTC format
+    cycleStart = toISOTimestamp(toPlainDate(period_start_date));
+    cycleEnd = toISOTimestamp(toPlainDate(period_end_date));
+  } else if (effective_date) {
+    // Calculate period dates from effective_date
+    // Format effective_date as UTC ISO8601
+    const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
+    cycleStart = effectiveDateUTC;
+    cycleEnd = await getNextBillingDate(company_id, effectiveDateUTC);
+  } else {
+    throw new Error('Invalid billing cycle dates');
+  }
+
+  // Check if an invoice already exists for this billing cycle
+  const existingInvoice = await knex('invoices')
+    .where({ 
+      billing_cycle_id,
+      tenant 
+    })
+    .first();
+
+  if (existingInvoice) {
+    throw new Error('No active billing plans for this period');
+  }
 
   const billingEngine = new BillingEngine();
   const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
+
+  if (billingResult.error) {
+    throw new Error(billingResult.error);
+  }
 
   if (billingResult.charges.length === 0) {
     throw new Error('Nothing to bill');
@@ -951,6 +975,7 @@ export async function finalizeInvoiceWithKnex(
     await trx('invoices')
       .where({ invoice_id: invoiceId, tenant: tenant })
       .update({
+        status: 'sent',
         finalized_at: toISODate(Temporal.Now.plainDateISO()),
         updated_at: toISODate(Temporal.Now.plainDateISO())
       });

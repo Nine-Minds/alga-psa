@@ -1,5 +1,6 @@
-import { Knex } from 'knex';
-
+import knex, { Knex } from 'knex';
+import { verifyTestDatabase } from './dbConfig';
+import { getSecret } from '@/lib/utils/getSecret';
 /**
  * Options for database reset
  */
@@ -46,12 +47,51 @@ export async function resetDatabase(
   } = options;
 
   try {
-    // Drop and recreate schema
-    await db.raw('DROP SCHEMA public CASCADE');
-    await db.raw('CREATE SCHEMA public');
+    // Get current database name and verify it's safe to reset
+    const { rows: [{ current_database }] } = await db.raw('SELECT current_database()');
+    
+    // Import verification function from dbConfig
+    verifyTestDatabase(current_database);
+    
+    // Close existing connections more aggressively
+    await db.raw(`
+      SELECT pg_terminate_backend(pid)
+      FROM pg_stat_activity 
+      WHERE datname = ?
+      AND pid <> pg_backend_pid()
+      AND state <> 'terminated'
+    `, [current_database]);
 
-    // Set environment
-    await db.raw(`SET app.environment = '${process.env.APP_ENV}'`);
+    // Add a small delay to ensure connections are fully terminated
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // First destroy the main connection
+    await db.destroy();
+
+    const config = {
+      client: db.client.config.client,
+      asyncStackTraces: true,
+      connection: {
+        ...db.client.config.connection,
+        database: 'postgres',
+        password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password'),
+      }
+    };
+
+    // Create admin connection
+    const adminDb = knex(config);
+
+    try {
+      // Drop and recreate database from postgres connection
+      await adminDb.raw(`DROP DATABASE IF EXISTS ${current_database}`);
+      await adminDb.raw(`CREATE DATABASE ${current_database}`);
+    } finally {
+      // Clean up admin connection
+      await adminDb.destroy();
+    }
+
+    // Reinitialize the main connection
+    await db.initialize();
 
     // Run any pre-setup commands
     for (const command of preSetupCommands) {
@@ -72,9 +112,9 @@ export async function resetDatabase(
     }
 
     // Clean up specified tables
-    for (const table of cleanupTables) {
-      await db(table).del();
-    }
+    // for (const table of cleanupTables) {
+    //   await db(table).del();
+    // }
   } catch (error) {
     console.error('Error resetting database:', error);
     throw error;

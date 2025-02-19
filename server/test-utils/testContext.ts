@@ -36,13 +36,14 @@ export interface TestContextOptions {
    * User type for test data
    * @default "admin"
    */
-  userType?: 'admin' | 'user';
+  userType?: 'client' | 'internal';
 }
 
 /**
  * Manages test context including database connection and test data
  */
 export class TestContext {
+  public static currentTenantId: string;
   public db!: Knex;
   public tenantId!: string;
   public companyId!: string;
@@ -57,7 +58,7 @@ export class TestContext {
       cleanupTables: [],
       setupCommands: [],
       companyName: 'Test Company',
-      userType: 'admin',
+      userType: 'internal',
       ...options
     };
   }
@@ -78,19 +79,32 @@ export class TestContext {
       });
 
       // Create test tenant
-      this.tenantId = await createTenant(this.db);
+      // this.tenantId = await createTenant(this.db);
+
+      const tenant = await this.db('tenants').first();
+      this.tenantId = tenant.tenant;
+      TestContext.currentTenantId = this.tenantId;
 
       // Create test company
       this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
 
-      // Get company details
+      // Get company details with full details
       this.company = await this.db('companies')
-        .where('company_id', this.companyId)
-        .first() as ICompany;
+        .where({ 
+          company_id: this.companyId,
+          tenant: this.tenantId 
+        })
+        .first();
+
+      if (!this.company) {
+        throw new Error(`Failed to find company with ID ${this.companyId}`);
+      }
+
+      this.company = this.company as ICompany;
 
       // Create test user
       this.userId = await createUser(this.db, this.tenantId, {
-        name: `Test ${this.options.userType}`,
+        first_name: `Test ${this.options.userType}`,
         user_type: this.options.userType
       });
 
@@ -120,24 +134,35 @@ export class TestContext {
       });
 
       // Re-create test data
-      this.tenantId = await createTenant(this.db);
+      const tenant = await this.db('tenants').first();
+      this.tenantId = tenant.tenant;
+      TestContext.currentTenantId = this.tenantId;
       this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
       this.userId = await createUser(this.db, this.tenantId, {
-        name: `Test ${this.options.userType}`,
+        first_name: `Test ${this.options.userType}`,
         user_type: this.options.userType
       });
 
       // Refresh entity references
       this.company = await this.db('companies')
-        .where('company_id', this.companyId)
-        .first() as ICompany;
+        .where({ 
+          company_id: this.companyId,
+          tenant: this.tenantId 
+        })
+        .first();
 
-      this.user = await this.db('users')
-        .select('users.*')
-        .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-        .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-        .where('users.user_id', this.userId)
-        .first() as IUserWithRoles;
+      if (!this.company) {
+        throw new Error(`Failed to find company with ID ${this.companyId}`);
+      }
+
+      this.company = this.company as ICompany;
+
+      // this.user = await this.db('users')
+      //   .select('users.*')
+      //   .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
+      //   .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
+      //   .where('users.user_id', this.userId)
+      //   .first() as IUserWithRoles;
     } catch (error) {
       console.error('Error resetting test context:', error);
       throw error;
@@ -159,25 +184,45 @@ export class TestContext {
    * @param data Entity data (tenant will be automatically added)
    * @returns Created entity ID
    */
-  async createEntity<T extends object>(table: string, data: T): Promise<string> {
-    const id = uuidv4();
-    await this.db(table).insert({
+  async createEntity<T extends object>(
+    table: string, 
+    data: T, 
+    idField: string = 'id'
+  ): Promise<string> {
+    // Check if data already contains the ID field
+    const entityData: Record<string, unknown> = {
       ...data,
       tenant: this.tenantId,
-      id
-    });
-    return id;
+    };
+    
+    // Remove the 'id' field if it exists and we're using a different idField
+    if (idField !== 'id' && 'id' in entityData) {
+      delete entityData.id;
+    }
+    
+    // Only generate and add ID if not already present in data
+    if (!(idField in data)) {
+      entityData[idField] = uuidv4();
+    }
+
+    await this.db(table).insert(entityData);
+    return entityData[idField] as string;
   }
 
   /**
    * Retrieves an entity by ID from the current test context
    * @param table Table name
    * @param id Entity ID
+   * @param idField Name of the ID column
    * @returns Entity data or undefined if not found
    */
-  async getEntity<T>(table: string, id: string): Promise<T | undefined> {
+  async getEntity<T>(
+    table: string, 
+    id: string, 
+    idField: string = 'id'
+  ): Promise<T | undefined> {
     return this.db(table)
-      .where({ id, tenant: this.tenantId })
+      .where({ [idField]: id, tenant: this.tenantId })
       .first();
   }
 
@@ -185,33 +230,31 @@ export class TestContext {
    * Creates test context helper functions for use in test files
    */
   static createHelpers() {
-    let context: TestContext;
-
-    return {
-      /**
-       * Initialize test context before all tests
-       * @param options Test context options
-       */
+    const testContext = {
+      context: undefined as TestContext | undefined,
+      
       beforeAll: async (options: TestContextOptions = {}) => {
-        context = new TestContext(options);
-        await context.initialize();
-        return context;
+        testContext.context = new TestContext(options);
+        await testContext.context.initialize();
+        return testContext.context;
       },
 
-      /**
-       * Reset test context before each test
-       */
       beforeEach: async () => {
-        await context.reset();
-        return context;
+        if (!testContext.context) {
+          throw new Error('Test context not initialized. Call beforeAll first.');
+        }
+        await testContext.context.reset();
+        return testContext.context;
       },
 
-      /**
-       * Clean up test context after all tests
-       */
       afterAll: async () => {
-        await context.cleanup();
+        if (testContext.context) {
+          await testContext.context.cleanup();
+          testContext.context = undefined;
+        }
       }
     };
+
+    return testContext;
   }
 }

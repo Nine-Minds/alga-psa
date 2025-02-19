@@ -568,9 +568,11 @@ export class BillingEngine {
     console.log('Time entries query:', query.toString());
     const timeEntries = await query;
 
+    console.log('Time entries:', timeEntries);
+
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
-      const startDateTime = Temporal.PlainDateTime.from(entry.start_time);
-      const endDateTime = Temporal.PlainDateTime.from(entry.end_time);
+      const startDateTime = Temporal.PlainDateTime.from(entry.start_time.toISOString().replace('Z', ''));
+      const endDateTime = Temporal.PlainDateTime.from(entry.end_time.toISOString().replace('Z', ''));
       const duration = Math.floor(startDateTime.until(endDateTime, { largestUnit: 'hours' }).hours);
       const rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
       return {

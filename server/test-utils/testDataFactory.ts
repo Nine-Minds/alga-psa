@@ -19,7 +19,6 @@ export async function createTenant(
 
   await db('tenants').insert({
     tenant: tenantId,
-    name,
     created_at: now,
     updated_at: now,
   });
@@ -130,31 +129,40 @@ export async function createUser(
   tenantId: string,
   options: {
     email?: string;
-    name?: string;
-    is_active?: boolean;
-    user_type?: 'admin' | 'user';
     username?: string;
     first_name?: string;
     last_name?: string;
     hashed_password?: string;
+    user_type?: 'client' | 'internal';
+    two_factor_enabled?: boolean;
+    two_factor_secret?: string;
+    is_google_user?: boolean;
+    is_inactive?: boolean;
+    contact_id?: string;
+    phone?: string;
+    timezone?: string;
   } = {}
 ): Promise<string> {
   const userId = uuidv4();
-  const now = new Date().toISOString();
+  const now = new Date();
 
   const user = {
     user_id: userId,
     tenant: tenantId,
-    email: options.email || `test.user.${userId}@example.com`,
-    name: options.name || 'Test User',
     username: options.username || `test.user.${userId}`,
-    first_name: options.first_name || options.name?.split(' ')[0] || 'Test',
-    last_name: options.last_name || options.name?.split(' ')[1] || 'User',
-    is_active: options.is_active ?? true,
-    user_type: options.user_type || 'user',
+    first_name: options.first_name || 'Test',
+    last_name: options.last_name || 'User',
+    email: options.email || `test.user.${userId}@example.com`,
     hashed_password: options.hashed_password || 'hashed_password_here',
     created_at: now,
-    updated_at: now,
+    two_factor_enabled: options.two_factor_enabled ?? false,
+    two_factor_secret: options.two_factor_secret,
+    is_google_user: options.is_google_user ?? false,
+    is_inactive: options.is_inactive ?? false,
+    user_type: options.user_type || 'internal',
+    contact_id: options.contact_id,
+    phone: options.phone,
+    timezone: options.timezone
   };
 
   await db('users').insert(user);
@@ -187,7 +195,7 @@ export async function createTestEnvironment(
   });
   const locationId = await createCompanyLocation(db, companyId, tenantId);
   const userId = await createUser(db, tenantId, {
-    name: options.userName
+    username: options.userName
   });
 
   return { tenantId, companyId, locationId, userId };

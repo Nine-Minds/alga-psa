@@ -11,7 +11,7 @@ const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod'];
  * @param dbName Database name to check
  * @throws Error if database name matches known production names
  */
-function verifyTestDatabase(dbName: string): void {
+export function verifyTestDatabase(dbName: string): void {
   if (PRODUCTION_DB_NAMES.includes(dbName.toLowerCase())) {
     throw new Error('Attempting to use production database for testing');
   }
@@ -34,6 +34,7 @@ export async function createTestDbConnection(): Promise<Knex> {
       password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password'),
       database: dbName,
     },
+    asyncStackTraces: true,
     pool: {
       min: 2,
       max: 20,

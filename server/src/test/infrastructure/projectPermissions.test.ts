@@ -60,7 +60,7 @@ describe('Project Permissions Infrastructure', () => {
       first_name: 'John',
       last_name: 'Doe',
       email: 'john@example.com',
-      user_type: 'user'
+      user_type: 'internal'
     });
 
     const adminUserId = await createUser(context.db, tenantId, {
@@ -68,7 +68,7 @@ describe('Project Permissions Infrastructure', () => {
       first_name: 'Jane',
       last_name: 'Admin',
       email: 'jane@example.com',
-      user_type: 'admin'
+      user_type: 'internal'
     });
 
     // Get complete user objects from database
