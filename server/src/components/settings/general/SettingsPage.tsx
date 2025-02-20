@@ -12,6 +12,7 @@ import UserManagement from './UserManagement';
 import TeamManagement from './TeamManagement';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import TimePeriodSettings from '../billing/TimePeriodSettings';
+import NumberingSettings from './NumberingSettings';
 import NotificationsTab from './NotificationsTab';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
@@ -108,7 +109,10 @@ const SettingsPage = (): JSX.Element =>  {
             <CardDescription>Manage your billing and subscription</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Add more billing management components */}
+            <div className="space-y-6">
+              <NumberingSettings entityType="INVOICE" />
+              {/* Add more billing management components */}
+            </div>
           </CardContent>
         </Card>
       ),
