@@ -1,3 +1,5 @@
+import { NumberingService } from '@/lib/services/numberingService';
+
 'use server'
 
 import { BillingEngine } from '@/lib/billing/billingEngine';
@@ -429,7 +431,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   let totalTax = 0;
   const due_date = await getDueDate(companyId, endDate);
 
-  const invoice: Omit<IInvoice, 'invoice_id'> = {
+  // Create invoice object
+  const invoiceData: Omit<IInvoice, 'invoice_id'> = {
     company_id: companyId,
     invoice_date: toISODate(Temporal.Now.plainDateISO()),
     due_date,
@@ -437,19 +440,72 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     tax: 0,
     total_amount: 0,
     status: 'draft',
-    invoice_number: await generateInvoiceNumber(),
+    invoice_number: '', // Will be set within transaction
     credit_applied: 0,
     billing_cycle_id: billing_cycle_id,
     tenant: tenant,
     is_manual: false
   };
 
-  const createdInvoice = await knex.transaction(async (trx) => {
-    const [newInvoice] = await trx('invoices').insert(invoice).returning('*');
+  let newInvoice: IInvoice | null = null;
+  const maxRetries = 3;
+  let retryCount = 0;
+
+  while (retryCount < maxRetries) {
+    try {
+      // Generate invoice number
+      const invoiceNumber = await generateInvoiceNumber();
+      invoiceData.invoice_number = invoiceNumber;
+
+      // Try to insert the invoice
+      const [insertedInvoice] = await knex('invoices').insert(invoiceData).returning('*');
+      newInvoice = insertedInvoice;
+      break;
+    } catch (error: unknown) {
+      if (error instanceof Error &&
+          'code' in error &&
+          typeof error.code === 'string' &&
+          error.code === '23505' &&
+          'constraint' in error &&
+          typeof error.constraint === 'string' &&
+          error.constraint === 'unique_invoice_number_per_tenant') {
+        // Handle uniqueness constraint violation
+        retryCount++;
+        
+        // Get current max invoice number by extracting numeric portion
+        const maxInvoiceNumber = await knex('invoices')
+          .where({ tenant: invoiceData.tenant })
+          .select(knex.raw(`MAX(CAST(SUBSTRING(invoice_number FROM '\\d+$') AS INTEGER)) as max_number`))
+          .first();
+        
+        if (maxInvoiceNumber?.max_number) {
+          // Update last_number to be max + 1
+          await knex('next_number')
+            .where({
+              tenant: invoiceData.tenant,
+              entity_type: 'INVOICE'
+            })
+            .update({ last_number: maxInvoiceNumber.max_number });
+        }
+        
+        if (retryCount >= maxRetries) {
+          throw new Error('Failed to generate unique invoice number after multiple attempts');
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (!newInvoice) {
+    throw new Error('Failed to create invoice');
+  }
+
+  await knex.transaction(async (trx) => {
 
     // Get current balance
     const currentBalance = await trx('transactions')
-      .where({ 
+      .where({
         company_id: companyId,
         tenant
       })
@@ -465,7 +521,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       amount: newInvoice.total_amount,
       type: 'invoice_generated',
       status: 'completed',
-      description: `Generated invoice ${newInvoice.invoice_number}`,
+      description: `Generated invoice ${invoiceData.invoice_number}`,
       created_at: toISODate(Temporal.Now.plainDateISO()),
       balance_after: currentBalance + newInvoice.total_amount,
       tenant: tenant
@@ -595,7 +651,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
         invoice_id: newInvoice.invoice_id,
         amount: -creditToApply,
         type: 'credit_application',
-        description: `Applied credit to invoice ${invoice.invoice_number}`,
+        description: `Applied credit to invoice ${invoiceData.invoice_number}`,
         balance_after: currentBalance - creditToApply
       }, trx);
 
@@ -606,8 +662,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   });
 
   const viewModel: InvoiceViewModel = {
-    invoice_id: createdInvoice.invoice_id,
-    invoice_number: createdInvoice.invoice_number,
+    invoice_id: newInvoice.invoice_id,
+    invoice_number: newInvoice.invoice_number,
     company_id: companyId,
     company: {
       name: company.company_name,
@@ -618,19 +674,19 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       name: '',  // TODO: Add contact info
       address: ''
     },
-    invoice_date: toPlainDate(createdInvoice.invoice_date),
-    due_date: toPlainDate(createdInvoice.due_date),
-    status: createdInvoice.status,
+    invoice_date: toPlainDate(newInvoice.invoice_date),
+    due_date: toPlainDate(newInvoice.due_date),
+    status: newInvoice.status,
     subtotal: Math.ceil(subtotal),
     tax: Math.ceil(totalTax),
-    total: createdInvoice.total_amount,
-    total_amount: createdInvoice.total_amount,
+    total: newInvoice.total_amount,
+    total_amount: newInvoice.total_amount,
     invoice_items: await knex('invoice_items')
-      .where({ 
-        invoice_id: createdInvoice.invoice_id,
+      .where({
+        invoice_id: newInvoice.invoice_id,
         tenant
       }),
-    credit_applied: invoice.credit_applied,
+    credit_applied: newInvoice.credit_applied,
     billing_cycle_id: billing_cycle_id,
     is_manual: false
   };
@@ -657,20 +713,9 @@ async function calculateChargeDetails(
   return { netAmount, taxCalculationResult };
 }
 
-export async function generateInvoiceNumber(): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('No tenant found');
-  }
-
-  const result = await knex('invoices')
-    .where({ tenant })
-    .max('invoice_number as lastInvoiceNumber')
-    .first();
-
-  const lastNumber = result?.lastInvoiceNumber ? parseInt(result.lastInvoiceNumber.toString().split('-')[1]) : 0;
-  const newNumber = lastNumber + 1;
-  return `INV-${newNumber.toString().padStart(6, '0')}`;
+export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {
+  const numberingService = new NumberingService();
+  return numberingService.getNextNumber('INVOICE');
 }
 
 function getPaymentTermDays(paymentTerms: string): number {
