@@ -3,6 +3,7 @@
 import { createTenantKnex } from '@/lib/db';
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
+import { TaxService } from '@/lib/services/taxService';
 
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
@@ -232,58 +233,6 @@ export async function deleteTaxHoliday(holidayId: string): Promise<void> {
 }
 
 export async function createDefaultTaxSettings(companyId: string): Promise<ICompanyTaxSettings> {
-  const { knex, tenant } = await createTenantKnex();
-  const trx = await knex.transaction();
-
-  try {
-    // Get the default tax rate (assuming there's at least one tax rate in the system)
-    const [defaultTaxRate] = await trx<ITaxRate>('tax_rates')
-      .where('is_active', true)
-      .orderBy('created_at', 'asc')
-      .limit(1);
-
-    if (!defaultTaxRate) {
-      throw new Error('No active tax rates found in the system');
-    }
-
-    // Create default company tax settings
-    // Create default company tax settings
-    await trx<ICompanyTaxSettings>('company_tax_settings')
-      .insert({
-        company_id: companyId,
-        tax_rate_id: defaultTaxRate.tax_rate_id,
-        is_reverse_charge_applicable: false,
-        tenant: tenant!
-      })
-      .returning('*');
-
-    // Create a default tax component
-    const tax_component_id = uuid4();
-    await trx<ITaxComponent>('tax_components')
-      .insert({
-        tax_component_id,
-        tax_rate_id: defaultTaxRate.tax_rate_id,
-        name: 'Default Tax',
-        rate: Math.ceil(defaultTaxRate.tax_percentage),
-        sequence: 1,
-        is_compound: false,
-        tenant: tenant!
-      })
-      .returning('*');
-
-    await trx.commit();
-
-    // Fetch the complete tax settings
-    const completeTaxSettings = await getCompanyTaxSettings(companyId);
-
-    if (!completeTaxSettings) {
-      throw new Error('Failed to create default tax settings');
-    }
-
-    return completeTaxSettings;
-  } catch (error) {
-    await trx.rollback();
-    console.error('Error creating default tax settings:', error);
-    throw new Error('Failed to create default tax settings');
-  }
+  const taxService = new TaxService();
+  return taxService.createDefaultTaxSettings(companyId);
 }

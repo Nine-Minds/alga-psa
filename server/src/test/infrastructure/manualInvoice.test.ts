@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import '../../../test-utils/nextApiMock';
 import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
@@ -91,7 +92,7 @@ describe('Manual Invoice Generation', () => {
 
       expect(result).toMatchObject({
         company_id: context.companyId,
-        invoice_number: expect.stringMatching(/^INV-\d{6}$/),
+        invoice_number: expect.stringMatching(/^TIC\d{6}$/),
         status: 'draft'
       });
 

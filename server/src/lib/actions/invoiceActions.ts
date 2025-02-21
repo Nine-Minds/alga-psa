@@ -731,7 +731,7 @@ function getPaymentTermDays(paymentTerms: string): number {
   }
 }
 
-async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
+export async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies')
     .where({ 

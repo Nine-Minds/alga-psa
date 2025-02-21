@@ -85,12 +85,17 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     // Process each line item
     for (const item of items) {
       // Get service details for tax info
-      const service = await trx('service_catalog')
-        .where({
-          service_id: item.service_id,
-          tenant
-        })
-        .first();
+      let service;
+      try {
+        service = await trx('service_catalog')
+          .where({
+            service_id: item.service_id,
+            tenant
+          })
+          .first();
+      } catch (error) {
+        throw new Error(`Invalid service ID: ${item.service_id}`);
+      }
 
       let netAmount: number;
       let taxCalculationResult: { taxAmount: number; taxRate: number };
@@ -143,7 +148,23 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         tenant
       };
 
-      await trx('invoice_items').insert(invoiceItem);
+      const exists = (await trx('service_catalog')
+        .where({
+          service_id: item.service_id,
+          tenant
+        })
+        .first()) !== undefined;
+
+      if (!exists) {
+        throw new Error(`Service not found: ${item.service_id}`);
+      }
+
+      try {
+        await trx('invoice_items').insert(invoiceItem);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+        throw new Error(`Failed to create invoice item: ${message}`);
+      }
 
       subtotal += netAmount;
       totalTax += taxCalculationResult.taxAmount;
