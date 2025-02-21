@@ -1,7 +1,6 @@
-import { NumberingService } from '@/lib/services/numberingService';
-
 'use server'
 
+import { NumberingService } from '@/lib/services/numberingService';
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
 import { Knex } from 'knex';
@@ -50,6 +49,7 @@ interface ManualItemsUpdate {
   newItems: IManualInvoiceItem[];
   updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
+  invoice_number?: string;
 }
 
 /**
@@ -1377,12 +1377,24 @@ export async function updateInvoiceManualItems(
       await trx('invoice_items').insert(invoiceItem);
     }
 
-    // Update invoice timestamp
-    await trx('invoices')
-      .where({ invoice_id: invoiceId })
-      .update({
-        updated_at: currentDate
-      });
+    // Update invoice number and timestamp
+    try {
+      await trx('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_number: changes.invoice_number || invoice.invoice_number,
+          updated_at: currentDate
+        });
+    } catch (error: unknown) {
+      if (error instanceof Error &&
+          'code' in error &&
+          error.code === '23505' &&
+          'constraint' in error &&
+          error.constraint === 'unique_invoice_number_per_tenant') {
+        throw new Error('Invoice number must be unique');
+      }
+      throw error;
+    }
   });
 
   // Recalculate the entire invoice

@@ -250,7 +250,7 @@ const Invoices: React.FC = () => {
                   handleManageItemsClick(record);
                 }}
               >
-                {record.is_manual ? 'Manage Items' : 'Manage Manual Items'}
+                {record.is_manual ? 'Invoice Details' : 'Manage Manual Items'}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
@@ -327,9 +327,7 @@ const Invoices: React.FC = () => {
           <div className="flex gap-4">
             <BackNav>Back to Invoices</BackNav>
             <h2 className="text-2xl font-bold">
-              {managingInvoice.is_manual
-                ? `Manage Items - Invoice ${managingInvoice.invoice_number}`
-                : `Manage Manual Items - Invoice ${managingInvoice.invoice_number}`}
+              {`Invoice Details - ${managingInvoice.invoice_number}`}
             </h2>
           </div>
         </div>

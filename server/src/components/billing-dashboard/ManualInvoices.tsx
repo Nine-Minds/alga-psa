@@ -49,6 +49,7 @@ interface EditableInvoiceItem extends InvoiceItem {
   item_id?: string;
   isExisting?: boolean;
   isRemoved?: boolean;
+  invoice_number?: string;
 }
 
 const defaultItem: EditableInvoiceItem = {
@@ -58,7 +59,8 @@ const defaultItem: EditableInvoiceItem = {
   rate: 0,
   is_discount: false,
   isExisting: false,
-  isRemoved: false
+  isRemoved: false,
+  invoice_number: ''
 };
 
 
@@ -320,6 +322,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       case 'applies_to_item_id':
         currentItem.applies_to_item_id = value as string;
         break;
+      case 'invoice_number':
+        if (invoice) {
+          invoice.invoice_number = value as string;
+        }
+        break;
     }
 
     newItems[index] = currentItem;
@@ -359,7 +366,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           .map(item => item.item_id!);
 
         await updateInvoiceManualItems(invoice.invoice_id, {
-          newItems: newItems.map(({ 
+          invoice_number: invoice.invoice_number,
+          newItems: newItems.map(({
             service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
           }) => ({
             service_id,
@@ -411,9 +419,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         });
       }
       
-      onGenerateSuccess();
-    } catch (err) {
-      setError(`Error ${invoice ? 'updating' : 'generating'} invoice`);
+      // Success - stay on the page
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'Invoice number must be unique') {
+        setError('This invoice number is already in use. Please choose a different number.');
+      } else {
+        setError(`Error ${invoice ? 'updating' : 'generating'} invoice`);
+      }
       if (IS_DEVELOPMENT) {
         console.error('Error with invoice:', err);
       }
@@ -473,11 +485,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           <>
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-lg font-semibold">
-                {invoice
-                  ? `Manage Items - Invoice ${invoice.invoice_number}`
-                  : 'Generate Manual Invoice'}
+                {invoice ? 'Invoice Details' : 'Generate Manual Invoice'}
               </h2>
             </div>
+
+            {/* Company Name */}
+            {invoice && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Company
+                </label>
+                <div className="text-gray-900">
+                  {companies.find(c => c.company_id === invoice.company_id)?.company_name || 'Unknown Company'}
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
@@ -515,6 +537,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     }))
                   }
                 />
+              )}
+
+              {/* Invoice Number field */}
+              {invoice && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Invoice Number
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.invoice_number}
+                    onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
+                    className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               )}
 
               {/* Manual items section */}
@@ -586,7 +623,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 id='save-changes-button'
                 type="submit"
                 disabled={isGenerating || (!invoice && !selectedCompany) || items.some(item => !item.is_discount && !item.service_id)}
-                className="w-full"
+                className="px-4"
               >
                 {getButtonText()}
               </Button>
