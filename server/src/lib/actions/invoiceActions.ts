@@ -385,7 +385,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     .first();
   
   const defaultSettings = await knex('default_billing_settings')
-    .where({ tenant_id: tenant })
+    .where({ tenant })
     .first();
   
   const settings = companySettings || defaultSettings;
