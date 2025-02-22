@@ -191,6 +191,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
 
     // First successful generation
     const invoice1 = await generateInvoice(successCycle1);
+    if (!invoice1) {
+      throw new Error('Failed to generate first invoice');
+    }
     expect(invoice1.invoice_number).toBe('INV-000001');
 
     // Failed generation attempt (no billing plan for this company)
@@ -203,6 +206,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
 
     // Second successful generation - should be next in sequence
     const invoice2 = await generateInvoice(successCycle2);
+    if (!invoice2) {
+      throw new Error('Failed to generate second invoice');
+    }
     expect(invoice2.invoice_number).toBe('INV-000002');
 
     // Verify the sequence in next_number table
@@ -294,6 +300,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
 
       // Generate invoice and verify prefix handling
       const invoice = await generateInvoice(billingCycle);
+      if (!invoice) {
+        throw new Error(`Failed to generate invoice for prefix: ${testCase.prefix}`);
+      }
       expect(invoice.invoice_number).toBe(testCase.expected);
     }
   });
@@ -377,6 +386,14 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     // Generate invoices and verify they increment correctly from initial value
     const invoice1 = await generateInvoice(billingCycle1);
     const invoice2 = await generateInvoice(billingCycle2);
+
+    if (!invoice1) {
+      throw new Error(`Failed to generate invoice1`);
+    }
+
+    if (!invoice2) {
+      throw new Error(`Failed to generate invoice2`);
+    }
 
     // Verify numbers start from initial value and increment
     expect(invoice1.invoice_number).toBe('INV-1000000');

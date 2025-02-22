@@ -21,6 +21,7 @@ import { setCompanyTemplate } from '../../lib/actions/invoiceActions';
 import BillingConfigForm from './BillingConfigForm';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
+import CompanyZeroDollarInvoiceSettings from './CompanyZeroDollarInvoiceSettings';
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -347,6 +348,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 billingConfig={billingConfig}
                 handleSelectChange={handleSelectChange}
                 contacts={contacts}
+                companyId={company.company_id}
+            />
+
+            <CompanyZeroDollarInvoiceSettings
                 companyId={company.company_id}
             />
 

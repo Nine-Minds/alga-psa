@@ -318,7 +318,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 }
 
-export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel> {
+export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel | null> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -379,6 +379,40 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error(billingResult.error);
   }
 
+  // Get zero-dollar invoice settings
+  const companySettings = await knex('company_billing_settings')
+    .where({ company_id: company_id, tenant })
+    .first();
+  
+  const defaultSettings = await knex('default_billing_settings')
+    .where({ tenant_id: tenant })
+    .first();
+  
+  const settings = companySettings || defaultSettings;
+  
+  if (!settings) {
+    throw new Error('No billing settings found');
+  }
+
+  // Handle zero-dollar invoices
+  if (billingResult.charges.length === 0 && billingResult.finalAmount === 0) {
+    // Only suppress if there are no items and suppression is enabled
+    if (settings.zero_dollar_invoice_handling === 'suppress') {
+      return null;
+    }
+    
+    // Create invoice with appropriate status
+    const invoice = await createInvoice(billingResult, company_id, cycleStart, cycleEnd, billing_cycle_id);
+    
+    if (settings.zero_dollar_invoice_handling === 'finalized') {
+      // Immediately finalize the invoice
+      await finalizeInvoiceWithKnex(invoice.invoice_id, knex, tenant, session.user.id);
+    }
+    
+    return await Invoice.getFullInvoiceById(invoice.invoice_id);
+  }
+
+  // If there are charges, always create the invoice regardless of total amount
   if (billingResult.charges.length === 0) {
     throw new Error('Nothing to bill');
   }
