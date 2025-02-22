@@ -253,6 +253,6 @@ describe('Billing Invoice Generation – Subtotal Calculation', () => {
     const updatedInvoice = await generateInvoice(billingCycle);
 
     // Verify subtotal is zero
-    expect(updatedInvoice.subtotal).toBe(0);
+    expect(updatedInvoice!.subtotal).toBe(0);
   });
 });
