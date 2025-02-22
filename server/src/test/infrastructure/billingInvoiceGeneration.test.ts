@@ -138,7 +138,7 @@ describe('Billing Invoice Generation – Subtotal Calculation', () => {
     const invoice = await generateInvoice(billingCycle);
 
     // Verify subtotal calculation
-    expect(invoice.subtotal).toBe(22500); // $225.00 in cents
+    expect(invoice!.subtotal).toBe(22500); // $225.00 in cents
   });
 
   it('should correctly calculate subtotal with line items having zero quantity', async () => {
@@ -254,5 +254,89 @@ describe('Billing Invoice Generation – Subtotal Calculation', () => {
 
     // Verify subtotal is zero
     expect(updatedInvoice!.subtotal).toBe(0);
+  });
+
+  it('should correctly calculate subtotal with negative rates (credits)', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Test Company 4',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      is_inactive: false,
+      is_tax_exempt: false
+    }, 'company_id');
+
+    // Create a billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Test Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Create services with negative rates
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit A',
+      description: 'Test credit A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit B',
+      description: 'Test credit B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit'
+    }, 'service_id');
+
+    // Assign services to plan
+    await context.db('plan_services').insert([
+      {
+        plan_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        plan_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
+    const billingCycle = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      effective_date: '2023-01-01',
+      period_start_date: '2023-01-01',
+      period_end_date: '2023-02-01'
+    }, 'billing_cycle_id');
+
+    // Assign plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      start_date: '2023-01-01',
+      is_active: true,
+      tenant: context.tenantId
+    });
+
+    // Generate invoice
+    const invoice = await generateInvoice(billingCycle);
+
+    // Verify subtotal calculation with negative rates
+    expect(invoice!.subtotal).toBe(-12500); // -$125.00 in cents
   });
 });
