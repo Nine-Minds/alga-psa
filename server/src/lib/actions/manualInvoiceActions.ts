@@ -31,7 +31,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const { knex, tenant } = await createTenantKnex();
   const { companyId, items } = request;
   const session = await getServerSession(options);
-  
+
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -54,10 +54,9 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
   const taxService = new TaxService();
   const currentDate = Temporal.Now.plainDateISO().toString();
-  
+
   // Calculate totals
   let subtotal = 0;
-  let totalTax = 0;
 
   // Create invoice record
   const invoiceNumber = await generateInvoiceNumber();
@@ -78,71 +77,63 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     is_manual: true
   };
 
-  await knex.transaction(async (trx) => {
+  return await knex.transaction(async (trx) => {
     // Insert invoice
     await trx('invoices').insert(invoice);
 
-    // Process each line item
-    for (const item of items) {
+    // First pass: Calculate net amounts and create invoice items
+    for (const requestItem of items) {
       // Get service details for tax info
       let service;
       try {
         service = await trx('service_catalog')
           .where({
-            service_id: item.service_id,
+            service_id: requestItem.service_id,
             tenant
           })
           .first();
       } catch (error) {
-        throw new Error(`Invalid service ID: ${item.service_id}`);
+        throw new Error(`Invalid service ID: ${requestItem.service_id}`);
       }
 
       let netAmount: number;
-      let taxCalculationResult: { taxAmount: number; taxRate: number };
 
-      if (item.is_discount) {
+      if (requestItem.is_discount) {
         // For discounts, calculate the negative amount
-        if (item.discount_type === 'percentage') {
+        if (requestItem.discount_type === 'percentage') {
           // Calculate percentage of applicable amount
-          const applicableAmount = item.applies_to_item_id
+          const applicableAmount = requestItem.applies_to_item_id
             ? (await knex('invoice_items')
-                .where({ item_id: item.applies_to_item_id })
-                .first())?.net_amount || 0
+              .where({ item_id: requestItem.applies_to_item_id })
+              .first())?.net_amount || 0
             : subtotal;
-          netAmount = -Math.round((applicableAmount * item.rate) / 100);
+          netAmount = -Math.round((applicableAmount * requestItem.rate) / 100);
         } else {
           // Fixed amount discount
-          netAmount = -Math.round(item.rate); // Negative for discounts
+          netAmount = -Math.round(requestItem.rate); // Negative for discounts
         }
-        // Discounts don't get taxed
-        taxCalculationResult = { taxAmount: 0, taxRate: 0 };
       } else {
         // Regular line item
-        netAmount = Math.round(item.quantity * item.rate);
-        taxCalculationResult = await taxService.calculateTax(
-          companyId,
-          netAmount,
-          currentDate
-        );
+        netAmount = Math.round(requestItem.quantity * requestItem.rate);
       }
 
-      // Create invoice item
+      // Create invoice item (without tax for now)
       const invoiceItem = {
         item_id: uuidv4(),
         invoice_id: invoiceId,
-        service_id: item.service_id,
-        description: item.description,
-        quantity: item.quantity,
-        unit_price: item.is_discount ? -Math.abs(Math.round(item.rate)) : Math.round(item.rate),
+        service_id: requestItem.service_id,
+        description: requestItem.description,
+        quantity: requestItem.quantity,
+        unit_price: requestItem.is_discount ? -Math.abs(Math.round(requestItem.rate)) : Math.round(requestItem.rate),
         net_amount: netAmount,
-        tax_amount: taxCalculationResult.taxAmount,
+        tax_amount: 0, // Will be updated after calculating total tax
         tax_region: service?.tax_region || company.tax_region,
-        tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount,
+        tax_rate: 0, // Will be updated after calculating total tax
+        total_price: netAmount, // Will be updated after calculating total tax
         is_manual: true,
-        is_discount: item.is_discount || false,
-        discount_type: item.discount_type,
-        applies_to_item_id: item.applies_to_item_id,
+        is_discount: requestItem.is_discount || false,
+        discount_type: requestItem.discount_type,
+        applies_to_item_id: requestItem.applies_to_item_id,
         created_by: session?.user?.id,
         created_at: currentDate,
         tenant
@@ -150,13 +141,13 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
       const exists = (await trx('service_catalog')
         .where({
-          service_id: item.service_id,
+          service_id: requestItem.service_id,
           tenant
         })
         .first()) !== undefined;
 
       if (!exists) {
-        throw new Error(`Service not found: ${item.service_id}`);
+        throw new Error(`Service not found: ${requestItem.service_id}`);
       }
 
       try {
@@ -167,8 +158,71 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       }
 
       subtotal += netAmount;
-      totalTax += taxCalculationResult.taxAmount;
     }
+
+    // Get invoice items
+    const invoiceItems = await trx('invoice_items')
+      .where({ invoice_id: invoiceId })
+      .orderBy('created_at', 'asc');
+
+    // Calculate tax on net subtotal (clamped to non-negative)
+    const taxableAmount = Math.max(subtotal, 0);
+    const taxResult = await taxService.calculateTax(
+      companyId,
+      taxableAmount,
+      currentDate
+    );
+
+    // Get positive items for tax distribution, sorted by net amount (highest to lowest)
+    const positiveItems = invoiceItems
+      .filter(item => Number(item.net_amount) > 0)
+      .sort((a, b) => Number(b.net_amount) - Number(a.net_amount));
+    const totalPositiveAmount = positiveItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
+
+    // First pass: Update non-positive items with zero tax
+    for (const item of invoiceItems.filter(item => Number(item.net_amount) <= 0)) {
+      await trx('invoice_items')
+        .where({ item_id: item.item_id })
+        .update({
+          tax_amount: 0,
+          tax_rate: taxResult.taxRate,
+          total_price: Number(item.net_amount)
+        });
+    }
+
+    // Second pass: Distribute tax among positive items
+    let remainingTax = taxResult.taxAmount;
+    for (let i = 0; i < positiveItems.length; i++) {
+      const item = positiveItems[i];
+      const netAmount = Number(item.net_amount);
+      const isLastPositiveItem = i === positiveItems.length - 1;
+
+      let itemTaxAmount;
+      if (isLastPositiveItem) {
+        // Last item gets remaining tax to ensure total matches exactly
+        itemTaxAmount = remainingTax;
+      } else {
+        // Other items get proportional tax rounded down
+        itemTaxAmount = Math.floor((netAmount / totalPositiveAmount) * taxResult.taxAmount);
+        remainingTax -= itemTaxAmount;
+      }
+
+      await trx('invoice_items')
+        .where({ item_id: item.item_id })
+        .update({
+          tax_amount: itemTaxAmount,
+          tax_rate: taxResult.taxRate,
+          total_price: netAmount + itemTaxAmount
+        });
+    }
+
+    // Get updated invoice items with tax
+    const updatedItems = await trx('invoice_items')
+      .where({ invoice_id: invoiceId })
+      .orderBy('created_at', 'asc');
+
+    // Calculate total tax from updated items
+    const totalTax = updatedItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
 
     // Update invoice with totals
     await trx('invoices')
@@ -192,50 +246,50 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       tenant,
       balance_after: Math.ceil(subtotal + totalTax)
     });
-  });
 
-  // Return invoice view model
-  return {
-    invoice_id: invoiceId,
-    invoice_number: invoiceNumber,
-    company_id: companyId,
-    company: {
-      name: company.company_name,
-      logo: company.logo || '',
-      address: company.address || ''
-    },
-    contact: {
-      name: '',
-      address: ''
-    },
-    invoice_date: Temporal.PlainDate.from(currentDate),
-    due_date: Temporal.PlainDate.from(currentDate),
-    status: 'draft',
-    subtotal: Math.ceil(subtotal),
-    tax: Math.ceil(totalTax),
-    total: Math.ceil(subtotal + totalTax),
-    total_amount: Math.ceil(subtotal + totalTax),
-    invoice_items: items.map((item): IInvoiceItem => ({
-      item_id: uuidv4(),
+    // Return invoice view model
+    return {
       invoice_id: invoiceId,
-      service_id: item.service_id,
-      description: item.description,
-      quantity: item.quantity,
-      unit_price: Math.round(item.rate), // Convert dollars to cents
-      total_price: Math.round(item.quantity * item.rate), // Convert dollars to cents
-      tax_amount: 0, // This should be calculated properly
-      net_amount: Math.round(item.quantity * item.rate), // Convert dollars to cents
-      tenant,
-      is_manual: true,
-      is_discount: item.is_discount || false,
-      discount_type: item.discount_type,
-      applies_to_item_id: item.applies_to_item_id,
-      created_by: session.user.id,
-      created_at: currentDate
-    })),
-    credit_applied: 0,
-    is_manual: true
-  };
+      invoice_number: invoiceNumber,
+      company_id: companyId,
+      company: {
+        name: company.company_name,
+        logo: company.logo || '',
+        address: company.address || ''
+      },
+      contact: {
+        name: '',
+        address: ''
+      },
+      invoice_date: Temporal.PlainDate.from(currentDate),
+      due_date: Temporal.PlainDate.from(currentDate),
+      status: 'draft',
+      subtotal: Math.ceil(subtotal),
+      tax: Math.ceil(totalTax),
+      total: Math.ceil(subtotal + totalTax),
+      total_amount: Math.ceil(subtotal + totalTax),
+      invoice_items: updatedItems.map((item: any): IInvoiceItem => ({
+        item_id: item.item_id,
+        invoice_id: invoiceId,
+        service_id: item.service_id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        tax_amount: item.tax_amount,
+        net_amount: item.net_amount,
+        tenant,
+        is_manual: true,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        applies_to_item_id: item.applies_to_item_id,
+        created_by: session.user.id,
+        created_at: item.created_at
+      })),
+      credit_applied: 0,
+      is_manual: true
+    };
+  });
 }
 
 export async function updateManualInvoice(
@@ -245,7 +299,7 @@ export async function updateManualInvoice(
   const { knex, tenant } = await createTenantKnex();
   const { companyId, items } = request;
   const session = await getServerSession(options);
-  
+
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -256,9 +310,9 @@ export async function updateManualInvoice(
 
   // Verify invoice exists and is manual
   const existingInvoice = await knex('invoices')
-    .where({ 
+    .where({
       invoice_id: invoiceId,
-      is_manual: true 
+      is_manual: true
     })
     .first();
 
@@ -277,140 +331,141 @@ export async function updateManualInvoice(
   if (!company) {
     throw new Error(`Company not found for tenant ${tenant}`);
   }
-const currentDate = Temporal.Now.plainDateISO().toString();
-const billingEngine = new BillingEngine();
 
-// Delete existing items and insert new ones
-await knex.transaction(async (trx) => {
-  // Delete existing items
-  await trx('invoice_items')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
-    .delete();
+  const currentDate = Temporal.Now.plainDateISO().toString();
+  const billingEngine = new BillingEngine();
 
-  // Insert new items
-  for (const item of items) {
-    let netAmount: number;
+  // Delete existing items and insert new ones
+  await knex.transaction(async (trx) => {
+    // Delete existing items
+    await trx('invoice_items')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
 
-    if (item.is_discount) {
-      // For discounts, calculate the negative amount
-      if (item.discount_type === 'percentage') {
-        // Calculate percentage of applicable amount
-        const applicableAmount = item.applies_to_item_id
-          ? (await trx('invoice_items')
+    // Insert new items
+    for (const item of items) {
+      let netAmount: number;
+
+      if (item.is_discount) {
+        // For discounts, calculate the negative amount
+        if (item.discount_type === 'percentage') {
+          // Calculate percentage of applicable amount
+          const applicableAmount = item.applies_to_item_id
+            ? (await trx('invoice_items')
               .where({
                 item_id: item.applies_to_item_id,
                 tenant,
                 invoice_id: invoiceId
               })
               .first())?.net_amount || 0
-          : 0; // Will be properly calculated by recalculateInvoice
-        netAmount = -Math.round((applicableAmount * item.rate) / 100);
+            : 0; // Will be properly calculated by recalculateInvoice
+          netAmount = -Math.round((applicableAmount * item.rate) / 100);
+        } else {
+          // Fixed amount discount
+          netAmount = -Math.round(item.rate); // Negative for discounts
+        }
       } else {
-        // Fixed amount discount
-        netAmount = -Math.round(item.rate); // Negative for discounts
+        // Regular line item
+        netAmount = Math.round(item.quantity * item.rate);
       }
-    } else {
-      // Regular line item
-      netAmount = Math.round(item.quantity * item.rate);
+
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: item.service_id,
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: Math.round(item.rate),
+        net_amount: netAmount,
+        tax_amount: 0, // Will be calculated by recalculateInvoice
+        tax_rate: 0, // Will be calculated by recalculateInvoice
+        tax_region: company.tax_region,
+        total_price: netAmount, // Will be updated by recalculateInvoice
+        is_manual: true,
+        is_discount: item.is_discount || false,
+        discount_type: item.discount_type,
+        applies_to_item_id: item.applies_to_item_id,
+        created_by: session.user.id,
+        created_at: currentDate,
+        tenant
+      };
+
+      await trx('invoice_items').insert(invoiceItem);
     }
 
-    const invoiceItem = {
-      item_id: uuidv4(),
+    // Update invoice updated_at timestamp
+    await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        updated_at: currentDate
+      });
+  });
+
+  // Recalculate the entire invoice
+  await billingEngine.recalculateInvoice(invoiceId);
+
+  // Fetch the updated invoice with new totals
+  const updatedInvoice = await knex('invoices')
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
+    .first();
+
+  if (!updatedInvoice) {
+    throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
+  }
+
+  const updatedItems = await knex('invoice_items')
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
+    .orderBy('created_at', 'asc');
+
+  // Return updated invoice view model
+  return {
+    invoice_id: invoiceId,
+    invoice_number: existingInvoice.invoice_number,
+    company_id: companyId,
+    company: {
+      name: company.company_name,
+      logo: company.logo || '',
+      address: company.address || ''
+    },
+    contact: {
+      name: '',
+      address: ''
+    },
+    invoice_date: Temporal.PlainDate.from(existingInvoice.invoice_date),
+    due_date: Temporal.PlainDate.from(existingInvoice.due_date),
+    status: existingInvoice.status,
+    subtotal: updatedInvoice.subtotal,
+    tax: updatedInvoice.tax,
+    total: updatedInvoice.total_amount,
+    total_amount: updatedInvoice.total_amount,
+    invoice_items: updatedItems.map((item): IInvoiceItem => ({
+      item_id: item.item_id,
       invoice_id: invoiceId,
       service_id: item.service_id,
       description: item.description,
       quantity: item.quantity,
-      unit_price: Math.round(item.rate),
-      net_amount: netAmount,
-      tax_amount: 0, // Will be calculated by recalculateInvoice
-      tax_rate: 0, // Will be calculated by recalculateInvoice
-      tax_region: company.tax_region,
-      total_price: netAmount, // Will be updated by recalculateInvoice
+      unit_price: item.unit_price,
+      total_price: item.total_price,
+      tax_amount: item.tax_amount,
+      net_amount: item.net_amount,
+      tenant,
       is_manual: true,
       is_discount: item.is_discount || false,
       discount_type: item.discount_type,
       applies_to_item_id: item.applies_to_item_id,
       created_by: session.user.id,
-      created_at: currentDate,
-      tenant
-    };
-
-    await trx('invoice_items').insert(invoiceItem);
-  }
-
-  // Update invoice updated_at timestamp
-  await trx('invoices')
-    .where({ invoice_id: invoiceId })
-    .update({
-      updated_at: currentDate
-    });
-});
-
-// Recalculate the entire invoice
-await billingEngine.recalculateInvoice(invoiceId);
-
-// Fetch the updated invoice with new totals
-const updatedInvoice = await knex('invoices')
-  .where({
-    invoice_id: invoiceId,
-    tenant
-  })
-  .first();
-
-if (!updatedInvoice) {
-  throw new Error(`Invoice ${invoiceId} not found for tenant ${tenant}`);
-}
-
-const updatedItems = await knex('invoice_items')
-  .where({
-    invoice_id: invoiceId,
-    tenant
-  })
-  .orderBy('created_at', 'asc');
-
-// Return updated invoice view model
-return {
-  invoice_id: invoiceId,
-  invoice_number: existingInvoice.invoice_number,
-  company_id: companyId,
-  company: {
-    name: company.company_name,
-    logo: company.logo || '',
-    address: company.address || ''
-  },
-  contact: {
-    name: '',
-    address: ''
-  },
-  invoice_date: Temporal.PlainDate.from(existingInvoice.invoice_date),
-  due_date: Temporal.PlainDate.from(existingInvoice.due_date),
-  status: existingInvoice.status,
-  subtotal: updatedInvoice.subtotal,
-  tax: updatedInvoice.tax,
-  total: updatedInvoice.total_amount,
-  total_amount: updatedInvoice.total_amount,
-  invoice_items: updatedItems.map((item): IInvoiceItem => ({
-    item_id: item.item_id,
-    invoice_id: invoiceId,
-    service_id: item.service_id,
-    description: item.description,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    total_price: item.total_price,
-    tax_amount: item.tax_amount,
-    net_amount: item.net_amount,
-    tenant,
-    is_manual: true,
-    is_discount: item.is_discount || false,
-    discount_type: item.discount_type,
-    applies_to_item_id: item.applies_to_item_id,
-    created_by: session.user.id,
-    created_at: item.created_at
-  })),
-  credit_applied: existingInvoice.credit_applied,
-  is_manual: true
-};
+      created_at: item.created_at
+    })),
+    credit_applied: existingInvoice.credit_applied,
+    is_manual: true
+  };
 }

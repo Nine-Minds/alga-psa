@@ -104,14 +104,18 @@ await updateManualInvoice(invoiceId, {
 - Leverage the Service Catalog to pre-fill default rates and descriptions, ensuring consistency.
 - Use Transactions as the single source of truth for any financial adjustments made via manual invoices.
 
-## TaxService and Dynamic Tax Calculation
+## Tax Calculation and Allocation
 
-While the tax_rates table has been part of the design, the actual computation is performed by a dedicated TaxService class (server/src/lib/services/taxService.ts). This service:
+The billing system implements a comprehensive tax calculation and allocation strategy that follows common practices in tax jurisdictions. This is handled through a combination of the TaxService class and specific allocation logic in the invoice generation process.
 
-- Looks up a company's tax region (or uses a line item's specific tax region if defined on the service).
-- Queries tax_rates based on region and date to find the current applicable rate.
-- Returns both a taxRate and a taxAmount (for the net amount in cents or minor currency units).
-- Is invoked during both automated invoice generation (by the billing engine) and manual invoice creation/updates.
+### TaxService Overview
+
+The TaxService class (server/src/lib/services/taxService.ts) provides the core tax calculation functionality:
+
+- Looks up a company's tax region (or uses a line item's specific tax region if defined on the service)
+- Queries tax_rates based on region and date to find the current applicable rate
+- Returns both a taxRate and a taxAmount (for the net amount in cents or minor currency units)
+- Is invoked during both automated invoice generation (by the billing engine) and manual invoice creation/updates
 
 Example Usage:
 ```typescript
@@ -129,6 +133,78 @@ Returned Object:
   taxRate: number;    // e.g., 0.065
 }
 ```
+
+### Tax Calculation Strategy
+
+The system follows these key principles for tax calculation:
+
+1. **Net Subtotal Basis**
+   - Tax is calculated on the invoice's net subtotal after all discounts and adjustments
+   - The taxable base is clamped to non-negative values (Math.max(subtotal, 0))
+   - This aligns with common practice where discounts reduce the taxable amount
+
+2. **Tax Rate Application**
+   - Tax rates are fetched from the tax_rates table based on:
+     * The company's tax region
+     * The current date (supporting time-based rate changes)
+     * Any applicable tax exemptions
+   - The system supports both simple and composite tax rates
+
+3. **Tax Allocation Logic**
+   - For invoices with mixed positive and negative line items:
+     * Only positive line items receive tax allocation
+     * Negative items (discounts, refunds, etc.) have zero tax
+     * Tax is distributed proportionally among positive items
+   - Items are processed in a consistent order (highest to lowest amount) for predictable allocation
+
+### Tax Distribution Algorithm
+
+The system uses a precise algorithm for distributing tax across line items:
+
+1. **Sort Positive Items**
+   ```typescript
+   const positiveItems = items
+     .filter(item => Number(item.net_amount) > 0)
+     .sort((a, b) => Number(b.net_amount) - Number(a.net_amount));
+   ```
+
+2. **Calculate Total Tax**
+   ```typescript
+   const taxableAmount = Math.max(subtotal, 0);
+   const taxResult = await taxService.calculateTax(
+     companyId,
+     taxableAmount,
+     currentDate
+   );
+   ```
+
+3. **Distribute Tax**
+   ```typescript
+   let remainingTax = taxResult.taxAmount;
+   for (let i = 0; i < positiveItems.length; i++) {
+     const item = positiveItems[i];
+     const netAmount = Number(item.net_amount);
+     const isLastPositiveItem = i === positiveItems.length - 1;
+
+     let itemTaxAmount;
+     if (isLastPositiveItem) {
+       // Last item gets remaining tax
+       itemTaxAmount = remainingTax;
+     } else {
+       // Other items get proportional tax rounded down
+       itemTaxAmount = Math.floor(
+         (netAmount / totalPositiveAmount) * taxResult.taxAmount
+       );
+       remainingTax -= itemTaxAmount;
+     }
+   }
+   ```
+
+This approach ensures:
+- Exact match between total tax and sum of allocated taxes
+- Consistent and predictable allocation
+- Proper handling of discounts and refunds
+- Accurate tax basis for partial returns or refunds
 
 When you insert or update invoice items, the system records tax_amount and tax_rate in invoice_items, which are then included in the invoice totals.
 

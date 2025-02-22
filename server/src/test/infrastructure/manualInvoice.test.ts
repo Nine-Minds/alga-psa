@@ -97,7 +97,7 @@ describe('Manual Invoice Generation', () => {
       });
 
       expect(result.subtotal).toBe(1000);
-      expect(result.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded up
+      expect(result.tax).toBe(89); // 8.88% of 1000 = 88.80, rounded up
       expect(result.total_amount).toBe(1089);
     });
 
@@ -125,8 +125,57 @@ describe('Manual Invoice Generation', () => {
       });
 
       expect(result.subtotal).toBe(2500); // (2 * 1000) + (1 * 500)
-      expect(result.tax).toBe(223); // (2000 * 8.88%) + (500 * 8.88%)
+      expect(result.tax).toBe(223); // 8.88% of 2500 = 223.00
       expect(result.total_amount).toBe(2723);
+    });
+
+    it('calculates correct subtotal with mixed positive and negative line items', async () => {
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+
+      const result = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [
+          {
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Service Charge',
+            rate: 1000
+          },
+          {
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Discount',
+            rate: -200
+          },
+          {
+            service_id: serviceId,
+            quantity: 2,
+            description: 'Additional Service',
+            rate: 500
+          },
+          {
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Refund',
+            rate: -300
+          }
+        ]
+      });
+
+      // Subtotal calculation:
+      // Service Charge: 1 * 1000 = 1000
+      // Discount: 1 * -200 = -200
+      // Additional Service: 2 * 500 = 1000
+      // Refund: 1 * -300 = -300
+      // Total: 1000 - 200 + 1000 - 300 = 1500
+      expect(result.subtotal).toBe(1500);
+      
+      // Tax should be calculated on the net positive amount:
+      // Net amount before tax: 1500 (1000 - 200 + 1000 - 300)
+      // Tax: 8.88% of 1500 = 133.20, rounded up to 133
+      expect(result.tax).toBe(134); // 8.875% of 1500 = 133.20, rounded up
+      expect(result.total_amount).toBe(1634); // 1500 + 134
     });
   });
 
