@@ -133,6 +133,7 @@ export async function persistInvoiceItems(
       tax_rate: 0, // Will be updated after calculating total tax
       total_price: netAmount, // Will be updated after calculating total tax
       is_manual: isManual,
+      is_taxable: service ? service.is_taxable !== false : true, // Copy from service, default to true if no service
       is_discount: requestItem.is_discount || false,
       discount_type: requestItem.discount_type,
       applies_to_item_id: requestItem.applies_to_item_id,
@@ -183,12 +184,18 @@ export async function calculateAndDistributeTax(
   // Calculate the overall taxable base (ensuring it's non-negative)
   const overallTaxableAmount = Math.max(subtotal, 0);
 
-  // Separate positive items (net_amount > 0) from non-positive items
-  const positiveItems = invoiceItems.filter(item => Number(item.net_amount) > 0);
-  const nonPositiveItems = invoiceItems.filter(item => Number(item.net_amount) <= 0);
+  // Get all items that should have zero tax (negative amounts or non-taxable)
+  const zeroTaxItems = invoiceItems.filter(item =>
+    Number(item.net_amount) <= 0 || item.is_taxable === false
+  );
 
-  // For non-positive items, tax should be zero
-  for (const item of nonPositiveItems) {
+  // Get items that should be taxed (positive amounts and taxable)
+  const taxableItems = invoiceItems.filter(item =>
+    Number(item.net_amount) > 0 && item.is_taxable === true
+  );
+
+  // Set tax to zero for non-taxable or negative items
+  for (const item of zeroTaxItems) {
     await tx('invoice_items')
       .where({ item_id: item.item_id })
       .update({
@@ -200,16 +207,17 @@ export async function calculateAndDistributeTax(
 
   let computedTotalTax = 0;
 
-  // If there are no positive items, we can skip tax calculation entirely
-  if (positiveItems.length > 0) {
-    // Sum all positive net amounts to determine the full base before considering discounts
-    const totalPositiveAmount = positiveItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
+  // If there are no taxable items, we can skip tax calculation entirely
+  if (taxableItems.length > 0) {
+    // Sum all taxable net amounts to determine the full base before considering discounts
+    const totalTaxableAmount = taxableItems.reduce((sum: number, item: IInvoiceItem) =>
+      sum + Number(item.net_amount), 0);
 
     // The discount factor adjusts for the negative items' effect on the taxable base
-    const discountFactor = overallTaxableAmount / totalPositiveAmount;
+    const discountFactor = overallTaxableAmount / totalTaxableAmount;
 
-    // Group positive invoice items by their tax region
-    const groups = positiveItems.reduce<Record<string, IInvoiceItem[]>>((acc, item) => {
+    // Group taxable invoice items by their tax region
+    const groups = taxableItems.reduce<Record<string, IInvoiceItem[]>>((acc: Record<string, IInvoiceItem[]>, item: IInvoiceItem) => {
       const region = item.tax_region || company.tax_region;
       if (!acc[region]) {
         acc[region] = [];
@@ -221,7 +229,7 @@ export async function calculateAndDistributeTax(
     // Process each tax region group separately
     for (const [region, itemsInGroup] of Object.entries(groups)) {
       // Sum net amounts for this group
-      const groupPositiveAmount = itemsInGroup.reduce((sum, item) => 
+      const groupPositiveAmount = itemsInGroup.reduce((sum: number, item: IInvoiceItem) =>
         sum + Number(item.net_amount), 0);
       
       // Compute the effective taxable amount for the group after applying the discount factor
@@ -236,14 +244,16 @@ export async function calculateAndDistributeTax(
       );
 
       // Sort items by net amount (highest to lowest) for consistent tax distribution
-      itemsInGroup.sort((a, b) => Number(b.net_amount) - Number(a.net_amount));
+      const sortedItems = [...itemsInGroup].sort((a: IInvoiceItem, b: IInvoiceItem) =>
+        Number(b.net_amount) - Number(a.net_amount)
+      );
 
       // Set up a remaining tax accumulator for proportional distribution
       let remainingGroupTax = groupTaxResult.taxAmount;
 
       // Distribute the computed group tax among the group's items
-      for (let i = 0; i < itemsInGroup.length; i++) {
-        const item = itemsInGroup[i];
+      for (let i = 0; i < sortedItems.length; i++) {
+        const item = sortedItems[i];
         const netAmt = Number(item.net_amount);
         const isLastInGroup = (i === itemsInGroup.length - 1);
         

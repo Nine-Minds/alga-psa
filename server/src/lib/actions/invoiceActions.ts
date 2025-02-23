@@ -767,7 +767,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       companyId,
       netAmount,
       endDate,
-      charge.tax_region || defaultTaxRegion
+      charge.tax_region || defaultTaxRegion,
+      charge.is_taxable !== false
     );
     return { netAmount, taxCalculationResult };
   }
@@ -1444,6 +1445,7 @@ export async function createInvoiceFromBillingResult(
         tax_rate: taxCalculationResult.taxRate,
         total_price: netAmount + taxCalculationResult.taxAmount,
         is_manual: false,
+        is_taxable: charge.is_taxable !== false,
         tenant,
         created_by: userId
       };

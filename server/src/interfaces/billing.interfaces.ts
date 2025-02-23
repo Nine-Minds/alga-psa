@@ -50,6 +50,7 @@ export interface IBillingCharge extends TenantEntity {
   tax_amount: number;
   tax_rate: number;
   tax_region?: string;
+  is_taxable?: boolean;
 }
 
 export interface IDiscount extends TenantEntity {

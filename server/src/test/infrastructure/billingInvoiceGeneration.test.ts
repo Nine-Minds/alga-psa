@@ -389,7 +389,8 @@ describe('Billing Invoice Generation', () => {
         service_type: 'Fixed',
         default_rate: 1000,
         unit_of_measure: 'unit',
-        tax_region: 'US-NY'
+        tax_region: 'US-NY',
+        is_taxable: true
       }, 'service_id');
 
       const serviceCA = await context.createEntity('service_catalog', {
@@ -397,7 +398,8 @@ describe('Billing Invoice Generation', () => {
         service_type: 'Fixed',
         default_rate: 500,
         unit_of_measure: 'unit',
-        tax_region: 'US-CA'
+        tax_region: 'US-CA',
+        is_taxable: true
       }, 'service_id');
 
       // Create a billing plan
@@ -498,6 +500,8 @@ describe('Billing Invoice Generation', () => {
         tax_region: 'US-NY'
       }, 'service_id');
 
+
+
       const serviceB = await context.createEntity('service_catalog', {
         service_name: 'Credit Service',
         service_type: 'Fixed',
@@ -563,6 +567,160 @@ describe('Billing Invoice Generation', () => {
       expect(invoice!.total_amount).toBe(872); 
     });
   });
+  
+  describe("Tax Calculation with Tax-Exempt Line Items", () => {
+    it("should only calculate tax for taxable line items", async () => {
+      // Create test company with tax settings
+      const company_id = await context.createEntity('companies', {
+        company_name: 'Tax Exempt Test Company',
+        billing_cycle: 'monthly',
+        company_id: uuidv4(),
+        tax_region: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        phone_no: '',
+        credit_balance: 0,
+        email: '',
+        url: '',
+        address: '',
+        is_inactive: false
+      }, 'company_id');
+
+      // Create NY tax rate (10%) and set as active
+      const nyTaxRateId = await context.createEntity('tax_rates', {
+        region: 'US-NY',
+        tax_percentage: 10.0,
+        description: 'NY Test Tax',
+        start_date: '2025-01-01',
+        is_active: true
+      }, 'tax_rate_id');
+
+      // Set up company tax settings
+      await context.db('company_tax_settings').insert({
+        company_id: company_id,
+        tenant: context.tenantId,
+        tax_rate_id: nyTaxRateId,
+        is_reverse_charge_applicable: false
+      });
+
+      // Ensure tax rate is active
+      await context.db('tax_rates')
+        .where({ tax_rate_id: nyTaxRateId })
+        .update({ is_active: true });
+
+      // Create services with different tax settings
+      const taxableService = await context.createEntity('service_catalog', {
+        service_name: 'Taxable Service',
+        service_type: 'Fixed',
+        default_rate: 10000, // $100.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: true  // Explicitly set as taxable
+      }, 'service_id');
+
+      const nonTaxableService = await context.createEntity('service_catalog', {
+        service_name: 'Non-Taxable Service',
+        service_type: 'Fixed',
+        default_rate: 5000, // $50.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: false  // Explicitly set as non-taxable
+      }, 'service_id');
+
+      // Verify services were created with correct tax settings
+      const services = await context.db('service_catalog')
+        .whereIn('service_id', [taxableService, nonTaxableService])
+        .select('service_id', 'service_name', 'is_taxable', 'tax_region');
+      
+      console.log('Created services:', services);
+
+      // Ensure tax settings are correct
+      const taxableServiceDetails = services.find(s => s.service_id === taxableService);
+      const nonTaxableServiceDetails = services.find(s => s.service_id === nonTaxableService);
+
+      if (!taxableServiceDetails?.is_taxable) {
+        throw new Error('Taxable service was not created with is_taxable=true');
+      }
+      if (nonTaxableServiceDetails?.is_taxable !== false) {
+        throw new Error('Non-taxable service was not created with is_taxable=false');
+      }
+
+      // Create a billing plan with both services
+      const mixedTaxPlanId = await context.createEntity('billing_plans', {
+        plan_name: 'Mixed Tax Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
+      }, 'plan_id');
+
+      // Assign services to plan
+      await context.db('plan_services').insert([
+        {
+          plan_id: mixedTaxPlanId,
+          service_id: taxableService,
+          quantity: 1,
+          tenant: context.tenantId
+        },
+        {
+          plan_id: mixedTaxPlanId,
+          service_id: nonTaxableService,
+          quantity: 1,
+          tenant: context.tenantId
+        }
+      ]);
+
+      // Create billing cycle
+      const mixedTaxBillingCycle = await context.createEntity('company_billing_cycles', {
+        company_id: company_id,
+        billing_cycle: 'monthly',
+        effective_date: '2025-02-01',
+        period_start_date: '2025-02-01',
+        period_end_date: '2025-03-01'
+      }, 'billing_cycle_id');
+
+      // Assign plan to company
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: company_id,
+        plan_id: mixedTaxPlanId,
+        start_date: '2025-02-01',
+        is_active: true,
+        tenant: context.tenantId
+      });
+
+      // Generate invoice
+      const mixedTaxInvoice = await generateInvoice(mixedTaxBillingCycle);
+
+      // Get invoice items to verify tax calculation
+      const invoiceItems = await context.db('invoice_items')
+        .where({ invoice_id: mixedTaxInvoice!.invoice_id })
+        .orderBy('net_amount', 'desc');
+
+      console.log('Invoice items:', invoiceItems);
+
+      // Verify each service's tax calculation
+      const taxableItem = invoiceItems.find(item => item.service_id === taxableService);
+      const nonTaxableItem = invoiceItems.find(item => item.service_id === nonTaxableService);
+
+      // Verify taxable service calculations
+      expect(parseInt(taxableItem?.net_amount)).toBe(10000); // $100.00
+      expect(parseInt(taxableItem?.tax_amount)).toBe(1000);  // $10.00 (10% tax)
+      expect(parseInt(taxableItem?.total_price)).toBe(11000); // $110.00
+
+      // Verify non-taxable service calculations
+      expect(parseInt(nonTaxableItem?.net_amount)).toBe(5000);  // $50.00
+      expect(parseInt(nonTaxableItem?.tax_amount)).toBe(0);     // No tax
+      expect(parseInt(nonTaxableItem?.total_price)).toBe(5000); // $50.00
+
+      // Verify overall invoice totals
+      expect(mixedTaxInvoice!.subtotal).toBe(15000); // $150.00
+      expect(mixedTaxInvoice!.tax).toBe(1000);       // $10.00 (only from taxable service)
+      expect(mixedTaxInvoice!.total_amount).toBe(16000); // $160.00
+    });
+  });
+
+
 
   describe('Tax Calculation Consistency', () => {
     it('should calculate tax consistently between manual and automatic invoices', async () => {

@@ -8,7 +8,7 @@ export class TaxService {
   constructor() {
   }
 
-  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, taxRegion?: string): Promise<ITaxCalculationResult> {
+  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, taxRegion?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
@@ -30,8 +30,8 @@ export class TaxService {
       throw new Error(`Company ${companyId} not found in tenant ${tenant}`);
     }
 
-    if (company.is_tax_exempt) {
-      console.log(`Company ${companyId} in tenant ${tenant} is tax exempt. Returning zero tax.`);
+    if (company.is_tax_exempt || !is_taxable) {
+      console.log(`No tax applied: company ${companyId} is tax exempt or item is not taxable`);
       return { taxAmount: 0, taxRate: 0 };
     }
 

@@ -468,7 +468,8 @@ export class BillingEngine {
         type: 'fixed',
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: service.tax_region || company.tax_region
+        tax_region: service.tax_region || company.tax_region,
+        is_taxable: service.is_taxable !== false
       };
   
       if (!company.is_tax_exempt && service.is_taxable !== false) {
@@ -586,7 +587,8 @@ export class BillingEngine {
         tax_amount: 0,
         tax_rate: 0,
         tax_region: entry.tax_region || entry.company_tax_region,
-        entryId: entry.entry_id
+        entryId: entry.entry_id,
+        is_taxable: entry.is_taxable !== false
       };
     });
 
@@ -642,7 +644,8 @@ export class BillingEngine {
       type: 'usage',
       tax_amount: 0,
       tax_rate: 0,
-      usageId: record.usage_id
+      usageId: record.usage_id,
+      is_taxable: record.is_taxable !== false
     }));
 
     return usageBasedCharges;
@@ -697,7 +700,8 @@ export class BillingEngine {
         total: (service.custom_rate || service.default_rate) * service.quantity,
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: service.tax_region || company.tax_region
+        tax_region: service.tax_region || company.tax_region,
+        is_taxable: service.is_taxable !== false
       };
 
       if (!company.is_tax_exempt && service.is_taxable !== false) {
@@ -761,7 +765,8 @@ export class BillingEngine {
         tax_rate: 0,
         tax_region: service.tax_region || company.tax_region,
         period_start: billingPeriod.startDate,
-        period_end: billingPeriod.endDate
+        period_end: billingPeriod.endDate,
+        is_taxable: service.is_taxable !== false
       };
 
       if (!company.is_tax_exempt && service.is_taxable !== false) {
@@ -839,7 +844,8 @@ export class BillingEngine {
       tax_rate: taxRate,
       tax_region: taxRegion,
       serviceId: bucketUsage.service_catalog_id,
-      tax_amount: taxAmount
+      tax_amount: taxAmount,
+      is_taxable: service ? service.is_taxable !== false : true
     };
 
     console.log('Calculated bucket charge:', charge);
@@ -1154,7 +1160,7 @@ export class BillingEngine {
         });
 
         // Only calculate tax for taxable items and non-exempt companies
-        if (!company.is_tax_exempt && (!service || service.is_taxable !== false)) {
+        if (!company.is_tax_exempt && item.is_taxable !== false) {
           const taxCalculationResult = await taxService.calculateTax(
             company.company_id,
             netAmount,
