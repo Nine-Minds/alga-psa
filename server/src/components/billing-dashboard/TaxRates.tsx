@@ -9,6 +9,8 @@ import { ITaxRate } from '@/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from '@/components/ui/DataTable';
 import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { toPlainDate, parseDateSafe } from '@/lib/utils/dateTimeUtils';
+import { Temporal } from '@js-temporal/polyfill';
 
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -33,9 +35,23 @@ const TaxRates: React.FC = () => {
   };
 
   const handleAddOrUpdateTaxRate = async () => {
+    // Basic validation
+    if (!currentTaxRate.region) {
+      setError('Region is required');
+      return;
+    }
+    if (!currentTaxRate.tax_percentage) {
+      setError('Tax percentage is required');
+      return;
+    }
+    if (!currentTaxRate.start_date) {
+      setError('Start date is required');
+      return;
+    }
+
     try {
       if (isEditing) {
-        await updateTaxRate('', currentTaxRate as ITaxRate);
+        await updateTaxRate(currentTaxRate as ITaxRate);
       } else {
         const newTaxRateWithId: ITaxRate = {
           ...currentTaxRate,
@@ -48,14 +64,25 @@ const TaxRates: React.FC = () => {
       setIsEditing(false);
       fetchTaxRates();
       setError(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding/updating tax rate:', error);
-      setError(`Failed to ${isEditing ? 'update' : 'add'} tax rate`);
+      // Extract error message from the server response
+      const errorMessage = error.message || `Failed to ${isEditing ? 'update' : 'add'} tax rate`;
+      setError(errorMessage);
     }
   };
 
+  const formatDateForInput = (date: string | null | undefined): string => {
+    if (!date) return '';
+    return toPlainDate(date).toString(); // Returns YYYY-MM-DD format
+  };
+
   const handleEditTaxRate = (taxRate: ITaxRate) => {
-    setCurrentTaxRate(taxRate);
+    setCurrentTaxRate({
+      ...taxRate,
+      start_date: formatDateForInput(taxRate.start_date),
+      end_date: formatDateForInput(taxRate.end_date)
+    });
     setIsEditing(true);
     setIsDialogOpen(true);
   };
@@ -77,15 +104,15 @@ const TaxRates: React.FC = () => {
     { title: 'Region', dataIndex: 'region' },
     { title: 'Tax Percentage', dataIndex: 'tax_percentage', render: (value) => `${value}%` },
     { title: 'Description', dataIndex: 'description' },
-    { 
-      title: 'Start Date', 
-      dataIndex: 'start_date', 
-      render: (value) => new Date(value).toLocaleDateString() 
+    {
+      title: 'Start Date',
+      dataIndex: 'start_date',
+      render: (value) => toPlainDate(value).toLocaleString()
     },
-    { 
-      title: 'End Date', 
-      dataIndex: 'end_date', 
-      render: (value) => value ? new Date(value).toLocaleDateString() : 'N/A' 
+    {
+      title: 'End Date',
+      dataIndex: 'end_date',
+      render: (value) => value ? toPlainDate(value).toLocaleString() : 'N/A'
     },
     {
       title: 'Actions',
@@ -111,7 +138,17 @@ const TaxRates: React.FC = () => {
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-          <Button id="add-tax-rate-btn" onClick={() => { setIsDialogOpen(true); setIsEditing(false); setCurrentTaxRate({}); }}>Add New Tax Rate</Button>
+          <Button
+            id="add-tax-rate-button"
+            onClick={() => {
+              setIsDialogOpen(true);
+              setIsEditing(false);
+              setCurrentTaxRate({});
+              setError(null);
+            }}
+          >
+            Add New Tax Rate
+          </Button>
           <DataTable
             data={taxRates}
             columns={columns}
@@ -127,50 +164,70 @@ const TaxRates: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="region">Region</Label>
+              <Label htmlFor="tax-rate-region-field">Region</Label>
               <Input
-                id="region"
+                id="tax-rate-region-field"
                 value={currentTaxRate.region || ''}
-                onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, region: e.target.value })}
+                onChange={(e) => {
+                  setCurrentTaxRate({ ...currentTaxRate, region: e.target.value });
+                  setError(null);
+                }}
               />
             </div>
             <div>
-              <Label htmlFor="taxPercentage">Tax Percentage</Label>
+              <Label htmlFor="tax-rate-percentage-field">Tax Percentage</Label>
               <Input
-                id="taxPercentage"
+                id="tax-rate-percentage-field"
                 type="number"
                 step="0.01"
                 value={currentTaxRate.tax_percentage || ''}
-                onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, tax_percentage: parseFloat(e.target.value) })}
+                onChange={(e) => {
+                  setCurrentTaxRate({ ...currentTaxRate, tax_percentage: parseFloat(e.target.value) });
+                  setError(null);
+                }}
               />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="tax-rate-description-field">Description</Label>
               <Input
-                id="description"
+                id="tax-rate-description-field"
                 value={currentTaxRate.description || ''}
-                onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, description: e.target.value })}
+                onChange={(e) => {
+                  setCurrentTaxRate({ ...currentTaxRate, description: e.target.value });
+                  setError(null);
+                }}
               />
             </div>
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="tax-rate-start-date-field">Start Date</Label>
               <Input
-                id="startDate"
+                id="tax-rate-start-date-field"
                 type="date"
                 value={currentTaxRate.start_date || ''}
-                onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, start_date: e.target.value })}
+                onChange={(e) => {
+                  setCurrentTaxRate({ ...currentTaxRate, start_date: e.target.value });
+                  setError(null);
+                }}
               />
             </div>
             <div>
-              <Label htmlFor="endDate">End Date (Optional)</Label>
+              <Label htmlFor="tax-rate-end-date-field">End Date (Optional)</Label>
               <Input
-                id="endDate"
+                id="tax-rate-end-date-field"
                 type="date"
                 value={currentTaxRate.end_date || ''}
-                onChange={(e) => setCurrentTaxRate({ ...currentTaxRate, end_date: e.target.value || null })}
+                onChange={(e) => {
+                  setCurrentTaxRate({ ...currentTaxRate, end_date: e.target.value || null });
+                  setError(null);
+                }}
               />
             </div>
-            <Button id="save-tax-rate-btn" onClick={handleAddOrUpdateTaxRate}>{isEditing ? 'Update' : 'Add'} Tax Rate</Button>
+            <Button
+              id="save-tax-rate-button"
+              onClick={handleAddOrUpdateTaxRate}
+            >
+              {isEditing ? 'Update' : 'Add'} Tax Rate
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

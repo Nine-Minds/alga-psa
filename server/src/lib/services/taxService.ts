@@ -8,6 +8,42 @@ export class TaxService {
   constructor() {
   }
 
+  async validateTaxRateDateRange(region: string, startDate: ISO8601String, endDate: ISO8601String | null, excludeTaxRateId?: string): Promise<void> {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for tax rate validation');
+    }
+
+    // Check for overlapping date ranges in the same region
+    const query = knex('tax_rates')
+      .where({
+        region,
+        tenant
+      })
+      .andWhere(function() {
+        this.where(function() {
+          this.whereNull('end_date')
+            .andWhere('start_date', '<', endDate || startDate);
+        }).orWhere(function() {
+          this.whereNotNull('end_date')
+            .andWhere('start_date', '<', endDate || startDate)
+            .andWhere('end_date', '>', startDate);
+        });
+      });
+
+    // Only add the excludeTaxRateId condition if it's provided
+    if (excludeTaxRateId) {
+      query.andWhereNot('tax_rate_id', excludeTaxRateId);
+    }
+
+    const overlappingRates = await query;
+
+    if (overlappingRates.length > 0) {
+      throw new Error(`Tax rate date range overlaps with existing rate(s) in region ${region}`);
+    }
+  }
+
   async calculateTax(companyId: string, netAmount: number, date: ISO8601String, taxRegion?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
