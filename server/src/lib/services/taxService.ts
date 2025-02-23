@@ -8,14 +8,14 @@ export class TaxService {
   constructor() {
   }
 
-  async calculateTax(companyId: string, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
+  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, taxRegion?: string): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
       throw new Error('Tenant context is required for tax calculation');
     }
 
-    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}`);
+    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, taxRegion ${taxRegion}`);
 
     // Check if company is tax exempt
     const company = await knex('companies')
@@ -35,6 +35,49 @@ export class TaxService {
       return { taxAmount: 0, taxRate: 0 };
     }
 
+    // If taxRegion is provided, use that instead of company tax settings
+    if (taxRegion) {
+      console.log(`Calculating tax for region: ${taxRegion}, amount: ${netAmount}, date: ${date}`);
+      
+      const taxRate = await knex('tax_rates')
+        .where({
+          region: taxRegion,
+          tenant,
+          is_active: true
+        })
+        .andWhere('start_date', '<=', date)
+        .andWhere(function() {
+          this.whereNull('end_date')
+            .orWhere('end_date', '>', date);
+        })
+        .first();
+
+      if (!taxRate) {
+        console.error(`No active tax rate found for region ${taxRegion}`);
+
+        // print all tax rates
+        const allTaxRates = await knex('tax_rates')
+          .where({
+            tenant
+          })
+          .select('*');
+        console.log('All tax rates:', allTaxRates);
+
+        throw new Error(`No active tax rate found for region ${taxRegion}`);
+      }
+
+      console.log(`Found tax rate: ${taxRate.tax_percentage}% for region ${taxRegion}`);
+      
+      const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
+      console.log(`Calculated tax amount: ${taxAmount} for net amount: ${netAmount}`);
+      
+      return { 
+        taxAmount,
+        taxRate: taxRate.tax_percentage
+      };
+    }
+
+    // Fall back to company tax settings if no taxRegion provided
     const taxSettings = await this.getCompanyTaxSettings(companyId);
     console.log(`Tax settings retrieved for company ${companyId}:`, taxSettings);
 

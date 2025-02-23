@@ -61,7 +61,7 @@ async function setupTaxConfiguration() {
     region: 'US-NY',
     tax_percentage: 8.875,
     description: 'NY State + City Tax',
-    start_date: new Date().toISOString()
+    start_date: '2025-02-22T00:00:00.000Z'
   });
 
   await context.db('company_tax_settings').insert({
@@ -243,12 +243,12 @@ describe('Manual Invoice Generation', () => {
     it('handles tax exempt companies correctly', async () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
-
+  
       // Make company tax exempt
       await context.db('companies')
         .where({ company_id: context.companyId })
         .update({ is_tax_exempt: true });
-
+  
       const result = await generateManualInvoice({
         companyId: context.companyId,
         items: [{
@@ -258,9 +258,73 @@ describe('Manual Invoice Generation', () => {
           rate: 1000
         }]
       });
-
+  
       expect(result.tax).toBe(0);
       expect(result.total_amount).toBe(1000);
+    });
+  
+    it('calculates tax accurately when line items have different tax rates', async () => {
+      // Create two services: one for US-NY and one for US-CA
+      const serviceNY = await createTestService(); // defaults to tax_region 'US-NY'
+      const serviceCA = await createTestService({ service_name: 'Second Service', tax_region: 'US-CA' });
+      
+      // Set up tax configuration for both regions
+      const taxRateNyId = uuidv4();
+      await context.db('tax_rates').insert([{
+         tax_rate_id: taxRateNyId,
+         tenant: context.tenantId,
+         region: 'US-NY',
+         tax_percentage: 8.875,
+         description: 'NY Tax',
+         start_date: '2025-02-22T00:00:00.000Z'
+      }, {
+         tax_rate_id: uuidv4(),
+         tenant: context.tenantId,
+         region: 'US-CA',
+         tax_percentage: 8.0,
+         description: 'CA Tax',
+         start_date: '2025-02-22T00:00:00.000Z'
+      }]);
+      
+      // First remove any existing tax settings for this company
+      await context.db('company_tax_settings')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+        
+      // Set up company tax settings with default NY rate
+      await context.db('company_tax_settings').insert({
+         company_id: context.companyId,
+         tenant: context.tenantId,
+         tax_rate_id: taxRateNyId,
+         is_reverse_charge_applicable: false
+      });
+      
+      // Generate an invoice with one item from each service
+      const result = await generateManualInvoice({
+         companyId: context.companyId,
+         items: [
+           {
+             service_id: serviceNY,
+             quantity: 1,
+             description: 'NY Service Item',
+             rate: 1000
+           },
+           {
+             service_id: serviceCA,
+             quantity: 1,
+             description: 'CA Service Item',
+             rate: 500
+           }
+         ]
+      });
+      
+      // Expected totals:
+      // Subtotal: 1000 + 500 = 1500
+      // Tax: For NY: ~1000 * 8.875% ≈ 88.75 rounded to 89, and for CA: 500 * 8% = 40, total = 129
+      // Total: 1500 + 129 = 1629
+      expect(result.subtotal).toBe(1500);
+      expect(result.tax).toBe(129);
+      expect(result.total_amount).toBe(1629);
     });
   });
 
