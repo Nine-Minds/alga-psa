@@ -51,7 +51,7 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
     // Create default tax settings
     await createDefaultTaxSettings(company_id);
 
-    // Create initial tax rate (10%) for US-NY
+    // Create initial tax rate (10%) for US-NY ending just before new rate starts
     await context.createEntity('tax_rates', {
       tax_type: 'VAT',
       country_code: 'US',
@@ -60,6 +60,7 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
       is_reverse_charge_applicable: false,
       is_composite: false,
       start_date: '2024-10-01',
+      end_date: '2024-10-14', // End date set to day before new rate starts
       is_active: true,
       description: 'Initial Tax Rate'
     }, 'tax_rate_id');

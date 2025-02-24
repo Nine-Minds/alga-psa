@@ -763,13 +763,12 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       netAmount = Math.ceil(charge.total);
     }
 
-    const taxCalculationResult = await taxService.calculateTax(
-      companyId,
-      netAmount,
-      endDate,
-      charge.tax_region || defaultTaxRegion,
-      charge.is_taxable !== false
-    );
+    // Don't calculate tax on negative amounts
+    // Don't calculate tax at the charge level - just return net amount
+    const taxCalculationResult = {
+      taxAmount: 0,
+      taxRate: 0
+    };
     return { netAmount, taxCalculationResult };
   }
 
@@ -1372,7 +1371,6 @@ export async function createInvoiceFromBillingResult(
   const due_date = await getDueDate(companyId, cycleEnd);
   const taxService = new TaxService();
   let subtotal = 0;
-  let totalTax = 0;
 
   // Create base invoice object
   const invoiceData = {
@@ -1452,7 +1450,6 @@ export async function createInvoiceFromBillingResult(
 
       await trx('invoice_items').insert(invoiceItem);
       subtotal += netAmount;
-      totalTax += taxCalculationResult.taxAmount;
     }
 
     // Process discounts
@@ -1481,7 +1478,73 @@ export async function createInvoiceFromBillingResult(
 
       await trx('invoice_items').insert(discountItem);
       subtotal += netAmount;
-      totalTax += taxCalculationResult.taxAmount;
+    }
+
+    // Calculate tax based on net amount per tax region
+    let totalTax = 0;
+    if (subtotal > 0) {
+      // Group items by tax region and calculate net amount per region
+      const items = await trx('invoice_items')
+        .where({
+          invoice_id: newInvoice!.invoice_id,
+          tenant
+        })
+        .orderBy('net_amount', 'desc');
+
+      const regionTotals = new Map<string, number>();
+      
+      for (const item of items) {
+        const region = item.tax_region || company.tax_region;
+        const amount = parseInt(item.net_amount);
+        regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
+      }
+
+      // Calculate tax for each region's net positive amount
+      for (const [region, netAmount] of regionTotals) {
+        if (netAmount > 0) {
+          const taxCalculationResult = await taxService.calculateTax(
+            companyId,
+            netAmount,
+            cycleEnd,
+            region,
+            true
+          );
+
+          const regionTax = taxCalculationResult.taxRate;
+          const regionTaxAmount = taxCalculationResult.taxAmount;
+          totalTax += regionTaxAmount;
+
+          // Distribute tax proportionally among positive items in this region
+          const regionItems = items.filter(item =>
+            (item.tax_region || company.tax_region) === region &&
+            parseInt(item.net_amount) > 0
+          );
+
+          const regionPositiveTotal = regionItems.reduce(
+            (sum, item) => sum + parseInt(item.net_amount),
+            0
+          );
+
+          let remainingTax = regionTaxAmount;
+          for (let i = 0; i < regionItems.length; i++) {
+            const item = regionItems[i];
+            const isLastItem = i === regionItems.length - 1;
+            const itemTax = isLastItem
+              ? remainingTax
+              : Math.floor((parseInt(item.net_amount) / regionPositiveTotal) * regionTaxAmount);
+
+            remainingTax -= itemTax;
+
+            await trx('invoice_items')
+              .where({ item_id: item.item_id })
+              .update({
+                tax_amount: itemTax,
+                tax_rate: regionTax,
+                total_price: parseInt(item.net_amount) + itemTax
+              });
+          }
+        }
+      }
     }
 
     const totalAmount = subtotal + totalTax;
@@ -1489,6 +1552,7 @@ export async function createInvoiceFromBillingResult(
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
     const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - creditToApply);
 
+    // Update invoice with final totals
     await trx('invoices')
       .where({ invoice_id: newInvoice!.invoice_id })
       .update({
