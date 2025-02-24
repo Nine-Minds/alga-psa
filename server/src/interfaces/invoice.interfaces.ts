@@ -52,6 +52,7 @@ export interface IManualInvoiceItem {
   rate: number;
   service_id?: string;
   tax_region?: string;
+  is_taxable?: boolean;
   is_discount?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;

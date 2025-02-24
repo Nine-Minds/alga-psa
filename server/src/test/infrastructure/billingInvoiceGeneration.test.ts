@@ -342,6 +342,135 @@ describe('Billing Invoice Generation', () => {
   });
 
   describe('Tax Calculation', () => {
+    it('should verify total calculation when subtotal is zero but tax is positive', async () => {
+      // Create test company
+      const company_id = await context.createEntity<ICompany>('companies', {
+        company_name: 'Discount Tax Test Company',
+        billing_cycle: 'monthly',
+        company_id: uuidv4(),
+        tax_region: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        phone_no: '',
+        credit_balance: 0,
+        email: '',
+        url: '',
+        address: '',
+        is_inactive: false
+      }, 'company_id');
+
+      // Create NY tax rate (10% for easy calculation)
+      const nyTaxRateId = await context.createEntity('tax_rates', {
+        region: 'US-NY',
+        tax_percentage: 10.0,
+        description: 'NY Test Tax',
+        start_date: '2025-01-01'
+      }, 'tax_rate_id');
+
+      // Set up company tax settings
+      await context.db('company_tax_settings').insert({
+        company_id: company_id,
+        tenant: context.tenantId,
+        tax_rate_id: nyTaxRateId,
+        is_reverse_charge_applicable: false
+      });
+
+      // Create a service with a simple price
+      const service = await context.createEntity('service_catalog', {
+        service_name: 'Discounted Service',
+        service_type: 'Fixed',
+        default_rate: 10000, // $100.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: true
+      }, 'service_id');
+
+      // Create a billing plan
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Discount Test Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        plan_type: 'Fixed'
+      }, 'plan_id');
+
+      // Assign service to plan
+      await context.db('plan_services').insert({
+        plan_id: planId,
+        service_id: service,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      // Create billing cycle
+      const billingCycle = await context.createEntity('company_billing_cycles', {
+        company_id: company_id,
+        billing_cycle: 'monthly',
+        effective_date: '2025-02-01',
+        period_start_date: '2025-02-01',
+        period_end_date: '2025-03-01'
+      }, 'billing_cycle_id');
+
+      // Assign plan to company
+      await context.db('company_billing_plans').insert({
+        company_billing_plan_id: uuidv4(),
+        company_id: company_id,
+        plan_id: planId,
+        start_date: '2025-02-01',
+        is_active: true,
+        tenant: context.tenantId
+      });
+
+      // Create a 100% discount service
+      const discountService = await context.createEntity('service_catalog', {
+        service_name: 'Full Discount',
+        service_type: 'Fixed',
+        default_rate: -10000, // -$100.00 to fully offset the original service
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: false // Discounts are not taxable
+      }, 'service_id');
+
+      // Add discount service to plan
+      await context.db('plan_services').insert({
+        plan_id: planId,
+        service_id: discountService,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      // Generate invoice with both the original service and the discount
+      const invoice = await generateInvoice(billingCycle);
+
+      // Verify calculations:
+      // - Original service: $100.00
+      // - Discount: -$100.00
+      // - Subtotal: $0.00
+      // - Tax: $10.00 (calculated on pre-discount amount)
+      // - Total: $10.00 (just the tax)
+      expect(invoice!.subtotal).toBe(0);       // $0.00 after discount
+      expect(invoice!.tax).toBe(1000);         // $10.00 (10% of original $100)
+      expect(invoice!.total_amount).toBe(1000); // $10.00 (tax only)
+
+      // Get invoice items to verify individual calculations
+      const invoiceItems = await context.db('invoice_items')
+        .where({ invoice_id: invoice!.invoice_id })
+        .orderBy('net_amount', 'desc');
+
+      // Verify we have both the original item and discount
+      expect(invoiceItems).toHaveLength(2);
+
+      // Original service should have tax
+      const originalItem = invoiceItems.find(item => item.service_id === service);
+      expect(parseInt(originalItem!.net_amount)).toBe(10000);
+      expect(parseInt(originalItem!.tax_amount)).toBe(1000);
+
+      // Discount item should have no tax
+      const discountItem = invoiceItems.find(item => item.service_id === discountService);
+      expect(parseInt(discountItem!.net_amount)).toBe(-10000);
+      expect(parseInt(discountItem!.tax_amount)).toBe(0);
+    });
+
     it('should calculate tax correctly for services with different tax regions', async () => {
       // Create test company
       const company_id = await context.createEntity<ICompany>('companies', {

@@ -46,6 +46,8 @@ interface ManualInvoiceUpdate {
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
+  is_taxable?: boolean;
+  tax_region?: string;
 }
 
 interface ManualItemsUpdate {
@@ -287,9 +289,12 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       due_date: toPlainDate(due_date),
       status: 'draft',
       subtotal: billingResult.totalAmount,
-      tax: 0, // Will be calculated in UI
-      total: billingResult.finalAmount,
-      total_amount: billingResult.finalAmount,
+      tax: billingResult.charges.reduce((sum, charge) =>
+        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
+      total: billingResult.totalAmount + billingResult.charges.reduce((sum, charge) =>
+        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
+      total_amount: billingResult.totalAmount + billingResult.charges.reduce((sum, charge) =>
+        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
       credit_applied: 0,
       billing_cycle_id,
       is_manual: false,
@@ -714,6 +719,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     return newInvoice;
   });
 
+  // Create view model with consistent tax calculation
   const viewModel: InvoiceViewModel = {
     invoice_id: newInvoice.invoice_id,
     invoice_number: newInvoice.invoice_number,
@@ -732,8 +738,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     status: newInvoice.status,
     subtotal: Math.ceil(subtotal),
     tax: Math.ceil(totalTax),
-    total: newInvoice.total_amount,
-    total_amount: newInvoice.total_amount,
+    total: Math.ceil(subtotal + totalTax - newInvoice.credit_applied),
+    total_amount: Math.ceil(subtotal + totalTax - newInvoice.credit_applied),
     invoice_items: await knex('invoice_items')
       .where({
         invoice_id: newInvoice.invoice_id,
@@ -763,12 +769,16 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       netAmount = Math.ceil(charge.total);
     }
 
-    // Don't calculate tax on negative amounts
-    // Don't calculate tax at the charge level - just return net amount
-    const taxCalculationResult = {
-      taxAmount: 0,
-      taxRate: 0
-    };
+    // Calculate tax only for taxable items with positive amounts
+    const taxCalculationResult = charge.is_taxable !== false && netAmount > 0
+      ? await taxService.calculateTax(
+          companyId,
+          netAmount,
+          endDate,
+          charge.tax_region || defaultTaxRegion
+        )
+      : { taxAmount: 0, taxRate: 0 };
+
     return { netAmount, taxCalculationResult };
   }
 
@@ -1454,13 +1464,8 @@ export async function createInvoiceFromBillingResult(
 
     // Process discounts
     for (const discount of billingResult.discounts) {
+      // Discounts are always non-taxable
       const netAmount = Math.round(-(discount.amount || 0));
-      const taxCalculationResult = await taxService.calculateTax(
-        companyId,
-        netAmount,
-        cycleEnd
-      );
-
       const discountItem = {
         item_id: uuidv4(),
         invoice_id: newInvoice!.invoice_id,
@@ -1468,9 +1473,10 @@ export async function createInvoiceFromBillingResult(
         quantity: 1,
         unit_price: netAmount,
         net_amount: netAmount,
-        tax_amount: taxCalculationResult.taxAmount,
-        tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount,
+        tax_amount: 0,
+        tax_rate: 0,
+        total_price: netAmount,
+        is_taxable: false,
         is_manual: false,
         tenant,
         created_by: userId
@@ -1480,10 +1486,10 @@ export async function createInvoiceFromBillingResult(
       subtotal += netAmount;
     }
 
-    // Calculate tax based on net amount per tax region
+    // Calculate tax based on net amount per tax region, only for taxable items
     let totalTax = 0;
     if (subtotal > 0) {
-      // Group items by tax region and calculate net amount per region
+      // Get all invoice items
       const items = await trx('invoice_items')
         .where({
           invoice_id: newInvoice!.invoice_id,
@@ -1491,83 +1497,115 @@ export async function createInvoiceFromBillingResult(
         })
         .orderBy('net_amount', 'desc');
 
+      // Calculate tax on positive amounts before discounts
       const regionTotals = new Map<string, number>();
+      const positiveItems = items.filter(item =>
+        item.is_taxable && parseInt(item.net_amount) > 0
+      );
       
-      for (const item of items) {
+      for (const item of positiveItems) {
         const region = item.tax_region || company.tax_region;
         const amount = parseInt(item.net_amount);
         regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
       }
 
-      // Calculate tax for each region's net positive amount
+      // Calculate tax for each region's taxable amount
       for (const [region, netAmount] of regionTotals) {
-        if (netAmount > 0) {
-          const taxCalculationResult = await taxService.calculateTax(
-            companyId,
-            netAmount,
-            cycleEnd,
-            region,
-            true
-          );
+        const taxCalculationResult = await taxService.calculateTax(
+          companyId,
+          netAmount,
+          cycleEnd,
+          region,
+          true
+        );
 
-          const regionTax = taxCalculationResult.taxRate;
-          const regionTaxAmount = taxCalculationResult.taxAmount;
-          totalTax += regionTaxAmount;
+        const regionTax = taxCalculationResult.taxRate;
+        const regionTaxAmount = taxCalculationResult.taxAmount;
+        totalTax += regionTaxAmount;
 
-          // Distribute tax proportionally among positive items in this region
-          const regionItems = items.filter(item =>
-            (item.tax_region || company.tax_region) === region &&
-            parseInt(item.net_amount) > 0
-          );
+        // Distribute tax proportionally among positive taxable items in this region
+        const regionItems = positiveItems.filter(item =>
+          (item.tax_region || company.tax_region) === region
+        );
 
-          const regionPositiveTotal = regionItems.reduce(
-            (sum, item) => sum + parseInt(item.net_amount),
-            0
-          );
+        const regionTaxableTotal = regionItems.reduce(
+          (sum, item) => sum + parseInt(item.net_amount),
+          0
+        );
 
-          let remainingTax = regionTaxAmount;
-          for (let i = 0; i < regionItems.length; i++) {
-            const item = regionItems[i];
-            const isLastItem = i === regionItems.length - 1;
-            const itemTax = isLastItem
-              ? remainingTax
-              : Math.floor((parseInt(item.net_amount) / regionPositiveTotal) * regionTaxAmount);
+        // Assign tax to positive taxable items proportionally
+        let remainingTax = regionTaxAmount;
+        for (let i = 0; i < regionItems.length; i++) {
+          const item = regionItems[i];
+          const isLastItem = i === regionItems.length - 1;
+          const itemTax = isLastItem
+            ? remainingTax
+            : Math.floor((parseInt(item.net_amount) / regionTaxableTotal) * regionTaxAmount);
 
-            remainingTax -= itemTax;
+          remainingTax -= itemTax;
 
-            await trx('invoice_items')
-              .where({ item_id: item.item_id })
-              .update({
-                tax_amount: itemTax,
-                tax_rate: regionTax,
-                total_price: parseInt(item.net_amount) + itemTax
-              });
-          }
+          await trx('invoice_items')
+            .where({ item_id: item.item_id })
+            .update({
+              tax_amount: itemTax,
+              tax_rate: regionTax,
+              total_price: parseInt(item.net_amount) + itemTax
+            });
         }
+
+        // Ensure all other items have zero tax
+        await trx('invoice_items')
+          .where({ invoice_id: newInvoice!.invoice_id, tenant })
+          .whereNotIn('item_id', regionItems.map(item => item.item_id))
+          .update({
+            tax_amount: 0,
+            tax_rate: 0,
+            total_price: trx.raw('net_amount')
+          });
+
+        // Ensure non-taxable items have zero tax
+        await trx('invoice_items')
+          .where({
+            invoice_id: newInvoice!.invoice_id,
+            tenant
+          })
+          .whereNot('is_taxable', true)
+          .update({
+            tax_amount: 0,
+            tax_rate: 0,
+            total_price: trx.raw('net_amount')
+          });
       }
     }
 
+    // Calculate final amounts
     const totalAmount = subtotal + totalTax;
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
-    const finalTotalAmount = Math.max(0, Math.ceil(totalAmount) - creditToApply);
+    const finalTotalAmount = Math.max(0, Math.ceil(subtotal + totalTax - creditToApply));
 
     // Update invoice with final totals
+    // Update invoice with final totals, ensuring tax is properly stored
+    const finalTax = Math.ceil(totalTax);
+    const finalSubtotal = Math.ceil(subtotal);
+    const finalCreditApplied = Math.ceil(creditToApply);
+    const finalTotal = Math.ceil(finalSubtotal + finalTax - finalCreditApplied);
+
     await trx('invoices')
       .where({ invoice_id: newInvoice!.invoice_id })
       .update({
-        subtotal: Math.ceil(subtotal),
-        tax: Math.ceil(totalTax),
-        total_amount: Math.ceil(finalTotalAmount),
-        credit_applied: Math.ceil(creditToApply)
+        subtotal: finalSubtotal,
+        tax: finalTax,
+        total_amount: finalTotal,
+        credit_applied: finalCreditApplied
       });
 
     await updateInvoiceTotalsAndRecordTransaction(
       trx as unknown as Knex.Transaction,
       newInvoice!.invoice_id,
       company,
-      subtotal,
-      totalTax,
+      finalSubtotal,
+      finalTax,
       tenant,
       invoiceData.invoice_number
     );
@@ -1678,10 +1716,16 @@ export async function addManualInvoiceItems(
   }
 
   await knex.transaction(async (trx) => {
+    // Persist manual items with proper tax handling
     await persistInvoiceItems(
       trx,
       invoiceId,
-      items.map(item => ({ ...item, service_id: item.service_id || '' })),
+      items.map(item => ({
+        ...item,
+        service_id: item.service_id || '',
+        is_taxable: item.is_taxable !== false,  // Default to taxable unless explicitly false
+        tax_region: item.tax_region || company.tax_region  // Use company tax region as fallback
+      })),
       company,
       session,
       tenant,
