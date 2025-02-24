@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from '@/lib/services/taxService';
 import { generateInvoiceNumber } from '@/lib/actions/invoiceActions';
 import { BillingEngine } from '@/lib/billing/billingEngine';
-import { InvoiceViewModel, IInvoiceItem, DiscountType } from '@/interfaces/invoice.interfaces';
+import { InvoiceViewModel, IInvoiceItem, NetAmountItem, DiscountType } from '@/interfaces/invoice.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from '@/types/types.d';
@@ -42,13 +42,7 @@ export async function getCompanyDetails(knex: Knex, tenant: string, companyId: s
   return company;
 }
 
-interface NetAmountItem {
-  quantity: number;
-  rate: number;
-  is_discount?: boolean;
-  discount_type?: DiscountType;
-  applies_to_item_id?: string;
-}
+
 
 export function calculateNetAmount(
   requestItem: NetAmountItem,
@@ -64,8 +58,8 @@ export function calculateNetAmount(
         : currentSubtotal;
       return -Math.round((applicableAmount * requestItem.rate) / 100);
     } else {
-      // Fixed amount discount
-      return -Math.round(requestItem.rate);
+      // Fixed amount discount - ensure it's always negative
+      return -Math.abs(Math.round(requestItem.rate));
     }
   } else {
     // Regular line item
@@ -77,6 +71,7 @@ interface InvoiceItem extends NetAmountItem {
   service_id: string;
   description: string;
   tax_region?: string;
+  applies_to_service_id?: string; // Add the new field
 }
 
 export async function persistInvoiceItems(
@@ -89,8 +84,14 @@ export async function persistInvoiceItems(
   isManual: boolean
 ): Promise<number> {
   let subtotal = 0;
-
-  for (const requestItem of items) {
+  
+  // Create a map to store service_id -> item_id mappings
+  const serviceToItemMap = new Map<string, string>();
+  
+  // First pass: Process all non-discount items
+  const nonDiscountItems = items.filter(item => !item.is_discount);
+  
+  for (const requestItem of nonDiscountItems) {
     // Get service details for tax info if service_id is provided
     let service;
     if (requestItem.service_id) {
@@ -106,37 +107,30 @@ export async function persistInvoiceItems(
       }
     }
 
-    // Calculate net amount considering any applicable item amount for percentage discounts
-    let applicableAmount;
-    if (requestItem.applies_to_item_id) {
-      const applicableItem = await tx('invoice_items')
-        .where({ 
-          item_id: requestItem.applies_to_item_id,
-          tenant 
-        })
-        .first();
-      applicableAmount = applicableItem?.net_amount;
-    }
+    // For non-discount items, we don't need to look up applicable amounts
+    const netAmount = calculateNetAmount(requestItem, subtotal);
 
-    const netAmount = calculateNetAmount(requestItem, subtotal, applicableAmount);
-
+    // Detect manual discounts (negative rate and no service_id)
+    const isDiscount = !requestItem.service_id && requestItem.rate < 0;
+    
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
-      service_id: requestItem.service_id,
+      service_id: requestItem.service_id ? requestItem.service_id : null,
       description: requestItem.description,
       quantity: requestItem.quantity,
-      unit_price: requestItem.is_discount ? -Math.abs(Math.round(requestItem.rate)) : Math.round(requestItem.rate),
+      unit_price: isDiscount ? -Math.abs(Math.round(requestItem.rate)) : Math.round(requestItem.rate),
       net_amount: netAmount,
       tax_amount: 0, // Will be updated after calculating total tax
       tax_region: service?.tax_region || company.tax_region,
       tax_rate: 0, // Will be updated after calculating total tax
       total_price: netAmount, // Will be updated after calculating total tax
       is_manual: isManual,
-      is_taxable: service ? service.is_taxable !== false : true, // Copy from service, default to true if no service
-      is_discount: requestItem.is_discount || false,
-      discount_type: requestItem.discount_type,
+      is_discount: isDiscount || requestItem.is_discount || false,
+      is_taxable: (isDiscount || requestItem.is_discount) ? false : (service ? service.is_taxable !== false : true),
+      discount_type: isDiscount ? 'fixed' : requestItem.discount_type,
       applies_to_item_id: requestItem.applies_to_item_id,
+      applies_to_service_id: requestItem.applies_to_service_id,
       created_by: session.user.id,
       created_at: Temporal.Now.plainDateISO().toString(),
       tenant
@@ -154,6 +148,9 @@ export async function persistInvoiceItems(
       if (!exists) {
         throw new Error(`Service not found: ${requestItem.service_id}`);
       }
+      
+      // Store the mapping of service_id to item_id for later use
+      serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
 
     try {
@@ -163,6 +160,88 @@ export async function persistInvoiceItems(
       throw new Error(`Failed to create invoice item: ${message}`);
     }
 
+    subtotal += netAmount;
+  }
+  
+  // Second pass: Process discount items and resolve service references
+  const discountItems = items.filter(item => item.is_discount);
+  
+  for (const requestItem of discountItems) {
+    // Resolve applies_to_service_id to applies_to_item_id if provided
+    let applicableItemId = requestItem.applies_to_item_id;
+    
+    if (requestItem.applies_to_service_id && !applicableItemId) {
+      applicableItemId = serviceToItemMap.get(requestItem.applies_to_service_id);
+      
+      if (!applicableItemId) {
+        throw new Error(`Could not find invoice item for service: ${requestItem.applies_to_service_id}`);
+      }
+    }
+    
+    // Get applicable item amount for percentage discounts
+    let applicableAmount;
+    if (applicableItemId) {
+      const applicableItem = await tx('invoice_items')
+        .where({
+          item_id: applicableItemId,
+          tenant
+        })
+        .first();
+      applicableAmount = applicableItem?.net_amount;
+    }
+    
+    // Calculate net amount with the resolved applicable item ID
+    const netAmount = calculateNetAmount(
+      { ...requestItem, applies_to_item_id: applicableItemId },
+      subtotal,
+      applicableAmount
+    );
+    
+    // Get service details for tax info if service_id is provided
+    let service;
+    if (requestItem.service_id) {
+      try {
+        service = await tx('service_catalog')
+          .where({
+            service_id: requestItem.service_id,
+            tenant
+          })
+          .first();
+      } catch (error) {
+        throw new Error(`Invalid service ID: ${requestItem.service_id}`);
+      }
+    }
+    
+    const invoiceItem = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: requestItem.service_id ? requestItem.service_id : null,
+      description: requestItem.description,
+      quantity: requestItem.quantity,
+      unit_price: -Math.abs(Math.round(requestItem.rate)),
+      net_amount: netAmount,
+      tax_amount: 0, // Discounts don't get tax
+      tax_region: service?.tax_region || company.tax_region,
+      tax_rate: 0,
+      total_price: netAmount,
+      is_manual: isManual,
+      is_discount: true,
+      is_taxable: false, // Discounts are not taxable
+      discount_type: requestItem.discount_type || 'fixed',
+      applies_to_item_id: applicableItemId,
+      applies_to_service_id: requestItem.applies_to_service_id,
+      created_by: session.user.id,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      tenant
+    };
+    
+    try {
+      await tx('invoice_items').insert(invoiceItem);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new Error(`Failed to create discount item: ${message}`);
+    }
+    
     subtotal += netAmount;
   }
 
@@ -181,43 +260,40 @@ export async function calculateAndDistributeTax(
     .where({ invoice_id: invoiceId })
     .orderBy('created_at', 'asc');
 
-  // Calculate the overall taxable base (ensuring it's non-negative)
-  const overallTaxableAmount = Math.max(subtotal, 0);
-
-  // Get all items that should have zero tax (negative amounts or non-taxable)
-  const zeroTaxItems = invoiceItems.filter(item =>
-    Number(item.net_amount) <= 0 || item.is_taxable === false
-  );
-
   // Get items that should be taxed (positive amounts and taxable)
+  // Note: Discounts (is_discount=true) are already marked as non-taxable (is_taxable=false)
   const taxableItems = invoiceItems.filter(item =>
-    Number(item.net_amount) > 0 && item.is_taxable === true
+    Number(item.net_amount) > 0 &&
+    item.is_taxable === true
   );
 
-  // Set tax to zero for non-taxable or negative items
-  for (const item of zeroTaxItems) {
+  // Get credit items (negative amounts that are NOT discounts)
+  // These should reduce the taxable base
+  const creditItems = invoiceItems.filter(item =>
+    Number(item.net_amount) < 0 &&
+    item.is_discount !== true
+  );
+
+  // Set tax to zero for all other items
+  const nonTaxableItems = invoiceItems.filter(item =>
+    !taxableItems.find(t => t.item_id === item.item_id)
+  );
+
+  for (const item of nonTaxableItems) {
     await tx('invoice_items')
       .where({ item_id: item.item_id })
       .update({
         tax_amount: 0,
-        tax_rate: 0,  // No tax rate applied for zero/negative items
+        tax_rate: 0,
         total_price: Number(item.net_amount)
       });
   }
 
   let computedTotalTax = 0;
 
-  // If there are no taxable items, we can skip tax calculation entirely
   if (taxableItems.length > 0) {
-    // Sum all taxable net amounts to determine the full base before considering discounts
-    const totalTaxableAmount = taxableItems.reduce((sum: number, item: IInvoiceItem) =>
-      sum + Number(item.net_amount), 0);
-
-    // The discount factor adjusts for the negative items' effect on the taxable base
-    const discountFactor = overallTaxableAmount / totalTaxableAmount;
-
-    // Group taxable invoice items by their tax region
-    const groups = taxableItems.reduce<Record<string, IInvoiceItem[]>>((acc: Record<string, IInvoiceItem[]>, item: IInvoiceItem) => {
+    // Group taxable items by tax region
+    const groups = taxableItems.reduce<Record<string, IInvoiceItem[]>>((acc, item) => {
       const region = item.tax_region || company.tax_region;
       if (!acc[region]) {
         acc[region] = [];
@@ -226,50 +302,61 @@ export async function calculateAndDistributeTax(
       return acc;
     }, {});
 
-    // Process each tax region group separately
-    for (const [region, itemsInGroup] of Object.entries(groups)) {
-      // Sum net amounts for this group
-      const groupPositiveAmount = itemsInGroup.reduce((sum: number, item: IInvoiceItem) =>
-        sum + Number(item.net_amount), 0);
-      
-      // Compute the effective taxable amount for the group after applying the discount factor
-      const effectiveTaxableAmount = Math.round(groupPositiveAmount * discountFactor);
+    // Group credit items by tax region
+    const creditGroups = creditItems.reduce<Record<string, IInvoiceItem[]>>((acc, item) => {
+      const region = item.tax_region || company.tax_region;
+      if (!acc[region]) {
+        acc[region] = [];
+      }
+      acc[region].push(item);
+      return acc;
+    }, {});
 
-      // Calculate tax for this group using its effective taxable base and tax region
+    // Process each tax region separately
+    for (const [region, itemsInGroup] of Object.entries(groups)) {
+      // Calculate total taxable amount for this region
+      const groupTaxableAmount = itemsInGroup.reduce((sum, item) =>
+        sum + Number(item.net_amount), 0
+      );
+
+      // Calculate total credit amount for this region
+      const regionCreditItems = creditGroups[region] || [];
+      const creditAmount = regionCreditItems.reduce((sum, item) =>
+        sum + Math.abs(Number(item.net_amount)), 0
+      );
+
+      // Adjust taxable amount by subtracting credits
+      const adjustedTaxableAmount = Math.max(0, groupTaxableAmount - creditAmount);
+
+      // Calculate tax for the adjusted group amount
       const groupTaxResult = await taxService.calculateTax(
         company.company_id,
-        effectiveTaxableAmount,
+        adjustedTaxableAmount,
         Temporal.Now.plainDateISO().toString(),
         region
       );
 
-      // Sort items by net amount (highest to lowest) for consistent tax distribution
-      const sortedItems = [...itemsInGroup].sort((a: IInvoiceItem, b: IInvoiceItem) =>
+      // Sort items by amount for consistent distribution
+      const sortedItems = [...itemsInGroup].sort((a, b) =>
         Number(b.net_amount) - Number(a.net_amount)
       );
 
-      // Set up a remaining tax accumulator for proportional distribution
-      let remainingGroupTax = groupTaxResult.taxAmount;
-
-      // Distribute the computed group tax among the group's items
+      // Distribute tax proportionally
+      let remainingTax = groupTaxResult.taxAmount;
       for (let i = 0; i < sortedItems.length; i++) {
         const item = sortedItems[i];
         const netAmt = Number(item.net_amount);
-        const isLastInGroup = (i === itemsInGroup.length - 1);
-        
-        let itemTax = 0;
-        if (isLastInGroup) {
-          // Assign all remaining tax to the last item to correct any rounding discrepancies
-          itemTax = remainingGroupTax;
-        } else {
-          // Calculate proportional tax allocation for the item, rounding down
-          itemTax = Math.floor((netAmt / groupPositiveAmount) * groupTaxResult.taxAmount);
-          remainingGroupTax -= itemTax;
-        }
+        const isLastItem = i === sortedItems.length - 1;
 
+        // Calculate this item's share of tax
+        const itemTax = isLastItem
+          ? remainingTax  // Last item gets remaining tax
+          : Math.floor((netAmt / groupTaxableAmount) * groupTaxResult.taxAmount);
+
+        remainingTax -= itemTax;
         computedTotalTax += itemTax;
 
-        // Update the invoice item with its tax details
+        // Update item with tax details
         await tx('invoice_items')
           .where({ item_id: item.item_id })
           .update({

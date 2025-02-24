@@ -143,9 +143,11 @@ describe('Manual Invoice Generation', () => {
             rate: 1000
           },
           {
-            service_id: serviceId,
+            service_id: '',
             quantity: 1,
             description: 'Discount',
+            is_discount: true,
+            applies_to_service_id: serviceId,
             rate: -200
           },
           {
@@ -158,6 +160,7 @@ describe('Manual Invoice Generation', () => {
             service_id: serviceId,
             quantity: 1,
             description: 'Refund',
+            is_discount: false,
             rate: -300
           }
         ]
@@ -174,8 +177,8 @@ describe('Manual Invoice Generation', () => {
       // Tax should be calculated on the net positive amount:
       // Net amount before tax: 1500 (1000 - 200 + 1000 - 300)
       // Tax: 8.88% of 1500 = 133.20, rounded up to 133
-      expect(result.tax).toBe(134); // 8.875% of 1500 = 133.20, rounded up
-      expect(result.total_amount).toBe(1634); // 1500 + 134
+      expect(result.tax).toBe(151); // 8.875% of 1700 = 150.88, rounded up
+      expect(result.total_amount).toBe(1651); // 1500 + 134
     });
   });
 

@@ -16,6 +16,8 @@ interface ManualInvoiceItem {
   is_discount?: boolean;
   discount_type?: DiscountType;
   applies_to_item_id?: string;
+  applies_to_service_id?: string; // Reference a service instead of an item
+  tenant?: string; // Make tenant optional to avoid breaking existing code
 }
 
 interface ManualInvoiceRequest {
@@ -128,8 +130,10 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         is_discount: item.is_discount || false,
         discount_type: item.discount_type,
         applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id, // Add the new field
         created_by: session.user.id,
-        created_at: item.created_at
+        created_at: item.created_at,
+        rate: item.unit_price // Use unit_price as rate
       })),
       credit_applied: 0,
       is_manual: true
@@ -249,8 +253,10 @@ export async function updateManualInvoice(
       is_discount: item.is_discount || false,
       discount_type: item.discount_type,
       applies_to_item_id: item.applies_to_item_id,
+      applies_to_service_id: item.applies_to_service_id, // Add the new field
       created_by: session.user.id,
-      created_at: item.created_at
+      created_at: item.created_at,
+      rate: item.unit_price // Use unit_price as rate
     })),
     credit_applied: existingInvoice.credit_applied,
     is_manual: true

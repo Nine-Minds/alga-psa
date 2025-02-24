@@ -11,7 +11,6 @@ import {
   IConditionalRule,
   IInvoiceAnnotation,
   InvoiceViewModel,
-  IManualInvoiceItem,
   IInvoiceItem,
   IInvoice,
   DiscountType,
@@ -51,7 +50,7 @@ interface ManualInvoiceUpdate {
 }
 
 interface ManualItemsUpdate {
-  newItems: IManualInvoiceItem[];
+  newItems: IInvoiceItem[];
   updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
   invoice_number?: string;
@@ -289,12 +288,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       due_date: toPlainDate(due_date),
       status: 'draft',
       subtotal: billingResult.totalAmount,
-      tax: billingResult.charges.reduce((sum, charge) =>
-        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
-      total: billingResult.totalAmount + billingResult.charges.reduce((sum, charge) =>
-        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
-      total_amount: billingResult.totalAmount + billingResult.charges.reduce((sum, charge) =>
-        sum + (charge.is_taxable && charge.total > 0 ? charge.tax_amount || 0 : 0), 0),
+      tax: await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''),
+      total: billingResult.totalAmount + await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''),
+      total_amount: billingResult.totalAmount + await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''),
       credit_applied: 0,
       billing_cycle_id,
       is_manual: false,
@@ -310,7 +306,8 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
         net_amount: charge.total - (charge.tax_amount || 0),
-        is_manual: false
+        is_manual: false,
+        rate: charge.rate,
       }))
     };
 
@@ -459,6 +456,32 @@ function getChargeQuantity(charge: IBillingCharge): number {
 function getChargeUnitPrice(charge: IBillingCharge): number {
   if (isBucketCharge(charge)) return charge.overageRate;
   return charge.rate;
+}
+
+async function calculatePreviewTax(
+  charges: IBillingCharge[],
+  companyId: string,
+  cycleEnd: ISO8601String,
+  defaultTaxRegion: string
+): Promise<number> {
+  const taxService = new TaxService();
+  let totalTax = 0;
+
+  // Calculate tax only on positive taxable amounts before discounts
+  for (const charge of charges) {
+    if (charge.is_taxable && charge.total > 0) {
+      const taxResult = await taxService.calculateTax(
+        companyId,
+        charge.total,
+        cycleEnd,
+        charge.tax_region || defaultTaxRegion,
+        true
+      );
+      totalTax += taxResult.taxAmount;
+    }
+  }
+
+  return totalTax;
 }
 
 async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
@@ -719,6 +742,11 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     return newInvoice;
   });
 
+  // Get the final invoice with updated totals
+  const updatedInvoice = await knex('invoices')
+    .where({ invoice_id: newInvoice.invoice_id })
+    .first();
+
   // Create view model with consistent tax calculation
   const viewModel: InvoiceViewModel = {
     invoice_id: newInvoice.invoice_id,
@@ -736,16 +764,16 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     invoice_date: toPlainDate(newInvoice.invoice_date),
     due_date: toPlainDate(newInvoice.due_date),
     status: newInvoice.status,
-    subtotal: Math.ceil(subtotal),
-    tax: Math.ceil(totalTax),
-    total: Math.ceil(subtotal + totalTax - newInvoice.credit_applied),
-    total_amount: Math.ceil(subtotal + totalTax - newInvoice.credit_applied),
+    subtotal: updatedInvoice.subtotal,
+    tax: updatedInvoice.tax,
+    total: updatedInvoice.total_amount,
+    total_amount: updatedInvoice.total_amount,
     invoice_items: await knex('invoice_items')
       .where({
         invoice_id: newInvoice.invoice_id,
         tenant
       }),
-    credit_applied: newInvoice.credit_applied,
+    credit_applied: updatedInvoice.credit_applied,
     billing_cycle_id: billing_cycle_id,
     is_manual: false
   };
@@ -1268,7 +1296,7 @@ interface ManualInvoiceUpdate {
 }
 
 interface ManualItemsUpdate {
-  newItems: IManualInvoiceItem[];
+  newItems: IInvoiceItem[];
   updatedItems: ManualInvoiceUpdate[];
   removedItemIds: string[];
 }
@@ -1320,7 +1348,7 @@ export async function updateInvoiceManualItems(
 
 export async function addManualItemsToInvoice(
   invoiceId: string,
-  items: IManualInvoiceItem[]
+  items: IInvoiceItem[]
 ): Promise<InvoiceViewModel> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -1476,7 +1504,8 @@ export async function createInvoiceFromBillingResult(
         tax_amount: 0,
         tax_rate: 0,
         total_price: netAmount,
-        is_taxable: false,
+        is_taxable: false,  // Discounts are not taxable
+        is_discount: true,  // Flag as a discount item
         is_manual: false,
         tenant,
         created_by: userId
@@ -1486,96 +1515,100 @@ export async function createInvoiceFromBillingResult(
       subtotal += netAmount;
     }
 
-    // Calculate tax based on net amount per tax region, only for taxable items
+    // Calculate tax based on positive taxable amounts before discounts
     let totalTax = 0;
-    if (subtotal > 0) {
-      // Get all invoice items
-      const items = await trx('invoice_items')
-        .where({
-          invoice_id: newInvoice!.invoice_id,
-          tenant
-        })
-        .orderBy('net_amount', 'desc');
+    
+    // Get all invoice items
+    const items = await trx('invoice_items')
+      .where({
+        invoice_id: newInvoice!.invoice_id,
+        tenant
+      })
+      .orderBy('net_amount', 'desc');
 
-      // Calculate tax on positive amounts before discounts
+    // Get positive taxable items
+    const positiveTaxableItems = items.filter(item =>
+      item.is_taxable && parseInt(item.net_amount) > 0
+    );
+
+    // Calculate tax for each item based on its region, ignoring discounts
+    if (positiveTaxableItems.length > 0) {
+      // Group items by tax region
       const regionTotals = new Map<string, number>();
-      const positiveItems = items.filter(item =>
-        item.is_taxable && parseInt(item.net_amount) > 0
-      );
-      
-      for (const item of positiveItems) {
+      for (const item of positiveTaxableItems) {
         const region = item.tax_region || company.tax_region;
         const amount = parseInt(item.net_amount);
         regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
       }
 
-      // Calculate tax for each region's taxable amount
-      for (const [region, netAmount] of regionTotals) {
-        const taxCalculationResult = await taxService.calculateTax(
+      // Calculate tax for each region on full amounts (no discount factor)
+      for (const [region, amount] of regionTotals) {
+        const rawTaxResult = await taxService.calculateTax(
           companyId,
-          netAmount,
+          amount,
+          cycleEnd,
+          region,
+          true
+        );
+        totalTax += rawTaxResult.taxAmount;
+      }
+
+      // Distribute tax proportionally among items within each region
+
+      // Group items by region
+      const itemsByRegion = new Map<string, typeof positiveTaxableItems>();
+      for (const item of positiveTaxableItems) {
+        const region = item.tax_region || company.tax_region;
+        if (!itemsByRegion.has(region)) {
+          itemsByRegion.set(region, []);
+        }
+        itemsByRegion.get(region)!.push(item);
+      }
+
+      // For each region, distribute the calculated tax among items
+      for (const [region, items] of itemsByRegion) {
+        // Calculate regional total from positive taxable items
+        const regionalTotal = items.reduce((sum, item) => sum + parseInt(item.net_amount), 0);
+        
+        // Get tax rate and amount for this region
+        const regionalTaxResult = await taxService.calculateTax(
+          companyId,
+          regionalTotal,  // Use full amount before discounts
           cycleEnd,
           region,
           true
         );
 
-        const regionTax = taxCalculationResult.taxRate;
-        const regionTaxAmount = taxCalculationResult.taxAmount;
-        totalTax += regionTaxAmount;
-
-        // Distribute tax proportionally among positive taxable items in this region
-        const regionItems = positiveItems.filter(item =>
-          (item.tax_region || company.tax_region) === region
-        );
-
-        const regionTaxableTotal = regionItems.reduce(
-          (sum, item) => sum + parseInt(item.net_amount),
-          0
-        );
-
-        // Assign tax to positive taxable items proportionally
-        let remainingTax = regionTaxAmount;
-        for (let i = 0; i < regionItems.length; i++) {
-          const item = regionItems[i];
-          const isLastItem = i === regionItems.length - 1;
+        // Distribute full tax amount proportionally
+        let remainingRegionalTax = regionalTaxResult.taxAmount;  // Use full tax amount
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const isLastItem = i === items.length - 1;
           const itemTax = isLastItem
-            ? remainingTax
-            : Math.floor((parseInt(item.net_amount) / regionTaxableTotal) * regionTaxAmount);
+            ? remainingRegionalTax
+            : Math.floor((parseInt(item.net_amount) / regionalTotal) * regionalTaxResult.taxAmount);
 
-          remainingTax -= itemTax;
+          remainingRegionalTax -= itemTax;
 
           await trx('invoice_items')
             .where({ item_id: item.item_id })
             .update({
               tax_amount: itemTax,
-              tax_rate: regionTax,
+              tax_rate: regionalTaxResult.taxRate,
               total_price: parseInt(item.net_amount) + itemTax
             });
         }
-
-        // Ensure all other items have zero tax
-        await trx('invoice_items')
-          .where({ invoice_id: newInvoice!.invoice_id, tenant })
-          .whereNotIn('item_id', regionItems.map(item => item.item_id))
-          .update({
-            tax_amount: 0,
-            tax_rate: 0,
-            total_price: trx.raw('net_amount')
-          });
-
-        // Ensure non-taxable items have zero tax
-        await trx('invoice_items')
-          .where({
-            invoice_id: newInvoice!.invoice_id,
-            tenant
-          })
-          .whereNot('is_taxable', true)
-          .update({
-            tax_amount: 0,
-            tax_rate: 0,
-            total_price: trx.raw('net_amount')
-          });
       }
+
+      // Ensure all other items have zero tax
+      await trx('invoice_items')
+        .where({ invoice_id: newInvoice!.invoice_id, tenant })
+        .whereNotIn('item_id', positiveTaxableItems.map(item => item.item_id))
+        .update({
+          tax_amount: 0,
+          tax_rate: 0,
+          total_price: trx.raw('net_amount')
+        });
     }
 
     // Calculate final amounts
@@ -1654,10 +1687,23 @@ export async function updateManualInvoiceItems(
       .delete();
 
     for (const item of changes.newItems) {
+      // Persist manual items with proper tax handling
       await persistInvoiceItems(
         trx,
         invoiceId,
-        [{ ...item, service_id: item.service_id || '' }],
+        [{
+          ...item,
+          service_id: item.service_id || '',
+          is_taxable: item.is_taxable !== false, // Default to taxable unless explicitly false
+          tax_region: item.tax_region || company.tax_region // Use company tax region as fallback
+          ,
+          invoice_id: item.invoice_id || invoiceId,
+          unit_price: 0,
+          total_price: 0,
+          tax_amount: 0,
+          net_amount: 0,
+          is_manual: false
+        }],
         company,
         session,
         tenant,
@@ -1689,7 +1735,7 @@ export async function updateManualInvoiceItems(
 
 export async function addManualInvoiceItems(
   invoiceId: string,
-  items: IManualInvoiceItem[],
+  items: IInvoiceItem[],
   session: Session,
   tenant: string
 ): Promise<void> {

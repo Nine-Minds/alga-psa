@@ -620,80 +620,119 @@ describe('Billing Invoice Generation', () => {
         is_reverse_charge_applicable: false
       });
 
-      // Create services (one positive, one negative)
-      const serviceA = await context.createEntity('service_catalog', {
+      // Create two services: regular and credit
+      const regularService = await context.createEntity('service_catalog', {
         service_name: 'Regular Service',
         service_type: 'Fixed',
         default_rate: 1000, // $10.00
         unit_of_measure: 'unit',
-        tax_region: 'US-NY'
+        tax_region: 'US-NY',
+        is_taxable: true
       }, 'service_id');
 
-
-
-      const serviceB = await context.createEntity('service_catalog', {
+      const creditService = await context.createEntity('service_catalog', {
         service_name: 'Credit Service',
         service_type: 'Fixed',
         default_rate: -200, // -$2.00
         unit_of_measure: 'unit',
-        tax_region: 'US-NY'
+        tax_region: 'US-NY',
+        is_taxable: true  // This is taxable but negative
       }, 'service_id');
 
-      // Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Mixed Amount Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
-
-      // Assign services to plan
-      await context.db('plan_services').insert([
-        {
-          plan_id: planId,
-          service_id: serviceA,
-          quantity: 1,
-          tenant: context.tenantId
-        },
-        {
-          plan_id: planId,
-          service_id: serviceB,
-          quantity: 1,
-          tenant: context.tenantId
-        }
-      ]);
-
-      // Create billing cycle
-      const billingCycle = await context.createEntity('company_billing_cycles', {
-        company_id: company_id,
-        billing_cycle: 'monthly',
-        effective_date: '2025-02-01',
-        period_start_date: '2025-02-01',
-        period_end_date: '2025-03-01'
-      }, 'billing_cycle_id');
-
-      // Assign plan to company
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: company_id,
-        plan_id: planId,
-        start_date: '2025-02-01',
-        is_active: true,
-        tenant: context.tenantId
+      // Generate invoice with manual items including a discount
+      const invoice = await generateManualInvoice({
+        companyId: company_id,
+        items: [
+          {
+            // Regular service item
+            service_id: regularService,
+            description: 'Regular Service',
+            quantity: 1,
+            rate: 1000
+          },
+          {
+            // Credit service item
+            service_id: creditService,
+            description: 'Credit Service',
+            quantity: 1,
+            is_discount: false,
+            rate: -200
+          },
+          {
+            // Manual discount applied to regular service by service ID
+            description: 'Manual Discount',
+            quantity: 1,
+            rate: -100,
+            is_discount: true,
+            discount_type: 'fixed',
+            service_id: '',
+            applies_to_service_id: regularService // Reference by service ID instead of item ID
+          }
+        ]
       });
 
-      // Generate invoice
-      const invoice = await generateInvoice(billingCycle);
+      // Get invoice items to verify calculations
+      const invoiceItems = await context.db('invoice_items')
+        .where({ invoice_id: invoice!.invoice_id })
+        .orderBy('net_amount', 'desc');
 
-      // Calculation details:
-      // - Regular Service: 1 unit at $10.00 (1000 cents)
-      // - Credit Service: 1 unit at -$2.00 (-200 cents)
-      // Subtotal: 1000 - 200 = 800 cents ($8.00)
-      // Tax: Calculated at 8.875% on the positive amount, resulting in 72 cents
-      // Total Amount: 800 + 72 = 872 cents ($8.72)
-      expect(invoice!.subtotal).toBe(800); // $8.00
-      expect(invoice!.tax).toBe(72);
-      expect(invoice!.total_amount).toBe(872);
+      // Verify service configurations were respected
+      const services = await context.db('service_catalog')
+        .whereIn('service_id', [regularService, creditService])
+        .select('service_id', 'service_name', 'default_rate', 'is_taxable', 'tax_region');
+
+      const regularServiceConfig = services.find(s => s.service_id === regularService);
+      const creditServiceConfig = services.find(s => s.service_id === creditService);
+
+      expect(regularServiceConfig?.is_taxable).toBe(true);
+      expect(creditServiceConfig?.is_taxable).toBe(true);
+
+      // Verify invoice totals
+      expect(invoice!.subtotal).toBe(700);  // $7.00 (1000 - 200 - 100)
+      expect(invoice!.tax).toBe(72);        // $0.72 (8.875% of $8.00 taxable base, rounded up)
+      expect(invoice!.total_amount).toBe(772); // $7.72 (subtotal + tax)
+
+      // Verify regular service item
+      const regularItem = invoiceItems.find(item => item.service_id === regularService);
+      expect(regularItem).toBeDefined();
+      expect(parseInt(regularItem!.net_amount)).toBe(1000);
+      expect(parseInt(regularItem!.tax_amount)).toBe(72); // Gets all tax since it's the only positive amount
+      expect(regularItem!.is_taxable).toBe(true);
+      expect(regularItem!.is_discount).toBe(false);
+      expect(regularItem!.tax_region).toBe('US-NY');
+
+      // Verify credit service item
+      const creditItem = invoiceItems.find(item => item.service_id === creditService);
+      expect(creditItem).toBeDefined();
+      expect(parseInt(creditItem!.net_amount)).toBe(-200);
+      expect(parseInt(creditItem!.tax_amount)).toBe(0);   // Negative amounts get no tax
+      expect(creditItem!.is_taxable).toBe(true);         // Still taxable, but no tax due to negative amount
+      expect(creditItem!.is_discount).toBe(false);       // Not a discount, just a negative amount
+      expect(creditItem!.tax_region).toBe('US-NY');
+
+      // Verify manual discount item
+      const discountItem = invoiceItems.find(item => item.is_discount === true);
+      expect(discountItem).toBeDefined();
+      expect(parseInt(discountItem!.net_amount)).toBe(-100);
+      expect(parseInt(discountItem!.tax_amount)).toBe(0);  // Discounts get no tax
+      expect(discountItem!.is_taxable).toBe(false);       // Marked non-taxable in invoice item
+      expect(discountItem!.is_discount).toBe(true);       // Properly marked as discount
+      
+      // Verify tax calculation logic
+      const positiveItems = invoiceItems
+        .filter(item => item.is_taxable && parseInt(item.net_amount) > 0);
+      const creditItems = invoiceItems
+        .filter(item => item.is_discount !== true && parseInt(item.net_amount) < 0);
+
+      const positiveAmount = positiveItems
+        .reduce((sum, item) => sum + parseInt(item.net_amount), 0);
+      const creditAmount = creditItems
+        .reduce((sum, item) => sum + Math.abs(parseInt(item.net_amount)), 0);
+
+      const taxableBase = positiveAmount - creditAmount;
+      expect(taxableBase).toBe(800); // Positive amounts (1000) minus credits (200)
+      
+      expect(invoice!.tax).toBe(72); // 8.875% of taxable base with proper rounding rules applied
     });
   });
 
@@ -1171,6 +1210,127 @@ describe('Billing Invoice Generation', () => {
   });
 
 
+
+  describe('Service-Based Discount Application', () => {
+    it('should correctly apply discounts using service references', async () => {
+      // Create test company
+      const company_id = await context.createEntity<ICompany>('companies', {
+        company_name: 'Service Discount Test Company',
+        billing_cycle: 'monthly',
+        company_id: uuidv4(),
+        tax_region: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        phone_no: '',
+        credit_balance: 0,
+        email: '',
+        url: '',
+        address: '',
+        is_inactive: false
+      }, 'company_id');
+
+      // Create NY tax rate
+      const nyTaxRateId = await context.createEntity('tax_rates', {
+        region: 'US-NY',
+        tax_percentage: 10.0, // 10% for easy calculation
+        description: 'NY Test Tax',
+        start_date: '2025-01-01'
+      }, 'tax_rate_id');
+
+      // Set up company tax settings
+      await context.db('company_tax_settings').insert({
+        company_id: company_id,
+        tenant: context.tenantId,
+        tax_rate_id: nyTaxRateId,
+        is_reverse_charge_applicable: false
+      });
+
+      // Create two services
+      const serviceA = await context.createEntity('service_catalog', {
+        service_name: 'Service A',
+        service_type: 'Fixed',
+        default_rate: 10000, // $100.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: true
+      }, 'service_id');
+
+      const serviceB = await context.createEntity('service_catalog', {
+        service_name: 'Service B',
+        service_type: 'Fixed',
+        default_rate: 5000, // $50.00
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        is_taxable: true
+      }, 'service_id');
+
+      // Generate invoice with service-based discount
+      const invoice = await generateManualInvoice({
+        companyId: company_id,
+        items: [
+          {
+            // Service A
+            service_id: serviceA,
+            description: 'Service A',
+            quantity: 1,
+            rate: 10000
+          },
+          {
+            // Service B
+            service_id: serviceB,
+            description: 'Service B',
+            quantity: 1,
+            rate: 5000
+          },
+          {
+            // Discount applied to Service A by service ID
+            description: '10% Discount on Service A',
+            quantity: 1,
+            rate: 10, // 10% discount
+            is_discount: true,
+            discount_type: 'percentage',
+            service_id: '',
+            applies_to_service_id: serviceA // Reference by service ID
+          }
+        ]
+      });
+
+      // Get invoice items to verify calculations
+      const invoiceItems = await context.db('invoice_items')
+        .where({ invoice_id: invoice.invoice_id })
+        .orderBy('net_amount', 'desc');
+
+      // Verify we have all three items
+      expect(invoiceItems).toHaveLength(3);
+
+      // Find each item
+      const serviceAItem = invoiceItems.find(item => item.service_id === serviceA);
+      const serviceBItem = invoiceItems.find(item => item.service_id === serviceB);
+      const discountItem = invoiceItems.find(item => item.is_discount === true);
+
+      // Verify Service A item
+      expect(serviceAItem).toBeDefined();
+      expect(parseInt(serviceAItem!.net_amount)).toBe(10000); // $100.00
+      expect(parseInt(serviceAItem!.tax_amount)).toBe(1000);  // $10.00 (10% tax)
+
+      // Verify Service B item
+      expect(serviceBItem).toBeDefined();
+      expect(parseInt(serviceBItem!.net_amount)).toBe(5000);  // $50.00
+      expect(parseInt(serviceBItem!.tax_amount)).toBe(500);   // $5.00 (10% tax)
+
+      // Verify discount item
+      expect(discountItem).toBeDefined();
+      expect(parseInt(discountItem!.net_amount)).toBe(-1000); // -$10.00 (10% of $100)
+      expect(parseInt(discountItem!.tax_amount)).toBe(0);     // No tax on discounts
+      expect(discountItem!.applies_to_item_id).toBe(serviceAItem!.item_id); // Should reference Service A item ID
+
+      // Verify invoice totals
+      expect(invoice.subtotal).toBe(14000);  // $140.00 ($100 + $50 - $10)
+      expect(invoice.tax).toBe(1500);        // $15.00 (10% of $150 taxable amount)
+      expect(invoice.total_amount).toBe(15500); // $155.00 (subtotal + tax)
+    });
+  });
 
   describe('Tax Calculation Consistency', () => {
     it('should calculate tax consistently between manual and automatic invoices', async () => {

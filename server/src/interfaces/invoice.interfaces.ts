@@ -17,7 +17,16 @@ export interface IInvoice extends TenantEntity {
   is_manual: boolean;
 }
 
-export interface IInvoiceItem extends TenantEntity {
+export interface NetAmountItem {
+  quantity: number;
+  rate: number;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  applies_to_item_id?: string;
+  applies_to_service_id?: string; // Reference a service instead of an item
+}
+
+export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
@@ -30,10 +39,12 @@ export interface IInvoiceItem extends TenantEntity {
   tax_region?: string;
   tax_rate?: number;
   is_manual: boolean;
+  is_taxable?: boolean;
   is_discount?: boolean;
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
+  applies_to_service_id?: string; // Reference a service instead of an item
   created_by?: string;
   updated_by?: string;
   created_at?: ISO8601String;
@@ -45,26 +56,26 @@ export type DiscountType = 'percentage' | 'fixed';
 /**
  * Interface for adding manual items to an invoice
  */
-export interface IManualInvoiceItem {
-  description: string;
-  quantity: number;
-  item_id: string;
-  rate: number;
-  service_id?: string;
-  tax_region?: string;
-  is_taxable?: boolean;
-  is_discount?: boolean;
-  discount_type?: DiscountType;
-  discount_percentage?: number;
-  applies_to_item_id?: string;
-}
+// export interface IManualInvoiceItem {
+//   description: string;
+//   quantity: number;
+//   item_id: string;
+//   rate: number;
+//   service_id?: string;
+//   tax_region?: string;
+//   is_taxable?: boolean;
+//   is_discount?: boolean;
+//   discount_type?: DiscountType;
+//   discount_percentage?: number;
+//   applies_to_item_id?: string;
+// }
 
 /**
  * Request interface for adding manual items to an existing invoice
  */
 export interface IAddManualItemsRequest {
   invoice_id: string;
-  items: IManualInvoiceItem[];
+  items: IInvoiceItem[];
 }
 
 export type BlockType = 'text' | 'dynamic' | 'image';
