@@ -1,17 +1,26 @@
 /**
  * Migration to add Credit Expiring notification subtype and email template
- * 
+ *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // Get the Invoices category
-  const invoicesCategory = await knex('notification_categories')
+  // Get or create the Invoices category
+  let invoicesCategory = await knex('notification_categories')
     .where({ name: 'Invoices' })
     .first();
     
   if (!invoicesCategory) {
-    throw new Error('Invoices notification category not found');
+    // Create the Invoices category if it doesn't exist
+    console.log('Creating Invoices notification category...');
+    [invoicesCategory] = await knex('notification_categories')
+      .insert({
+        name: 'Invoices',
+        description: 'Notifications related to billing and invoices',
+        is_enabled: true,
+        is_default_enabled: true
+      })
+      .returning('*');
   }
   
   // Add the Credit Expiring notification subtype
@@ -98,7 +107,27 @@ exports.down = async function(knex) {
     .del();
     
   // Delete the notification subtype
-  await knex('notification_subtypes')
+  const deletedSubtype = await knex('notification_subtypes')
     .where({ name: 'Credit Expiring' })
     .del();
+  
+  // Check if we need to clean up the Invoices category
+  // Only delete it if there are no other subtypes using it
+  const invoicesCategory = await knex('notification_categories')
+    .where({ name: 'Invoices' })
+    .first();
+    
+  if (invoicesCategory) {
+    const remainingSubtypes = await knex('notification_subtypes')
+      .where({ category_id: invoicesCategory.id })
+      .count('* as count')
+      .first();
+      
+    if (remainingSubtypes && remainingSubtypes.count === '0') {
+      console.log('No remaining subtypes for Invoices category, deleting it...');
+      await knex('notification_categories')
+        .where({ id: invoicesCategory.id })
+        .del();
+    }
+  }
 };

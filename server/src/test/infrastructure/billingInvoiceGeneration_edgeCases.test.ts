@@ -28,7 +28,8 @@ describe('Billing Invoice Edge Cases', () => {
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings'
+        'company_tax_settings',
+        'transactions'
       ],
       companyName: 'Test Company',
       userType: 'internal'
@@ -166,5 +167,149 @@ describe('Billing Invoice Edge Cases', () => {
       expect(parseInt(item.tax_amount)).toBe(0); // Each item should have zero tax
       expect(parseInt(item.total_price)).toBe(parseInt(item.net_amount)); // Total should equal net amount
     }
+  });
+
+  it('should properly handle true zero-value invoices through the entire workflow', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Zero Value Invoice Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create tax rate settings
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create a free service with zero price
+    const freeService = await context.createEntity('service_catalog', {
+      service_name: 'Free Service',
+      service_type: 'Fixed',
+      default_rate: 0, // $0.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true // Even though it's taxable, tax on $0 is $0
+    }, 'service_id');
+
+    // Create a billing plan with the free service
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Free Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Assign free service to plan
+    await context.db('plan_services').insert({
+      plan_id: planId,
+      service_id: freeService,
+      quantity: 1,
+      tenant: context.tenantId
+    });
+
+    // Create billing cycle
+    const billingCycle = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      effective_date: '2025-02-01',
+      period_start_date: '2025-02-01',
+      period_end_date: '2025-03-01'
+    }, 'billing_cycle_id');
+
+    // Assign plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      start_date: '2025-02-01',
+      is_active: true,
+      tenant: context.tenantId
+    });
+
+    // Step 1: Generate invoice
+    const draftInvoice = await generateInvoice(billingCycle);
+
+    // Verify invoice properties
+    expect(draftInvoice).toBeTruthy();
+    expect(draftInvoice!.subtotal).toBe(0);           // $0.00 subtotal
+    expect(draftInvoice!.tax).toBe(0);                // $0.00 tax (10% of $0 is $0)
+    expect(draftInvoice!.total_amount).toBe(0);       // $0.00 total
+    expect(draftInvoice!.status).toBe('draft');       // Should be in draft status
+    expect(draftInvoice!.invoice_number).toMatch(/^TIC\d{6}$/); // Should have a valid invoice number
+    
+    // Get invoice items to verify
+    const invoiceItems = await context.db('invoice_items')
+      .where({ invoice_id: draftInvoice!.invoice_id })
+      .orderBy('created_at', 'asc');
+
+    // Verify invoice items
+    expect(invoiceItems).toHaveLength(1);  // Should have the one free service
+    expect(parseInt(invoiceItems[0].net_amount)).toBe(0);
+    expect(parseInt(invoiceItems[0].tax_amount)).toBe(0);
+    expect(parseInt(invoiceItems[0].total_price)).toBe(0);
+    expect(invoiceItems[0].service_id).toBe(freeService);
+
+    // Step 2: Finalize the invoice
+    await context.db('invoices')
+      .where({ invoice_id: draftInvoice!.invoice_id })
+      .update({ status: 'sent' });
+
+    // Get the finalized invoice
+    const finalizedInvoice = await context.db('invoices')
+      .where({ invoice_id: draftInvoice!.invoice_id })
+      .first();
+
+    // Verify finalized invoice properties
+    expect(finalizedInvoice.status).toBe('sent');
+    expect(finalizedInvoice.subtotal).toBe(0);
+    expect(finalizedInvoice.tax).toBe(0);
+    expect(parseInt(finalizedInvoice.total_amount.toString())).toBe(0);
+
+    // Step 3: Verify transaction handling for zero-value invoice
+    const transactions = await context.db('transactions')
+      .where({ invoice_id: draftInvoice!.invoice_id })
+      .select();
+
+    // Based on logs, a transaction record is created even for zero-value invoices
+    expect(transactions).toHaveLength(1);
+    
+    if (transactions.length > 0) {
+      // The transaction should have appropriate values
+      const transaction = transactions[0];
+      // We expect the transaction amount to be zero
+      expect(parseInt(transaction.amount)).toBe(0);
+      // Verify the transaction is properly linked to the company and invoice
+      expect(transaction.company_id).toBe(company_id);
+      expect(transaction.invoice_id).toBe(draftInvoice!.invoice_id);
+    }
+
+    // Step 4: Verify the company credit balance remains unchanged
+    const companyAfter = await context.db('companies')
+      .where({ company_id: company_id })
+      .first();
+
+    expect(companyAfter.credit_balance).toBe(0); // Should still be 0
   });
 });

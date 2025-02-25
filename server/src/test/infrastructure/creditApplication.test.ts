@@ -9,6 +9,7 @@ import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 
 describe('Credit Application Tests', () => {
   const testHelpers = TestContext.createHelpers();
@@ -1045,9 +1046,9 @@ describe('Credit Application Tests', () => {
       .first();
     
     expect(creditTracking).toBeTruthy();
-    expect(creditTracking.amount).toBe(creditAmount.toString());
-    expect(creditTracking.remaining_amount).toBe(creditAmount.toString());
-    expect(creditTracking.expiration_date).toBe(creditTransaction.expiration_date);
+    expect(parseInt(creditTracking.amount.toString())).toEqual(creditAmount);
+    expect(parseInt(creditTracking.remaining_amount.toString())).toEqual(creditAmount);
+    expect(toPlainDate(creditTracking.expiration_date)).toEqual(toPlainDate(creditTransaction.expiration_date));
     expect(creditTracking.is_expired).toBe(false);
   });
 
@@ -1085,16 +1086,19 @@ describe('Credit Application Tests', () => {
       is_reverse_charge_applicable: false
     });
 
-    // Set up default billing settings with expiration days
-    await context.db('default_billing_settings').insert({
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      credit_expiration_days: 60, // Different from company settings to verify it's used
-      credit_expiration_notification_days: [14, 7, 1],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    });
+    // Set up default billing settings with expiration days using upsert pattern
+    await context.db('default_billing_settings')
+      .insert({
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        credit_expiration_days: 60, // Different from company settings to verify it's used
+        credit_expiration_notification_days: [14, 7, 1],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .onConflict('tenant')
+      .merge(); // This will update existing records if there's a conflict
 
     // Create services with negative rates (credits)
     const serviceA = await context.createEntity('service_catalog', {
@@ -1183,7 +1187,7 @@ describe('Credit Application Tests', () => {
       .first();
     
     expect(creditTracking).toBeTruthy();
-    expect(creditTracking.expiration_date).toBe(creditTransaction.expiration_date);
+    expect(toPlainDate(creditTracking.expiration_date)).toEqual(toPlainDate(creditTransaction.expiration_date));
   });
 
   it('should prioritize credits by expiration date when applying to invoices', async () => {
