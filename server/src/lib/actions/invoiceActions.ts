@@ -3,6 +3,7 @@
 import { NumberingService } from '@/lib/services/numberingService';
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
+import { applyCreditToInvoice } from '@/lib/actions/creditActions';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import {
@@ -337,9 +338,9 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   const billingCycle = await knex('company_billing_cycles')
-    .where({ 
+    .where({
       billing_cycle_id,
-      tenant 
+      tenant
     })
     .first();
 
@@ -1100,9 +1101,12 @@ export async function finalizeInvoiceWithKnex(
   tenant: string,
   userId: string
 ): Promise<void> {
+  let invoice: any;
+  
+  // First transaction to update invoice status
   await knex.transaction(async (trx) => {
     // Check if invoice exists and is not already finalized
-    const invoice = await trx('invoices')
+    invoice = await trx('invoices')
       .where({ 
         invoice_id: invoiceId,
         tenant
@@ -1141,6 +1145,36 @@ export async function finalizeInvoiceWithKnex(
       }
     );
   });
+  
+  // Check if this is a prepayment invoice (no billing_cycle_id)
+  if (invoice && !invoice.billing_cycle_id) {
+    // For prepayment invoices, update the company's credit balance
+    await CompanyBillingPlan.updateCompanyCredit(invoice.company_id, invoice.subtotal);
+    
+    // Log the credit update
+    console.log(`Updated credit balance for company ${invoice.company_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
+  } 
+  // For regular invoices, check if there's available credit to apply
+  else if (invoice && invoice.company_id) {
+    const availableCredit = await CompanyBillingPlan.getCompanyCredit(invoice.company_id);
+    
+    if (availableCredit > 0) {
+      // Get the current invoice with updated totals
+      const updatedInvoice = await knex('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+      
+      if (updatedInvoice && updatedInvoice.total_amount > 0) {
+        // Calculate how much credit to apply
+        const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
+        
+        if (creditToApply > 0) {
+          // Apply credit to the invoice
+          await applyCreditToInvoice(invoice.company_id, invoiceId, creditToApply);
+        }
+      }
+    }
+  }
 }
 
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
@@ -1615,26 +1649,23 @@ export async function createInvoiceFromBillingResult(
     const totalAmount = subtotal + totalTax;
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
-    const finalTotalAmount = Math.max(0, Math.ceil(subtotal + totalTax - creditToApply));
 
-    // Update invoice with final totals
     // Update invoice with final totals, ensuring tax is properly stored
     const finalTax = Math.ceil(totalTax);
     const finalSubtotal = Math.ceil(subtotal);
-    const finalCreditApplied = Math.ceil(creditToApply);
-    const finalTotal = Math.ceil(finalSubtotal + finalTax - finalCreditApplied);
-
+    
+    // Update the invoice with subtotal, tax, and total amount
     await trx('invoices')
       .where({ invoice_id: newInvoice!.invoice_id })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,
-        total_amount: finalTotal,
-        credit_applied: finalCreditApplied
+        total_amount: Math.ceil(finalSubtotal + finalTax),
+        credit_applied: 0
       });
 
     await updateInvoiceTotalsAndRecordTransaction(
-      trx as unknown as Knex.Transaction,
+      trx,
       newInvoice!.invoice_id,
       company,
       finalSubtotal,
@@ -1696,13 +1727,6 @@ export async function updateManualInvoiceItems(
           service_id: item.service_id || '',
           is_taxable: item.is_taxable !== false, // Default to taxable unless explicitly false
           tax_region: item.tax_region || company.tax_region // Use company tax region as fallback
-          ,
-          invoice_id: item.invoice_id || invoiceId,
-          unit_price: 0,
-          total_price: 0,
-          tax_amount: 0,
-          net_amount: 0,
-          is_manual: false
         }],
         company,
         session,

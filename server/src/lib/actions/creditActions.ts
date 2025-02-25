@@ -223,25 +223,9 @@ export async function createPrepaymentInvoice(
             tenant
         });
 
-        // Update company credit balance
-        await trx('companies')
-            .where({ company_id: companyId, tenant })
-            .update({
-                credit_balance: knex('companies')
-                    .where({ company_id: companyId, tenant })
-                    .select(knex.raw('COALESCE(credit_balance, 0)'))
-                    .first()
-                    .then((result) => result + amount),
-                updated_at: new Date().toISOString()
-            });
-        
-        console.log('increased company', companyId, 'credit balance by', amount);
-
-        // query the credit balance
-        const company = await knex('companies')
-            .where({ company_id: companyId, tenant })
-            .select('credit_balance');
-        console.log('** creditActions ** company', companyId, 'credit balance is', company[0].credit_balance);
+        // Note: Credit balance will be updated when the invoice is finalized
+        console.log('Prepayment invoice created for company', companyId, 'with amount', amount);
+        console.log('Credit will be applied when the invoice is finalized');
 
         return createdInvoice;
     });
@@ -280,8 +264,7 @@ export async function applyCreditToInvoice(
             amount: -amount,
             type: 'credit_adjustment',
             status: 'completed',
-            description: 'Credit balance adjustment from application',
-            parent_transaction_id: creditTransaction.transaction_id,
+            description: `Credit balance adjustment from application (Transaction: ${creditTransaction.transaction_id})`,
             created_at: new Date().toISOString(),
             tenant
         });

@@ -71,6 +71,7 @@ interface InvoiceItem extends NetAmountItem {
   service_id: string;
   description: string;
   tax_region?: string;
+  is_taxable?: boolean;
   applies_to_service_id?: string; // Add the new field
 }
 
