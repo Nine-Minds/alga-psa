@@ -7,6 +7,7 @@ import { IInvoiceItem, InvoiceViewModel, DiscountType } from '@/interfaces/invoi
 import { TaxService } from '@/lib/services/taxService';
 import { BillingEngine } from '@/lib/billing/billingEngine';
 import * as invoiceService from '@/lib/services/invoiceService';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 
 interface ManualInvoiceItem {
   service_id: string;
@@ -231,13 +232,13 @@ export async function updateManualInvoice(
       name: '',
       address: ''
     },
-    invoice_date: Temporal.PlainDate.from(existingInvoice.invoice_date),
-    due_date: Temporal.PlainDate.from(existingInvoice.due_date),
+    invoice_date: toPlainDate(existingInvoice.invoice_date),
+    due_date: toPlainDate(existingInvoice.due_date),
     status: existingInvoice.status,
     subtotal: updatedInvoice.subtotal,
     tax: updatedInvoice.tax,
     total: updatedInvoice.total_amount,
-    total_amount: updatedInvoice.total_amount,
+    total_amount: parseInt(updatedInvoice.total_amount.toString()),
     invoice_items: updatedItems.map((item): IInvoiceItem => ({
       item_id: item.item_id,
       invoice_id: invoiceId,
@@ -246,7 +247,7 @@ export async function updateManualInvoice(
       quantity: item.quantity,
       unit_price: item.unit_price,
       total_price: item.total_price,
-      tax_amount: item.tax_amount,
+      tax_amount: parseInt(item.tax_amount.toString()),
       net_amount: item.net_amount,
       tenant,
       is_manual: true,

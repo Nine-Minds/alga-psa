@@ -7,6 +7,7 @@ import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
+import { BillingEngine } from '@/lib/billing/billingEngine';
 
 describe('Billing Invoice Tax Calculations', () => {
   const testHelpers = TestContext.createHelpers();
@@ -780,5 +781,168 @@ describe('Billing Invoice Tax Calculations', () => {
     // Additional verification that both values are positive
     expect(invoice!.subtotal).toBeGreaterThan(0);
     expect(invoice!.tax).toBeGreaterThan(0);
+  });
+  
+  it('should correctly handle different tax regions during invoice recalculation', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Tax Recalculation Test Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY', // Default tax region
+      is_tax_exempt: false,
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString()
+    }, 'company_id');
+
+    // Create tax rates for different regions
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 8.875,
+      description: 'NY State + City Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    const caTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-CA',
+      tax_percentage: 8.0,
+      description: 'CA State Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create services with different tax regions
+    const serviceNY = await context.createEntity('service_catalog', {
+      service_name: 'NY Service',
+      service_type: 'Fixed',
+      default_rate: 1000,
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    const serviceCA = await context.createEntity('service_catalog', {
+      service_name: 'CA Service',
+      service_type: 'Fixed',
+      default_rate: 500,
+      unit_of_measure: 'unit',
+      tax_region: 'US-CA',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create initial invoice with NY service
+    const initialInvoice = await generateManualInvoice({
+      companyId: company_id,
+      items: [{
+        service_id: serviceNY,
+        quantity: 1,
+        description: 'NY Service Item',
+        rate: 1000
+      }]
+    });
+
+    // Get invoice ID
+    const invoiceId = initialInvoice.invoice_id;
+
+    // Verify initial calculations
+    expect(initialInvoice.subtotal).toBe(1000);
+    expect(initialInvoice.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded to 89
+
+    // Set up for recalculation by ensuring dates are in a format that Temporal.PlainDate.from() can parse
+    const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+    await context.db('invoices')
+      .where({ invoice_id: invoiceId })
+      .update({
+        invoice_date: today,
+        due_date: today
+      });
+
+    // Update invoice by adding a CA service item
+    const billingEngine = new BillingEngine();
+    
+    // First update the invoice items
+    await context.db('invoice_items').where({ invoice_id: invoiceId }).delete();
+    
+    // Insert both the NY and CA items
+    await context.db('invoice_items').insert([
+      {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceNY,
+        description: 'NY Service Item',
+        quantity: 1,
+        unit_price: 1000,
+        net_amount: 1000,
+        tax_amount: 0, // Will be recalculated
+        tax_rate: 0,   // Will be recalculated
+        tax_region: 'US-NY',
+        is_taxable: true,
+        is_discount: false,
+        total_price: 1000,
+        tenant: context.tenantId,
+        created_at: new Date().toISOString(),
+        created_by: 'test'
+      },
+      {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: serviceCA,
+        description: 'CA Service Item',
+        quantity: 1,
+        unit_price: 500,
+        net_amount: 500,
+        tax_amount: 0, // Will be recalculated
+        tax_rate: 0,   // Will be recalculated
+        tax_region: 'US-CA',
+        is_taxable: true,
+        is_discount: false,
+        total_price: 500,
+        tenant: context.tenantId,
+        created_at: new Date().toISOString(),
+        created_by: 'test'
+      }
+    ]);
+    
+    // Trigger recalculation
+    await billingEngine.recalculateInvoice(invoiceId);
+    
+    // Fetch updated invoice
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+      
+    // Fetch updated items
+    const updatedItems = await context.db('invoice_items')
+      .where({ invoice_id: invoiceId })
+      .orderBy('created_at', 'asc');
+      
+    // Verify the recalculated tax amounts
+    const nyItem = updatedItems.find(item => item.tax_region === 'US-NY');
+    const caItem = updatedItems.find(item => item.tax_region === 'US-CA');
+    
+    // The specific items should have the correct tax applied
+    expect(parseInt(nyItem.net_amount)).toBe(1000);
+    expect(parseInt(nyItem.tax_amount)).toBe(89); // 8.875% of 1000 = 88.75, rounded to 89
+    
+    expect(parseInt(caItem.net_amount)).toBe(500);
+    expect(parseInt(caItem.tax_amount)).toBe(40); // 8% of 500 = 40
+    
+    // Overall invoice totals
+    expect(updatedInvoice.subtotal).toBe(1500); // 1000 + 500
+    expect(updatedInvoice.tax).toBe(129); // 89 + 40
+    expect(parseInt(updatedInvoice.total_amount.toString())).toBe(1629); // 1500 + 129
   });
 });

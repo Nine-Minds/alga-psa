@@ -1164,7 +1164,8 @@ export class BillingEngine {
           const taxCalculationResult = await taxService.calculateTax(
             company.company_id,
             netAmount,
-            toISODate(Temporal.Now.plainDateISO())
+            toISODate(Temporal.Now.plainDateISO()),
+            service?.tax_region || item.tax_region
           );
           taxAmount = Math.round(taxCalculationResult.taxAmount);
           taxRate = taxCalculationResult.taxRate;

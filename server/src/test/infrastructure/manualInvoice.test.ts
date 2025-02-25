@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
-import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
+import { generateManualInvoice, updateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
 import { TestContext } from '../../../test-utils/testContext';
@@ -359,6 +359,267 @@ describe('Manual Invoice Generation', () => {
         status: 'completed',
         amount: 1089 // Including tax
       });
+    });
+  });
+
+  describe('Invoice Adjustments', () => {
+    it('correctly updates an invoice when new manual items are added', async () => {
+      // 1. Set up test services and tax configuration
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+
+      // 2. Create initial invoice with one item
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [{
+          service_id: serviceId,
+          quantity: 1,
+          description: 'Initial Service Item',
+          rate: 1000
+        }]
+      });
+
+      // 3. Verify initial state
+      expect(initialInvoice.subtotal).toBe(1000);
+      expect(initialInvoice.tax).toBe(89); // 8.875% of 1000, rounded
+      expect(initialInvoice.total_amount).toBe(1089);
+      expect(initialInvoice.invoice_items).toHaveLength(1);
+
+      // Extract the invoice ID for later use
+      const invoiceId = initialInvoice.invoice_id;
+      
+      // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+      
+      // 5. Update the invoice with new items
+      const updatedInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Include the original item
+          {
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Initial Service Item',
+            rate: 1000
+          },
+          // Add a new service item
+          {
+            service_id: serviceId,
+            quantity: 2,
+            description: 'Additional Service',
+            rate: 500
+          }
+        ]
+      });
+
+      // 5. Verify updated state
+      // New subtotal: 1000 (original) + (2 * 500) = 2000
+      expect(updatedInvoice.subtotal).toBe(2000);
+      // New tax: 8.875% of 2000 = 177.5, rounded to 178
+      expect(updatedInvoice.tax).toBe(178);
+      expect(parseInt(updatedInvoice.total_amount.toString())).toBe(2178);
+      expect(updatedInvoice.invoice_items).toHaveLength(2);
+
+      // 6. Verify transaction records are updated
+      const transactions = await context.db('transactions')
+        .where({
+          invoice_id: initialInvoice.invoice_id,
+          tenant: context.tenantId
+        })
+        .orderBy('created_at', 'desc');
+
+      expect(transactions).toHaveLength(2);
+      expect(transactions[0]).toMatchObject({
+        company_id: context.companyId,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        amount: 2178 // Updated amount including tax
+      });
+    });
+
+    it('correctly handles mixed items including discounts when adding new items', async () => {
+      // 1. Set up test service
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+
+      // 2. Create initial invoice with one item
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [{
+          service_id: serviceId,
+          quantity: 1,
+          description: 'Initial Service Item',
+          rate: 1000
+        }]
+      });
+
+      // 3. Get invoice ID for the update operation
+      const invoiceId = initialInvoice.invoice_id;
+
+      // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+
+      // 5. Update the invoice with a mix of items including a discount
+      const updatedInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Include the original item
+          {
+            service_id: serviceId,
+            quantity: 1,
+            description: 'Initial Service Item',
+            rate: 1000
+          },
+          // Add a new service item
+          {
+            service_id: serviceId,
+            quantity: 2,
+            description: 'Additional Service',
+            rate: 500
+          },
+          // Add a discount item
+          {
+            service_id: '',
+            quantity: 1,
+            description: 'Discount',
+            is_discount: true,
+            applies_to_service_id: serviceId,
+            rate: -300
+          }
+        ]
+      });
+
+      // 4. Verify updated state
+      // Subtotal calculation:
+      // Initial item: 1 * 1000 = 1000
+      // Additional service: 2 * 500 = 1000
+      // Discount: 1 * -300 = -300
+      // Total: 1000 + 1000 - 300 = 1700
+      expect(updatedInvoice.subtotal).toBe(1700);
+      
+      // Tax should be calculated on pre-discount amount
+      // for positive items only: 1000 + 1000 = 2000
+      // Tax: 8.875% of 2000 = 177.5, rounded to 178
+      expect(updatedInvoice.tax).toBe(178);
+      expect(updatedInvoice.total_amount).toBe(1878); // 1700 + 178
+      expect(updatedInvoice.invoice_items).toHaveLength(3);
+    });
+
+    it('correctly handles different tax regions when adding new items', async () => {
+      // 1. Create services with different tax regions
+      const serviceNY = await createTestService(); // defaults to tax_region 'US-NY'
+      const serviceCA = await createTestService({
+        service_name: 'California Service',
+        tax_region: 'US-CA'
+      });
+      
+      // 2. Set up multi-region tax configuration
+      const taxRateNyId = uuidv4();
+      await context.db('tax_rates').insert([{
+        tax_rate_id: taxRateNyId,
+        tenant: context.tenantId,
+        region: 'US-NY',
+        tax_percentage: 8.875,
+        description: 'NY Tax',
+        start_date: '2025-02-22T00:00:00.000Z'
+      }, {
+        tax_rate_id: uuidv4(),
+        tenant: context.tenantId,
+        region: 'US-CA',
+        tax_percentage: 8.0,
+        description: 'CA Tax',
+        start_date: '2025-02-22T00:00:00.000Z'
+      }]);
+      
+      // First remove any existing tax settings for this company
+      await context.db('company_tax_settings')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+        
+      // Set up company tax settings with default NY rate
+      await context.db('company_tax_settings').insert({
+        company_id: context.companyId,
+        tenant: context.tenantId,
+        tax_rate_id: taxRateNyId,
+        is_reverse_charge_applicable: false
+      });
+      
+      // 3. Create initial invoice with NY service
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [{
+          service_id: serviceNY,
+          quantity: 1,
+          description: 'NY Service Item',
+          rate: 1000
+        }]
+      });
+      
+      // Get invoice ID for the update operation
+      const invoiceId = initialInvoice.invoice_id;
+      
+      // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+      
+      // 5. Update invoice by adding a CA service item
+      const updatedInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Include the original NY item
+          {
+            service_id: serviceNY,
+            quantity: 1,
+            description: 'NY Service Item',
+            rate: 1000
+          },
+          // Add a CA service item
+          {
+            service_id: serviceCA,
+            quantity: 1,
+            description: 'CA Service Item',
+            rate: 500
+          }
+        ]
+      });
+      
+      // 5. Verify updated calculations
+      // Subtotal: 1000 + 500 = 1500
+      expect(updatedInvoice.subtotal).toBe(1500);
+      
+      // Tax:
+      // NY: 1000 * 8.875% = 88.75, rounded to 89
+      // CA: 500 * 8% = 40
+      // Total tax: 89 + 40 = 129
+      expect(updatedInvoice.tax).toBe(129);
+      expect(updatedInvoice.total_amount).toBe(1629); // 1500 + 129
+      expect(updatedInvoice.invoice_items).toHaveLength(2);
+      
+      // 6. Verify each item has the correct tax amount
+      const nyItem = updatedInvoice.invoice_items.find(item =>
+        item.description === 'NY Service Item');
+      const caItem = updatedInvoice.invoice_items.find(item =>
+        item.description === 'CA Service Item');
+        
+      expect(nyItem?.tax_amount).toBe(89);
+      expect(caItem?.tax_amount).toBe(40);
     });
   });
 });
