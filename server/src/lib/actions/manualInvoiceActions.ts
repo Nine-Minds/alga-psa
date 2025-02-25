@@ -122,10 +122,10 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         service_id: item.service_id,
         description: item.description,
         quantity: item.quantity,
-        unit_price: item.unit_price,
-        total_price: item.total_price,
-        tax_amount: item.tax_amount,
-        net_amount: item.net_amount,
+        unit_price: parseInt(item.unit_price.toString()),
+        total_price: parseInt(item.total_price.toString()),
+        tax_amount: parseInt(item.tax_amount.toString()),
+        net_amount: parseInt(item.net_amount.toString()),
         tenant,
         is_manual: true,
         is_discount: item.is_discount || false,
@@ -134,7 +134,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
         applies_to_service_id: item.applies_to_service_id, // Add the new field
         created_by: session.user.id,
         created_at: item.created_at,
-        rate: item.unit_price // Use unit_price as rate
+        rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
       })),
       credit_applied: 0,
       is_manual: true
@@ -245,8 +245,8 @@ export async function updateManualInvoice(
       service_id: item.service_id,
       description: item.description,
       quantity: item.quantity,
-      unit_price: item.unit_price,
-      total_price: item.total_price,
+      unit_price: parseInt(item.unit_price.toString()),
+      total_price: parseInt(item.total_price.toString()),
       tax_amount: parseInt(item.tax_amount.toString()),
       net_amount: item.net_amount,
       tenant,
@@ -257,7 +257,7 @@ export async function updateManualInvoice(
       applies_to_service_id: item.applies_to_service_id, // Add the new field
       created_by: session.user.id,
       created_at: item.created_at,
-      rate: item.unit_price // Use unit_price as rate
+      rate: parseInt(item.unit_price.toString()) // Use unit_price as rate
     })),
     credit_applied: existingInvoice.credit_applied,
     is_manual: true

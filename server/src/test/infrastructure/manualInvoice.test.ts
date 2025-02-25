@@ -625,5 +625,391 @@ describe('Manual Invoice Generation', () => {
       expect(nyItem?.tax_amount).toBe(89);
       expect(caItem?.tax_amount).toBe(40);
     });
+    
+    it('correctly updates an invoice when existing items are modified', async () => {
+      // 1. Set up test service and tax configuration
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+
+      // 2. Create initial invoice with one item
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [{
+          service_id: serviceId,
+          quantity: 1,
+          description: 'Initial Service Item',
+          rate: 1000
+        }]
+      });
+
+      // 3. Verify initial state
+      expect(initialInvoice.subtotal).toBe(1000);
+      expect(initialInvoice.tax).toBe(89); // 8.875% of 1000, rounded
+      expect(initialInvoice.total_amount).toBe(1089);
+      expect(initialInvoice.invoice_items).toHaveLength(1);
+
+      // Extract the invoice ID for later use
+      const invoiceId = initialInvoice.invoice_id;
+      
+      // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+      
+      // 5. Update the invoice by modifying the existing item (changing quantity and rate)
+      const updatedInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Same item but with modified quantity and rate
+          {
+            service_id: serviceId,
+            quantity: 2, // Changed from 1 to 2
+            description: 'Initial Service Item (Modified)',
+            rate: 1500 // Changed from 1000 to 1500
+          }
+        ]
+      });
+
+      // 6. Verify updated state
+      // New subtotal: 2 * 1500 = 3000
+      expect(updatedInvoice.subtotal).toBe(3000);
+      // New tax: 8.875% of 3000 = 266.25, rounded up to 267
+      expect(updatedInvoice.tax).toBe(267);
+      expect(updatedInvoice.total_amount).toBe(3267);
+      expect(updatedInvoice.invoice_items).toHaveLength(1); // Still just one item
+      
+      // Verify the item was actually modified
+      const modifiedItem = updatedInvoice.invoice_items[0];
+      expect(modifiedItem.quantity).toBeCloseTo(2);
+      expect(modifiedItem.rate).toBe(1500);
+      expect(modifiedItem.description).toBe('Initial Service Item (Modified)');
+
+      // 7. Verify transaction records are updated
+      const transactions = await context.db('transactions')
+        .where({
+          invoice_id: initialInvoice.invoice_id,
+          tenant: context.tenantId
+        })
+        .orderBy('created_at', 'desc');
+
+      expect(transactions).toHaveLength(2);
+      
+      // Find the invoice_adjustment transaction
+      const adjustmentTransaction = transactions.find(t => t.type === 'invoice_adjustment');
+      expect(adjustmentTransaction).toBeDefined();
+      expect(adjustmentTransaction).toMatchObject({
+        company_id: context.companyId,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        amount: 3267 // Updated amount including tax (with tax rounded up)
+      });
+    });
+    
+    it('validates manual item adjustments when items are removed', async () => {
+      // 1. Set up test services and tax configuration
+      const service1Id = await createTestService({ service_name: 'First Service' });
+      const service2Id = await createTestService({ service_name: 'Second Service' });
+      await setupTaxConfiguration();
+
+      // 2. Create initial invoice with multiple items
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [
+          {
+            service_id: service1Id,
+            quantity: 1,
+            description: 'First Service Item',
+            rate: 1000
+          },
+          {
+            service_id: service2Id,
+            quantity: 2,
+            description: 'Second Service Item',
+            rate: 500
+          }
+        ]
+      });
+
+      // 3. Verify initial state
+      expect(initialInvoice.subtotal).toBe(2000); // 1000 + (2 * 500)
+      expect(initialInvoice.tax).toBe(178); // 8.875% of 2000 = 177.5, rounded up to 178
+      expect(initialInvoice.total_amount).toBe(2178);
+      expect(initialInvoice.invoice_items).toHaveLength(2);
+
+      // Extract the invoice ID for later use
+      const invoiceId = initialInvoice.invoice_id;
+      
+      // 4. Ensure the invoice dates are stored in a format that Temporal.PlainDate.from() can parse
+      const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+      
+      // 5. Update the invoice by removing one item (the second service)
+      const updatedInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Only include the first item, effectively removing the second item
+          {
+            service_id: service1Id,
+            quantity: 1,
+            description: 'First Service Item',
+            rate: 1000
+          }
+        ]
+      });
+
+      // 6. Verify updated state after item removal
+      expect(updatedInvoice.subtotal).toBe(1000); // Only the first item remains
+      expect(updatedInvoice.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded up to 89
+      expect(updatedInvoice.total_amount).toBe(1089);
+      expect(updatedInvoice.invoice_items).toHaveLength(1); // One item has been removed
+      
+      // Verify the correct item was kept
+      expect(updatedInvoice.invoice_items[0].description).toBe('First Service Item');
+      expect(updatedInvoice.invoice_items[0].rate).toBe(1000);
+
+      // 7. Verify transaction records are updated
+      const transactions = await context.db('transactions')
+        .where({
+          invoice_id: initialInvoice.invoice_id,
+          tenant: context.tenantId
+        })
+        .orderBy('created_at', 'desc');
+
+      expect(transactions).toHaveLength(2);
+      
+      // Find the invoice_adjustment transaction
+      const adjustmentTransaction = transactions.find(t => t.type === 'invoice_adjustment');
+      expect(adjustmentTransaction).toBeDefined();
+      expect(adjustmentTransaction).toMatchObject({
+        company_id: context.companyId,
+        type: 'invoice_adjustment',
+        status: 'completed',
+        amount: 1089 // Updated amount after item removal
+      });      
+    });
+
+    it('tests manual item adjustments affecting tax calculation', async () => {
+      // 1. Set up test services with different tax configurations
+      const taxableServiceId = await createTestService({
+        service_name: 'Taxable Service',
+        is_taxable: true
+      });
+      const nonTaxableServiceId = await createTestService({
+        service_name: 'Non-Taxable Service',
+        is_taxable: false
+      });
+      
+      // Service with different tax region
+      const caServiceId = await createTestService({
+        service_name: 'California Service',
+        tax_region: 'US-CA'
+      });
+      
+      // Set up tax configuration for NY and CA regions
+      const taxRateNyId = uuidv4();
+      await context.db('tax_rates').insert([{
+        tax_rate_id: taxRateNyId,
+        tenant: context.tenantId,
+        region: 'US-NY',
+        tax_percentage: 8.875, // NY tax rate
+        description: 'NY Tax',
+        start_date: '2025-02-22T00:00:00.000Z'
+      }, {
+        tax_rate_id: uuidv4(),
+        tenant: context.tenantId,
+        region: 'US-CA',
+        tax_percentage: 7.25, // CA tax rate
+        description: 'CA Tax',
+        start_date: '2025-02-22T00:00:00.000Z'
+      }]);
+      
+      // First remove any existing tax settings
+      await context.db('company_tax_settings')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+        
+      // Set up company tax settings with default NY rate
+      await context.db('company_tax_settings').insert({
+        company_id: context.companyId,
+        tenant: context.tenantId,
+        tax_rate_id: taxRateNyId,
+        is_reverse_charge_applicable: false
+      });
+
+      // 2. Create initial invoice with a mix of taxable and non-taxable items
+      const initialInvoice = await generateManualInvoice({
+        companyId: context.companyId,
+        items: [
+          // Taxable NY service
+          {
+            service_id: taxableServiceId,
+            quantity: 1,
+            description: 'Taxable NY Item',
+            rate: 1000
+          },
+          // Non-taxable service
+          {
+            service_id: nonTaxableServiceId,
+            quantity: 1,
+            description: 'Non-Taxable Item',
+            rate: 500
+          }
+        ]
+      });
+
+      // 3. Verify initial state - tax should only be on the taxable item
+      expect(initialInvoice.subtotal).toBe(1500); // 1000 + 500
+      expect(initialInvoice.tax).toBe(89); // 8.875% of 1000 = 88.75, rounded up to 89
+      expect(initialInvoice.total_amount).toBe(1589);
+      expect(initialInvoice.invoice_items).toHaveLength(2);
+      
+      // Verify individual item tax amounts
+      const initialTaxableItem = initialInvoice.invoice_items.find(i => i.description === 'Taxable NY Item');
+      const initialNonTaxableItem = initialInvoice.invoice_items.find(i => i.description === 'Non-Taxable Item');
+      expect(initialTaxableItem?.tax_amount).toBe(89);
+      expect(initialNonTaxableItem?.tax_amount).toBe(0);
+
+      // Get invoice ID for the update operation
+      const invoiceId = initialInvoice.invoice_id;
+      
+      // Format dates for Temporal compatibility
+      const today = new Date().toISOString().split('T')[0];
+      await context.db('invoices')
+        .where({ invoice_id: invoiceId })
+        .update({
+          invoice_date: today,
+          due_date: today
+        });
+      
+      // 4. First adjustment: Change tax region of the taxable item
+      const regionChangeInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Change the tax region by using the CA service instead
+          {
+            service_id: caServiceId, // Using CA service instead of NY
+            quantity: 1,
+            description: 'Taxable CA Item (was NY)',
+            rate: 1000
+          },
+          // Keep the non-taxable item the same
+          {
+            service_id: nonTaxableServiceId,
+            quantity: 1,
+            description: 'Non-Taxable Item',
+            rate: 500
+          }
+        ]
+      });
+      
+      // 5. Verify tax calculation after changing tax region
+      expect(regionChangeInvoice.subtotal).toBe(1500); // Same as before
+      expect(regionChangeInvoice.tax).toBe(73); // 7.25% of 1000 = 72.5, rounded up to 73
+      expect(regionChangeInvoice.total_amount).toBe(1573);
+      
+      // Verify individual item tax amounts
+      const regionChangeTaxableItem = regionChangeInvoice.invoice_items.find(i =>
+        i.description === 'Taxable CA Item (was NY)');
+      expect(regionChangeTaxableItem?.tax_amount).toBe(73);
+      
+      // 6. Second adjustment: Convert non-taxable item to taxable, and vice versa
+      const taxStatusChangeInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Change previously taxable item to use non-taxable service
+          {
+            service_id: nonTaxableServiceId,
+            quantity: 1,
+            description: 'Now Non-Taxable Item',
+            rate: 1000
+          },
+          // Change previously non-taxable item to use taxable service
+          {
+            service_id: taxableServiceId,
+            quantity: 1,
+            description: 'Now Taxable Item',
+            rate: 500
+          }
+        ]
+      });
+      
+      // 7. Verify tax calculation after switching tax status
+      expect(taxStatusChangeInvoice.subtotal).toBe(1500); // Same as before
+      expect(taxStatusChangeInvoice.tax).toBe(45); // 8.875% of 500 = 44.375, rounded up to 45
+      expect(taxStatusChangeInvoice.total_amount).toBe(1545);
+      
+      // Verify individual item tax amounts
+      const nowNonTaxableItem = taxStatusChangeInvoice.invoice_items.find(i =>
+        i.description === 'Now Non-Taxable Item');
+      const nowTaxableItem = taxStatusChangeInvoice.invoice_items.find(i =>
+        i.description === 'Now Taxable Item');
+      expect(nowNonTaxableItem?.tax_amount).toBe(0);
+      expect(nowTaxableItem?.tax_amount).toBe(45);
+      
+      // 8. Third adjustment: Add a discount that affects tax calculation
+      const discountAdjustmentInvoice = await updateManualInvoice(invoiceId, {
+        companyId: context.companyId,
+        items: [
+          // Keep the taxable item
+          {
+            service_id: taxableServiceId,
+            quantity: 2, // Double the quantity
+            description: 'Taxable Item',
+            rate: 1000 // Double the rate
+          },
+          // Add a discount (which should not reduce the taxable base)
+          {
+            service_id: '',
+            quantity: 1,
+            description: 'Discount',
+            is_discount: true,
+            applies_to_service_id: taxableServiceId,
+            rate: -500
+          }
+        ]
+      });
+      
+      // 9. Verify tax calculation with discount
+      // Subtotal: (2 * 1000) + (-500) = 1500
+      expect(discountAdjustmentInvoice.subtotal).toBe(1500);
+      
+      // Tax should be calculated on the full pre-discount amount: 8.875% of 2000 = 177.5, rounded up to 178
+      // This is because discounts don't reduce the taxable base per the tax allocation strategy
+      expect(discountAdjustmentInvoice.tax).toBe(178);
+      expect(discountAdjustmentInvoice.total_amount).toBe(1678);
+      
+      // Verify discount doesn't have tax
+      const discountItem = discountAdjustmentInvoice.invoice_items.find(i =>
+        i.description === 'Discount');
+      expect(discountItem?.is_discount).toBe(true);
+      expect(discountItem?.tax_amount).toBe(0);
+      
+      // 10. Verify transaction records are updated
+      const transactions = await context.db('transactions')
+        .where({
+          invoice_id: initialInvoice.invoice_id,
+          tenant: context.tenantId
+        })
+        .orderBy('created_at', 'desc');
+
+      // Should have one invoice_generated and three invoice_adjustment transactions
+      expect(transactions).toHaveLength(4);
+      
+      // Find the adjustment transaction for the final discount update by the expected amount
+      const discountAdjustment = transactions.find(t =>
+        t.type === 'invoice_adjustment' && t.amount === 1678);
+      expect(discountAdjustment).toBeDefined();
+      expect(discountAdjustment?.type).toBe('invoice_adjustment');
+      expect(discountAdjustment?.amount).toBe(1678);
+    });    
   });
 });

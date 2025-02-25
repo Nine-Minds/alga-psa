@@ -6,6 +6,7 @@ import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
+import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
 
 describe('Billing Invoice Subtotal Calculations', () => {
   const testHelpers = TestContext.createHelpers();
@@ -40,6 +41,68 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
   afterAll(async () => {
     await testHelpers.afterAll();
+  });
+
+  it('should correctly handle rounding behavior for subtotal calculations with fractional amounts', async () => {
+    // Create a manual invoice with fractional quantities to test rounding behavior
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Fractional Service A',
+      service_type: 'Fixed',
+      default_rate: 9999, // $99.99 (stored in cents)
+      unit_of_measure: 'hour',
+      is_taxable: false
+    }, 'service_id');
+    
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Fractional Service B',
+      service_type: 'Fixed',
+      default_rate: 14995, // $149.95 (stored in cents)
+      unit_of_measure: 'hour',
+      is_taxable: false
+    }, 'service_id');
+
+    // Generate invoice with fractional quantities (using whole numbers for rates since they're in cents)
+    const invoice = await generateManualInvoice({
+      companyId: context.companyId,
+      items: [
+        {
+          service_id: serviceA,
+          description: 'Fractional Service A',
+          quantity: 3.33, // Fractional quantity
+          rate: 9999 // $99.99 in cents
+        },
+        {
+          service_id: serviceB,
+          description: 'Fractional Service B',
+          quantity: 2.5, // Fractional quantity
+          rate: 14995 // $149.95 in cents
+        }
+      ]
+    });
+
+    // Get invoice items to verify individual calculations
+    const invoiceItems = await context.db('invoice_items')
+      .where({ invoice_id: invoice.invoice_id })
+      .orderBy('created_at', 'asc');
+
+    expect(invoiceItems).toHaveLength(2);
+    
+    // Calculate expected values - rates are already in cents
+    const expectedItem1Amount = Math.round(3.33 * 9999); // Should be 33297 cents ($332.97)
+    const expectedItem2Amount = Math.round(2.5 * 14995);  // Should be 37488 cents ($374.88)
+    const expectedSubtotal = expectedItem1Amount + expectedItem2Amount; // Should be 70785 cents ($707.85)
+    
+    // Verify individual line item amounts are rounded correctly
+    expect(parseInt(invoiceItems[0].net_amount)).toBe(expectedItem1Amount);
+    expect(parseInt(invoiceItems[1].net_amount)).toBe(expectedItem2Amount);
+    
+    // Verify the invoice subtotal matches the sum of the rounded line item amounts
+    expect(invoice.subtotal).toBe(expectedSubtotal);
+    
+    // Verify that manually calculating subtotal matches the system's calculation
+    const calculatedSubtotal = invoiceItems.reduce((sum, item) => sum + parseInt(item.net_amount), 0);
+    expect(calculatedSubtotal).toBe(expectedSubtotal);
+    expect(calculatedSubtotal).toBe(invoice.subtotal);
   });
 
   it('should correctly calculate subtotal with multiple line items having different rates and quantities', async () => {
