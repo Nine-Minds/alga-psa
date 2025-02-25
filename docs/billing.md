@@ -2,7 +2,7 @@
 
 ## System Purpose
 
-The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of hours/retainer models, **discounts and promotions, multi-currency support, tax handling, service bundling, refunds and adjustments, and approval workflows**. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements.
+The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of hours/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, refunds and adjustments, and approval workflows. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements.
 
 ## Manual Invoicing
 
@@ -138,10 +138,11 @@ Returned Object:
 
 The system follows these key principles for tax calculation:
 
-1. **Net Subtotal Basis**
-   - Tax is calculated on the invoice's net subtotal after all discounts and adjustments
-   - The taxable base is clamped to non-negative values (Math.max(subtotal, 0))
-   - This aligns with common practice where discounts reduce the taxable amount
+1. **Pre-Discount Basis**
+   - Tax is calculated on the full pre-discount charge amounts for each taxable line item
+   - Discounts (marked with is_discount=true) are always non-taxable and do not reduce the taxable base
+   - Credits (negative non-discount items) do reduce the taxable base
+   - This approach maintains consistent tax calculations regardless of discounts applied
 
 2. **Tax Rate Application**
    - Tax rates are fetched from the tax_rates table based on:
@@ -152,50 +153,90 @@ The system follows these key principles for tax calculation:
 
 3. **Tax Allocation Logic**
    - For invoices with mixed positive and negative line items:
-     * Only positive line items receive tax allocation
+     * Only positive, taxable line items receive tax allocation
      * Negative items (discounts, refunds, etc.) have zero tax
-     * Tax is distributed proportionally among positive items
+     * Tax is distributed proportionally among positive taxable items
    - Items are processed in a consistent order (highest to lowest amount) for predictable allocation
 
 ### Tax Distribution Algorithm
 
 The system uses a precise algorithm for distributing tax across line items:
 
-1. **Sort Positive Items**
+1. **Filter Taxable Items**
    ```typescript
-   const positiveItems = items
-     .filter(item => Number(item.net_amount) > 0)
-     .sort((a, b) => Number(b.net_amount) - Number(a.net_amount));
-   ```
-
-2. **Calculate Total Tax**
-   ```typescript
-   const taxableAmount = Math.max(subtotal, 0);
-   const taxResult = await taxService.calculateTax(
-     companyId,
-     taxableAmount,
-     currentDate
+   const positiveTaxableItems = items.filter(item =>
+     item.is_taxable && parseInt(item.net_amount) > 0
    );
    ```
 
-3. **Distribute Tax**
+2. **Calculate Tax by Region**
    ```typescript
-   let remainingTax = taxResult.taxAmount;
-   for (let i = 0; i < positiveItems.length; i++) {
-     const item = positiveItems[i];
-     const netAmount = Number(item.net_amount);
-     const isLastPositiveItem = i === positiveItems.length - 1;
+   // Group items by tax region
+   const regionTotals = new Map<string, number>();
+   for (const item of positiveTaxableItems) {
+     const region = item.tax_region || company.tax_region;
+     const amount = parseInt(item.net_amount);
+     regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
+   }
 
-     let itemTaxAmount;
-     if (isLastPositiveItem) {
-       // Last item gets remaining tax
-       itemTaxAmount = remainingTax;
-     } else {
-       // Other items get proportional tax rounded down
-       itemTaxAmount = Math.floor(
-         (netAmount / totalPositiveAmount) * taxResult.taxAmount
-       );
-       remainingTax -= itemTaxAmount;
+   // Calculate tax for each region
+   for (const [region, amount] of regionTotals) {
+     const taxResult = await taxService.calculateTax(
+       companyId,
+       amount,
+       currentDate,
+       region,
+       true
+     );
+     totalTax += taxResult.taxAmount;
+   }
+   ```
+
+3. **Distribute Tax Among Items**
+   ```typescript
+   // Group items by region
+   const itemsByRegion = new Map<string, typeof positiveTaxableItems>();
+   for (const item of positiveTaxableItems) {
+     const region = item.tax_region || company.tax_region;
+     if (!itemsByRegion.has(region)) {
+       itemsByRegion.set(region, []);
+     }
+     itemsByRegion.get(region)!.push(item);
+   }
+
+   // For each region, distribute the calculated tax
+   for (const [region, items] of itemsByRegion) {
+     const regionalTotal = items.reduce((sum, item) => 
+       sum + parseInt(item.net_amount), 0);
+     
+     const regionalTaxResult = await taxService.calculateTax(
+       companyId,
+       regionalTotal,
+       currentDate,
+       region,
+       true
+     );
+
+     // Distribute regional tax proportionally
+     let remainingRegionalTax = regionalTaxResult.taxAmount;
+     for (let i = 0; i < items.length; i++) {
+       const item = items[i];
+       const isLastItem = i === items.length - 1;
+       const itemTax = isLastItem
+         ? remainingRegionalTax
+         : Math.floor((parseInt(item.net_amount) / regionalTotal) * 
+             regionalTaxResult.taxAmount);
+
+       remainingRegionalTax -= itemTax;
+
+       // Update item with tax allocation
+       await trx('invoice_items')
+         .where({ item_id: item.item_id })
+         .update({
+           tax_amount: itemTax,
+           tax_rate: regionalTaxResult.taxRate,
+           total_price: parseInt(item.net_amount) + itemTax
+         });
      }
    }
    ```
@@ -203,7 +244,7 @@ The system uses a precise algorithm for distributing tax across line items:
 This approach ensures:
 - Exact match between total tax and sum of allocated taxes
 - Consistent and predictable allocation
-- Proper handling of discounts and refunds
+- Proper handling of discounts and credits
 - Accurate tax basis for partial returns or refunds
 
 When you insert or update invoice items, the system records tax_amount and tax_rate in invoice_items, which are then included in the invoice totals.
@@ -275,7 +316,7 @@ async function previewInvoice(
 
 ## Service Types
 
-The billing system uses a strongly-typed service type system to determine how each service will be billed and calculated. There are three main service types:
+The billing system uses a strongly-typed service type system to determine how each service will be billed and calculated. There are five main service types:
 
 ### Fixed Price Services
 - Billed at a flat rate
@@ -295,9 +336,21 @@ The billing system uses a strongly-typed service type system to determine how ea
 - Used for services like storage, bandwidth, or per-user licensing
 - Calculated by the billing engine's `calculateUsageBasedCharges()` method
 
+### Product Services
+- Similar to fixed price services but typically for tangible goods
+- Not prorated like subscription services
+- Used for one-time product purchases or equipment sales
+- Calculated by the billing engine's `calculateProductCharges()` method
+
+### License Services
+- Time-limited services with specific validity periods
+- Include period_start and period_end dates
+- Used for software licenses, subscriptions with defined durations
+- Calculated by the billing engine's `calculateLicenseCharges()` method
+
 The service type is enforced through a TypeScript union type:
 ```typescript
-export type ServiceType = 'Fixed' | 'Hourly' | 'Usage';
+export type ServiceType = 'Fixed' | 'Time' | 'Usage' | 'Product' | 'License';
 ```
 
 This typing ensures that only valid service types can be assigned, maintaining data consistency throughout the billing system.
@@ -322,7 +375,7 @@ This typing ensures that only valid service types can be assigned, maintaining d
 
 4. **`service_catalog`** *(From Original Plan)*
    - **Purpose:** Defines available services that can be billed
-   - **Key Fields:** `tenant`, `service_id` (UUID, PK), `service_name`, `service_type` (Fixed|Time|Usage), `default_rate`, `unit_of_measure`, `category_id` (FK to `service_categories`)
+   - **Key Fields:** `tenant`, `service_id` (UUID, PK), `service_name`, `service_type` (Fixed|Time|Usage|Product|License), `default_rate`, `unit_of_measure`, `category_id` (FK to `service_categories`)
 
 5. **`service_categories`** *(From Original Plan)*
    - **Purpose:** Categorizes services for more organized billing
@@ -456,7 +509,7 @@ This interface represents a single billing charge.
 ```typescript
 interface IBillingCharge {
   id: string;
-  type: 'fixed' | 'time-based' | 'usage-based';
+  type: 'fixed' | 'time-based' | 'usage-based' | 'product' | 'license';
   amount: number;
   description: string;
   // ... existing code ...
@@ -509,6 +562,62 @@ Multiple IBillingCharges are combined to create IInvoiceItems.
 IInvoiceItems are grouped into an IInvoice for final billing presentation.
 Understanding these data structures is essential for developers working on the billing system, as they dictate how information flows through the various components of the system.
 
+## Credit System
+
+The billing system includes a comprehensive credit management system that allows companies to maintain credit balances and apply them to invoices. Key features include:
+
+1. **Credit Sources**
+   - **Prepayment Invoices**: Companies can make prepayments that are converted to credits
+   - **Negative Invoices**: Invoices with negative totals automatically generate credits when finalized
+   - **Adjustments**: Manual credit adjustments can be made to company accounts
+
+2. **Credit Application**
+   - Credits can be applied to any outstanding invoice
+   - Applied automatically during invoice finalization
+   - Can be applied manually to specific invoices
+   - Credit applications are recorded as transactions
+   - Real-time credit balance updates
+
+3. **Credit Transaction Types**
+   - **credit_issuance**: Generated when a prepayment is processed
+   - **credit_issuance_from_negative_invoice**: Generated when a negative invoice is finalized
+   - **credit_application**: Applied to an invoice to reduce the balance due
+   - **credit_adjustment**: Manual adjustment to a company's credit balance
+   - **credit_expiration**: When credits expire (if configured with expiration dates)
+   - **credit_transfer**: When credits are transferred between accounts
+
+4. **Implementation Details**
+   ```typescript
+   // Creating credit from a negative invoice
+   if (invoice && invoice.total_amount < 0) {
+     // Get absolute value of negative total
+     const creditAmount = Math.abs(invoice.total_amount);
+     
+     // Update company credit balance
+     await CompanyBillingPlan.updateCompanyCredit(invoice.company_id, creditAmount);
+     
+     // Record a credit issuance transaction
+     await trx('transactions').insert({
+       transaction_id: uuidv4(),
+       company_id: invoice.company_id,
+       invoice_id: invoiceId,
+       amount: creditAmount,
+       type: 'credit_issuance_from_negative_invoice',
+       status: 'completed',
+       description: `Credit issued from negative invoice ${invoice.invoice_number}`,
+       created_at: new Date().toISOString(),
+       balance_after: currentBalance + creditAmount,
+       tenant
+     });
+   }
+   ```
+
+5. **Credit Tracking**
+   - Company credit balances are managed and tracked in real-time
+   - Credits are displayed on the billing dashboard
+   - Detailed transaction history records all credit activities
+   - Credits can be configured with expiration dates and usage rules
+
 ## Important Implementation Details
 
 1. **Multi-tenancy** *(From Original Plan)*
@@ -542,88 +651,6 @@ Understanding these data structures is essential for developers working on the b
    - Use the `billing_frequency` from **`billing_plans`** to determine when to generate invoices.
    - Implement a job scheduler to automate recurring invoice generation.
    - Handle different billing frequencies for multiple active plans.
-
-## Invoice Source Tracking
-
-The system tracks the source of each invoice item through linking tables:
-
-- `invoice_time_entries`: Links time entries to specific invoice items
-- `invoice_usage_records`: Links usage records to specific invoice items
-
-This provides:
-- Clear audit trail of what was billed
-- Prevention of double-billing
-- Ability to track invoiced vs non-invoiced entries
-
-Example schema:
-```sql
-CREATE TABLE invoice_time_entries (
-  invoice_time_entry_id UUID PRIMARY KEY,
-  invoice_id UUID NOT NULL,
-  entry_id UUID NOT NULL,
-  tenant UUID NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id),
-  FOREIGN KEY (entry_id) REFERENCES time_entries(entry_id)
-);
-```
-
-## Credit System
-
-The billing system includes a comprehensive credit management system that allows companies to maintain credit balances and apply them to invoices. Key features include:
-
-1. **Prepayment Handling**
-   - Companies can make prepayments that are converted to credit
-   - Prepayment invoices are tracked through their status field
-   - Prepayments are tracked separately from regular invoices through the invoice status
-
-2. **Credit Application**
-   - Credits can be applied to any outstanding invoice
-   - Multiple credit allocations can be tracked per invoice
-   - Credit applications are recorded as transactions
-   - Real-time credit balance updates
-
-3. **Credit History**
-   - Detailed tracking of all credit-related transactions
-   - Support for filtering by date ranges
-   - Transaction types include: credit, prepayment, invoice_application, credit_refund
-
-4. **Integration**
-   - Seamless integration with existing invoice system
-   - Automatic credit balance management
-   - Transaction-based approach ensures data consistency
-
-## Service Catalog Management
-
-The billing system now includes a Service Catalog Management feature, allowing MSPs to manage their offered services efficiently. This feature is integrated into the Billing Dashboard and provides the following functionalities:
-
-1. **View Services**: Users can view a list of all services in the catalog, including their names, default rates, and categories.
-
-2. **Add New Services**: MSPs can add new services to their catalog by providing the service name, default rate, and selecting a category.
-
-3. **Edit Existing Services**: Users can modify the details of existing services, including their names, default rates, and categories.
-
-4. **Delete Services**: Services that are no longer offered can be removed from the catalog.
-
-5. **Category Management**: Services are organized into categories for better organization and easier management.
-
-6. **Real-time Updates**: Changes made to the service catalog are immediately reflected in the billing dashboard and other relevant parts of the system.
-
-7. **Integration with Billing Plans**: The service catalog is integrated with the billing plans, allowing MSPs to easily add services to plans and ensure consistent pricing across the system.
-
-### Implementation Details
-
-- The Service Catalog Management is implemented as a separate component (`ServiceCatalogManager`) within the Billing Dashboard.
-- CRUD operations for services are handled by dedicated functions in the `serviceActions.ts` file.
-- The Billing Dashboard component manages the overall state of services and passes update callbacks to the Service Catalog Manager.
-- Changes in the service catalog trigger updates in related components, ensuring data consistency across the application.
-
-### Best Practices
-
-- Regularly review and update the service catalog to ensure it reflects current offerings.
-- Use meaningful and consistent naming conventions for services and categories.
-- Set default rates that align with your pricing strategy, but remember that these can be overridden in specific billing plans.
-- Consider the impact of deleting services, especially if they are currently used in active billing plans.
 
 6. **Custom Pricing** *(From Original Plan)*
    - Use `custom_rate` in **`plan_services`** to override default service rates for specific plans.
@@ -671,121 +698,48 @@ The billing system now includes a Service Catalog Management feature, allowing M
     - Create comprehensive reporting tools that can break down billing by plan type, service category, individual services, and apply filters for discounts and taxes. *(New)*
     - Implement specific reports for bucket plan usage, including visualizations of used vs. allocated hours.
 
-15. **Discounts and Promotions** *(New)*
-    - Implement the **`discounts`** and **`plan_discounts`** tables to manage discounts and promotions.
-    - Update the billing engine to apply discounts during invoice generation.
-    - Support various discount types (percentage, fixed amount, time-bound offers).
+## Transaction Types
 
-16. **Service Dependencies and Bundling** *(New)*
-    - Use the **`service_dependencies`** table to define prerequisite or dependent services.
-    - Use the **`service_bundles`** and **`bundle_services`** tables to offer grouped services at bundled prices.
-    - Adjust the billing logic to handle bundles and enforce service dependencies.
+The billing system logs all financial events through the transactions table. Each transaction has a specific type that categorizes the financial activity. The system supports the following transaction types:
 
-17. **Refunds, Credits, and Adjustments** *(New)*
-    - Implement the **`transactions`** table to log all financial activities.
-    - Modify the billing engine to factor in refunds, credits, and adjustments during invoice generation and account balance calculations.
+### Invoice-Related Transactions
+- **invoice_generated**: Created when a new invoice is generated
+- **invoice_adjustment**: Recorded when an invoice is adjusted
+- **invoice_cancelled**: Logged when an invoice is cancelled
 
-18. **Cancellation and Suspension Handling** *(New)*
-    - Introduce the **`client_status`** table to track the status of services and plans.
-    - Include a `status` field (active, suspended, cancelled) and `reason` for the status change.
-    - Ensure the billing engine respects these statuses during billing cycles.
+### Payment Transactions
+- **payment**: Records a payment made to an invoice
+- **partial_payment**: Indicates a partial payment towards an invoice
+- **prepayment**: Records when a company makes a payment in advance
+- **payment_reversal**: Logs the reversal of a payment
+- **payment_failed**: Records a failed payment attempt
 
-19. **Notification System** *(New)*
-    - Implement the **`notifications`** table to track communication events and preferences.
-    - Integrate with email/SMS services to automate sending of invoices, reminders, and alerts for overages or upcoming renewals.
+### Credit Transactions
+- **credit_issuance**: Generated when a prepayment is converted to credit
+- **credit_issuance_from_negative_invoice**: Created when a negative invoice generates credit
+- **credit_application**: Records when credit is applied to an invoice
+- **credit_adjustment**: Logs manual adjustments to a company's credit balance
+- **credit_expiration**: Records when credits expire
+- **credit_transfer**: Tracks credit transfers between accounts
 
-20. **Approval Workflows** *(New)*
-    - Use the **`approvals`** table to manage items pending approval, such as time entries, large usage reports, and special discounts.
-    - Incorporate user roles and permissions to handle who can approve which items.
-    - Enhance data integrity and oversight through the approval process.
+### Fee and Discount Transactions
+- **late_fee**: Records late payment fees
+- **early_payment_discount**: Logs discounts for early payments
 
-By incorporating these new components into your system design, you will enhance the system's capability to handle discounts, taxation, multi-currency transactions, service dependencies, refunds, and approvals, providing a more robust and flexible billing solution for MSPs.
+### Refund Transactions
+- **refund_full**: Records a full refund
+- **refund_partial**: Records a partial refund
+- **refund_reversal**: Logs the reversal of a refund
 
----
+### Adjustment Transactions
+- **service_credit**: Tracks service credits issued
+- **price_adjustment**: Records adjustments to prices
+- **service_adjustment**: Logs adjustments to services
+- **billing_cycle_adjustment**: Tracks adjustments to billing cycles
+- **currency_adjustment**: Records currency exchange rate adjustments
+- **tax_adjustment**: Logs adjustments to tax calculations
 
-## List of Tests to Ensure the New Suggestions are Working
-
-1. **Discounts and Promotions Tests**
-
-   - Verify that percentage discounts are correctly applied to invoice totals.
-   - Test fixed amount discounts on specific services or plans.
-   - Ensure time-bound discounts are only applied within their valid date range.
-   - Check that discounts associated with specific clients override default plan discounts.
-
-2. **Taxation Details Tests**
-
-   - Validate that the correct tax rate is applied based on the client's region.
-   - Test tax exemptions for certain clients or services.
-   - Ensure tax calculations are accurate on invoice items.
-   - Verify that tax rates are correctly updated when tax laws change.
-
-3. **Currency Management Tests**
-
-   - Confirm that invoices are generated in the client's preferred currency.
-   - Test currency conversion calculations using current exchange rates.
-   - Validate that monetary amounts are stored with the correct currency codes.
-   - Ensure that reports aggregate financial data accurately across multiple currencies.
-
-4. **Service Dependencies and Bundling Tests**
-
-   - Verify that dependent services are automatically added when a primary service is selected.
-   - Test that service bundles are billed at the bundled price, not individual service prices.
-   - Ensure that removing a service also removes its dependent services if applicable.
-   - Check that clients cannot subscribe to services without required dependencies.
-
-5. **Refunds, Credits, and Adjustments Tests**
-
-   - Validate that refunds are correctly applied to client accounts and reflected in transactions.
-   - Test that credits reduce the client's outstanding balance appropriately.
-   - Ensure that billing adjustments are accurately recorded and affect invoice totals.
-   - Verify that the transaction history accurately reflects all financial activities.
-
-6. **Cancellation and Suspension Handling Tests**
-
-   - Confirm that services marked as suspended do not generate charges during the suspension period.
-   - Test that cancelled services are no longer billed and are removed from active client plans.
-   - Ensure that reactivating a suspended service resumes billing correctly.
-   - Validate that status changes are recorded with the correct date and reason.
-
-7. **Notification System Tests**
-
-   - Verify that invoices are sent to clients via their preferred communication method.
-   - Test that payment reminders are sent according to the schedule.
-   - Ensure that overage alerts are triggered when usage exceeds predefined thresholds.
-   - Check that notification preferences can be updated by clients and are respected.
-
-8. **Approval Workflows Tests**
-
-   - Validate that time entries exceeding a certain duration require approval before billing.
-   - Test that discounts over a certain value require managerial approval.
-   - Ensure that only authorized users can approve pending items.
-   - Verify that the approval status is correctly updated and affects billing processes.
-
-9. **Detailed Audit Trail Tests**
-
-   - Confirm that all changes to billing-related data are logged in the **`audit_logs`** table.
-   - Test that the audit logs capture who made the change, what was changed, and when.
-   - Ensure that audit logs cannot be tampered with by unauthorized users.
-   - Validate that audit reports can be generated for compliance and troubleshooting.
-
-10. **Integration Tests**
-
-    - Test the end-to-end process of creating a billing plan with discounts, assigning it to a client, and generating an invoice with taxes and currency conversion.
-    - Verify that service dependencies and bundles are handled correctly during client onboarding.
-    - Ensure that cancellations, refunds, and adjustments are accurately reflected in client accounts and financial reports.
-    - Test that notifications and approvals are integrated seamlessly into billing workflows.
-
-11. **Concurrency and Data Integrity Tests**
-
-    - Simulate concurrent billing operations to test for race conditions.
-    - Verify that transactions are atomic and data remains consistent under high load.
-    - Ensure that approval processes prevent unapproved data from affecting billing.
-
-By performing these tests, you can ensure that the new features are functioning correctly and integrate smoothly with the existing system components. This will help maintain the reliability and accuracy of your billing system as it becomes more complex.
-
----
-
-I hope this updated plan and the list of tests help you in enhancing your MSP billing system. Please let me know if you need further assistance with any specific component or implementation detail.
+This comprehensive transaction system ensures a complete audit trail of all financial activities within the billing system, supporting accurate financial reporting and reconciliation.
 
 ```mermaid
 erDiagram
@@ -838,275 +792,250 @@ erDiagram
     tax_rates ||--o{ invoice_items : applies_to               
 
     service_dependencies }o--|| service_catalog : requires    
+service_bundles ||--o{ bundle_services : groups
 
-    service_bundles ||--o{ bundle_services : groups           
+approvals ||--o{ audit_logs : generates
 
-    approvals ||--o{ audit_logs : generates                   
+%% Table Definitions
+tenants {
+    UUID tenant PK
+    string company_name
+    string email
+    string plan
+}
 
-    %% Table Definitions
-    tenants {
-        UUID tenant PK
-        string company_name
-        string email
-        string plan
-    }
+companies {
+    UUID tenant PK,FK
+    UUID company_id PK
+    string company_name
+    string billing_type
+}
 
-    companies {
-        UUID tenant PK,FK
-        UUID company_id PK
-        string company_name
-        string billing_type
-    }
+users {
+    UUID tenant PK,FK
+    UUID user_id PK
+    string email
+    string role
+    decimal rate
+}
 
-    users {
-        UUID tenant PK,FK
-        UUID user_id PK
-        string email
-        string role
-        decimal rate
-    }
+service_catalog {
+    UUID tenant PK,FK
+    UUID service_id PK
+    string service_name
+    string service_type
+    decimal default_rate
+    string unit_of_measure
+    UUID category_id FK
+}
 
-    service_catalog {
-        UUID tenant PK,FK
-        UUID service_id PK
-        string service_name
-        string service_type
-        decimal default_rate
-        string unit_of_measure
-        UUID category_id FK
-    }
+service_categories {
+    UUID tenant PK,FK
+    UUID category_id PK
+    string category_name
+    string description
+}
 
-    service_categories {
-        UUID tenant PK,FK
-        UUID category_id PK
-        string category_name
-        string description
-    }
+billing_plans {
+    UUID tenant PK,FK
+    UUID plan_id PK
+    string plan_name
+    string billing_frequency
+    boolean is_custom
+    string plan_type
+}
 
-    billing_plans {
-        UUID tenant PK,FK
-        UUID plan_id PK
-        string plan_name
-        string billing_frequency
-        boolean is_custom
-        string plan_type
-    }
+plan_services {
+    UUID tenant PK,FK
+    UUID plan_id PK,FK
+    UUID service_id PK,FK
+    integer quantity
+    decimal custom_rate
+}
 
-    plan_services {
-        UUID tenant PK,FK
-        UUID plan_id PK,FK
-        UUID service_id PK,FK
-        integer quantity
-        decimal custom_rate
-    }
+company_billing_plans {
+    UUID tenant PK,FK
+    UUID company_billing_id PK
+    UUID company_id FK
+    UUID plan_id FK
+    UUID service_category FK
+    date start_date
+    date end_date
+    boolean is_active
+}
 
-    company_billing_plans {
-        UUID tenant PK,FK
-        UUID company_billing_id PK
-        UUID company_id FK
-        UUID plan_id FK
-        UUID service_category FK
-        date start_date
-        date end_date
-        boolean is_active
-    }
+time_entries {
+    UUID tenant PK,FK
+    UUID entry_id PK
+    UUID user_id FK
+    UUID ticket_id FK
+    UUID service_id FK
+    timestamp start_time
+    timestamp end_time
+    integer duration
+    boolean billable
+}
 
-    time_entries {
-        UUID tenant PK,FK
-        UUID entry_id PK
-        UUID user_id FK
-        UUID ticket_id FK
-        UUID service_id FK
-        timestamp start_time
-        timestamp end_time
-        integer duration
-        boolean billable
-    }
+usage_tracking {
+    UUID tenant PK,FK
+    UUID usage_id PK
+    UUID company_id FK
+    UUID service_id FK
+    date usage_date
+    decimal quantity
+}
 
-    usage_tracking {
-        UUID tenant PK,FK
-        UUID usage_id PK
-        UUID company_id FK
-        UUID service_id FK
-        date usage_date
-        decimal quantity
-    }
+invoices {
+    UUID tenant PK,FK
+    UUID invoice_id PK
+    UUID company_id FK
+    date invoice_date
+    date due_date
+    decimal total_amount
+    string status
+    string currency_code FK
+}
 
-    invoices {
-        UUID tenant PK,FK
-        UUID invoice_id PK
-        UUID company_id FK
-        date invoice_date
-        date due_date
-        decimal total_amount
-        string status
-        string currency_code FK           
-    }
+invoice_items {
+    UUID tenant PK,FK
+    UUID invoice_id PK,FK
+    UUID item_id PK
+    UUID service_id FK
+    string description
+    decimal quantity
+    decimal unit_price
+    decimal total_price
+    string currency_code FK
+    UUID tax_rate_id FK
+}
 
-    invoice_items {
-        UUID tenant PK,FK
-        UUID invoice_id PK,FK
-        UUID item_id PK
-        UUID service_id FK
-        string description
-        decimal quantity
-        decimal unit_price
-        decimal total_price
-        string currency_code FK           
-        UUID tax_rate_id FK               
-    }
+bucket_plans {
+    UUID tenant PK,FK
+    UUID bucket_plan_id PK
+    UUID plan_id FK
+    integer total_hours
+    string billing_period
+    decimal overage_rate
+}
 
-    bucket_plans {
-        UUID tenant PK,FK
-        UUID bucket_plan_id PK
-        UUID plan_id FK
-        integer total_hours
-        string billing_period
-        decimal overage_rate
-    }
+bucket_usage {
+    UUID tenant PK,FK
+    UUID usage_id PK
+    UUID bucket_plan_id FK
+    UUID company_id FK
+    date period_start
+    date period_end
+    decimal hours_used
+    decimal overage_hours
+}
 
-    bucket_usage {
-        UUID tenant PK,FK
-        UUID usage_id PK
-        UUID bucket_plan_id FK
-        UUID company_id FK
-        date period_start
-        date period_end
-        decimal hours_used
-        decimal overage_hours
-    }
+%% New Tables
+discounts {
+    UUID tenant PK,FK
+    UUID discount_id PK
+    string discount_name
+    string discount_type
+    decimal value
+    date start_date
+    date end_date
+    boolean is_active
+}
 
-    %% New Tables
-    discounts {                               
-        UUID tenant PK,FK
-        UUID discount_id PK
-        string discount_name
-        string discount_type
-        decimal value
-        date start_date
-        date end_date
-        boolean is_active
-    }
+plan_discounts {
+    UUID tenant PK,FK
+    UUID plan_id FK
+    UUID company_id FK
+    UUID discount_id FK
+}
 
-    plan_discounts {                          
-        UUID tenant PK,FK
-        UUID plan_id FK 
-        UUID company_id FK 
-        UUID discount_id FK
-    }
+tax_rates {
+    UUID tenant PK,FK
+    UUID tax_rate_id PK
+    string region
+    decimal tax_percentage
+    string description
+    date start_date
+    date end_date
+}
 
-    tax_rates {                               
-        UUID tenant PK,FK
-        UUID tax_rate_id PK
-        string region
-        decimal tax_percentage
-        string description
-        date start_date
-        date end_date
-    }
+currencies {
+    string currency_code PK
+    string currency_name
+    decimal exchange_rate_to_base
+    boolean is_active
+}
 
-    currencies {                              
-        string currency_code PK
-        string currency_name
-        decimal exchange_rate_to_base
-        boolean is_active
-    }
+service_dependencies {
+    UUID tenant PK,FK
+    UUID service_id PK,FK
+    UUID dependent_service_id PK,FK
+}
 
-    service_dependencies {                    
-        UUID tenant PK,FK
-        UUID service_id PK,FK
-        UUID dependent_service_id PK,FK
-    }
+service_bundles {
+    UUID tenant PK,FK
+    UUID bundle_id PK
+    string bundle_name
+    string bundle_description
+}
 
-    service_bundles {                         
-        UUID tenant PK,FK
-        UUID bundle_id PK
-        string bundle_name
-        string bundle_description
-    }
+bundle_services {
+    UUID tenant PK,FK
+    UUID bundle_id PK,FK
+    UUID service_id PK,FK
+}
 
-    bundle_services {                         
-        UUID tenant PK,FK
-        UUID bundle_id PK,FK
-        UUID service_id PK,FK
-    }
+transactions {
+    UUID tenant PK,FK
+    UUID transaction_id PK
+    UUID company_id FK
+    UUID invoice_id FK
+    string transaction_type
+    decimal amount
+    string currency_code FK
+    date transaction_date
+    string description
+}
 
-    transactions {                            
-        UUID tenant PK,FK
-        UUID transaction_id PK
-        UUID company_id FK
-        UUID invoice_id FK 
-        string transaction_type "Enum: credit_application, credit_issuance, credit_adjustment, credit_expiration, credit_transfer, payment, partial_payment, prepayment, payment_reversal, payment_failed, invoice_generated, invoice_adjustment, invoice_cancelled, late_fee, early_payment_discount, refund_full, refund_partial, refund_reversal, service_credit, price_adjustment, service_adjustment, billing_cycle_adjustment, currency_adjustment, tax_adjustment"
-        decimal amount
-        string currency_code FK
-        date transaction_date
-        string description
-    }
+approvals {
+    UUID tenant PK,FK
+    UUID approval_id PK
+    string item_type
+    UUID item_id FK
+    UUID requested_by FK
+    UUID approved_by FK
+    string status
+    date request_date
+    date approval_date
+}
 
-    approvals {                               
-        UUID tenant PK,FK
-        UUID approval_id PK
-        string item_type
-        UUID item_id FK
-        UUID requested_by FK
-        UUID approved_by FK 
-        string status
-        date request_date
-        date approval_date 
-    }
+notifications {
+    UUID tenant PK,FK
+    UUID notification_id PK
+    UUID company_id FK
+    UUID user_id FK
+    string notification_type
+    string message
+    date sent_date
+    string status
+}
 
-    notifications {                           
-        UUID tenant PK,FK
-        UUID notification_id PK
-        UUID company_id FK 
-        UUID user_id FK 
-        string notification_type
-        string message
-        date sent_date
-        string status
-    }
+audit_logs {
+    UUID tenant PK,FK
+    UUID audit_id PK
+    UUID user_id FK
+    string operation
+    string table_name
+    UUID record_id
+    string changed_data
+    timestamp timestamp
+}
 
-    audit_logs {                              
-        UUID tenant PK,FK
-        UUID audit_id PK
-        UUID user_id FK
-        string operation
-        string table_name
-        UUID record_id
-        string changed_data
-        timestamp timestamp
-    }
-
-    %% Relationships for New Tables
-
-    plan_discounts }o--|| discounts : applies_to       
-    plan_discounts }o--|| billing_plans : associated_with  
-    plan_discounts }o--|| companies : specific_to          
-
-    invoice_items ||--|| tax_rates : taxed_by              
-
-    invoices ||--|| currencies : in_currency               
-    invoice_items ||--|| currencies : in_currency          
-    transactions ||--|| currencies : in_currency           
-
-    service_dependencies }o--|| service_catalog : requires 
-
-    bundle_services }o--|| service_bundles : part_of       
-    bundle_services }o--|| service_catalog : includes      
-
-    transactions }o--|| invoices : associated_with         
-
-    approvals }o--|| users : requested_by                  
-    approvals }o--|| users : approved_by                   
-
-    notifications }o--|| users : sent_to                   
-    notifications }o--|| companies : sent_to               
-
-    audit_logs }o--|| users : performed_by                 
-
-    %% Additional Relationships
-    companies ||--o{ notifications : receives              
-    users ||--o{ notifications : receives                  
-    companies ||--o{ audit_logs : generates                
-    users ||--o{ audit_logs : generates                    
+%% Additional Relationships
+notifications }o--|| users : sent_to
+notifications }o--|| companies : sent_to
+audit_logs }o--|| users : performed_by
+companies ||--o{ notifications : receives
+users ||--o{ notifications : receives
+companies ||--o{ audit_logs : generates
+users ||--o{ audit_logs : generates
 ```

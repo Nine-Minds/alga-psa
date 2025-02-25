@@ -722,4 +722,157 @@ describe('Credit Application Tests', () => {
     expect(parseFloat(creditTransaction.amount)).toBe(-expectedCreditApplied);
     expect(creditTransaction.description).toContain('Applied credit to invoice');
   });
+  
+  it('should create credits from regular invoices with negative totals when they are finalized', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Negative Invoice Credit Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create services with negative rates (credits)
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Assign services to plan
+    await context.db('plan_services').insert([
+      {
+        plan_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        plan_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
+    const now = createTestDate();
+    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: endDate,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+
+    // Assign plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
+    // Step 1: Check initial credit balance (should be 0)
+    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(initialCredit).toBe(0);
+
+    // Step 2: Generate invoice with negative total
+    const invoice = await generateInvoice(billingCycleId);
+    
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+    
+    // Verify the invoice has a negative total
+    expect(invoice.total_amount).toBeLessThan(0);
+    const negativeAmount = invoice.total_amount;
+    const creditAmount = Math.abs(negativeAmount);
+    
+    console.log('Generated negative invoice:', {
+      invoice_id: invoice.invoice_id,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax,
+      total_amount: invoice.total_amount
+    });
+    
+    // Step 3: Finalize the invoice to trigger credit creation
+    await finalizeInvoice(invoice.invoice_id);
+    
+    // Step 4: Verify credit balance has been increased
+    const updatedCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(updatedCredit).toBe(creditAmount);
+    
+    // Step 5: Verify transaction record
+    const creditTransaction = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice.invoice_id,
+        type: 'credit_issuance_from_negative_invoice'
+      })
+      .first();
+    
+    // Verify transaction details
+    expect(creditTransaction).toBeTruthy();
+    expect(parseFloat(creditTransaction.amount)).toBe(creditAmount);
+    expect(creditTransaction.description).toContain('Credit issued from negative invoice');
+    
+    // Verify invoice status
+    const finalizedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoice.invoice_id })
+      .first();
+    
+    expect(finalizedInvoice.status).toBe('sent');
+    expect(finalizedInvoice.finalized_at).toBeTruthy();
+  });
 });

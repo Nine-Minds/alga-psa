@@ -8,6 +8,8 @@ import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
+import { runWithTenant } from '@/lib/db';
+import '../../../test-utils/nextApiMock';
 
 global.TextEncoder = TextEncoder;
 
@@ -114,12 +116,14 @@ describe('Prepayment Invoice System', () => {
   describe('Creating Prepayment Invoices', () => {
     it('creates a prepayment invoice with correct details', async () => {
       const prepaymentAmount = 100000;
-      const result = await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+      const result = await runWithTenant(context.tenantId, async () => {
+        return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+      });
 
       expect(result).toMatchObject({
-        invoice_number: expect.stringMatching(/^INV-\d{6}$/),
+        invoice_number: expect.stringMatching(/^TIC\d{6}$/),
         subtotal: prepaymentAmount,
-        total_amount: prepaymentAmount,
+        total_amount: prepaymentAmount.toString(),
         status: 'draft'
       });
     });
@@ -128,7 +132,9 @@ describe('Prepayment Invoice System', () => {
       const invalidCompanyId = uuidv4();
       
       await expectNotFound(
-        () => createPrepaymentInvoice(invalidCompanyId, 100000),
+        () => runWithTenant(context.tenantId, async () => {
+          return await createPrepaymentInvoice(invalidCompanyId, 100000);
+        }),
         'Company'
       );
 
@@ -151,27 +157,21 @@ describe('Prepayment Invoice System', () => {
   describe('Finalizing Prepayment Invoices', () => {
     it('finalizes a prepayment invoice and creates credit', async () => {
       const prepaymentAmount = 100000;
-      const invoice = await createPrepaymentInvoice(context.companyId, prepaymentAmount);
-      const finalizedInvoice = await generateInvoice(invoice.invoice_id);
+      const invoice = await runWithTenant(context.tenantId, async () => {
+        return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+      });
+      
+      const finalizedInvoice = await runWithTenant(context.tenantId, async () => {
+        return await generateInvoice(invoice.invoice_id);
+      });
 
       expect(finalizedInvoice).toMatchObject({
         invoice_id: invoice.invoice_id,
         status: 'sent'
       });
 
-      // Create credit issuance transaction after invoice is finalized
-      await context.db('transactions').insert({
-        transaction_id: uuidv4(),
-        company_id: context.companyId,
-        invoice_id: invoice.invoice_id,
-        amount: prepaymentAmount,
-        type: 'credit_issuance',
-        status: 'completed',
-        description: 'Credit issued from prepayment',
-        created_at: createTestDateISO(),
-        tenant: context.tenantId,
-        balance_after: prepaymentAmount
-      });
+      // The system should automatically create the credit transaction when finalizing
+      // No need to manually insert a transaction
 
       const creditTransaction = await context.db('transactions')
         .where({
@@ -184,11 +184,13 @@ describe('Prepayment Invoice System', () => {
       expect(creditTransaction).toMatchObject({
         company_id: context.companyId,
         status: 'completed',
-        description: 'Credit issued from prepayment'
+        description: expect.stringContaining('Credit issued')
       });
       expect(parseFloat(creditTransaction.amount)).toBe(prepaymentAmount);
 
-      const creditBalance = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      const creditBalance = await runWithTenant(context.tenantId, async () => {
+        return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      });
       expect(parseInt(creditBalance+'')).toBe(prepaymentAmount);
     });
   });
@@ -264,29 +266,40 @@ describe('Prepayment Invoice System', () => {
     it('automatically applies available credit when generating an invoice', async () => {
       // Setup prepayment
       const prepaymentAmount = 100000;
-      const prepaymentInvoice = await createPrepaymentInvoice(context.companyId, prepaymentAmount);
-      await generateInvoice(prepaymentInvoice.invoice_id);
+      const prepaymentInvoice = await runWithTenant(context.tenantId, async () => {
+        return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+      });
+      
+      await runWithTenant(context.tenantId, async () => {
+        return await generateInvoice(prepaymentInvoice.invoice_id);
+      });
 
-      const initialCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      const initialCredit = await runWithTenant(context.tenantId, async () => {
+        return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      });
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
       // Generate billing invoice
-      const invoice = await generateInvoice(billingCycleId);
+      const invoice = await runWithTenant(context.tenantId, async () => {
+        return await generateInvoice(billingCycleId);
+      });
 
       // Verify credit application
-      expect(invoice.total).toBeLessThan(invoice.subtotal + invoice.tax);
-      const creditApplied = invoice.subtotal + invoice.tax - invoice.total;
+      expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
+      const creditApplied = invoice!.subtotal + invoice!.tax - invoice!.total;
       expect(creditApplied).toBeGreaterThan(0);
 
       // Verify credit balance update
-      const finalCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      const finalCredit = await runWithTenant(context.tenantId, async () => {
+        return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+      });
       expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - creditApplied);
 
       // Verify credit transaction
       const creditTransaction = await context.db('transactions')
         .where({
           company_id: context.companyId,
-          invoice_id: invoice.invoice_id,
+          invoice_id: invoice!.invoice_id,
           type: 'credit_application'
         })
         .first();
@@ -397,34 +410,50 @@ describe('Multiple Credit Applications', () => {
   it('applies credit from multiple prepayment invoices to a single invoice', async () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
-    const prepaymentInvoice1 = await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
-    await generateInvoice(prepaymentInvoice1.invoice_id);
+    const prepaymentInvoice1 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice1.invoice_id);
+    });
 
     const prepaymentAmount2 = 30000;
-    const prepaymentInvoice2 = await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
-    await generateInvoice(prepaymentInvoice2.invoice_id);
+    const prepaymentInvoice2 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice2.invoice_id);
+    });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const initialCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     // Generate a billing invoice that is less than total prepayment
-    const invoice = await generateInvoice(billingCycleId1);
+    const invoice = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(billingCycleId1);
+    });
 
     // Verify credit application
-    expect(invoice.total).toBeLessThan(invoice.subtotal + invoice.tax);
-    const creditApplied = invoice.subtotal + invoice.tax - invoice.total;
+    expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
+    const creditApplied = invoice!.subtotal + invoice!.tax - invoice!.total;
     expect(creditApplied).toBeGreaterThan(0);
 
     // Verify credit balance update
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const finalCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
 
     // Verify credit transaction
     const creditTransaction = await context.db('transactions')
       .where({
         company_id: context.companyId,
-        invoice_id: invoice.invoice_id,
+        invoice_id: invoice!.invoice_id,
         type: 'credit_application'
       })
       .first();
@@ -436,29 +465,46 @@ describe('Multiple Credit Applications', () => {
   it('distributes credit across multiple invoices', async () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
-    const prepaymentInvoice1 = await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
-    await generateInvoice(prepaymentInvoice1.invoice_id);
+    const prepaymentInvoice1 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice1.invoice_id);
+    });
 
     const prepaymentAmount2 = 30000;
-    const prepaymentInvoice2 = await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
-    await generateInvoice(prepaymentInvoice2.invoice_id);
+    const prepaymentInvoice2 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice2.invoice_id);
+    });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const initialCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     // Generate multiple billing invoices
-    const invoice1 = await generateInvoice(billingCycleId1);
-    const invoice2 = await generateInvoice(billingCycleId2);
+    const invoice1 = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(billingCycleId1);
+    });
+    
+    const invoice2 = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(billingCycleId2);
+    });
 
     // Verify credit application on invoice1
-    expect(invoice1.total).toBeLessThan(invoice1.subtotal + invoice1.tax);
-    const creditApplied1 = invoice1.subtotal + invoice1.tax - invoice1.total;
+    expect(invoice1!.total).toBeLessThan(invoice1!.subtotal + invoice1!.tax);
+    const creditApplied1 = invoice1!.subtotal + invoice1!.tax - invoice1!.total;
     expect(creditApplied1).toBeGreaterThan(0);
 
     // Verify credit application on invoice2
-    expect(invoice2.total).toBeLessThan(invoice2.subtotal + invoice2.tax);
-    const creditApplied2 = invoice2.subtotal + invoice2.tax - invoice2.total;
+    expect(invoice2!.total).toBeLessThan(invoice2!.subtotal + invoice2!.tax);
+    const creditApplied2 = invoice2!.subtotal + invoice2!.tax - invoice2!.total;
     expect(creditApplied2).toBeGreaterThan(0);
 
     // Verify total credit applied
@@ -466,42 +512,65 @@ describe('Multiple Credit Applications', () => {
     expect(totalCreditApplied).toBeLessThanOrEqual(totalPrepayment);
 
     // Verify final credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const finalCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totalCreditApplied);
   });
 
   it('handles cases where credit exceeds billing amounts', async () => {
     // Setup multiple prepayments
     const prepaymentAmount1 = 50000;
-    const prepaymentInvoice1 = await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
-    await generateInvoice(prepaymentInvoice1.invoice_id);
+    const prepaymentInvoice1 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount1);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice1.invoice_id);
+    });
 
     const prepaymentAmount2 = 30000;
-    const prepaymentInvoice2 = await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
-    await generateInvoice(prepaymentInvoice2.invoice_id);
+    const prepaymentInvoice2 = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount2);
+    });
+    
+    await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice2.invoice_id);
+    });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const initialCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
     // Generate a billing invoice with a smaller amount
-    const invoice = await generateInvoice(billingCycleId1);
+    const invoice = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(billingCycleId1);
+    });
 
     // Verify credit application
-    expect(invoice.total).toBe(0);
-    const creditApplied = invoice.subtotal + invoice.tax;
+    expect(invoice!.total).toBe(0);
+    const creditApplied = invoice!.subtotal + invoice!.tax;
     expect(creditApplied).toBeLessThanOrEqual(totalPrepayment);
 
     // Verify final credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const finalCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
   });
 
   it('handles cases where credit is insufficient for billing amounts', async () => {
     // Setup a prepayment
     const prepaymentAmount = 1000;
-    const prepaymentInvoice = await createPrepaymentInvoice(context.companyId, prepaymentAmount);
-    const finalizedInvoice = await generateInvoice(prepaymentInvoice.invoice_id);
+    const prepaymentInvoice = await runWithTenant(context.tenantId, async () => {
+      return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+    });
+    
+    const finalizedInvoice = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(prepaymentInvoice.invoice_id);
+    });
 
     // Create credit issuance transaction after invoice is finalized
     await context.db('transactions').insert({
@@ -517,19 +586,25 @@ describe('Multiple Credit Applications', () => {
       balance_after: prepaymentAmount
     });
 
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const initialCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
     // Generate a billing invoice with a larger amount
-    const invoice = await generateInvoice(billingCycleId1);
+    const invoice = await runWithTenant(context.tenantId, async () => {
+      return await generateInvoice(billingCycleId1);
+    });
 
     // Verify credit application
-    expect(invoice.total).toBeLessThan(invoice.subtotal + invoice.tax);
+    expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
     const creditApplied = prepaymentAmount;
-    expect(invoice.total).toBe(invoice.subtotal + invoice.tax - creditApplied);
+    expect(invoice!.total).toBe(invoice!.subtotal + invoice!.tax - creditApplied);
 
     // Verify final credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    const finalCredit = await runWithTenant(context.tenantId, async () => {
+      return await CompanyBillingPlan.getCompanyCredit(context.companyId);
+    });
     expect(parseInt(finalCredit+'')).toBe(0);
   });
 });

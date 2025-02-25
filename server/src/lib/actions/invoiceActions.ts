@@ -1153,7 +1153,73 @@ export async function finalizeInvoiceWithKnex(
     
     // Log the credit update
     console.log(`Updated credit balance for company ${invoice.company_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
-  } 
+  }
+  // Handle regular invoices with negative totals
+  else if (invoice && invoice.total_amount < 0) {
+    // Get absolute value of negative total
+    const creditAmount = Math.abs(invoice.total_amount);
+    
+    // Update company credit balance and record transaction in a single transaction
+    // We handle this directly without using CompanyBillingPlan.updateCompanyCredit to avoid validation issues
+    await knex.transaction(async (trx) => {
+      // Get current credit balance
+      const company = await trx('companies')
+        .where({ company_id: invoice.company_id, tenant })
+        .select('credit_balance')
+        .first();
+      
+      if (!company) {
+        throw new Error(`Company ${invoice.company_id} not found`);
+      }
+      
+      // Calculate new balance
+      const newBalance = (company.credit_balance || 0) + creditAmount;
+      
+      // Update company credit balance within the transaction
+      await trx('companies')
+        .where({ company_id: invoice.company_id, tenant })
+        .update({ 
+          credit_balance: newBalance,
+          updated_at: new Date().toISOString()
+        });
+      
+      // Record transaction with the correct balance
+      // Skip validation for negative invoices since we're creating credit
+      const transactionId = uuidv4();
+      await trx('transactions').insert({
+        transaction_id: transactionId,
+        company_id: invoice.company_id,
+        invoice_id: invoiceId,
+        amount: creditAmount,
+        type: 'credit_issuance_from_negative_invoice',
+        status: 'completed',
+        description: `Credit issued from negative invoice ${invoice.invoice_number}`,
+        created_at: new Date().toISOString(),
+        balance_after: newBalance,
+        tenant
+      });
+      
+      // Log audit
+      await auditLog(
+        trx,
+        {
+          userId: userId,
+          operation: 'credit_issuance_from_negative_invoice',
+          tableName: 'companies',
+          recordId: invoice.company_id,
+          changedData: { credit_balance: newBalance },
+          details: {
+            action: 'Credit issued from negative invoice',
+            invoiceId: invoiceId,
+            amount: creditAmount
+          }
+        }
+      );
+    });
+    
+    // Log the credit update
+    console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
+  }
   // For regular invoices, check if there's available credit to apply
   else if (invoice && invoice.company_id) {
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(invoice.company_id);

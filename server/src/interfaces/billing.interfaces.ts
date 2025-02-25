@@ -221,12 +221,13 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
 
 export type BillingCycleType = 'weekly' | 'bi-weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
 
-export type TransactionType = 
+export type TransactionType =
   | 'credit_application'
   | 'credit_issuance'
   | 'credit_adjustment'
   | 'credit_expiration'
   | 'credit_transfer'
+  | 'credit_issuance_from_negative_invoice'
   | 'payment'
   | 'partial_payment'
   | 'prepayment'
