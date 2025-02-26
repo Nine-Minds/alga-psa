@@ -1172,18 +1172,47 @@ export async function finalizeInvoiceWithKnex(
         throw new Error(`Company ${invoice.company_id} not found`);
       }
       
+      // Get company's credit expiration settings or default settings
+      const companySettings = await trx('company_billing_settings')
+        .where({
+          company_id: invoice.company_id,
+          tenant
+        })
+        .first();
+      
+      const defaultSettings = await trx('default_billing_settings')
+        .where({ tenant })
+        .first();
+      
+      // Determine expiration days - use company setting if available, otherwise use default
+      let expirationDays: number | undefined;
+      if (companySettings?.credit_expiration_days !== undefined) {
+        expirationDays = companySettings.credit_expiration_days;
+      } else if (defaultSettings?.credit_expiration_days !== undefined) {
+        expirationDays = defaultSettings.credit_expiration_days;
+      }
+      
+      // Calculate expiration date if applicable
+      let expirationDate: string | undefined;
+      if (expirationDays && expirationDays > 0) {
+        const today = new Date();
+        const expDate = new Date(today);
+        expDate.setDate(today.getDate() + expirationDays);
+        expirationDate = expDate.toISOString();
+      }
+      
       // Calculate new balance
       const newBalance = (company.credit_balance || 0) + creditAmount;
       
       // Update company credit balance within the transaction
       await trx('companies')
         .where({ company_id: invoice.company_id, tenant })
-        .update({ 
+        .update({
           credit_balance: newBalance,
           updated_at: new Date().toISOString()
         });
       
-      // Record transaction with the correct balance
+      // Record transaction with the correct balance and expiration date
       // Skip validation for negative invoices since we're creating credit
       const transactionId = uuidv4();
       await trx('transactions').insert({
@@ -1196,7 +1225,22 @@ export async function finalizeInvoiceWithKnex(
         description: `Credit issued from negative invoice ${invoice.invoice_number}`,
         created_at: new Date().toISOString(),
         balance_after: newBalance,
-        tenant
+        tenant,
+        expiration_date: expirationDate
+      });
+      
+      // Create credit tracking entry
+      await trx('credit_tracking').insert({
+        credit_id: uuidv4(),
+        tenant,
+        company_id: invoice.company_id,
+        transaction_id: transactionId,
+        amount: creditAmount,
+        remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
+        created_at: new Date().toISOString(),
+        expiration_date: expirationDate,
+        is_expired: false,
+        updated_at: new Date().toISOString()
       });
       
       // Log audit
@@ -1207,11 +1251,15 @@ export async function finalizeInvoiceWithKnex(
           operation: 'credit_issuance_from_negative_invoice',
           tableName: 'companies',
           recordId: invoice.company_id,
-          changedData: { credit_balance: newBalance },
+          changedData: {
+            credit_balance: newBalance,
+            expiration_date: expirationDate
+          },
           details: {
             action: 'Credit issued from negative invoice',
             invoiceId: invoiceId,
-            amount: creditAmount
+            amount: creditAmount,
+            expiration_date: expirationDate
           }
         }
       );

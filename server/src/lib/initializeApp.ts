@@ -1,6 +1,7 @@
 import { isEnterprise } from './features';
 import { parsePolicy } from './auth/ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
+import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import logger from '../utils/logger';
 
 export async function initializeApp() {
@@ -8,6 +9,10 @@ export async function initializeApp() {
     // Initialize event bus
     await initializeEventBus();
     logger.info('Event bus initialized');
+    
+    // Initialize scheduled jobs
+    await initializeScheduledJobs();
+    logger.info('Scheduled jobs initialized');
 
     // Register cleanup handlers
     process.on('SIGTERM', async () => {

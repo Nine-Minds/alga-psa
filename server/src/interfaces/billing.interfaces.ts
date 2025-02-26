@@ -265,6 +265,27 @@ export interface ITransaction extends TenantEntity {
   reference_number?: string;
   metadata?: Record<string, any>;
   balance_after: number;
+  expiration_date?: ISO8601String;
+  related_transaction_id?: string;
+}
+
+export interface ICreditTracking extends TenantEntity {
+  credit_id: string;
+  tenant: string;
+  company_id: string;
+  transaction_id: string;
+  amount: number;
+  remaining_amount: number;
+  created_at: ISO8601String;
+  expiration_date?: ISO8601String;
+  is_expired: boolean;
+  updated_at?: ISO8601String;
+}
+
+export interface ICreditExpirationSettings {
+  enable_credit_expiration: boolean;
+  credit_expiration_days?: number;
+  credit_expiration_notification_days?: number[];
 }
 
 export interface ITaxRate extends TenantEntity {
@@ -280,4 +301,25 @@ export interface ICompanyTaxRate extends TenantEntity {
   company_tax_rate_id?: string;
   company_id: string;
   tax_rate_id: string;
+}
+
+export interface IDefaultBillingSettings extends TenantEntity {
+  zero_dollar_invoice_handling: 'normal' | 'finalized';
+  suppress_zero_dollar_invoices: boolean;
+  enable_credit_expiration: boolean;
+  credit_expiration_days: number;
+  credit_expiration_notification_days: number[];
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+}
+
+export interface ICompanyBillingSettings extends TenantEntity {
+  company_id: string;
+  zero_dollar_invoice_handling: 'normal' | 'finalized';
+  suppress_zero_dollar_invoices: boolean;
+  enable_credit_expiration?: boolean;
+  credit_expiration_days?: number;
+  credit_expiration_notification_days?: number[];
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
 }

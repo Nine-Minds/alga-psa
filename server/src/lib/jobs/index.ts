@@ -4,6 +4,8 @@ import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { InvoiceEmailHandler, InvoiceEmailJobData } from '@/lib/jobs/handlers/invoiceEmailHandler';
 import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
+import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
+import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -30,6 +32,16 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     
+    // Register expired credits handler
+    jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
+      await expiredCreditsHandler(job.data);
+    });
+    
+    // Register expiring credits notification handler
+    jobScheduler.registerJobHandler<ExpiringCreditsNotificationJobData>('expiring-credits-notification', async (job: Job<ExpiringCreditsNotificationJobData>) => {
+      await expiringCreditsNotificationHandler(job.data);
+    });
+    
     // Register invoice handlers if storageService is provided
     if (storageService && jobService) {
       const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
@@ -51,7 +63,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 };
 
 // Export types
-export type { JobFilter, GenerateInvoiceData };
+export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData };
 
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -94,4 +106,46 @@ export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleImmediateJob(jobName, data);
+};
+
+/**
+ * Schedule a recurring job to process expired credits
+ *
+ * @param tenantId The tenant ID
+ * @param companyId Optional company ID to limit processing to a specific company
+ * @param cronExpression Cron expression for job scheduling (e.g., '0 0 * * *' for daily at midnight)
+ * @returns Job ID if successful, null otherwise
+ */
+export const scheduleExpiredCreditsJob = async (
+  tenantId: string,
+  companyId?: string,
+  cronExpression: string = '0 0 * * *' // Default: daily at midnight
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpiredCreditsJobData>(
+    'expired-credits',
+    cronExpression,
+    { tenantId, companyId }
+  );
+};
+
+/**
+ * Schedule a recurring job to send notifications about credits that will expire soon
+ *
+ * @param tenantId The tenant ID
+ * @param companyId Optional company ID to limit processing to a specific company
+ * @param cronExpression Cron expression for job scheduling (e.g., '0 9 * * *' for daily at 9:00 AM)
+ * @returns Job ID if successful, null otherwise
+ */
+export const scheduleExpiringCreditsNotificationJob = async (
+  tenantId: string,
+  companyId?: string,
+  cronExpression: string = '0 9 * * *' // Default: daily at 9:00 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ExpiringCreditsNotificationJobData>(
+    'expiring-credits-notification',
+    cronExpression,
+    { tenantId, companyId }
+  );
 };

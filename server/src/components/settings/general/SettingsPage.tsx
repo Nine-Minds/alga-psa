@@ -3,6 +3,7 @@
 
 import React from 'react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
+import CreditExpirationSettings from '../billing/CreditExpirationSettings';
 import CustomTabs, { TabContent } from "@/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -114,6 +115,7 @@ const SettingsPage = (): JSX.Element =>  {
               <div className="space-y-6">
                 <NumberingSettings entityType="INVOICE" />
                 <ZeroDollarInvoiceSettings />
+                <CreditExpirationSettings />
               </div>
             </div>
           </CardContent>

@@ -184,6 +184,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(false);
+  const [isPrepayment, setIsPrepayment] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<string>('');
 
   // Fetch invoice items when invoice changes
   useEffect(() => {
@@ -416,8 +418,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
         await generateManualInvoice({
           companyId: selectedCompany || '',
-          items: items.filter(item => !item.isRemoved).map(({ 
-            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage 
+          isPrepayment,
+          expirationDate: isPrepayment ? expirationDate : undefined,
+          items: items.filter(item => !item.isRemoved).map(({
+            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
           }) => ({
             service_id,
             description,
@@ -571,6 +575,43 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
                     className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+              )}
+
+              {/* Prepayment and Expiration Date fields */}
+              {!invoice && (
+                <div className="mb-6 space-y-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="is-prepayment"
+                      checked={isPrepayment}
+                      onChange={(e) => setIsPrepayment(e.target.checked)}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="is-prepayment" className="ml-2 block text-sm text-gray-700">
+                      This is a prepayment invoice (creates credit)
+                    </label>
+                  </div>
+                  
+                  {isPrepayment && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Credit Expiration Date
+                      </label>
+                      <div className="flex items-center">
+                        <input
+                          type="date"
+                          value={expirationDate}
+                          onChange={(e) => setExpirationDate(e.target.value)}
+                          className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        />
+                        <div className="ml-2 text-sm text-gray-500">
+                          Leave blank for no expiration or to use default expiration period
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

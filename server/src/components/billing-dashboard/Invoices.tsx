@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/DropdownMenu';
+import CreditExpirationInfo from './CreditExpirationInfo';
 import {
   fetchAllInvoices,
   getInvoiceTemplates,
@@ -211,6 +212,15 @@ const Invoices: React.FC = () => {
       dataIndex: 'total',
       render: (value) => {
         // Convert cents to dollars and handle potential null/undefined
+        const amount = typeof value === 'number' ? value / 100 : 0;
+        return `$${amount.toFixed(2)}`;
+      },
+    },
+    {
+      title: 'Credit Applied',
+      dataIndex: 'credit_applied',
+      render: (value, record) => {
+        if (!value || value === 0) return '-';
         const amount = typeof value === 'number' ? value / 100 : 0;
         return `$${amount.toFixed(2)}`;
       },
@@ -517,6 +527,14 @@ const Invoices: React.FC = () => {
                 invoiceData={selectedInvoice}
               />
             </PaperInvoice>
+            
+            {/* Show credit expiration information if credits were applied */}
+            {selectedInvoice.credit_applied > 0 && (
+              <CreditExpirationInfo
+                creditApplied={selectedInvoice.credit_applied}
+                invoiceId={selectedInvoice.invoice_id}
+              />
+            )}
           </div>
         )}
       </div>

@@ -24,12 +24,14 @@ interface ManualInvoiceItem {
 interface ManualInvoiceRequest {
   companyId: string;
   items: ManualInvoiceItem[];
+  expirationDate?: string; // Add expiration date for prepayments
+  isPrepayment?: boolean;
 }
 
 export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<InvoiceViewModel> {
   // Validate session and tenant context
   const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
-  const { companyId, items } = request;
+  const { companyId, items, expirationDate, isPrepayment } = request;
 
   // Get company details
   const company = await invoiceService.getCompanyDetails(knex, tenant, companyId);
@@ -39,6 +41,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const invoiceNumber = await generateInvoiceNumber();
   const invoiceId = uuidv4();
 
+  // Set invoice type based on isPrepayment flag
   const invoice = {
     invoice_id: invoiceId,
     tenant,
@@ -51,7 +54,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     tax: 0,
     total_amount: 0,
     credit_applied: 0,
-    is_manual: true
+    is_manual: true,
+    is_prepayment: isPrepayment || false
   };
 
   return await knex.transaction(async (trx) => {
@@ -87,7 +91,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       subtotal,
       computedTotalTax,
       tenant,
-      invoiceNumber
+      invoiceNumber,
+      isPrepayment ? expirationDate : undefined
     );
 
     // Get updated invoice items with tax

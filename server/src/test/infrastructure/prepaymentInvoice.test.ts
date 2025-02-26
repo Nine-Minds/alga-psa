@@ -114,19 +114,112 @@ async function setupTaxConfiguration() {
 
 describe('Prepayment Invoice System', () => {
   describe('Creating Prepayment Invoices', () => {
-    it('creates a prepayment invoice with correct details', async () => {
-      const prepaymentAmount = 100000;
-      const result = await runWithTenant(context.tenantId, async () => {
-        return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+      it('creates a prepayment invoice with correct details', async () => {
+        const prepaymentAmount = 100000;
+        const result = await runWithTenant(context.tenantId, async () => {
+          return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+        });
+  
+        expect(result).toMatchObject({
+          invoice_number: expect.stringMatching(/^TIC\d{6}$/),
+          subtotal: prepaymentAmount,
+          total_amount: prepaymentAmount.toString(),
+          status: 'draft'
+        });
       });
-
-      expect(result).toMatchObject({
-        invoice_number: expect.stringMatching(/^TIC\d{6}$/),
-        subtotal: prepaymentAmount,
-        total_amount: prepaymentAmount.toString(),
-        status: 'draft'
+  
+      it('creates a prepayment invoice with expiration date', async () => {
+        // Setup company billing settings with expiration days
+        await context.db('company_billing_settings').insert({
+          company_id: context.companyId,
+          tenant: context.tenantId,
+          zero_dollar_invoice_handling: 'normal',
+          suppress_zero_dollar_invoices: false,
+          credit_expiration_days: 30,
+          credit_expiration_notification_days: [7, 1],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+  
+        const prepaymentAmount = 100000;
+        const result = await runWithTenant(context.tenantId, async () => {
+          return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
+        });
+  
+        // Finalize the invoice to create the credit
+        await runWithTenant(context.tenantId, async () => {
+          return await generateInvoice(result.invoice_id);
+        });
+  
+        // Check that the transaction has an expiration date
+        const transaction = await context.db('transactions')
+          .where({
+            invoice_id: result.invoice_id,
+            tenant: context.tenantId,
+            type: 'credit_issuance'
+          })
+          .first();
+  
+        expect(transaction).toBeTruthy();
+        expect(transaction.expiration_date).toBeTruthy();
+        
+        // Verify the expiration date is approximately 30 days from now
+        const expirationDate = new Date(transaction.expiration_date);
+        const today = new Date();
+        const daysDiff = Math.round((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        expect(daysDiff).toBeCloseTo(30, 1); // Allow for small time differences during test execution
+  
+        // Check that the credit tracking entry has the same expiration date
+        const creditTracking = await context.db('credit_tracking')
+          .where({
+            transaction_id: transaction.transaction_id,
+            tenant: context.tenantId
+          })
+          .first();
+  
+        expect(creditTracking).toBeTruthy();
+        expect(creditTracking.expiration_date).toBe(transaction.expiration_date);
+        expect(creditTracking.is_expired).toBe(false);
       });
-    });
+  
+      it('creates a prepayment invoice with manual expiration date', async () => {
+        const prepaymentAmount = 100000;
+        const manualExpirationDate = new Date();
+        manualExpirationDate.setDate(manualExpirationDate.getDate() + 60); // 60 days from now
+        const expirationDateString = manualExpirationDate.toISOString();
+  
+        const result = await runWithTenant(context.tenantId, async () => {
+          return await createPrepaymentInvoice(context.companyId, prepaymentAmount, expirationDateString);
+        });
+  
+        // Finalize the invoice to create the credit
+        await runWithTenant(context.tenantId, async () => {
+          return await generateInvoice(result.invoice_id);
+        });
+  
+        // Check that the transaction has the manual expiration date
+        const transaction = await context.db('transactions')
+          .where({
+            invoice_id: result.invoice_id,
+            tenant: context.tenantId,
+            type: 'credit_issuance'
+          })
+          .first();
+  
+        expect(transaction).toBeTruthy();
+        expect(transaction.expiration_date).toBe(expirationDateString);
+  
+        // Check that the credit tracking entry has the same expiration date
+        const creditTracking = await context.db('credit_tracking')
+          .where({
+            transaction_id: transaction.transaction_id,
+            tenant: context.tenantId
+          })
+          .first();
+  
+        expect(creditTracking).toBeTruthy();
+        expect(creditTracking.expiration_date).toBe(expirationDateString);
+      });
 
     it('rejects invalid company IDs', async () => {
       const invalidCompanyId = uuidv4();

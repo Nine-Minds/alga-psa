@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { createPrepaymentInvoice } from '@/lib/actions/creditActions';
+import { createPrepaymentInvoice, applyCreditToInvoice } from '@/lib/actions/creditActions';
 import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
 import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -887,6 +887,563 @@ describe('Credit Application Tests', () => {
     
     expect(finalizedInvoice.status).toBe('sent');
     expect(finalizedInvoice.finalized_at).toBeTruthy();
+  });
+
+  it('should create credits with expiration dates from negative invoices', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Negative Invoice With Expiration',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Set up company billing settings with expiration days
+    await context.db('company_billing_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      credit_expiration_days: 30,
+      credit_expiration_notification_days: [7, 1],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Create services with negative rates (credits)
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    const serviceB = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service B',
+      service_type: 'Fixed',
+      default_rate: -7500, // -$75.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Assign services to plan
+    await context.db('plan_services').insert([
+      {
+        plan_id: planId,
+        service_id: serviceA,
+        quantity: 1,
+        tenant: context.tenantId
+      },
+      {
+        plan_id: planId,
+        service_id: serviceB,
+        quantity: 1,
+        tenant: context.tenantId
+      }
+    ]);
+
+    // Create billing cycle
+    const now = createTestDate();
+    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: endDate,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+
+    // Assign plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
+    // Step 1: Generate invoice with negative total
+    const invoice = await generateInvoice(billingCycleId);
+    
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+    
+    // Verify the invoice has a negative total
+    expect(invoice.total_amount).toBeLessThan(0);
+    const negativeAmount = invoice.total_amount;
+    const creditAmount = Math.abs(negativeAmount);
+    
+    // Step 2: Finalize the invoice to trigger credit creation
+    await finalizeInvoice(invoice.invoice_id);
+    
+    // Step 3: Verify credit transaction has expiration date
+    const creditTransaction = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice.invoice_id,
+        type: 'credit_issuance_from_negative_invoice'
+      })
+      .first();
+    
+    // Verify transaction details
+    expect(creditTransaction).toBeTruthy();
+    expect(parseFloat(creditTransaction.amount)).toBe(creditAmount);
+    expect(creditTransaction.expiration_date).toBeTruthy();
+    
+    // Verify the expiration date is approximately 30 days from now
+    const expirationDate = new Date(creditTransaction.expiration_date);
+    const today = new Date();
+    const daysDiff = Math.round((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    expect(daysDiff).toBeCloseTo(30, 1); // Allow for small time differences during test execution
+    
+    // Step 4: Verify credit tracking entry was created
+    const creditTracking = await context.db('credit_tracking')
+      .where({
+        transaction_id: creditTransaction.transaction_id,
+        tenant: context.tenantId
+      })
+      .first();
+    
+    expect(creditTracking).toBeTruthy();
+    expect(creditTracking.amount).toBe(creditAmount.toString());
+    expect(creditTracking.remaining_amount).toBe(creditAmount.toString());
+    expect(creditTracking.expiration_date).toBe(creditTransaction.expiration_date);
+    expect(creditTracking.is_expired).toBe(false);
+  });
+
+  it('should use default billing settings for credit expiration when company settings are not available', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Default Settings Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Set up default billing settings with expiration days
+    await context.db('default_billing_settings').insert({
+      tenant: context.tenantId,
+      zero_dollar_invoice_handling: 'normal',
+      suppress_zero_dollar_invoices: false,
+      credit_expiration_days: 60, // Different from company settings to verify it's used
+      credit_expiration_notification_days: [14, 7, 1],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Create services with negative rates (credits)
+    const serviceA = await context.createEntity('service_catalog', {
+      service_name: 'Credit Service A',
+      service_type: 'Fixed',
+      default_rate: -5000, // -$50.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Credit Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Assign services to plan
+    await context.db('plan_services').insert({
+      plan_id: planId,
+      service_id: serviceA,
+      quantity: 1,
+      tenant: context.tenantId
+    });
+
+    // Create billing cycle
+    const now = createTestDate();
+    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: endDate,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+
+    // Assign plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
+    // Step 1: Generate invoice with negative total
+    const invoice = await generateInvoice(billingCycleId);
+    
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+    
+    // Step 2: Finalize the invoice to trigger credit creation
+    await finalizeInvoice(invoice.invoice_id);
+    
+    // Step 3: Verify credit transaction has expiration date from default settings
+    const creditTransaction = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice.invoice_id,
+        type: 'credit_issuance_from_negative_invoice'
+      })
+      .first();
+    
+    // Verify transaction details
+    expect(creditTransaction).toBeTruthy();
+    expect(creditTransaction.expiration_date).toBeTruthy();
+    
+    // Verify the expiration date is approximately 60 days from now (from default settings)
+    const expirationDate = new Date(creditTransaction.expiration_date);
+    const today = new Date();
+    const daysDiff = Math.round((expirationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    expect(daysDiff).toBeCloseTo(60, 1); // Allow for small time differences during test execution
+    
+    // Step 4: Verify credit tracking entry was created with same expiration date
+    const creditTracking = await context.db('credit_tracking')
+      .where({
+        transaction_id: creditTransaction.transaction_id,
+        tenant: context.tenantId
+      })
+      .first();
+    
+    expect(creditTracking).toBeTruthy();
+    expect(creditTracking.expiration_date).toBe(creditTransaction.expiration_date);
+  });
+
+  it('should prioritize credits by expiration date when applying to invoices', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Credit Prioritization Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0,
+      description: 'NY Test Tax',
+      start_date: '2025-01-01'
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create a service for the invoice
+    const service = await context.createEntity('service_catalog', {
+      service_name: 'Standard Service',
+      service_type: 'Fixed',
+      default_rate: 20000, // $200.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Link service to plan
+    await context.db('plan_services').insert({
+      plan_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
+    });
+
+    // Create billing cycle
+    const now = createTestDate();
+    const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate,
+      period_end_date: endDate,
+      effective_date: startDate
+    }, 'billing_cycle_id');
+
+    // Link plan to company
+    await context.db('company_billing_plans').insert({
+      company_billing_plan_id: uuidv4(),
+      company_id: company_id,
+      plan_id: planId,
+      tenant: context.tenantId,
+      start_date: startDate,
+      is_active: true
+    });
+
+    // Step 1: Create three credit transactions with different expiration dates
+    const today = new Date();
+    
+    // Credit 1: Expires in 30 days (should be used first)
+    const expDate1 = new Date(today);
+    expDate1.setDate(today.getDate() + 30);
+    const expirationDate1 = expDate1.toISOString();
+    
+    // Credit 2: Expires in 60 days (should be used second)
+    const expDate2 = new Date(today);
+    expDate2.setDate(today.getDate() + 60);
+    const expirationDate2 = expDate2.toISOString();
+    
+    // Credit 3: No expiration date (should be used last)
+    const expirationDate3 = null;
+    
+    // Create credit transactions and tracking entries
+    const transactionId1 = uuidv4();
+    const transactionId2 = uuidv4();
+    const transactionId3 = uuidv4();
+    
+    // Create transactions
+    await context.db('transactions').insert([
+      {
+        transaction_id: transactionId1,
+        company_id: company_id,
+        amount: 5000, // $50.00
+        type: 'credit_issuance',
+        status: 'completed',
+        description: 'Credit 1 - Expires in 30 days',
+        created_at: new Date().toISOString(),
+        balance_after: 5000,
+        tenant: context.tenantId,
+        expiration_date: expirationDate1
+      },
+      {
+        transaction_id: transactionId2,
+        company_id: company_id,
+        amount: 7000, // $70.00
+        type: 'credit_issuance',
+        status: 'completed',
+        description: 'Credit 2 - Expires in 60 days',
+        created_at: new Date().toISOString(),
+        balance_after: 12000,
+        tenant: context.tenantId,
+        expiration_date: expirationDate2
+      },
+      {
+        transaction_id: transactionId3,
+        company_id: company_id,
+        amount: 8000, // $80.00
+        type: 'credit_issuance',
+        status: 'completed',
+        description: 'Credit 3 - No expiration',
+        created_at: new Date().toISOString(),
+        balance_after: 20000,
+        tenant: context.tenantId,
+        expiration_date: expirationDate3
+      }
+    ]);
+    
+    // Create credit tracking entries
+    await context.db('credit_tracking').insert([
+      {
+        credit_id: uuidv4(),
+        tenant: context.tenantId,
+        company_id: company_id,
+        transaction_id: transactionId1,
+        amount: 5000,
+        remaining_amount: 5000,
+        created_at: new Date().toISOString(),
+        expiration_date: expirationDate1,
+        is_expired: false,
+        updated_at: new Date().toISOString()
+      },
+      {
+        credit_id: uuidv4(),
+        tenant: context.tenantId,
+        company_id: company_id,
+        transaction_id: transactionId2,
+        amount: 7000,
+        remaining_amount: 7000,
+        created_at: new Date().toISOString(),
+        expiration_date: expirationDate2,
+        is_expired: false,
+        updated_at: new Date().toISOString()
+      },
+      {
+        credit_id: uuidv4(),
+        tenant: context.tenantId,
+        company_id: company_id,
+        transaction_id: transactionId3,
+        amount: 8000,
+        remaining_amount: 8000,
+        created_at: new Date().toISOString(),
+        expiration_date: expirationDate3,
+        is_expired: false,
+        updated_at: new Date().toISOString()
+      }
+    ]);
+    
+    // Update company credit balance
+    await context.db('companies')
+      .where({ company_id: company_id, tenant: context.tenantId })
+      .update({ credit_balance: 20000 });
+    
+    // Step 2: Generate an invoice
+    const invoice = await generateInvoice(billingCycleId);
+    
+    if (!invoice) {
+      throw new Error('Failed to generate invoice');
+    }
+    
+    // Step 3: Apply credit to the invoice (should use credits in order of expiration date)
+    await applyCreditToInvoice(company_id, invoice.invoice_id, 15000); // Apply $150 of credit
+    
+    // Step 4: Verify credit application
+    // Get updated credit tracking entries
+    const updatedCreditEntries = await context.db('credit_tracking')
+      .where({ company_id: company_id, tenant: context.tenantId })
+      .orderBy('expiration_date', 'asc');
+    
+    // Credit 1 (expires in 30 days) should be fully used
+    expect(Number(updatedCreditEntries[0].remaining_amount)).toBe(0);
+    
+    // Credit 2 (expires in 60 days) should be partially used (7000 - (15000 - 5000) = 0)
+    expect(Number(updatedCreditEntries[1].remaining_amount)).toBe(0);
+    
+    // Credit 3 (no expiration) should be partially used (8000 - (15000 - 5000 - 7000) = 5000)
+    expect(Number(updatedCreditEntries[2].remaining_amount)).toBe(5000);
+    
+    // Verify the credit application transaction
+    const creditApplicationTx = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    expect(creditApplicationTx).toBeTruthy();
+    expect(parseFloat(creditApplicationTx.amount)).toBe(-15000);
+    
+    // Verify the metadata contains the applied credits
+    expect(creditApplicationTx.metadata).toBeTruthy();
+    const metadata = typeof creditApplicationTx.metadata === 'string'
+      ? JSON.parse(creditApplicationTx.metadata)
+      : creditApplicationTx.metadata;
+    
+    expect(metadata.applied_credits).toBeTruthy();
+    expect(metadata.applied_credits.length).toBe(3);
+    
+    // Verify the applied credits are in the correct order
+    expect(metadata.applied_credits[0].transactionId).toBe(transactionId1);
+    expect(metadata.applied_credits[1].transactionId).toBe(transactionId2);
+    expect(metadata.applied_credits[2].transactionId).toBe(transactionId3);
+    
+    // Verify the amounts applied from each credit
+    expect(metadata.applied_credits[0].amount).toBe(5000);
+    expect(metadata.applied_credits[1].amount).toBe(7000);
+    expect(metadata.applied_credits[2].amount).toBe(3000);
+    
+    // Verify the invoice was updated correctly
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoice.invoice_id, tenant: context.tenantId })
+      .first();
+    
+    expect(updatedInvoice.credit_applied).toBe(15000);
+    
+    // Verify the company credit balance was updated
+    const updatedCompany = await context.db('companies')
+      .where({ company_id: company_id, tenant: context.tenantId })
+      .first();
+    
+    expect(updatedCompany.credit_balance).toBe(5000);
   });
 
   it('should correctly apply partial credit across multiple invoices', async () => {

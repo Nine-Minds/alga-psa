@@ -22,6 +22,7 @@ import BillingConfigForm from './BillingConfigForm';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
 import CompanyZeroDollarInvoiceSettings from './CompanyZeroDollarInvoiceSettings';
+import CompanyCreditExpirationSettings from './CompanyCreditExpirationSettings';
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -352,6 +353,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             />
 
             <CompanyZeroDollarInvoiceSettings
+                companyId={company.company_id}
+            />
+
+            <CompanyCreditExpirationSettings
                 companyId={company.company_id}
             />
 

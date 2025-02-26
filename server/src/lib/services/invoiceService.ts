@@ -379,7 +379,8 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   subtotal: number,
   computedTotalTax: number,
   tenant: string,
-  invoiceNumber: string
+  invoiceNumber: string,
+  expirationDate?: string
 ): Promise<void> {
   // Update invoice with totals
   await tx('invoices')
@@ -411,6 +412,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     description: `Generated invoice ${invoiceNumber}`,
     created_at: Temporal.Now.plainDateISO().toString(),
     tenant,
-    balance_after: currentBalance + Math.ceil(subtotal + computedTotalTax)
+    balance_after: currentBalance + Math.ceil(subtotal + computedTotalTax),
+    expiration_date: expirationDate
   });
 }
