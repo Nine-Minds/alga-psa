@@ -120,23 +120,25 @@ export async function validateTransactionBalance(
     tenant: string,
     skipCreditBalanceCheck: boolean = false
 ): Promise<void> {
-    const currentBalance = await trx('transactions')
-        .where({ 
-            company_id: companyId,
-            tenant
-        })
-        .orderBy('created_at', 'desc')
-        .first()
-        .then(lastTx => lastTx?.balance_after || 0);
-
-    const newBalance = currentBalance + amount;
-    
-    if (newBalance < 0) {
-        throw new Error('Insufficient credit balance');
-    }
-    
-    // Skip additional credit balance check for certain operations
+    // If we're skipping the credit balance check for credit application,
+    // we should also skip the negative balance check
     if (!skipCreditBalanceCheck) {
+        const currentBalance = await trx('transactions')
+            .where({ 
+                company_id: companyId,
+                tenant
+            })
+            .orderBy('created_at', 'desc')
+            .first()
+            .then(lastTx => lastTx?.balance_after || 0);
+
+        const newBalance = currentBalance + amount;
+        
+        if (newBalance < 0) {
+            throw new Error('Insufficient credit balance');
+        }
+        
+        // Perform additional credit balance validation
         const validation = await validateCreditBalance(companyId, undefined, trx);
         if (!validation.isValid) {
             throw new Error('Credit balance validation failed');
@@ -261,21 +263,36 @@ export async function createPrepaymentInvoice(
 export async function applyCreditToInvoice(
     companyId: string,
     invoiceId: string,
-    amount: number
+    requestedAmount: number
 ): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
     
     await knex.transaction(async (trx) => {
-        // Create the main credit application transaction
-        const newBalance = await calculateNewBalance(companyId, -amount, trx);
-        await validateTransactionBalance(companyId, -amount, trx, tenant, true); // Skip validation for credit application
+        // Get current credit balance
+        const [company] = await trx('companies')
+            .where({ company_id: companyId, tenant })
+            .select('credit_balance');
         
+        // Calculate the maximum amount of credit we can apply
+        const availableCredit = company.credit_balance || 0;
+        const amountToApply = Math.min(requestedAmount, availableCredit);
+        
+        // If no credit to apply, exit early
+        if (amountToApply <= 0) {
+            console.log(`No credit available to apply for company ${companyId}`);
+            return;
+        }
+        
+        // Calculate new balance (should never be negative now)
+        const newBalance = availableCredit - amountToApply;
+        
+        // Create the main credit application transaction
         const [creditTransaction] = await trx('transactions').insert({
             transaction_id: uuidv4(),
             company_id: companyId,
             invoice_id: invoiceId,
-            amount: -amount,
+            amount: -amountToApply,
             type: 'credit_application',
             status: 'completed',
             description: `Applied credit to invoice ${invoiceId}`,
@@ -288,7 +305,7 @@ export async function applyCreditToInvoice(
         await trx('transactions').insert({
             transaction_id: uuidv4(),
             company_id: companyId,
-            amount: -amount,
+            amount: -amountToApply,
             type: 'credit_adjustment',
             status: 'completed',
             description: `Credit balance adjustment from application (Transaction: ${creditTransaction.transaction_id})`,
@@ -301,7 +318,7 @@ export async function applyCreditToInvoice(
             allocation_id: uuidv4(),
             transaction_id: creditTransaction.transaction_id,
             invoice_id: invoiceId,
-            amount: amount,
+            amount: amountToApply,
             created_at: new Date().toISOString(),
             tenant
         });
@@ -322,10 +339,21 @@ export async function applyCreditToInvoice(
                     invoice_id: invoiceId,
                     tenant
                 })
-                .increment('credit_applied', amount)
-                .decrement('total_amount', amount),
-            CompanyBillingPlan.updateCompanyCredit(companyId, -amount)
+                .increment('credit_applied', amountToApply)
+                .decrement('total_amount', amountToApply),
+            trx('companies')
+                .where({
+                    company_id: companyId,
+                    tenant
+                })
+                .update({
+                    credit_balance: newBalance,
+                    updated_at: new Date().toISOString()
+                })
         ]);
+        
+        // Log the credit application
+        console.log(`Applied ${amountToApply} credit to invoice ${invoiceId} for company ${companyId}. Remaining credit: ${newBalance}`);
     });
 }
 

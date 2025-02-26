@@ -846,12 +846,25 @@ describe('Credit Application Tests', () => {
       total_amount: invoice.total_amount
     });
     
+    // Verify that no tax is applied to negative amounts
+    // According to taxService.ts: "For negative or zero net amounts, no tax should be applied"
+    expect(invoice.tax).toBe(0);
+    
+    // Expected values:
+    // Service A: -$50.00 (-5000)
+    // Service B: -$75.00 (-7500)
+    // Subtotal: -$125.00 (-12500)
+    // Tax: $0 (no tax on negative amounts)
+    // Total: -$125.00 (-12500)
+    expect(invoice.subtotal).toBe(-12500);
+    expect(invoice.total_amount).toBe(-12500);
+    
     // Step 3: Finalize the invoice to trigger credit creation
     await finalizeInvoice(invoice.invoice_id);
     
-    // Step 4: Verify credit balance has been increased
+    // Step 4: Verify credit balance has been increased by the absolute value of the negative total
     const updatedCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
-    expect(updatedCredit).toBe(creditAmount);
+    expect(updatedCredit).toBe(12500); // $125.00
     
     // Step 5: Verify transaction record
     const creditTransaction = await context.db('transactions')
@@ -874,5 +887,552 @@ describe('Credit Application Tests', () => {
     
     expect(finalizedInvoice.status).toBe('sent');
     expect(finalizedInvoice.finalized_at).toBeTruthy();
+  });
+
+  it('should correctly apply partial credit across multiple invoices', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Multiple Invoice Credit Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate - make sure it's active and has appropriate date range
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0, // 10% for easy calculation
+      description: 'NY Test Tax',
+      start_date: '2020-01-01', // Use an earlier date to ensure it's valid for our test dates
+      is_active: true, // Explicitly set as active
+      tax_type: 'Sales Tax',
+      tenant: context.tenantId
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create a single service for all invoices
+    const service = await context.createEntity('service_catalog', {
+      service_name: 'Standard Service',
+      service_type: 'Fixed',
+      default_rate: 10000, // $100.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a single billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Link service to plan
+    await context.db('plan_services').insert({
+      plan_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
+    });
+
+    // Create billing cycles for three consecutive months
+    const now = createTestDate();
+    
+    // First billing cycle (3 months ago)
+    const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 3 }).toString();
+    const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
+    
+    const billingCycleId1 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate1,
+      period_end_date: endDate1,
+      effective_date: startDate1
+    }, 'billing_cycle_id');
+
+    // Second billing cycle (2 months ago)
+    const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
+    const endDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    
+    const billingCycleId2 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate2,
+      period_end_date: endDate2,
+      effective_date: startDate2
+    }, 'billing_cycle_id');
+
+    // Third billing cycle (1 month ago)
+    const startDate3 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate3 = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId3 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate3,
+      period_end_date: endDate3,
+      effective_date: startDate3
+    }, 'billing_cycle_id');
+
+    // Link the same plan to company for all billing cycles
+    await context.db('company_billing_plans').insert([
+      {
+        company_billing_plan_id: uuidv4(),
+        company_id: company_id,
+        plan_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate1,
+        is_active: true
+      }
+    ]);
+
+    // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
+    const prepaymentAmount = 20000; // $200.00 credit
+    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    
+    // Step 2: Finalize the prepayment invoice to add credit to the company
+    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    
+    // Step 3: Verify initial credit balance
+    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(initialCredit).toBe(prepaymentAmount);
+    console.log('Initial credit balance:', initialCredit);
+    
+    // Step 4: Generate invoices for each billing cycle
+    const invoice1 = await generateInvoice(billingCycleId1); // Basic service ($50 + $5 tax = $55)
+    const invoice2 = await generateInvoice(billingCycleId2); // Standard service ($100 + $10 tax = $110)
+    const invoice3 = await generateInvoice(billingCycleId3); // Premium service ($150 + $15 tax = $165)
+    
+    if (!invoice1 || !invoice2 || !invoice3) {
+      throw new Error('Failed to generate one or more invoices');
+    }
+    
+    console.log('Generated invoices:', {
+      invoice1: { id: invoice1.invoice_id, total: invoice1.total_amount },
+      invoice2: { id: invoice2.invoice_id, total: invoice2.total_amount },
+      invoice3: { id: invoice3.invoice_id, total: invoice3.total_amount }
+    });
+    
+    // Step 5: Finalize the first invoice and verify credit application
+    await finalizeInvoice(invoice1.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice1 = await context.db('invoices')
+      .where({ invoice_id: invoice1.invoice_id })
+      .first();
+    
+    // Calculate expected values for first invoice
+    const subtotal1 = 10000; // $100.00
+    const tax1 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit1 = subtotal1 + tax1; // $110.00
+    const expectedAppliedCredit1 = totalBeforeCredit1; // $110.00 (full invoice amount)
+    const expectedRemainingCredit1 = prepaymentAmount - expectedAppliedCredit1; // $200 - $110 = $90
+    
+    // Verify first invoice values
+    expect(updatedInvoice1.subtotal).toBe(subtotal1);
+    expect(updatedInvoice1.tax).toBe(tax1);
+    expect(updatedInvoice1.credit_applied).toBe(expectedAppliedCredit1);
+    expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after first invoice
+    const creditAfterInvoice1 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
+    console.log('Credit balance after first invoice:', creditAfterInvoice1);
+    
+    // Verify credit application transaction for first invoice
+    const creditTransaction1 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice1.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    expect(creditTransaction1).toBeTruthy();
+    expect(parseFloat(creditTransaction1.amount)).toBe(-expectedAppliedCredit1);
+    expect(creditTransaction1.description).toContain('Applied credit to invoice');
+    
+    // Step 6: Finalize the second invoice and verify credit application
+    await finalizeInvoice(invoice2.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice2 = await context.db('invoices')
+      .where({ invoice_id: invoice2.invoice_id })
+      .first();
+    
+    // Calculate expected values for second invoice
+    const subtotal2 = 10000; // $100.00
+    const tax2 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit2 = subtotal2 + tax2; // $110.00
+    const expectedAppliedCredit2 = expectedRemainingCredit1; // $90.00 (all remaining credit)
+    const expectedRemainingCredit2 = 0; // All credit has been applied
+    const expectedRemainingTotal2 = totalBeforeCredit2 - expectedAppliedCredit2; // $110 - $90 = $20
+    
+    // Verify second invoice values
+    expect(updatedInvoice2.subtotal).toBe(subtotal2);
+    expect(updatedInvoice2.tax).toBe(tax2);
+    expect(updatedInvoice2.credit_applied).toBe(expectedAppliedCredit2);
+    expect(parseInt(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2); // Invoice should be partially paid
+    
+    // Verify credit balance after second invoice
+    const creditAfterInvoice2 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
+    console.log('Credit balance after second invoice:', creditAfterInvoice2);
+    
+    // Verify credit application transaction for second invoice
+    const creditTransaction2 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice2.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    expect(creditTransaction2).toBeTruthy();
+    expect(parseFloat(creditTransaction2.amount)).toBe(-expectedAppliedCredit2);
+    expect(creditTransaction2.description).toContain('Applied credit to invoice');
+    
+    // Calculate expected values for third invoice
+    const subtotal3 = 10000; // $100.00
+    const tax3 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit3 = subtotal3 + tax3; // $110.00
+    const expectedAppliedCredit3 = expectedRemainingCredit2; // $0 (no remaining credit)
+    const expectedRemainingTotal3 = totalBeforeCredit3 - expectedAppliedCredit3; // $110 - $0 = $110
+    
+    // Step 7: Finalize the third invoice - credit should be automatically applied
+    await finalizeInvoice(invoice3.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice3 = await context.db('invoices')
+      .where({ invoice_id: invoice3.invoice_id })
+      .first();
+    
+    // Verify third invoice values after manual credit application
+    expect(updatedInvoice3.subtotal).toBe(subtotal3);
+    expect(updatedInvoice3.tax).toBe(tax3);
+    expect(updatedInvoice3.credit_applied).toBe(expectedAppliedCredit3);
+    expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
+    
+    // Verify credit balance is now zero
+    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(finalCredit).toBe(0);
+    console.log('Final credit balance:', finalCredit);
+    
+    // Since there's no credit left to apply to the third invoice,
+    // there should be no credit application transaction
+    const creditTransaction3 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice3.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    // No credit transaction should exist for the third invoice
+    expect(creditTransaction3).toBeUndefined();
+    
+    // Summary verification
+    console.log('Credit application summary:', {
+      initialCredit: prepaymentAmount,
+      invoice1Applied: expectedAppliedCredit1,
+      invoice2Applied: expectedAppliedCredit2,
+      invoice3Applied: expectedAppliedCredit3,
+      totalApplied: expectedAppliedCredit1 + expectedAppliedCredit2 + expectedAppliedCredit3,
+      finalCreditBalance: finalCredit
+    });
+    
+    // Verify total credit applied equals initial credit amount
+    expect(expectedAppliedCredit1 + expectedAppliedCredit2 + expectedAppliedCredit3).toBe(prepaymentAmount);
+  });
+
+  it('should correctly apply partial credit across three invoices with partial credit on the third', async () => {
+    // Create test company
+    const company_id = await context.createEntity<ICompany>('companies', {
+      company_name: 'Three Invoice Credit Company',
+      billing_cycle: 'monthly',
+      company_id: uuidv4(),
+      tax_region: 'US-NY',
+      is_tax_exempt: false,
+      created_at: Temporal.Now.plainDateISO().toString(),
+      updated_at: Temporal.Now.plainDateISO().toString(),
+      phone_no: '',
+      credit_balance: 0,
+      email: '',
+      url: '',
+      address: '',
+      is_inactive: false
+    }, 'company_id');
+
+    // Create NY tax rate - make sure it's active and has appropriate date range
+    const nyTaxRateId = await context.createEntity('tax_rates', {
+      region: 'US-NY',
+      tax_percentage: 10.0, // 10% for easy calculation
+      description: 'NY Test Tax',
+      start_date: '2020-01-01', // Use an earlier date to ensure it's valid for our test dates
+      is_active: true, // Explicitly set as active
+      tax_type: 'Sales Tax',
+      tenant: context.tenantId
+    }, 'tax_rate_id');
+
+    // Set up company tax settings
+    await context.db('company_tax_settings').insert({
+      company_id: company_id,
+      tenant: context.tenantId,
+      tax_rate_id: nyTaxRateId,
+      is_reverse_charge_applicable: false
+    });
+
+    // Create a single service for all invoices
+    const service = await context.createEntity('service_catalog', {
+      service_name: 'Standard Service',
+      service_type: 'Fixed',
+      default_rate: 10000, // $100.00
+      unit_of_measure: 'unit',
+      tax_region: 'US-NY',
+      is_taxable: true
+    }, 'service_id');
+
+    // Create a single billing plan
+    const planId = await context.createEntity('billing_plans', {
+      plan_name: 'Standard Plan',
+      billing_frequency: 'monthly',
+      is_custom: false,
+      plan_type: 'Fixed'
+    }, 'plan_id');
+
+    // Link service to plan
+    await context.db('plan_services').insert({
+      plan_id: planId,
+      service_id: service,
+      tenant: context.tenantId,
+      quantity: 1
+    });
+
+    // Create billing cycles for three consecutive months
+    const now = createTestDate();
+    
+    // First billing cycle (3 months ago)
+    const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 3 }).toString();
+    const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
+    
+    const billingCycleId1 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate1,
+      period_end_date: endDate1,
+      effective_date: startDate1
+    }, 'billing_cycle_id');
+
+    // Second billing cycle (2 months ago)
+    const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
+    const endDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    
+    const billingCycleId2 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate2,
+      period_end_date: endDate2,
+      effective_date: startDate2
+    }, 'billing_cycle_id');
+
+    // Third billing cycle (1 month ago)
+    const startDate3 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
+    const endDate3 = Temporal.PlainDate.from(now).toString();
+    
+    const billingCycleId3 = await context.createEntity('company_billing_cycles', {
+      company_id: company_id,
+      billing_cycle: 'monthly',
+      period_start_date: startDate3,
+      period_end_date: endDate3,
+      effective_date: startDate3
+    }, 'billing_cycle_id');
+
+    // Link the same plan to company for all billing cycles
+    await context.db('company_billing_plans').insert([
+      {
+        company_billing_plan_id: uuidv4(),
+        company_id: company_id,
+        plan_id: planId,
+        tenant: context.tenantId,
+        start_date: startDate1,
+        is_active: true
+      }
+    ]);
+
+    // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
+    // and partially cover the third invoice
+    const prepaymentAmount = 25000; // $250.00 credit (enough for 2 full invoices + partial third)
+    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    
+    // Step 2: Finalize the prepayment invoice to add credit to the company
+    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    
+    // Step 3: Verify initial credit balance
+    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(initialCredit).toBe(prepaymentAmount);
+    console.log('Initial credit balance:', initialCredit);
+    
+    // Step 4: Generate invoices for each billing cycle
+    const invoice1 = await generateInvoice(billingCycleId1);
+    const invoice2 = await generateInvoice(billingCycleId2);
+    const invoice3 = await generateInvoice(billingCycleId3);
+    
+    if (!invoice1 || !invoice2 || !invoice3) {
+      throw new Error('Failed to generate one or more invoices');
+    }
+    
+    console.log('Generated invoices:', {
+      invoice1: { id: invoice1.invoice_id, total: invoice1.total_amount },
+      invoice2: { id: invoice2.invoice_id, total: invoice2.total_amount },
+      invoice3: { id: invoice3.invoice_id, total: invoice3.total_amount }
+    });
+    
+    // Step 5: Finalize the first invoice and verify credit application
+    await finalizeInvoice(invoice1.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice1 = await context.db('invoices')
+      .where({ invoice_id: invoice1.invoice_id })
+      .first();
+    
+    // Calculate expected values for first invoice
+    const subtotal1 = 10000; // $100.00
+    const tax1 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit1 = subtotal1 + tax1; // $110.00
+    const expectedAppliedCredit1 = totalBeforeCredit1; // $110.00 (full invoice amount)
+    const expectedRemainingCredit1 = prepaymentAmount - expectedAppliedCredit1; // $250 - $110 = $140
+    
+    // Verify first invoice values
+    expect(updatedInvoice1.subtotal).toBe(subtotal1);
+    expect(updatedInvoice1.tax).toBe(tax1);
+    expect(updatedInvoice1.credit_applied).toBe(expectedAppliedCredit1);
+    expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after first invoice
+    const creditAfterInvoice1 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
+    console.log('Credit balance after first invoice:', creditAfterInvoice1);
+    
+    // Verify credit application transaction for first invoice
+    const creditTransaction1 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice1.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    expect(creditTransaction1).toBeTruthy();
+    expect(parseFloat(creditTransaction1.amount)).toBe(-expectedAppliedCredit1);
+    expect(creditTransaction1.description).toContain('Applied credit to invoice');
+    
+    // Step 6: Finalize the second invoice and verify credit application
+    await finalizeInvoice(invoice2.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice2 = await context.db('invoices')
+      .where({ invoice_id: invoice2.invoice_id })
+      .first();
+    
+    // Calculate expected values for second invoice
+    const subtotal2 = 10000; // $100.00
+    const tax2 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit2 = subtotal2 + tax2; // $110.00
+    const expectedAppliedCredit2 = totalBeforeCredit2; // $110.00 (full invoice amount)
+    const expectedRemainingCredit2 = expectedRemainingCredit1 - expectedAppliedCredit2; // $140 - $110 = $30
+    
+    // Verify second invoice values
+    expect(updatedInvoice2.subtotal).toBe(subtotal2);
+    expect(updatedInvoice2.tax).toBe(tax2);
+    expect(updatedInvoice2.credit_applied).toBe(expectedAppliedCredit2);
+    expect(parseInt(updatedInvoice2.total_amount)).toBe(0); // Invoice should be fully paid
+    
+    // Verify credit balance after second invoice
+    const creditAfterInvoice2 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
+    console.log('Credit balance after second invoice:', creditAfterInvoice2);
+    
+    // Verify credit application transaction for second invoice
+    const creditTransaction2 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice2.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    expect(creditTransaction2).toBeTruthy();
+    expect(parseFloat(creditTransaction2.amount)).toBe(-expectedAppliedCredit2);
+    expect(creditTransaction2.description).toContain('Applied credit to invoice');
+    
+    // Calculate expected values for third invoice
+    const subtotal3 = 10000; // $100.00
+    const tax3 = 1000;      // $10.00 (10% of $100)
+    const totalBeforeCredit3 = subtotal3 + tax3; // $110.00
+    const expectedAppliedCredit3 = expectedRemainingCredit2; // $30.00 (partial credit)
+    const expectedRemainingTotal3 = totalBeforeCredit3 - expectedAppliedCredit3; // $110 - $30 = $80
+    
+    // Step 7: Finalize the third invoice - credit should be automatically applied
+    await finalizeInvoice(invoice3.invoice_id);
+    
+    // Get the updated invoice
+    const updatedInvoice3 = await context.db('invoices')
+      .where({ invoice_id: invoice3.invoice_id })
+      .first();
+    
+    // Verify third invoice values after credit application
+    expect(updatedInvoice3.subtotal).toBe(subtotal3);
+    expect(updatedInvoice3.tax).toBe(tax3);
+    expect(updatedInvoice3.credit_applied).toBe(expectedAppliedCredit3);
+    expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
+    
+    // Verify credit balance is now zero
+    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    expect(finalCredit).toBe(0);
+    console.log('Final credit balance:', finalCredit);
+    
+    // Verify credit application transaction for third invoice
+    const creditTransaction3 = await context.db('transactions')
+      .where({
+        company_id: company_id,
+        invoice_id: invoice3.invoice_id,
+        type: 'credit_application'
+      })
+      .first();
+    
+    // There should be a credit transaction for the third invoice
+    expect(creditTransaction3).toBeTruthy();
+    expect(parseFloat(creditTransaction3.amount)).toBe(-expectedAppliedCredit3);
+    expect(creditTransaction3.description).toContain('Applied credit to invoice');
+    
+    // Summary verification
+    console.log('Credit application summary:', {
+      initialCredit: prepaymentAmount,
+      invoice1Applied: expectedAppliedCredit1,
+      invoice2Applied: expectedAppliedCredit2,
+      invoice3Applied: expectedAppliedCredit3,
+      totalApplied: expectedAppliedCredit1 + expectedAppliedCredit2 + expectedAppliedCredit3,
+      finalCreditBalance: finalCredit
+    });
+    
+    // Verify total credit applied equals initial credit amount
+    expect(expectedAppliedCredit1 + expectedAppliedCredit2 + expectedAppliedCredit3).toBe(prepaymentAmount);
   });
 });
