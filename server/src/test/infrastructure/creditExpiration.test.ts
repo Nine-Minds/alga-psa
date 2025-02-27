@@ -541,4 +541,90 @@ describe('Credit Expiration Tests', () => {
       expect(company2Credit).toBe(7000); // Credit still active
     });
   });
+
+  describe('Credit Creation with Expiration Settings', () => {
+    it('should create credits with expiration dates based on company settings', async () => {
+      // Create test company
+      const company_id = await context.createEntity<ICompany>('companies', {
+        company_name: 'Company Settings Expiration Test',
+        billing_cycle: 'monthly',
+        company_id: uuidv4(),
+        tax_region: 'US-NY',
+        is_tax_exempt: false,
+        created_at: Temporal.Now.plainDateISO().toString(),
+        updated_at: Temporal.Now.plainDateISO().toString(),
+        phone_no: '',
+        credit_balance: 0,
+        email: '',
+        url: '',
+        address: '',
+        is_inactive: false
+      }, 'company_id');
+
+      // Set up company billing settings with specific expiration days
+      const expirationDays = 45; // 45-day expiration period
+      await context.db('company_billing_settings').insert({
+        company_id: company_id,
+        tenant: context.tenantId,
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        credit_expiration_days: expirationDays,
+        credit_expiration_notification_days: [14, 7, 1],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+
+      // Create prepayment invoice WITHOUT specifying an expiration date
+      // This should use the company settings to determine the expiration date
+      const prepaymentAmount = 15000; // $150.00 credit
+      const prepaymentInvoice = await createPrepaymentInvoice(
+        company_id,
+        prepaymentAmount
+        // No expiration date provided - should use company settings
+      );
+      
+      // Finalize the prepayment invoice
+      await finalizeInvoice(prepaymentInvoice.invoice_id);
+      
+      // Get the credit transaction
+      const creditTransaction = await context.db('transactions')
+        .where({
+          company_id: company_id,
+          invoice_id: prepaymentInvoice.invoice_id,
+          type: 'credit_issuance'
+        })
+        .first();
+      
+      // Verify the transaction has an expiration date
+      expect(creditTransaction).toBeTruthy();
+      expect(creditTransaction.expiration_date).toBeTruthy();
+      
+      // Calculate expected expiration date (current date + expirationDays)
+      const today = new Date();
+      const expectedExpirationDate = new Date(today);
+      expectedExpirationDate.setDate(today.getDate() + expirationDays);
+      
+      // Convert both dates to date-only strings for comparison (ignoring time)
+      const actualExpirationDate = new Date(creditTransaction.expiration_date);
+      const actualDateString = actualExpirationDate.toISOString().split('T')[0];
+      const expectedDateString = expectedExpirationDate.toISOString().split('T')[0];
+      
+      // Verify the expiration date matches company settings
+      expect(actualDateString).toBe(expectedDateString);
+      
+      // Get the credit tracking entry
+      const creditTracking = await context.db('credit_tracking')
+        .where({
+          transaction_id: creditTransaction.transaction_id,
+          tenant: context.tenantId
+        })
+        .first();
+      
+      // Verify credit tracking entry has the same expiration date
+      expect(creditTracking).toBeTruthy();
+      expect(creditTracking.expiration_date).toBe(creditTransaction.expiration_date);
+      expect(creditTracking.is_expired).toBe(false);
+      expect(Number(creditTracking.remaining_amount)).toBe(prepaymentAmount);
+    });
+  });
 });
