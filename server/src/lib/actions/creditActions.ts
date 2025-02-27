@@ -353,15 +353,21 @@ export async function createPrepaymentInvoice(
         
         // Calculate expiration date if applicable and if expiration is enabled
         let expirationDate: string | undefined = manualExpirationDate;
+        console.log('createPrepaymentInvoice: Manual expiration date provided:', manualExpirationDate);
+        
         if (isCreditExpirationEnabled && !expirationDate && expirationDays && expirationDays > 0) {
             const today = new Date();
             const expDate = new Date(today);
             expDate.setDate(today.getDate() + expirationDays);
             expirationDate = expDate.toISOString();
+            console.log('createPrepaymentInvoice: Calculated expiration date from settings:', expirationDate);
         } else if (!isCreditExpirationEnabled) {
             // If credit expiration is disabled, don't set an expiration date
             expirationDate = undefined;
+            console.log('createPrepaymentInvoice: Credit expiration disabled, no expiration date set');
         }
+        
+        console.log('createPrepaymentInvoice: Final expiration date to use:', expirationDate);
 
         // Create the prepayment invoice
         const [createdInvoice] = await trx('invoices')
@@ -396,7 +402,8 @@ export async function createPrepaymentInvoice(
 
         // Create transaction with expiration date if applicable
         const transactionId = uuidv4();
-        await trx('transactions').insert({
+        console.log('createPrepaymentInvoice: Creating transaction with ID:', transactionId);
+        console.log('createPrepaymentInvoice: Transaction data:', {
             transaction_id: transactionId,
             company_id: companyId,
             invoice_id: createdInvoice.invoice_id,
@@ -409,20 +416,97 @@ export async function createPrepaymentInvoice(
             tenant,
             expiration_date: expirationDate
         });
+        
+        // Log the SQL query that would be executed
+        const query = trx('transactions')
+            .insert({
+                transaction_id: transactionId,
+                company_id: companyId,
+                invoice_id: createdInvoice.invoice_id,
+                amount: amount,
+                type: 'credit_issuance',
+                status: 'completed',
+                description: 'Credit issued from prepayment',
+                created_at: new Date().toISOString(),
+                balance_after: newBalance,
+                tenant,
+                expiration_date: expirationDate
+            })
+            .toSQL();
+        console.log('createPrepaymentInvoice: Transaction SQL:', query.sql);
+        console.log('createPrepaymentInvoice: Transaction bindings:', query.bindings);
+        
+        try {
+            await trx('transactions').insert({
+                transaction_id: transactionId,
+                company_id: companyId,
+                invoice_id: createdInvoice.invoice_id,
+                amount: amount,
+                type: 'credit_issuance',
+                status: 'completed',
+                description: 'Credit issued from prepayment',
+                created_at: new Date().toISOString(),
+                balance_after: newBalance,
+                tenant,
+                expiration_date: expirationDate
+            });
+            console.log('createPrepaymentInvoice: Transaction created successfully');
+        } catch (error) {
+            console.error('createPrepaymentInvoice: Error creating transaction:', error);
+            throw error;
+        }
 
         // Create credit tracking entry
-        await trx('credit_tracking').insert({
-            credit_id: uuidv4(),
+        const creditId = uuidv4();
+        console.log('createPrepaymentInvoice: Creating credit tracking entry with ID:', creditId);
+        console.log('createPrepaymentInvoice: Credit tracking data:', {
+            credit_id: creditId,
             tenant,
             company_id: companyId,
             transaction_id: transactionId,
             amount: amount,
-            remaining_amount: amount, // Initially, remaining amount equals the full amount
+            remaining_amount: amount,
             created_at: new Date().toISOString(),
             expiration_date: expirationDate,
             is_expired: false,
             updated_at: new Date().toISOString()
         });
+        
+        try {
+            await trx('credit_tracking').insert({
+                credit_id: creditId,
+                tenant,
+                company_id: companyId,
+                transaction_id: transactionId,
+                amount: amount,
+                remaining_amount: amount, // Initially, remaining amount equals the full amount
+                created_at: new Date().toISOString(),
+                expiration_date: expirationDate,
+                is_expired: false,
+                updated_at: new Date().toISOString()
+            });
+            console.log('createPrepaymentInvoice: Credit tracking entry created successfully');
+            
+            // Verify the transaction and credit tracking entries were created correctly
+            const createdTransaction = await trx('transactions')
+                .where({ transaction_id: transactionId, tenant })
+                .first();
+            console.log('createPrepaymentInvoice: Verified transaction:', {
+                transaction_id: createdTransaction?.transaction_id,
+                expiration_date: createdTransaction?.expiration_date
+            });
+            
+            const createdCreditTracking = await trx('credit_tracking')
+                .where({ credit_id: creditId, tenant })
+                .first();
+            console.log('createPrepaymentInvoice: Verified credit tracking:', {
+                credit_id: createdCreditTracking?.credit_id,
+                expiration_date: createdCreditTracking?.expiration_date
+            });
+        } catch (error) {
+            console.error('createPrepaymentInvoice: Error creating credit tracking entry:', error);
+            throw error;
+        }
 
         // Note: Credit balance will be updated when the invoice is finalized
         console.log('Prepayment invoice created for company', companyId, 'with amount', amount);

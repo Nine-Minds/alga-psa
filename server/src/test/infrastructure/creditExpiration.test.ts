@@ -10,6 +10,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from '@/lib/models/clientBilling';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from '@/lib/jobs/handlers/expiredCreditsHandler';
+import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 
 describe('Credit Expiration Tests', () => {
   const testHelpers = TestContext.createHelpers();
@@ -70,17 +71,42 @@ describe('Credit Expiration Tests', () => {
         is_inactive: false
       }, 'company_id');
 
-      // Set up company billing settings with expiration days
+      // Set up company billing settings with expiration days and explicitly enable credit expiration
       await context.db('company_billing_settings').insert({
         company_id: company_id,
         tenant: context.tenantId,
         zero_dollar_invoice_handling: 'normal',
         suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true, // Explicitly enable credit expiration
         credit_expiration_days: 30,
         credit_expiration_notification_days: [7, 1],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       });
+      
+      // Also ensure default settings have credit expiration enabled
+      const defaultSettings = await context.db('default_billing_settings')
+        .where({ tenant: context.tenantId })
+        .first();
+      
+      if (defaultSettings) {
+        await context.db('default_billing_settings')
+          .where({ tenant: context.tenantId })
+          .update({
+            enable_credit_expiration: true
+          });
+      } else {
+        await context.db('default_billing_settings').insert({
+          tenant: context.tenantId,
+          zero_dollar_invoice_handling: 'normal',
+          suppress_zero_dollar_invoices: false,
+          enable_credit_expiration: true,
+          credit_expiration_days: 365,
+          credit_expiration_notification_days: [30, 7, 1],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
 
       // Step 1: Create prepayment invoice with manual expiration date in the past
       const prepaymentAmount = 10000; // $100.00 credit
@@ -88,18 +114,24 @@ describe('Credit Expiration Tests', () => {
       pastDate.setDate(pastDate.getDate() - 5); // 5 days ago
       const expirationDate = pastDate.toISOString();
       
+      console.log('Test: Creating prepayment invoice with expiration date:', expirationDate);
+      
       const prepaymentInvoice = await createPrepaymentInvoice(
-        company_id, 
+        company_id,
         prepaymentAmount,
         expirationDate
       );
       
+      console.log('Test: Prepayment invoice created:', prepaymentInvoice.invoice_id);
+      
       // Step 2: Finalize the prepayment invoice
       await finalizeInvoice(prepaymentInvoice.invoice_id);
+      console.log('Test: Prepayment invoice finalized');
       
       // Step 3: Verify initial credit balance and credit tracking entry
       const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
       expect(initialCredit).toBe(prepaymentAmount);
+      console.log('Test: Initial credit balance verified:', initialCredit);
       
       // Get the credit transaction
       const creditTransaction = await context.db('transactions')
@@ -110,8 +142,29 @@ describe('Credit Expiration Tests', () => {
         })
         .first();
       
+      console.log('Test: Credit transaction found:', creditTransaction?.transaction_id);
+      console.log('Test: Credit transaction expiration_date:', creditTransaction?.expiration_date);
+      console.log('Test: Expected expiration_date:', expirationDate);
+      
+      // Log all columns in the transaction
+      console.log('Test: All transaction columns:', Object.keys(creditTransaction || {}));
+      
+      // Check if the transactions table has the expiration_date column
+      const hasColumn = await context.db.schema.hasColumn('transactions', 'expiration_date');
+      console.log('Test: transactions table has expiration_date column:', hasColumn);
+      
+      // Log the SQL query that would be executed
+      const query = context.db('transactions')
+        .where({
+          company_id: company_id,
+          invoice_id: prepaymentInvoice.invoice_id,
+          type: 'credit_issuance'
+        })
+        .toSQL();
+      console.log('Test: SQL query:', query.sql, query.bindings);
+      
       expect(creditTransaction).toBeTruthy();
-      expect(creditTransaction.expiration_date).toBe(expirationDate);
+      expect(toPlainDate(creditTransaction.expiration_date)).toEqual(toPlainDate(expirationDate)); 
       
       // Get the credit tracking entry
       const creditTracking = await context.db('credit_tracking')
@@ -122,7 +175,7 @@ describe('Credit Expiration Tests', () => {
         .first();
       
       expect(creditTracking).toBeTruthy();
-      expect(creditTracking.expiration_date).toBe(expirationDate);
+      expect(toPlainDate(creditTracking.expiration_date)).toEqual(toPlainDate(expirationDate));
       expect(creditTracking.is_expired).toBe(false);
       expect(Number(creditTracking.remaining_amount)).toBe(prepaymentAmount);
       
@@ -178,12 +231,13 @@ describe('Credit Expiration Tests', () => {
         is_inactive: false
       }, 'company_id');
 
-      // Set up company billing settings with expiration days
+      // Set up company billing settings with expiration days and explicitly enable credit expiration
       await context.db('company_billing_settings').insert({
         company_id: company_id,
         tenant: context.tenantId,
         zero_dollar_invoice_handling: 'normal',
         suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true, // Explicitly enable credit expiration
         credit_expiration_days: 30,
         credit_expiration_notification_days: [7, 1],
         created_at: new Date().toISOString(),
@@ -311,12 +365,13 @@ describe('Credit Expiration Tests', () => {
         is_inactive: false
       }, 'company_id');
 
-      // Set up company billing settings with expiration days
+      // Set up company billing settings with expiration days and explicitly enable credit expiration
       await context.db('company_billing_settings').insert({
         company_id: company_id,
         tenant: context.tenantId,
         zero_dollar_invoice_handling: 'normal',
         suppress_zero_dollar_invoices: false,
+        enable_credit_expiration: true, // Explicitly enable credit expiration
         credit_expiration_days: 30,
         credit_expiration_notification_days: [7, 1],
         created_at: new Date().toISOString(),
@@ -383,7 +438,7 @@ describe('Credit Expiration Tests', () => {
         })
         .count('* as count');
       
-      expect(expirationTransactions[0].count).toBe(1); // Still only one expiration transaction
+      expect(parseInt(expirationTransactions[0].count.toString(), 10)).toBe(1); // Still only one expiration transaction
     });
 
     it('should process expired credits for a specific company when company ID is provided', async () => {
@@ -420,13 +475,14 @@ describe('Credit Expiration Tests', () => {
         is_inactive: false
       }, 'company_id');
 
-      // Set up company billing settings for both companies
+      // Set up company billing settings for both companies with credit expiration explicitly enabled
       await context.db('company_billing_settings').insert([
         {
           company_id: company1_id,
           tenant: context.tenantId,
           zero_dollar_invoice_handling: 'normal',
           suppress_zero_dollar_invoices: false,
+          enable_credit_expiration: true, // Explicitly enable credit expiration
           credit_expiration_days: 30,
           credit_expiration_notification_days: [7, 1],
           created_at: new Date().toISOString(),
@@ -437,6 +493,7 @@ describe('Credit Expiration Tests', () => {
           tenant: context.tenantId,
           zero_dollar_invoice_handling: 'normal',
           suppress_zero_dollar_invoices: false,
+          enable_credit_expiration: true, // Explicitly enable credit expiration
           credit_expiration_days: 30,
           credit_expiration_notification_days: [7, 1],
           created_at: new Date().toISOString(),
