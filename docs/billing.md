@@ -562,9 +562,11 @@ Multiple IBillingCharges are combined to create IInvoiceItems.
 IInvoiceItems are grouped into an IInvoice for final billing presentation.
 Understanding these data structures is essential for developers working on the billing system, as they dictate how information flows through the various components of the system.
 
-## Credit System
+## Credit System and Reconciliation
 
-The billing system includes a comprehensive credit management system that allows companies to maintain credit balances and apply them to invoices. Key features include:
+The billing system includes a comprehensive credit management system that allows companies to maintain credit balances and apply them to invoices. This system is complemented by a robust credit reconciliation mechanism that ensures the integrity of credit balances.
+
+### Credit Management
 
 1. **Credit Sources**
    - **Prepayment Invoices**: Companies can make prepayments that are converted to credits
@@ -617,6 +619,65 @@ The billing system includes a comprehensive credit management system that allows
    - Credits are displayed on the billing dashboard
    - Detailed transaction history records all credit activities
    - Credits can be configured with expiration dates and usage rules
+
+### Credit Reconciliation System
+
+The credit reconciliation system ensures the integrity of credit balances by detecting and reporting discrepancies between expected and actual credit balances, as well as issues with credit tracking entries.
+
+1. **Reconciliation Philosophy**
+   - **Separation of Detection and Correction**: The system detects discrepancies without automatically correcting them
+   - **Transparency**: All discrepancies are reported with detailed information
+   - **Manual Resolution**: Authorized users must manually review and resolve discrepancies
+   - **Comprehensive Audit Trail**: All detections and resolutions are logged for accountability
+
+2. **Types of Discrepancies**
+   - **Credit Balance Discrepancies**: Differences between the expected credit balance (calculated from transactions) and the actual credit balance stored in the company record
+   - **Missing Credit Tracking Entries**: Transactions that should have corresponding credit tracking entries but don't
+   - **Inconsistent Remaining Amounts**: Credit tracking entries where the remaining amount doesn't match the expected value based on transaction history
+
+3. **Reconciliation Process**
+   - **Balance Validation**: Calculate expected balance, compare with actual, create report if discrepancy
+   - **Credit Tracking Validation**: Identify missing entries or inconsistent amounts
+   - **Report Creation**: Store detailed information about each discrepancy
+   - **Scheduled Validation**: Runs daily at 2:00 AM to validate all companies
+
+4. **Resolution Workflow**
+   - **Resolution Options**: Apply recommended adjustment, custom adjustment, or mark as resolved
+   - **Audit Trail**: All resolutions are logged with user, date, and notes
+   - **Transaction Records**: All corrections create transaction records for financial traceability
+
+5. **Database Schema**
+   - **credit_reconciliation_reports**: Stores detected discrepancies
+   ```typescript
+   interface ICreditReconciliationReport {
+     report_id: string;
+     company_id: string;
+     expected_balance: number;
+     actual_balance: number;
+     difference: number;
+     detection_date: string;
+     status: 'open' | 'in_review' | 'resolved';
+     resolution_date?: string;
+     resolution_user?: string;
+     resolution_notes?: string;
+     resolution_transaction_id?: string;
+     metadata?: any; // Stores detailed information specific to the discrepancy type
+   }
+   ```
+
+6. **User Interface Components**
+   - **Reconciliation Dashboard**: Overview of all credit discrepancies
+   - **Discrepancy Detail View**: Comprehensive information about a specific discrepancy
+   - **Recommended Fix Panel**: Suggests resolution options based on discrepancy type
+   - **Resolution Form**: Guides users through the resolution process
+
+7. **Server Actions**
+   - **validateCreditBalanceWithoutCorrection()**: Validates credit balance without making corrections
+   - **validateCreditTrackingEntries()**: Validates credit tracking entries
+   - **validateCreditTrackingRemainingAmounts()**: Validates remaining amounts
+   - **resolveReconciliationReport()**: Resolves a reconciliation report
+   - **createMissingCreditTrackingEntry()**: Creates a missing credit tracking entry
+   - **updateCreditTrackingRemainingAmount()**: Updates a credit tracking entry's remaining amount
 
 ## Important Implementation Details
 

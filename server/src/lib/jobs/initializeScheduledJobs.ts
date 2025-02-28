@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob } from './index';
 import logger from '@/utils/logger';
 import { createTenantKnex } from '@/lib/db';
 
@@ -36,6 +36,15 @@ export async function initializeScheduledJobs(): Promise<void> {
         logger.info(`Scheduled expiring credits notification job for tenant ${tenantId} with job ID ${notificationJobId}`);
       } else {
         logger.error(`Failed to schedule expiring credits notification job for tenant ${tenantId}`);
+      }
+      
+      // Schedule daily job to run credit reconciliation (runs at 2:00 AM)
+      const reconciliationJobId = await scheduleCreditReconciliationJob(tenantId, undefined, '0 2 * * *');
+      
+      if (reconciliationJobId) {
+        logger.info(`Scheduled credit reconciliation job for tenant ${tenantId} with job ID ${reconciliationJobId}`);
+      } else {
+        logger.error(`Failed to schedule credit reconciliation job for tenant ${tenantId}`);
       }
     }
     

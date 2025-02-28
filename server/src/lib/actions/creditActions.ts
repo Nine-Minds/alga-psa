@@ -8,6 +8,7 @@ import { ITransaction, ICreditTracking } from '@/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceActions';
 import { Knex } from 'knex';
+import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
 
 async function calculateNewBalance(
     companyId: string, 
@@ -24,11 +25,21 @@ async function calculateNewBalance(
     return company.credit_balance + changeAmount;
 }
 
+/**
+ * Validates a company's credit balance and automatically corrects it if needed
+ * This function is maintained for backward compatibility
+ * It uses validateCreditBalanceWithoutCorrection and then applies corrections if needed
+ *
+ * @param companyId The ID of the company to validate
+ * @param expectedBalance Optional expected balance for validation without correction
+ * @param providedTrx Optional transaction object
+ * @returns Object containing validation results
+ */
 export async function validateCreditBalance(
     companyId: string,
     expectedBalance?: number,
     providedTrx?: Knex.Transaction
-): Promise<{isValid: boolean, actualBalance: number, lastTransaction: ITransaction}> {
+): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction}> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error('Tenant context is required for credit balance validation');
@@ -36,171 +47,48 @@ export async function validateCreditBalance(
     
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
-        // Get current date for expiration check
-        const now = new Date().toISOString();
+        // First, validate without making corrections
+        const validationResult = await validateCreditBalanceWithoutCorrection(companyId, trx);
         
-        // Check if credit expiration is enabled for this company
-        const companySettings = await trx('company_billing_settings')
-            .where({
-                company_id: companyId,
-                tenant
-            })
-            .first();
-        
-        const defaultSettings = await trx('default_billing_settings')
-            .where({ tenant })
-            .first();
-        
-        // Determine if credit expiration is enabled
-        // Company setting overrides default, if not specified use default
-        let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (companySettings?.enable_credit_expiration !== undefined) {
-            isCreditExpirationEnabled = companySettings.enable_credit_expiration;
-        } else if (defaultSettings?.enable_credit_expiration !== undefined) {
-            isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
-        }
-        
-        // Get all credit-related transactions
-        const transactions = await trx('transactions')
-            .where({
-                company_id: companyId,
-                tenant
-            })
-            .whereIn('type', [
-                'credit_issuance',
-                'credit_application',
-                'credit_adjustment',
-                'credit_expiration',
-                'credit_transfer'
-            ])
-            .orderBy('created_at', 'asc');
-
-        let calculatedBalance = 0;
-        
-        // Process transactions
-        for (const tx of transactions) {
-            // For credit issuance transactions, check if they're expired (only if expiration is enabled)
-            if (
-                isCreditExpirationEnabled &&
-                (tx.type === 'credit_issuance' || tx.type === 'credit_issuance_from_negative_invoice') &&
-                tx.amount > 0 &&
-                tx.expiration_date &&
-                tx.expiration_date < now
-            ) {
-                // Skip expired credits in the balance calculation
-                console.log(`Skipping expired credit transaction ${tx.transaction_id} with amount ${tx.amount}`);
-                
-                // Check if there's already a credit_expiration transaction for this credit
-                const existingExpiration = await trx('transactions')
-                    .where({
-                        related_transaction_id: tx.transaction_id,
-                        type: 'credit_expiration',
-                        tenant
-                    })
-                    .first();
-                
-                // If no expiration transaction exists, create one to record the expiration
-                if (!existingExpiration && expectedBalance === undefined) {
-                    const expirationTxId = uuidv4();
-                    await trx('transactions').insert({
-                        transaction_id: expirationTxId,
-                        company_id: companyId,
-                        amount: -tx.amount, // Negative amount to reduce the balance
-                        type: 'credit_expiration',
-                        status: 'completed',
-                        description: `Credit expired (original transaction: ${tx.transaction_id})`,
-                        created_at: now,
-                        balance_after: calculatedBalance,
-                        tenant,
-                        related_transaction_id: tx.transaction_id
-                    });
-                    
-                    // Update credit_tracking entry to mark as expired
-                    const creditTracking = await trx('credit_tracking')
-                        .where({
-                            transaction_id: tx.transaction_id,
-                            tenant
-                        })
-                        .first();
-                    
-                    if (creditTracking) {
-                        await trx('credit_tracking')
-                            .where({
-                                credit_id: creditTracking.credit_id,
-                                tenant
-                            })
-                            .update({
-                                is_expired: true,
-                                remaining_amount: 0,
-                                updated_at: now
-                            });
-                    }
-                    
-                    // Add the expiration transaction to our list so it's included in the balance calculation
-                    transactions.push({
-                        transaction_id: expirationTxId,
-                        company_id: companyId,
-                        amount: -tx.amount,
-                        type: 'credit_expiration',
-                        status: 'completed',
-                        created_at: now,
-                        tenant,
-                        related_transaction_id: tx.transaction_id
-                    });
-                }
-            } else {
-                // For non-expired credits or other transaction types, include in balance
-                calculatedBalance += tx.amount;
-            }
-        }
-
-        const [company] = await trx('companies')
-            .where({ company_id: companyId, tenant })
-            .select('credit_balance');
-
-        const isValid = Number(calculatedBalance) === Number(company.credit_balance);
-        
-        if (!isValid) {
-            console.error(`Credit balance mismatch for tenant ${tenant}:`, {
-                tenant,
-                companyId,
-                expectedBalance: company.credit_balance,
-                actualBalance: calculatedBalance,
-                difference: calculatedBalance - company.credit_balance
-            });
+        // If there's a discrepancy and no expected balance is provided, apply the correction
+        if (!validationResult.isValid && expectedBalance === undefined) {
+            const now = new Date().toISOString();
             
-            if (expectedBalance === undefined) {
-                await trx('companies')
-                    .where({ company_id: companyId, tenant })
-                    .update({
-                        credit_balance: calculatedBalance,
-                        updated_at: new Date().toISOString()
-                    });
-                
-                await auditLog(
-                    trx,
-                    {
-                        userId: 'system',
-                        operation: 'credit_balance_correction',
-                        tableName: 'companies',
-                        recordId: companyId,
-                        changedData: {
-                            previous_balance: company.credit_balance,
-                            corrected_balance: calculatedBalance
-                        },
-                        details: {
-                            action: 'Credit balance corrected',
-                            difference: calculatedBalance - company.credit_balance
-                        }
+            // Update the company's credit balance to match the calculated balance
+            await trx('companies')
+                .where({ company_id: companyId, tenant })
+                .update({
+                    credit_balance: validationResult.expectedBalance,
+                    updated_at: now
+                });
+            
+            // Log the automatic correction
+            await auditLog(
+                trx,
+                {
+                    userId: 'system',
+                    operation: 'credit_balance_correction',
+                    tableName: 'companies',
+                    recordId: companyId,
+                    changedData: {
+                        previous_balance: validationResult.actualBalance,
+                        corrected_balance: validationResult.expectedBalance
+                    },
+                    details: {
+                        action: 'Credit balance automatically corrected',
+                        difference: validationResult.difference,
+                        reconciliation_report_id: validationResult.reportId
                     }
-                );
-            }
+                }
+            );
+            
+            console.log(`Credit balance for company ${companyId} automatically corrected from ${validationResult.actualBalance} to ${validationResult.expectedBalance}`);
         }
-
+        
         return {
-            isValid,
-            actualBalance: calculatedBalance,
-            lastTransaction: transactions[transactions.length - 1]
+            isValid: validationResult.isValid,
+            actualBalance: validationResult.expectedBalance, // Return the expected balance as the actual balance after correction
+            lastTransaction: validationResult.lastTransaction
         };
     };
     
@@ -238,60 +126,26 @@ export async function validateTransactionBalance(
     }
 }
 
+/**
+ * Run scheduled credit balance validation for all companies
+ * This function is maintained for backward compatibility
+ * It now uses the new runScheduledCreditBalanceValidation function
+ * which creates reconciliation reports instead of making automatic corrections
+ *
+ * @returns Promise that resolves when validation is complete
+ */
 export async function scheduledCreditBalanceValidation(): Promise<void> {
-    const { knex, tenant } = await createTenantKnex();
+    // Import and use the new function from creditReconciliationActions
+    const { runScheduledCreditBalanceValidation } = await import('./creditReconciliationActions');
     
-    console.log(`Starting scheduled credit balance validation for tenant ${tenant}`);
+    // Run the validation and get the results
+    const results = await runScheduledCreditBalanceValidation();
     
-    const companies = await knex('companies')
-        .where({ tenant })
-        .select('company_id');
-
-    console.log(`Found ${companies.length} companies to validate`);
-    
-    let validCount = 0;
-    let invalidCount = 0;
-    let errorCount = 0;
-
-    for (const company of companies) {
-        try {
-            // This will automatically handle expired credits as part of the validation
-            const result = await validateCreditBalance(company.company_id);
-            
-            if (result.isValid) {
-                validCount++;
-            } else {
-                invalidCount++;
-                await knex.transaction(async (trx) => {
-                    await auditLog(
-                        trx,
-                        {
-                            userId: 'system',
-                            operation: 'credit_balance_validation_failed',
-                            tableName: 'companies',
-                            recordId: company.company_id,
-                            changedData: result,
-                            details: {
-                                action: 'Credit balance validation failed',
-                                expectedBalance: result.actualBalance,
-                                actualBalance: result.actualBalance
-                            }
-                        }
-                    );
-                });
-            }
-            
-            // Log the validation result
-            console.log(`Credit balance validation for company ${company.company_id}: ${result.isValid ? 'Valid' : 'Invalid'}, Balance: ${result.actualBalance}`);
-            
-        } catch (error) {
-            errorCount++;
-            console.error(`Balance validation failed for company ${company.company_id}:`, error);
-        }
-    }
-    
-    console.log(`Completed scheduled credit balance validation for tenant ${tenant}`);
-    console.log(`Results: ${validCount} valid, ${invalidCount} corrected, ${errorCount} errors`);
+    // Log the results for backward compatibility
+    console.log(`Scheduled credit balance validation completed.`);
+    console.log(`Results: ${results.balanceValidCount} valid balances, ${results.balanceDiscrepancyCount} balance discrepancies found`);
+    console.log(`Credit tracking: ${results.missingTrackingCount} missing entries, ${results.inconsistentTrackingCount} inconsistent entries`);
+    console.log(`Errors: ${results.errorCount}`);
 }
 
 export async function createPrepaymentInvoice(

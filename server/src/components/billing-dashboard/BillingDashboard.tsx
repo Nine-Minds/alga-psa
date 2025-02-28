@@ -17,6 +17,7 @@ import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
+import CreditReconciliation from './CreditReconciliation';
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriodView[];
@@ -52,7 +53,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'billing-cycles',
     'time-periods',
     'usage-tracking',
-    'credits'
+    'credits',
+    'reconciliation'
   ];
 
   return (
@@ -123,6 +125,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="credits">
           <CreditManagement />
+        </Tabs.Content>
+
+        <Tabs.Content value="reconciliation">
+          <CreditReconciliation />
         </Tabs.Content>
       </Tabs.Root>
     </div>

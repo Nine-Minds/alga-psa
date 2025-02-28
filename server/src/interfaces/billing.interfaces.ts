@@ -323,3 +323,22 @@ export interface ICompanyBillingSettings extends TenantEntity {
   created_at: ISO8601String;
   updated_at: ISO8601String;
 }
+
+export type ReconciliationStatus = 'open' | 'in_review' | 'resolved';
+
+export interface ICreditReconciliationReport extends TenantEntity {
+  report_id: string;
+  company_id: string;
+  expected_balance: number;
+  actual_balance: number;
+  difference: number;
+  detection_date: ISO8601String;
+  status: ReconciliationStatus;
+  resolution_date?: ISO8601String;
+  resolution_user?: string;
+  resolution_notes?: string;
+  resolution_transaction_id?: string;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+  metadata?: Record<string, any>; // For storing additional information about the reconciliation issue
+}

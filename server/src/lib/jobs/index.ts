@@ -6,6 +6,7 @@ import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
+import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -42,6 +43,11 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await expiringCreditsNotificationHandler(job.data);
     });
     
+    // Register credit reconciliation handler
+    jobScheduler.registerJobHandler<CreditReconciliationJobData>('credit-reconciliation', async (job: Job<CreditReconciliationJobData>) => {
+      await creditReconciliationHandler(job.data);
+    });
+    
     // Register invoice handlers if storageService is provided
     if (storageService && jobService) {
       const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
@@ -63,7 +69,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 };
 
 // Export types
-export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData };
+export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData };
 
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
@@ -145,6 +151,28 @@ export const scheduleExpiringCreditsNotificationJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ExpiringCreditsNotificationJobData>(
     'expiring-credits-notification',
+    cronExpression,
+    { tenantId, companyId }
+  );
+};
+
+/**
+ * Schedule a recurring job to run credit reconciliation
+ * This job validates credit balances and creates reconciliation reports for any discrepancies
+ *
+ * @param tenantId The tenant ID
+ * @param companyId Optional company ID to limit processing to a specific company
+ * @param cronExpression Cron expression for job scheduling (e.g., '0 2 * * *' for daily at 2:00 AM)
+ * @returns Job ID if successful, null otherwise
+ */
+export const scheduleCreditReconciliationJob = async (
+  tenantId: string,
+  companyId?: string,
+  cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<CreditReconciliationJobData>(
+    'credit-reconciliation',
     cronExpression,
     { tenantId, companyId }
   );
