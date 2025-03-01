@@ -8,7 +8,11 @@
     "dev": "NEXT_PUBLIC_EDITION=enterprise next dev",
     "build": "NEXT_PUBLIC_EDITION=enterprise next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "workflow-worker": "ts-node --esm src/bin/workflow-worker.ts",
+    "workflow-worker:dev": "nodemon --watch src --ext ts --exec \"ts-node --esm src/bin/workflow-worker.ts\"",
+    "workflow-worker:build": "tsc --project tsconfig.json --outDir dist src/bin/workflow-worker.ts",
+    "workflow-worker:start": "node dist/bin/workflow-worker.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
