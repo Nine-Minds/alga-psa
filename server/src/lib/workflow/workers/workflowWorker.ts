@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 import { getRedisStreamClient } from '../streams/redisStreamClient';
-import { WorkflowRuntime, ProcessQueuedEventParams } from '../core/workflowRuntime';
+import { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from '../core/workflowRuntime';
 import { parseStreamEvent } from '../streams/workflowEventSchema';
 import WorkflowEventProcessingModel from '../persistence/workflowEventProcessingModel';
 import logger from '../../../utils/logger';
@@ -68,7 +68,7 @@ export class WorkflowWorker {
   private running: boolean = false;
   private workerId: string;
   private redisStreamClient = getRedisStreamClient();
-  private workflowRuntime: WorkflowRuntime;
+  private workflowRuntime: TypeScriptWorkflowRuntime;
   private config: WorkflowWorkerConfig;
   private startTime: number = Date.now();
   private activeEventCount: number = 0;
@@ -89,7 +89,7 @@ export class WorkflowWorker {
    * @param workflowRuntime Workflow runtime instance
    * @param config Worker configuration
    */
-  constructor(workflowRuntime: WorkflowRuntime, config: Partial<WorkflowWorkerConfig> = {}) {
+  constructor(workflowRuntime: TypeScriptWorkflowRuntime, config: Partial<WorkflowWorkerConfig> = {}) {
     this.workflowRuntime = workflowRuntime;
     this.config = { ...DEFAULT_CONFIG, ...config };
     
@@ -568,7 +568,7 @@ export class WorkflowWorker {
  * @returns The started worker instance
  */
 export async function startWorkflowWorker(
-  workflowRuntime: WorkflowRuntime,
+  workflowRuntime: TypeScriptWorkflowRuntime,
   config: Partial<WorkflowWorkerConfig> = {}
 ): Promise<WorkflowWorker> {
   const worker = new WorkflowWorker(workflowRuntime, config);

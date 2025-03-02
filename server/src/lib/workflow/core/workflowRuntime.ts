@@ -1,807 +1,818 @@
-import { createTenantKnex } from '@/lib/db';
+import { WorkflowContext, WorkflowFunction, WorkflowEvent } from './workflowContext';
+import { WorkflowDefinition } from './workflowDefinition';
+import { ActionRegistry } from './actionRegistry';
+import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing';
 import { v4 as uuidv4 } from 'uuid';
-import { WorkflowDefinition } from './workflowParser';
-import { ActionToExecute, EventProcessingResult, StateMachine, WorkflowEvent, WorkflowContext } from './stateMachine';
-import { createActionExecutor, EnhancedActionToExecute, ActionResult } from './actionExecutor';
-import WorkflowExecutionModel from '../persistence/workflowExecutionModel';
-import WorkflowEventModel from '../persistence/workflowEventModel';
-import WorkflowTimerModel from '../persistence/workflowTimerModel';
-import WorkflowActionResultModel from '../persistence/workflowActionResultModel';
-import WorkflowEventProcessingModel from '../persistence/workflowEventProcessingModel';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IWorkflowEvent, IWorkflowExecution, IWorkflowTimer } from '../persistence/workflowInterfaces';
-import { IWorkflowEventProcessing } from '../persistence/workflowEventProcessingModel';
-import { Knex } from 'knex';
+import { createTenantKnex } from '@/lib/db';
 import { getRedisStreamClient } from '../streams/redisStreamClient';
-import {
-  WorkflowEventBase,
-  WorkflowEventProcessingStatus,
-  toStreamEvent
-} from '../streams/workflowEventSchema';
+import { executeDistributedTransaction } from '../util/distributedTransaction';
+import { acquireDistributedLock, releaseDistributedLock } from '../util/distributedLock';
+import { toStreamEvent } from '../streams/workflowEventSchema';
+import WorkflowEventModel from '../persistence/workflowEventModel';
+import WorkflowExecutionModel from '../persistence/workflowExecutionModel';
+import WorkflowEventProcessingModel from '../persistence/workflowEventProcessingModel';
 import logger from '../../../utils/logger';
-import {
-  acquireDistributedLock,
-  releaseDistributedLock,
-  executeDistributedTransaction,
-  withRetry,
-  classifyError,
-  RecoveryStrategy
-} from '../util';
+import { workflowConfig } from '../../../config/workflowConfig';
 
 /**
- * Parameters for enqueueing an event
+ * Options for workflow execution
  */
-export interface EnqueueEventParams {
-  executionId: string;           // ID of the workflow execution
-  eventName: string;             // Name of the event to process
-  payload?: Record<string, any>; // Event payload
-  userRole?: string;             // Role of the user triggering the event
-  tenant: string;                // Tenant identifier
-  idempotencyKey?: string;       // Optional idempotency key for deduplication
+export interface WorkflowExecutionOptions {
+  tenant: string;
+  initialData?: Record<string, any>;
+  userId?: string;
 }
 
 /**
- * Parameters for processing an event
+ * Result of a workflow execution
  */
-export interface ProcessEventParams {
-  executionId: string;           // ID of the workflow execution
-  eventName: string;             // Name of the event to process
-  payload?: Record<string, any>; // Event payload
-  userRole?: string;             // Role of the user triggering the event
-  tenant: string;                // Tenant identifier
+export interface WorkflowExecutionResult {
+  executionId: string;
+  currentState: string;
+  isComplete: boolean;
+}
+
+/**
+ * Event submission options
+ */
+export interface EventSubmissionOptions {
+  execution_id: string;
+  event_name: string;
+  payload?: any;
+  user_id?: string;
+  tenant: string;
+  idempotency_key?: string;
 }
 
 /**
  * Result of enqueueing an event
  */
 export interface EnqueueEventResult {
-  success: boolean;              // Whether the event was enqueued successfully
-  eventId: string;               // ID of the enqueued event
-  processingId: string;          // ID of the processing record
-  errorMessage?: string;         // Error message if not successful
+  eventId: string;
+  processingId: string;
 }
 
 /**
  * Parameters for processing a queued event
  */
 export interface ProcessQueuedEventParams {
-  eventId: string;               // ID of the event to process
-  executionId: string;           // ID of the workflow execution
-  processingId: string;          // ID of the processing record
-  workerId: string;              // ID of the worker processing the event
-  tenant: string;                // Tenant identifier
+  eventId: string;
+  executionId: string;
+  processingId: string;
+  workerId: string;
+  tenant: string;
 }
 
 /**
- * Parameters for creating a workflow execution
+ * Result of processing a queued event
  */
-export interface CreateExecutionParams {
-  executionId?: string;          // Optional ID for the execution (generated if not provided)
-  workflowName: string;          // Name of the workflow
-  workflowVersion?: string;      // Version of the workflow (defaults to 'latest')
-  initialState?: string;         // Initial state (defaults to first state in definition)
-  contextData?: Record<string, any>; // Initial context data
-  tenant: string;                // Tenant identifier
+export interface ProcessQueuedEventResult {
+  success: boolean;
+  errorMessage?: string;
+  previousState?: string;
+  currentState?: string;
+  actionsExecuted: Array<{
+    actionName: string;
+    success: boolean;
+    error?: string;
+  }>;
 }
 
 /**
- * Result of processing an event
+ * Implementation of the workflow runtime for TypeScript-based workflows
  */
-export interface EventProcessingResponse {
-  success: boolean;              // Whether the event was processed successfully
-  executionId: string;           // ID of the workflow execution
-  previousState: string;         // State before the event
-  currentState: string;          // State after the event
-  actionsExecuted: ActionResult[]; // Results of the actions executed
-  errorMessage?: string;         // Error message if not successful
-}
-
-/**
- * Available event or action
- */
-export interface AvailableAction {
-  name: string;                  // Name of the event or action
-  parameters?: Record<string, any>; // Required parameters
-  description?: string;          // Description of the event or action
-}
-
-/**
- * Workflow details including state and available actions
- */
-export interface WorkflowDetails {
-  executionId: string;           // ID of the workflow execution
-  workflowName: string;          // Name of the workflow
-  currentState: string;          // Current state
-  context: Record<string, any>;  // Current context data
-  availableEvents: string[];     // Events that can be triggered
-  availableActions: string[];    // Actions that can be executed
-  history: IWorkflowEvent[];     // History of events
-  activeTimers: IWorkflowTimer[]; // Active timers
-}
-
-/**
- * Workflow runtime engine that processes events, maintains state via event sourcing,
- * and executes actions in parallel based on dependencies.
- *
- * Supports both synchronous and asynchronous event processing:
- * - Synchronous: processEvent() - processes an event immediately and returns the result
- * - Asynchronous: enqueueEvent() - persists the event and publishes to Redis for later processing
- */
-export class WorkflowRuntime {
-  private stateMachine: StateMachine;
-  private workflowRegistry: Map<string, WorkflowDefinition>;
-  private redisStreamClient: ReturnType<typeof getRedisStreamClient>;
+export class TypeScriptWorkflowRuntime {
+  private actionRegistry: ActionRegistry;
+  private workflowDefinitions: Map<string, WorkflowDefinition> = new Map();
+  private executionStates: Map<string, any> = new Map();
+  private stateCache: Map<string, { timestamp: number, state: any }> = new Map();
+  private readonly STATE_CACHE_TTL_MS = 60000; // 1 minute cache TTL
   
-  /**
-   * Create a new workflow runtime
-   */
-  constructor() {
-    this.stateMachine = new StateMachine();
-    this.workflowRegistry = new Map();
-    this.redisStreamClient = getRedisStreamClient();
+  constructor(actionRegistry: ActionRegistry) {
+    this.actionRegistry = actionRegistry;
   }
   
   /**
-   * Register a workflow definition
-   * @param workflowName Name of the workflow
-   * @param definition Workflow definition
-   * @param version Version of the workflow (defaults to 'latest')
+   * Load a workflow execution state from events
+   * This implements the event sourcing pattern by replaying events to derive state
+   *
+   * @param executionId The workflow execution ID
+   * @param tenant The tenant ID
+   * @param options Options for event replay
+   * @returns The derived execution state
    */
-  registerWorkflow(workflowName: string, definition: WorkflowDefinition, version: string = 'latest'): void {
-    const key = `${workflowName}:${version}`;
-    this.workflowRegistry.set(key, definition);
-  }
-  
-  /**
-   * Get a workflow definition
-   * @param workflowName Name of the workflow
-   * @param version Version of the workflow (defaults to 'latest')
-   * @returns The workflow definition
-   */
-  getWorkflowDefinition(workflowName: string, version: string = 'latest'): WorkflowDefinition | undefined {
-    const key = `${workflowName}:${version}`;
-    return this.workflowRegistry.get(key);
-  }
-  
-  /**
-   * Create a new workflow execution
-   * @param params Parameters for creating the execution
-   * @returns The execution ID
-   */
-  async createExecution(params: CreateExecutionParams): Promise<string> {
-    const executionId = params.executionId || uuidv4();
-    
-    // Get the workflow definition
-    const workflowDef = this.getWorkflowDefinition(params.workflowName, params.workflowVersion);
-    if (!workflowDef) {
-      throw new Error(`Workflow definition not found: ${params.workflowName}:${params.workflowVersion || 'latest'}`);
+  async loadExecutionState(
+    executionId: string,
+    tenant: string,
+    options: EventReplayOptions = {}
+  ): Promise<any> {
+    // Check cache first if not explicitly bypassed
+    if (!options.debug && !options.replayUntil) {
+      const cachedState = this.stateCache.get(executionId);
+      if (cachedState && (Date.now() - cachedState.timestamp) < this.STATE_CACHE_TTL_MS) {
+        logger.debug(`[TypeScriptWorkflowRuntime] Using cached state for execution ${executionId}`);
+        return cachedState.state;
+      }
     }
     
-    // Determine initial state
-    const initialState = params.initialState || workflowDef.states[0]?.name || 'initial';
-    
     try {
-      // Create execution record
-      await WorkflowExecutionModel.create({
-        tenant: params.tenant,
-        workflow_name: params.workflowName,
-        workflow_version: params.workflowVersion || 'latest',
-        current_state: initialState,
-        status: 'active',
-        context_data: params.contextData || {}
-      });
+      // Use event sourcing to replay events and derive state
+      const result = await WorkflowEventSourcing.replayEvents(executionId, tenant, options);
       
-      return executionId;
+      // Store derived state in memory cache
+      this.executionStates.set(executionId, result.executionState);
+      
+      // Update cache with timestamp
+      if (!options.debug && !options.replayUntil) {
+        this.stateCache.set(executionId, {
+          timestamp: Date.now(),
+          state: result.executionState
+        });
+      }
+      
+      return result.executionState;
     } catch (error) {
-      console.error(`Error creating workflow execution:`, error);
+      logger.error(`[TypeScriptWorkflowRuntime] Error loading execution state for ${executionId}:`, error);
       throw error;
     }
   }
   
   /**
-   * Enqueue an event for asynchronous processing
-   * This is a "fire and forget" operation that returns quickly after persisting the event
-   * and publishing it to Redis Streams for later processing by a worker
-   *
-   * @param params Parameters for enqueueing the event
-   * @returns Result of enqueueing the event
+   * Register a workflow definition
    */
-  async enqueueEvent(params: EnqueueEventParams): Promise<EnqueueEventResult> {
+  registerWorkflow(workflow: WorkflowDefinition): void {
+    this.workflowDefinitions.set(workflow.metadata.name, workflow);
+  }
+  
+  /**
+   * Get all registered workflow definitions
+   * @returns Map of workflow definitions
+   */
+  getRegisteredWorkflows(): Map<string, WorkflowDefinition> {
+    return new Map(this.workflowDefinitions);
+  }
+  
+  /**
+   * Start a new workflow execution
+   */
+  async startWorkflow(
+    workflowName: string,
+    options: WorkflowExecutionOptions
+  ): Promise<WorkflowExecutionResult> {
+    const workflow = this.workflowDefinitions.get(workflowName);
+    if (!workflow) {
+      throw new Error(`Workflow "${workflowName}" not found`);
+    }
+    
+    // Generate a unique execution ID
+    const executionId = `wf-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    
     try {
-      // Generate event ID and idempotency key if not provided
-      const eventId = params.idempotencyKey || uuidv4();
-      const idempotencyKey = params.idempotencyKey;
+      // Get Knex instance
+      const { knex } = await createTenantKnex();
       
-      // Check for idempotency - if this event was already enqueued, return the existing ID
-      if (idempotencyKey) {
-        // Since we don't have a getByIdempotencyKey method, we'll need to implement a different approach
-        // For now, we'll just proceed with the new event ID
-        logger.info(`[WorkflowRuntime] Using idempotency key ${idempotencyKey} as event ID`);
-      }
+      // Create initial execution state
+      const executionState = {
+        executionId,
+        tenant: options.tenant,
+        currentState: 'initial',
+        data: options.initialData || {},
+        events: [],
+        isComplete: false
+      };
       
-      // Use withRetry for resilient execution
-      return await withRetry(async () => {
-        // Load workflow execution
-        const execution = await WorkflowExecutionModel.getById(params.executionId);
-        if (!execution) {
-          return {
-            success: false,
-            eventId,
-            processingId: '',
-            errorMessage: `Workflow execution not found: ${params.executionId}`
-          };
-        }
-        
-        // Load workflow definition
-        const workflowDef = this.getWorkflowDefinition(execution.workflow_name, execution.workflow_version);
-        if (!workflowDef) {
-          return {
-            success: false,
-            eventId,
-            processingId: '',
-            errorMessage: `Workflow definition not found: ${execution.workflow_name}:${execution.workflow_version}`
-          };
-        }
-        
-        // Validate that the event is allowed in the current state
-        const dbEvents = await WorkflowEventModel.getByExecutionId(params.executionId);
-        const eventLog: WorkflowEvent[] = dbEvents.map(dbEvent => ({
-          event_id: dbEvent.event_id,
-          execution_id: dbEvent.execution_id,
-          event_name: dbEvent.event_name,
-          tenant: dbEvent.tenant,
-          payload: dbEvent.payload || {},
-          user_id: dbEvent.user_id,
-          timestamp: dbEvent.created_at,
-          from_state: dbEvent.from_state,
-          to_state: dbEvent.to_state
-        }));
-        
-        // Get current state by replaying events
-        const { currentState } = this.stateMachine.replayEvents(workflowDef, eventLog);
-        
-        // Check if the event is valid for the current state
-        const availableEvents = this.stateMachine.getAvailableEvents(workflowDef, currentState);
-        if (!availableEvents.includes(params.eventName)) {
-          return {
-            success: false,
-            eventId,
-            processingId: '',
-            errorMessage: `Invalid event ${params.eventName} for current state ${currentState}`
-          };
-        }
-        
-        // Get the current user if available
-        const currentUser = params.userRole ? await getCurrentUser() : undefined;
-        const userId = currentUser ? uuidv4() : undefined; // Simplified for the implementation
-        
-        // Get Knex instance for database operations
-        const { knex } = await createTenantKnex();
-        let processingId = '';
-        
-        // Use distributed transaction for database operations
-        await executeDistributedTransaction(
-          knex,
-          `workflow:${params.executionId}:enqueue`,
-          async (trx) => {
-            // Persist the event
-            const eventData: Omit<IWorkflowEvent, 'event_id' | 'created_at'> = {
-              tenant: params.tenant,
-              execution_id: params.executionId,
-              event_name: params.eventName,
-              event_type: 'user_action', // Default type
-              from_state: currentState,
-              to_state: '', // Will be determined during processing
-              user_id: userId,
-              payload: params.payload
-            };
-            
-            // Since we can't use the model with a transaction, use knex directly
-            const [createdEvent] = await trx<IWorkflowEvent>('workflow_events')
-              .insert({
-                ...eventData,
-                tenant: params.tenant
-              })
-              .returning('event_id');
-            
-            // Create processing record directly with knex
-            const [processingRecord] = await trx<IWorkflowEventProcessing>('workflow_event_processing')
-              .insert({
-                event_id: createdEvent.event_id,
-                execution_id: params.executionId,
-                tenant: params.tenant,
-                status: 'pending' as WorkflowEventProcessingStatus,
-                attempt_count: 0
-              })
-              .returning('processing_id');
-            
-            processingId = processingRecord.processing_id;
-            
-            // Update execution status to indicate pending processing
-            await trx('workflow_executions')
-              .where({
-                execution_id: params.executionId,
-                tenant: params.tenant
-              })
-              .update({
-                status: 'pending_processing',
-                updated_at: new Date().toISOString()
-              });
-          },
-          {
-            isolationLevel: 'repeatable read'
-          }
-        );
-        
-        // Get the created event to publish to Redis
-        const event = await WorkflowEventModel.getById(eventId);
-        if (!event) {
-          throw new Error(`Failed to retrieve created event: ${eventId}`);
-        }
-        
-        // Convert to stream event format
-        const streamEvent = toStreamEvent(event);
-        
-        // Publish to Redis Stream with retry
-        await withRetry(async () => {
-          await this.redisStreamClient.publishEvent(streamEvent);
-        }, {
-          maxRetries: 3,
-          initialDelayMs: 500
-        });
-        
-        // Update processing record to indicate published
-        await WorkflowEventProcessingModel.markAsPublished(processingId);
-        
-        // Return success
-        return {
-          success: true,
-          eventId,
-          processingId
-        };
-      }, {
-        maxRetries: 3,
-        initialDelayMs: 1000
+      // Store execution state in memory
+      this.executionStates.set(executionId, executionState);
+      
+      // Persist workflow execution record
+      await WorkflowExecutionModel.create({
+        workflow_name: workflowName,
+        workflow_version: workflow.metadata.version || '1.0.0', // Default version if not specified
+        current_state: 'initial',
+        status: 'active',
+        context_data: options.initialData || {},
+        tenant: options.tenant
       });
-    } catch (error: any) {
-      // Classify the error
-      const classification = classifyError(error);
-      logger.error(`Error enqueueing event:`, {
-        error,
-        category: classification.category,
-        strategy: classification.strategy,
-        description: classification.description
-      });
+      
+      // Create initial workflow.started event
+      const startEvent = {
+        execution_id: executionId,
+        event_name: 'workflow.started',
+        event_type: 'system',
+        tenant: options.tenant,
+        from_state: 'none',
+        to_state: 'initial',
+        user_id: options.userId, // This is optional in IWorkflowEvent
+        payload: {
+          workflow_name: workflowName,
+          workflow_version: workflow.metadata.version || '1.0.0', // Default version if not specified
+          initial_data: options.initialData || {}
+        }
+      };
+      
+      // Persist the initial event
+      await WorkflowEventModel.create(startEvent);
+      
+      // Create workflow context
+      const context = this.createWorkflowContext(executionId, options.tenant);
+      
+      // Start workflow execution in background
+      this.executeWorkflow(workflow.execute, context, executionState);
       
       return {
-        success: false,
-        eventId: '',
-        processingId: '',
-        errorMessage: classification.description
+        executionId,
+        currentState: executionState.currentState,
+        isComplete: executionState.isComplete
       };
+    } catch (error) {
+      logger.error(`[TypeScriptWorkflowRuntime] Error starting workflow ${workflowName}:`, error);
+      throw error;
     }
   }
   
   /**
-   * Process an event for a workflow execution synchronously
-   * @param params Parameters for processing the event
-   * @returns Result of processing the event
+   * Submit an event to a workflow execution
+   * This is the synchronous version that processes the event immediately
+   * but still persists the event for event sourcing
    */
-  async processEvent(params: ProcessEventParams): Promise<EventProcessingResponse> {
+  async submitEvent(options: EventSubmissionOptions): Promise<WorkflowExecutionResult> {
+    const { execution_id, event_name, payload, user_id, tenant } = options;
+    
     try {
-      // Load workflow execution
-      const execution = await WorkflowExecutionModel.getById(params.executionId);
-      if (!execution) {
-        throw new Error(`Workflow execution not found: ${params.executionId}`);
-      }
+      // Get Knex instance
+      const { knex } = await createTenantKnex();
       
-      // Load workflow definition
-      const workflowDef = this.getWorkflowDefinition(execution.workflow_name, execution.workflow_version);
-      if (!workflowDef) {
-        throw new Error(`Workflow definition not found: ${execution.workflow_name}:${execution.workflow_version}`);
-      }
+      // Load execution state using event sourcing
+      const executionState = await this.loadExecutionState(execution_id, tenant);
       
-      // Load all previous events for this execution
-      const dbEvents = await WorkflowEventModel.getByExecutionId(params.executionId);
+      // Store the previous state
+      const previousState = executionState.currentState;
       
-      // Convert database events to WorkflowEvent format
-      const eventLog: WorkflowEvent[] = dbEvents.map(dbEvent => ({
-        event_id: dbEvent.event_id,
-        execution_id: dbEvent.execution_id,
-        event_name: dbEvent.event_name,
-        tenant: dbEvent.tenant,
-        payload: dbEvent.payload || {},
-        user_id: dbEvent.user_id,
-        timestamp: dbEvent.created_at, // Use created_at as timestamp
-        from_state: dbEvent.from_state,
-        to_state: dbEvent.to_state
-      }));
-      
-      // Get the current user if available
-      const currentUser = params.userRole ? await getCurrentUser() : undefined;
-      const userId = currentUser ? uuidv4() : undefined; // Simplified for the implementation
-      
-      // Create new event object
-      const newEvent: WorkflowEvent = {
-        event_id: uuidv4(),
-        execution_id: params.executionId,
-        event_name: params.eventName,
-        tenant: params.tenant,
-        payload: params.payload || {},
-        user_id: userId,
-        timestamp: new Date().toISOString(),
-        from_state: execution.current_state,
-        to_state: '' // Will be filled in after processing
+      // Create workflow event
+      const workflowEvent: WorkflowEvent = {
+        name: event_name,
+        payload: payload || {},
+        user_id,
+        timestamp: new Date().toISOString()
       };
       
-      // Process the event using the stateless state machine
-      const context = execution.context_data || {};
-      const result = this.stateMachine.processEvent(
-        workflowDef,
-        eventLog,
-        newEvent,
-        context
-      );
+      // Add event to execution state
+      executionState.events.push(workflowEvent);
       
-      if (!result.isValid) {
-        return {
-          success: false,
-          executionId: params.executionId,
-          previousState: execution.current_state,
-          currentState: execution.current_state,
-          actionsExecuted: [],
-          errorMessage: result.errorMessage || `Invalid event ${params.eventName} for current state ${execution.current_state}`
-        };
-      }
+      // Apply the event to update the state data
+      executionState.data = WorkflowEventSourcing.applyEvent(executionState.data, workflowEvent);
       
-      // Update the event with the final destination state
-      newEvent.to_state = result.nextState;
+      // Notify event listeners
+      this.notifyEventListeners(execution_id, workflowEvent);
       
-      // Begin transaction for database operations
-      const { knex } = await createTenantKnex();
-      let actionResults: ActionResult[] = [];
+      // Persist the event to database for event sourcing
+      const dbEvent = {
+        execution_id,
+        event_name,
+        event_type: 'workflow',
+        tenant,
+        payload: payload || {},
+        user_id,
+        from_state: previousState,
+        to_state: executionState.currentState,
+      };
       
-      await knex.transaction(async (trx) => {
-        // Persist the event
-        const eventData: Omit<IWorkflowEvent, 'event_id' | 'created_at'> = {
-          tenant: params.tenant,
-          execution_id: params.executionId,
-          event_name: params.eventName,
-          event_type: 'user_action', // Default type
-          from_state: newEvent.from_state || '',
-          to_state: newEvent.to_state || '',
-          user_id: userId,
-          payload: params.payload
-        };
+      // Persist the event
+      await WorkflowEventModel.create(dbEvent);
+      
+      // Update workflow execution record with new state
+      await WorkflowExecutionModel.update(execution_id, {
+        current_state: executionState.currentState,
+        context_data: executionState.data
+      });
+      
+      return {
+        executionId: execution_id,
+        currentState: executionState.currentState,
+        isComplete: executionState.isComplete
+      };
+    } catch (error) {
+      logger.error(`[TypeScriptWorkflowRuntime] Error submitting event to execution ${execution_id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Enqueues an event for asynchronous processing
+   * Returns quickly after persisting the event and publishing to Redis
+   *
+   * @param options Event submission options
+   * @returns Promise resolving to the event ID
+   */
+  async enqueueEvent(options: EventSubmissionOptions): Promise<EnqueueEventResult> {
+    const { execution_id, event_name, payload, user_id, tenant, idempotency_key } = options;
+    
+    // Get Knex instance
+    const { knex } = await createTenantKnex();
+    
+    // Verify execution exists and is valid
+    const executionState = this.executionStates.get(execution_id);
+    if (!executionState) {
+      throw new Error(`Workflow execution "${execution_id}" not found`);
+    }
+    
+    // Verify tenant
+    if (executionState.tenant !== tenant) {
+      throw new Error(`Tenant mismatch for workflow execution "${execution_id}"`);
+    }
+    
+    // Get Redis stream client
+    const redisStreamClient = getRedisStreamClient();
+    
+    // Generate a unique event ID
+    const eventId = idempotency_key || `evt-${Date.now()}-${uuidv4()}`;
+    
+    // Create event
+    const event = {
+      event_id: eventId,
+      execution_id,
+      event_name,
+      event_type: 'workflow',
+      tenant,
+      payload: payload || {},
+      user_id,
+      from_state: executionState.currentState,
+      to_state: executionState.currentState, // Initially the same as from_state, will be updated during processing
+      created_at: new Date().toISOString()
+    };
+    
+    // Generate a unique processing ID
+    const processingId = `proc-${Date.now()}-${uuidv4()}`;
+    
+    try {
+      // Use distributed transaction to persist event and publish to Redis
+      await executeDistributedTransaction(knex, `workflow:${execution_id}`, async (trx) => {
+        // Persist event to database
+        await trx('workflow_events').insert(event);
         
-        await WorkflowEventModel.create(eventData);
+        // Create processing record
+        await trx('workflow_event_processing').insert({
+          processing_id: processingId,
+          event_id: eventId,
+          execution_id,
+          tenant,
+          status: 'pending',
+          attempt_count: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
         
-        // Update execution current state (as a cache)
-        await trx('workflow_executions')
+        // Publish to Redis stream
+        const streamEvent = toStreamEvent(event);
+        await redisStreamClient.publishEvent(streamEvent);
+        
+        // Update processing record status to published
+        await trx('workflow_event_processing')
           .where({
-            execution_id: params.executionId,
-            tenant: params.tenant
+            processing_id: processingId,
+            tenant
           })
           .update({
-            current_state: result.nextState,
-            context_data: context,
+            status: 'published',
             updated_at: new Date().toISOString()
           });
       });
       
-      // Execute actions using the dependency graph executor (outside the transaction)
-      const enhancedActions = this.enhanceActions(result.actionsToExecute, newEvent);
-      const actionExecutor = createActionExecutor();
-      actionResults = await actionExecutor.executeActions(enhancedActions, newEvent, params.tenant);
+      logger.info(`[TypeScriptWorkflowRuntime] Successfully enqueued event ${eventId} for execution ${execution_id}`, {
+        eventId,
+        executionId: execution_id,
+        eventName: event_name
+      });
       
-      // Return the result
       return {
-        success: true,
-        executionId: params.executionId,
-        previousState: result.previousState,
-        currentState: result.nextState,
-        actionsExecuted: actionResults
+        eventId,
+        processingId
       };
-    } catch (error: any) {
-      logger.error(`Error processing event:`, error);
-      return {
-        success: false,
-        executionId: params.executionId,
-        previousState: '',
-        currentState: '',
-        actionsExecuted: [],
-        errorMessage: error.message
-      };
+    } catch (error) {
+      logger.error(`[TypeScriptWorkflowRuntime] Failed to enqueue event for execution ${execution_id}:`, error);
+      throw error;
     }
   }
   
   /**
-   * Process a queued event from Redis Streams
-   * This is called by worker processes to handle events asynchronously
+   * Process a queued event from Redis stream
+   * Called by worker processes to handle events asynchronously
    *
    * @param params Parameters for processing the queued event
    * @returns Result of processing the event
    */
-  async processQueuedEvent(params: ProcessQueuedEventParams): Promise<EventProcessingResponse> {
-    // Generate a unique owner ID for distributed lock
-    const lockOwnerId = `worker-${params.workerId}-${uuidv4().substring(0, 8)}`;
+  async processQueuedEvent(
+    params: ProcessQueuedEventParams
+  ): Promise<ProcessQueuedEventResult> {
+    const { eventId, executionId, processingId, workerId, tenant } = params;
     
-    // Create lock key based on event ID to ensure exclusive processing
-    const lockKey = `event:${params.eventId}:processing`;
+    // Get Knex instance
+    const { knex } = await createTenantKnex();
+    
+    // Acquire distributed lock to ensure only one worker processes this event
+    const lockKey = `event:${eventId}:processing`;
+    const lockOwner = `worker:${workerId}`;
     
     try {
-      // Update processing status to indicate processing has started
-      await WorkflowEventProcessingModel.markAsProcessing(params.processingId, params.workerId);
-      
-      // Acquire distributed lock to ensure exclusive processing
-      const lockAcquired = await acquireDistributedLock(lockKey, lockOwnerId, {
-        waitTimeMs: 5000,  // Wait up to 5 seconds
-        ttlMs: 60000,      // Lock expires after 60 seconds
-        throwOnFailure: true
+      // Acquire lock with 5 second wait time and 60 second TTL
+      const lockAcquired = await acquireDistributedLock(lockKey, lockOwner, {
+        waitTimeMs: 5000,
+        ttlMs: 60000
       });
       
       if (!lockAcquired) {
-        throw new Error(`Failed to acquire lock for event ${params.eventId}`);
+        return {
+          success: false,
+          errorMessage: 'Failed to acquire lock for event processing',
+          actionsExecuted: []
+        };
       }
-      
-      logger.debug(`[WorkflowRuntime] Acquired lock for event ${params.eventId}`);
       
       try {
-        // Load the event
-        const event = await WorkflowEventModel.getById(params.eventId);
+        // Mark event as processing
+        await WorkflowEventProcessingModel.markAsProcessing(processingId, workerId);
+        
+        // Load the event from database
+        const event = await WorkflowEventModel.getById(eventId);
         if (!event) {
-          throw new Error(`Event not found: ${params.eventId}`);
+          throw new Error(`Event ${eventId} not found`);
         }
         
-        // Load workflow execution
-        const execution = await WorkflowExecutionModel.getById(params.executionId);
-        if (!execution) {
-          throw new Error(`Workflow execution not found: ${params.executionId}`);
-        }
+        // Load execution state using event sourcing
+        // This ensures we have the latest state derived from all events
+        const executionState = await this.loadExecutionState(executionId, tenant);
         
-        // Load workflow definition
-        const workflowDef = this.getWorkflowDefinition(execution.workflow_name, execution.workflow_version);
-        if (!workflowDef) {
-          throw new Error(`Workflow definition not found: ${execution.workflow_name}:${execution.workflow_version}`);
-        }
+        // Store the previous state
+        const previousState = executionState.currentState;
         
-        // Load all previous events for this execution
-        const dbEvents = await WorkflowEventModel.getByExecutionId(params.executionId);
-        
-        // Convert database events to WorkflowEvent format
-        const eventLog: WorkflowEvent[] = dbEvents.map(dbEvent => ({
-          event_id: dbEvent.event_id,
-          execution_id: dbEvent.execution_id,
-          event_name: dbEvent.event_name,
-          tenant: dbEvent.tenant,
-          payload: dbEvent.payload || {},
-          user_id: dbEvent.user_id,
-          timestamp: dbEvent.created_at, // Use created_at as timestamp
-          from_state: dbEvent.from_state,
-          to_state: dbEvent.to_state
-        }));
-        
-        // Create workflow event object from the database event
+        // Create a workflow event for the runtime
         const workflowEvent: WorkflowEvent = {
-          event_id: event.event_id,
-          execution_id: event.execution_id,
-          event_name: event.event_name,
-          tenant: event.tenant,
+          name: event.event_name,
           payload: event.payload || {},
           user_id: event.user_id,
-          timestamp: event.created_at,
-          from_state: event.from_state,
-          to_state: event.to_state || '' // Will be updated after processing
+          timestamp: event.created_at
         };
         
-        // Process the event using the stateless state machine
-        const context = execution.context_data || {};
-        const result = this.stateMachine.processEvent(
-          workflowDef,
-          eventLog,
-          workflowEvent,
-          context
-        );
+        // Add event to execution state
+        executionState.events.push(workflowEvent);
         
-        if (!result.isValid) {
-          // Mark processing as failed
-          const errorMessage = result.errorMessage || `Invalid event ${event.event_name} for current state ${execution.current_state}`;
-          await WorkflowEventProcessingModel.markAsFailed(params.processingId, errorMessage);
+        // Apply the event to update the state data
+        executionState.data = WorkflowEventSourcing.applyEvent(executionState.data, workflowEvent);
+        
+        // Notify event listeners
+        this.notifyEventListeners(executionId, workflowEvent);
+        
+        // Update the event's to_state in the database
+        await executeDistributedTransaction(knex, `workflow:${executionId}`, async (trx) => {
+          await trx('workflow_events')
+            .where({
+              event_id: eventId,
+              tenant
+            })
+            .update({
+              to_state: executionState.currentState
+            });
           
-          return {
-            success: false,
-            executionId: params.executionId,
-            previousState: execution.current_state,
-            currentState: execution.current_state,
-            actionsExecuted: [],
-            errorMessage
-          };
-        }
+          // Mark event processing as completed
+          await trx('workflow_event_processing')
+            .where({
+              processing_id: processingId,
+              tenant
+            })
+            .update({
+              status: 'completed',
+              updated_at: new Date().toISOString()
+            });
+        });
         
-        // Update the event with the final destination state
-        workflowEvent.to_state = result.nextState;
-        
-        // Get Knex instance for database operations
-        const { knex } = await createTenantKnex();
-        let actionResults: ActionResult[] = [];
-        
-        // Use distributed transaction to ensure consistency
-        await executeDistributedTransaction(
-          knex,
-          `workflow:${params.executionId}`,
-          async (trx) => {
-            // Update the event with the determined state transition
-            await trx('workflow_events')
-              .where({
-                event_id: params.eventId,
-                tenant: params.tenant
-              })
-              .update({
-                to_state: result.nextState
-              });
-            
-            // Update execution current state
-            await trx('workflow_executions')
-              .where({
-                execution_id: params.executionId,
-                tenant: params.tenant
-              })
-              .update({
-                current_state: result.nextState,
-                context_data: context,
-                status: 'active',
-                updated_at: new Date().toISOString()
-              });
-          },
-          {
-            isolationLevel: 'repeatable read'
-          }
-        );
-        
-        // Execute actions using the dependency graph executor with retry
-        const enhancedActions = this.enhanceActions(result.actionsToExecute, workflowEvent);
-        const actionExecutor = createActionExecutor();
-        
-        // Use withRetry for resilient action execution
-        actionResults = await withRetry(
-          async () => actionExecutor.executeActions(enhancedActions, workflowEvent, params.tenant),
-          {
-            maxRetries: 3,
-            initialDelayMs: 1000
-          }
-        );
-        
-        // Mark processing as completed
-        await WorkflowEventProcessingModel.markAsCompleted(params.processingId);
-        
-        // Return the result
+        // Return success result
         return {
           success: true,
-          executionId: params.executionId,
-          previousState: result.previousState,
-          currentState: result.nextState,
-          actionsExecuted: actionResults
+          previousState,
+          currentState: executionState.currentState,
+          actionsExecuted: [] // In a real implementation, we would track action executions
+        };
+      } catch (error) {
+        // Mark event as failed
+        await WorkflowEventProcessingModel.markAsFailed(
+          processingId,
+          error instanceof Error ? error.message : String(error)
+        );
+        
+        logger.error(`[TypeScriptWorkflowRuntime] Error processing event ${eventId}:`, error);
+        
+        return {
+          success: false,
+          errorMessage: error instanceof Error ? error.message : String(error),
+          actionsExecuted: []
         };
       } finally {
-        // Always release the lock, even if processing fails
-        try {
-          await releaseDistributedLock(lockKey, lockOwnerId, false);
-          logger.debug(`[WorkflowRuntime] Released lock for event ${params.eventId}`);
-        } catch (error) {
-          logger.warn(`[WorkflowRuntime] Failed to release lock for event ${params.eventId}:`, error);
-        }
+        // Release the lock
+        await releaseDistributedLock(lockKey, lockOwner);
       }
-    } catch (error: any) {
-      // Classify the error to determine recovery strategy
-      const classification = classifyError(error);
-      logger.error(`Error processing queued event:`, {
-        error,
-        category: classification.category,
-        strategy: classification.strategy,
-        description: classification.description
-      });
-      
-      // Mark processing as failed
-      await WorkflowEventProcessingModel.markAsFailed(params.processingId, classification.description);
+    } catch (error) {
+      logger.error(`[TypeScriptWorkflowRuntime] Error in processQueuedEvent for event ${eventId}:`, error);
       
       return {
         success: false,
-        executionId: params.executionId,
-        previousState: '',
-        currentState: '',
-        actionsExecuted: [],
-        errorMessage: classification.description
+        errorMessage: error instanceof Error ? error.message : String(error),
+        actionsExecuted: []
       };
     }
-  }
-
-  /**
-   * Enhance actions with additional properties needed for execution
-   * @param actions Basic actions from state machine
-   * @param event Event that triggered the actions
-   * @returns Enhanced actions
-   */
-  private enhanceActions(actions: ActionToExecute[], event: WorkflowEvent): EnhancedActionToExecute[] {
-    return actions.map(action => {
-      // Generate a unique ID for this action
-      const id = uuidv4();
-      
-      // Generate an idempotency key based on the event and action
-      const idempotencyKey = `${event.event_id}:${action.name}:${id}`;
-      
-      // Return enhanced action
-      return {
-        ...action,
-        id,
-        idempotencyKey
-      };
-    });
   }
   
   /**
-   * Get workflow details including current state and available actions
-   * @param tenant Tenant identifier
-   * @param executionId Execution ID
-   * @returns Workflow details
+   * Get the current state of a workflow execution
+   * This method now uses the cached state if available, or loads it from events if needed
    */
-  async getWorkflowDetails(tenant: string, executionId: string): Promise<WorkflowDetails> {
-    // Load execution
-    const execution = await WorkflowExecutionModel.getById(executionId);
-    if (!execution) {
-      throw new Error(`Workflow execution not found: ${executionId}`);
+  async getExecutionState(executionId: string, tenant: string): Promise<WorkflowExecutionResult> {
+    try {
+      // Check if we have the state in memory
+      let executionState = this.executionStates.get(executionId);
+      
+      // If not in memory, load it using event sourcing
+      if (!executionState) {
+        executionState = await this.loadExecutionState(executionId, tenant);
+      }
+      
+      // Verify tenant
+      if (executionState.tenant !== tenant) {
+        throw new Error(`Tenant mismatch for workflow execution "${executionId}"`);
+      }
+      
+      return {
+        executionId,
+        currentState: executionState.currentState,
+        isComplete: executionState.isComplete
+      };
+    } catch (error) {
+      logger.error(`[TypeScriptWorkflowRuntime] Error getting execution state for ${executionId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Wait for a workflow to complete
+   * @param executionId The workflow execution ID
+   * @param tenant The tenant ID
+   * @param options Options for waiting
+   * @returns Promise that resolves to true if the workflow completed, false if it timed out
+   */
+  async waitForWorkflowCompletion(
+    executionId: string,
+    tenant: string,
+    options: {
+      maxWaitMs?: number,
+      checkIntervalMs?: number,
+      debug?: boolean
+    } = {}
+  ): Promise<boolean> {
+    const {
+      maxWaitMs = 1000,
+      checkIntervalMs = 50,
+      debug = false
+    } = options;
+    
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < maxWaitMs) {
+      try {
+        // Get the current state (now async)
+        const state = await this.getExecutionState(executionId, tenant);
+        
+        if (debug) {
+          console.log(`Checking workflow state: isComplete=${state.isComplete}, currentState=${state.currentState}`);
+          
+          if (state.isComplete) {
+            // Get the execution state directly to check data
+            const executionState = this.executionStates.get(executionId);
+            if (executionState) {
+              console.log('Execution state data:', executionState.data);
+            }
+          }
+        }
+        
+        if (state.isComplete) {
+          return true;
+        }
+      } catch (error) {
+        if (debug) {
+          console.error('Error checking workflow state:', error);
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, checkIntervalMs));
     }
     
-    // Load workflow definition
-    const workflowDef = this.getWorkflowDefinition(execution.workflow_name, execution.workflow_version);
-    if (!workflowDef) {
-      throw new Error(`Workflow definition not found: ${execution.workflow_name}:${execution.workflow_version}`);
-    }
+    return false;
+  }
+  
+  /**
+   * Create a workflow context for execution
+   */
+  private createWorkflowContext(executionId: string, tenant: string): WorkflowContext {
+    const executionState = this.executionStates.get(executionId)!;
+    const eventListeners: Map<string, ((event: WorkflowEvent) => void)[]> = new Map();
     
-    // Load all events for this execution
-    const dbEvents = await WorkflowEventModel.getByExecutionId(executionId);
+    // Store event listeners in execution state
+    executionState.eventListeners = eventListeners;
     
-    // Convert database events to WorkflowEvent format for replaying
-    const events: WorkflowEvent[] = dbEvents.map(dbEvent => ({
-      event_id: dbEvent.event_id,
-      execution_id: dbEvent.execution_id,
-      event_name: dbEvent.event_name,
-      tenant: dbEvent.tenant,
-      payload: dbEvent.payload || {},
-      user_id: dbEvent.user_id,
-      timestamp: dbEvent.created_at, // Use created_at as timestamp
-      from_state: dbEvent.from_state,
-      to_state: dbEvent.to_state
-    }));
-    
-    // Get current state from the state machine by replaying events
-    const { currentState, context } = this.stateMachine.replayEvents(workflowDef, events);
-    
-    // Get available events for the current state
-    const availableEvents = this.stateMachine.getAvailableEvents(workflowDef, currentState);
-    
-    // Get available actions for the current state
-    const availableActions = this.stateMachine.getAvailableActions(workflowDef, currentState);
-    
-    // Get active timers
-    const activeTimers = await WorkflowTimerModel.getActiveByExecutionId(executionId);
+    // Create action proxy
+    const actionProxy = this.createActionProxy(executionId, tenant);
     
     return {
       executionId,
-      workflowName: execution.workflow_name,
-      currentState,
-      context,
-      availableEvents,
-      availableActions,
-      history: dbEvents, // Use the original DB events as history
-      activeTimers
+      tenant,
+      
+      // Action proxy
+      actions: actionProxy,
+      
+      // Data manager
+      data: {
+        get: <T>(key: string): T => {
+          return executionState.data[key] as T;
+        },
+        set: <T>(key: string, value: T): void => {
+          executionState.data[key] = value;
+        }
+      },
+      
+      // Event manager
+      events: {
+        waitFor: (eventName: string | string[]): Promise<WorkflowEvent> => {
+          return new Promise((resolve) => {
+            const eventNames = Array.isArray(eventName) ? eventName : [eventName];
+            
+            // Check if event already exists
+            const existingEvent = executionState.events.find((e: WorkflowEvent) =>
+              eventNames.includes(e.name) &&
+              !e.processed
+            );
+            
+            if (existingEvent) {
+              existingEvent.processed = true;
+              resolve(existingEvent);
+              return;
+            }
+            
+            // Register listener for future events
+            const listener = (event: WorkflowEvent) => {
+              if (eventNames.includes(event.name)) {
+                event.processed = true;
+                resolve(event);
+              }
+            };
+            
+            // Add listener for each event name
+            eventNames.forEach(name => {
+              if (!eventListeners.has(name)) {
+                eventListeners.set(name, []);
+              }
+              eventListeners.get(name)!.push(listener);
+            });
+          });
+        },
+        emit: async (eventName: string, payload?: any): Promise<void> => {
+          if (workflowConfig.distributedMode) {
+            // Use distributed mode - enqueue event for asynchronous processing
+            await this.enqueueEvent({
+              execution_id: executionId,
+              event_name: eventName,
+              payload,
+              tenant
+            });
+          } else {
+            // Use synchronous mode - process event immediately
+            await this.submitEvent({
+              execution_id: executionId,
+              event_name: eventName,
+              payload,
+              tenant
+            });
+          }
+        }
+      },
+      
+      // Logger
+      logger: {
+        info: (message: string, ...args: any[]): void => {
+          console.log(`[INFO] [${executionId}] ${message}`, ...args);
+        },
+        warn: (message: string, ...args: any[]): void => {
+          console.warn(`[WARN] [${executionId}] ${message}`, ...args);
+        },
+        error: (message: string, ...args: any[]): void => {
+          console.error(`[ERROR] [${executionId}] ${message}`, ...args);
+        },
+        debug: (message: string, ...args: any[]): void => {
+          console.debug(`[DEBUG] [${executionId}] ${message}`, ...args);
+        }
+      },
+      
+      // State management
+      getCurrentState: (): string => {
+        return executionState.currentState;
+      },
+      setState: (state: string): void => {
+        executionState.currentState = state;
+      }
     };
+  }
+  
+  /**
+   * Create a proxy for action execution
+   */
+  private createActionProxy(executionId: string, tenant: string): Record<string, any> {
+    const proxy = {};
+    
+    // Get all registered actions
+    const actions = this.actionRegistry.getRegisteredActions();
+    
+    // Create proxy methods for each action
+    for (const [actionName, actionDef] of Object.entries(actions)) {
+      // Convert camelCase to snake_case for the proxy method name
+      const snakeCaseName = actionName.replace(/([A-Z])/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
+      
+      // Create a function that executes the action
+      const executeAction = async (params: any) => {
+        return this.actionRegistry.executeAction(actionName, {
+          tenant,
+          executionId,
+          parameters: params,
+          idempotencyKey: `${executionId}-${actionName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+        });
+      };
+      
+      // Create proxy method with snake_case name
+      Object.defineProperty(proxy, snakeCaseName, {
+        value: executeAction,
+        enumerable: true
+      });
+      
+      // Also create proxy method with original camelCase name
+      Object.defineProperty(proxy, actionName, {
+        value: executeAction,
+        enumerable: true
+      });
+    }
+    
+    return proxy;
+  }
+  
+  /**
+   * Execute a workflow function
+   */
+  private async executeWorkflow(
+    workflowFn: WorkflowFunction,
+    context: WorkflowContext,
+    executionState: any
+  ): Promise<void> {
+    try {
+      // Execute the workflow function
+      await workflowFn(context);
+      
+      // Mark workflow as complete
+      executionState.isComplete = true;
+    } catch (error) {
+      // Handle workflow execution error
+      console.error(`Error executing workflow ${executionState.executionId}:`, error);
+      executionState.error = error;
+    }
+  }
+  
+  /**
+   * Notify event listeners of a new event
+   */
+  private notifyEventListeners(executionId: string, event: WorkflowEvent): void {
+    const executionState = this.executionStates.get(executionId);
+    if (!executionState) return;
+    
+    // Get listeners for this event
+    const listeners = executionState.eventListeners?.get(event.name) || [];
+    
+    // Notify listeners
+    for (const listener of listeners) {
+      try {
+        listener(event);
+      } catch (error) {
+        console.error(`Error notifying event listener:`, error);
+      }
+    }
   }
 }
 
+// Singleton instance
+let runtimeInstance: TypeScriptWorkflowRuntime | null = null;
+
 /**
- * Create a new workflow runtime
- * @returns New workflow runtime instance
+ * Get the workflow runtime instance
  */
-export function createWorkflowRuntime(): WorkflowRuntime {
-  return new WorkflowRuntime();
+export function getWorkflowRuntime(actionRegistry?: ActionRegistry): TypeScriptWorkflowRuntime {
+  if (!runtimeInstance) {
+    if (!actionRegistry) {
+      throw new Error('ActionRegistry must be provided when creating the workflow runtime');
+    }
+    runtimeInstance = new TypeScriptWorkflowRuntime(actionRegistry);
+  }
+  return runtimeInstance;
 }

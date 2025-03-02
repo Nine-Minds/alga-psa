@@ -154,7 +154,7 @@
     "ts-node": "^10.9.2",
     "ts-proto": "^2.6.0",
     "typescript": "^5",
-    "vitest": "^2.1.2"
+    "vitest": "^3.0.7"
   },
   "version": "1.0.0",
   "description": "This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).",

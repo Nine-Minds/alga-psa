@@ -1,5 +1,5 @@
 "use client";
-import { SessionProvider } from "next-auth/react"; 
+import { SessionProvider } from "next-auth/react";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 
 export default function MspLayout({

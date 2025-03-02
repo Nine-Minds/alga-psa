@@ -94,9 +94,9 @@ const WorkflowEventModel = {
       }
       
       const events = await knex<IWorkflowEvent>('workflow_events')
-        .where({ 
+        .where({
           execution_id: executionId,
-          tenant 
+          tenant
         })
         .where('created_at', '<=', until)
         .select('*')
@@ -105,6 +105,61 @@ const WorkflowEventModel = {
       return events;
     } catch (error) {
       console.error(`Error getting events for execution ${executionId} until ${until}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get events for a workflow execution after a specific point in time
+   * This is useful for replaying events from a snapshot
+   */
+  getByExecutionIdAfter: async (executionId: string, after: string): Promise<IWorkflowEvent[]> => {
+    try {
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant not found');
+      }
+      
+      const events = await knex<IWorkflowEvent>('workflow_events')
+        .where({
+          execution_id: executionId,
+          tenant
+        })
+        .where('created_at', '>', after)
+        .select('*')
+        .orderBy('created_at', 'asc');
+      
+      return events;
+    } catch (error) {
+      console.error(`Error getting events for execution ${executionId} after ${after}:`, error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get events for a workflow execution between two points in time
+   * This is useful for replaying events from a snapshot up to a specific point
+   */
+  getByExecutionIdBetween: async (executionId: string, after: string, until: string): Promise<IWorkflowEvent[]> => {
+    try {
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+        throw new Error('Tenant not found');
+      }
+      
+      const events = await knex<IWorkflowEvent>('workflow_events')
+        .where({
+          execution_id: executionId,
+          tenant
+        })
+        .where('created_at', '>', after)
+        .where('created_at', '<=', until)
+        .select('*')
+        .orderBy('created_at', 'asc');
+      
+      return events;
+    } catch (error) {
+      console.error(`Error getting events for execution ${executionId} between ${after} and ${until}:`, error);
       throw error;
     }
   },

@@ -3,8 +3,11 @@ import { toPlainDate } from '@/lib/utils/dateTimeUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from './user-actions/userActions';
 import { getActionRegistry, TransactionIsolationLevel } from '../workflow/core/actionRegistry';
-import { createWorkflowRuntime } from '../workflow/core/workflowRuntime';
+import { getWorkflowRuntime } from '../workflow/core/workflowRuntime';
 import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { submitWorkflowEventAction } from './workflow-event-actions';
+import { workflowConfig } from '../../config/workflowConfig';
+import logger from '../../utils/logger';
 
 
 /**
@@ -23,25 +26,32 @@ export async function startInvoiceWorkflow(invoice: any): Promise<string> {
   const tenant = currentUser.tenant;
   
   // Create a new workflow execution for invoice approval
-  const workflowRuntime = createWorkflowRuntime();
+  const workflowRuntime = getWorkflowRuntime();
   
   // Generate a unique execution ID
   const executionId = uuidv4();
   
   // Create the workflow execution record
-  await workflowRuntime.createExecution({
-    executionId,
-    workflowName: 'InvoiceApproval',
-    workflowVersion: 'latest',
-    tenant
+  // Note: This is a placeholder - we need to implement this method in the TypeScriptWorkflowRuntime class
+  await workflowRuntime.startWorkflow('InvoiceApproval', {
+    tenant,
+    initialData: {
+      invoice: {
+        id: invoice.id,
+        total: invoice.total,
+        customerId: invoice.customer_id,
+        items: invoice.items,
+        created_date: toPlainDate(new Date()).toString()
+      },
+      created_by: currentUser.user_id || ''
+    },
+    userId: currentUser.user_id
   });
   
   // Emit the initial event to start the workflow
-  await workflowRuntime.processEvent({
-    executionId,
-    eventName: 'CreateInvoice', // Initial event to start the workflow
-    tenant,
-    userRole: currentUser.roles?.[0]?.role_name || 'user', // Get first role name or default to 'user'
+  await submitWorkflowEventAction({
+    execution_id: executionId,
+    event_name: 'CreateInvoice', // Initial event to start the workflow
     payload: {
       // Data for the invoice model
       invoice: {
@@ -63,27 +73,15 @@ export async function startInvoiceWorkflow(invoice: any): Promise<string> {
  * Process an invoice approval or rejection event
  */
 export async function processInvoiceEvent(executionId: string | undefined, eventName: string, payload: any): Promise<any> {
-  // Get current user
-  const currentUser = await getCurrentUser();
-  if (!currentUser?.tenant) {
-    throw new Error('No current user found');
-  }
-  const tenant = currentUser.tenant;
-  
   // Validate executionId
   if (!executionId) {
     throw new Error('Execution ID is required');
   }
   
-  // Create workflow runtime
-  const workflowRuntime = createWorkflowRuntime();
-  
-  // Process the event through the workflow engine
-  const result = await workflowRuntime.processEvent({
-    executionId, // Now guaranteed to be non-undefined
-    eventName,
-    tenant,
-    userRole: currentUser.roles?.[0]?.role_name || 'user',
+  // Submit the event using the workflow event action
+  const result = await submitWorkflowEventAction({
+    execution_id: executionId,
+    event_name: eventName,
     payload
   });
   

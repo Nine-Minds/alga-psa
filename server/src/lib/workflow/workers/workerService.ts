@@ -1,5 +1,5 @@
 import { WorkflowWorker, WorkflowWorkerConfig, WorkerHealth } from './workflowWorker';
-import { createWorkflowRuntime, WorkflowRuntime } from '../core/workflowRuntime';
+import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '../core/workflowRuntime';
 import logger from '../../../utils/logger';
 import os from 'os';
 
@@ -40,7 +40,7 @@ const DEFAULT_CONFIG: Required<WorkerServiceConfig> = {
  */
 export class WorkerService {
   private workers: WorkflowWorker[] = [];
-  private workflowRuntime: WorkflowRuntime;
+  private workflowRuntime: TypeScriptWorkflowRuntime;
   private config: Required<WorkerServiceConfig>;
   private isRunning: boolean = false;
   private healthCheckInterval?: NodeJS.Timeout;
@@ -51,7 +51,7 @@ export class WorkerService {
    */
   constructor(config: WorkerServiceConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.workflowRuntime = createWorkflowRuntime();
+    this.workflowRuntime = getWorkflowRuntime();
     
     logger.info(`[WorkerService] Created worker service with ${this.config.workerCount} workers`);
     
