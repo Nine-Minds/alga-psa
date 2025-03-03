@@ -350,6 +350,10 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       updateData.subcategory_id = null;
     }
 
+    // Check if we're updating the assigned_to field
+    const isChangingAssignment = 'assigned_to' in updateData &&
+                                updateData.assigned_to !== currentTicket.assigned_to;
+
     // If updating category or subcategory, ensure they are compatible
     if ('subcategory_id' in updateData || 'category_id' in updateData) {
       const newSubcategoryId = updateData.subcategory_id;
@@ -369,16 +373,81 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
 
     // Get the status before and after update to check for closure
     const oldStatus = await db('statuses')
-      .where({ 
+      .where({
         status_id: currentTicket.status_id,
         tenant: tenant
       })
       .first();
     
-    const [updatedTicket] = await db('tickets')
-      .where({ ticket_id: id, tenant: tenant })
-      .update(updateData)
-      .returning('*');
+    let updatedTicket;
+    
+    // If we're changing the assigned_to field, we need to handle the ticket_resources table
+    if (isChangingAssignment) {
+      updatedTicket = await db.transaction(async (trx) => {
+        // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
+        // to avoid constraint violations after the update
+        await trx('ticket_resources')
+          .where({
+            tenant: tenant,
+            ticket_id: id,
+            additional_user_id: updateData.assigned_to
+          })
+          .delete();
+        
+        // Step 2: Get existing resources with the old assigned_to value
+        const existingResources = await trx('ticket_resources')
+          .where({
+            tenant: tenant,
+            ticket_id: id,
+            assigned_to: currentTicket.assigned_to
+          })
+          .select('*');
+          
+        // Step 3: Store resources for recreation, excluding those that would violate constraints
+        const resourcesToRecreate = [];
+        for (const resource of existingResources) {
+          // Skip resources where additional_user_id would equal the new assigned_to
+          if (resource.additional_user_id !== updateData.assigned_to) {
+            // Clone the resource but exclude the primary key fields
+            const { assignment_id, ...resourceData } = resource;
+            resourcesToRecreate.push(resourceData);
+          }
+        }
+        
+        // Step 4: Delete the existing resources with the old assigned_to
+        if (existingResources.length > 0) {
+          await trx('ticket_resources')
+            .where({
+              tenant: tenant,
+              ticket_id: id,
+              assigned_to: currentTicket.assigned_to
+            })
+            .delete();
+        }
+        
+        // Step 5: Update the ticket with the new assigned_to
+        const [updated] = await trx('tickets')
+          .where({ ticket_id: id, tenant: tenant })
+          .update(updateData)
+          .returning('*');
+          
+        // Step 6: Re-create the resources with the new assigned_to
+        for (const resourceData of resourcesToRecreate) {
+          await trx('ticket_resources').insert({
+            ...resourceData,
+            assigned_to: updateData.assigned_to
+          });
+        }
+        
+        return updated;
+      });
+    } else {
+      // Regular update without changing assignment
+      [updatedTicket] = await db('tickets')
+        .where({ ticket_id: id, tenant: tenant })
+        .update(updateData)
+        .returning('*');
+    }
 
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');

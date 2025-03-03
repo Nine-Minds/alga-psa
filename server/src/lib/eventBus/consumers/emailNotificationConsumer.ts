@@ -75,7 +75,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
       case 'TICKET_COMMENT_ADDED': {
         const ticket = await knex('tickets as t')
           .select(
-            't.assigned_user_id',
+            't.assigned_to',
             't.ticket_number',
             't.title',
             'c.email as company_email',
@@ -116,10 +116,10 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
         }
         
         // Fallback to assigned user's email
-        if (ticket?.assigned_user_id) {
+        if (ticket?.assigned_to) {
           const user = await knex('users')
             .select('email')
-            .where('id', ticket.assigned_user_id)
+            .where('user_id', ticket.assigned_to)
             .first();
           return user?.email || null;
         }

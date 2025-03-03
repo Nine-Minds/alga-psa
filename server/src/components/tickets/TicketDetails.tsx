@@ -320,6 +320,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
             if (result === 'success') {
                 console.log(`${field} changed to: ${newValue}`);
+                
+                // If we're changing the assigned_to field, refresh the additional resources
+                if (field === 'assigned_to') {
+                    try {
+                        // Refresh the additional resources
+                        const resources = await getTicketResources(ticket.ticket_id!, user);
+                        setAdditionalAgents(resources);
+                        console.log('Additional resources refreshed after assignment change');
+                    } catch (resourceError) {
+                        console.error('Error refreshing additional resources:', resourceError);
+                    }
+                }
             } else {
                 console.error(`Failed to update ticket ${field}`);
                 setTicket(prevTicket => ({ ...prevTicket, [field]: ticket[field] }));
