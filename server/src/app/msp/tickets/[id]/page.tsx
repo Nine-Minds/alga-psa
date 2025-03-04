@@ -1,10 +1,10 @@
 import React from 'react';
-import TicketDetails from '@/components/tickets/TicketDetails';
-import { ITicket } from '@/interfaces/ticket.interfaces';
-import Ticket from '@/lib/models/ticket';
+import TicketDetails from 'server/src/components/tickets/TicketDetails';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import Ticket from 'server/src/lib/models/ticket';
 import { formatDistanceToNow } from 'date-fns';
-import BackNav from '@/components/ui/BackNav';
-import { getTenantForCurrentRequest } from '@/lib/tenant';
+import BackNav from 'server/src/components/ui/BackNav';
+import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
 
 const TicketPage = async ({ params }: { params: { id: string } }) => {
   const { id } = params;

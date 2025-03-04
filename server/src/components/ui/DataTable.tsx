@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { DataTableComponent, AutomationProps } from '@/types/ui-reflection/types';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { DataTableComponent, AutomationProps } from 'server/src/types/ui-reflection/types';
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,8 +11,8 @@ import {
   ColumnDef,
   Row,
 } from '@tanstack/react-table';
-import { ColumnDefinition, DataTableProps } from '@/interfaces/dataTable.interfaces';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { ColumnDefinition, DataTableProps } from 'server/src/interfaces/dataTable.interfaces';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 // Helper function to get nested property value
 const getNestedValue = (obj: unknown, path: string | string[]): unknown => {

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { IWorkflowEvent } from '@/lib/workflow/persistence/workflowInterfaces';
+import { IWorkflowEvent } from '@shared/workflow/persistence/workflowInterfaces';
 
 interface WorkflowEventTimelineProps {
   events: IWorkflowEvent[];

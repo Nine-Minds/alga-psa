@@ -1,5 +1,5 @@
 import { BillingCycleType, TenantEntity } from './index';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 
 export interface ICompany extends TenantEntity {
   company_id: string;

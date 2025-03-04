@@ -2,12 +2,12 @@
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { formatISO, parseISO, addMinutes } from 'date-fns';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import { TimePicker } from '@/components/ui/TimePicker';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { MinusCircle, XCircle } from 'lucide-react';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 

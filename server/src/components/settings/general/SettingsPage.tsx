@@ -4,10 +4,10 @@
 import React from 'react';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
-import CustomTabs, { TabContent } from "@/components/ui/CustomTabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Input } from "server/src/components/ui/Input";
+import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from './GeneralSettings';
 import TicketingSettings from './TicketingSettings';
 import UserManagement from './UserManagement';

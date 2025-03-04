@@ -1,15 +1,15 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { IUser, IUserWithRoles, IRole } from '@/interfaces/auth.interfaces';
-import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from '@/lib/actions/policyActions';
-import { useDrawer } from '@/context/DrawerContext';
+import { IUser, IUserWithRoles, IRole } from 'server/src/interfaces/auth.interfaces';
+import { findUserById, updateUser, adminChangeUserPassword, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getRoles, getUserRoles, assignRoleToUser, removeRoleFromUser } from 'server/src/lib/actions/policyActions';
+import { useDrawer } from "server/src/context/DrawerContext";
 import { Text, Flex } from '@radix-ui/themes';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import { Card } from '@/components/ui/Card';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Card } from 'server/src/components/ui/Card';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { EyeOpenIcon, EyeClosedIcon } from '@radix-ui/react-icons';
 import PasswordChangeForm from './PasswordChangeForm';
 

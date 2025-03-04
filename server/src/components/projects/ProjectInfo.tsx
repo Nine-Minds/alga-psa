@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ICompany, IProject, IUserWithRoles } from '@/interfaces';
+import { ICompany, IProject, IUserWithRoles } from 'server/src/interfaces';
 import HoursProgressBar from './HoursProgressBar';
-import { calculateProjectCompletion } from '@/lib/utils/projectUtils';
+import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
 import { Edit2 } from 'lucide-react';
-import BackNav from '@/components/ui/BackNav';
-import { Button } from '@/components/ui/Button';
-import { useDrawer } from '@/context/DrawerContext';
+import BackNav from 'server/src/components/ui/BackNav';
+import { Button } from 'server/src/components/ui/Button';
+import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 
 interface ProjectInfoProps {

@@ -1,21 +1,21 @@
 'use server';
 
 import { Knex } from 'knex';
-import ProjectTaskModel from '@/lib/models/projectTask';
-import ProjectModel from '@/lib/models/project';
-import { publishEvent } from '@/lib/eventBus/publishers';
-import { IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
-import { IUser, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { hasPermission } from '@/lib/auth/rbac';
-import { validateData, validateArray } from '@/lib/utils/validation';
-import { createTenantKnex } from '@/lib/db';
+import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import ProjectModel from 'server/src/lib/models/project';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { validateData, validateArray } from 'server/src/lib/utils/validation';
+import { createTenantKnex } from 'server/src/lib/db';
 import { 
     createTaskSchema, 
     updateTaskSchema, 
     createChecklistItemSchema, 
     updateChecklistItemSchema
-} from '@/lib/schemas/project.schemas';
+} from 'server/src/lib/schemas/project.schemas';
 
 async function checkPermission(user: IUser, resource: string, action: string): Promise<void> {
     const hasPermissionResult = await hasPermission(user, resource, action);

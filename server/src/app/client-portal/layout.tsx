@@ -1,6 +1,6 @@
 "use client";
 import { SessionProvider } from "next-auth/react"; 
-import ClientPortalLayout from "@/components/layout/ClientPortalLayout";
+import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
 
 export default function Layout({
   children,

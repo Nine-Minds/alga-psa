@@ -1,6 +1,6 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 
 export function DashboardActions() {
   return (

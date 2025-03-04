@@ -1,0 +1,1 @@
+export { getSecret } from './getSecret.js';

@@ -1,5 +1,5 @@
-import { IUser, IResource, IPolicy, ICondition, IRole, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { USER_ATTRIBUTES, TICKET_ATTRIBUTES, UserAttributeKey, TicketAttributeKey } from '@/lib/attributes/EntityAttributes';
+import { IUser, IResource, IPolicy, ICondition, IRole, IUserWithRoles } from '../../../../../server/src/interfaces/auth.interfaces';
+import { USER_ATTRIBUTES, TICKET_ATTRIBUTES, UserAttributeKey, TicketAttributeKey } from '../../../../../server/src/lib/attributes/EntityAttributes';
 
 export class Resource implements IResource {
   type: string;

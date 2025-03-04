@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { ICompany } from '../../interfaces/company.interfaces';
-import { BillingCycleType } from '@/interfaces';
+import { BillingCycleType } from 'server/src/interfaces';
 
 const Company = {
   async getById(companyId: string): Promise<ICompany | null> {

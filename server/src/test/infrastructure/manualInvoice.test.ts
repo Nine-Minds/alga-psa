@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
-import { generateManualInvoice, updateManualInvoice } from '@/lib/actions/manualInvoiceActions';
+import { generateManualInvoice, updateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
 import { TestContext } from '../../../test-utils/testContext';

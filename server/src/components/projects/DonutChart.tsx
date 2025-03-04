@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tooltip } from '@/components/ui/Tooltip';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 interface DonutChartProps {
   percentage: number;

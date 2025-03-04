@@ -1,8 +1,8 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { createTenantKnex } from '@/lib/db';
-import { auditLog } from '@/lib/logging/auditLog';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { auditLog } from 'server/src/lib/logging/auditLog';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 
 export interface ExpiredCreditsJobData extends Record<string, unknown> {
   tenantId: string;

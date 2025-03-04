@@ -5,7 +5,7 @@ import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { menuItems, bottomMenuItems, MenuItem } from '../../config/menuConfig';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';

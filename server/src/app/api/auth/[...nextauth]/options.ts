@@ -3,14 +3,14 @@ import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import { NextAuthOptions } from "next-auth";
 
-import { verifyAuthenticator } from "@/utils/authenticator/authenticator";
-import { authenticateUser } from "@/lib/actions/auth";
-import { getKeycloakToken } from "@/utils/keycloak";
-import { decodeToken } from "@/utils/tokenizer";
-import User from "@/lib/models/user";
-import logger from "@/utils/logger";
-import "@/types/next-auth";
-import { getAdminConnection } from '@/lib/db/admin';
+import { verifyAuthenticator } from "../../../../utils/authenticator/authenticator";
+import { authenticateUser } from "../../../../lib/actions/auth";
+import { getKeycloakToken } from "../../../../utils/keycloak";
+import { decodeToken } from "../../../../utils/tokenizer";
+import User from "../../../../lib/models/user";
+import logger from '@shared/core/logger';
+import "../../../../types/next-auth";
+import { getAdminConnection } from "../../../../lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
 
@@ -305,17 +305,18 @@ export const options: NextAuthOptions = {
 
             logger.debug("Session Token:", token);
             if (token && session.user) {
-                session.user.id = token.id as string;
-                session.user.email = token.email || '';
-                session.user.name = token.name || '';
-                session.user.username = token.username as string;
-                session.user.image = token.image as string;
-                session.user.proToken = token.proToken as string;
-                session.user.tenant = token.tenant as string;
-                session.user.user_type = token.user_type as string;
-                session.user.companyId = token.companyId as string;
-                session.user.contactId = token.contactId as string;
-              }
+                const user = session.user as ExtendedUser;
+                user.id = token.id as string;
+                user.email = token.email || '';
+                user.name = token.name || '';
+                user.username = token.username as string;
+                user.image = token.image as string;
+                user.proToken = token.proToken as string;
+                user.tenant = token.tenant as string;
+                user.user_type = token.user_type as string;
+                user.companyId = token.companyId as string;
+                user.contactId = token.contactId as string;
+            }
             logger.trace("Session Object:", session);
             return session;
         },

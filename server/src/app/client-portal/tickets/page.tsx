@@ -1,8 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import { TicketList } from '@/components/client-portal/tickets/TicketList';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { TicketList } from 'server/src/components/client-portal/tickets/TicketList';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 export default function TicketsPage() {
   return (

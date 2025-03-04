@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IProject } from '@/interfaces/project.interfaces';
-import { IStatus } from '@/interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import { TextArea } from '@/components/ui/TextArea';
-import { Input } from '@/components/ui/Input';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { updateProject, getProjectStatuses } from '@/lib/actions/project-actions/projectActions';
-import { getContactsByCompany, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
+import { IProject } from 'server/src/interfaces/project.interfaces';
+import { IStatus } from 'server/src/interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Input } from 'server/src/components/ui/Input';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { updateProject, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
 
 interface ProjectDetailsEditProps {

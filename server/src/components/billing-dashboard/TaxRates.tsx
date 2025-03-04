@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate } from '@/lib/actions/taxRateActions';
-import { ITaxRate } from '@/interfaces/billing.interfaces';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from 'server/src/components/ui/Dialog';
+import { Label } from 'server/src/components/ui/Label';
+import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate } from 'server/src/lib/actions/taxRateActions';
+import { ITaxRate } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { toPlainDate, parseDateSafe } from '@/lib/utils/dateTimeUtils';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { toPlainDate, parseDateSafe } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
 
 const TaxRates: React.FC = () => {

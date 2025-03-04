@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
 
 interface UnitOfMeasureInputProps {
   value: string;

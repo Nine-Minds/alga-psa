@@ -1,19 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { X } from 'lucide-react';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from '@/types/ui-reflection/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { TextArea } from "@/components/ui/TextArea";
-import { addContact } from '@/lib/actions/contact-actions/contactActions';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { IContact } from '@/interfaces/contact.interfaces';
-import { Switch } from '@/components/ui/Switch';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { FormComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from "server/src/components/ui/Button";
+import { Input } from "server/src/components/ui/Input";
+import { Label } from "server/src/components/ui/Label";
+import { TextArea } from "server/src/components/ui/TextArea";
+import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { Switch } from 'server/src/components/ui/Switch';
 
 interface QuickAddContactProps {
   isOpen: boolean;

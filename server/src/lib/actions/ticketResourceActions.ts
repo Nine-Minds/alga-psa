@@ -1,11 +1,11 @@
 // server/src/lib/actions/ticketResourceActions.ts
 'use server'
 
-import { ITicketResource } from '@/interfaces/ticketResource.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import TicketResource from '@/lib/models/ticketResource';
-import { hasPermission } from '@/lib/auth/rbac';
-import { createTenantKnex } from '@/lib/db';
+import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import TicketResource from 'server/src/lib/models/ticketResource';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function addTicketResource(
   ticketId: string,

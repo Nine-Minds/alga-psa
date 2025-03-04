@@ -39,7 +39,7 @@ import ContactDetailsView from '../contacts/ContactDetailsView';
 import { addTicketResource, getTicketResources, removeTicketResource } from '../../lib/actions/ticketResourceActions';
 import TechnicianDispatchDashboard from '../technician-dispatch/TechnicianDispatchDashboard';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import TimeEntryDialog from '@/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { PartialBlock, StyledText } from '@blocknote/core';
 
 interface TicketDetailsProps {

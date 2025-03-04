@@ -27,7 +27,7 @@ import {
   NotificationLog,
   NotificationService
 } from '../models/notification';
-import { getEmailService } from '@/services/emailService';
+import { getEmailService } from 'server/src/services/emailService';
 export class EmailNotificationService implements NotificationService {
   private async compileTemplate(template: string, data: Record<string, any>): Promise<string> {
     // Dynamically import Handlebars only when needed

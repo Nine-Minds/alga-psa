@@ -1,16 +1,16 @@
 'use server';
 
-import User from '@/lib/models/user';
-import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@/interfaces/auth.interfaces';
+import User from 'server/src/lib/models/user';
+import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from 'server/src/interfaces/auth.interfaces';
 import { getServerSession } from "next-auth/next";
-import { options as authOptions } from '@/app/api/auth/[...nextauth]/options';
+import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/options';
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@/lib/db/admin';
-import { hashPassword } from '@/utils/encryption/encryption';
-import Tenant from '@/lib/models/tenant';
-import UserPreferences from '@/lib/models/userPreferences';
-import { verifyEmailSuffix, getCompanyByEmailSuffix } from '@/lib/actions/company-settings/emailSettings';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getAdminConnection } from 'server/src/lib/db/admin';
+import { hashPassword } from 'server/src/utils/encryption/encryption';
+import Tenant from 'server/src/lib/models/tenant';
+import UserPreferences from 'server/src/lib/models/userPreferences';
+import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 
 export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
   try {

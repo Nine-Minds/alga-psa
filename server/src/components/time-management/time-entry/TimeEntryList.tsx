@@ -2,11 +2,11 @@
 
 import { memo } from 'react';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import TimeEntryEditForm from './time-sheet/TimeEntryEditForm';
 import TimeEntryReadOnly from './time-sheet/TimeEntryReadOnly';
 import { ITimeEntryWithNew, TimeInputs, Service } from './time-sheet/types';
-import { TaxRegion } from '@/types/types.d';
+import { TaxRegion } from 'server/src/types/types.d';
 
 interface TimeEntryListProps {
   id: string;

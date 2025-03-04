@@ -1,14 +1,14 @@
 // server/src/components/InvoiceTemplateManager.tsx
 import React, { useState } from 'react';
-import { IInvoiceTemplate, IInvoice, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+import { IInvoiceTemplate, IInvoice, InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { TemplateRenderer } from './TemplateRenderer';
-import { sampleInvoices } from '@/utils/sampleInvoiceData';
+import { sampleInvoices } from 'server/src/utils/sampleInvoiceData';
 import PaperInvoice from './PaperInvoice';
-import { TextArea } from '@/components/ui/TextArea';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
-import { saveInvoiceTemplate } from '@/lib/actions/invoiceActions';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
+import { saveInvoiceTemplate } from 'server/src/lib/actions/invoiceActions';
 
 interface InvoiceTemplateManagerProps {
   templates: IInvoiceTemplate[];

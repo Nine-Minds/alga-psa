@@ -1,7 +1,7 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   label?: string;

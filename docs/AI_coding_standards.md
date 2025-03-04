@@ -32,18 +32,18 @@ Prefer radix components over other libraries
 When implementing action menus in DataTable components, follow these guidelines:
 
 1. **Component Structure**
-   - Use Radix UI's DropdownMenu components from '@/components/ui/DropdownMenu':
+   - Use Radix UI's DropdownMenu components from 'server/src/components/ui/DropdownMenu':
      ```tsx
      import {
        DropdownMenu,
        DropdownMenuTrigger,
        DropdownMenuContent,
        DropdownMenuItem,
-     } from '@/components/ui/DropdownMenu';
+     } from 'server/src/components/ui/DropdownMenu';
      ```
 
 2. **Trigger Button Implementation**
-   - Use the Button component from '@/components/ui/Button'
+   - Use the Button component from 'server/src/components/ui/Button'
    - Import MoreVertical icon from 'lucide-react'
    ```tsx
    <DropdownMenuTrigger asChild>
@@ -241,7 +241,7 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
    - Example:
      ```tsx
      // Good
-     import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+     import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
      const date = toPlainDate(someDate);
 
      // Bad

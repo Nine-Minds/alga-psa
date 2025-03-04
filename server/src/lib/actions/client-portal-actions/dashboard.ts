@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { headers } from 'next/headers';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 export interface DashboardMetrics {
   openTickets: number;

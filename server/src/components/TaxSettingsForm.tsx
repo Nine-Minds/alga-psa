@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCompanyTaxSettings, updateCompanyTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface TaxSettingsFormProps {
   companyId: string;

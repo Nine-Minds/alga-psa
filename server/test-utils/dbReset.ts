@@ -1,6 +1,6 @@
 import knex, { Knex } from 'knex';
 import { verifyTestDatabase } from './dbConfig';
-import { getSecret } from '@/lib/utils/getSecret';
+import { getSecret } from 'server/src/lib/utils/getSecret';
 /**
  * Options for database reset
  */

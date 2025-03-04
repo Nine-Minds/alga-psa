@@ -1,34 +1,34 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { QuickAddTicket } from '@/components/tickets/QuickAddTicket';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { 
   addTicketLinkAction,
   deleteTaskTicketLinkAction,
   getTaskTicketLinksAction
-} from '@/lib/actions/project-actions/projectTaskActions';
-import { getTicketsForList, getTicketById } from '@/lib/actions/ticket-actions/ticketActions';
-import { ITicketListFilters } from '@/interfaces/ticket.interfaces';
-import { useDrawer } from '@/context/DrawerContext';
-import TicketDetails from '@/components/tickets/TicketDetails';
-import { ITicketListItem, ITicket, ITicketCategory } from '@/interfaces/ticket.interfaces';
-import { IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
-import { Button } from '@/components/ui/Button';
+} from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getTicketsForList, getTicketById } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
+import { useDrawer } from "server/src/context/DrawerContext";
+import TicketDetails from 'server/src/components/tickets/TicketDetails';
+import { ITicketListItem, ITicket, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { Button } from 'server/src/components/ui/Button';
 import { Link, Plus, ExternalLink, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { CategoryPicker } from '@/components/tickets/CategoryPicker';
-import UserPicker from '@/components/ui/UserPicker';
-import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
-import { IChannel } from '@/interfaces';
-import { getTicketCategories } from '@/lib/actions/ticketCategoryActions';
-import { getAllChannels } from '@/lib/actions/channel-actions/channelActions';
-import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { IChannel } from 'server/src/interfaces';
+import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
+import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import TicketSelect from './TicketSelect';
 
 interface TaskTicketLinksProps {

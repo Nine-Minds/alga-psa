@@ -6,8 +6,8 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface DialogProps {
   isOpen: boolean;

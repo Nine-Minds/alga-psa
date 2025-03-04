@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { getProjectTreeData } from '@/lib/actions/project-actions/projectActions';
+import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import { getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
@@ -15,21 +15,21 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   addTicketLinkAction
-} from '@/lib/actions/project-actions/projectTaskActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+} from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/TextArea';
-import EditableText from '@/components/ui/EditableText';
+import { Button } from 'server/src/components/ui/Button';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import EditableText from 'server/src/components/ui/EditableText';
 import { ListChecks, UserPlus, Trash2 } from 'lucide-react';
-import { DatePicker } from '@/components/ui/DatePicker';
-import UserPicker from '@/components/ui/UserPicker';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { Input } from '@/components/ui/Input';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Input } from 'server/src/components/ui/Input';
 import { toast } from 'react-hot-toast';
 import TaskTicketLinks from './TaskTicketLinks';
-import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@/components/ui/TreeSelect';
-import { Checkbox } from '@/components/ui/Checkbox';
+import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 

@@ -213,6 +213,53 @@ docker compose logs [service-name]
 ✓ Database users have appropriate permissions
 ✓ Environment variables properly validated
 
+## Workflow System Configuration
+
+The system includes a distributed workflow engine that can process business processes asynchronously across multiple servers.
+
+### Enabling Distributed Workflow Processing
+
+1. Configure workflow environment variables:
+   ```bash
+   # Workflow Configuration
+   WORKFLOW_DISTRIBUTED_MODE=true  # Enable distributed mode
+   WORKFLOW_REDIS_STREAM_PREFIX=workflow:events:  # Redis stream prefix
+   WORKFLOW_REDIS_CONSUMER_GROUP=workflow-workers # Consumer group name
+   WORKFLOW_REDIS_BATCH_SIZE=10    # Number of events to process in a batch
+   WORKFLOW_REDIS_IDLE_TIMEOUT_MS=60000  # Idle timeout in milliseconds
+   WORKFLOW_WORKER_REPLICAS=2      # Number of worker containers to run
+   ```
+
+2. Start the services with the workflow worker:
+   ```bash
+   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env up -d
+   ```
+
+3. Verify the workflow worker is running:
+   ```bash
+   docker compose logs workflow-worker
+   ```
+
+4. Scale the number of worker instances if needed:
+   ```bash
+   docker compose up -d --scale workflow-worker=3
+   ```
+
+### Workflow System Architecture
+
+The workflow system consists of:
+- **Server**: Handles API requests and enqueues workflow events
+- **Workflow Worker**: Processes workflow events asynchronously
+- **Redis Streams**: Used as a message queue for distributing events
+- **Database**: Stores workflow executions, events, and action results
+
+In distributed mode, workflow events are:
+1. Validated and persisted to the database
+2. Published to Redis Streams
+3. Processed asynchronously by worker processes
+
+This architecture provides higher throughput, better fault tolerance, and improved scalability.
+
 ## Next Steps
 
 1. Configure email notifications:

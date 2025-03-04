@@ -1,6 +1,6 @@
 import { createTenantKnex } from '../db';
 import { IComment } from '../../interfaces/comment.interface';
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
 
 const Comment = {
   getAllbyTicketId: async (ticket_id: string): Promise<IComment[]> => {

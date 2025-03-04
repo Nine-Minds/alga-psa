@@ -106,7 +106,7 @@ Update the Invoices component to use server actions and follow UI standards:
 
 ```typescript
 // In Invoices.tsx
-import { finalizeInvoice, unfinalizeInvoice } from '@/lib/actions/invoiceActions';
+import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceActions';
 
 // Action menu items following standards
 <DropdownMenuContent align="end">

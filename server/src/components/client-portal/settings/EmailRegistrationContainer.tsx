@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getServerSession } from "next-auth/next";
-import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from '@/lib/actions/user-actions/userActions';
-import { getCompanyEmailSettings } from '@/lib/actions/company-settings/emailSettings';
-import { ICompanyEmailSettings } from '@/interfaces/company.interfaces';
-import { IRoleWithPermissions, IPermission } from '@/interfaces/auth.interfaces';
-import { Alert } from '@/components/ui/Alert';
+import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
+import { getCompanyEmailSettings } from 'server/src/lib/actions/company-settings/emailSettings';
+import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
+import { IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { Alert } from 'server/src/components/ui/Alert';
 import EmailRegistrationSettings from './EmailRegistrationSettings';
 
 export default function EmailRegistrationContainer() {

@@ -5,7 +5,7 @@ import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
+import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 
 describe('Tax Allocation Strategy', () => {
   const testHelpers = TestContext.createHelpers();

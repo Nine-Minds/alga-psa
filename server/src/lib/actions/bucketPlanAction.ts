@@ -1,9 +1,9 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import { IBucketPlan, IBucketUsage } from '@/interfaces/billing.interfaces';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { IBucketPlan, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
 
 export async function createBucketPlan(bucketPlan: Omit<IBucketPlan, 'bucket_plan_id'> & { service_catalog_id: string }) {
   const session = await getServerSession(options);

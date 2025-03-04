@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { IDocument } from '@/interfaces/document.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import Image from 'next/image';
-import { getDocumentPreview } from '@/lib/actions/document-actions/documentActions';
+import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface DocumentPreviewProps {
     document: IDocument;

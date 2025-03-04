@@ -84,9 +84,6 @@ EDITION=enterprise docker compose -f docker-compose.yaml -f ee/setup/docker-comp
 ```json
 {
   "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]
-    }
   }
 }
 ```
@@ -117,8 +114,8 @@ Example:
 import { Something } from "../../../../../server/src/components/Something";
 
 // Use path aliases:
-import { Something } from "@/components/Something";
-import { EEFeature } from "@ee/components/EEFeature";
+import { Something } from "server/src/components/Something";
+import { EEFeature } from "ee/components/EEFeature";
 ```
 
 ## Feature Flags
@@ -139,9 +136,9 @@ export function getFeatureImplementation<T>(ceModule: T, eeModule?: T): T {
 
 Usage:
 ```typescript
-import { CEFeature } from "@/features/CEFeature";
-import { EEFeature } from "@ee/features/EEFeature";
-import { getFeatureImplementation } from "@/lib/features";
+import { CEFeature } from "features/CEFeature";
+import { EEFeature } from "ee/features/EEFeature";
+import { getFeatureImplementation } from "server/src/lib/features";
 
 const FeatureComponent = getFeatureImplementation(CEFeature, EEFeature);
 ```

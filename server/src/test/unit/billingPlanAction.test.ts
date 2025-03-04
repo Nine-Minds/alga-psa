@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { getBillingPlans, createBillingPlan } from '@/lib/actions/billingPlanAction';
-import BillingPlan from '@/lib/models/billingPlan';
-import { IBillingPlan } from '@/interfaces/billing.interfaces';
+import { getBillingPlans, createBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import BillingPlan from 'server/src/lib/models/billingPlan';
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
 
 vi.mock('@/lib/models/billingPlan');
 vi.mock('@/lib/db/db');

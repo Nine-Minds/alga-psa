@@ -1,20 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import TimezonePicker from '@/components/ui/TimezonePicker';
-import { getCurrentUser, updateUser } from '@/lib/actions/user-actions/userActions';
-import type { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@/lib/models/notification';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import TimezonePicker from 'server/src/components/ui/TimezonePicker';
+import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
+import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import { 
   getCategoriesAction, 
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction 
-} from '@/lib/actions/notification-actions/notificationActions';
+} from 'server/src/lib/actions/notification-actions/notificationActions';
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
 

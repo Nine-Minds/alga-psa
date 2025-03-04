@@ -3,7 +3,9 @@
   "private": true,
   "workspaces": [
     "server",
-    "ee/server"
+    "ee/server",
+    "services/workflow-worker",
+    "shared"
   ],
   "scripts": {
     "migrate": "knex migrate:latest",
@@ -14,7 +16,11 @@
     "dev": "cd server && NEXT_PUBLIC_EDITION=enterprise next dev",
     "build": "cd server && next build",
     "build:ee": "cd server && NEXT_PUBLIC_EDITION=enterprise next build",
-    "start": "next start"
+    "start": "next start",
+    "build:shared": "cd shared && npm run build",
+    "build:workflow-worker": "cd services/workflow-worker && npm run build",
+    "start:workflow-worker": "cd services/workflow-worker && npm run start",
+    "dev:workflow-worker": "cd services/workflow-worker && npm run dev"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

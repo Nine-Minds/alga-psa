@@ -2,23 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { X } from 'lucide-react';
-import { extractTextFromBlocks } from '@/lib/utils/textUtils';
+import { extractTextFromBlocks } from 'server/src/lib/utils/textUtils';
 import { 
   getClientTicketDetails, 
   addClientTicketComment,
   updateClientTicketComment,
   deleteClientTicketComment
-} from '@/lib/actions/client-portal-actions/client-tickets';
+} from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow } from 'date-fns';
-import { ITicket } from '@/interfaces/ticket.interfaces';
-import { IComment } from '@/interfaces/comment.interface';
-import { IDocument } from '@/interfaces/document.interface';
-import TicketConversation from '@/components/tickets/TicketConversation';
-import { DEFAULT_BLOCK } from '@/components/editor/TextEditor';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
+import { IComment } from 'server/src/interfaces/comment.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import TicketConversation from 'server/src/components/tickets/TicketConversation';
+import { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface TicketDetailsProps {
   ticketId: string;

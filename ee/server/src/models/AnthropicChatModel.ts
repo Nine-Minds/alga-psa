@@ -1,4 +1,4 @@
-import { ChatModelInterface, ChatMessage } from '../interfaces/ChatModelInterface';
+import { ChatModelInterface, ChatMessage } from 'ee/server/src/interfaces/ChatModelInterface';
 import Anthropic from '@anthropic-ai/sdk';
 import { write } from 'fs';
 

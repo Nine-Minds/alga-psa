@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Flex, Text, Checkbox } from '@radix-ui/themes';
-import { getPermissions, getRoles, getRolePermissions, assignPermissionToRole, removePermissionFromRole } from '@/lib/actions/policyActions';
-import { IPermission, IRole } from '@/interfaces/auth.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { getPermissions, getRoles, getRolePermissions, assignPermissionToRole, removePermissionFromRole } from 'server/src/lib/actions/policyActions';
+import { IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 export default function PermissionManagement() {
   const [permissions, setPermissions] = useState<IPermission[]>([]);

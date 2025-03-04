@@ -1,15 +1,15 @@
-import { JobService, JobStepResult } from '@/services/job.service';
-import { PDFGenerationService } from '@/services/pdf-generation.service';
-import { getEmailService } from '@/services/emailService';
-import { StorageService } from '@/lib/storage/StorageService';
-import Invoice from '@/lib/models/invoice';
-import { createTenantKnex } from '@/lib/db';
-import { getCompanyById } from '@/lib/actions/companyActions';
-import ContactModel from '@/lib/models/contact';
+import { JobService, JobStepResult } from 'server/src/services/job.service';
+import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { getEmailService } from 'server/src/services/emailService';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import Invoice from 'server/src/lib/models/invoice';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
-import { getConnection } from '@/lib/db/db';
-import { JobStatus } from '@/types/job.d';
-import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
+import { getConnection } from 'server/src/lib/db/db';
+import { JobStatus } from 'server/src/types/job.d';
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceActions';
 
 export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;

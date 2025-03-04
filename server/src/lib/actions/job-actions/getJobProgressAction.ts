@@ -1,12 +1,12 @@
 'use server';
 
 import { getCurrentUser } from '../user-actions/userActions';
-import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@/lib/db/admin';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getAdminConnection } from 'server/src/lib/db/admin';
 
-import { JobStatus } from '@/types/job.d';
-import type { JobHeader, JobDetail } from '@/services/job.service';
-import { JobMetrics } from '@/lib/actions/job-actions';
+import { JobStatus } from 'server/src/types/job.d';
+import type { JobHeader, JobDetail } from 'server/src/services/job.service';
+import { JobMetrics } from 'server/src/lib/actions/job-actions';
 
 export interface JobProgressData {
   header: JobHeader;

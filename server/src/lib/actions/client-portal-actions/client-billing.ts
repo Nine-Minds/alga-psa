@@ -1,15 +1,15 @@
 'use server';
 
 import { getServerSession } from 'next-auth';
-import { options } from '@/app/api/auth/[...nextauth]/options';
-import { getConnection } from '@/lib/db/db';
+import { options } from 'server/src/app/api/auth/[...nextauth]/options';
+import { getConnection } from 'server/src/lib/db/db';
 import { 
   ICompanyBillingPlan, 
   IBillingResult, 
   IBucketUsage,
   IService,
   PaymentMethod
-} from '@/interfaces/billing.interfaces';
+} from 'server/src/interfaces/billing.interfaces';
 
 export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null> {
   const session = await getServerSession(options);

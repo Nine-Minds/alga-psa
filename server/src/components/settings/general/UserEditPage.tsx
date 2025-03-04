@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useRouter } from 'next/router';
 import UserDetails from './UserDetails';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
 
 const UserEditPage: React.FC = () => {
   const router = useRouter();

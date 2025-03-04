@@ -1,5 +1,5 @@
 import { createTenantKnex } from '../db';
-import { IEditScope, IScheduleEntry, IRecurrencePattern } from '@/interfaces/schedule.interfaces';
+import { IEditScope, IScheduleEntry, IRecurrencePattern } from 'server/src/interfaces/schedule.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { generateOccurrences } from '../utils/recurrenceUtils';
 import { Knex } from 'knex';

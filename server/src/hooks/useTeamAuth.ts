@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getTeams } from '@/lib/actions/team-actions/teamActions';
-import { ITeam, IUser } from '@/interfaces';
+import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
+import { ITeam, IUser } from 'server/src/interfaces';
 
 export function useTeamAuth(currentUser: IUser | null) {
   const [isManager, setIsManager] = useState(false);

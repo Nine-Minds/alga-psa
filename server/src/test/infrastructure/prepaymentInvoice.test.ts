@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { generateInvoice } from '@/lib/actions/invoiceActions';
-import { createPrepaymentInvoice } from '@/lib/actions/creditActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
 import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
-import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { runWithTenant } from '@/lib/db';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { runWithTenant } from 'server/src/lib/db';
 import '../../../test-utils/nextApiMock';
 
 global.TextEncoder = TextEncoder;

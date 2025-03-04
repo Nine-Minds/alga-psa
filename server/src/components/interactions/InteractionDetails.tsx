@@ -1,17 +1,17 @@
 // src/components/interactions/InteractionDetails.tsx
 
 import React, { useState, useEffect } from 'react';
-import { IInteraction } from '@/interfaces/interaction.interfaces';
+import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { Calendar, Clock, User, Briefcase, FileText, ArrowLeft, Plus, Pen, Check, X } from 'lucide-react';
-import { useDrawer } from '@/context/DrawerContext';
+import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from '../contacts/ContactDetailsView';
 import CompanyDetails from '../companies/CompanyDetails';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
-import { ITicket } from '@/interfaces';
-import { getContactByContactNameId } from '@/lib/actions/contact-actions/contactActions';
-import { getCompanyById, getAllCompanies } from '@/lib/actions/companyActions';
-import { updateInteraction } from '@/lib/actions/interactionActions';
+import { ITicket } from 'server/src/interfaces';
+import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getCompanyById, getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { updateInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 
 interface InteractionDetailsProps {

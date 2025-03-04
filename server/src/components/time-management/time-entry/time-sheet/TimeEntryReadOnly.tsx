@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { parseISO } from 'date-fns';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { Pencil, Trash2 } from 'lucide-react';
 import { BsClock } from 'react-icons/bs';
 import { TimeEntryReadOnlyProps } from './types';

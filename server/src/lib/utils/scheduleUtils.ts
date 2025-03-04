@@ -1,4 +1,4 @@
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 
 export function differentiateRecurringEntries(entries: IScheduleEntry[]): IScheduleEntry[] {
   return entries.map((entry: IScheduleEntry, index): IScheduleEntry => {

@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
-import { Button } from '@/components/ui/Button';
-import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from '@/lib/actions/policyActions';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
-import { IRole, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import UserPicker from '@/components/ui/UserPicker';
+import { Button } from 'server/src/components/ui/Button';
+import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from 'server/src/lib/actions/policyActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
 
 export default function UserRoleAssignment() {
   const [users, setUsers] = useState<IUserWithRoles[]>([]);

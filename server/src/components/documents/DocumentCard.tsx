@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState } from 'react';
-import { IDocument } from '@/interfaces/document.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
 import { FileText, Link2, Trash2 } from 'lucide-react';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface DocumentCardProps {
   id?: string;

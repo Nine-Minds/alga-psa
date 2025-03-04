@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Projects from '@/components/projects/Projects';
-import { getProjects } from '@/lib/actions/project-actions/projectActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { IProject } from '@/interfaces/project.interfaces';
-import { ICompany } from '@/interfaces';
+import Projects from 'server/src/components/projects/Projects';
+import { getProjects } from 'server/src/lib/actions/project-actions/projectActions';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { IProject } from 'server/src/interfaces/project.interfaces';
+import { ICompany } from 'server/src/interfaces';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<IProject[]>([]);

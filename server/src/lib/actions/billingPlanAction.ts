@@ -1,9 +1,9 @@
 // server/src/lib/actions/billingPlanActions.ts
 'use server'
 
-import BillingPlan from '@/lib/models/billingPlan';
-import { IBillingPlan } from '@/interfaces/billing.interfaces';
-import { createTenantKnex } from '@/lib/db';
+import BillingPlan from 'server/src/lib/models/billingPlan';
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {

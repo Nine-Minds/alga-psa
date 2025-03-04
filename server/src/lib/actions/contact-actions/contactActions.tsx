@@ -1,10 +1,10 @@
 'use server'
 
-import { IContact, MappableField, ImportContactResult } from '@/interfaces/contact.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { ITag } from '@/interfaces/tag.interfaces';
-import { createTenantKnex } from '@/lib/db';
-import { unparseCSV } from '@/lib/utils/csvParser';
+import { IContact, MappableField, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { unparseCSV } from 'server/src/lib/utils/csvParser';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   const { knex: db, tenant } = await createTenantKnex();

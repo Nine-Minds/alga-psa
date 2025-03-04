@@ -1,7 +1,7 @@
 'use server'
 
-import { createTenantKnex, runWithTenant } from '@/lib/db';
-import { getEmailService } from '@/services/emailService';
+import { createTenantKnex, runWithTenant } from 'server/src/lib/db';
+import { getEmailService } from 'server/src/services/emailService';
 
 interface SendVerificationEmailParams {
   email: string;

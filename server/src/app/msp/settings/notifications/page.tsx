@@ -1,9 +1,9 @@
 import { Suspense } from "react";
-import { NotificationSettings } from "@/components/settings/notifications/NotificationSettings";
-import { EmailTemplates } from "@/components/settings/notifications/EmailTemplates";
-import { NotificationCategories } from "@/components/settings/notifications/NotificationCategories";
-import { CustomTabs } from "@/components/ui/CustomTabs";
-import { Card } from "@/components/ui/Card";
+import { NotificationSettings } from "server/src/components/settings/notifications/NotificationSettings";
+import { EmailTemplates } from "server/src/components/settings/notifications/EmailTemplates";
+import { NotificationCategories } from "server/src/components/settings/notifications/NotificationCategories";
+import { CustomTabs } from "server/src/components/ui/CustomTabs";
+import { Card } from "server/src/components/ui/Card";
 
 export default function NotificationsSettingsPage() {
   const tabs = [

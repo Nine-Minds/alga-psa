@@ -1,5 +1,5 @@
-import { IUser, IRole, IPermission, IRoleWithPermissions } from '@/interfaces/auth.interfaces';
-import { getUserRolesWithPermissions } from '@/lib/actions/user-actions/userActions';
+import { IUser, IRole, IPermission, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
+import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 
 export class Role implements IRole {
   role_id: string;

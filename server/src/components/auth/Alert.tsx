@@ -3,7 +3,7 @@ import React from 'react';
 import * as AlertDialog from '@radix-ui/react-alert-dialog'; 
 import { ExclamationTriangleIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 
-import { AlertProps } from '@/interfaces'; 
+import { AlertProps } from 'server/src/interfaces'; 
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {

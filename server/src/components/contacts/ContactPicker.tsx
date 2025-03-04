@@ -6,9 +6,9 @@ import CustomSelect from '../ui/CustomSelect';
 import { ChevronDownIcon, Cross2Icon } from '@radix-ui/react-icons';
 import { IContact } from '../../interfaces/contact.interfaces';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, FormFieldComponent } from '@/types/ui-reflection/types';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface ContactPickerProps {
   id?: string;

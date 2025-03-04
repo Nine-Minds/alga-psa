@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-import { getServices, updateService, deleteService } from '@/lib/actions/serviceActions';
-import { getServiceCategories } from '@/lib/actions/serviceCategoryActions';
-import { IService, IServiceCategory, ServiceType } from '@/interfaces/billing.interfaces';
+import { getServices, updateService, deleteService } from 'server/src/lib/actions/serviceActions';
+import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
+import { IService, IServiceCategory, ServiceType } from 'server/src/interfaces/billing.interfaces';
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Switch } from '../ui/Switch';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
 
 // Define service type options

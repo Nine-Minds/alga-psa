@@ -10,7 +10,7 @@ import {
   ProjectTaskAssignedEvent
 } from '../events';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
-import logger from '../../../utils/logger';
+import logger from '@shared/core/logger';
 import { createTenantKnex } from '../../db';
 
 /**

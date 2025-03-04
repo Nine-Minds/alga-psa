@@ -5,10 +5,10 @@ import { useState, useEffect } from 'react';
 import { TimeSheet } from './time-sheet/TimeSheet';
 import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
-import { ITimeSheetView, ITimePeriodWithStatusView, ITimeEntry } from '@/interfaces/timeEntry.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { fetchTimePeriods, fetchOrCreateTimeSheet, saveTimeEntry } from '@/lib/actions/timeEntryActions';
-import { useTeamAuth } from '@/hooks/useTeamAuth';
+import { ITimeSheetView, ITimePeriodWithStatusView, ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { fetchTimePeriods, fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
 
 
 interface TimeTrackingProps {

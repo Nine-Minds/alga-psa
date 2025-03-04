@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState } from 'react';
-import { ITimeSheetComment, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
-import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/TextArea';
+import { ITimeSheetComment, TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { TextArea } from 'server/src/components/ui/TextArea';
 
 interface TimeSheetCommentsProps {
     comments: ITimeSheetComment[];

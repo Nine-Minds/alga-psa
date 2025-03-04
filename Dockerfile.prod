@@ -25,6 +25,11 @@ RUN npm ci
 FROM deps AS builder
 # Copy all project files and build the server
 COPY . .
+
+WORKDIR /app
+RUN npm install --workspace=shared
+RUN npm run build --workspace=shared
+
 WORKDIR /app/server
 
 # Create secrets directory and populate with secure placeholder values
@@ -67,6 +72,7 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
+COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/server/.next ./server/.next
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/

@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createTenantKnex } from '@/lib/db';
-import { IDocument } from '@/interfaces/document.interface';
-import { IDocumentAssociation, IDocumentAssociationInput } from '@/interfaces/document-association.interface';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 export async function associateDocumentWithAsset(input: IDocumentAssociationInput): Promise<IDocumentAssociation> {
     const { knex, tenant } = await createTenantKnex();

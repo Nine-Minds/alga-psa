@@ -1,7 +1,7 @@
 // TemplateRenderer.tsx
 'use client'
 import { useEffect, useState } from 'react';
-import { IInvoiceTemplate, InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+import { IInvoiceTemplate, InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { renderTemplateCore } from './TemplateRendererCore';
 
 interface TemplateRendererProps {

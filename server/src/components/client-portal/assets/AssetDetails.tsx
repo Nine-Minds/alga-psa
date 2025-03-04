@@ -1,7 +1,7 @@
 'use client';
 
-import { Asset } from '@/interfaces/asset.interfaces';
-import { Card } from '@/components/ui/Card';
+import { Asset } from 'server/src/interfaces/asset.interfaces';
+import { Card } from 'server/src/components/ui/Card';
 
 interface AssetDetailsProps {
   asset: Asset;

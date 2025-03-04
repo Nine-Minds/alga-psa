@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi, Mock } from 'vitest';
-import { IUserRegister } from '@/interfaces';
+import { IUserRegister } from 'server/src/interfaces';
 import jwt from 'jsonwebtoken';
-import { createToken, getInfoFromToken } from '@/utils';
+import { createToken, getInfoFromToken } from 'server/src/utils';
 
 vi.mock('jsonwebtoken', () => {
     class MockTokenExpiredError extends Error {

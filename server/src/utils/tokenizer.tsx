@@ -1,8 +1,8 @@
 import jwt, { TokenExpiredError, JsonWebTokenError, NotBeforeError, SignOptions, Secret } from 'jsonwebtoken'; 
 
-import { IUserRegister, TokenResponse } from '@/interfaces'; 
+import { IUserRegister, TokenResponse } from 'server/src/interfaces'; 
 
-import logger from '@/utils/logger';
+import logger from 'server/src/utils/logger';
 
 
 const secretKey: Secret = process.env.SECRET_KEY || 'default';

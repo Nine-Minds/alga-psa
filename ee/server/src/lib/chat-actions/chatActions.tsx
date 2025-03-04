@@ -1,9 +1,9 @@
 'use server'
 
-import { IChat } from '@ee/interfaces/chat.interface';
-import { IMessage } from '@ee/interfaces/message.interface';
-import Chat from '@ee/models/chat';
-import Message from '@ee/models/message';
+import { IChat } from '../../interfaces/chat.interface';
+import { IMessage } from '../../interfaces/message.interface';
+import Chat from '../../models/chat';
+import Message from '../../models/message';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createNewChatAction(data: Omit<IChat, 'tenant'>) {

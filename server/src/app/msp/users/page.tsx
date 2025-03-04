@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { getMultipleUsersWithRoles } from '@/lib/actions/user-actions/userActions';
-import UserList from '@/components/settings/general/UserList';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
+import UserList from 'server/src/components/settings/general/UserList';
 import { Button } from '@radix-ui/themes';
 
 export default function UsersPage() {

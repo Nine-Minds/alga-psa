@@ -2,17 +2,17 @@
 
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { extractTextFromBlocks } from '@/lib/utils/textUtils';
+import { extractTextFromBlocks } from 'server/src/lib/utils/textUtils';
 import TextEditor from '../editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { ITicket, IComment, ITicketCategory } from '../../interfaces';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from '../ui/CustomSelect';
 import { CategoryPicker } from './CategoryPicker';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories } from '../../lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration

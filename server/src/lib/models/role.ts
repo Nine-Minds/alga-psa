@@ -1,6 +1,6 @@
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { IRole } from '../../interfaces/auth.interfaces';
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
 
 const Role = {
   getAllRoles: async (): Promise<IRole[]> => {

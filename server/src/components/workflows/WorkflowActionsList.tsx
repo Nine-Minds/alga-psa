@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { IWorkflowActionResult } from '@/lib/workflow/persistence/workflowInterfaces';
-import { Button } from '@/components/ui/Button';
-import { retryWorkflowActionAction } from '@/lib/actions/workflow-actions';
+import { IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { retryWorkflowActionAction } from 'server/src/lib/actions/workflow-actions';
 import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
 
 interface WorkflowActionsListProps {

@@ -1,10 +1,10 @@
 import React from 'react';
-import { Switch } from "@/components/ui/Switch";
-import { Label } from "@/components/ui/Label";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Switch } from "server/src/components/ui/Switch";
+import { Label } from "server/src/components/ui/Label";
+import { Input } from "server/src/components/ui/Input";
+import { Button } from "server/src/components/ui/Button";
 import toast from 'react-hot-toast';
-import { getDefaultBillingSettings, updateDefaultBillingSettings, type BillingSettings } from "@/lib/actions/billingSettingsActions";
+import { getDefaultBillingSettings, updateDefaultBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
 
 const CreditExpirationSettings = (): JSX.Element => {
   const [settings, setSettings] = React.useState<BillingSettings>({

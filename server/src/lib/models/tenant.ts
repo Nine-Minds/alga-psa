@@ -1,4 +1,4 @@
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
 import { ITenant } from '../../interfaces';
 import { createTenantKnex } from '../db';
 

@@ -1,11 +1,11 @@
-import { getQueueMetricsAction, getJobDetailsWithHistory } from '@/lib/actions/job-actions';
-import { getWorkflowMetricsAction, getWorkflowExecutionsWithDetails } from '@/lib/actions/workflow-actions';
-import WorkflowRegistryViewer from '@/components/workflows/WorkflowRegistryViewer';
-import JobMetricsDisplay from '@/components/jobs/JobMetricsDisplay';
-import JobHistoryTable from '@/components/jobs/JobHistoryTable';
-import WorkflowMetricsDisplay from '@/components/workflows/WorkflowMetricsDisplay';
-import WorkflowExecutionsTable from '@/components/workflows/WorkflowExecutionsTable';
-import CustomTabs from '@/components/ui/CustomTabs';
+import { getQueueMetricsAction, getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
+import { getWorkflowMetricsAction, getWorkflowExecutionsWithDetails } from 'server/src/lib/actions/workflow-actions';
+import WorkflowRegistryViewer from 'server/src/components/workflows/WorkflowRegistryViewer';
+import JobMetricsDisplay from 'server/src/components/jobs/JobMetricsDisplay';
+import JobHistoryTable from 'server/src/components/jobs/JobHistoryTable';
+import WorkflowMetricsDisplay from 'server/src/components/workflows/WorkflowMetricsDisplay';
+import WorkflowExecutionsTable from 'server/src/components/workflows/WorkflowExecutionsTable';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 
 export const revalidate = 5; // Revalidate every 5 seconds
 

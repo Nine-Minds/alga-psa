@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import {
   IBillingPeriod,
   IBillingResult,
@@ -17,16 +17,16 @@ import {
   ILicenseCharge,
   ICompanyBillingCycle,
   BillingCycleType
-} from '@/interfaces/billing.interfaces';
+} from 'server/src/interfaces/billing.interfaces';
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
-import { ISO8601String } from '@/types/types.d';
-import { getCompanyTaxRate } from '@/lib/actions/invoiceActions';
-import { toPlainDate, toISODate } from '@/lib/utils/dateTimeUtils';
-import { getCompanyById } from '@/lib/actions/companyActions';
-import { ICompany } from '@/interfaces';
+import { ISO8601String } from 'server/src/types/types.d';
+import { getCompanyTaxRate } from 'server/src/lib/actions/invoiceActions';
+import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { ICompany } from 'server/src/interfaces';
 import { get } from 'http';
-import { TaxService } from '@/lib/services/taxService';
+import { TaxService } from 'server/src/lib/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 
 export class BillingEngine {

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ITimePeriodView, IService } from '@/interfaces';
+import { ITimePeriodView, IService } from 'server/src/interfaces';
 
 // Import all the components including the new GenerateInvoices component
 import Overview from './Overview';

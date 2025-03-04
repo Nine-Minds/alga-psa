@@ -1,4 +1,4 @@
-import { GET } from '@/app/auth/route';
+import { GET } from 'app/auth/route';
 import { redirect } from 'next/navigation';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 

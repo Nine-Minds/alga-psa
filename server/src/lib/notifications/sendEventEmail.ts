@@ -1,6 +1,6 @@
-import { getEmailService } from '@/services/emailService';
+import { getEmailService } from 'server/src/services/emailService';
 import { getConnection } from '../db/db';
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
 
 export interface SendEmailParams {
   tenantId: string;

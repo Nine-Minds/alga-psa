@@ -5,7 +5,7 @@ import { buildFlowGraph } from '../ast/flowGraphBuilder';
 import { applyLayout } from '../services/layoutService';
 import { fetchRuntimeStatus, applyRuntimeStatus } from '../services/runtimeIntegrationService';
 import { FlowGraph, FlowNode } from '../types/visualizationTypes';
-import { getWorkflowDefinition, getWorkflowDSLContent } from '@/lib/actions/workflow-visualization-actions';
+import { getWorkflowDefinition, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
 
 /**
  * Parameters for the useWorkflowVisualization hook

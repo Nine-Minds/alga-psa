@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import WorkflowVisualizer from '@/components/workflows/visualization/WorkflowVisualizer';
-import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from '@/lib/actions/workflow-visualization-actions';
+import WorkflowVisualizer from 'server/src/components/workflows/visualization/WorkflowVisualizer';
+import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
 
 interface ClientWorkflowVisualizationProps {
   workflowDefinitionId: string;

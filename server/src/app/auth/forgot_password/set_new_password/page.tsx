@@ -10,9 +10,9 @@ import * as Form from '@radix-ui/react-form'; // Third-party library imports
 import * as Label from '@radix-ui/react-label';
 
 
-import { setNewPassword } from '@/lib/actions/useRegister'; // Local imports
-import { AlertProps, TPasswordCriteria } from '@/interfaces';
-import Alert from '@/components/auth/Alert';
+import { setNewPassword } from 'server/src/lib/actions/useRegister'; // Local imports
+import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
+import Alert from 'server/src/components/auth/Alert';
 
 
 type FormData = {

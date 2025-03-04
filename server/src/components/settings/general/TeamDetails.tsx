@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from '@/lib/actions/team-actions/teamActions';
-import { getAllUsers, getMultipleUsersWithRoles } from '@/lib/actions/user-actions/userActions';
-import { ITeam, IUser, IRole, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUserToTeam } from 'server/src/lib/actions/team-actions/teamActions';
+import { getAllUsers, getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface TeamDetailsProps {
   teamId: string;

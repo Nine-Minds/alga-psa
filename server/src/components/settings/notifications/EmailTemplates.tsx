@@ -1,25 +1,25 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Dialog, DialogContent, DialogFooter, DialogTitle } from "@/components/ui/Dialog";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { TextArea } from "@/components/ui/TextArea";
-import { DataTable } from "@/components/ui/DataTable";
-import { ColumnDefinition } from "@/interfaces/dataTable.interfaces";
+import { Card } from "server/src/components/ui/Card";
+import { Button } from "server/src/components/ui/Button";
+import { Dialog, DialogContent, DialogFooter, DialogTitle } from "server/src/components/ui/Dialog";
+import { Input } from "server/src/components/ui/Input";
+import { Label } from "server/src/components/ui/Label";
+import { TextArea } from "server/src/components/ui/TextArea";
+import { DataTable } from "server/src/components/ui/DataTable";
+import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
 import { 
   getTemplatesAction,
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction
-} from "@/lib/actions/notification-actions/notificationActions";
+} from "server/src/lib/actions/notification-actions/notificationActions";
 import { 
   SystemEmailTemplate,
   TenantEmailTemplate 
-} from "@/lib/models/notification";
-import { getCurrentTenant } from "@/lib/tenant-client";
+} from "server/src/lib/models/notification";
+import { getCurrentTenant } from "server/src/lib/tenant-client";
 
 export function EmailTemplates() {
   const [templates, setTemplates] = useState<{

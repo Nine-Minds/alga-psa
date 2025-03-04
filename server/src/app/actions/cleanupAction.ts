@@ -1,6 +1,5 @@
 'use server'
 
-import { destroyConnection } from "@/lib/db/db";
 import { headers } from 'next/headers';
 
 export async function cleanupDatabaseConnection() {

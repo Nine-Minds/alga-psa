@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { ITaxRate } from '@/interfaces/billing.interfaces';
-import { TaxService } from '@/lib/services/taxService';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ITaxRate } from 'server/src/interfaces/billing.interfaces';
+import { TaxService } from 'server/src/lib/services/taxService';
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {

@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import CompanyForm from './CompanyForm';
-import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from '@/lib/actions/companyActions';
+import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/companyActions';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';
@@ -12,7 +12,7 @@ import CompaniesList from './CompaniesList';
 import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, LayoutList, Search } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { CompanyPicker } from '../companies/CompanyPicker';
-import { getCurrentUser, getUserPreference, setUserPreference } from '@/lib/actions/user-actions/userActions';
+import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import CompaniesImportDialog from './CompaniesImportDialog';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';

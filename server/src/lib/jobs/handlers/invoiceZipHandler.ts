@@ -1,16 +1,16 @@
-import { JobService, JobStepResult } from '@/services/job.service';
-import { getTenantDetails } from '@/lib/actions/tenantActions';
-import { getInvoiceForRendering } from '@/lib/actions/invoiceActions';
-import { uploadDocument } from '@/lib/actions/document-actions/documentActions';
-import type { TenantCompany } from '@/lib/types';
+import { JobService, JobStepResult } from 'server/src/services/job.service';
+import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceActions';
+import { uploadDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import type { TenantCompany } from 'server/src/lib/types';
 /// <reference types="formdata-node" />
 // @ts-ignore - Types exist but aren't properly exposed in package.json
 const { FormData } = require('formdata-node');
 import fs from 'fs/promises';
-import { StorageService } from '@/lib/storage/StorageService';
-import { ZipGenerationService } from '@/services/zip-generation.service';
-import { PDFGenerationService } from '@/services/pdf-generation.service';
-import { JobStatus } from '@/types/job.d';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { ZipGenerationService } from 'server/src/services/zip-generation.service';
+import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { JobStatus } from 'server/src/types/job.d';
 
 export interface InvoiceZipJobData extends Record<string, unknown> {
   jobServiceId: string;

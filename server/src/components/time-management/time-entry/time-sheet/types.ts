@@ -1,5 +1,5 @@
-import { ITimeEntry, ITimePeriodView } from '@/interfaces';
-import { TaxRegion } from '@/types/types.d';
+import { ITimeEntry, ITimePeriodView } from 'server/src/interfaces';
+import { TaxRegion } from 'server/src/types/types.d';
 
 export interface Service {
   id: string;

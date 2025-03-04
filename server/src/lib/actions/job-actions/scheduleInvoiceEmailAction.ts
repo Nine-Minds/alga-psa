@@ -1,12 +1,12 @@
 'use server'
 
-import { JobService } from '@/services/job.service';
-import { createTenantKnex } from '@/lib/db';
+import { JobService } from 'server/src/services/job.service';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { getInvoiceForRendering } from '../invoiceActions';
 import { getCompanyById } from '../companyActions';
-import { JobStatus } from '@/types/job.d';
-import logger from '@/utils/logger';
+import { JobStatus } from 'server/src/types/job.d';
+import logger from '@shared/core/logger';
 
 export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
   const { tenant } = await createTenantKnex();

@@ -1,8 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
-import { ButtonComponent } from '@/types/ui-reflection/types';
+import { ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { MenuItem } from '../../config/menuConfig';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface SidebarSubMenuItemProps {
   item: MenuItem;

@@ -1,8 +1,8 @@
 'use server'
 
-import Team from '@/lib/models/team';
-import { ITeam, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { getMultipleUsersWithRoles } from '@/lib/actions/user-actions/userActions';
+import Team from 'server/src/lib/models/team';
+import { ITeam, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
 
 export async function createTeam(teamData: Omit<ITeam, 'members'> & { members?: IUserWithRoles[] }): Promise<ITeam> {
   try {

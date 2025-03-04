@@ -1,11 +1,11 @@
 'use client';
 
-import { IProjectTask, ProjectStatus } from '@/interfaces/project.interfaces';
-import { Button } from '@/components/ui/Button';
+import { IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useState, useRef } from 'react';
 
 interface StatusColumnProps {

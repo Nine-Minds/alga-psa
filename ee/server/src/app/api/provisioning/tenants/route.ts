@@ -3,8 +3,8 @@ import { TenantService, TenantProvisioningError } from '../../../../services/pro
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
 import { getServerSession } from 'next-auth';
-import { hasPermission } from '@/lib/auth/rbac';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { hasPermission } from '../../../../../../../server/src/lib/auth/rbac';
+import { getCurrentUser } from '../../../../../../../server/src/lib/actions/user-actions/userActions';
 
 export async function POST(req: NextRequest) {
   try {

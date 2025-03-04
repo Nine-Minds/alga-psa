@@ -43,7 +43,7 @@ import {
   Fingerprint
 } from 'lucide-react';
 import CreateTicketFromAssetButton from './CreateTicketFromAssetButton';
-import CustomTabs from '@/components/ui/CustomTabs';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 
 interface AssetDetailsProps {
   asset: Asset;

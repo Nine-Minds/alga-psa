@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { DataTable } from '@/components/ui/DataTable';
-import type { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { createApiKey, deactivateApiKey, listApiKeys } from '@/lib/actions/apiKeyActions';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
 
 export interface ApiKey {

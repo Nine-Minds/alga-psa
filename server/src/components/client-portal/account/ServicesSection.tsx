@@ -1,9 +1,9 @@
 'use client';
 
-import { Card } from "@/components/ui/Card";
-import { Table } from "@/components/ui/Table";
-import { Button } from "@/components/ui/Button";
-import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import { Card } from "server/src/components/ui/Card";
+import { Table } from "server/src/components/ui/Table";
+import { Button } from "server/src/components/ui/Button";
+import { Dialog, DialogContent } from "server/src/components/ui/Dialog";
 import { useState, useEffect } from 'react';
 import { 
   getActiveServices, 
@@ -12,7 +12,7 @@ import {
   downgradeService,
   type Service,
   type ServicePlan
-} from "@/lib/actions/account";
+} from "server/src/lib/actions/account";
 
 export default function ServicesSection() {
   const [services, setServices] = useState<Service[]>([]);

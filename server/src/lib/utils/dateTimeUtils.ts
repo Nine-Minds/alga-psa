@@ -3,7 +3,7 @@
 import { format, toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 
 // Date conversion utilities
 

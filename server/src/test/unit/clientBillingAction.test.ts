@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { createClientBilling, updateClientBilling, getClientBilling, getOverlappingBillings } from '@/lib/actions/clientBillingAction';
-import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { ICompanyBillingPlan } from '@/interfaces/billing.interfaces';
+import { createClientBilling, updateClientBilling, getClientBilling, getOverlappingBillings } from 'server/src/lib/actions/clientBillingAction';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { parseISO } from 'date-fns';
 
 vi.mock('@/lib/models/clientBilling');

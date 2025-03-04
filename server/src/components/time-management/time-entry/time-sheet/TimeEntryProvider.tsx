@@ -1,12 +1,12 @@
 'use client';
 
 import { createContext, useContext, useReducer, useEffect } from 'react';
-import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
-import { TaxRegion } from '@/types/types.d';
-import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '@/lib/actions/timeEntryActions';
+import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { TaxRegion } from 'server/src/types/types.d';
+import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
 import { formatISO, parseISO } from 'date-fns';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 interface Service {
   id: string;
@@ -157,7 +157,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     let newEntries: ITimeEntryWithNew[] = [];
 
     if (existingEntries?.length) {
-      newEntries = existingEntries.map(({ tenant: _tenant, ...rest }): ITimeEntryWithNew => ({
+      newEntries = existingEntries.map(({ ...rest }): ITimeEntryWithNew => ({
         ...rest,
         start_time: formatISO(parseISO(rest.start_time)),
         end_time: formatISO(parseISO(rest.end_time)),

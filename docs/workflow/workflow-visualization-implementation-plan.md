@@ -349,8 +349,8 @@ We'll create custom node components for different types of workflow elements, fo
 // StateNode.tsx
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { StateNodeData } from '@/lib/workflow/visualization/types/visualizationTypes';
-import { Card } from '@/components/ui/Card';
+import { StateNodeData } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { Card } from 'server/src/components/ui/Card';
 
 export function StateNode({ data, id }: NodeProps<StateNodeData>) {
   const automationId = `workflow-state-node-${id}`;
@@ -406,8 +406,8 @@ import { FilterControls } from './controls/FilterControls';
 import { ZoomControls } from './controls/ZoomControls';
 import { LegendComponent } from './controls/LegendComponent';
 
-import { useWorkflowVisualization } from '@/lib/workflow/visualization/hooks/useWorkflowVisualization';
-import { WorkflowDefinition } from '@/lib/workflow/core/workflowParser';
+import { useWorkflowVisualization } from 'server/src/lib/workflow/visualization/hooks/useWorkflowVisualization';
+import { WorkflowDefinition } from 'server/src/lib/workflow/core/workflowParser';
 
 // Define custom node types
 const nodeTypes: NodeTypes = {
@@ -508,7 +508,7 @@ The Runtime Integration Service will connect the visualization with the workflow
 
 ```typescript
 // runtimeIntegrationService.ts
-import { getWorkflowExecutionStatus } from '@/lib/actions/workflow-visualization-actions';
+import { getWorkflowExecutionStatus } from 'server/src/lib/actions/workflow-visualization-actions';
 import { FlowGraph } from '../types/visualizationTypes';
 
 interface RuntimeStatus {
@@ -630,8 +630,8 @@ import { buildFlowGraph } from '../ast/flowGraphBuilder';
 import { applyLayout } from '../services/layoutService';
 import { fetchRuntimeStatus, applyRuntimeStatus } from '../services/runtimeIntegrationService';
 import { FlowGraph, FlowNode } from '../types/visualizationTypes';
-import { getWorkflowDefinition, getWorkflowDSLContent } from '@/lib/actions/workflow-visualization-actions';
-import { WorkflowDefinition } from '@/lib/workflow/core/workflowParser';
+import { getWorkflowDefinition, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
+import { WorkflowDefinition } from 'server/src/lib/workflow/core/workflowParser';
 
 interface UseWorkflowVisualizationParams {
   workflowDefinitionId: string;
@@ -813,9 +813,9 @@ We'll update the existing ClientWorkflowVisualization component to use the new v
 "use client";
 
 import { useState, useEffect } from 'react';
-import WorkflowVisualizer from '@/components/workflows/visualization/WorkflowVisualizer';
-import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from '@/lib/actions/workflow-visualization-actions';
-import { WorkflowDefinition } from '@/lib/workflow/core/workflowParser';
+import WorkflowVisualizer from 'server/src/components/workflows/visualization/WorkflowVisualizer';
+import { getWorkflowDefinition, getWorkflowExecutionStatus, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
+import { WorkflowDefinition } from 'server/src/lib/workflow/core/workflowParser';
 
 interface ClientWorkflowVisualizationProps {
   workflowDefinitionId: string;
@@ -972,7 +972,7 @@ We'll create comprehensive unit tests for each component of the visualization sy
 
 ```typescript
 // astParser.test.ts
-import { parseWorkflowDefinition, findWorkflowExecuteFunction } from '@/lib/workflow/visualization/ast/astParser';
+import { parseWorkflowDefinition, findWorkflowExecuteFunction } from 'server/src/lib/workflow/visualization/ast/astParser';
 
 describe('AST Parser', () => {
   test('should parse a workflow definition', () => {
@@ -1028,7 +1028,7 @@ We'll create integration tests to verify that the visualization system works cor
 ```typescript
 // workflowVisualization.integration.test.ts
 import { renderHook, act } from '@testing-library/react-hooks';
-import { useWorkflowVisualization } from '@/lib/workflow/visualization/hooks/useWorkflowVisualization';
+import { useWorkflowVisualization } from 'server/src/lib/workflow/visualization/hooks/useWorkflowVisualization';
 import { mockWorkflowDefinition, mockRuntimeStatus } from './mocks';
 
 // Mock fetch

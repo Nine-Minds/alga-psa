@@ -1,4 +1,4 @@
-import { IUserWithRoles, IPolicy, ICondition, IRole } from '@/interfaces/auth.interfaces';
+import { IUserWithRoles, IPolicy, ICondition, IRole } from 'server/src/interfaces/auth.interfaces';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES, UserAttributeKey, TicketAttributeKey } from '../attributes/EntityAttributes';
 
 export class PolicyEngine {

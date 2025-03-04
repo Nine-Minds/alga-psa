@@ -1,22 +1,22 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 import { Plus, X, Edit2, Lock } from "lucide-react";
-import { IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { 
   getAllInteractionTypes, 
   createInteractionType, 
   updateInteractionType, 
   deleteInteractionType,
   getSystemInteractionTypes 
-} from '@/lib/actions/interactionTypeActions';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import CustomSelect from '@/components/ui/CustomSelect';
+} from 'server/src/lib/actions/interactionTypeActions';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);

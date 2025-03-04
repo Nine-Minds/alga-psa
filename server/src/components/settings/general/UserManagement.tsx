@@ -1,15 +1,15 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import UserList from './UserList';
-import { getAllUsers, addUser, getUserWithRoles, deleteUser } from '@/lib/actions/user-actions/userActions';
-import { getAllRoles } from '@/lib/actions/user-actions/userActions';
-import { IUser, IRole } from '@/interfaces/auth.interfaces';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
+import { getAllUsers, addUser, getUserWithRoles, deleteUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllRoles } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Search } from 'lucide-react';
 
 const UserManagement = (): JSX.Element => {

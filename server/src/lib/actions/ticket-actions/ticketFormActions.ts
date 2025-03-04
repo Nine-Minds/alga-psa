@@ -1,12 +1,12 @@
 'use server'
 
-import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact } from '@/interfaces';
-import { getAllUsers, getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getAllChannels } from '@/lib/actions/channel-actions/channelActions';
-import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { getAllCompanies, getCompanyById } from '@/lib/actions/companyActions';
-import { getContactsByCompany } from '@/lib/actions/contact-actions/contactActions';
+import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
+import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 
 export interface TicketFormData {
   users: IUser[];

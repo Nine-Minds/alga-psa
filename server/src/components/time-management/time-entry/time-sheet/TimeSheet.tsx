@@ -10,19 +10,19 @@ import {
     ITimeEntryWithWorkItemString, 
     ITimeEntryWithWorkItem,
     ITimePeriodView
-} from '@/interfaces/timeEntry.interfaces';
-import { IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
+} from 'server/src/interfaces/timeEntry.interfaces';
+import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import TimeEntryDialog from './TimeEntryDialog';
 import { AddWorkItemDialog } from './AddWorkItemDialog';
-import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from '@/lib/actions/timeEntryActions';
-import { updateScheduleEntry } from '@/lib/actions/scheduleActions';
+import { fetchTimeEntriesForTimeSheet, fetchWorkItemsForTimeSheet, saveTimeEntry, submitTimeSheet, deleteWorkItem } from 'server/src/lib/actions/timeEntryActions';
+import { updateScheduleEntry } from 'server/src/lib/actions/scheduleActions';
 import { toast } from 'react-hot-toast';
-import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from '@/lib/actions/timeSheetActions';
-import { useDrawer } from '@/context/DrawerContext';
+import { fetchTimeSheet, fetchTimeSheetComments, addCommentToTimeSheet } from 'server/src/lib/actions/timeSheetActions';
+import { useDrawer } from "server/src/context/DrawerContext";
 import { formatISO, parseISO } from 'date-fns';
 import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetHeader } from './TimeSheetHeader';
-import { TimeSheetComments } from '@/components/time-management/approvals/TimeSheetComments';
+import { TimeSheetComments } from 'server/src/components/time-management/approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
 
 interface TimeSheetProps {
@@ -362,7 +362,6 @@ export function TimeSheet({
 
     const dates = timeSheet.time_period ? getDatesInPeriod({
         period_id: timeSheet.time_period.period_id,
-        tenant: timeSheet.time_period.tenant,
         start_date: timeSheet.time_period.start_date,
         end_date: timeSheet.time_period.end_date
     }) : [];

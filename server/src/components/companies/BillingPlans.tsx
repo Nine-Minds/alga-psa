@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import PlanPickerDialog from './PlanPickerDialog';
-import { ICompanyBillingPlan, IBillingPlan, IServiceCategory } from '@/interfaces/billing.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { ICompanyBillingPlan, IBillingPlan, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 
 interface BillingPlansProps {

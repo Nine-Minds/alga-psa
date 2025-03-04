@@ -1,5 +1,5 @@
-import { createTenantKnex } from '@/lib/db';
-import { ITicket } from '@/interfaces/ticket.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { z } from 'zod';
 
 

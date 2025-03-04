@@ -1,18 +1,18 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, CheckCircle, ArrowRight } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
-import { ICreditReconciliationReport } from '@/interfaces/billing.interfaces';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { TextArea } from '@/components/ui/TextArea';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
+import { ICreditReconciliationReport } from 'server/src/interfaces/billing.interfaces';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
 
 interface RecommendedFixPanelProps {
   report: ICreditReconciliationReport;

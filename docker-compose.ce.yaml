@@ -37,6 +37,10 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      # Workflow configuration
+      WORKFLOW_DISTRIBUTED_MODE: "true"
+      WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
+      WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
     volumes:
       - type: bind
         source: ./secrets/db_password_server
@@ -121,6 +125,75 @@ services:
       postgres:
         condition: service_started
     entrypoint: ["/app/setup/entrypoint.sh"]
+
+  workflow-worker:
+    # Remove extends to use a custom build
+    # extends:
+    #   file: ./server/docker-compose.yaml
+    #   service: server
+    # Remove container_name to allow multiple instances
+    # container_name: ${APP_NAME:-sebastian}_workflow_worker_ce
+    build:
+      context: .
+      dockerfile: services/workflow-worker/Dockerfile
+    environment:
+      EDITION: community
+      DB_NAME: server
+      PGBOSS_DATABASE: server
+      DB_NAME_SERVER: server
+      DB_USER_SERVER: app_user
+      DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
+      VERSION: ${VERSION}
+      APP_NAME: ${APP_NAME}
+      APP_ENV: ${APP_ENV:-development}
+      NODE_ENV: ${APP_ENV:-development}
+      HOST: ${HOST}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      DB_TYPE: ${DB_TYPE:-postgres}
+      DB_HOST: postgres
+      DB_PORT: ${DB_PORT:-5432}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
+      LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
+      # Workflow-specific configuration
+      WORKFLOW_DISTRIBUTED_MODE: "true"
+      WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
+      WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      WORKFLOW_REDIS_BATCH_SIZE: "10"
+      WORKFLOW_REDIS_IDLE_TIMEOUT_MS: "60000"
+    ports:
+      # Expose a random port for health checks/monitoring
+      - "3000"
+    volumes:
+      - type: bind
+        source: ./secrets/db_password_server
+        target: /run/secrets/db_password_server
+        read_only: true
+      - type: bind
+        source: ./services/workflow-worker/entrypoint.sh
+        target: /app/entrypoint.sh
+        read_only: true
+    entrypoint: ["/app/entrypoint.sh"]
+    secrets:
+      - postgres_password
+      - db_password_server
+      - redis_password
+      - crypto_key
+      - token_secret_key
+      - nextauth_secret
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      server:
+        condition: service_started
+    # Enable scaling of worker instances
+    deploy:
+      replicas: ${WORKFLOW_WORKER_REPLICAS:-1}
 
   hocuspocus:
     extends:

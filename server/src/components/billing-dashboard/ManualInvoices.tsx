@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
-import { updateInvoiceManualItems, getInvoiceLineItems } from '@/lib/actions/invoiceActions';
+import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { updateInvoiceManualItems, getInvoiceLineItems } from 'server/src/lib/actions/invoiceActions';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { LineItem, ServiceOption } from './LineItem';
@@ -8,7 +8,7 @@ import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel, DiscountType } from '@/interfaces/invoice.interfaces';
+import { InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';

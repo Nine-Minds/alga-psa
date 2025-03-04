@@ -1,5 +1,5 @@
-import { TicketAttributeKey, UserAttributeKey } from '@/lib/attributes/EntityAttributes';
-import { IPolicy, ICondition } from '@/interfaces/auth.interfaces';
+import { TicketAttributeKey, UserAttributeKey } from 'server/src/lib/attributes/EntityAttributes';
+import { IPolicy, ICondition } from 'server/src/interfaces/auth.interfaces';
 
 export class PolicyEngine {
   constructor() {

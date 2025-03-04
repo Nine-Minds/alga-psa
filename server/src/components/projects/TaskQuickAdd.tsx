@@ -1,7 +1,7 @@
 'use client';
 
-import { IProjectPhase, IProjectTask, ProjectStatus } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { IProjectPhase, IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import TaskForm from './TaskForm';
 
 interface TaskQuickAddProps {

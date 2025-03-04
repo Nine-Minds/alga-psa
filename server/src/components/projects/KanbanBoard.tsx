@@ -1,7 +1,7 @@
 'use client';
 
-import { IProjectTask, ProjectStatus } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
 import { Circle, Clipboard, PlayCircle, PauseCircle, CheckCircle, XCircle } from 'lucide-react';

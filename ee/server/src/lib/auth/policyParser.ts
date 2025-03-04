@@ -1,8 +1,8 @@
 /* eslint-disable custom-rules/map-return-type */
 import * as P from 'parsimmon';
 import { Policy } from './abac';
-import { ICondition } from '@/interfaces/auth.interfaces';
-import { UserAttributeKey, TicketAttributeKey } from '@/lib/attributes/EntityAttributes';
+import { ICondition } from '../../../../../server/src/interfaces/auth.interfaces';
+import { UserAttributeKey, TicketAttributeKey } from '../../../../../server/src/lib/attributes/EntityAttributes';
 
 const policyParser = P.createLanguage({
   // Basic parsers

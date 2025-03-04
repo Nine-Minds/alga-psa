@@ -2,10 +2,10 @@ import * as React from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { DateTimePickerComponent } from '@/types/ui-reflection/types';
-import { Calendar } from '@/components/ui/Calendar';
-import { cn } from '@/lib/utils';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { DateTimePickerComponent } from 'server/src/types/ui-reflection/types';
+import { Calendar } from 'server/src/components/ui/Calendar';
+import { cn } from 'server/src/lib/utils';
 
 export interface DateTimePickerProps {
   value?: Date;

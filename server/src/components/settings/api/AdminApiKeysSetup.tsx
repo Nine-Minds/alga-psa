@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { DataTable } from '@/components/ui/DataTable';
-import type { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { adminListApiKeys, adminDeactivateApiKey } from '@/lib/actions/apiKeyActions';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { adminListApiKeys, adminDeactivateApiKey } from 'server/src/lib/actions/apiKeyActions';
 
 export interface AdminApiKey {
   api_key_id: string;

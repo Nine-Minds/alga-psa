@@ -1,9 +1,9 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '@/interfaces/tax.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
-import { TaxService } from '@/lib/services/taxService';
+import { TaxService } from 'server/src/lib/services/taxService';
 
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {

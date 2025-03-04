@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui/Skeleton';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 export function SkeletonTimeSheet() {
   return (

@@ -3,10 +3,10 @@
 'use client'
 
 import React from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
 import { Users, ArrowUp, AlertCircle } from 'lucide-react';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const revenueData = [

@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IUser, IPermission } from '@/interfaces/auth.interfaces';
-import { getCurrentUser, getUserRolesWithPermissions } from '@/lib/actions/user-actions/userActions';
-import { getClientUserById, updateClientUser, resetClientUserPassword } from '@/lib/actions/client-portal-actions/clientUserActions';
-import { useDrawer } from '@/context/DrawerContext';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import { Card, CardContent } from '@/components/ui/Card';
+import { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import { getClientUserById, updateClientUser, resetClientUserPassword } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { useDrawer } from "server/src/context/DrawerContext";
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Card, CardContent } from 'server/src/components/ui/Card';
 import { Eye, EyeOff } from 'lucide-react';
 import ClientPasswordChangeForm from './ClientPasswordChangeForm';
 

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/Card";
-import { Switch } from "@/components/ui/Switch";
-import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { Button } from "@/components/ui/Button";
-import { getNotificationSettingsAction, updateNotificationSettingsAction } from "@/lib/actions/notification-actions/notificationActions";
-import { NotificationSettings as NotificationSettingsType } from "@/lib/models/notification";
-import { getCurrentTenant } from "@/lib/tenant-client";
+import { Card } from "server/src/components/ui/Card";
+import { Switch } from "server/src/components/ui/Switch";
+import { Input } from "server/src/components/ui/Input";
+import { Label } from "server/src/components/ui/Label";
+import { Button } from "server/src/components/ui/Button";
+import { getNotificationSettingsAction, updateNotificationSettingsAction } from "server/src/lib/actions/notification-actions/notificationActions";
+import { NotificationSettings as NotificationSettingsType } from "server/src/lib/models/notification";
+import { getCurrentTenant } from "server/src/lib/tenant-client";
 
 export function NotificationSettings() {
   const [settings, setSettings] = useState<NotificationSettingsType | null>(null);

@@ -1,8 +1,8 @@
 import React from 'react';
-import Drawer from '@/components/ui/Drawer';
+import Drawer from 'server/src/components/ui/Drawer';
 import { JobProgress } from '../common/JobProgress';
 import JobMetricsDisplay from './JobMetricsDisplay';
-import { useJobMonitor } from '@/lib/hooks/useJobMonitor';
+import { useJobMonitor } from 'server/src/lib/hooks/useJobMonitor';
 import JobStepHistory from './JobStepHistory';
 
 interface JobDetailsDrawerProps {

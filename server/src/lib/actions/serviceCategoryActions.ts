@@ -1,9 +1,9 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import { IServiceCategory } from '@/interfaces/billing.interfaces';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { TextNoneIcon } from '@radix-ui/react-icons';
 
 export async function getServiceCategories() {

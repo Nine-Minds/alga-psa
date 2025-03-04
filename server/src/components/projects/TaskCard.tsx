@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { IProjectTask, IProjectTicketLinkWithDetails } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { IProjectTask, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { CheckSquare, Square, Ticket, Users } from 'lucide-react';
-import UserPicker from '@/components/ui/UserPicker';
-import { getTaskTicketLinksAction, getTaskResourcesAction } from '@/lib/actions/project-actions/projectTaskActions';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { getTaskTicketLinksAction, getTaskResourcesAction } from 'server/src/lib/actions/project-actions/projectTaskActions';
 
 interface TaskCardProps {
   task: IProjectTask;

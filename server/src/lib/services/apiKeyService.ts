@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import crypto from 'crypto';
 
 interface ApiKey {

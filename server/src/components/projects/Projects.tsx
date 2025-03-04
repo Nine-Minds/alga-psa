@@ -2,19 +2,19 @@
 
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { IProject, ICompany } from '@/interfaces';
-import { Button } from '@/components/ui/Button';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { IProject, ICompany } from 'server/src/interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
-import { deleteProject } from '@/lib/actions/project-actions/projectActions';
-import { getContactByContactNameId } from '@/lib/actions/contact-actions/contactActions';
-import { findUserById } from '@/lib/actions/user-actions/userActions';
+import { deleteProject } from 'server/src/lib/actions/project-actions/projectActions';
+import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useDrawer } from '@/context/DrawerContext';
+import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 
 interface ProjectsProps {

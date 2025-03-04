@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { createPrepaymentInvoice, applyCreditToInvoice } from '@/lib/actions/creditActions';
-import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
-import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
+import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import CompanyBillingPlan from '@/lib/models/clientBilling';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expiredCreditsHandler } from '@/lib/jobs/handlers/expiredCreditsHandler';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
 /**
  * Tests for the effects of credit expiration on the system.

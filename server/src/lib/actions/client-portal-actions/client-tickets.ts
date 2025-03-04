@@ -1,13 +1,13 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { validateData } from '@/lib/utils/validation';
-import { ITicket, ITicketListItem } from '@/interfaces/ticket.interfaces';
-import { IComment } from '@/interfaces/comment.interface';
+import { createTenantKnex } from 'server/src/lib/db';
+import { validateData } from 'server/src/lib/utils/validation';
+import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
+import { IComment } from 'server/src/interfaces/comment.interface';
 import { getServerSession } from 'next-auth';
-import { options } from '@/app/api/auth/[...nextauth]/options';
+import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { z } from 'zod';
-import { NumberingService } from '@/lib/services/numberingService';
+import { NumberingService } from 'server/src/lib/services/numberingService';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),

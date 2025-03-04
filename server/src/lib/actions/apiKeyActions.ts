@@ -2,7 +2,7 @@
 
 import { ApiKeyService } from '../services/apiKeyService';
 import { getCurrentUser, getUserRoles } from './user-actions/userActions';
-import { IRole } from '@/interfaces/auth.interfaces';
+import { IRole } from 'server/src/interfaces/auth.interfaces';
 
 /**
  * Create a new API key for the current user

@@ -1,10 +1,10 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
-import { getWorkflowRuntime } from '../workflow/core/workflowRuntime';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { workflowConfig } from '../../config/workflowConfig';
 import { getCurrentUser } from './user-actions/userActions';
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
+import { createTenantKnex } from '../db';
 
 /**
  * Options for submitting a workflow event
@@ -40,8 +40,10 @@ export async function submitWorkflowEventAction(
     // Get current user
     const currentUser = await getCurrentUser();
     if (!currentUser?.tenant) {
-      throw new Error('No current user found');
+      throw new Error('No current user found');      
     }
+
+    const { knex } = await createTenantKnex();
     
     const { execution_id, event_name, payload, idempotency_key } = options;
     const tenant = currentUser.tenant;
@@ -52,7 +54,7 @@ export async function submitWorkflowEventAction(
     
     if (workflowConfig.distributedMode) {
       // Use distributed mode - enqueue event for asynchronous processing
-      const result = await runtime.enqueueEvent({
+      const result = await runtime.enqueueEvent(knex, {
         execution_id,
         event_name,
         payload,
@@ -69,7 +71,7 @@ export async function submitWorkflowEventAction(
       };
     } else {
       // Use synchronous mode - process event immediately
-      const result = await runtime.submitEvent({
+      const result = await runtime.submitEvent(knex, {
         execution_id,
         event_name,
         payload,

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
-import { Input } from '@/components/ui/Input';
+import { Input } from 'server/src/components/ui/Input';
 
 export interface TicketOption {
   value: string;

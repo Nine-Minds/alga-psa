@@ -21,16 +21,16 @@ import {
     updatePhase,
     deletePhase,
     deleteProject
-} from '@/lib/actions/project-actions/projectActions';
+} from 'server/src/lib/actions/project-actions/projectActions';
 import {
     addTaskToPhase,
     updateTaskWithChecklist,
     moveTaskToPhase,
     deleteTask
-} from '@/lib/actions/project-actions/projectTaskActions';
-import { IProject, IProjectPhase, IProjectTask } from '@/interfaces/project.interfaces';
-import ProjectModel from '@/lib/models/project';
-import ProjectTaskModel from '@/lib/models/projectTask';
+} from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { IProject, IProjectPhase, IProjectTask } from 'server/src/interfaces/project.interfaces';
+import ProjectModel from 'server/src/lib/models/project';
+import ProjectTaskModel from 'server/src/lib/models/projectTask';
 
 global.TextEncoder = TextEncoder;
 

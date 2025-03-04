@@ -1,16 +1,16 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Label } from '@/components/ui/Label';
-import { Input } from '@/components/ui/Input';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
-import CreditExpirationBadge from '@/components/ui/CreditExpirationBadge';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
-import { listCompanyCredits, applyCreditToInvoice } from '@/lib/actions/creditActions';
-import { DataTable } from '@/components/ui/DataTable';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import CreditExpirationBadge from 'server/src/components/ui/CreditExpirationBadge';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { listCompanyCredits, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { DataTable } from 'server/src/components/ui/DataTable';
 
 interface CreditApplicationUIProps {
   companyId: string;

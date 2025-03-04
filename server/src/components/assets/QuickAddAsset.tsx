@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { createAsset } from '@/lib/actions/asset-actions/assetActions';
-import { CreateAssetRequest } from '@/interfaces/asset.interfaces';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import { ICompany } from '@/interfaces';
-import { getAllCompanies } from '@/lib/actions/companyActions';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ICompany } from 'server/src/interfaces';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
 
 interface QuickAddAssetProps {
   companyId?: string;

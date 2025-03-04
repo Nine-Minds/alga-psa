@@ -1,5 +1,5 @@
 import P from "parsimmon";
-import { InvoiceLanguage } from '@/lib/invoice-dsl/templateLanguage';
+import { InvoiceLanguage } from 'server/src/lib/invoice-dsl/templateLanguage';
 import { describe, it, expect, vi, test, beforeEach, beforeAll, afterEach, afterAll } from 'vitest';
 
 describe('Invoice Template Parser', () => {

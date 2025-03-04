@@ -212,7 +212,7 @@ Key features:
 Example usage:
 
 ```typescript
-import { getWorkflowRuntime } from '../lib/workflow/core/workflowRuntime';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { invoiceApprovalWorkflow } from '../workflows/invoiceApprovalWorkflow';
 
 // Initialize the workflow runtime
@@ -449,7 +449,7 @@ export const simpleApprovalWorkflow = defineWorkflow(
 ### Distributed Processing Example
 
 ```typescript
-import { getWorkflowRuntime } from '../lib/workflow/core/workflowRuntime';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 
 // Initialize the workflow runtime
 const runtime = getWorkflowRuntime();
@@ -509,8 +509,8 @@ Common issues and their solutions:
 ### Integration with Domain Logic
 
 ```typescript
-import { getWorkflowRuntime } from '../lib/workflow/core/workflowRuntime';
-import { getActionRegistry } from '../lib/workflow/core/actionRegistry';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
 import { invoiceApprovalWorkflow } from '../workflows/invoiceApprovalWorkflow';
 
 // Initialize the action registry

@@ -26,7 +26,7 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
-        project: ["./server/tsconfig.json", "./ee/server/tsconfig.json"],
+        project: ["./server/tsconfig.json", "./ee/server/tsconfig.json", "./shared/tsconfig.json"],
         ecmaFeatures: {
           jsx: true
         },

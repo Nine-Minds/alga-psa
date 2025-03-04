@@ -1,9 +1,9 @@
 'use client';
 import React, { useState } from 'react';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 import UserDetails from './UserDetails';
-import { useDrawer } from '@/context/DrawerContext';
-import { DataTable } from '@/components/ui/DataTable';
+import { useDrawer } from "server/src/context/DrawerContext";
+import { DataTable } from 'server/src/components/ui/DataTable';
 
 interface UserListProps {
   users: IUser[];

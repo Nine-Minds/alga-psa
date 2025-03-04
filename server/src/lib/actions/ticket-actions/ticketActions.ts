@@ -1,12 +1,12 @@
 'use server'
 
-import { ITicket, ITicketListItem, ITicketListFilters, IAgentSchedule } from '@/interfaces/ticket.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
-import Ticket from '@/lib/models/ticket';
+import { ITicket, ITicketListItem, ITicketListFilters, IAgentSchedule } from 'server/src/interfaces/ticket.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
+import Ticket from 'server/src/lib/models/ticket';
 import { revalidatePath } from 'next/cache';
-import { getTicketAttributes } from '@/lib/actions/policyActions';
-import { hasPermission } from '@/lib/auth/rbac';
-import { createTenantKnex } from '@/lib/db';
+import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
+import { createTenantKnex } from 'server/src/lib/db';
 import { 
   ticketFormSchema, 
   ticketSchema, 
@@ -15,17 +15,17 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema,
   createTicketFromAssetSchema
-} from '@/lib/schemas/ticket.schema';
+} from 'server/src/lib/schemas/ticket.schema';
 import { z } from 'zod';
-import { validateData } from '@/lib/utils/validation';
-import { AssetAssociationModel } from '@/models/asset';
+import { validateData } from 'server/src/lib/utils/validation';
+import { AssetAssociationModel } from 'server/src/models/asset';
 import { getEventBus } from '../../../lib/eventBus';
 import { 
   TicketCreatedEvent,
   TicketUpdatedEvent,
   TicketClosedEvent
 } from '../../../lib/eventBus/events';
-import { NumberingService } from '@/lib/services/numberingService';
+import { NumberingService } from 'server/src/lib/services/numberingService';
 
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null }>(record: T): T {

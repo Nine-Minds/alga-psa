@@ -1,16 +1,16 @@
 'use client'
 
 import React from 'react';
-import { IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
-import { getTicketById } from '@/lib/actions/ticket-actions/ticketActions';
-import { getTaskWithDetails } from '@/lib/actions/project-actions/projectTaskActions';
-import { getWorkItemById } from '@/lib/actions/workItemActions';
-import { getCurrentUser, getAllUsers } from '@/lib/actions/user-actions/userActions';
+import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { getTicketById } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getTaskWithDetails } from 'server/src/lib/actions/project-actions/projectTaskActions';
+import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
-import TicketDetails from '@/components/tickets/TicketDetails';
-import TaskEdit from '@/components/projects/TaskEdit';
-import EntryPopup from '@/components/schedule/EntryPopup';
-import { useTenant } from '@/components/TenantProvider';
+import TicketDetails from 'server/src/components/tickets/TicketDetails';
+import TaskEdit from 'server/src/components/projects/TaskEdit';
+import EntryPopup from 'server/src/components/schedule/EntryPopup';
+import { useTenant } from 'server/src/components/TenantProvider';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;

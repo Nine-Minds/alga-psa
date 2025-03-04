@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { JobData } from '@/lib/jobs/jobScheduler';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { JobData } from 'server/src/lib/jobs/jobScheduler';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import JobDetailsDrawer from './JobDetailsDrawer';
-import { getJobDetailsWithHistory } from '@/lib/actions/job-actions';
+import { getJobDetailsWithHistory } from 'server/src/lib/actions/job-actions';
 
 const columns: ColumnDefinition<JobData>[] = [
   {

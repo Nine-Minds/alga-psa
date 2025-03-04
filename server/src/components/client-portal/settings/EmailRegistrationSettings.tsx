@@ -2,22 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import { MoreVertical } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Switch } from '@/components/ui/Switch';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { DataTable } from '@/components/ui/DataTable';
+import { Card } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { DataTable } from 'server/src/components/ui/DataTable';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem
-} from '@/components/ui/DropdownMenu';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { addCompanyEmailSetting, updateCompanyEmailSetting, deleteCompanyEmailSetting } from '@/lib/actions/company-settings/emailSettings';
-import { ICompanyEmailSettings } from '@/interfaces/company.interfaces';
+} from 'server/src/components/ui/DropdownMenu';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { addCompanyEmailSetting, updateCompanyEmailSetting, deleteCompanyEmailSetting } from 'server/src/lib/actions/company-settings/emailSettings';
+import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
 
 interface EmailRegistrationSettingsProps {
   companyId: string;

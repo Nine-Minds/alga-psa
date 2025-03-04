@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { IProject } from '@/interfaces/project.interfaces';
-import DonutChart from '@/components/projects/DonutChart';
-import HoursProgressBar from '@/components/projects/HoursProgressBar';
-import { calculateProjectCompletion, ProjectCompletionMetrics } from '@/lib/utils/projectUtils';
+import { IProject } from 'server/src/interfaces/project.interfaces';
+import DonutChart from 'server/src/components/projects/DonutChart';
+import HoursProgressBar from 'server/src/components/projects/HoursProgressBar';
+import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src/lib/utils/projectUtils';
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProjectDetailViewProps {

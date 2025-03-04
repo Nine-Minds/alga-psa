@@ -1,24 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/DropdownMenu';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
+} from 'server/src/components/ui/DropdownMenu';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from '@/lib/actions/billingPlanAction';
-import { getPlanServices, addPlanService, updatePlanService, removePlanService } from '@/lib/actions/planServiceActions';
-import { IBillingPlan, IPlanService, IService } from '@/interfaces/billing.interfaces';
+import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { getPlanServices, addPlanService, updatePlanService, removePlanService } from 'server/src/lib/actions/planServiceActions';
+import { IBillingPlan, IPlanService, IService } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from '@/constants/billing';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 
 interface BillingPlansProps {
   initialServices: IService[];

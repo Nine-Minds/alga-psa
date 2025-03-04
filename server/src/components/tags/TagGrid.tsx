@@ -1,5 +1,5 @@
 import React from 'react';
-import { generateEntityColor } from '@/utils/colorUtils';
+import { generateEntityColor } from 'server/src/utils/colorUtils';
 
 interface TagGridProps {
   tags: string[];

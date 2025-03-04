@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { IBillingPlan, IServiceCategory } from '@/interfaces/billing.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { IBillingPlan, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface PlanPickerDialogProps {
     isOpen: boolean;

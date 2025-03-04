@@ -1,9 +1,9 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import { IPlanService } from '@/interfaces';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { IPlanService } from 'server/src/interfaces';
 
 export async function getPlanServices(planId: string): Promise<IPlanService[]> {
   const session = await getServerSession(options);

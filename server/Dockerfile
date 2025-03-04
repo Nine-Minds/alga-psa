@@ -21,6 +21,9 @@ RUN npm install
 
 COPY tsconfig.base.json ./
 
+WORKDIR /app
+COPY shared/ ./shared/
+
 WORKDIR /app/server
 
 # Copy server source code (changes frequently)

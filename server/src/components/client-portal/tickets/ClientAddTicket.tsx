@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
 import { AlertCircle, X } from 'lucide-react';
-import { createClientTicket } from '@/lib/actions/client-portal-actions/client-tickets';
-import { getTicketFormData } from '@/lib/actions/ticket-actions/ticketFormActions';
-import { IPriority } from '@/interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import { createClientTicket } from 'server/src/lib/actions/client-portal-actions/client-tickets';
+import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
+import { IPriority } from 'server/src/interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { TextArea } from 'server/src/components/ui/TextArea';
 import { useRouter } from 'next/navigation';
 
 interface ClientAddTicketProps {

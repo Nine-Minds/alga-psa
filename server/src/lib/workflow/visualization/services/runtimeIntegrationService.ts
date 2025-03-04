@@ -1,4 +1,4 @@
-import { getWorkflowExecutionStatus } from '@/lib/actions/workflow-visualization-actions';
+import { getWorkflowExecutionStatus } from 'server/src/lib/actions/workflow-visualization-actions';
 import {
   FlowGraph,
   FlowNode,

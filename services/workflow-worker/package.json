@@ -1,0 +1,29 @@
+{
+  "name": "workflow-worker",
+  "version": "1.0.0",
+  "description": "Workflow Worker Service",
+  "main": "dist/services/workflow-worker/src/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc-alias",
+    "start": "node .",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "4.18.3",
+    "pg": "8.12.0",
+    "redis": "4.7.0",
+    "uuid": "10.0.0",
+    "winston": "3.13.1",
+    "zod": "3.22.4"
+  },
+  "devDependencies": {
+    "@types/express": "4.17.21",
+    "@types/node": "20.11.24",
+    "tsc-alias": "^1.8.11",
+    "typescript": "5.3.3"
+  }
+}

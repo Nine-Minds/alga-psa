@@ -4,10 +4,10 @@ import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { Temporal } from '@js-temporal/polyfill';
 import { formatISO, parseISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/Dialog';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from '@/lib/actions/timeEntryActions';
-import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { deleteTimeEntry, fetchTimeEntriesForTimeSheet } from 'server/src/lib/actions/timeEntryActions';
+import { Button } from 'server/src/components/ui/Button';
 import { 
   ITimeEntry, 
   ITimeEntryWithWorkItem, 
@@ -15,10 +15,10 @@ import {
   ITimePeriodView, 
   TimeSheetStatus, 
   ITimeEntryWithWorkItemString 
-} from '@/interfaces/timeEntry.interfaces';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
+} from 'server/src/interfaces/timeEntry.interfaces';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import TimeEntryList from '../TimeEntryList';
 import SingleTimeEntryForm from './SingleTimeEntryForm';

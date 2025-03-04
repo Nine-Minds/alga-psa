@@ -1,10 +1,10 @@
 import React from 'react';
-import { Button } from '@/components/ui/Button';
-import { ITaxRate, ICompanyTaxRate } from '@/interfaces/billing.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Card } from '@/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { ITaxRate, ICompanyTaxRate } from 'server/src/interfaces/billing.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Card } from 'server/src/components/ui/Card';
 
 interface CompanyTaxRatesProps {
     companyTaxRates: ICompanyTaxRate[];

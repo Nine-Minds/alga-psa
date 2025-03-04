@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Switch } from '@/components/ui/Switch';
-import { Label } from '@/components/ui/Label';
-import { Button } from '@/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
+import { Button } from 'server/src/components/ui/Button';
 import toast from 'react-hot-toast';
-import { getCompanyBillingSettings, updateCompanyBillingSettings, type BillingSettings } from "@/lib/actions/billingSettingsActions";
+import { getCompanyBillingSettings, updateCompanyBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
 
 interface CompanyCreditExpirationSettingsProps {
   companyId: string;

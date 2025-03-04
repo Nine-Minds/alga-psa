@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { MoreVertical } from 'lucide-react';
@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/DropdownMenu';
+} from 'server/src/components/ui/DropdownMenu';
 import CreditExpirationInfo from './CreditExpirationInfo';
 import {
   fetchAllInvoices,
@@ -17,22 +17,22 @@ import {
   getInvoiceLineItems,
   finalizeInvoice,
   unfinalizeInvoice
-} from '@/lib/actions/invoiceActions';
-import { scheduleInvoiceZipAction } from '@/lib/actions/job-actions/scheduleInvoiceZipAction';
-import { scheduleInvoiceEmailAction } from '@/lib/actions/job-actions/scheduleInvoiceEmailAction';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { getServices } from '@/lib/actions/serviceActions';
-import { InvoiceViewModel, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
+} from 'server/src/lib/actions/invoiceActions';
+import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
+import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getServices } from 'server/src/lib/actions/serviceActions';
+import { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { TemplateRenderer } from './TemplateRenderer';
 import PaperInvoice from './PaperInvoice';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Button } from '@/components/ui/Button';
-import { DataTable } from '@/components/ui/DataTable';
-import { CustomTabs } from '@/components/ui/CustomTabs';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Button } from 'server/src/components/ui/Button';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import ManualInvoices from './ManualInvoices';
-import { ICompany } from '@/interfaces';
-import { IService } from '@/interfaces/billing.interfaces';
+import { ICompany } from 'server/src/interfaces';
+import { IService } from 'server/src/interfaces/billing.interfaces';
 import BackNav from '../ui/BackNav';
 
 interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {

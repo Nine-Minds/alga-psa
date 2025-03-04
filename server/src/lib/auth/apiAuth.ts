@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { hasPermission } from './rbac';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 
 export interface AuthenticatedUser {
   userId: string;

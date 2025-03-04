@@ -1,7 +1,7 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { logSecurityEvent } from '@/lib/security/rateLimiting';
+import { createTenantKnex } from 'server/src/lib/db';
+import { logSecurityEvent } from 'server/src/lib/security/rateLimiting';
 
 export async function cleanupExpiredRegistrations(): Promise<void> {
   const { knex, tenant } = await createTenantKnex();

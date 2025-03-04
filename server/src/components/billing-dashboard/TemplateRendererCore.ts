@@ -1,5 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from '@/interfaces/invoice.interfaces';
+import { Calculation, Conditional, Field, IInvoiceTemplate, Section, Style, TemplateElement, StaticText, InvoiceViewModel, GlobalCalculation } from 'server/src/interfaces/invoice.interfaces';
 
 interface List {
     type: 'list';

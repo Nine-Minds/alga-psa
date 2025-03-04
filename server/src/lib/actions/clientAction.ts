@@ -1,7 +1,7 @@
 'use server'
 
-import { IClient } from '@/interfaces/client.interfaces';
-import { createTenantKnex } from '@/lib/db';
+import { IClient } from 'server/src/interfaces/client.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
   try {

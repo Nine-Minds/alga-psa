@@ -1,15 +1,15 @@
 "use server";
 import { v4 as uuidv4 } from 'uuid';
 
-import User from '@/lib/models/user';
-import Tenant from '@/lib/models/tenant';
+import User from 'server/src/lib/models/user';
+import Tenant from 'server/src/lib/models/tenant';
 
-import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@/interfaces/auth.interfaces';
+import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/interfaces/auth.interfaces';
 
-import { getInfoFromToken, createToken } from '@/utils/tokenizer';
-import { hashPassword } from '@/utils/encryption/encryption';
-import { getEmailService } from '@/services/emailService';
-import logger from '@/utils/logger';
+import { getInfoFromToken, createToken } from 'server/src/utils/tokenizer';
+import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { getEmailService } from 'server/src/services/emailService';
+import logger from 'server/src/utils/logger';
 
 const VERIFY_EMAIL_ENABLED = process.env.VERIFY_EMAIL_ENABLED === 'true';
 const EMAIL_ENABLE = process.env.EMAIL_ENABLE === 'true';

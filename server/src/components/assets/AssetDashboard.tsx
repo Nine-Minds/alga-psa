@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { Card } from '@/components/ui/Card';
-import { DataTable } from '@/components/ui/DataTable';
-import { Asset, AssetListResponse, ClientMaintenanceSummary } from '@/interfaces/asset.interfaces';
-import { getClientMaintenanceSummary, listAssets } from '@/lib/actions/asset-actions/assetActions';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { Card } from 'server/src/components/ui/Card';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Asset, AssetListResponse, ClientMaintenanceSummary } from 'server/src/interfaces/asset.interfaces';
+import { getClientMaintenanceSummary, listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { QuickAddAsset } from './QuickAddAsset';

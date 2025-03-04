@@ -1,12 +1,12 @@
 'use client'
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
-import CreditExpirationBadge from '@/components/ui/CreditExpirationBadge';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
-import { getCreditDetails } from '@/lib/actions/creditActions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import CreditExpirationBadge from 'server/src/components/ui/CreditExpirationBadge';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { getCreditDetails } from 'server/src/lib/actions/creditActions';
 
 interface CreditExpirationInfoProps {
   creditApplied: number;

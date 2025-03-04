@@ -1,8 +1,8 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
-import { hashPassword } from '@/utils/encryption/encryption';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 
 /**
  * Update a client user

@@ -1,4 +1,4 @@
-import { ITimeEntry } from '@/interfaces/timeEntry.interfaces';
+import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { parseISO } from 'date-fns';
 
 export function calculateBillabilityPercentage(timeEntry: ITimeEntry): number {

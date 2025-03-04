@@ -1,30 +1,30 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import Link from 'next/link';
-import { ITicket, ITicketListItem, ITicketCategory } from '@/interfaces/ticket.interfaces';
+import { ITicket, ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Button } from '@/components/ui/Button';
-import { getAllChannels } from '@/lib/actions/channel-actions/channelActions';
-import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { getAllUsers, getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getTicketCategories } from '@/lib/actions/ticketCategoryActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import { IChannel, ICompany } from '@/interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { Input } from '@/components/ui/Input';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { getTicketsForList, deleteTicket } from '@/lib/actions/ticket-actions/ticketActions';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Button } from 'server/src/components/ui/Button';
+import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { IChannel, ICompany } from 'server/src/interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Input } from 'server/src/components/ui/Input';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { getTicketsForList, deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { MoreHorizontal, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface TicketingDashboardProps {
   id?: string;

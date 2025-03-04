@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
-import { BillingEngine } from '@/lib/billing/billingEngine';
-import { getConnection } from '@/lib/db/db';
-import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, ICompanyBillingPlan, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from '@/interfaces/billing.interfaces';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { getConnection } from 'server/src/lib/db/db';
+import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, ICompanyBillingPlan, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
-import { getCompanyTaxRate } from '@/lib/actions/invoiceActions';
+import { getCompanyTaxRate } from 'server/src/lib/actions/invoiceActions';
 
 
 vi.mock('@/lib/actions/invoiceActions', () => ({

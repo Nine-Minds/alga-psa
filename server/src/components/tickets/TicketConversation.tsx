@@ -10,10 +10,10 @@ import CommentItem from './CommentItem';
 import CustomTabs from '../ui/CustomTabs';
 import Documents from '../documents/Documents';
 import styles from './TicketDetails.module.css';
-import { Button } from '@/components/ui/Button';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
+import { Button } from 'server/src/components/ui/Button';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface TicketConversationProps {
   id?: string;

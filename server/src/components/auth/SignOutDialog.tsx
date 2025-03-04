@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
-import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
+import { Dialog, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
 
 interface SignOutDialogProps {
   isOpen: boolean;

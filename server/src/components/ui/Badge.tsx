@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from 'server/src/lib/utils';
 import * as React from 'react';
 
 export type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'error';

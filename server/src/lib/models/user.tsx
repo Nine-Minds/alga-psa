@@ -1,9 +1,9 @@
-import logger from '@/utils/logger';
-import { IUser, IRole, IUserRole, IUserWithRoles, IRoleWithPermissions, IPermission } from '@/interfaces/auth.interfaces';
-import { getConnection } from '@/lib/db/db';
-import { getAdminConnection } from '@/lib/db/admin';
-import { createTenantKnex } from '@/lib/db';
-import { hashPassword, verifyPassword } from '@/utils/encryption/encryption';
+import logger from '@shared/core/logger';
+import { IUser, IRole, IUserRole, IUserWithRoles, IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { getConnection } from 'server/src/lib/db/db';
+import { getAdminConnection } from 'server/src/lib/db/admin';
+import { createTenantKnex } from 'server/src/lib/db';
+import { hashPassword, verifyPassword } from 'server/src/utils/encryption/encryption';
 
 // Update the IUserRole interface to make tenant optional and allow null
 interface IUserRoleWithOptionalTenant extends Omit<IUserRole, 'tenant'> {

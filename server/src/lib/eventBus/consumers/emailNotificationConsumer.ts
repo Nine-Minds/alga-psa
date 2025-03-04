@@ -2,7 +2,7 @@ import { createClient } from 'redis';
 import { Event, EventSchemas, EventType } from '../events';
 import { BaseEventSchema } from '../events';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
-import logger from '../../../utils/logger';
+import logger from '@shared/core/logger';
 import { getRedisConfig, getEventStream } from '../../../config/redisConfig';
 import { getSecret } from '../../utils/getSecret';
 import { getConnection } from '../../db/db';

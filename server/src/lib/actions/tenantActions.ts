@@ -2,7 +2,7 @@
 
 import { getTenantForCurrentRequest } from '../tenant';
 import { createTenantKnex } from '../db';
-import { Tenant, TenantCompany } from '@/lib/types';
+import { Tenant, TenantCompany } from 'server/src/lib/types';
 import { Knex } from 'knex';
 
 export async function getCurrentTenant(): Promise<string | null> {

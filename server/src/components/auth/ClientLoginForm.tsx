@@ -1,11 +1,11 @@
 'use client'
 
 import { signIn } from 'next-auth/react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
 import { Eye, EyeOff } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';

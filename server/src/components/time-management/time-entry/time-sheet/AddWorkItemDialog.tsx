@@ -1,8 +1,8 @@
 'use client'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { WorkItemPicker } from './WorkItemPicker';
-import { ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 
 interface AddWorkItemDialogProps {
   isOpen: boolean;

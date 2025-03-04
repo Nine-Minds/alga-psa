@@ -1,10 +1,10 @@
 "use server";
-import User from "@/lib/models/user";
+import User from "server/src/lib/models/user";
 
-import { verifyPassword } from '@/utils/encryption/encryption';
-import logger from "@/utils/logger";
+import { verifyPassword } from 'server/src/utils/encryption/encryption';
+import logger from "server/src/utils/logger";
 
-import { IUser } from '@/interfaces/auth.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 
 
 export async function authenticateUser( email: string, password: string): Promise<IUser | null> {

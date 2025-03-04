@@ -1,8 +1,8 @@
-import { CustomTabs } from '@/components/ui/CustomTabs';
+import { CustomTabs } from 'server/src/components/ui/CustomTabs';
 import EmailRegistrationContainer from './EmailRegistrationContainer';
 import { CompanyDetailsSettings } from './CompanyDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
-import { DrawerProvider } from '@/context/DrawerContext';
+import { DrawerProvider } from "server/src/context/DrawerContext";
 
 export default function ClientPortalSettingsPage() {
   const tabs = [

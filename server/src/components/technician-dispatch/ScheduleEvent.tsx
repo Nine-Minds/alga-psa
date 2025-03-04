@@ -1,6 +1,6 @@
 import React from 'react';
 import { Trash } from 'lucide-react';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { getEventColors } from './utils';
 
 interface ScheduleEventProps {

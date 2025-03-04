@@ -1,15 +1,15 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import ContactDetailsView from '@/components/contacts/ContactDetailsView';
-import { IContact } from '@/interfaces/contact.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { getDocumentsByEntity } from '@/lib/actions/document-actions/documentActions';
-import { IDocument } from '@/interfaces/document.interface';
-import { getContactByContactNameId } from '@/lib/actions/contact-actions/contactActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
+import ContactDetailsView from 'server/src/components/contacts/ContactDetailsView';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
 
 const ContactDetailPage = ({ params }: { params: { id: string } }) => {
   const [contact, setContact] = useState<IContact | null>(null);

@@ -1,6 +1,6 @@
 // ServiceCatalog.tsx
 import React from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import ServiceCatalogManager from './ServiceCatalogManager';
 
 const ServiceCatalog: React.FC = () => {

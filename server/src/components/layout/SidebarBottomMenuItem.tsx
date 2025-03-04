@@ -1,7 +1,7 @@
 import React from 'react';
-import { ButtonComponent } from '@/types/ui-reflection/types';
+import { ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { MenuItem } from '../../config/menuConfig';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface SidebarBottomMenuItemProps {
   id: string;

@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset, ServerAsset, MobileDeviceAsset, PrinterAsset } from '@/interfaces/asset.interfaces';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { getAsset, updateAsset } from '@/lib/actions/asset-actions/assetActions';
+import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset, ServerAsset, MobileDeviceAsset, PrinterAsset } from 'server/src/interfaces/asset.interfaces';
+import { Card } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { useRouter } from 'next/navigation';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface AssetFormProps {
   assetId: string;

@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getRegisteredWorkflowsAction } from '@/lib/actions/workflow-actions';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { WorkflowVisualizer } from '@/components/workflows/visualization/WorkflowVisualizer';
+import { getRegisteredWorkflowsAction } from 'server/src/lib/actions/workflow-actions';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
+import { WorkflowVisualizer } from 'server/src/components/workflows/visualization/WorkflowVisualizer';
 
 interface WorkflowDefinitionInfo {
   name: string;

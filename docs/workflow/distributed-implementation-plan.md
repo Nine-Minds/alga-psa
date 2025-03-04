@@ -432,8 +432,8 @@ export class WorkflowWorker {
 Create `server/src/services/workflowWorkerService.ts` to initialize and manage worker instances:
 
 ```typescript
-import { getWorkflowRuntime } from '../lib/workflow/core/workflowRuntime';
-import { getActionRegistry } from '../lib/workflow/core/actionRegistry'; 
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry'; 
 import { startWorkflowWorker, WorkflowWorker } from '../lib/workflow/workers/workflowWorker';
 import logger from '../utils/logger';
 
@@ -527,7 +527,7 @@ Update `server/src/controllers/workflowController.ts`:
 
 ```typescript
 import { config } from '../config';
-import { getWorkflowRuntime } from '../lib/workflow/core/workflowRuntime';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { Request, Response } from 'express';
 
 export class WorkflowController {

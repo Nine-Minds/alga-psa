@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 import { Temporal } from '@js-temporal/polyfill';
 
 // Basic validation utilities

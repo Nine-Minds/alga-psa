@@ -1,5 +1,5 @@
 import { ICompanyBillingPlan, ITransaction } from '../../interfaces/billing.interfaces';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 class CompanyBillingPlan {

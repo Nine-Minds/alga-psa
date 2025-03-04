@@ -3,10 +3,10 @@
  * This file should only be imported in server components or server actions
  */
 
-import { getActionRegistry } from '../core/actionRegistry';
-import { getWorkflowRuntime } from '../core/workflowRuntime';
-import { registerExampleWorkflows } from './workflowRegistration';
-import logger from '../../../utils/logger';
+import { getActionRegistry, type ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { registerExampleWorkflows } from '@shared/workflow/init';
+import logger from '@shared/core/logger.js';
 
 // Track initialization state
 let initialized = false;
@@ -36,7 +36,7 @@ export async function initializeServerWorkflows(): Promise<void> {
         { name: 'entityId', type: 'string', required: true },
         { name: 'user', type: 'string', required: false }
       ],
-      async (params) => {
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
         logger.info(`[AUDIT] ${params.eventType} for ${params.entityId} by ${params.user || 'system'}`);
         return { success: true };
       }
@@ -49,7 +49,7 @@ export async function initializeServerWorkflows(): Promise<void> {
         { name: 'recipient', type: 'string', required: true },
         { name: 'message', type: 'string', required: true }
       ],
-      async (params) => {
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
         logger.info(`[NOTIFICATION] To: ${params.recipient}, Message: ${params.message}`);
         return { success: true, notificationId: `notif-${Date.now()}` };
       }
@@ -61,7 +61,7 @@ export async function initializeServerWorkflows(): Promise<void> {
       [
         { name: 'userId', type: 'string', required: true }
       ],
-      async (params) => {
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
         // Mock implementation - in a real system, this would query a database
         const roles = {
           'user1': 'user',

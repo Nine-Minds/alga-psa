@@ -5,8 +5,9 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
-import Drawer from '@/components/ui/Drawer';
-import { DrawerProvider } from '@/context/DrawerContext';
+import Drawer from 'server/src/components/ui/Drawer';
+import { DrawerProvider } from "server/src/context/DrawerContext";
+
 
 export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);

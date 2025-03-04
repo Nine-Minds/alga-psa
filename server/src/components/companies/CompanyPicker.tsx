@@ -7,9 +7,9 @@ import { Button } from '../ui/Button';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, ContainerComponent, FormFieldComponent } from '@/types/ui-reflection/types';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { AutomationProps, ContainerComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface CompanyPickerProps {
   id?: string;

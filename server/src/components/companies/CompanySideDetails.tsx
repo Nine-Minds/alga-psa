@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ICompany } from "@/interfaces/company.interfaces";
+import { ICompany } from "server/src/interfaces/company.interfaces";
 
 interface CompanySideDetailsProps {
     company: ICompany;

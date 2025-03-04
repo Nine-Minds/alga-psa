@@ -1,9 +1,9 @@
 "use client";
 
 import React from 'react';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { Download } from 'lucide-react';
-import { IDocument } from '@/interfaces/document.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
 
 interface DocumentDownloadProps {
     document: IDocument;

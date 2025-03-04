@@ -1,7 +1,7 @@
 'use server'
 
-import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { ICompanyBillingPlan } from '@/interfaces/billing.interfaces';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 
 export async function createClientBilling(
   billingData: Omit<ICompanyBillingPlan, 'company_billing_plan_id'>

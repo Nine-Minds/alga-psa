@@ -1,7 +1,7 @@
 "use client";
 import { CaretLeftIcon, CaretRightIcon } from '@radix-ui/react-icons';
-import { ICompany } from '@/interfaces/company.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface CompaniesPaginationProps {
     filteredCompanies: ICompany[];

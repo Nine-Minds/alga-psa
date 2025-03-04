@@ -1,7 +1,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { ICreditTracking, ITransaction } from '@/interfaces/billing.interfaces';
-import { createTenantKnex } from '@/lib/db';
+import { ICreditTracking, ITransaction } from 'server/src/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
 import { recordTransaction } from './transactionUtils';
 
 /**

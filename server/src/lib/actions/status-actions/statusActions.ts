@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IStatus, ItemType } from '@/interfaces/status.interface';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
 
 export async function getStatuses(type?: ItemType) {
   try {

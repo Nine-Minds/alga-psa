@@ -10,18 +10,18 @@ import {
   ITimeSheetView,
   ITimeSheetApprovalView,
   ITimePeriodView
-} from '@/interfaces';
-import { createTenantKnex } from '@/lib/db';
-import TimeSheetComment from '@/interfaces/timeSheetComment';
+} from 'server/src/interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import TimeSheetComment from 'server/src/interfaces/timeSheetComment';
 import { formatISO } from 'date-fns';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { 
   timeSheetApprovalViewSchema, 
   timeSheetCommentSchema, 
   timeEntrySchema, 
   timeSheetViewSchema 
 } from '../schemas/timeSheet.schemas';
-import { WorkItemType } from '@/interfaces/workItem.interfaces';
+import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { validateArray, validateData } from '../utils/validation';
 import { Temporal } from '@js-temporal/polyfill';
 

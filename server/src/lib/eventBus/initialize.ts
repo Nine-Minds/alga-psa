@@ -1,6 +1,6 @@
 import { initializeEmailNotificationConsumer } from './consumers/emailNotificationConsumer';
 import { registerAllSubscribers } from './subscribers';
-import logger from '../../utils/logger';
+import logger from '@shared/core/logger';
 import { getConnection } from '../db/db';
 import { getAdminConnection } from '../db/admin';
 

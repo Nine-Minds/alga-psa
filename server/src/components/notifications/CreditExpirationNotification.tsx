@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Bell, AlertTriangle, Clock } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import Link from 'next/link';
 
 export interface CreditExpirationNotificationProps {

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { ConditionalNodeData } from '@/lib/workflow/visualization/types/visualizationTypes';
-import { Card } from '@/components/ui/Card';
+import { ConditionalNodeData } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { Card } from 'server/src/components/ui/Card';
 
 /**
  * Conditional node component for workflow visualization

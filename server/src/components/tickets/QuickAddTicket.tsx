@@ -1,28 +1,28 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
 import { AlertCircle } from 'lucide-react';
-import { addTicket } from '@/lib/actions/ticket-actions/ticketActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getContactsByCompany } from '@/lib/actions/contact-actions/contactActions';
-import { getTicketFormData } from '@/lib/actions/ticket-actions/ticketFormActions';
-import { getTicketCategoriesByChannel } from '@/lib/actions/categoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact, ITicket, ITicketCategory } from '@/interfaces';
-import { TicketFormData } from '@/lib/actions/ticket-actions/ticketFormActions';
-import { ChannelPicker } from '@/components/settings/general/ChannelPicker';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
+import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
+import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
+import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { TicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
+import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { TextArea } from 'server/src/components/ui/TextArea';
 import { toast } from 'react-hot-toast';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '@/types/ui-reflection/ReflectionContainer';
-import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from '@/types/ui-reflection/types';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { useRegisterUIComponent } from '@/types/ui-reflection/useRegisterUIComponent';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 
 interface QuickAddTicketProps {
   id?: string;

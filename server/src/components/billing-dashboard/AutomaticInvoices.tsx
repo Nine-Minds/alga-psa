@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
@@ -13,7 +13,7 @@ import { generateInvoice } from '../../lib/actions/invoiceActions';
 import { getInvoicedBillingCycles, removeBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
-import { previewInvoice } from '@/lib/actions/invoiceActions';
+import { previewInvoice } from '../../lib/actions/invoiceActions';
 
 interface AutomaticInvoicesProps {
   periods: (ICompanyBillingCycle & {

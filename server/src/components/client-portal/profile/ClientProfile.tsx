@@ -1,22 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Button } from '@/components/ui/Button';
-import { Switch } from '@/components/ui/Switch';
-import TimezonePicker from '@/components/ui/TimezonePicker';
-import { getCurrentUser, updateUser } from '@/lib/actions/user-actions/userActions';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Button } from 'server/src/components/ui/Button';
+import { Switch } from 'server/src/components/ui/Switch';
+import TimezonePicker from 'server/src/components/ui/TimezonePicker';
+import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import { 
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from '@/lib/actions/notification-actions/notificationActions';
-import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@/lib/models/notification';
-import type { IUserWithRoles } from '@/types';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import PasswordChangeForm from '@/components/settings/general/PasswordChangeForm';
+} from 'server/src/lib/actions/notification-actions/notificationActions';
+import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
+import type { IUserWithRoles } from 'server/src/types';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
 import { toast } from 'react-hot-toast';
 
 export function ClientProfile() {

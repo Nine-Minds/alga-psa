@@ -2,9 +2,9 @@
 
 'use server'
 
-import { IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 export async function getAllInteractionTypes(): Promise<(IInteractionType | ISystemInteractionType)[]> {
   try {

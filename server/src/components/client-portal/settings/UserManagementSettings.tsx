@@ -2,16 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
+import { Card, CardContent } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem
-} from '@/components/ui/DropdownMenu';
+} from 'server/src/components/ui/DropdownMenu';
 import { Search, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import ClientUserDetails from './ClientUserDetails';
 import { 
@@ -20,13 +20,13 @@ import {
   getUserCompanyId, 
   deleteUser,
   getClientUsersForCompany
-} from '@/lib/actions/user-actions/userActions';
-import { getContactByEmail, createCompanyContact } from '@/lib/actions/contact-actions/contactActions';
-import { createClientUser } from '@/lib/actions/client-portal-actions/clientUserActions';
-import { IUser, IPermission } from '@/interfaces/auth.interfaces';
-import { useDrawer } from '@/context/DrawerContext';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+} from 'server/src/lib/actions/user-actions/userActions';
+import { getContactByEmail, createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { createClientUser } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { IUser, IPermission } from 'server/src/interfaces/auth.interfaces';
+import { useDrawer } from "server/src/context/DrawerContext";
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 export function UserManagementSettings() {
   const router = useRouter();

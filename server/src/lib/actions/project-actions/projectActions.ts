@@ -1,20 +1,20 @@
 'use server';
 
 import { Knex } from 'knex';
-import ProjectModel from '@/lib/models/project';
-import ProjectTaskModel from '@/lib/models/projectTask';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails, ProjectStatus } from '@/interfaces/project.interfaces';
-import { IStatus, IStandardStatus, ItemType } from '@/interfaces/status.interface';
-import { getCurrentUser, getAllUsers, findUserById } from '@/lib/actions/user-actions/userActions';
-import { IUser, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { getContactByContactNameId } from '@/lib/actions/contact-actions/contactActions';
-import { hasPermission } from '@/lib/auth/rbac';
+import ProjectModel from 'server/src/lib/models/project';
+import ProjectTaskModel from 'server/src/lib/models/projectTask';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectStatusMapping, ITaskChecklistItem, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
+import { getCurrentUser, getAllUsers, findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from '../../utils/validation';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { z } from 'zod';
-import { publishEvent } from '@/lib/eventBus/publishers';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { getAllCompanies } from '@/lib/actions/companyActions';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
 import { 
     createProjectSchema, 
     updateProjectSchema, 

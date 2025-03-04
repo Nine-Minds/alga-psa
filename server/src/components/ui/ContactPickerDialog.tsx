@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { IContact } from '@/interfaces/contact.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { DialogComponent, ButtonComponent, FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';

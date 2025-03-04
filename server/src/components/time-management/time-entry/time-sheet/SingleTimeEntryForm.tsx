@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import TimeEntryEditForm from './TimeEntryEditForm';
 import { ITimeEntryWithNew, TimeInputs, Service } from './types';
-import { TaxRegion } from '@/types/types.d';
+import { TaxRegion } from 'server/src/types/types.d';
 
 interface SingleTimeEntryFormProps {
   id: string;

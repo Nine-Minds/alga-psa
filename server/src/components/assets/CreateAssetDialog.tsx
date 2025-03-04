@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from '@/interfaces/asset.interfaces';
-import { ICompany } from '@/interfaces';
-import { createAsset } from '@/lib/actions/asset-actions/assetActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
+import { Dialog } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from 'server/src/interfaces/asset.interfaces';
+import { ICompany } from 'server/src/interfaces';
+import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 
 interface CreateAssetDialogProps {
   onClose: () => void;

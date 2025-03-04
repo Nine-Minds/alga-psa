@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { iso8601Schema, tenantSchema, plainDateSchema } from '@/lib/utils/validation';
+import { iso8601Schema, tenantSchema, plainDateSchema } from 'server/src/lib/utils/validation';
 
 export const timeSheetStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'APPROVED', 'CHANGES_REQUESTED']);
 export const workItemTypeSchema = z.enum(['ticket', 'project_task', 'non_billable_category', 'ad_hoc'] as const);

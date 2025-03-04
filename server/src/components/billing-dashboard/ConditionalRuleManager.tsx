@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IConditionalRule, IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
-import { getConditionalRules, saveConditionalRule } from '@/lib/actions/invoiceActions';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { IConditionalRule, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { getConditionalRules, saveConditionalRule } from 'server/src/lib/actions/invoiceActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface ConditionalRuleManagerProps {
   template: IInvoiceTemplate;

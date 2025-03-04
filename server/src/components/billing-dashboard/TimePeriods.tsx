@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/Table';
-import { Button } from '@/components/ui/Button';
-import { ITimePeriodSettings, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'server/src/components/ui/Table';
+import { Button } from 'server/src/components/ui/Button';
+import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
-import { getTimePeriodSettings } from '@/lib/actions/timePeriodsActions';
-import { ISO8601String } from '@/types/types.d';
+import { getTimePeriodSettings } from 'server/src/lib/actions/timePeriodsActions';
+import { ISO8601String } from 'server/src/types/types.d';
 import { parseISO, format } from 'date-fns'; // Import date-fns functions
 
 interface TimePeriodsProps {

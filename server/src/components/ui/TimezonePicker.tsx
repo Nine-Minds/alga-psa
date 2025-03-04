@@ -3,7 +3,7 @@
 import React, { useMemo } from 'react';
 import { Command } from 'cmdk';
 import { Check, Globe } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn } from 'server/src/lib/utils';
 import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface TimezoneOption {

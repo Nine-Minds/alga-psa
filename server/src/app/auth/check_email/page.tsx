@@ -4,7 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { recoverPassword } from '@/lib/actions/useRegister';
+import { recoverPassword } from 'server/src/lib/actions/useRegister';
 
 const CheckEmailContent: React.FC = () => {
   const [message, setMessage] = useState({

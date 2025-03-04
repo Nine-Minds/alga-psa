@@ -7,10 +7,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from '../ui/Button';
 
 type PlanType = 'Fixed' | 'Bucket' | 'Hourly' | 'Usage';
-import { createBillingPlan, updateBillingPlan } from '@/lib/actions/billingPlanAction';
-import { IBillingPlan } from '@/interfaces/billing.interfaces';
+import { createBillingPlan, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
-import { PLAN_TYPE_OPTIONS, BILLING_FREQUENCY_OPTIONS } from '@/constants/billing';
+import { PLAN_TYPE_OPTIONS, BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 
 interface BillingPlanDialogProps {
   onPlanAdded: () => void;

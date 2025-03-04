@@ -1,12 +1,12 @@
 // server/src/app/msp/contacts/page.tsx
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import ContactModel from '@/lib/models/contact';
-import UserModel from '@/lib/models/user';
+import ContactModel from 'server/src/lib/models/contact';
+import UserModel from 'server/src/lib/models/user';
 import { User } from 'next-auth';
-import { IContact } from '@/interfaces';
-import Contacts from '@/components/contacts/Contacts';
-import OverallInteractionsFeed from '@/components/interactions/OverallInteractionsFeed';
+import { IContact } from 'server/src/interfaces';
+import Contacts from 'server/src/components/contacts/Contacts';
+import OverallInteractionsFeed from 'server/src/components/interactions/OverallInteractionsFeed';
 
 type IdName = { id: string; name: string };
 

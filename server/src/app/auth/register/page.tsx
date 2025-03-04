@@ -10,9 +10,9 @@ import Link from 'next/link';
 import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Label from '@radix-ui/react-label';
 
-import { AlertProps, TPasswordCriteria } from '@/interfaces';
-import { registerUser } from '@/lib/actions/useRegister';
-import Alert from '@/components/auth/Alert';
+import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
+import { registerUser } from 'server/src/lib/actions/useRegister';
+import Alert from 'server/src/components/auth/Alert';
 
 
 

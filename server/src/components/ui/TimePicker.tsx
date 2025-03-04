@@ -1,9 +1,9 @@
 import * as React from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Clock } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { TimePickerComponent } from '@/types/ui-reflection/types';
+import { cn } from 'server/src/lib/utils';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { TimePickerComponent } from 'server/src/types/ui-reflection/types';
 
 export interface TimePickerProps {
   value?: string;

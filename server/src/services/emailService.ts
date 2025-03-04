@@ -1,10 +1,10 @@
 import nodemailer from 'nodemailer';
 import { getSecret } from '../lib/utils/getSecret';
-import { StorageService } from '@/lib/storage/StorageService';
-import { InvoiceViewModel } from '@/interfaces/invoice.interfaces';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { getTenantDetails } from '@/lib/actions/tenantActions';
-import { createTenantKnex } from '@/lib/db';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getTenantDetails } from 'server/src/lib/actions/tenantActions';
+import { createTenantKnex } from 'server/src/lib/db';
 
 interface EmailConfig {
   host: string;

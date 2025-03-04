@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
 import type { SelectSingleEventHandler } from 'react-day-picker';
-import { cn } from '@/lib/utils';
+import { cn } from 'server/src/lib/utils';
 import { format } from 'date-fns';
 
 interface CalendarProps extends Omit<React.ComponentProps<typeof DayPicker>, 'mode' | 'selected' | 'onSelect'> {

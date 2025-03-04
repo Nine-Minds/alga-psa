@@ -1,7 +1,7 @@
 'use client';
 
-import { IProjectPhase } from '@/interfaces/project.interfaces';
-import { Button } from '@/components/ui/Button';
+import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
+import { Button } from 'server/src/components/ui/Button';
 import PhaseListItem from './PhaseListItem';
 
 interface ProjectPhasesProps {

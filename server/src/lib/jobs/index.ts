@@ -1,8 +1,8 @@
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter, IJobScheduler, DummyJobScheduler } from './jobScheduler';
-import { InvoiceZipJobHandler } from '@/lib/jobs/handlers/invoiceZipHandler';
-import { InvoiceEmailHandler, InvoiceEmailJobData } from '@/lib/jobs/handlers/invoiceEmailHandler';
-import type { InvoiceZipJobData } from '@/lib/jobs/handlers/invoiceZipHandler';
+import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
+import { InvoiceEmailHandler, InvoiceEmailJobData } from 'server/src/lib/jobs/handlers/invoiceEmailHandler';
+import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
@@ -10,7 +10,7 @@ import { creditReconciliationHandler, CreditReconciliationJobData } from './hand
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
-import logger from '@/utils/logger';
+import logger from '@shared/core/logger';
 
 // Initialize the job scheduler singleton
 let jobScheduler: IJobScheduler;

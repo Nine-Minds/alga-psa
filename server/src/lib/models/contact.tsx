@@ -1,5 +1,5 @@
-import { createTenantKnex } from '@/lib/db';
-import { IContact } from '@/interfaces/contact.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { te } from 'date-fns/locale';
 
 const ContactModel = {

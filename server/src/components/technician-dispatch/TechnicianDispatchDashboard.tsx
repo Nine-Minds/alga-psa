@@ -3,19 +3,19 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import WorkItemCard from './WorkItemCard';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
-import { useDrawer } from '@/context/DrawerContext';
+import { useDrawer } from "server/src/context/DrawerContext";
 import TechnicianScheduleGrid from './TechnicianScheduleGrid';
-import { IScheduleEntry } from '@/interfaces/schedule.interfaces';
-import { WorkItemType, IWorkItem, IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
-import { searchWorkItems } from '@/lib/actions/workItemActions';
-import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from '@/lib/actions/scheduleActions';
+import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { searchWorkItems } from 'server/src/lib/actions/workItemActions';
+import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { toast } from 'react-hot-toast';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { DragState } from '@/interfaces/drag.interfaces';
-import { HighlightedSlot } from '@/interfaces/schedule.interfaces';
-import { DropEvent } from '@/interfaces/event.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { DragState } from 'server/src/interfaces/drag.interfaces';
+import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
+import { DropEvent } from 'server/src/interfaces/event.interfaces';
 
 const TechnicianDispatchDashboard: React.FC = () => {
   const [selectedPriority, setSelectedPriority] = useState('All');

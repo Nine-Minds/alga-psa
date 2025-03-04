@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
-import CustomSelect from '@/components/ui/CustomSelect'
-import { createService } from '@/lib/actions/serviceActions'
-import { ServiceType } from '@/interfaces'
+import { Button } from 'server/src/components/ui/Button'
+import { Input } from 'server/src/components/ui/Input'
+import CustomSelect from 'server/src/components/ui/CustomSelect'
+import { createService } from 'server/src/lib/actions/serviceActions'
+import { ServiceType } from 'server/src/interfaces'
 import { UnitOfMeasureInput } from './UnitOfMeasureInput'
 
 export const ServiceForm: React.FC = () => {

@@ -2,18 +2,18 @@
 
 import React, { useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
-import { extractTextFromBlocks } from '@/lib/utils/textUtils';
+import { extractTextFromBlocks } from 'server/src/lib/utils/textUtils';
 import TextEditor from '../editor/TextEditor';
 import ReactMarkdown from 'react-markdown';
 import { Pencil, Trash } from 'lucide-react';
 import { Pencil2Icon, TrashIcon } from '@radix-ui/react-icons';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { IComment } from '@/interfaces/comment.interface';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import UserPicker from '@/components/ui/UserPicker';
-import { Button } from '@/components/ui/Button';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import { IComment } from 'server/src/interfaces/comment.interface';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { Button } from 'server/src/components/ui/Button';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 interface CommentItemProps {
   id?: string;

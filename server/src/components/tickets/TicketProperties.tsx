@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getScheduledHoursForTicket } from '@/lib/actions/ticket-actions/ticketActions';
+import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule } from '../../interfaces';
 import { IUserWithRoles, ITeam } from '../../interfaces/auth.interfaces';
 import { ITicketResource } from '../../interfaces/ticketResource.interfaces';
@@ -9,14 +9,14 @@ import { Button } from '../ui/Button';
 import { Label } from '../ui/Label';
 import { Input } from '../ui/Input';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle } from 'lucide-react';
-import { formatMinutesAsHoursAndMinutes } from '@/lib/utils/dateTimeUtils';
+import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
 import UserPicker from '../ui/UserPicker';
 import AvatarIcon from '../ui/AvatarIcon';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { ContactPicker } from '../contacts/ContactPicker';
 import { toast } from 'react-hot-toast';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface TicketPropertiesProps {
   id?: string;

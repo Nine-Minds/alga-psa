@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react';
 import { Card, Flex, Heading } from '@radix-ui/themes';
 import * as Tabs from '@radix-ui/react-tabs';
-import RoleManagement from '@/components/settings/policy/RoleManagement';
-import PermissionManagement from '@/components/settings/policy/PermissionManagement';
-import UserRoleAssignment from '@/components/settings/policy/UserRoleAssignment';
-import PolicyManagement from '@/components/settings/policy/PolicyManagement';
-import AdminApiKeysSetup from '@/components/settings/api/AdminApiKeysSetup';
-import { Switch } from "@/components/ui/Switch";
-import { Label } from "@/components/ui/Label";
+import RoleManagement from 'server/src/components/settings/policy/RoleManagement';
+import PermissionManagement from 'server/src/components/settings/policy/PermissionManagement';
+import UserRoleAssignment from 'server/src/components/settings/policy/UserRoleAssignment';
+import PolicyManagement from 'server/src/components/settings/policy/PolicyManagement';
+import AdminApiKeysSetup from 'server/src/components/settings/api/AdminApiKeysSetup';
+import { Switch } from "server/src/components/ui/Switch";
+import { Label } from "server/src/components/ui/Label";
 
 export default function SecuritySettingsPage() {
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);

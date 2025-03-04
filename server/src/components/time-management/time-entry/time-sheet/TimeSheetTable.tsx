@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState }  from 'react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { Button } from '@/components/ui/Button';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Button } from 'server/src/components/ui/Button';
 import { Trash } from 'lucide-react';
-import { ITimeEntryWithWorkItemString } from '@/interfaces/timeEntry.interfaces';
-import { IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
+import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.interfaces';
+import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO } from 'date-fns';
 
 interface TimeSheetTableProps {

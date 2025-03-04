@@ -1,8 +1,8 @@
 'use server';
 
-import { JobService } from '@/services/job.service';
-import { JobStatus } from '@/types/job.d';
-import { createTenantKnex } from '@/lib/db';
+import { JobService } from 'server/src/services/job.service';
+import { JobStatus } from 'server/src/types/job.d';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from '../db/admin';
 
 export interface JobMetrics {

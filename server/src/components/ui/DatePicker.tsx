@@ -2,9 +2,9 @@ import * as React from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import * as Popover from '@radix-ui/react-popover';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { DatePickerComponent } from '@/types/ui-reflection/types';
-import { Calendar } from '@/components/ui/Calendar';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { DatePickerComponent } from 'server/src/types/ui-reflection/types';
+import { Calendar } from 'server/src/components/ui/Calendar';
 
 export interface DatePickerProps {
   value?: Date;

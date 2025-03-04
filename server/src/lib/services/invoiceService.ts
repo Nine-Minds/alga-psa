@@ -1,15 +1,15 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from 'next-auth/next';
-import { options } from '@/app/api/auth/[...nextauth]/options';
+import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { v4 as uuidv4 } from 'uuid';
-import { TaxService } from '@/lib/services/taxService';
-import { generateInvoiceNumber } from '@/lib/actions/invoiceActions';
-import { BillingEngine } from '@/lib/billing/billingEngine';
-import { InvoiceViewModel, IInvoiceItem, NetAmountItem, DiscountType } from '@/interfaces/invoice.interfaces';
+import { TaxService } from 'server/src/lib/services/taxService';
+import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceActions';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { InvoiceViewModel, IInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 
 interface InvoiceContext {
   session: Session;

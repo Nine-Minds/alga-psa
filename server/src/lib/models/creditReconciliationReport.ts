@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
-import { ICreditReconciliationReport, ReconciliationStatus } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
 
 interface ListReportsOptions {
   companyId?: string;

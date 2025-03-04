@@ -1,8 +1,8 @@
 'use server'
 
-import { IProject, IProjectTask } from '@/interfaces/project.interfaces';
-import { ITimeEntry } from '@/interfaces/timeEntry.interfaces';
-import { createTenantKnex } from '@/lib/db';
+import { IProject, IProjectTask } from 'server/src/interfaces/project.interfaces';
+import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export interface ProjectCompletionMetrics {
   taskCompletionPercentage: number;

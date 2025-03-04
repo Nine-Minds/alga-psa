@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StorageService } from '@/lib/storage/StorageService';
-import { createTenantKnex } from '@/lib/db';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function GET(
     request: NextRequest,

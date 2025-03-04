@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { verifyRegistrationToken, completeRegistration } from '@/lib/actions/user-actions/registrationActions';
+import { Button } from 'server/src/components/ui/Button';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { verifyRegistrationToken, completeRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 
 export default function VerifyPage() {
   const [error, setError] = useState('');

@@ -1,10 +1,10 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { createTeam, deleteTeam } from '@/lib/actions/team-actions/teamActions';
-import { getAllUsers } from '@/lib/actions/user-actions/userActions';
-import { ITeam, IUser } from '@/interfaces/auth.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { createTeam, deleteTeam } from 'server/src/lib/actions/team-actions/teamActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { ITeam, IUser } from 'server/src/interfaces/auth.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 interface TeamListProps {
   teams: ITeam[];

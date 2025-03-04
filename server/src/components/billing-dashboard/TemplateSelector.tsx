@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
-import { getInvoiceTemplates, saveInvoiceTemplate } from '@/lib/actions/invoiceActions';
-import { Button } from '@/components/ui/Button';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { TextArea } from '@/components/ui/TextArea';
-import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
+import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { getInvoiceTemplates, saveInvoiceTemplate } from 'server/src/lib/actions/invoiceActions';
+import { Button } from 'server/src/components/ui/Button';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
 
 interface TemplateSelectorProps {
     onTemplateSelect: (template: IInvoiceTemplate) => void;

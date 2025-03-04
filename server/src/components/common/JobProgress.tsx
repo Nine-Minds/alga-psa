@@ -1,6 +1,6 @@
-import { useJobMonitor } from '@/lib/hooks/useJobMonitor';
-import { Card } from '@/components/ui/Card';
-import { Badge, type BadgeVariant } from '@/components/ui/Badge';
+import { useJobMonitor } from 'server/src/lib/hooks/useJobMonitor';
+import { Card } from 'server/src/components/ui/Card';
+import { Badge, type BadgeVariant } from 'server/src/components/ui/Badge';
 import { formatDistanceToNow } from 'date-fns';
 
 interface JobProgressProps {

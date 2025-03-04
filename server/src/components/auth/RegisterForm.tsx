@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { verifyContactEmail } from '@/lib/actions/user-actions/userActions';
-import { initiateRegistration } from '@/lib/actions/user-actions/registrationActions';
-import { verifyEmailSuffix } from '@/lib/actions/company-settings/emailSettings';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
+import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
+import { verifyEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');

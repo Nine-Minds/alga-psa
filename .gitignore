@@ -89,3 +89,4 @@ secrets/
 .secrets
 .clinerules
 data/
+shared/dist

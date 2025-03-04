@@ -1,7 +1,7 @@
 // server/src/components/ui/UserPicker.tsx
 import React from 'react';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';

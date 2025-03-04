@@ -1,6 +1,6 @@
 'use client';
 
-import Drawer from '@/components/ui/Drawer';
+import Drawer from 'server/src/components/ui/Drawer';
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 
 interface DrawerContentProps {

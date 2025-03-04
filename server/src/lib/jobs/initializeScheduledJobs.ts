@@ -1,6 +1,6 @@
 import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob } from './index';
-import logger from '@/utils/logger';
-import { createTenantKnex } from '@/lib/db';
+import logger from '@shared/core/logger';
+import { createTenantKnex } from 'server/src/lib/db';
 
 /**
  * Initialize all scheduled jobs for the application

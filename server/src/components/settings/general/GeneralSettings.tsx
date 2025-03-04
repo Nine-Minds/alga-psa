@@ -1,18 +1,18 @@
 'use client'
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
-import { Label } from "@/components/ui/Label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table";
-import { Checkbox } from "@/components/ui/Checkbox";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Input } from "server/src/components/ui/Input";
+import { Button } from "server/src/components/ui/Button";
+import { Label } from "server/src/components/ui/Label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "server/src/components/ui/Table";
+import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getTenantDetails, updateTenantName, addCompanyToTenant, removeCompanyFromTenant, setDefaultCompany } from "@/lib/actions/tenantActions";
-import { getAllCompanies } from "@/lib/actions/companyActions";
-import { CompanyPicker } from "@/components/companies/CompanyPicker";
-import { ICompany } from "@/interfaces/company.interfaces";
+import { getTenantDetails, updateTenantName, addCompanyToTenant, removeCompanyFromTenant, setDefaultCompany } from "server/src/lib/actions/tenantActions";
+import { getAllCompanies } from "server/src/lib/actions/companyActions";
+import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
+import { ICompany } from "server/src/interfaces/company.interfaces";
 
 const GeneralSettings = () => {
   const [tenantName, setTenantName] = React.useState('');

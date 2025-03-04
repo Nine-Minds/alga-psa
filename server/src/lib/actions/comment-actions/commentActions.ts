@@ -1,9 +1,9 @@
 'use server'
 
-import Comment from '@/lib/models/comment';
-import { IComment } from '@/interfaces/comment.interface';
-import { findUserById } from '@/lib/actions/user-actions/userActions';
-import { createTenantKnex } from '@/lib/db';
+import Comment from 'server/src/lib/models/comment';
+import { IComment } from 'server/src/interfaces/comment.interface';
+import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function findCommentsByTicketId(ticketId: string) {
   try {

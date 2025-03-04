@@ -1,9 +1,9 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
-import { getEmailNotificationService } from '@/lib/notifications/email';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
-import { formatCurrency, formatDate } from '@/lib/utils/formatters';
-import { toPlainDate, toISODate } from '@/lib/utils/dateTimeUtils';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getEmailNotificationService } from 'server/src/lib/notifications/email';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency, formatDate } from 'server/src/lib/utils/formatters';
+import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 
 export interface ExpiringCreditsNotificationJobData extends Record<string, unknown> {
   tenantId: string;

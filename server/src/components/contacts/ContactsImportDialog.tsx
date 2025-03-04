@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { DataTable } from '@/components/ui/DataTable';
-import { Switch } from '@/components/ui/Switch';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from '@/interfaces/contact.interfaces';
-import { importContactsFromCSV, checkExistingEmails } from '@/lib/actions/contact-actions/contactActions';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Switch } from 'server/src/components/ui/Switch';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ICSVColumnMapping, ICSVPreviewData, ICSVValidationResult, IContact, MappableField, ICSVImportOptions, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
+import { importContactsFromCSV, checkExistingEmails } from 'server/src/lib/actions/contact-actions/contactActions';
 import { X, Upload, AlertTriangle, Check, Download } from 'lucide-react';
-import { parseCSV, unparseCSV, validateCSVHeaders } from '@/lib/utils/csvParser';
+import { parseCSV, unparseCSV, validateCSVHeaders } from 'server/src/lib/utils/csvParser';
 
 interface ContactsImportDialogProps {
   isOpen: boolean;

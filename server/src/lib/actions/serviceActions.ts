@@ -1,10 +1,10 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import Service from '@/lib/models/service'
-import { IService } from '@/interfaces/billing.interfaces'
-import { validateArray } from '@/lib/utils/validation'
-import { serviceSchema } from '@/lib/models/service'
+import Service from 'server/src/lib/models/service'
+import { IService } from 'server/src/interfaces/billing.interfaces'
+import { validateArray } from 'server/src/lib/utils/validation'
+import { serviceSchema } from 'server/src/lib/models/service'
 
 export async function getServices(): Promise<IService[]> {
     try {

@@ -1,13 +1,10 @@
-import { createTenantKnex } from '@/lib/db';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { createTenantKnex } from 'server/src/lib/db';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { getCurrentUser } from './user-actions/userActions';
-import { getActionRegistry, TransactionIsolationLevel } from '../workflow/core/actionRegistry';
-import { getWorkflowRuntime } from '../workflow/core/workflowRuntime';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import { getActionRegistry, TransactionIsolationLevel } from '@shared/workflow/core/actionRegistry';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { submitWorkflowEventAction } from './workflow-event-actions';
-import { workflowConfig } from '../../config/workflowConfig';
-import logger from '../../utils/logger';
 
 
 /**
@@ -30,10 +27,11 @@ export async function startInvoiceWorkflow(invoice: any): Promise<string> {
   
   // Generate a unique execution ID
   const executionId = uuidv4();
+  const { knex } = await createTenantKnex();
   
   // Create the workflow execution record
   // Note: This is a placeholder - we need to implement this method in the TypeScriptWorkflowRuntime class
-  await workflowRuntime.startWorkflow('InvoiceApproval', {
+  await workflowRuntime.startWorkflow(knex, 'InvoiceApproval', {
     tenant,
     initialData: {
       invoice: {

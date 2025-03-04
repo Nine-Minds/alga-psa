@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth';
-import { getTicketsForList } from '@/lib/actions/ticket-actions/ticketActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import TicketingDashboard from '@/components/tickets/TicketingDashboard';
+import { getTicketsForList } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import TicketingDashboard from 'server/src/components/tickets/TicketingDashboard';
 
 export default async function TicketsPage() {
   try {

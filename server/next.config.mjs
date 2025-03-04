@@ -16,6 +16,9 @@ const nextConfig = {
     // and ensure packages from root workspace are resolved
     config.resolve = {
       ...config.resolve,
+      extensionAlias: {
+        '.js': ['.js', '.ts', '.tsx']
+      },
       alias: {
         ...config.resolve.alias,
         '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'

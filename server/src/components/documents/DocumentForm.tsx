@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { IDocument, UpdateDocumentContentInput } from '@/interfaces/document.interface';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Button } from '@/components/ui/Button';
+import { IDocument, UpdateDocumentContentInput } from 'server/src/interfaces/document.interface';
+import { Input } from 'server/src/components/ui/Input';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Button } from 'server/src/components/ui/Button';
 import { Text } from '@radix-ui/themes';
 
 // Combined type for form data

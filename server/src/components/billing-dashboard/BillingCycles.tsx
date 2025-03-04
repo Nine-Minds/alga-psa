@@ -1,20 +1,20 @@
 // BillingCycles.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { DataTable } from '@/components/ui/DataTable';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { Button } from '@/components/ui/Button';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { Button } from 'server/src/components/ui/Button';
 import { Info } from 'lucide-react';
 import { 
   getAllBillingCycles, 
   updateBillingCycle,
   canCreateNextBillingCycle,
   createNextBillingCycle
-} from '@/lib/actions/billingCycleActions';
-import { getAllCompanies } from '@/lib/actions/companyActions';
-import { BillingCycleType, ICompany } from '@/interfaces';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+} from 'server/src/lib/actions/billingCycleActions';
+import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { BillingCycleType, ICompany } from 'server/src/interfaces';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
   { value: 'weekly', label: 'Weekly' },

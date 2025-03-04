@@ -1,25 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
 import { CreditCard, FileText, Package } from 'lucide-react';
-import { CustomTabs, TabContent } from '@/components/ui/CustomTabs';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { CustomTabs, TabContent } from 'server/src/components/ui/CustomTabs';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { 
   getClientBillingPlan, 
   getClientInvoices, 
   getClientPaymentMethods,
   getCurrentUsage 
-} from '@/lib/actions/client-portal-actions/client-billing';
+} from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { 
   ICompanyBillingPlan, 
   IBucketUsage, 
   IService,
   PaymentMethod 
-} from '@/interfaces/billing.interfaces';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/Dialog';
+} from 'server/src/interfaces/billing.interfaces';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 
 interface Invoice {
   id: string;

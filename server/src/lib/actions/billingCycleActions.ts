@@ -2,12 +2,12 @@
 
 import { getServerSession } from "next-auth/next";
 import { options } from '../../app/api/auth/[...nextauth]/options';
-import { createTenantKnex } from '@/lib/db';
-import { BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
 import { createCompanyBillingCycles } from "../billing/createBillingCycles";
 import { v4 as uuidv4 } from 'uuid';
 import { getNextBillingDate, hardDeleteInvoice } from './invoiceActions';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 
 export async function getBillingCycle(companyId: string): Promise<BillingCycleType> {
   const session = await getServerSession(options);

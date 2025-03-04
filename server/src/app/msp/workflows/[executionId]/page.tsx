@@ -1,14 +1,13 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
-import { getWorkflowExecutionDetails } from '@/lib/actions/workflow-actions';
-import ClientWorkflowVisualization from '@/components/workflows/ClientWorkflowVisualization';
-import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
+import ClientWorkflowVisualization from 'server/src/components/workflows/ClientWorkflowVisualization';
+import { Card } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
 import Link from 'next/link';
-import WorkflowEventTimeline from '@/components/workflows/WorkflowEventTimeline';
-import WorkflowActionsList from '@/components/workflows/WorkflowActionsList';
-import WorkflowControls from '@/components/workflows/WorkflowControls';
-import { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@/lib/workflow/persistence/workflowInterfaces';
+import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEventTimeline';
+import WorkflowActionsList from 'server/src/components/workflows/WorkflowActionsList';
+import WorkflowControls from 'server/src/components/workflows/WorkflowControls';
 
 export const revalidate = 5; // Revalidate every 5 seconds
 

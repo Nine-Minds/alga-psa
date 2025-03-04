@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import AssetForm from '@/components/assets/AssetForm';
+import AssetForm from 'server/src/components/assets/AssetForm';
 
 interface AssetEditPageProps {
   params: {

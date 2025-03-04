@@ -1,13 +1,13 @@
 // server/src/components/projects/PhaseQuickAdd.tsx
 'use client'
 import React, { useState } from 'react';
-import { IProjectPhase } from '@/interfaces/project.interfaces';
+import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/TextArea';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { Button } from 'server/src/components/ui/Button';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { toast } from 'react-hot-toast';
-import { addProjectPhase } from '@/lib/actions/project-actions/projectActions';
+import { addProjectPhase } from 'server/src/lib/actions/project-actions/projectActions';
 
 interface PhaseQuickAddProps {
   projectId: string;

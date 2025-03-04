@@ -1,7 +1,7 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { ICompanyTaxRate } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ICompanyTaxRate } from 'server/src/interfaces/billing.interfaces';
 
 export async function getCompanyTaxRates(companyId: string): Promise<ICompanyTaxRate[]> {
   const { knex, tenant } = await createTenantKnex();

@@ -1,10 +1,10 @@
 // models/timeSheetComment.ts
 import { TenantEntity } from ".";
-import { createTenantKnex } from '@/lib/db';
-import { ITimeSheetApproval, ITimeSheetComment } from '@/interfaces/timeEntry.interfaces';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ITimeSheetApproval, ITimeSheetComment } from 'server/src/interfaces/timeEntry.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { Knex } from 'knex';
-import { useTenant } from '@/components/TenantProvider';
+import { useTenant } from 'server/src/components/TenantProvider';
 
 const TimeSheetComment = {
   getByTimeSheetId: async (timeSheetId: string): Promise<ITimeSheetApproval | null> => {

@@ -1,6 +1,6 @@
-import { LayoutBlock } from '@/interfaces/invoice.interfaces';
+import { LayoutBlock } from 'server/src/interfaces/invoice.interfaces';
 import styles from './InvoiceDesigner.module.css';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface PropertyEditorProps {
     block?: LayoutBlock;

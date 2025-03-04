@@ -2,22 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { CustomTabs, TabContent } from '@/components/ui/CustomTabs';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { formatDateOnly, formatDateTime } from '@/lib/utils/dateTimeUtils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { CustomTabs, TabContent } from 'server/src/components/ui/CustomTabs';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatDateOnly, formatDateTime } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
-import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@/interfaces/billing.interfaces';
-import { resolveReconciliationReport } from '@/lib/actions/creditReconciliationActions';
-import { applyReconciliationFix } from '@/lib/actions/creditReconciliationFixActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { resolveReconciliationReport } from 'server/src/lib/actions/creditReconciliationActions';
+import { applyReconciliationFix } from 'server/src/lib/actions/creditReconciliationFixActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import RecommendedFixPanel from './RecommendedFixPanel';
-import { Badge } from '@/components/ui/Badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/Dialog';
-import { TextArea } from '@/components/ui/TextArea';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from 'server/src/components/ui/Dialog';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 
 interface CompanyInfo {

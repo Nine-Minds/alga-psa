@@ -1,4 +1,4 @@
-import TextEditor from '@/components/editor/TextEditor';
+import TextEditor from 'server/src/components/editor/TextEditor';
 
 // NOTE: Currently not being saved in the Database
 export default async function TaskList() {

@@ -1,9 +1,9 @@
 import { Text } from '@radix-ui/themes';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { getInvoiceTemplates, getDefaultTemplate } from '@/lib/actions/invoiceActions';
-import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
-import { IContact } from '@/interfaces/contact.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { getInvoiceTemplates, getDefaultTemplate } from 'server/src/lib/actions/invoiceActions';
+import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';

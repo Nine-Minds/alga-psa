@@ -1,6 +1,6 @@
-import { IResource, IPolicy, ICondition, IRole, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { USER_ATTRIBUTES, UserAttributeKey } from '@/lib/attributes/EntityAttributes';
-import { hasPermission } from '@/lib/auth/rbac';
+import { IResource, IPolicy, ICondition, IRole, IUserWithRoles } from '../../../../../server/src/interfaces/auth.interfaces';
+import { USER_ATTRIBUTES, UserAttributeKey } from '../../../../../server/src/lib/attributes/EntityAttributes';
+import { hasPermission } from '../../../../../server/src/lib/auth/rbac';
 import { Policy } from './abac';
 
 export class PolicyEngine {

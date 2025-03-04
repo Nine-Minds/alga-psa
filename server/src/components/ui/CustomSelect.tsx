@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 export interface SelectOption {
   value: string;

@@ -1,6 +1,6 @@
 // Overview.tsx
 import React from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { 
   FileSpreadsheet, 
   Building2, 
@@ -11,7 +11,7 @@ import {
   FileText,
   AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
   <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white hover:shadow-lg transition-shadow p-4">

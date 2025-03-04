@@ -2,7 +2,7 @@ import { isEnterprise } from './features';
 import { parsePolicy } from './auth/ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
-import logger from '../utils/logger';
+import logger from '@shared/core/logger';
 
 export async function initializeApp() {
   try {
@@ -27,22 +27,22 @@ export async function initializeApp() {
 
     // Initialize policy engine
     if (isEnterprise) {
-      const { PolicyEngine } = await import('@ee/lib/auth');
-      const policyEngine = new PolicyEngine();
+      // const { PolicyEngine } = await import('ee/lib/auth');
+      // const policyEngine = new PolicyEngine();
 
-      const policies = [
-        `ALLOW read ON Ticket WHEN user.role == "admin"`,
-        `ALLOW write ON Ticket WHEN user.role == "admin"`,
-        // Add more policies as needed
-      ];
+      // const policies = [
+      //   `ALLOW read ON Ticket WHEN user.role == "admin"`,
+      //   `ALLOW write ON Ticket WHEN user.role == "admin"`,
+      //   // Add more policies as needed
+      // ];
 
-      for (const policyString of policies) {
-        const policy = await parsePolicy(policyString);
-        policyEngine.addPolicy(policy);
-      }
+      // for (const policyString of policies) {
+      //   const policy = await parsePolicy(policyString);
+      //   policyEngine.addPolicy(policy);
+      // }
 
-      logger.info('Policy engine initialized');
-      return policyEngine;
+      // logger.info('Policy engine initialized');
+      // return policyEngine;
     }
 
     // Community Edition uses basic RBAC only

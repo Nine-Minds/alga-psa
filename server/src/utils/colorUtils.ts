@@ -1,5 +1,5 @@
 import tinycolor from 'tinycolor2';
-import { ITag } from '@/interfaces/tag.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface ColorResult {
   background: string;

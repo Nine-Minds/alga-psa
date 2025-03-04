@@ -1,0 +1,608 @@
+## 1. Project Overview
+- **Project Name:** Alias Elimination Project
+- **Objective:** Remove @ symbol aliases from import paths in the codebase
+- **Description:**  
+  This project aims to eliminate the use of aliases (@ symbols in imports) throughout the codebase to improve compatibility with multiple projects in a monorepo structure. By using relative imports instead of alias-based imports, we'll make the codebase more portable and easier to integrate with other projects.
+
+## 2. Task List
+### To Do
+- [ ] Identify all files using @ symbol aliases in imports
+- [ ] Create a mapping of alias paths to relative paths
+- [ ] Develop a strategy for systematically replacing aliases
+- [ ] Implement changes in a way that maintains code functionality
+- [ ] Update build configurations to remove alias definitions
+- [ ] Test the application thoroughly after changes
+- [ ] Document the new import structure for future development
+
+### Folders to Process
+ - [✓] ee/server/src/app/api/provisioning/tenants/route.ts
+ - [✓] ee/server/src/components/chat/Chat.tsx
+ - [✓] ee/server/src/components/flow/DeleteWorkflowButton.tsx
+ - [✓] ee/server/src/components/flow/DnDFlow.tsx
+ - [✓] ee/server/src/components/layout/RightSidebarContent.tsx
+ - [ ] ee/server/src/components/settings/policy/PolicyManagement.tsx
+ - [ ] ee/server/src/interfaces/chat.interface.tsx
+ - [ ] ee/server/src/interfaces/message.interface.ts
+ - [ ] ee/server/src/lib/actions/workflow.ts
+ - [ ] ee/server/src/lib/auth/abac.ts
+ - [ ] ee/server/src/lib/auth/policyEngine.ts
+ - [ ] ee/server/src/lib/auth/policyParser.ts
+ - [ ] ee/server/src/lib/chat-actions/chatActions.tsx
+ - [ ] ee/server/src/lib/storage/providers/S3StorageProvider.ts
+ - [ ] ee/server/src/models/AnthropicChatModel.ts
+ - [ ] ee/server/src/models/HuggingFaceChatModel.ts
+ - [ ] ee/server/src/models/chat.ts
+ - [ ] ee/server/src/models/message.ts
+ - [ ] ee/server/src/services/flow/workflowUtils.ts
+ - [ ] ee/server/src/services/provisioning/tenantService.ts
+ - [ ] ee/server/src/services/streaming.ts
+ - [ ] server/src/app/api/auth/validate-api-key/route.ts
+ - [ ] server/src/app/api/chat/stream/[...slug]/route.ts
+ - [ ] server/src/app/api/chat/stream/title/route.ts
+ - [ ] server/src/app/api/documents/download/[fileId]/route.ts
+ - [ ] server/src/app/auth/check_email/page.tsx
+ - [ ] server/src/app/auth/forgot_password/page.tsx
+ - [ ] server/src/app/auth/forgot_password/set_new_password/page.tsx
+ - [ ] server/src/app/auth/layout.tsx
+ - [ ] server/src/app/auth/register/page.tsx
+ - [ ] server/src/app/auth/signin/page.tsx
+ - [ ] server/src/app/auth/verify/page.tsx
+ - [ ] server/src/app/auth/verify_email/page.tsx
+ - [ ] server/src/app/client-portal/company-settings/page.tsx
+ - [ ] server/src/app/client-portal/dashboard/page.tsx
+ - [ ] server/src/app/client-portal/layout.tsx
+ - [ ] server/src/app/client-portal/profile/page.tsx
+ - [ ] server/src/app/client-portal/projects/page.tsx
+ - [ ] server/src/app/client-portal/tickets/page.tsx
+ - [ ] server/src/app/layout.tsx
+ - [ ] server/src/app/msp/account-manager/page.tsx
+ - [ ] server/src/app/msp/assets/[asset_id]/edit/page.tsx
+ - [ ] server/src/app/msp/assets/[asset_id]/page.tsx
+ - [ ] server/src/app/msp/assets/page.tsx
+ - [ ] server/src/app/msp/billing/credits/actions.ts
+ - [ ] server/src/app/msp/billing/credits/page.tsx
+ - [ ] server/src/app/msp/billing/credits/settings.ts
+ - [ ] server/src/app/msp/companies/[id]/page.tsx
+ - [ ] server/src/app/msp/companies/page.tsx
+ - [ ] server/src/app/msp/contacts/[id]/activity/page.tsx
+ - [ ] server/src/app/msp/contacts/[id]/page.tsx
+ - [ ] server/src/app/msp/contacts/page.tsx
+ - [ ] server/src/app/msp/dashboard/page.tsx
+ - [ ] server/src/app/msp/jobs/page.tsx
+ - [ ] server/src/app/msp/layout.tsx
+ - [ ] server/src/app/msp/profile/page.tsx
+ - [ ] server/src/app/msp/projects/[id]/page.tsx
+ - [ ] server/src/app/msp/projects/page.tsx
+ - [ ] server/src/app/msp/reports/page.tsx
+ - [ ] server/src/app/msp/schedule/page.tsx
+ - [ ] server/src/app/msp/security-settings/page.tsx
+ - [ ] server/src/app/msp/settings/notifications/page.tsx
+ - [ ] server/src/app/msp/settings/page.tsx
+ - [ ] server/src/app/msp/share_document/page.tsx
+ - [ ] server/src/app/msp/technician-dispatch.tsx
+ - [ ] server/src/app/msp/technician-dispatch/page.tsx
+ - [ ] server/src/app/msp/tickets/[id]/page.tsx
+ - [ ] server/src/app/msp/tickets/page.tsx
+ - [ ] server/src/app/msp/time-entry/TimeTrackingClient.tsx
+ - [ ] server/src/app/msp/time-entry/page.tsx
+ - [ ] server/src/app/msp/time-sheet-approvals/page.tsx
+ - [ ] server/src/app/msp/users/page.tsx
+ - [ ] server/src/app/msp/workflows/[executionId]/page.tsx
+ - [ ] server/src/app/msp/workflows/page.tsx
+ - [ ] server/src/app/static/master_terms/page.tsx
+ - [ ] server/src/app/static/privacy_policy/page.tsx
+ - [ ] server/src/components/AccountManagerDashboard.tsx
+ - [ ] server/src/components/TaxSettingsForm.tsx
+ - [ ] server/src/components/assets/AssetDashboard.tsx
+ - [ ] server/src/components/assets/AssetDetails.tsx
+ - [ ] server/src/components/assets/AssetDocuments.tsx
+ - [ ] server/src/components/assets/AssetForm.tsx
+ - [ ] server/src/components/assets/CreateAssetDialog.tsx
+ - [ ] server/src/components/assets/CreateTicketFromAssetButton.tsx
+ - [ ] server/src/components/assets/QuickAddAsset.tsx
+ - [ ] server/src/components/auth/Alert.tsx
+ - [ ] server/src/components/auth/ClientLoginForm.tsx
+ - [ ] server/src/components/auth/GeneralDialog.tsx
+ - [ ] server/src/components/auth/MspLoginForm.tsx
+ - [ ] server/src/components/auth/RegisterForm.tsx
+ - [ ] server/src/components/auth/SignOutDialog.tsx
+ - [ ] server/src/components/auth/TwoFA.tsx
+ - [ ] server/src/components/billing-dashboard/BillingCycles.tsx
+ - [ ] server/src/components/billing-dashboard/BillingDashboard.tsx
+ - [ ] server/src/components/billing-dashboard/BillingPlanDialog.tsx
+ - [ ] server/src/components/billing-dashboard/BillingPlans.tsx
+ - [ ] server/src/components/billing-dashboard/ConditionalRuleManager.tsx
+ - [ ] server/src/components/billing-dashboard/CreditApplicationUI.tsx
+ - [ ] server/src/components/billing-dashboard/CreditExpirationInfo.tsx
+ - [ ] server/src/components/billing-dashboard/CreditExpirationModificationDialog.tsx
+ - [ ] server/src/components/billing-dashboard/CreditManagement.tsx
+ - [ ] server/src/components/billing-dashboard/CreditReconciliation.tsx
+ - [ ] server/src/components/billing-dashboard/DiscrepancyDetail.tsx
+ - [ ] server/src/components/billing-dashboard/InvoiceAnnotations.tsx
+ - [ ] server/src/components/billing-dashboard/InvoiceTemplateManager.tsx
+ - [ ] server/src/components/billing-dashboard/InvoiceTemplates.tsx
+ - [ ] server/src/components/billing-dashboard/Invoices.tsx
+ - [ ] server/src/components/billing-dashboard/LineItem.tsx
+ - [ ] server/src/components/billing-dashboard/ManualInvoices.tsx
+ - [ ] server/src/components/billing-dashboard/Overview.tsx
+ - [ ] server/src/components/billing-dashboard/PropertyEditor.tsx
+ - [ ] server/src/components/billing-dashboard/QuickAddService.tsx
+ - [ ] server/src/components/billing-dashboard/RecommendedFixPanel.tsx
+ - [ ] server/src/components/billing-dashboard/ReconciliationResolution.tsx
+ - [ ] server/src/components/billing-dashboard/ServiceCatalog.tsx
+ - [ ] server/src/components/billing-dashboard/ServiceCatalogManager.tsx
+ - [ ] server/src/components/billing-dashboard/ServiceForm.tsx
+ - [ ] server/src/components/billing-dashboard/TaxRates.tsx
+ - [ ] server/src/components/billing-dashboard/TemplateRenderer.tsx
+ - [ ] server/src/components/billing-dashboard/TemplateRendererCore.ts
+ - [ ] server/src/components/billing-dashboard/TemplateSelector.tsx
+ - [ ] server/src/components/billing-dashboard/TimePeriodForm.tsx
+ - [ ] server/src/components/billing-dashboard/TimePeriods.tsx
+ - [ ] server/src/components/billing-dashboard/UnitOfMeasureInput.tsx
+ - [ ] server/src/components/billing-dashboard/UsageTracking.tsx
+ - [ ] server/src/components/client-portal/account/BillingSection.tsx
+ - [ ] server/src/components/client-portal/account/ProfileSection.tsx
+ - [ ] server/src/components/client-portal/account/ServicesSection.tsx
+ - [ ] server/src/components/client-portal/assets/AssetDetails.tsx
+ - [ ] server/src/components/client-portal/assets/AssetList.tsx
+ - [ ] server/src/components/client-portal/billing/BillingOverview.tsx
+ - [ ] server/src/components/client-portal/dashboard/ClientDashboard.tsx
+ - [ ] server/src/components/client-portal/profile/ClientProfile.tsx
+ - [ ] server/src/components/client-portal/projects/ProjectCard.tsx
+ - [ ] server/src/components/client-portal/projects/ProjectDetailView.tsx
+ - [ ] server/src/components/client-portal/projects/ProjectsOverviewPage.tsx
+ - [ ] server/src/components/client-portal/settings/ClientPasswordChangeForm.tsx
+ - [ ] server/src/components/client-portal/settings/ClientPortalSettingsPage.tsx
+ - [ ] server/src/components/client-portal/settings/ClientUserDetails.tsx
+ - [ ] server/src/components/client-portal/settings/CompanyDetailsSettings.tsx
+ - [ ] server/src/components/client-portal/settings/EmailRegistrationContainer.tsx
+ - [ ] server/src/components/client-portal/settings/EmailRegistrationSettings.tsx
+ - [ ] server/src/components/client-portal/settings/UserManagementSettings.tsx
+ - [ ] server/src/components/client-portal/tickets/ClientAddTicket.tsx
+ - [ ] server/src/components/client-portal/tickets/TicketDetails.tsx
+ - [ ] server/src/components/client-portal/tickets/TicketList.tsx
+ - [ ] server/src/components/common/JobProgress.tsx
+ - [ ] server/src/components/companies/BillingConfigForm.tsx
+ - [ ] server/src/components/companies/BillingConfiguration.tsx
+ - [ ] server/src/components/companies/BillingPlans.tsx
+ - [ ] server/src/components/companies/Companies.tsx
+ - [ ] server/src/components/companies/CompaniesGrid.tsx
+ - [ ] server/src/components/companies/CompaniesImportDialog.tsx
+ - [ ] server/src/components/companies/CompaniesList.tsx
+ - [ ] server/src/components/companies/CompaniesPagination.tsx
+ - [ ] server/src/components/companies/CompanyAssets.tsx
+ - [ ] server/src/components/companies/CompanyCreditExpirationSettings.tsx
+ - [ ] server/src/components/companies/CompanyDetails.tsx
+ - [ ] server/src/components/companies/CompanyForm.tsx
+ - [ ] server/src/components/companies/CompanyGridCard.tsx
+ - [ ] server/src/components/companies/CompanyPicker.tsx
+ - [ ] server/src/components/companies/CompanySideDetails.tsx
+ - [ ] server/src/components/companies/CompanyTaxRates.tsx
+ - [ ] server/src/components/companies/CompanyZeroDollarInvoiceSettings.tsx
+ - [ ] server/src/components/companies/PlanPickerDialog.tsx
+ - [ ] server/src/components/companies/ServiceCatalog.tsx
+ - [ ] server/src/components/contacts/ContactDetailsEdit.tsx
+ - [ ] server/src/components/contacts/ContactDetailsView.tsx
+ - [ ] server/src/components/contacts/ContactPicker.tsx
+ - [ ] server/src/components/contacts/Contacts.tsx
+ - [ ] server/src/components/contacts/ContactsImportDialog.tsx
+ - [ ] server/src/components/contacts/ContactsPagination.tsx
+ - [ ] server/src/components/contacts/QuickAddContact.tsx
+ - [ ] server/src/components/dashboard/Dashboard.tsx
+ - [ ] server/src/components/dashboard/DashboardActions.tsx
+ - [ ] server/src/components/documents/BlockEditor.tsx
+ - [ ] server/src/components/documents/DocumentCard.tsx
+ - [ ] server/src/components/documents/DocumentDownload.tsx
+ - [ ] server/src/components/documents/DocumentEditor.tsx
+ - [ ] server/src/components/documents/DocumentForm.tsx
+ - [ ] server/src/components/documents/DocumentPreview.tsx
+ - [ ] server/src/components/documents/DocumentSelector.tsx
+ - [ ] server/src/components/documents/Documents.tsx
+ - [ ] server/src/components/documents/DocumentsPagination.tsx
+ - [ ] server/src/components/editor/TextEditor.tsx
+ - [ ] server/src/components/editor/Toolbar.tsx
+ - [ ] server/src/components/editor/yjs-config.ts
+ - [ ] server/src/components/interactions/InteractionDetails.tsx
+ - [ ] server/src/components/interactions/OverallInteractionsFeed.tsx
+ - [ ] server/src/components/interactions/QuickAddInteraction.tsx
+ - [ ] server/src/components/jobs/JobDetailsDrawer.tsx
+ - [ ] server/src/components/jobs/JobHistoryTable.tsx
+ - [ ] server/src/components/jobs/JobMetricsDisplay.tsx
+ - [ ] server/src/components/jobs/JobStepHistory.tsx
+ - [ ] server/src/components/layout/ClientPortalLayout.tsx
+ - [ ] server/src/components/layout/DefaultLayout.tsx
+ - [ ] server/src/components/layout/Header.tsx
+ - [ ] server/src/components/layout/RightSidebar.tsx
+ - [ ] server/src/components/layout/Sidebar.tsx
+ - [ ] server/src/components/layout/SidebarBottomMenuItem.tsx
+ - [ ] server/src/components/layout/SidebarMenuItem.tsx
+ - [ ] server/src/components/layout/SidebarSubMenuItem.tsx
+ - [ ] server/src/components/notifications/CreditExpirationNotification.tsx
+ - [ ] server/src/components/projects/DonutChart.tsx
+ - [ ] server/src/components/projects/HoursProgressBar.tsx
+ - [ ] server/src/components/projects/KanbanBoard.tsx
+ - [ ] server/src/components/projects/PhaseListItem.tsx
+ - [ ] server/src/components/projects/PhaseQuickAdd.tsx
+ - [ ] server/src/components/projects/ProjectActiveToggle.tsx
+ - [ ] server/src/components/projects/ProjectDetail.tsx
+ - [ ] server/src/components/projects/ProjectDetailsEdit.tsx
+ - [ ] server/src/components/projects/ProjectInfo.tsx
+ - [ ] server/src/components/projects/ProjectPhases.tsx
+ - [ ] server/src/components/projects/ProjectQuickAdd.tsx
+ - [ ] server/src/components/projects/Projects.tsx
+ - [ ] server/src/components/projects/StatusColumn.tsx
+ - [ ] server/src/components/projects/TaskCard.tsx
+ - [ ] server/src/components/projects/TaskEdit.tsx
+ - [ ] server/src/components/projects/TaskForm.tsx
+ - [ ] server/src/components/projects/TaskQuickAdd.tsx
+ - [ ] server/src/components/projects/TaskTicketLinks.tsx
+ - [ ] server/src/components/projects/TicketSelect.tsx
+ - [ ] server/src/components/schedule/EntryPopup.tsx
+ - [ ] server/src/components/schedule/ScheduleCalendar.tsx
+ - [ ] server/src/components/settings/api/AdminApiKeysSetup.tsx
+ - [ ] server/src/components/settings/api/ApiKeysSetup.tsx
+ - [ ] server/src/components/settings/billing/CreditExpirationSettings.tsx
+ - [ ] server/src/components/settings/billing/TimePeriodSettings.tsx
+ - [ ] server/src/components/settings/billing/ZeroDollarInvoiceSettings.tsx
+ - [ ] server/src/components/settings/general/ChannelPicker.tsx
+ - [ ] server/src/components/settings/general/GeneralSettings.tsx
+ - [ ] server/src/components/settings/general/InteractionTypeSettings.tsx
+ - [ ] server/src/components/settings/general/NotificationsTab.tsx
+ - [ ] server/src/components/settings/general/NumberingSettings.tsx
+ - [ ] server/src/components/settings/general/PasswordChangeForm.tsx
+ - [ ] server/src/components/settings/general/SettingsPage.tsx
+ - [ ] server/src/components/settings/general/TeamDetails.tsx
+ - [ ] server/src/components/settings/general/TeamList.tsx
+ - [ ] server/src/components/settings/general/TeamManagement.tsx
+ - [ ] server/src/components/settings/general/TicketNumberingSettings.tsx
+ - [ ] server/src/components/settings/general/TicketingSettings.tsx
+ - [ ] server/src/components/settings/general/UserDetails.tsx
+ - [ ] server/src/components/settings/general/UserEditList.tsx
+ - [ ] server/src/components/settings/general/UserEditPage.tsx
+ - [ ] server/src/components/settings/general/UserList.tsx
+ - [ ] server/src/components/settings/general/UserManagement.tsx
+ - [ ] server/src/components/settings/general/UserProfile.tsx
+ - [ ] server/src/components/settings/notifications/EmailTemplates.tsx
+ - [ ] server/src/components/settings/notifications/NotificationCategories.tsx
+ - [ ] server/src/components/settings/notifications/NotificationSettings.tsx
+ - [ ] server/src/components/settings/policy/PermissionManagement.tsx
+ - [ ] server/src/components/settings/policy/PolicyManagement.tsx
+ - [ ] server/src/components/settings/policy/RoleManagement.tsx
+ - [ ] server/src/components/settings/policy/UserRoleAssignment.tsx
+ - [ ] server/src/components/tags/TagFilter.tsx
+ - [ ] server/src/components/tags/TagGrid.tsx
+ - [ ] server/src/components/technician-dispatch/ScheduleEvent.tsx
+ - [ ] server/src/components/technician-dispatch/TechnicianDispatchDashboard.tsx
+ - [ ] server/src/components/technician-dispatch/TechnicianRow.tsx
+ - [ ] server/src/components/technician-dispatch/TechnicianScheduleGrid.tsx
+ - [ ] server/src/components/technician-dispatch/WorkItemCard.tsx
+ - [ ] server/src/components/technician-dispatch/WorkItemDetailsDrawer.tsx
+ - [ ] server/src/components/technician-dispatch/utils.ts
+ - [ ] server/src/components/tickets/CommentItem.tsx
+ - [ ] server/src/components/tickets/QuickAddTicket.tsx
+ - [ ] server/src/components/tickets/TicketConversation.tsx
+ - [ ] server/src/components/tickets/TicketDetails.tsx
+ - [ ] server/src/components/tickets/TicketInfo.tsx
+ - [ ] server/src/components/tickets/TicketProperties.tsx
+ - [ ] server/src/components/tickets/TicketingDashboard.tsx
+ - [ ] server/src/components/time-management/approvals/ApprovalActions.tsx
+ - [ ] server/src/components/time-management/approvals/ManagerApprovalDashboard.tsx
+ - [ ] server/src/components/time-management/approvals/TimeSheetApproval.tsx
+ - [ ] server/src/components/time-management/approvals/TimeSheetComments.tsx
+ - [ ] server/src/components/time-management/time-entry/SkeletonTimeSheet.tsx
+ - [ ] server/src/components/time-management/time-entry/TimeEntryList.tsx
+ - [ ] server/src/components/time-management/time-entry/TimePeriodList.tsx
+ - [ ] server/src/components/time-management/time-entry/TimeTracking.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/SingleTimeEntryForm.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeEntryEditForm.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeEntryProvider.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeEntryReadOnly.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeEntrySkeletons.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeSheetHeader.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/TimeSheetTable.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/WorkItemList.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/WorkItemPicker.tsx
+ - [ ] server/src/components/time-management/time-entry/time-sheet/types.ts
+ - [ ] server/src/components/ui/Alert.tsx
+ - [ ] server/src/components/ui/Badge.tsx
+ - [ ] server/src/components/ui/Button.tsx
+ - [ ] server/src/components/ui/Calendar.tsx
+ - [ ] server/src/components/ui/Card.tsx
+ - [ ] server/src/components/ui/ContactPickerDialog.tsx
+ - [ ] server/src/components/ui/CreditExpirationBadge.tsx
+ - [ ] server/src/components/ui/CustomSelect.tsx
+ - [ ] server/src/components/ui/CustomTabs.tsx
+ - [ ] server/src/components/ui/DataTable.tsx
+ - [ ] server/src/components/ui/DatePicker.tsx
+ - [ ] server/src/components/ui/DateTimePicker.tsx
+ - [ ] server/src/components/ui/Dialog.tsx
+ - [ ] server/src/components/ui/Drawer.tsx
+ - [ ] server/src/components/ui/DropdownMenu.tsx
+ - [ ] server/src/components/ui/EditableField.tsx
+ - [ ] server/src/components/ui/GenericDialog.tsx
+ - [ ] server/src/components/ui/Input.tsx
+ - [ ] server/src/components/ui/Label.tsx
+ - [ ] server/src/components/ui/MultiUserPicker.tsx
+ - [ ] server/src/components/ui/Progress.tsx
+ - [ ] server/src/components/ui/Skeleton.tsx
+ - [ ] server/src/components/ui/Switch.tsx
+ - [ ] server/src/components/ui/TextArea.tsx
+ - [ ] server/src/components/ui/TimePicker.tsx
+ - [ ] server/src/components/ui/TimezonePicker.tsx
+ - [ ] server/src/components/ui/TreeSelect.tsx
+ - [ ] server/src/components/ui/UserPicker.tsx
+ - [ ] server/src/components/workflows/ClientWorkflowVisualization.tsx
+ - [ ] server/src/components/workflows/WorkflowActionsList.tsx
+ - [ ] server/src/components/workflows/WorkflowControls.tsx
+ - [ ] server/src/components/workflows/WorkflowEventTimeline.tsx
+ - [ ] server/src/components/workflows/WorkflowExecutionsTable.tsx
+ - [ ] server/src/components/workflows/WorkflowMetricsDisplay.tsx
+ - [ ] server/src/components/workflows/WorkflowRegistryViewer.tsx
+ - [ ] server/src/components/workflows/visualization/WorkflowVisualizer.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/ActionNode.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/ConditionalNode.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/EventNode.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/LoopNode.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/ParallelNode.tsx
+ - [ ] server/src/components/workflows/visualization/nodes/StateNode.tsx
+ - [ ] server/src/config/menuConfig.ts
+ - [ ] server/src/context/DrawerContext.tsx
+ - [ ] server/src/empty/lib/auth/index.ts
+ - [ ] server/src/hooks/useTeamAuth.ts
+ - [ ] server/src/interfaces/auth.interfaces.ts
+ - [ ] server/src/interfaces/company.interfaces.tsx
+ - [ ] server/src/interfaces/general.interfaces.tsx
+ - [ ] server/src/interfaces/invoice.interfaces.ts
+ - [ ] server/src/interfaces/timeEntry.interfaces.ts
+ - [ ] server/src/interfaces/timeSheetComment.ts
+ - [ ] server/src/lib/actions/apiKeyActions.ts
+ - [ ] server/src/lib/actions/asset-actions/assetDocumentActions.ts
+ - [ ] server/src/lib/actions/auth.tsx
+ - [ ] server/src/lib/actions/billingCycleActions.ts
+ - [ ] server/src/lib/actions/billingPlanAction.ts
+ - [ ] server/src/lib/actions/billingSettingsActions.ts
+ - [ ] server/src/lib/actions/bucketPlanAction.ts
+ - [ ] server/src/lib/actions/categoryActions.ts
+ - [ ] server/src/lib/actions/client-portal-actions/client-billing.ts
+ - [ ] server/src/lib/actions/client-portal-actions/client-projects.ts
+ - [ ] server/src/lib/actions/client-portal-actions/client-tickets.ts
+ - [ ] server/src/lib/actions/client-portal-actions/clientUserActions.ts
+ - [ ] server/src/lib/actions/client-portal-actions/dashboard.ts
+ - [ ] server/src/lib/actions/clientAction.ts
+ - [ ] server/src/lib/actions/clientBillingAction.ts
+ - [ ] server/src/lib/actions/comment-actions/commentActions.ts
+ - [ ] server/src/lib/actions/company-settings/emailSettings.ts
+ - [ ] server/src/lib/actions/companyActions.ts
+ - [ ] server/src/lib/actions/companyTaxRateActions.ts
+ - [ ] server/src/lib/actions/contact-actions/contactActions.tsx
+ - [ ] server/src/lib/actions/creditActions.ts
+ - [ ] server/src/lib/actions/creditReconciliationActions.ts
+ - [ ] server/src/lib/actions/creditReconciliationFixActions.ts
+ - [ ] server/src/lib/actions/initializeApp.ts
+ - [ ] server/src/lib/actions/interactionActions.ts
+ - [ ] server/src/lib/actions/interactionTypeActions.ts
+ - [ ] server/src/lib/actions/invoiceActions.ts
+ - [ ] server/src/lib/actions/invoiceWorkflowActions.ts
+ - [ ] server/src/lib/actions/job-actions.ts
+ - [ ] server/src/lib/actions/job-actions/getJobProgressAction.ts
+ - [ ] server/src/lib/actions/job-actions/scheduleInvoiceEmailAction.ts
+ - [ ] server/src/lib/actions/job-actions/scheduleInvoiceZipAction.ts
+ - [ ] server/src/lib/actions/manualInvoiceActions.ts
+ - [ ] server/src/lib/actions/number-actions/numberingActions.ts
+ - [ ] server/src/lib/actions/planServiceActions.ts
+ - [ ] server/src/lib/actions/policyActions.ts
+ - [ ] server/src/lib/actions/priorityActions.ts
+ - [ ] server/src/lib/actions/project-actions/projectActions.ts
+ - [ ] server/src/lib/actions/project-actions/projectTaskActions.ts
+ - [ ] server/src/lib/actions/reconciliationReportActions.ts
+ - [ ] server/src/lib/actions/scheduleActions.ts
+ - [ ] server/src/lib/actions/serviceActions.ts
+ - [ ] server/src/lib/actions/serviceCategoryActions.ts
+ - [ ] server/src/lib/actions/status-actions/statusActions.ts
+ - [ ] server/src/lib/actions/tagActions.ts
+ - [ ] server/src/lib/actions/taxRateActions.ts
+ - [ ] server/src/lib/actions/taxSettingsActions.ts
+ - [ ] server/src/lib/actions/team-actions/teamActions.ts
+ - [ ] server/src/lib/actions/tenantActions.ts
+ - [ ] server/src/lib/actions/ticket-actions/ticketActions.ts
+ - [ ] server/src/lib/actions/ticket-actions/ticketFormActions.ts
+ - [ ] server/src/lib/actions/ticket-number-actions/ticketNumberActions.ts
+ - [ ] server/src/lib/actions/ticketCategoryActions.ts
+ - [ ] server/src/lib/actions/ticketResourceActions.ts
+ - [ ] server/src/lib/actions/timeEntryActions.ts
+ - [ ] server/src/lib/actions/timePeriodsActions.ts
+ - [ ] server/src/lib/actions/timeSheetActions.ts
+ - [ ] server/src/lib/actions/usageActions.ts
+ - [ ] server/src/lib/actions/useRegister.tsx
+ - [ ] server/src/lib/actions/user-actions/registrationActions.ts
+ - [ ] server/src/lib/actions/user-actions/userActions.ts
+ - [ ] server/src/lib/actions/workItemActions.ts
+ - [ ] server/src/lib/actions/workflow-actions.ts
+ - [ ] server/src/lib/actions/workflow-event-actions.ts
+ - [ ] server/src/lib/actions/workflow-visualization-actions.ts
+ - [ ] server/src/lib/attributes/EntityAttributes.ts
+ - [ ] server/src/lib/auth/apiAuth.ts
+ - [ ] server/src/lib/auth/ee.ts
+ - [ ] server/src/lib/auth/rbac.ts
+ - [ ] server/src/lib/auth/session.ts
+ - [ ] server/src/lib/billing/billingEngine.ts
+ - [ ] server/src/lib/billing/createBillingCycles.ts
+ - [ ] server/src/lib/createHocuspocusProvider.tsx
+ - [ ] server/src/lib/email/sendVerificationEmail.ts
+ - [ ] server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts
+ - [ ] server/src/lib/hooks/useJobMonitor.ts
+ - [ ] server/src/lib/initializeApp.ts
+ - [ ] server/src/lib/jobs/cleanupRegistrations.ts
+ - [ ] server/src/lib/jobs/handlers/creditReconciliationHandler.ts
+ - [ ] server/src/lib/jobs/handlers/expiredCreditsHandler.ts
+ - [ ] server/src/lib/jobs/handlers/expiringCreditsNotificationHandler.ts
+ - [ ] server/src/lib/jobs/handlers/invoiceEmailHandler.ts
+ - [ ] server/src/lib/jobs/handlers/invoiceZipHandler.ts
+ - [ ] server/src/lib/jobs/index.ts
+ - [ ] server/src/lib/jobs/initializeScheduledJobs.ts
+ - [ ] server/src/lib/jobs/jobScheduler.ts
+ - [ ] server/src/lib/models/billingPlan.ts
+ - [ ] server/src/lib/models/clientBilling.ts
+ - [ ] server/src/lib/models/company.tsx
+ - [ ] server/src/lib/models/contact.tsx
+ - [ ] server/src/lib/models/creditReconciliationReport.ts
+ - [ ] server/src/lib/models/invoice.ts
+ - [ ] server/src/lib/models/project.ts
+ - [ ] server/src/lib/models/projectTask.ts
+ - [ ] server/src/lib/models/role.ts
+ - [ ] server/src/lib/models/scheduleEntry.ts
+ - [ ] server/src/lib/models/ticket.tsx
+ - [ ] server/src/lib/models/ticketCategory.tsx
+ - [ ] server/src/lib/models/timePeriod.ts
+ - [ ] server/src/lib/models/timePeriodSettings.ts
+ - [ ] server/src/lib/models/user.tsx
+ - [ ] server/src/lib/notifications/email.ts
+ - [ ] server/src/lib/notifications/sendEventEmail.ts
+ - [ ] server/src/lib/policy/PolicyEngine.ts
+ - [ ] server/src/lib/schemas/timeSheet.schemas.ts
+ - [ ] server/src/lib/security/rateLimiting.ts
+ - [ ] server/src/lib/services/apiKeyService.ts
+ - [ ] server/src/lib/services/invoiceService.ts
+ - [ ] server/src/lib/services/numberingService.ts
+ - [ ] server/src/lib/storage/StorageProviderFactory.ts
+ - [ ] server/src/lib/storage/StorageService.ts
+ - [ ] server/src/lib/timePeriodSuggester.ts
+ - [ ] server/src/lib/utils/creditReconciliationUtils.ts
+ - [ ] server/src/lib/utils/dateTimeUtils.ts
+ - [ ] server/src/lib/utils/projectUtils.ts
+ - [ ] server/src/lib/utils/scheduleUtils.ts
+ - [ ] server/src/lib/utils/transactionUtils.ts
+ - [ ] server/src/lib/utils/validation.ts
+ - [ ] server/src/lib/workflow/WorkflowComponentLoader.ts
+ - [ ] server/src/lib/workflow/persistence/workflowActionDependencyModel.ts
+ - [ ] server/src/lib/workflow/persistence/workflowActionResultModel.ts
+ - [ ] server/src/lib/workflow/persistence/workflowSyncPointModel.ts
+ - [ ] server/src/lib/workflow/persistence/workflowTimerModel.ts
+ - [ ] server/src/lib/workflow/visualization/hooks/useWorkflowVisualization.ts
+ - [ ] server/src/lib/workflow/visualization/services/runtimeIntegrationService.ts
+ - [ ] server/src/pages/_error.tsx
+ - [ ] server/src/services/emailService.ts
+ - [ ] server/src/services/job.module.ts
+ - [ ] server/src/services/job.service.ts
+ - [ ] server/src/test/infrastructure/billingInvoiceGeneration_consistency.test.ts
+ - [ ] server/src/test/infrastructure/billingInvoiceGeneration_discounts.test.ts
+ - [ ] server/src/test/infrastructure/billingInvoiceGeneration_edgeCases.test.ts
+ - [ ] server/src/test/infrastructure/billingInvoiceGeneration_subtotal.test.ts
+ - [ ] server/src/test/infrastructure/billingInvoiceGeneration_tax.test.ts
+ - [ ] server/src/test/infrastructure/companyBillingCycle.test.ts
+ - [ ] server/src/test/infrastructure/creditApplication.test.ts
+ - [ ] server/src/test/infrastructure/creditCreationAndDates.test.ts
+ - [ ] server/src/test/infrastructure/creditExpirationCore.test.ts
+ - [ ] server/src/test/infrastructure/creditExpirationEffects.test.ts
+ - [ ] server/src/test/infrastructure/creditExpirationIntegration.test.ts
+ - [ ] server/src/test/infrastructure/creditExpirationPriority.test.ts
+ - [ ] server/src/test/infrastructure/creditReconciliation.test.ts
+ - [ ] server/src/test/infrastructure/errorHandling.test.ts
+ - [ ] server/src/test/infrastructure/fixedPriceAndTimeBasedPlans.test.ts
+ - [ ] server/src/test/infrastructure/invoiceDueDate.test.ts
+ - [ ] server/src/test/infrastructure/invoiceNumberGeneration_part1.test.ts
+ - [ ] server/src/test/infrastructure/invoiceNumberGeneration_part2.test.ts
+ - [ ] server/src/test/infrastructure/manualInvoice.test.ts
+ - [ ] server/src/test/infrastructure/negativeInvoiceCredit.test.ts
+ - [ ] server/src/test/infrastructure/prepaymentInvoice.test.ts
+ - [ ] server/src/test/infrastructure/projectManagement.test.ts
+ - [ ] server/src/test/infrastructure/taxExemptionHandling.test.ts
+ - [ ] server/src/test/infrastructure/taxRateChanges.test.ts
+ - [ ] server/src/test/infrastructure/taxRoundingBehavior.test.ts
+ - [ ] server/src/test/infrastructure/timePeriodsActions.test.ts
+ - [ ] server/src/test/infrastructure/usageBucketAndFinalization.test.ts
+ - [ ] server/src/test/setup.ts
+ - [ ] server/src/test/unit/auth.test.ts
+ - [ ] server/src/test/unit/billingEngine.test.ts
+ - [ ] server/src/test/unit/billingPlanAction.test.ts
+ - [ ] server/src/test/unit/clientBillingAction.test.ts
+ - [ ] server/src/test/unit/route.test.tsx
+ - [ ] server/src/test/unit/taxCalculation.test.ts
+ - [ ] server/src/test/unit/templateLanguage.test.ts
+ - [ ] server/src/test/unit/templateRenderer.test.tsx
+ - [ ] server/src/test/unit/timePeriodSuggester.test.ts
+ - [ ] server/src/types/types.d.tsx
+ - [ ] server/src/utils/colorUtils.ts
+ - [ ] server/src/utils/email/emailService.tsx
+ - [ ] server/src/utils/keycloak.tsx
+ - [ ] server/src/utils/sampleInvoiceData.ts
+ - [ ] server/src/utils/timeEntryUtils.ts
+ - [ ] server/src/utils/tokenizer.tsx
+ - [ ] server/test-utils/dateUtils.ts
+ - [ ] server/test-utils/dbReset.ts
+ - [ ] shared/types/temporal.ts
+ - [ ] tools/ai-automation/web/src/app/layout.tsx
+ - [ ] tools/ai-automation/web/src/app/page.tsx
+
+
+## 4. Path Conversion Rules
+
+### Current Alias Mappings
+- `@/*` maps to `server/src/*`
+- `@ee/*` maps to `ee/server/src/*`
+- `@shared/*` maps to `shared/*`
+
+### Conversion Rules
+1. **For files within server/src importing from server/src:**
+   - Replace `@/` with relative path to server/src
+   - Example: If `server/src/components/tickets/TicketDetails.tsx` imports from `@/lib/actions/ticketActions.ts`
+   - Convert to: `../../lib/actions/ticketActions.ts`
+
+2. **For files within ee/server/src importing from ee/server/src:**
+   - Replace `@ee/` with relative path to ee/server/src
+   - Example: If `ee/server/src/components/chat/Chat.tsx` imports from `@ee/lib/auth/abac.ts`
+   - Convert to: `../../lib/auth/abac.ts`
+
+3. **For files importing from shared directory:**
+   - Replace `@shared/` with relative path to shared directory
+   - Example: If importing from `@shared/types/temporal.ts`
+   - Convert to: `../../../shared/types/temporal.ts` (adjust ../s based on file depth)
+
+4. **Cross-Project Imports:**
+    - When server/src files import from ee/server/src:
+      - Replace `@ee/` with relative path to ee/server/src
+      - Example: `../../../ee/server/src/lib/auth/abac.ts`
+    - When ee/server/src files import from server/src:
+      - Replace `@/` with relative path to server/src
+      - Count segments from ee/server/src to the file location
+      - Add 3 more levels to get from ee/server/src to project root
+      - Total ../ needed = file segments + 3
+      - Examples:
+        - For files in components/chat (2 segments):
+          - 2 + 3 = 5 ../ needed: `../../../../../server/src/`
+        - For files in components/flow (2 segments):
+          - 2 + 3 = 5 ../ needed: `../../../../../server/src/`
+        - For files in app/api/provisioning/tenants (4 segments):
+          - 4 + 3 = 7 ../ needed: `../../../../../../../server/src/`
+
+### Implementation Strategy
+1. Calculate relative path by:
+   - Determine source file's depth from src root
+   - Navigate up that many levels with `../`
+   - Navigate down to target file
+2. Use path.relative() or similar utilities to calculate correct paths
+3. Maintain file extension in imports
+4. Test each file after conversion to ensure imports resolve correctly
+
+### Important Considerations
+- Some files may have multiple imports to convert
+- Pay attention to index files and barrel exports
+- Verify circular dependencies don't get introduced
+- Test thoroughly after each batch of conversions
+- Consider using automated tools to help calculate relative paths
+
+## 5. Key Information & Updates
+- **Important Details:**
+  - Aliases (@ symbols in imports) make it difficult to work with multiple projects in a monorepo
+  - The goal is to replace all alias imports with relative imports
+  - Changes must maintain all existing functionality
+  - Build configurations will need to be updated to remove alias definitions
+- **Additional Notes:**
+  - Using relative imports will improve code portability across the monorepo
+  - This change will make it easier to share code between projects
+  - Care must be taken to ensure correct path resolution, especially for deeply nested files

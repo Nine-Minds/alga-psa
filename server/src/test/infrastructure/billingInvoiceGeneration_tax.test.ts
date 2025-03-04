@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { generateInvoice } from '@/lib/actions/invoiceActions';
-import { generateManualInvoice } from '@/lib/actions/manualInvoiceActions';
-import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import { BillingEngine } from '@/lib/billing/billingEngine';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 
 describe('Billing Invoice Tax Calculations', () => {
   const testHelpers = TestContext.createHelpers();

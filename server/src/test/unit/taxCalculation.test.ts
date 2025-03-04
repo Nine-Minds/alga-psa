@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { TaxService } from '@/lib/services/taxService';
-import { ICompanyTaxSettings, ITaxRate, ITaxCalculationResult, ITaxComponent, ITaxRateThreshold } from '@/interfaces/tax.interfaces';
-import CompanyTaxSettings from '@/lib/models/companyTaxSettings';
-import { ISO8601String } from '@/types/types.d';
+import { TaxService } from 'server/src/lib/services/taxService';
+import { ICompanyTaxSettings, ITaxRate, ITaxCalculationResult, ITaxComponent, ITaxRateThreshold } from 'server/src/interfaces/tax.interfaces';
+import CompanyTaxSettings from 'server/src/lib/models/companyTaxSettings';
+import { ISO8601String } from 'server/src/types/types.d';
 
 // Set up mock for CompanyTaxSettings
 vi.mock('@/lib/models/companyTaxSettings', () => ({

@@ -1,6 +1,6 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
 import { getPostgresConnection } from '../db/knexfile';
-import { StorageService } from '@/lib/storage/StorageService';
+import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobService } from '../../services/job.service';
 import { JobStatus } from '../../types/job.d';
 

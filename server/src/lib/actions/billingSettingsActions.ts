@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from "@/lib/db";
+import { createTenantKnex } from "server/src/lib/db";
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
 
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';

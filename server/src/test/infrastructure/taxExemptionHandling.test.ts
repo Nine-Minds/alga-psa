@@ -3,7 +3,7 @@ import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
 import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
-import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
+import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 

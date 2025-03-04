@@ -1,9 +1,9 @@
 // server/src/lib/models/project.ts
 import { v4 as uuidv4 } from 'uuid';
-import { IProject, IProjectPhase, IProjectTask, IProjectStatusMapping } from '@/interfaces/project.interfaces';
-import { IStatus, IStandardStatus, ItemType } from '@/interfaces/status.interface'
+import { IProject, IProjectPhase, IProjectTask, IProjectStatusMapping } from 'server/src/interfaces/project.interfaces';
+import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface'
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 const ProjectModel = {
   updatePhase: async (phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase> => {

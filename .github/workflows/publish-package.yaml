@@ -87,6 +87,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Extract short SHA
+        id: sha
+        run: echo "short_sha=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
@@ -94,4 +98,6 @@ jobs:
           context: .
           file: Dockerfile.prod
           push: true
-          tags: ghcr.io/nine-minds/alga-psa:latest
+          tags: |
+            ghcr.io/nine-minds/alga-psa:latest
+            ghcr.io/nine-minds/alga-psa:${{ steps.sha.outputs.short_sha }}

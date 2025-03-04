@@ -1,9 +1,9 @@
 'use client';
 
-import { IProjectPhase } from '@/interfaces/project.interfaces';
+import { IProjectPhase } from 'server/src/interfaces/project.interfaces';
 import { Pencil, Check, X, Trash2 } from 'lucide-react';
 import { TextArea } from '../ui/TextArea';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 
 interface PhaseListItemProps {
   phase: IProjectPhase;

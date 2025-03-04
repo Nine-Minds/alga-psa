@@ -3,11 +3,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import InteractionModel from '@/lib/models/interactions'
-import { IInteractionType, IInteraction } from '@/interfaces/interaction.interfaces'
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions'
+import InteractionModel from 'server/src/lib/models/interactions'
+import { IInteractionType, IInteraction } from 'server/src/interfaces/interaction.interfaces'
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
   try {

@@ -1,9 +1,9 @@
 // InvoiceTemplates.tsx
 import React, { useState, useEffect } from 'react';
-import { Card, CardHeader, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from '@/lib/actions/invoiceActions';
-import { IInvoiceTemplate } from '@/interfaces/invoice.interfaces';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceActions';
+import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import InvoiceTemplateManager from './InvoiceTemplateManager';
 import CustomSelect from '../ui/CustomSelect';
 import { FileTextIcon } from 'lucide-react';

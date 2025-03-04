@@ -1,7 +1,7 @@
 'use server'
 
-import CreditReconciliationReport from '@/lib/models/creditReconciliationReport';
-import { ReconciliationStatus } from '@/interfaces/billing.interfaces';
+import CreditReconciliationReport from 'server/src/lib/models/creditReconciliationReport';
+import { ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
 // Mock function for getting company by ID - in a real implementation, this would be imported from a company model
 async function getCompanyById(companyId: string) {
   // This is a placeholder - in a real implementation, you would fetch the company from the database

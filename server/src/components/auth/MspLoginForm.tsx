@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
-import { Label } from '@/components/ui/Label';
+import { Label } from 'server/src/components/ui/Label';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';

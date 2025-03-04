@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from '@/lib/actions/user-actions/userActions';
-import { getCompanyById, updateCompany } from '@/lib/actions/companyActions';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { IPermission } from '@/interfaces/auth.interfaces';
+import { Card } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
+import { getCompanyById, updateCompany } from 'server/src/lib/actions/companyActions';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IPermission } from 'server/src/interfaces/auth.interfaces';
 
 export function CompanyDetailsSettings() {
   const router = useRouter();

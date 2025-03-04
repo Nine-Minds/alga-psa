@@ -1,10 +1,10 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { v4 as uuid4 } from 'uuid';
-import { ICompanyEmailSettings } from '@/interfaces/company.interfaces';
-import { getAdminConnection } from '@/lib/db/admin';
+import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
+import { getAdminConnection } from 'server/src/lib/db/admin';
 
 export async function verifyEmailSuffix(email: string): Promise<boolean> {
   try {

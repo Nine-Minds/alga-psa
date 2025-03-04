@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { StorageService } from '@/lib/storage/StorageService';
-import { InvoiceViewModel } from '@/interfaces/invoice.interfaces';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 
 interface EmailAttachment {
   filename: string;

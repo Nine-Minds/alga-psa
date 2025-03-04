@@ -6,9 +6,9 @@ import Image from 'next/image';
 import Link from 'next/link'; 
 
 import * as Label from '@radix-ui/react-label';
-import * as Form from '@radix-ui/react-form'; 
+import * as Form from '@radix-ui/react-form';
 
-import { recoverPassword } from '@/lib/actions/useRegister';
+import { recoverPassword } from 'server/src/lib/actions/useRegister';
 
 
 type FormData = {

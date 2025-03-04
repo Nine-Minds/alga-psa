@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 interface UpdateNumberResponse {
   success: boolean;

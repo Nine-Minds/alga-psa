@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "strictNullChecks": true,
-    "noEmit": false
+    "noEmit": false,
   },
   "include": [
     "next-env.d.ts",

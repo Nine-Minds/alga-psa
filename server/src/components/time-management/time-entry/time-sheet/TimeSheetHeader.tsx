@@ -1,8 +1,8 @@
 'use client'
 
 import React from 'react';
-import { TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
-import { Button } from '@/components/ui/Button';
+import { TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
+import { Button } from 'server/src/components/ui/Button';
 import { ArrowLeftIcon } from '@radix-ui/react-icons';
 
 interface TimeSheetHeaderProps {

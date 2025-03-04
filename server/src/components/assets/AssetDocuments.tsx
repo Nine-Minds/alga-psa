@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import Documents from '@/components/documents/Documents';
+import Documents from 'server/src/components/documents/Documents';
 import { useEffect, useState } from 'react';
-import { IDocument } from '@/interfaces/document.interface';
-import { getDocumentsByEntity } from '@/lib/actions/document-actions/documentActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface AssetDocumentsProps {
     assetId: string;

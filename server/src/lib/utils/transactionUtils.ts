@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { ITransaction, TransactionType } from '@/interfaces/billing.interfaces';
+import { ITransaction, TransactionType } from 'server/src/interfaces/billing.interfaces';
 
 export async function recordTransaction(
   trx: Knex.Transaction,

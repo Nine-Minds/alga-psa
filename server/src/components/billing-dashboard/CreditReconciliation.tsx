@@ -2,23 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { CustomTabs } from '@/components/ui/CustomTabs';
-import { DataTable } from '@/components/ui/DataTable';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ICreditReconciliationReport, ReconciliationStatus } from '@/interfaces/billing.interfaces';
-import { validateCompanyCredit } from '@/lib/actions/creditReconciliationActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
+import { validateCompanyCredit } from 'server/src/lib/actions/creditReconciliationActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   fetchReconciliationReports,
   fetchCompaniesForDropdown,
   fetchReconciliationStats
-} from '@/lib/actions/reconciliationReportActions';
+} from 'server/src/lib/actions/reconciliationReportActions';
 import { 
   BarChart, 
   Bar, 

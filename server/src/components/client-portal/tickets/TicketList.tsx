@@ -1,24 +1,24 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from 'server/src/components/ui/DataTable';
 import { format } from 'date-fns';
-import { getClientTickets, updateTicketStatus } from '@/lib/actions/client-portal-actions/client-tickets';
-import { getTicketStatuses } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from '@/lib/actions/priorityActions';
-import { getTicketCategories } from '@/lib/actions/ticketCategoryActions';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ITicketListItem, ITicketCategory } from '@/interfaces/ticket.interfaces';
-import { IStatus } from '@/interfaces/status.interface';
+import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
+import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { IStatus } from 'server/src/interfaces/status.interface';
 import { TicketDetails } from './TicketDetails';
-import { Button } from '@/components/ui/Button';
-import { SearchInput } from '@/components/ui/SearchInput';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { CategoryPicker } from '@/components/tickets/CategoryPicker';
+import { Button } from 'server/src/components/ui/Button';
+import { SearchInput } from 'server/src/components/ui/SearchInput';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { ChevronDown, XCircle } from 'lucide-react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ClientAddTicket } from '@/components/client-portal/tickets/ClientAddTicket';
+import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 
 export function TicketList() {
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);

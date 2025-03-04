@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { IContact } from '@/interfaces/contact.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface ContactsPaginationProps {
     filteredContacts: IContact[];

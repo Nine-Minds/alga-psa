@@ -1,9 +1,9 @@
-import { getAsset } from '@/lib/actions/asset-actions/assetActions';
+import { getAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { getServerSession } from "next-auth/next";
-import User from '@/lib/models/user';
+import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import AssetDetails from '@/components/assets/AssetDetails';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import AssetDetails from 'server/src/components/assets/AssetDetails';
 
 interface Props {
   params: {

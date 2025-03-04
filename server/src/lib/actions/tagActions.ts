@@ -1,7 +1,7 @@
 'use server'
 
-import Tag from '@/lib/models/tag';
-import { ITag, TaggedEntityType } from '@/interfaces/tag.interfaces';
+import Tag from 'server/src/lib/models/tag';
+import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
 
 export async function findTagsByEntityId(entityId: string, entityType: TaggedEntityType): Promise<ITag[]> {
   try {

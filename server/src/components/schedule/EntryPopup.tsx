@@ -2,21 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { TextArea } from '@/components/ui/TextArea';
-import { Switch } from '@/components/ui/Switch';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Switch } from 'server/src/components/ui/Switch';
 import { format, isWeekend, addYears } from 'date-fns';
-import { IScheduleEntry, IRecurrencePattern, IEditScope } from '@/interfaces/schedule.interfaces';
-import { AddWorkItemDialog } from '@/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
-import { getWorkItemById } from '@/lib/actions/workItemActions';
-import CustomSelect from '@/components/ui/CustomSelect';
-import SelectedWorkItem from '@/components/time-management/time-entry/time-sheet/SelectedWorkItem';
-import UserPicker from '@/components/ui/UserPicker';
-import { DateTimePicker } from '@/components/ui/DateTimePicker';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
+import { AddWorkItemDialog } from 'server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 interface EntryPopupProps {
   event: IScheduleEntry | null;

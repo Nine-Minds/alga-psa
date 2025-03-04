@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { Label } from '@/components/ui/Label';
-import { Input } from '@/components/ui/Input';
-import { Switch } from '@/components/ui/Switch';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { toPlainDate, toISODate, formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
+import { Switch } from 'server/src/components/ui/Switch';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { toPlainDate, toISODate, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
 
 interface CreditExpirationModificationDialogProps {

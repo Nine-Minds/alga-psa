@@ -1,9 +1,9 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@/interfaces/usage.interfaces';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
 

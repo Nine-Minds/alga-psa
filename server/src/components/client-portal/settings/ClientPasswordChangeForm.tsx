@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { changeOwnPassword } from '@/lib/actions/user-actions/userActions';
+import { changeOwnPassword } from 'server/src/lib/actions/user-actions/userActions';
 
 interface ClientPasswordChangeFormProps {
   onSuccess?: () => void;

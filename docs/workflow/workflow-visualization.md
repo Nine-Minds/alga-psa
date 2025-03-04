@@ -225,7 +225,7 @@ interface WorkflowVisualizationProps {
 ### 10.1 Basic Usage
 
 ```tsx
-import { WorkflowVisualization } from '@/lib/workflow/visualization';
+import { WorkflowVisualization } from 'server/src/lib/workflow/visualization';
 
 function WorkflowStatusPage({ workflowId, executionId }) {
   return (
@@ -245,7 +245,7 @@ function WorkflowStatusPage({ workflowId, executionId }) {
 ### 10.2 Definition-Only View
 
 ```tsx
-import { WorkflowVisualization } from '@/lib/workflow/visualization';
+import { WorkflowVisualization } from 'server/src/lib/workflow/visualization';
 
 function WorkflowDefinitionViewer({ workflowId }) {
   return (
@@ -265,7 +265,7 @@ function WorkflowDefinitionViewer({ workflowId }) {
 ### 10.3 Custom Styling
 
 ```tsx
-import { WorkflowVisualization } from '@/lib/workflow/visualization';
+import { WorkflowVisualization } from 'server/src/lib/workflow/visualization';
 import { CustomStateNode, CustomActionNode } from './customNodes';
 
 function CustomStyledWorkflow({ workflowId, executionId }) {

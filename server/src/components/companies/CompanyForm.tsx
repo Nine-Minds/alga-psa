@@ -1,11 +1,11 @@
 // server/src/components/CompanyForm.tsx
 import React, { useState } from 'react';
-import { ICompany } from '@/interfaces/company.interfaces';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Label } from '@/components/ui/Label';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { TextArea } from '@/components/ui/TextArea';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { TextArea } from 'server/src/components/ui/TextArea';
 
 interface CompanyFormProps {
   onSubmit: (data: Omit<ICompany, "company_id" | "created_at" | "updated_at">) => void;

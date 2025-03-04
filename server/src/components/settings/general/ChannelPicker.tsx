@@ -8,8 +8,8 @@ import { ChevronDownIcon } from '@radix-ui/react-icons';
 import { useAutomationIdAndRegister } from '../../../types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent, AutomationProps, FormFieldComponent } from '../../../types/ui-reflection/types';
 import { ReflectionContainer } from '../../../types/ui-reflection/ReflectionContainer';
-import { Button } from '@/components/ui/Button';
-import { withDataAutomationId } from '@/types/ui-reflection/withDataAutomationId';
+import { Button } from 'server/src/components/ui/Button';
+import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
 interface ChannelPickerProps {
   id?: string;

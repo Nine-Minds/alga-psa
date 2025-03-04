@@ -1,14 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { 
   IProjectTask, 
   ITaskChecklistItem, 
   IProjectTicketLink, 
   IProjectTicketLinkWithDetails, 
   IProjectTaskCardInfo 
-} from '@/interfaces/project.interfaces';
+} from 'server/src/interfaces/project.interfaces';
 import ProjectModel from './project'
 
 const ProjectTaskModel = {

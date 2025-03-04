@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { 
   addWeeks, 
   addMonths, 
@@ -14,7 +14,7 @@ import {
   subWeeks,
   formatISO
 } from 'date-fns';
-import { ISO8601String } from '@/types/types.d';
+import { ISO8601String } from 'server/src/types/types.d';
 
 function getNextCycleDate(currentDate: ISO8601String, billingCycle: string): {
   effectiveDate: ISO8601String;

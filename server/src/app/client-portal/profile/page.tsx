@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ClientProfile } from '@/components/client-portal/profile/ClientProfile';
+import { ClientProfile } from 'server/src/components/client-portal/profile/ClientProfile';
 
 export default function ProfilePage() {
   return (

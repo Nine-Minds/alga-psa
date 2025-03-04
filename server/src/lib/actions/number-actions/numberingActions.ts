@@ -1,7 +1,7 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
-import type { EntityType } from '@/lib/services/numberingService';
+import { createTenantKnex } from 'server/src/lib/db';
+import type { EntityType } from 'server/src/lib/services/numberingService';
 
 export interface NumberSettings {
   prefix: string;

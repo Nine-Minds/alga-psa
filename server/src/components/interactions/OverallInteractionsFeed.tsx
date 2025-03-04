@@ -2,17 +2,17 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType, ISystemInteractionType } from '@/interfaces/interaction.interfaces';
+import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { Calendar, Phone, Mail, FileText, CheckSquare, Filter, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
-import { getRecentInteractions } from '@/lib/actions/interactionActions';
-import { getAllInteractionTypes } from '@/lib/actions/interactionTypeActions';
-import { useDrawer } from '@/context/DrawerContext';
+import { getRecentInteractions } from 'server/src/lib/actions/interactionActions';
+import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
+import { useDrawer } from "server/src/context/DrawerContext";
 import InteractionDetails from './InteractionDetails';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 
 interface OverallInteractionsFeedProps {
   users: { id: string; name: string }[];

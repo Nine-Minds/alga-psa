@@ -6,12 +6,12 @@ import {
   updateTicketPrefix, 
   updateInitialValue, 
   updateLastNumber 
-} from '@/lib/actions/ticket-number-actions/ticketNumberActions';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+} from 'server/src/lib/actions/ticket-number-actions/ticketNumberActions';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 import { Edit2 } from 'lucide-react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 interface TicketNumberSettings {
   prefix: string;

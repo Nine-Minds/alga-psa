@@ -1,10 +1,10 @@
 'use server'
 
-import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition } from '@/interfaces/auth.interfaces';
-import { ITicket } from '@/interfaces/ticket.interfaces';
+import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition } from 'server/src/interfaces/auth.interfaces';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { PolicyEngine } from '../policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../attributes/EntityAttributes';
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 const policyEngine = new PolicyEngine();
 

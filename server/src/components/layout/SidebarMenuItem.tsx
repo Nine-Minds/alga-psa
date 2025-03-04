@@ -1,8 +1,8 @@
 import React from 'react';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { MenuItem } from '../../config/menuConfig';
-import { useAutomationIdAndRegister } from '@/types/ui-reflection/useAutomationIdAndRegister';
-import { ButtonComponent } from '@/types/ui-reflection/types';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent } from 'server/src/types/ui-reflection/types';
 
 interface SidebarMenuItemProps {
   id: string;

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { Switch } from '@/components/ui/Switch';
-import { Label } from '@/components/ui/Label';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
 import toast from 'react-hot-toast';
-import { getCompanyBillingSettings, updateCompanyBillingSettings, type BillingSettings } from "@/lib/actions/billingSettingsActions";
+import { getCompanyBillingSettings, updateCompanyBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
 
 interface CompanyZeroDollarInvoiceSettingsProps {
   companyId: string;

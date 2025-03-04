@@ -5,12 +5,12 @@ import { signOut } from "next-auth/react";
 import Link from 'next/link';
 import { QuestionMarkCircledIcon, SunIcon, MoonIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import type { IUserWithRoles } from '@/types';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import type { IUserWithRoles } from 'server/src/types';
 import { usePathname } from 'next/navigation';
-import { menuItems, bottomMenuItems, MenuItem } from '@/config/menuConfig';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { useTheme } from '@/context/ThemeContext';
+import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { useTheme } from "server/src/context/ThemeContext";
 import { toast } from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 

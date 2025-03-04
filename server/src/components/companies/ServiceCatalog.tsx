@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Button } from '@radix-ui/themes';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IService, IServiceCategory } from '../../interfaces/billing.interfaces';
-import { Input } from '@/components/ui/Input';
+import { Input } from 'server/src/components/ui/Input';
 import { Pencil, Trash2, Check, X } from 'lucide-react';
 
 interface ServiceCatalogProps {

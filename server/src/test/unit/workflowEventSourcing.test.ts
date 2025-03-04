@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { WorkflowEventSourcing } from '../../lib/workflow/core/workflowEventSourcing';
+import { WorkflowEventSourcing } from '../../lib/workflow/core/workflowEventSourcing.js';
 import WorkflowEventModel from '../../lib/workflow/persistence/workflowEventModel';
 import WorkflowSnapshotModel from '../../lib/workflow/persistence/workflowSnapshotModel';
 import { IWorkflowEvent } from '../../lib/workflow/persistence/workflowInterfaces';

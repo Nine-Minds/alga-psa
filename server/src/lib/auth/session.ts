@@ -1,4 +1,4 @@
-import { IUser } from '@/interfaces/auth.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 
 export async function getCurrentUser(): Promise<IUser> {
     // This is a placeholder implementation. In a real application, 

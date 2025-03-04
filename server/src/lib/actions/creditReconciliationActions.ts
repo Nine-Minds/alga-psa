@@ -1,11 +1,11 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { ICreditReconciliationReport, ITransaction, ICreditTracking } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import CreditReconciliationReport from '@/lib/models/creditReconciliationReport';
-import { auditLog } from '@/lib/logging/auditLog';
+import CreditReconciliationReport from 'server/src/lib/models/creditReconciliationReport';
+import { auditLog } from 'server/src/lib/logging/auditLog';
 
 /**
  * Validates a company's credit balance without making automatic corrections

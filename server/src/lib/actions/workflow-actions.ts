@@ -1,14 +1,14 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
-import WorkflowExecutionModel from '@/lib/workflow/persistence/workflowExecutionModel';
-import WorkflowEventModel from '@/lib/workflow/persistence/workflowEventModel';
-import WorkflowActionResultModel from '@/lib/workflow/persistence/workflowActionResultModel';
-import { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@/lib/workflow/persistence/workflowInterfaces';
-import { getWorkflowRuntime } from '@/lib/workflow/core/workflowRuntime';
-import { getActionRegistry } from '@/lib/workflow/core/actionRegistry';
-import { WorkflowDefinition, WorkflowMetadata } from '@/lib/workflow/core/workflowDefinition';
-import { initializeServerWorkflows } from '@/lib/workflow/init/serverInit';
+import { createTenantKnex } from 'server/src/lib/db';
+import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel';
+import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
+import WorkflowActionResultModel from '@shared/workflow/persistence/workflowActionResultModel';
+import { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
+import { WorkflowDefinition, WorkflowMetadata } from '@shared/workflow/core/workflowDefinition';
+import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 
 /**
  * Workflow metrics interface
@@ -145,18 +145,24 @@ export async function getWorkflowExecutionDetails(
   actionResults: IWorkflowActionResult[]
 } | null> {
   try {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
     // Get execution details
-    const execution = await WorkflowExecutionModel.getById(executionId);
+    const execution = await WorkflowExecutionModel.getById(knex, tenant, executionId);
     
     if (!execution) {
       return null;
     }
     
     // Get events for this execution
-    const events = await WorkflowEventModel.getByExecutionId(executionId);
+    const events = await WorkflowEventModel.getByExecutionId(knex, tenant, executionId);
     
     // Get action results for this execution
-    const actionResults = await WorkflowActionResultModel.getByExecutionId(executionId);
+    const actionResults = await WorkflowActionResultModel.getByExecutionId(knex, tenant, executionId);
     
     return {
       execution,
@@ -181,14 +187,14 @@ export async function pauseWorkflowExecutionAction(executionId: string): Promise
     }
     
     // Check if the execution exists and belongs to this tenant
-    const execution = await WorkflowExecutionModel.getById(executionId);
+    const execution = await WorkflowExecutionModel.getById(knex, tenant, executionId);
     
     if (!execution || execution.tenant !== tenant) {
       return false;
     }
     
     // Update the status to paused
-    await WorkflowExecutionModel.update(executionId, {
+    await WorkflowExecutionModel.update(knex, tenant, executionId, {
       status: 'paused'
     });
     
@@ -211,14 +217,14 @@ export async function resumeWorkflowExecutionAction(executionId: string): Promis
     }
     
     // Check if the execution exists and belongs to this tenant
-    const execution = await WorkflowExecutionModel.getById(executionId);
+    const execution = await WorkflowExecutionModel.getById(knex, tenant, executionId);
     
     if (!execution || execution.tenant !== tenant) {
       return false;
     }
     
     // Update the status to active
-    await WorkflowExecutionModel.update(executionId, {
+    await WorkflowExecutionModel.update(knex, tenant, executionId, {
       status: 'active'
     });
     
@@ -241,14 +247,14 @@ export async function cancelWorkflowExecutionAction(executionId: string): Promis
     }
     
     // Check if the execution exists and belongs to this tenant
-    const execution = await WorkflowExecutionModel.getById(executionId);
+    const execution = await WorkflowExecutionModel.getById(knex, tenant, executionId);
     
     if (!execution || execution.tenant !== tenant) {
       return false;
     }
     
     // Update the status to cancelled
-    await WorkflowExecutionModel.update(executionId, {
+    await WorkflowExecutionModel.update(knex, tenant, executionId, {
       status: 'cancelled'
     });
     
@@ -275,14 +281,14 @@ export async function retryWorkflowActionAction(
     }
     
     // Check if the action result exists and belongs to this tenant
-    const actionResult = await WorkflowActionResultModel.getById(actionResultId);
+    const actionResult = await WorkflowActionResultModel.getById(knex, tenant, actionResultId);
     
     if (!actionResult || actionResult.tenant !== tenant || actionResult.execution_id !== executionId) {
       return false;
     }
     
     // Mark the action as ready to execute again
-    await WorkflowActionResultModel.update(actionResultId, {
+    await WorkflowActionResultModel.update(knex, tenant, actionResultId, {
       ready_to_execute: true,
       success: false,
       error_message: undefined,
@@ -291,7 +297,7 @@ export async function retryWorkflowActionAction(
     });
     
     // Update the workflow execution status to active
-    await WorkflowExecutionModel.update(executionId, {
+    await WorkflowExecutionModel.update(knex, tenant, executionId, {
       status: 'active'
     });
     

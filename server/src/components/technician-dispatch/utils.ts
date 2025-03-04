@@ -1,4 +1,4 @@
-import { WorkItemType } from '@/interfaces/workItem.interfaces';
+import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
 export const calculateTimeFromPosition = (
   x: number,

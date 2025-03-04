@@ -1,6 +1,6 @@
 // server/src/lib/models/billingPlan.ts
-import { IBillingPlan } from '@/interfaces';
-import { createTenantKnex } from '@/lib/db';
+import { IBillingPlan } from 'server/src/interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 const BillingPlan = {

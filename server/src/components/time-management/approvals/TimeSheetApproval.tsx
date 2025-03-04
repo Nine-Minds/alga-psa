@@ -7,15 +7,15 @@ import {
   ITimeSheetApprovalView,
   ITimeEntryWithWorkItem, 
   TimeSheetStatus 
-} from '@/interfaces/timeEntry.interfaces';
-import { addCommentToTimeSheet, fetchTimeSheetComments } from '@/lib/actions/timeSheetActions';
+} from 'server/src/interfaces/timeEntry.interfaces';
+import { addCommentToTimeSheet, fetchTimeSheetComments } from 'server/src/lib/actions/timeSheetActions';
 import { FaCheck, FaTimes, FaClock, FaUndo, FaChevronDown, FaChevronUp } from 'react-icons/fa';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
-import { Button } from '@/components/ui/Button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { TextArea } from '@/components/ui/TextArea';
-import { IUser } from '@/interfaces/auth.interfaces';
-import { fetchWorkItemsForTimeSheet, saveTimeEntry } from '@/lib/actions/timeEntryActions';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { fetchWorkItemsForTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { parseISO } from 'date-fns';
 import { Temporal } from '@js-temporal/polyfill';
 

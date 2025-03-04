@@ -1,8 +1,8 @@
 'use server';
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@/interfaces/workItem.interfaces';
-import ScheduleEntry from '@/lib/models/scheduleEntry';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IWorkItem, IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import ScheduleEntry from 'server/src/lib/models/scheduleEntry';
 
 interface SearchOptions {
   searchTerm?: string;

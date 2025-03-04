@@ -1,5 +1,5 @@
 import React from 'react';
-import { WorkItemType } from '@/interfaces/workItem.interfaces';
+import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
 interface WorkItemCardProps {
   ticketNumber?: string;

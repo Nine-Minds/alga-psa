@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "target": "es2022",
+    "outDir": "dist",
+    "noEmit": false,
+    "noEmitOnError": false,
+    "moduleResolution": "nodenext",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["../../shared/*"],
+    },
+    "rootDir": "../.."
+  },
+  "include": [
+    "src/**/*.ts"
+, "../../shared/utils/retryUtils.ts"  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

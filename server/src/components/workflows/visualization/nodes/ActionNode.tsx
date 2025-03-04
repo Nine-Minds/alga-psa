@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
-import { ActionNodeData } from '@/lib/workflow/visualization/types/visualizationTypes';
-import { Card } from '@/components/ui/Card';
+import { ActionNodeData } from 'server/src/lib/workflow/visualization/types/visualizationTypes';
+import { Card } from 'server/src/components/ui/Card';
 
 /**
  * Action node component for workflow visualization

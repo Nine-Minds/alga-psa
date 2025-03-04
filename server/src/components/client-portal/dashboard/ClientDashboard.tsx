@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { getDashboardMetrics, getRecentActivity, type RecentActivity } from '@/lib/actions/client-portal-actions/dashboard';
-import { ClientAddTicket } from '@/components/client-portal/tickets/ClientAddTicket';
+import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
+import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
 
 export function ClientDashboard() {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);

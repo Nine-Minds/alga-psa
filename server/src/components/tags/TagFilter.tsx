@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Tag as TagIcon } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
+import { Input } from 'server/src/components/ui/Input';
 import * as Popover from '@radix-ui/react-popover';
 import { TagGrid } from './TagGrid';
-import { filterTagsByText } from '@/utils/colorUtils';
+import { filterTagsByText } from 'server/src/utils/colorUtils';
 
 interface TagFilterProps {
   allTags: string[];

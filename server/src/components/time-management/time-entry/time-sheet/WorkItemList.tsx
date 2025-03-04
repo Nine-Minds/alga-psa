@@ -1,5 +1,5 @@
 'use client'
-import { WorkItemWithStatus, WorkItemType } from '@/interfaces/workItem.interfaces';
+import { WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 
 interface WorkItemListProps {
   items: WorkItemWithStatus[];

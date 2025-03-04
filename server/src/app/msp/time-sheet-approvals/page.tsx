@@ -1,7 +1,7 @@
-import ManagerApprovalDashboard from '@/components/time-management/approvals/ManagerApprovalDashboard';
-import { findUserById } from '@/lib/actions/user-actions/userActions';
+import ManagerApprovalDashboard from 'server/src/components/time-management/approvals/ManagerApprovalDashboard';
+import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
 
 export default async function TimeSheetApprovalsPage() {
   const session = await getServerSession(options);

@@ -1,6 +1,6 @@
 import { Event } from '../events';
 import { getEventBus } from '../index';
-import logger from '../../../utils/logger';
+import logger from '@shared/core/logger';
 
 export async function publishEvent(event: Omit<Event, 'id' | 'timestamp'>): Promise<void> {
   try {

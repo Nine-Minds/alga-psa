@@ -1,9 +1,9 @@
 'use server'
 
-import { NumberingService } from '@/lib/services/numberingService';
-import { BillingEngine } from '@/lib/billing/billingEngine';
-import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { applyCreditToInvoice } from '@/lib/actions/creditActions';
+import { NumberingService } from 'server/src/lib/services/numberingService';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import {
@@ -16,25 +16,25 @@ import {
   IInvoice,
   DiscountType,
   PreviewInvoiceResponse
-} from '@/interfaces/invoice.interfaces';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from '@/interfaces/billing.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
+} from 'server/src/interfaces/invoice.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import Invoice from '@/lib/models/invoice';
-import { parseInvoiceTemplate } from '@/lib/invoice-dsl/templateLanguage';
-import { createTenantKnex } from '@/lib/db';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import Invoice from 'server/src/lib/models/invoice';
+import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
+import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
-import { PDFGenerationService } from '@/services/pdf-generation.service';
-import { toPlainDate, toISODate, toISOTimestamp, formatDateOnly } from '@/lib/utils/dateTimeUtils';
-import { StorageService } from '@/lib/storage/StorageService';
-import { ISO8601String } from '@/types/types.d';
-import { TaxService } from '@/lib/services/taxService';
-import { ITaxCalculationResult } from '@/interfaces/tax.interfaces';
+import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { toPlainDate, toISODate, toISOTimestamp, formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { ISO8601String } from 'server/src/types/types.d';
+import { TaxService } from 'server/src/lib/services/taxService';
+import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { auditLog } from '@/lib/logging/auditLog';
-import * as invoiceService from '@/lib/services/invoiceService';
-import {getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction} from '@/lib/services/invoiceService';
+import { auditLog } from 'server/src/lib/logging/auditLog';
+import * as invoiceService from 'server/src/lib/services/invoiceService';
+import {getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction} from 'server/src/lib/services/invoiceService';
 
 interface ManualInvoiceUpdate {
   service_id?: string;

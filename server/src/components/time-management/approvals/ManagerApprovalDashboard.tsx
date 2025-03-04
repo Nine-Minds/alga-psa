@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from '@/interfaces/timeEntry.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { Button } from '@/components/ui/Button';
+import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithUserInfo } from 'server/src/interfaces/timeEntry.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { Button } from 'server/src/components/ui/Button';
 import {
   fetchTimeSheetsForApproval,
   bulkApproveTimeSheets,
@@ -13,11 +13,11 @@ import {
   requestChangesForTimeSheet,
   fetchTimeSheetComments,
   reverseTimeSheetApproval
-} from '@/lib/actions/timeSheetActions';
-import { useTeamAuth } from '@/hooks/useTeamAuth';
-import { IUser } from '@/interfaces';
+} from 'server/src/lib/actions/timeSheetActions';
+import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
+import { IUser } from 'server/src/interfaces';
 import { TimeSheetApproval } from './TimeSheetApproval';
-import { useDrawer } from '@/context/DrawerContext'; // Assuming you're using a drawer for the approval view
+import { useDrawer } from "server/src/context/DrawerContext"; // Assuming you're using a drawer for the approval view
 import { parseISO } from 'date-fns';
 
 interface ManagerApprovalDashboardProps {

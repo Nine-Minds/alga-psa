@@ -1,7 +1,7 @@
 // server/src/app/msp/contacts/[id]/activity/page.tsx
-import InteractionsFeed from '@/components/interactions/InteractionsFeed';
-import { getInteractionsForEntity } from '@/lib/actions/interactionActions';
-import ContactModel from '@/lib/models/contact';
+import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
+import { getInteractionsForEntity } from 'server/src/lib/actions/interactionActions';
+import ContactModel from 'server/src/lib/models/contact';
 
 export default async function ContactActivityPage({ params }: { params: { id: string } }) {
   const contact = await ContactModel.get(params.id);

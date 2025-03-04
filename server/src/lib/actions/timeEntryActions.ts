@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { 
   ITimeEntry, 
   ITimePeriod, 
@@ -11,17 +11,17 @@ import {
   ITimePeriodView,
   ITimePeriodWithStatusView,
   TimeSheetStatus 
-} from '@/interfaces/timeEntry.interfaces';
-import { IWorkItem } from '@/interfaces/workItem.interfaces';
+} from 'server/src/interfaces/timeEntry.interfaces';
+import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getServerSession } from "next-auth/next";
-import { options } from "@/app/api/auth/[...nextauth]/options";
-import { TaxRegion } from '@/types/types.d';
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { TaxRegion } from 'server/src/types/types.d';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
-import { validateData } from '@/lib/utils/validation';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { validateData } from 'server/src/lib/utils/validation';
 import { z } from 'zod';
-import { timeEntrySchema } from '@/lib/schemas/timeSheet.schemas';
+import { timeEntrySchema } from 'server/src/lib/schemas/timeSheet.schemas';
 
 // Parameter schemas
 const fetchTimeEntriesParamsSchema = z.object({

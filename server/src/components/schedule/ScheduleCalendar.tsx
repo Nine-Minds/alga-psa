@@ -9,18 +9,18 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Button } from '../ui/Button';
 import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
-import { getCurrentUserScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@/lib/actions/scheduleActions';
-import { IEditScope, IScheduleEntry } from '@/interfaces/schedule.interfaces';
+import { getCurrentUserScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from 'server/src/lib/actions/scheduleActions';
+import { IEditScope, IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { produce } from 'immer';
 import { Dialog } from '@radix-ui/react-dialog';
-import { WorkItemType, IExtendedWorkItem } from '@/interfaces/workItem.interfaces';
-import { useUsers } from '@/hooks/useUsers';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { WorkItemDrawer } from '@/components/time-management/time-entry/time-sheet/WorkItemDrawer';
-import { useDrawer } from '@/context/DrawerContext';
+import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { useUsers } from 'server/src/hooks/useUsers';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
+import { useDrawer } from "server/src/context/DrawerContext";
 import { Trash } from 'lucide-react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 const localizer = momentLocalizer(moment);
 

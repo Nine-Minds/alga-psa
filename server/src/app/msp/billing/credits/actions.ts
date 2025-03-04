@@ -7,9 +7,9 @@ import {
   updateCreditExpiration, 
   manuallyExpireCredit, 
   transferCredit 
-} from '@/lib/actions/creditActions';
-import { getCurrentUser } from '@/lib/auth/session';
-import { ICreditTracking } from '@/interfaces/billing.interfaces';
+} from 'server/src/lib/actions/creditActions';
+import { getCurrentUser } from 'server/src/lib/auth/session';
+import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 
 /**
  * List all credits for a company with detailed information

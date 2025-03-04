@@ -1,9 +1,9 @@
 'use client'
 
 import React from 'react';
-import { Badge } from '@/components/ui/Badge';
-import { Tooltip } from '@/components/ui/Tooltip';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { Badge } from 'server/src/components/ui/Badge';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 
 export type CreditStatus = 'active' | 'expiring-soon' | 'expired' | 'no-expiration';
 

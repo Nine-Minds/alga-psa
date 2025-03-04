@@ -1,6 +1,6 @@
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import Link from "next/link";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';

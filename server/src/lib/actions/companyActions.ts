@@ -1,8 +1,8 @@
 'use server'
 
-import { ICompany } from '@/interfaces/company.interfaces';
-import { createTenantKnex } from '@/lib/db';
-import { unparseCSV } from '@/lib/utils/csvParser';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { createDefaultTaxSettings } from './taxSettingsActions';
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {

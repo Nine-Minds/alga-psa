@@ -1,10 +1,10 @@
 'use server'
 
-import { auditLog } from '@/lib/logging/auditLog';
-import { createTenantKnex } from '@/lib/db';
-import CompanyBillingPlan from '@/lib/models/clientBilling';
-import { IInvoice } from '@/interfaces/invoice.interfaces';
-import { ITransaction, ICreditTracking } from '@/interfaces/billing.interfaces';
+import { auditLog } from 'server/src/lib/logging/auditLog';
+import { createTenantKnex } from 'server/src/lib/db';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { IInvoice } from 'server/src/interfaces/invoice.interfaces';
+import { ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceActions';
 import { Knex } from 'knex';

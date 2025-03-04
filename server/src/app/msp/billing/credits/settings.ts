@@ -1,7 +1,7 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { ICreditExpirationSettings } from '@/interfaces/billing.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ICreditExpirationSettings } from 'server/src/interfaces/billing.interfaces';
 
 /**
  * Get credit expiration settings for a company

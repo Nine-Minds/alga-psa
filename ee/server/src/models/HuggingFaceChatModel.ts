@@ -1,8 +1,8 @@
 // src/models/HuggingFaceChatModel.ts
 
-import { ChatModelInterface, ChatResponse, StreamResponse, ChatMessage } from '../interfaces/ChatModelInterface';
+import { ChatModelInterface, ChatResponse, StreamResponse, ChatMessage } from 'ee/server/src/interfaces/ChatModelInterface';
 import { HfInference, HfInferenceEndpoint } from '@huggingface/inference';
-import { evaluatePrompt } from "../services/streaming";
+import { evaluatePrompt } from "ee/server/src/services/streaming";
 
 export class HuggingFaceChatModel implements ChatModelInterface {
   private hf: HfInferenceEndpoint;

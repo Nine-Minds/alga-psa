@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
-import { DiscountType } from '@/interfaces/invoice.interfaces';
+import { DiscountType } from 'server/src/interfaces/invoice.interfaces';
 
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {

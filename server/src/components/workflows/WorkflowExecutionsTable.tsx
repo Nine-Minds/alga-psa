@@ -1,24 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { IWorkflowExecution } from '@/lib/workflow/persistence/workflowInterfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { getWorkflowExecutionsWithDetails } from '@/lib/actions/workflow-actions';
-import { Button } from '@/components/ui/Button';
+import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { getWorkflowExecutionsWithDetails } from 'server/src/lib/actions/workflow-actions';
+import { Button } from 'server/src/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/DropdownMenu';
+} from 'server/src/components/ui/DropdownMenu';
 import { MoreVertical, RefreshCw, Filter } from 'lucide-react';
 import { 
   pauseWorkflowExecutionAction, 
   resumeWorkflowExecutionAction,
   cancelWorkflowExecutionAction 
-} from '@/lib/actions/workflow-actions';
+} from 'server/src/lib/actions/workflow-actions';
 
 interface WorkflowExecutionsTableProps {
   initialData?: IWorkflowExecution[];

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
-import { finalizeInvoice, generateInvoice } from '@/lib/actions/invoiceActions';
-import { createDefaultTaxSettings } from '@/lib/actions/taxSettingsActions';
+import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
 import { TestContext } from '../../../test-utils/testContext';

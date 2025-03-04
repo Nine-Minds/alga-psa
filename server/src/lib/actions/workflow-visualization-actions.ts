@@ -2,14 +2,22 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import { getWorkflowRuntime } from '@/lib/workflow/core/workflowRuntime';
-import { getActionRegistry } from '@/lib/workflow/core/actionRegistry';
-import { WorkflowDefinition } from '@/lib/workflow/core/workflowDefinition';
-import { initializeServerWorkflows } from '@/lib/workflow/init/serverInit';
-import { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@/lib/workflow/persistence/workflowInterfaces';
-import WorkflowExecutionModel from '@/lib/workflow/persistence/workflowExecutionModel';
-import WorkflowEventModel from '@/lib/workflow/persistence/workflowEventModel';
-import WorkflowActionResultModel from '@/lib/workflow/persistence/workflowActionResultModel';
+import {
+  getWorkflowRuntime,
+  getActionRegistry,
+  type WorkflowDefinition
+} from '@shared/workflow/core';
+
+import {
+  type IWorkflowExecution,
+  type IWorkflowEvent,
+  type IWorkflowActionResult,
+  WorkflowExecutionModel,
+  WorkflowEventModel,
+  WorkflowActionResultModel
+} from '@shared/workflow/persistence';
+import { initializeServerWorkflows } from 'server/src/lib/workflow/init/serverInit';
+import { createTenantKnex } from 'server/src/lib/db';
 
 /**
  * Get workflow definition by ID
@@ -145,7 +153,10 @@ export async function getWorkflowExecution(executionId: string): Promise<IWorkfl
       };
     }
     
-    const execution = await WorkflowExecutionModel.getById(executionId);
+    // Create a tenant knex instance
+    const { knex, tenant } = await createTenantKnex();
+    
+    const execution = await WorkflowExecutionModel.getById(knex, tenant!, executionId);
     
     // If no execution found, return null
     if (!execution) {
@@ -202,10 +213,13 @@ export async function getWorkflowEvents(executionId: string): Promise<IWorkflowE
       ];
     }
     
-    const events = await WorkflowEventModel.getByExecutionId(executionId);
+    // Create a tenant knex instance
+    const { knex, tenant } = await createTenantKnex();
+    
+    const events = await WorkflowEventModel.getByExecutionId(knex, tenant!, executionId);
     
     // Return clean copies without any non-serializable data
-    return events.map(event => ({
+    return events.map((event: IWorkflowEvent) => ({
       event_id: event.event_id,
       execution_id: event.execution_id,
       event_name: event.event_name,
@@ -248,10 +262,13 @@ export async function getWorkflowActionResults(executionId: string): Promise<IWo
       ];
     }
     
-    const results = await WorkflowActionResultModel.getByExecutionId(executionId);
+    // Create a tenant knex instance
+    const { knex, tenant } = await createTenantKnex();
+    
+    const results = await WorkflowActionResultModel.getByExecutionId(knex, tenant!, executionId);
     
     // Return clean copies without any non-serializable data
-    return results.map(result => ({
+    return results.map((result: IWorkflowActionResult) => ({
       result_id: result.result_id,
       execution_id: result.execution_id,
       event_id: result.event_id,
@@ -364,6 +381,10 @@ export async function getWorkflowExecutionStatus(executionId: string) {
       };
     }
     
+    // Create a tenant knex instance - we'll use the same one for all queries
+    const { knex, tenant } = await createTenantKnex();
+    
+    // Pass the knex and tenant to each function
     const [execution, events, actionResults] = await Promise.all([
       getWorkflowExecution(executionId),
       getWorkflowEvents(executionId),
@@ -385,7 +406,7 @@ export async function getWorkflowExecutionStatus(executionId: string) {
         created_at: execution.created_at,
         updated_at: execution.updated_at
       },
-      events: events.map(event => ({
+      events: events.map((event: IWorkflowEvent) => ({
         event_id: event.event_id,
         execution_id: event.execution_id,
         event_name: event.event_name,
@@ -394,7 +415,7 @@ export async function getWorkflowExecutionStatus(executionId: string) {
         to_state: event.to_state,
         created_at: event.created_at
       })),
-      actionResults: actionResults.map(result => ({
+      actionResults: actionResults.map((result: IWorkflowActionResult) => ({
         result_id: result.result_id,
         execution_id: result.execution_id,
         action_name: result.action_name,

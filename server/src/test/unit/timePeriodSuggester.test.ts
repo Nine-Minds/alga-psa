@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
 import { TimePeriodSuggester } from '../../lib/timePeriodSuggester';
-import { ITimePeriodSettings, ITimePeriod } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriod } from 'server/src/interfaces/timeEntry.interfaces';
 
 const createTestSettings = (
   unit: 'day' | 'week' | 'month' | 'year',

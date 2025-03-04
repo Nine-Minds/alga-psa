@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 import qs from 'querystring';
-import logger from '@/utils/logger';
+import logger from 'server/src/utils/logger';
 
 const keycloakConfig = {
     url: process.env.KEYCLOAK_URL,

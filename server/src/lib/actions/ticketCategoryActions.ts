@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { ITicketCategory } from '@/interfaces/ticket.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
   // First separate parent categories and subcategories

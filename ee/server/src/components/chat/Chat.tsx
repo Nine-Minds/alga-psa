@@ -3,14 +3,14 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { v4 as uuid } from 'uuid';
 
-import { Message } from "@ee/components/message/Message";
-import { IChat } from "@ee/interfaces/chat.interface";
-import { createNewChatAction, addMessageToChatAction } from '@ee/lib/chat-actions/chatActions';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import { ChatModelInterface, ChatMessage } from '@ee/interfaces/ChatModelInterface';
+import { Message } from "../../components/message/Message";
+import { IChat } from "../../interfaces/chat.interface";
+import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
+import { getCurrentUser } from '../../../../../server/src/lib/actions/user-actions/userActions';
+import { ChatModelInterface, ChatMessage } from '../../interfaces/ChatModelInterface';
 import { HfInference } from '@huggingface/inference';
 
-import "@ee/components/chat/chat.css";
+import "../../components/chat/chat.css";
 
 type ChatProps = {
   companyUrl: string,

@@ -1,7 +1,7 @@
 'use server'
-import { createTenantKnex } from '@/lib/db';
-import { IServiceCategory } from '@/interfaces/billing.interfaces';
-import { ITicketCategory } from '@/interfaces/ticket.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 
 export async function getServiceCategories(): Promise<IServiceCategory[]> {
   try {

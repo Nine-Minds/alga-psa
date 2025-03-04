@@ -1,8 +1,8 @@
 import React from 'react';
-import { ITimePeriodWithStatusView, TimeSheetStatus } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodWithStatusView, TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
 import { Button } from '@radix-ui/themes';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 interface TimePeriodListProps {
   timePeriods: ITimePeriodWithStatusView[];

@@ -1,9 +1,9 @@
 'use server';
 
-import { createTenantKnex } from '@/lib/db';
-import { getCurrentUser, getUserCompanyId } from '@/lib/actions/user-actions/userActions';
-import { IProject } from '@/interfaces/project.interfaces';
-import ProjectModel from '@/lib/models/project';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getCurrentUser, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
+import { IProject } from 'server/src/interfaces/project.interfaces';
+import ProjectModel from 'server/src/lib/models/project';
 
 /**
  * Fetch all projects for a client company with basic details

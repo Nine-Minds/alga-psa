@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import logger from '../utils/logger';
+import logger from '@shared/core/logger';
 
 // Construct Redis URL from environment variables
 function getRedisUrl(): string {

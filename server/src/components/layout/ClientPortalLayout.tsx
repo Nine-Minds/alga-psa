@@ -6,11 +6,10 @@ import Image from 'next/image';
 import { signOut } from "next-auth/react";
 import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import AvatarIcon from '@/components/ui/AvatarIcon';
-import { getCurrentUser, getUserRolesWithPermissions } from '@/lib/actions/user-actions/userActions';
-import type { IUserWithRoles } from '@/interfaces/auth.interfaces';
+import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
+import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
-import { DrawerProvider } from '@/context/DrawerContext';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;

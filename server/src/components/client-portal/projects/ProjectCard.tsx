@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { getProjectProgress, getProjectManager } from '@/lib/actions/client-portal-actions/client-projects';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { Card, CardContent } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { getProjectProgress, getProjectManager } from 'server/src/lib/actions/client-portal-actions/client-projects';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { Mail } from 'lucide-react';
 
-import { IProject } from '@/interfaces/project.interfaces';
+import { IProject } from 'server/src/interfaces/project.interfaces';
 
 interface ProjectCardProps {
   project: IProject;

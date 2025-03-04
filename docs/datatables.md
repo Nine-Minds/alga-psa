@@ -48,7 +48,7 @@ npm install @tanstack/react-table
 Import the `DataTable` component into your project:
 
 ```tsx
-import { DataTable } from '@/components/ui/DataTable';
+import { DataTable } from 'server/src/components/ui/DataTable';
 ```
 
 ---
@@ -137,8 +137,8 @@ Below is an example of how to use the `DataTable` component to display a list of
 
 ```tsx
 import React from 'react';
-import { DataTable } from '@/components/ui/DataTable';
-import { IContact } from '@/interfaces/contact.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
 
 const ContactsComponent: React.FC = () => {
   const contacts: IContact[] = [

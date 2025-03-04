@@ -1,7 +1,7 @@
 'use client';
 
-import { Card } from '@/components/ui/Card';
-import type { JobDetail } from '@/services/job.service';
+import { Card } from 'server/src/components/ui/Card';
+import type { JobDetail } from 'server/src/services/job.service';
 
 interface JobStepHistoryProps {
   steps: JobDetail[];

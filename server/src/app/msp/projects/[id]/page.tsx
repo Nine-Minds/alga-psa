@@ -1,12 +1,12 @@
 'use client';
 
-import { getProjectDetails, updateProject } from '@/lib/actions/project-actions/projectActions';
-import ProjectInfo from '@/components/projects/ProjectInfo';
-import ProjectDetail from '@/components/projects/ProjectDetail';
+import { getProjectDetails, updateProject } from 'server/src/lib/actions/project-actions/projectActions';
+import ProjectInfo from 'server/src/components/projects/ProjectInfo';
+import ProjectDetail from 'server/src/components/projects/ProjectDetail';
 import { useEffect, useState } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 
 interface ProjectDetails {
   project: IProject;

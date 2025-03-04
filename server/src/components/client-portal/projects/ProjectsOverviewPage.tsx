@@ -1,18 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getClientProjects } from '@/lib/actions/client-portal-actions/client-projects';
-import { useDrawer } from '@/context/DrawerContext';
-import { DrawerProvider } from '@/context/DrawerContext';
+import { getClientProjects } from 'server/src/lib/actions/client-portal-actions/client-projects';
+import { useDrawer } from "server/src/context/DrawerContext";
+import { DrawerProvider } from "server/src/context/DrawerContext";
 import ProjectDetailView from './ProjectDetailView';
 import { ProjectCard } from './ProjectCard';
-import { DataTable } from '@/components/ui/DataTable';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 import { Search, XCircle, ExternalLink } from 'lucide-react';
-import { IProject } from '@/interfaces/project.interfaces';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { formatDateOnly } from '@/lib/utils/dateTimeUtils';
+import { IProject } from 'server/src/interfaces/project.interfaces';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 
 export function ProjectsOverviewPage() {
   const [projects, setProjects] = useState<IProject[]>([]);

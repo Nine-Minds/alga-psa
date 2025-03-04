@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
-import { Button } from '@/components/ui/Button';
-import { createRole, updateRole, deleteRole, getRoles } from '@/lib/actions/policyActions';
-import { IRole } from '@/interfaces/auth.interfaces';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { createRole, updateRole, deleteRole, getRoles } from 'server/src/lib/actions/policyActions';
+import { IRole } from 'server/src/interfaces/auth.interfaces';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);

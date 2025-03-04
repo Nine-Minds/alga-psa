@@ -1,4 +1,4 @@
-import { ICompany } from '@/interfaces/company.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import CompanyGridCard from "./CompanyGridCard";
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import CompaniesPagination from "./CompaniesPagination";

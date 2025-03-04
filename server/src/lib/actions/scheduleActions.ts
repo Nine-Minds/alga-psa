@@ -1,7 +1,7 @@
 'use server'
 import ScheduleEntry from '../models/scheduleEntry';
-import { IScheduleEntry, IEditScope } from '@/interfaces/schedule.interfaces';
-import { WorkItemType } from '@/interfaces/workItem.interfaces';
+import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
+import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { getCurrentUser } from './user-actions/userActions';
 
 export type ScheduleActionResult<T> = 

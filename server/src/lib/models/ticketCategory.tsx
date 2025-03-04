@@ -1,5 +1,5 @@
-import { createTenantKnex } from '@/lib/db';
-import { ITicketCategory } from '@/interfaces/ticket.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 
 const TicketCategory = {
   getAll: async (): Promise<ITicketCategory[]> => {

@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { getBlockContent, updateBlockContent } from '@/lib/actions/document-actions/documentBlockContentActions';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { getBlockContent, updateBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
+import { Button } from 'server/src/components/ui/Button';
+import { Card } from 'server/src/components/ui/Card';
 
 interface DocumentEditorProps {
   documentId: string;

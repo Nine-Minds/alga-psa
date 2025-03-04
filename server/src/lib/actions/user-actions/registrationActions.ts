@@ -1,21 +1,21 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@/lib/db/admin';
-import { hashPassword } from '@/utils/encryption/encryption';
-import { verifyContactEmail } from '@/lib/actions/user-actions/userActions';
-import User from '@/lib/models/user';
-import { verifyEmailSuffix, getCompanyByEmailSuffix } from '@/lib/actions/company-settings/emailSettings';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getAdminConnection } from 'server/src/lib/db/admin';
+import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
+import User from 'server/src/lib/models/user';
+import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { v4 as uuid } from 'uuid';
 import crypto from 'crypto';
-import { sendVerificationEmail } from '@/lib/email/sendVerificationEmail';
+import { sendVerificationEmail } from 'server/src/lib/email/sendVerificationEmail';
 import { 
   checkRegistrationLimit, 
   checkVerificationLimit, 
   checkEmailLimit,
   formatRateLimitError,
   logSecurityEvent 
-} from '@/lib/security/rateLimiting';
+} from 'server/src/lib/security/rateLimiting';
 
 interface IRegistrationResult {
   success: boolean;

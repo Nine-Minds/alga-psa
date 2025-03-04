@@ -1,8 +1,8 @@
 'use server'
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { auditLog } from '@/lib/logging/auditLog';
+import { auditLog } from 'server/src/lib/logging/auditLog';
 
 // Rate limiters for different operations
 const registrationLimiter = new RateLimiterMemory({

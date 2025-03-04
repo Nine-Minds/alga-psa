@@ -21,17 +21,17 @@ import ReactFlow, {
 } from 'reactflow';
 import { v4 as uuidv4 } from 'uuid';
 import 'reactflow/dist/style.css';
-import '@ee/components/flow/styles/DarkTheme.css';
-import { NodeTypes, CustomNode } from '@ee/services/flow/types/nodes';
-import ThinkingNode from '@ee/components/flow/nodes/ThinkingNode';
-import ActionNode from '@ee/components/flow/nodes/ActionNode';
-import Office365ReceiverNode from '@ee/components/flow/nodes/Office365ReceiverNode';
-import ClassifierNode from '@ee/components/flow/nodes/ClassifierNode';
-import TicketCreatorNode from '@ee/components/flow/nodes/TicketCreatorNode';
-import DecisionNode from '@ee/components/flow/nodes/DecisionNode';
-import SelectorNode from '@ee/components/flow/nodes/SelectorNode';
-import Sidebar from '@ee/components/flow/Sidebar';
-import TopBar from '@ee/components/flow/TopBar';
+import '../../components/flow/styles/DarkTheme.css';
+import { NodeTypes, CustomNode } from '../../services/flow/types/nodes';
+import ThinkingNode from '../../components/flow/nodes/ThinkingNode';
+import ActionNode from '../../components/flow/nodes/ActionNode';
+import Office365ReceiverNode from '../../components/flow/nodes/Office365ReceiverNode';
+import ClassifierNode from '../../components/flow/nodes/ClassifierNode';
+import TicketCreatorNode from '../../components/flow/nodes/TicketCreatorNode';
+import DecisionNode from '../../components/flow/nodes/DecisionNode';
+import SelectorNode from '../../components/flow/nodes/SelectorNode';
+import Sidebar from '../../components/flow/Sidebar';
+import TopBar from '../../components/flow/TopBar';
 import {
   ThinkingNodeData,
   ActionNodeData,
@@ -42,7 +42,7 @@ import {
   SelectorNodeData,
   Template,
   ConditionType
-} from '@ee/services/flow/types/workflowTypes';
+} from '../../services/flow/types/workflowTypes';
 
 interface WorkflowNode {
   id: string;

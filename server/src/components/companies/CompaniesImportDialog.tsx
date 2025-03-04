@@ -1,18 +1,18 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { DataTable } from '@/components/ui/DataTable';
-import { Switch } from '@/components/ui/Switch';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { Switch } from 'server/src/components/ui/Switch';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
-import { parseCSV } from '@/lib/utils/csvParser';
-import { checkExistingCompanies, importCompaniesFromCSV } from '@/lib/actions/companyActions';
+import { parseCSV } from 'server/src/lib/utils/csvParser';
+import { checkExistingCompanies, importCompaniesFromCSV } from 'server/src/lib/actions/companyActions';
 
 interface CompaniesImportDialogProps {
   isOpen: boolean;

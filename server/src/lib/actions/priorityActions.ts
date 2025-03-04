@@ -1,9 +1,9 @@
 'use server'
 
-import { IPriority } from '@/interfaces';
-import Priority from '@/lib/models/priority';
+import { IPriority } from 'server/src/interfaces';
+import Priority from 'server/src/lib/models/priority';
 
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from 'server/src/lib/db';
 
 export async function getAllPriorities() {
   const { tenant } = await createTenantKnex();

@@ -1,11 +1,11 @@
 'use client';
 
-import { Asset } from '@/interfaces/asset.interfaces';
+import { Asset } from 'server/src/interfaces/asset.interfaces';
 import { useState } from 'react';
 import { AssetDetails } from './AssetDetails';
-import { Dialog } from '@/components/ui/Dialog';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { Dialog } from 'server/src/components/ui/Dialog';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 interface AssetListProps {
   assets: Asset[];

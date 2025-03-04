@@ -1,6 +1,6 @@
 import { DBFieldAttribute, ComputedAttribute } from './AttributeSystem';
-import { IUser, IRole, IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { ITicket } from '@/interfaces/ticket.interfaces';
+import { IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 
 export const USER_ATTRIBUTES = {
   user_id: new DBFieldAttribute<string, IUser>('user_id', 'user_id'),

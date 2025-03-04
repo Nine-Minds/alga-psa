@@ -1,21 +1,21 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
-import { Switch } from "@/components/ui/Switch";
-import { DataTable } from "@/components/ui/DataTable";
-import { ColumnDefinition } from "@/interfaces/dataTable.interfaces";
+import { Card } from "server/src/components/ui/Card";
+import { Button } from "server/src/components/ui/Button";
+import { Switch } from "server/src/components/ui/Switch";
+import { DataTable } from "server/src/components/ui/DataTable";
+import { ColumnDefinition } from "server/src/interfaces/dataTable.interfaces";
 import { 
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateCategoryAction,
   updateSubtypeAction
-} from "@/lib/actions/notification-actions/notificationActions";
+} from "server/src/lib/actions/notification-actions/notificationActions";
 import { 
   NotificationCategory,
   NotificationSubtype 
-} from "@/lib/models/notification";
+} from "server/src/lib/models/notification";
 
 export function NotificationCategories() {
   const [categories, setCategories] = useState<NotificationCategory[] | null>(null);

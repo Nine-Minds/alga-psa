@@ -1,7 +1,7 @@
 import { createTenantKnex } from '../db';
-import { ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
-import { ISO8601String } from '@/types/types.d';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
+import { ISO8601String } from 'server/src/types/types.d';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 

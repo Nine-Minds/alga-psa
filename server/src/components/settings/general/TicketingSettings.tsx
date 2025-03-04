@@ -1,23 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import CustomTabs from '@/components/ui/CustomTabs';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search } from "lucide-react";
-import { getAllChannels, createChannel, deleteChannel, updateChannel } from '@/lib/actions/channel-actions/channelActions';
-import { getStatuses, createStatus, deleteStatus, updateStatus } from '@/lib/actions/status-actions/statusActions';
-import { getAllPriorities, createPriority, deletePriority, updatePriority } from '@/lib/actions/priorityActions';
-import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from '@/lib/actions/ticketCategoryActions';
-import { IChannel } from '@/interfaces/channel.interface';
-import { IStatus, ItemType } from '@/interfaces/status.interface';
-import { IPriority, ITicketCategory } from '@/interfaces/ticket.interfaces';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
+import { getTicketCategories, createTicketCategory, deleteTicketCategory, updateTicketCategory } from 'server/src/lib/actions/ticketCategoryActions';
+import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
+import { IPriority, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import NumberingSettings from './NumberingSettings';
-import { Switch } from '@/components/ui/Switch';
-import { DataTable } from '@/components/ui/DataTable';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
-import CustomSelect from '@/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
 
 interface SettingSectionProps<T extends object> {

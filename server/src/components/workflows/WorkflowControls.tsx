@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { IWorkflowExecution } from '@/lib/workflow/persistence/workflowInterfaces';
-import { Button } from '@/components/ui/Button';
+import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
+import { Button } from 'server/src/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { 
   pauseWorkflowExecutionAction, 
   resumeWorkflowExecutionAction,
   cancelWorkflowExecutionAction 
-} from '@/lib/actions/workflow-actions';
+} from 'server/src/lib/actions/workflow-actions';
 import { 
   PauseCircle, 
   PlayCircle, 

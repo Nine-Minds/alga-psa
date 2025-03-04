@@ -1,14 +1,14 @@
 import { Suspense } from 'react';
 import { listCredits } from './actions';
 import { getCreditExpirationSettings } from './settings';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { CustomTabs } from '@/components/ui/CustomTabs';
-import { DataTable } from '@/components/ui/DataTable';
-import { ICreditTracking, ICreditExpirationSettings } from '@/interfaces/billing.interfaces';
-import { formatCurrency } from '@/lib/utils/formatters';
-import { ColumnDefinition } from '@/interfaces/dataTable.interfaces';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
+import { CustomTabs } from 'server/src/components/ui/CustomTabs';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ICreditTracking, ICreditExpirationSettings } from 'server/src/interfaces/billing.interfaces';
+import { formatCurrency } from 'server/src/lib/utils/formatters';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 // Define columns for the credits table
 const columns: ColumnDefinition<ICreditTracking & { transaction_description?: string, invoice_number?: string }>[] = [

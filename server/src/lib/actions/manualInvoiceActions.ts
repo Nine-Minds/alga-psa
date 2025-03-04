@@ -3,11 +3,11 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceActions';
-import { IInvoiceItem, InvoiceViewModel, DiscountType } from '@/interfaces/invoice.interfaces';
-import { TaxService } from '@/lib/services/taxService';
-import { BillingEngine } from '@/lib/billing/billingEngine';
-import * as invoiceService from '@/lib/services/invoiceService';
-import { toPlainDate } from '@/lib/utils/dateTimeUtils';
+import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { TaxService } from 'server/src/lib/services/taxService';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import * as invoiceService from 'server/src/lib/services/invoiceService';
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
 interface ManualInvoiceItem {
   service_id: string;

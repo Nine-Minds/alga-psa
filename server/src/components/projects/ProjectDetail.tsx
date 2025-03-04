@@ -1,22 +1,22 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, ProjectStatus } from '@/interfaces/project.interfaces';
-import { IUserWithRoles } from '@/interfaces/auth.interfaces';
-import { useDrawer } from '@/context/DrawerContext';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { useDrawer } from "server/src/context/DrawerContext";
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
-import { getProjectTaskStatuses, updatePhase, deletePhase } from '@/lib/actions/project-actions/projectActions';
-import { updateTaskStatus, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems } from '@/lib/actions/project-actions/projectTaskActions';
+import { getProjectTaskStatuses, updatePhase, deletePhase } from 'server/src/lib/actions/project-actions/projectActions';
+import { updateTaskStatus, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import ProjectPhases from './ProjectPhases';
 import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
-import { calculateProjectCompletion } from '@/lib/utils/projectUtils';
-import { ICompany } from '@/interfaces/company.interfaces';
+import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
 
 interface ProjectDetailProps {
   project: IProject;

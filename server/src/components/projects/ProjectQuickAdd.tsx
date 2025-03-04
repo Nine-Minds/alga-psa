@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '@/components/ui/Button';
-import { TextArea } from '@/components/ui/TextArea';
-import { Input } from '@/components/ui/Input';
-import { IProject, ICompany, IStatus } from '@/interfaces';
-import { createProject, generateNextWbsCode, getProjectStatuses } from '@/lib/actions/project-actions/projectActions';
-import { CompanyPicker } from '@/components/companies/CompanyPicker';
-import CustomSelect from '@/components/ui/CustomSelect';
-import { getContactsByCompany, getAllContacts } from '@/lib/actions/contact-actions/contactActions';
-import { getCurrentUser, getAllUsers } from '@/lib/actions/user-actions/userActions';
-import { IUser } from '@/interfaces/auth.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Input } from 'server/src/components/ui/Input';
+import { IProject, ICompany, IStatus } from 'server/src/interfaces';
+import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 
 interface ProjectQuickAddProps {
   onClose: () => void;

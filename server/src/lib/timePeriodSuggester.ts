@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { v4 as uuidv4 } from 'uuid';
-import { ITimePeriodSettings, ITimePeriod, ITimePeriodView } from '@/interfaces/timeEntry.interfaces';
+import { ITimePeriodSettings, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 
 
 export type TimePeriodSettings = ITimePeriodSettings;

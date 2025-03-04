@@ -1,15 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Input } from '@/components/ui/Input';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
-import { Button } from '@/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { Button } from 'server/src/components/ui/Button';
 import { toast } from 'react-hot-toast';
 import { Edit2 } from 'lucide-react';
-import { ConfirmationDialog } from '@/components/ui/ConfirmationDialog';
-import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
-import type { EntityType } from '@/lib/services/numberingService';
-import { getNumberSettings, updateNumberSettings, type NumberSettings } from '@/lib/actions/number-actions/numberingActions';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import type { EntityType } from 'server/src/lib/services/numberingService';
+import { getNumberSettings, updateNumberSettings, type NumberSettings } from 'server/src/lib/actions/number-actions/numberingActions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;

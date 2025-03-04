@@ -1,6 +1,6 @@
-import { ITimePeriodSettings } from '@/interfaces/timeEntry.interfaces';
-import { createTenantKnex } from '@/lib/db';
-import { ISO8601String } from '@/types/types.d';
+import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { ISO8601String } from 'server/src/types/types.d';
 import { format, fromZonedTime, toZonedTime,  } from 'date-fns-tz';
 
 export class TimePeriodSettings {

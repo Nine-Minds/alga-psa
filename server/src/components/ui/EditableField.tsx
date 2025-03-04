@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import CustomSelect from '@/components/ui/CustomSelect';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { AutomationProps } from '../../types/ui-reflection/types';
 
 interface EditableFieldProps {
