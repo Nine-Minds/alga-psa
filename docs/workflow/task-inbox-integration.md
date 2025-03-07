@@ -187,6 +187,8 @@ The main interface showing tasks assigned to or available to the user:
 - Grouping by workflow type, task type, or assignment
 - Quick actions for claiming, completing, or delegating tasks
 - Search and sort capabilities
+- **Integration with User Activities Screen**: The Task Inbox will be embedded within the new "user activities" screen, providing a centralized location for users to view and interact with their workflow tasks
+- **Dual Mode Support**: The component will support both standalone mode (full-featured) and embedded mode (compact view for the activities dashboard)
 
 #### Task Detail View
 Displays comprehensive information about a task:
@@ -283,22 +285,33 @@ CREATE TABLE workflow_task_history (
    - Integrate Form Registry with Task Inbox
    - Implement form validation and submission
    - Connect form submission to event creation
-
+   
 ### Phase 2: UI Development
 
 1. **Task Inbox Dashboard**
    - Build list view of tasks with filtering
    - Implement task sorting and pagination
    - Create task action buttons (claim, complete)
+   - Develop both standalone and embedded modes for the component
+   - Create responsive design that adapts to the user activities screen context
 
-2. **Task Detail View**
+2. **User Activities Screen Integration**
+   - Implement embedded version of Task Inbox for the user activities screen
+   - Create compact view for the activities dashboard
+   - Ensure consistent styling and interaction patterns with other activity types
+   - Implement drawer-based navigation for task details within the activities context
+
+3. **Task Detail View**
    - Create task detail display
    - Integrate dynamic form renderer
    - Implement form submission handling
+   - Support viewing task details both standalone and within the activities drawer system
 
-3. **Notification System**
+4. **Notification System**
    - Add real-time updates for new tasks
    - Implement due date notifications
+   - Create alert system for high priority tasks
+   - Ensure notifications work in both standalone and embedded contexts
    - Create alert system for high priority tasks
 
 ### Phase 3: Workflow Integration

@@ -274,11 +274,11 @@ export async function fetchTicketActivities(
             .andOn("tickets.tenant", "companies.tenant");
       })
       .leftJoin("contacts", function() {
-        this.on("tickets.contact_id", "contacts.contact_id")
+        this.on("tickets.contact_name_id", "contacts.contact_name_id")
             .andOn("tickets.tenant", "contacts.tenant");
       })
       .leftJoin("statuses", function() {
-        this.on("tickets.status", "statuses.status_id")
+        this.on("tickets.status_id", "statuses.status_id")
             .andOn("tickets.tenant", "statuses.tenant");
       })
       .leftJoin("priorities", function() {
@@ -355,14 +355,14 @@ export async function fetchTicketActivities(
         type: ActivityType.TICKET,
         status: ticket.status_name || 'Unknown',
         priority,
-        dueDate: ticket.due_date ? new Date(ticket.due_date).toISOString() as ISO8601String : undefined,
+        dueDate: ticket.due_date ? (new Date(ticket.due_date).toString() !== 'Invalid Date' ? new Date(ticket.due_date).toISOString() : undefined) : undefined,
         assignedTo: ticket.assigned_to ? [ticket.assigned_to] : [],
         sourceId: ticket.ticket_id,
         sourceType: ActivityType.TICKET,
         ticketNumber: ticket.ticket_number,
         companyId: ticket.company_id,
         companyName: ticket.company_name,
-        contactId: ticket.contact_id,
+        contactId: ticket.contact_name_id,
         contactName: ticket.contact_name,
         estimatedHours: ticket.estimated_hours,
         isClosed: ticket.is_closed,
@@ -371,8 +371,8 @@ export async function fetchTicketActivities(
           { id: 'edit', label: 'Edit' }
         ],
         tenant: ticket.tenant,
-        createdAt: new Date(ticket.created_at).toISOString() as ISO8601String,
-        updatedAt: new Date(ticket.updated_at).toISOString() as ISO8601String
+        createdAt: ticket.created_at ? (new Date(ticket.created_at).toString() !== 'Invalid Date' ? new Date(ticket.created_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String,
+        updatedAt: ticket.updated_at ? (new Date(ticket.updated_at).toString() !== 'Invalid Date' ? new Date(ticket.updated_at).toISOString() : new Date().toISOString()) as ISO8601String : new Date().toISOString() as ISO8601String
       };
     });
   } catch (error) {
@@ -467,65 +467,70 @@ export async function fetchWorkflowTaskActivities(
     
     const roleIds = userRoles.map(role => role.role_id);
 
-    // Query for workflow tasks assigned to the user or their roles
-    const workflowTasks = await db("workflow_tasks")
+    // Go back to using the knex query builder instead of raw SQL to avoid binding issues
+    const workflowTasksQuery = db("workflow_tasks as wt")
       .select(
-        "workflow_tasks.*",
-        "workflow_executions.workflow_name",
-        "workflow_executions.context_data",
-        "workflow_executions.workflow_version",
-        "workflow_executions.current_state",
-        "workflow_executions.status as execution_status"
+        "wt.*",
+        "we.workflow_name",
+        "we.context_data",
+        "we.workflow_version",
+        "we.current_state",
+        "we.status as execution_status"
       )
-      .leftJoin("workflow_executions", function() {
-        this.on("workflow_tasks.execution_id", "workflow_executions.execution_id")
-            .andOn("workflow_tasks.tenant", "workflow_executions.tenant");
+      .leftJoin("workflow_executions as we", function() {
+        this.on(db.raw("wt.execution_id::text = we.execution_id::text"))
+            .andOn(db.raw("wt.tenant::text = we.tenant::text"));
       })
-      .where("workflow_tasks.tenant", tenant)
-      .where(function() {
-        // Tasks directly assigned to the user
-        this.whereRaw("workflow_tasks.assigned_users @> ?", [`["${userId}"]`]);
-        
-        // Or tasks assigned to roles this user has
-        if (roleIds.length > 0) {
-          this.orWhere(function() {
-            roleIds.forEach(roleId => {
-              this.orWhereRaw("workflow_tasks.assigned_roles @> ?", [`["${roleId}"]`]);
-            });
-          });
-        }
-      })
-      // Apply status filter if provided
+      .where("wt.tenant", tenant)
       .modify(function(queryBuilder) {
+        // Filter for tasks assigned to the user or their roles
+        queryBuilder.where(function() {
+          // Tasks assigned to the user
+          this.whereRaw("wt.assigned_users::jsonb @> ?::jsonb", [JSON.stringify([userId])]);
+          
+          // Tasks assigned to user's roles
+          if (roleIds.length > 0) {
+            roleIds.forEach(roleId => {
+              this.orWhereRaw("wt.assigned_roles::jsonb @> ?::jsonb", [JSON.stringify([roleId])]);
+            });
+          }
+        });
+        
+        // Apply status filter if provided
         if (filters.status && filters.status.length > 0) {
-          queryBuilder.whereIn("workflow_tasks.status", filters.status);
+          queryBuilder.whereIn("wt.status", filters.status);
         }
         
         // Apply priority filter if provided
         if (filters.priority && filters.priority.length > 0) {
-          queryBuilder.whereIn("workflow_tasks.priority", 
+          queryBuilder.whereIn("wt.priority",
             filters.priority.map(p => p.charAt(0).toUpperCase() + p.slice(1))
           );
         }
         
         // Apply due date filter if provided
         if (filters.dueDateStart) {
-          queryBuilder.where("workflow_tasks.due_date", ">=", toPlainDate(filters.dueDateStart));
+          queryBuilder.where("wt.due_date", ">=", toPlainDate(filters.dueDateStart));
         }
         
         if (filters.dueDateEnd) {
-          queryBuilder.where("workflow_tasks.due_date", "<=", toPlainDate(filters.dueDateEnd));
+          queryBuilder.where("wt.due_date", "<=", toPlainDate(filters.dueDateEnd));
         }
         
         // Apply closed filter if provided
         if (filters.isClosed !== undefined) {
           if (filters.isClosed) {
-            queryBuilder.whereIn("workflow_tasks.status", ["completed", "cancelled"]);
+            queryBuilder.whereIn("wt.status", ["completed", "cancelled"]);
           } else {
-            queryBuilder.whereNotIn("workflow_tasks.status", ["completed", "cancelled"]);
+            queryBuilder.whereNotIn("wt.status", ["completed", "cancelled"]);
           }
         }
       });
+    
+    console.log('Executing workflow task query:', workflowTasksQuery.toString());
+    
+    // Execute the query
+    const workflowTasks = await workflowTasksQuery;
 
     // Convert to activities
     return workflowTasks.map((task: WorkflowTaskData) => {

@@ -1,6 +1,6 @@
 import { TenantEntity } from ".";
 
-export type TaggedEntityType = 'contact' | 'company' | 'ticket' | 'project';
+export type TaggedEntityType = 'contact' | 'company' | 'ticket' | 'project' | 'workflow_form';
 
 export interface ITag extends TenantEntity {
   tag_id: string;
