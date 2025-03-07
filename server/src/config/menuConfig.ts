@@ -17,6 +17,11 @@ export const menuItems: MenuItem[] = [
     href: '/msp/dashboard'  // Updated to point to our new dashboard page
   },
   {
+    name: 'User Activities',
+    icon: RadixIcons.ActivityLogIcon,
+    href: '/msp/user-activities'
+  },
+  {
     name: 'Tickets',
     icon: RadixIcons.ChatBubbleIcon,
     href: '/msp/tickets'
