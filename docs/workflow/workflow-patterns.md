@@ -4,6 +4,8 @@
 
 This document provides examples of common workflow patterns that can be implemented using the Dynamic Workflow UI System. These patterns serve as templates and best practices for building workflows that leverage the system's capabilities.
 
+> **Important Note on Workflow Execution**: Workflows are executed in response to events. When a workflow is triggered, the event that triggered it is passed as input to the workflow. The workflow does not wait for the initial event - the fact that the workflow is executing means the event has already occurred. This is reflected in the patterns below where each workflow receives its triggering event via `context.input.triggerEvent`.
+
 ## Table of Contents
 
 1. [Approval Workflows](#approval-workflows)
@@ -48,17 +50,16 @@ export const simpleApprovalWorkflow = defineWorkflow(
   async (context: WorkflowContext) => {
     const { actions, events, data, logger } = context;
     
-    // Initial state - Draft
-    context.setState('draft');
-    logger.info('Workflow started in draft state');
+    // Initial state - Processing
+    context.setState('processing');
     
-    // Wait for Submit event
-    const submitEvent = await events.waitFor('Submit');
-    logger.info(`Request submitted by ${submitEvent.user_id}`);
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
+    logger.info(`Processing request submitted by ${triggerEvent.user_id}`);
     
     // Store request data
-    data.set('requestData', submitEvent.payload);
-    data.set('requestor', submitEvent.user_id);
+    data.set('requestData', triggerEvent.payload);
+    data.set('requestor', triggerEvent.user_id);
     
     // Create approval task
     const { taskId } = await actions.createHumanTask({
@@ -169,15 +170,15 @@ export const multiLevelApprovalWorkflow = defineWorkflow(
   async (context: WorkflowContext) => {
     const { actions, events, data, logger } = context;
     
-    // Initial state - Draft
-    context.setState('draft');
+    // Initial state - Processing
+    context.setState('processing');
     
-    // Wait for Submit event
-    const submitEvent = await events.waitFor('Submit');
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
     
     // Store request data
-    data.set('requestData', submitEvent.payload);
-    data.set('requestor', submitEvent.user_id);
+    data.set('requestData', triggerEvent.payload);
+    data.set('requestor', triggerEvent.user_id);
     
     // First level approval (Team Lead)
     context.setState('pending_team_lead_approval');
@@ -354,15 +355,15 @@ export const parallelApprovalWorkflow = defineWorkflow(
   async (context: WorkflowContext) => {
     const { actions, events, data, logger } = context;
     
-    // Initial state - Draft
-    context.setState('draft');
+    // Initial state - Processing
+    context.setState('processing');
     
-    // Wait for Submit event
-    const submitEvent = await events.waitFor('Submit');
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
     
     // Store request data
-    data.set('requestData', submitEvent.payload);
-    data.set('requestor', submitEvent.user_id);
+    data.set('requestData', triggerEvent.payload);
+    data.set('requestor', triggerEvent.user_id);
     
     // Create approval tasks for all required approvers
     context.setState('pending_approval');
@@ -543,16 +544,16 @@ export const conditionalApprovalWorkflow = defineWorkflow(
   async (context: WorkflowContext) => {
     const { actions, events, data, logger } = context;
     
-    // Initial state - Draft
-    context.setState('draft');
+    // Initial state - Processing
+    context.setState('processing');
     
-    // Wait for Submit event
-    const submitEvent = await events.waitFor('Submit');
-    const requestData = submitEvent.payload;
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
+    const requestData = triggerEvent.payload;
     
     // Store request data
     data.set('requestData', requestData);
-    data.set('requestor', submitEvent.user_id);
+    data.set('requestor', triggerEvent.user_id);
     
     // Determine approval path based on request attributes
     let approvalPath;
@@ -795,16 +796,16 @@ export const creditReimbursementWorkflow = defineWorkflow(
     const { actions, events, data, logger } = context;
     
     // Initial state
-    context.setState('initiated');
+    context.setState('processing');
     
-    // Wait for submission event
-    const submitEvent = await events.waitFor('Submit');
-    const requestData = submitEvent.payload;
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
+    const requestData = triggerEvent.payload;
     
     // Store request data
     data.set('requestData', requestData);
-    data.set('requestor', submitEvent.user_id);
-    data.set('submissionDate', submitEvent.timestamp);
+    data.set('requestor', triggerEvent.user_id);
+    data.set('submissionDate', triggerEvent.timestamp);
     
     // Validate customer information
     context.setState('validating');
@@ -1089,15 +1090,15 @@ export const documentReviewWorkflow = defineWorkflow(
     const { actions, events, data, logger } = context;
     
     // Initial state
-    context.setState('draft');
+    context.setState('processing');
     
-    // Wait for document submission
-    const submitEvent = await events.waitFor('Submit');
-    const documentData = submitEvent.payload;
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
+    const documentData = triggerEvent.payload;
     
     // Store document data
     data.set('documentData', documentData);
-    data.set('author', submitEvent.user_id);
+    data.set('author', triggerEvent.user_id);
     data.set('version', '1.0');
     
     // Determine reviewers based on document type
@@ -1228,12 +1229,12 @@ export const documentReviewWorkflow = defineWorkflow(
       
       context.setState('changes_requested');
       
-      // Wait for document revision
-      const revisionEvent = await events.waitFor('DocumentRevision');
+      // The workflow will be re-triggered when a DocumentRevision event occurs
+      // This would be a separate workflow execution with the revision event as input
+      logger.info('Waiting for document revision');
       
-      // Update document data and version
-      data.set('documentData', revisionEvent.payload);
-      data.set('version', (parseFloat(data.get('version')) + 0.1).toFixed(1));
+      // Note: In a real implementation, we would end this workflow here
+      // and start a new workflow instance when the DocumentRevision event occurs
       
       // Restart review process with the same reviewers
       // This could be implemented as a recursive call or by jumping back to the review creation step

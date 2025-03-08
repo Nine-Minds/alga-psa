@@ -1,5 +1,9 @@
 import { WorkflowContext, WorkflowFunction, WorkflowEvent } from './workflowContext.js';
-import { WorkflowDefinition } from './workflowDefinition.js';
+import {
+  WorkflowDefinition,
+  deserializeWorkflowDefinition,
+  SerializedWorkflowDefinition
+} from './workflowDefinition.js';
 import { ActionRegistry } from './actionRegistry.js';
 import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing.js';
 import { Knex } from 'knex';
@@ -96,6 +100,11 @@ export interface TypeScriptWorkflowRuntime {
   registerWorkflow(workflow: WorkflowDefinition): void;
   
   getRegisteredWorkflows(): Map<string, WorkflowDefinition>;
+  
+  getWorkflowDefinition(
+    workflowName: string,
+    version?: string
+  ): Promise<WorkflowDefinition | null>;
   
   startWorkflow(
     knex: Knex,
@@ -205,6 +214,59 @@ export class TypeScriptWorkflowRuntime {
   }
   
   /**
+   * Get a workflow definition by name, loading from database if needed
+   * This implements on-demand loading of workflow definitions
+   *
+   * @param workflowName The name of the workflow to get
+   * @param version Optional version string
+   * @returns The workflow definition or null if not found
+   */
+  async getWorkflowDefinition(workflowName: string, version?: string): Promise<WorkflowDefinition | null> {
+    // First check if we have a code-registered workflow with this name
+    const codeWorkflow = this.workflowDefinitions.get(workflowName);
+    if (codeWorkflow) {
+      return codeWorkflow;
+    }
+    
+    try {
+      // Not found in code registrations, try to load from database
+      // We need to dynamically import the server actions to avoid circular dependencies
+      // and to keep the shared code independent of server-specific code
+      try {
+        // Use dynamic import to load the server actions
+        const { getWorkflowRegistration } = await import('server/src/lib/actions/workflow-runtime-actions');
+        
+        // Get the workflow registration from the database
+        const registration = await getWorkflowRegistration(workflowName, version);
+        
+        if (!registration) {
+          return null;
+        }
+        
+        // Convert the stored definition to a WorkflowDefinition
+        const serializedDefinition: SerializedWorkflowDefinition = {
+          metadata: {
+            name: registration.name,
+            description: registration.definition.description || '',
+            version: registration.version,
+            tags: registration.definition.tags || []
+          },
+          executeFn: registration.definition.executeFn
+        };
+        
+        // Deserialize the workflow definition
+        return deserializeWorkflowDefinition(serializedDefinition);
+      } catch (importError) {
+        logger.error(`Failed to import workflow-runtime-actions:`, importError);
+        return null;
+      }
+    } catch (error) {
+      logger.error(`Failed to load workflow definition for ${workflowName}:`, error);
+      return null;
+    }
+  }
+  
+  /**
    * Start a new workflow execution
    */
   async startWorkflow(
@@ -212,7 +274,8 @@ export class TypeScriptWorkflowRuntime {
     workflowName: string,
     options: WorkflowExecutionOptions
   ): Promise<WorkflowExecutionResult> {
-    const workflow = this.workflowDefinitions.get(workflowName);
+    // Try to get the workflow definition (from code or database)
+    const workflow = await this.getWorkflowDefinition(workflowName);
     if (!workflow) {
       throw new Error(`Workflow "${workflowName}" not found`);
     }

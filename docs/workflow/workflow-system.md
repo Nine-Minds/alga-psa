@@ -2,6 +2,8 @@
 
 ## 1. Introduction and Philosophy
 
+> **Important Note on Workflow Execution**: Workflows are executed in response to events. When a workflow is triggered, the event that triggered it is passed as input to the workflow. The workflow does not wait for the initial event - the fact that the workflow is executing means the event has already occurred. This is reflected in the workflow examples where each workflow receives its triggering event via `context.input.triggerEvent`.
+
 ### Purpose and Vision
 
 The workflow system is a robust, flexible engine designed to model, execute, and manage complex business processes. It provides a structured way to define business logic, execute actions, and respond to events while maintaining a complete audit trail of all activities. The system is built on modern architectural principles to ensure reliability, scalability, and maintainability.
@@ -420,12 +422,14 @@ export const simpleApprovalWorkflow = defineWorkflow(
   async (context: WorkflowContext) => {
     const { actions, events, logger } = context;
     
-    // Initial state - Draft
-    context.setState('draft');
-    logger.info('Workflow started in draft state');
+    // Initial state - Processing
+    context.setState('processing');
+    logger.info('Workflow started in processing state');
     
-    // Wait for Submit event
-    await events.waitFor('Submit');
+    // The workflow is triggered by a Submit event, which is passed as input
+    const { triggerEvent } = context.input;
+    logger.info(`Processing submission from ${triggerEvent.user_id}`);
+    
     await actions.log_event({ message: "Item submitted for approval" });
     context.setState('submitted');
     

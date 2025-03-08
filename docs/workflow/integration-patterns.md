@@ -4,6 +4,8 @@
 
 The Dynamic Workflow UI System is designed to be extensible and adaptable to various business needs. This document outlines the integration patterns for extending the system with custom functionality, integrating with external systems, and building on top of the core components.
 
+> **Important Note on Workflow Execution**: Workflows are executed in response to events. When a workflow is triggered, the event that triggered it is passed as input to the workflow. The workflow does not wait for the initial event - the fact that the workflow is executing means the event has already occurred. This is reflected in the patterns below where each workflow receives its triggering event via `context.input.triggerEvent`.
+
 ## Table of Contents
 
 1. [Extending the Form System](#extending-the-form-system)
@@ -769,11 +771,12 @@ Workflows can manage state based on task interactions.
 ```typescript
 // Within a workflow definition
 async function stateBasedWorkflow(context) {
-  // Initial state
-  context.setState('draft');
+  // Initial state - Processing
+  context.setState('processing');
   
-  // Wait for submission
-  await context.events.waitFor('Submit');
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  logger.info(`Processing submission from ${triggerEvent.user_id}`);
   context.setState('submitted');
   
   // Create review task
@@ -805,12 +808,11 @@ async function stateBasedWorkflow(context) {
   } else if (reviewComplete.payload.decision === 'revise') {
     context.setState('revision_requested');
     
-    // Wait for resubmission
-    await context.events.waitFor('Resubmit');
-    context.setState('resubmitted');
+    // The workflow will end here, and a new workflow will be triggered when a Resubmit event occurs
+    logger.info('Waiting for document resubmission');
     
-    // Restart review process
-    // ... recursive call or loop
+    // Note: In a real implementation, we would end this workflow here
+    // and start a new workflow instance when the Resubmit event occurs
   }
 }
 ```
