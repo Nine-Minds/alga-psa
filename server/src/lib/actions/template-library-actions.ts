@@ -51,16 +51,13 @@ export async function getAllTemplates(): Promise<TemplateData[]> {
       return templates.map(template => ({
         ...template,
         tags: template.tags ? template.tags : [],
-        definition: JSON.parse(template.definition),
-        parameter_schema: template.parameter_schema ? JSON.parse(template.parameter_schema) : null,
-        default_parameters: template.default_parameters ? JSON.parse(template.default_parameters) : null,
-        ui_metadata: template.ui_metadata ? JSON.parse(template.ui_metadata) : null,
+        definition: template.definition,
+        parameter_schema: template.parameter_schema ? template.parameter_schema : null,
+        default_parameters: template.default_parameters ? template.default_parameters : null,
+        ui_metadata: template.ui_metadata ? template.ui_metadata : null,
       }));
     } finally {
-      // Release the knex connection
-      if (knex) {
-        await knex.destroy();
-      }
+      // Connection will be released automatically
     }
   } catch (error) {
     logger.error("Error getting all templates:", error);
@@ -107,10 +104,7 @@ export async function getTemplate(id: string): Promise<TemplateData> {
         ui_metadata: template.ui_metadata ? JSON.parse(template.ui_metadata) : null,
       };
     } finally {
-      // Release the knex connection
-      if (knex) {
-        await knex.destroy();
-      }
+      // Connection will be released automatically
     }
   } catch (error) {
     logger.error(`Error getting template ${id}:`, error);
@@ -154,10 +148,7 @@ export async function getTemplatesByCategory(category: string): Promise<Template
         ui_metadata: template.ui_metadata ? JSON.parse(template.ui_metadata) : null,
       }));
     } finally {
-      // Release the knex connection
-      if (knex) {
-        await knex.destroy();
-      }
+      // Connection will be released automatically
     }
   } catch (error) {
     logger.error(`Error getting templates for category ${category}:`, error);
@@ -192,10 +183,7 @@ export async function getAllTemplateCategories(): Promise<{ category_id: string;
       
       return categories;
     } finally {
-      // Release the knex connection
-      if (knex) {
-        await knex.destroy();
-      }
+      // Connection will be released automatically
     }
   } catch (error) {
     logger.error("Error getting all template categories:", error);
@@ -255,7 +243,6 @@ export async function createWorkflowFromTemplate(
           definition: template.definition,
           parameters: parameters ? JSON.stringify(parameters) : template.default_parameters,
           created_by: user.user_id,
-          updated_by: user.user_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
@@ -276,10 +263,7 @@ export async function createWorkflowFromTemplate(
       
       return registration.registration_id;
     } finally {
-      // Release the knex connection
-      if (knex) {
-        await knex.destroy();
-      }
+      // Connection will be released automatically
     }
   } catch (error) {
     logger.error(`Error creating workflow from template ${templateId}:`, error);

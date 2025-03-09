@@ -10,6 +10,7 @@ import { createWorkflowFromTemplate } from "server/src/lib/actions/template-libr
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { Code2 } from "lucide-react";
+import Editor from "@monaco-editor/react";
 
 import { TemplateData } from "server/src/lib/actions/template-library-actions";
 import { extractTemplateCode } from "server/src/lib/utils/templateUtils";
@@ -53,7 +54,7 @@ export default function TemplatePreview({ isOpen, onClose, template, mode }: Tem
       
       toast.success("Workflow created successfully");
       onClose();
-      router.push(`/msp/automation-hub/workflows/editor?id=${workflowId}`);
+      router.push(`/msp/automation-hub?tab=workflows&workflowId=${workflowId}`);
     } catch (error) {
       console.error("Error creating workflow from template:", error);
       toast.error("Failed to create workflow from template");
@@ -138,8 +139,26 @@ export default function TemplatePreview({ isOpen, onClose, template, mode }: Tem
           
           <div>
             <Label>Template Code Preview</Label>
-            <div className="mt-1 p-4 bg-gray-900 text-gray-100 rounded-md overflow-auto max-h-60 font-mono text-sm">
-              <pre>{getTemplateCode()}</pre>
+            <div className="mt-1 rounded-md overflow-hidden border border-gray-200" style={{ height: "300px" }}>
+              <Editor
+                height="100%"
+                defaultLanguage="typescript"
+                value={getTemplateCode()}
+                options={{
+                  readOnly: true,
+                  minimap: { enabled: true },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  wordWrap: "on",
+                  wrappingIndent: "indent",
+                  scrollbar: {
+                    vertical: "auto",
+                    horizontal: "auto",
+                    verticalScrollbarSize: 12,
+                    horizontalScrollbarSize: 12
+                  }
+                }}
+              />
             </div>
           </div>
         </div>

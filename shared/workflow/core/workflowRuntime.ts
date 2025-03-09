@@ -15,6 +15,7 @@ import { toStreamEvent } from '@shared/workflow/streams/workflowEventSchema.js';
 import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel.js';
 import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel.js';
 import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel.js';
+import WorkflowRegistrationModel from '@shared/workflow/persistence/workflowRegistrationModel.js';
 import logger from '@shared/core/logger.js';
 
 // Temporary workflowConfig until the real one is implemented
@@ -229,41 +230,65 @@ export class TypeScriptWorkflowRuntime {
     }
     
     try {
-      // Not found in code registrations, try to load from database
-      // We need to dynamically import the server actions to avoid circular dependencies
-      // and to keep the shared code independent of server-specific code
-      try {
-        // Use dynamic import to load the server actions
-        const { getWorkflowRegistration } = await import('server/src/lib/actions/workflow-runtime-actions');
-        
-        // Get the workflow registration from the database
-        const registration = await getWorkflowRegistration(workflowName, version);
-        
-        if (!registration) {
-          return null;
-        }
-        
-        // Convert the stored definition to a WorkflowDefinition
-        const serializedDefinition: SerializedWorkflowDefinition = {
-          metadata: {
-            name: registration.name,
-            description: registration.definition.description || '',
-            version: registration.version,
-            tags: registration.definition.tags || []
-          },
-          executeFn: registration.definition.executeFn
-        };
-        
-        // Deserialize the workflow definition
-        return deserializeWorkflowDefinition(serializedDefinition);
-      } catch (importError) {
-        logger.error(`Failed to import workflow-runtime-actions:`, importError);
+      // Get a knex instance from the caller context
+      // This is typically passed to methods that need database access
+      const knex = this.getKnexInstance();
+      if (!knex) {
+        logger.error(`No knex instance available for loading workflow definition: ${workflowName}`);
         return null;
       }
+      
+      // Get the tenant from the context
+      const tenant = this.getTenant();
+      if (!tenant) {
+        logger.error(`No tenant available for loading workflow definition: ${workflowName}`);
+        return null;
+      }
+      
+      // Get the workflow registration from the database using the model
+      const registration = await WorkflowRegistrationModel.getByName(knex, tenant, workflowName, version);
+      
+      if (!registration) {
+        return null;
+      }
+      
+      // Convert the stored definition to a WorkflowDefinition
+      const serializedDefinition: SerializedWorkflowDefinition = {
+        metadata: {
+          name: registration.name,
+          description: registration.definition.description || '',
+          version: registration.version,
+          tags: registration.definition.tags || []
+        },
+        executeFn: registration.definition.executeFn
+      };
+      
+      // Deserialize the workflow definition
+      return deserializeWorkflowDefinition(serializedDefinition);
     } catch (error) {
       logger.error(`Failed to load workflow definition for ${workflowName}:`, error);
       return null;
     }
+  }
+  
+  /**
+   * Get the knex instance from the context
+   * This is a placeholder method that should be implemented by the caller
+   */
+  private getKnexInstance(): Knex | null {
+    // In a real implementation, this would get the knex instance from the context
+    // For now, we'll return null to indicate that it's not available
+    return null;
+  }
+  
+  /**
+   * Get the tenant from the context
+   * This is a placeholder method that should be implemented by the caller
+   */
+  private getTenant(): string | null {
+    // In a real implementation, this would get the tenant from the context
+    // For now, we'll return a default tenant
+    return 'default';
   }
   
   /**

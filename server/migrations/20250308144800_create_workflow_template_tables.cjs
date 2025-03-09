@@ -124,23 +124,24 @@ exports.up = async function(knex) {
       WHERE is_current = TRUE;
   `);
   
-  // Add check constraints for row-level security
+  // Enable row level security and create policies
   await knex.raw(`
-    ALTER TABLE workflow_template_categories
-    ADD CONSTRAINT workflow_template_categories_tenant_rls
-    CHECK (tenant_id = current_setting('app.current_tenant')::text);
+    ALTER TABLE workflow_template_categories ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE workflow_templates ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE workflow_registrations ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE workflow_registration_versions ENABLE ROW LEVEL SECURITY;
     
-    ALTER TABLE workflow_templates
-    ADD CONSTRAINT workflow_templates_tenant_rls
-    CHECK (tenant_id = current_setting('app.current_tenant')::text);
+    CREATE POLICY tenant_isolation_policy ON workflow_template_categories
+      USING (tenant_id::TEXT = current_setting('app.current_tenant')::TEXT);
     
-    ALTER TABLE workflow_registrations
-    ADD CONSTRAINT workflow_registrations_tenant_rls
-    CHECK (tenant_id = current_setting('app.current_tenant')::text);
+    CREATE POLICY tenant_isolation_policy ON workflow_templates
+      USING (tenant_id::TEXT = current_setting('app.current_tenant')::TEXT);
     
-    ALTER TABLE workflow_registration_versions
-    ADD CONSTRAINT workflow_registration_versions_tenant_rls
-    CHECK (tenant_id = current_setting('app.current_tenant')::text);
+    CREATE POLICY tenant_isolation_policy ON workflow_registrations
+      USING (tenant_id::TEXT = current_setting('app.current_tenant')::TEXT);
+    
+    CREATE POLICY tenant_isolation_policy ON workflow_registration_versions
+      USING (tenant_id::TEXT = current_setting('app.current_tenant')::TEXT);
   `);
 };
 

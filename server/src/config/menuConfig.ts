@@ -82,22 +82,22 @@ export const menuItems: MenuItem[] = [
       {
         name: 'Template Library',
         icon: RadixIcons.LayoutIcon,
-        href: '/msp/automation-hub/template-library'
+        href: '/msp/automation-hub?tab=template-library'
       },
       {
         name: 'Workflows',
         icon: RadixIcons.CodeIcon,
-        href: '/msp/automation-hub/workflows'
+        href: '/msp/automation-hub?tab=workflows'
       },
       {
         name: 'Events Catalog',
         icon: RadixIcons.BellIcon,
-        href: '/msp/automation-hub/events-catalog'
+        href: '/msp/automation-hub?tab=events-catalog'
       },
       {
         name: 'Logs & History',
         icon: RadixIcons.ClockIcon,
-        href: '/msp/automation-hub/logs-history'
+        href: '/msp/automation-hub?tab=logs-history'
       }
     ]
   },

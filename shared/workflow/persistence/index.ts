@@ -15,3 +15,4 @@ export { default as WorkflowSyncPointModel } from './workflowSyncPointModel.js';
 export { default as WorkflowTimerModel } from './workflowTimerModel.js';
 export { default as WorkflowEventProcessingModel } from './workflowEventProcessingModel.js';
 export { default as WorkflowSnapshotModel } from './workflowSnapshotModel.js';
+export { default as WorkflowRegistrationModel } from './workflowRegistrationModel.js';

@@ -13,6 +13,7 @@ import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrig
 import { createWorkflowTrigger, createWorkflowEventMappings } from "server/src/lib/actions/workflow-trigger-actions";
 import { createWorkflowEventAttachment } from "server/src/lib/actions/workflow-event-attachment-actions";
 import { getAllWorkflowRegistrations } from "server/src/lib/actions/workflow-runtime-actions";
+import { getCurrentTenant } from "server/src/lib/actions/tenantActions";
 
 interface EventTriggerDialogProps {
   isOpen: boolean;
@@ -123,9 +124,12 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
     try {
       setIsSubmitting(true);
 
+      // Get current tenant ID using server action
+      const tenant = await getCurrentTenant();
+      
       // Create the workflow trigger
       const triggerData: ICreateWorkflowTrigger = {
-        tenant_id: "current", // This would be the actual tenant ID in a real implementation
+        tenant_id: tenant || "", // Get tenant ID from server action
         name: triggerName,
         description: triggerDescription,
         event_type: event.event_type
@@ -149,7 +153,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       const attachmentData: ICreateWorkflowEventAttachment = {
         workflow_id: selectedWorkflowId,
         event_id: event.event_id,
-        tenant_id: "current", // This would be the actual tenant ID in a real implementation
+        tenant_id: tenant || "", // Get tenant ID from server action
         is_active: true
       };
 

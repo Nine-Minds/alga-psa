@@ -1,20 +1,25 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { Card } from "server/src/components/ui/Card";
-import { Button } from "server/src/components/ui/Button";
-import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
-import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check } from "lucide-react";
-import { Input } from "server/src/components/ui/Input";
-import { 
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card } from 'server/src/components/ui/Card';
+import { Button } from 'server/src/components/ui/Button';
+import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Switch } from 'server/src/components/ui/Switch';
+import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem
-} from "server/src/components/ui/DropdownMenu";
-import { Badge } from "server/src/components/ui/Badge";
-import { getAllWorkflows, setActiveWorkflowVersion, getWorkflowVersions } from "server/src/lib/actions/workflow-editor-actions";
-import { toast } from "react-hot-toast";
+} from 'server/src/components/ui/DropdownMenu';
+import { Badge } from 'server/src/components/ui/Badge';
+import { getAllWorkflows, setActiveWorkflowVersion, getWorkflowVersions } from 'server/src/lib/actions/workflow-editor-actions';
+import { toast } from 'react-hot-toast';
+import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
+
 
 // Type for workflow data with events
 interface WorkflowWithEvents {
@@ -29,16 +34,28 @@ interface WorkflowWithEvents {
   lastUpdated?: string;
 }
 
-export default function WorkflowsPage() {
+interface WorkflowsProps {
+  workflowId?: string | null;
+}
+
+export default function Workflows({ workflowId }: WorkflowsProps) {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState<WorkflowWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [activatingVersion, setActivatingVersion] = useState<{workflowId: string, versionId: string} | null>(null);
+  const [showEditor, setShowEditor] = useState<boolean>(false);
+  const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   
-  // Load workflows on page load
+  // Handle workflowId if provided
   useEffect(() => {
-    loadWorkflows();
-  }, []);
+    if (workflowId) {
+      setSelectedWorkflowId(workflowId);
+      setShowEditor(true);
+    } else {
+      loadWorkflows();
+    }
+  }, [workflowId]);
   
   // Load workflows from server
   const loadWorkflows = async () => {
@@ -50,30 +67,54 @@ export default function WorkflowsPage() {
       // For now, we'll use placeholder event data
       const workflowsWithEvents: WorkflowWithEvents[] = workflowsData.map(workflow => ({
         ...workflow,
-        id: workflow.id || "",
+        id: workflow.id || '',
         events: [],
         lastUpdated: new Date().toISOString()
       }));
       
       setWorkflows(workflowsWithEvents);
     } catch (error) {
-      console.error("Error loading workflows:", error);
-      toast.error("Failed to load workflows");
+      console.error('Error loading workflows:', error);
+      toast.error('Failed to load workflows');
     } finally {
       setLoading(false);
     }
   };
   
   // Filter workflows based on search term
-  const filteredWorkflows = workflows.filter(workflow => 
+  const filteredWorkflows = workflows.filter(workflow =>
     workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Handle creating a new workflow
+  const handleCreateWorkflow = () => {
+    setSelectedWorkflowId(null);
+    setShowEditor(true);
+  };
+
+  // Handle editing a workflow
+  const handleEditWorkflow = (id: string) => {
+    setSelectedWorkflowId(id);
+    setShowEditor(true);
+  };
+
+  // Handle going back to the workflow list
+  const handleBackToList = () => {
+    setShowEditor(false);
+    setSelectedWorkflowId(null);
+    loadWorkflows(); // Refresh the list
+  };
+
   return (
-    <ReflectionContainer id="workflows-container" label="Workflows">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      {showEditor ? (
+        <WorkflowEditorComponent
+          workflowId={selectedWorkflowId}
+          onBack={handleBackToList}
+        />
+      ) : (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
@@ -83,9 +124,9 @@ export default function WorkflowsPage() {
             <div className="flex items-center space-x-4">
               <div className="relative w-64">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input 
+                <Input
                   id="search-workflows-input"
-                  placeholder="Search workflows..." 
+                  placeholder="Search workflows..."
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -95,14 +136,14 @@ export default function WorkflowsPage() {
                 <Button
                   id="browse-templates-button"
                   variant="outline"
-                  onClick={() => window.location.href = "/msp/automation-hub/template-library"}
+                  onClick={() => router.push('/msp/automation-hub?tab=template-library')}
                 >
                   <BookTemplate className="h-4 w-4 mr-2" />
                   Browse Templates
                 </Button>
                 <Button
                   id="create-workflow-button"
-                  onClick={() => window.location.href = "/msp/automation-hub/workflows/editor"}
+                  onClick={handleCreateWorkflow}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Workflow
@@ -123,7 +164,7 @@ export default function WorkflowsPage() {
               <div className="mt-6 flex space-x-4">
                 <Button
                   id="browse-templates-empty-button"
-                  onClick={() => window.location.href = "/msp/automation-hub/template-library"}
+                  onClick={() => router.push('/msp/automation-hub?tab=template-library')}
                   variant="outline"
                 >
                   <BookTemplate className="h-4 w-4 mr-2" />
@@ -131,7 +172,7 @@ export default function WorkflowsPage() {
                 </Button>
                 <Button
                   id="create-workflow-empty-button"
-                  onClick={() => window.location.href = "/msp/automation-hub/workflows/editor"}
+                  onClick={handleCreateWorkflow}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Create Workflow
@@ -182,10 +223,10 @@ export default function WorkflowsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <Badge 
+                        <Badge
                           className={`${
                             workflow.isActive
-                              ? 'bg-green-100 text-green-800' 
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}
                         >
@@ -224,54 +265,52 @@ export default function WorkflowsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
                               id={`edit-${workflow.id}-menu-item`}
-                              onClick={() => window.location.href = `/msp/automation-hub/workflows/editor?id=${workflow.id}`}
+                              onClick={() => handleEditWorkflow(workflow.id)}
                             >
                               Edit
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               id={`versions-${workflow.id}-menu-item`}
-                              onClick={() => {
-                                window.location.href = `/msp/automation-hub/workflows/editor?id=${workflow.id}`;
-                              }}
+                              onClick={() => handleEditWorkflow(workflow.id)}
                             >
                               <History className="h-4 w-4 mr-2" />
                               Manage Versions
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               id={`duplicate-${workflow.id}-menu-item`}
                             >
                               Duplicate
                             </DropdownMenuItem>
                             {workflow.isActive ? (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 id={`deactivate-${workflow.id}-menu-item`}
                                 onClick={async () => {
                                   // TODO: Implement deactivate workflow functionality
-                                  toast.success("Workflow deactivated");
+                                  toast.success('Workflow deactivated');
                                   await loadWorkflows();
                                 }}
                               >
                                 Deactivate
                               </DropdownMenuItem>
                             ) : (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 id={`activate-${workflow.id}-menu-item`}
                                 onClick={async () => {
                                   // TODO: Implement activate workflow functionality
-                                  toast.success("Workflow activated");
+                                  toast.success('Workflow activated');
                                   await loadWorkflows();
                                 }}
                               >
                                 Activate
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               id={`delete-${workflow.id}-menu-item`}
                               className="text-red-600 focus:text-red-600"
                               onClick={async () => {
                                 // TODO: Implement delete workflow functionality
-                                if (confirm("Are you sure you want to delete this workflow? This action cannot be undone.")) {
-                                  toast.success("Workflow deleted");
+                                if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
+                                  toast.success('Workflow deleted');
                                   await loadWorkflows();
                                 }
                               }}
@@ -288,7 +327,7 @@ export default function WorkflowsPage() {
             </div>
           )}
         </Card>
-      </div>
-    </ReflectionContainer>
+      )}
+    </div>
   );
 }

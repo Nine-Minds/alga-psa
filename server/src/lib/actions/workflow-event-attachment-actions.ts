@@ -379,10 +379,7 @@ async function subscribeWorkflowToEvent(
       }
     });
   } finally {
-    // Release the knex connection
-    if (knex) {
-      await knex.destroy();
-    }
+    // Connection will be released automatically
   }
 }
 

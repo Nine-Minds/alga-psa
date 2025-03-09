@@ -45,6 +45,7 @@ export type WorkflowVersionData = {
  * @returns Created workflow ID
  */
 export async function createWorkflow(data: WorkflowData): Promise<string> {
+  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -63,51 +64,56 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
+    knexInstance = knex;
     
-    // Create workflow registration
-    const [registration] = await knex('workflow_registrations')
-      .insert({
-        tenant_id: user.tenant,
-        name: validatedData.name,
-        description: validatedData.description || '',
-        category: 'custom',
-        tags: JSON.stringify(validatedData.tags),
-        status: validatedData.isActive ? 'active' : 'inactive',
-        created_by: user.user_id,
-        updated_by: user.user_id,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .returning('registration_id');
-    
-    // Create workflow definition
-    const workflowDefinition = {
-      metadata: {
-        name: metadata.name,
-        description: metadata.description || validatedData.description || '',
-        version: metadata.version || validatedData.version,
-        author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
-        tags: metadata.tags || validatedData.tags,
-      },
-      executeFn: validatedData.code,
-    };
-    
-    // Create workflow version
-    await knex('workflow_registration_versions')
-      .insert({
-        registration_id: registration.registration_id,
-        tenant_id: user.tenant,
-        version: validatedData.version,
-        is_current: true,
-        definition: JSON.stringify(workflowDefinition),
-        created_by: user.user_id,
-        created_at: new Date().toISOString(),
-      });
-    
-    return registration.registration_id;
+    // Use a transaction to ensure both operations succeed or fail together
+    return await knex.transaction(async (trx) => {
+      // Create workflow registration
+      const [registration] = await trx('workflow_registrations')
+        .insert({
+          tenant_id: user.tenant,
+          name: validatedData.name,
+          description: validatedData.description || '',
+          category: 'custom',
+          tags: JSON.stringify(validatedData.tags),
+          status: validatedData.isActive ? 'active' : 'inactive',
+          created_by: user.user_id,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .returning('registration_id');
+      
+      // Create workflow definition
+      const workflowDefinition = {
+        metadata: {
+          name: metadata.name,
+          description: metadata.description || validatedData.description || '',
+          version: metadata.version || validatedData.version,
+          author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
+          tags: metadata.tags || validatedData.tags,
+        },
+        executeFn: validatedData.code,
+      };
+      
+      // Create workflow version
+      await trx('workflow_registration_versions')
+        .insert({
+          registration_id: registration.registration_id,
+          tenant_id: user.tenant,
+          version: validatedData.version,
+          is_current: true,
+          definition: JSON.stringify(workflowDefinition),
+          created_by: user.user_id,
+          created_at: new Date().toISOString(),
+        });
+      
+      return registration.registration_id;
+    });
   } catch (error) {
     logger.error("Error creating workflow:", error);
     throw error;
+  } finally {
+    // Connection will be released automatically
   }
 }
 
@@ -119,6 +125,7 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
  * @returns Updated workflow ID
  */
 export async function updateWorkflow(id: string, data: WorkflowData): Promise<string> {
+  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -137,60 +144,65 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
+    knexInstance = knex;
     
-    // Update workflow registration
-    await knex('workflow_registrations')
-      .where({
-        registration_id: id,
-        tenant_id: user.tenant,
-      })
-      .update({
-        name: validatedData.name,
-        description: validatedData.description || '',
-        tags: JSON.stringify(validatedData.tags),
-        status: validatedData.isActive ? 'active' : 'inactive',
-        updated_by: user.user_id,
-        updated_at: new Date().toISOString(),
-      });
-    
-    // Create workflow definition
-    const workflowDefinition = {
-      metadata: {
-        name: metadata.name,
-        description: metadata.description || validatedData.description || '',
-        version: metadata.version || validatedData.version,
-        author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
-        tags: metadata.tags || validatedData.tags,
-      },
-      executeFn: validatedData.code,
-    };
-    
-    // Set all existing versions to not current
-    await knex('workflow_registration_versions')
-      .where({
-        registration_id: id,
-        tenant_id: user.tenant,
-      })
-      .update({
-        is_current: false,
-      });
-    
-    // Create new workflow version
-    await knex('workflow_registration_versions')
-      .insert({
-        registration_id: id,
-        tenant_id: user.tenant,
-        version: validatedData.version,
-        is_current: true,
-        definition: JSON.stringify(workflowDefinition),
-        created_by: user.user_id,
-        created_at: new Date().toISOString(),
-      });
-    
-    return id;
+    // Use a transaction to ensure all operations succeed or fail together
+    return await knex.transaction(async (trx) => {
+      // Update workflow registration
+      await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant,
+        })
+        .update({
+          name: validatedData.name,
+          description: validatedData.description || '',
+          tags: JSON.stringify(validatedData.tags),
+          status: validatedData.isActive ? 'active' : 'inactive',
+          updated_at: new Date().toISOString(),
+        });
+      
+      // Create workflow definition
+      const workflowDefinition = {
+        metadata: {
+          name: metadata.name,
+          description: metadata.description || validatedData.description || '',
+          version: metadata.version || validatedData.version,
+          author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
+          tags: metadata.tags || validatedData.tags,
+        },
+        executeFn: validatedData.code,
+      };
+      
+      // Set all existing versions to not current
+      await trx('workflow_registration_versions')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant,
+        })
+        .update({
+          is_current: false,
+        });
+      
+      // Create new workflow version
+      await trx('workflow_registration_versions')
+        .insert({
+          registration_id: id,
+          tenant_id: user.tenant,
+          version: validatedData.version,
+          is_current: true,
+          definition: JSON.stringify(workflowDefinition),
+          created_by: user.user_id,
+          created_at: new Date().toISOString(),
+        });
+      
+      return id;
+    });
   } catch (error) {
     logger.error(`Error updating workflow ${id}:`, error);
     throw error;
+  } finally {
+    // Connection will be released automatically
   }
 }
 
@@ -249,10 +261,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
     logger.error(`Error getting workflow versions for ${id}:`, error);
     throw error;
   } finally {
-    // Release the knex connection
-    if (knex) {
-      await knex.destroy();
-    }
+    // Connection will be released automatically
   }
 }
 
@@ -328,8 +337,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
         })
         .update({
           version: version.version,
-          updated_at: new Date().toISOString(),
-          updated_by: user.user_id
+          updated_at: new Date().toISOString()
         });
       
       return { success: true };
@@ -338,10 +346,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
     logger.error(`Error setting active workflow version for ${workflowId}:`, error);
     throw error;
   } finally {
-    // Release the knex connection
-    if (knex) {
-      await knex.destroy();
-    }
+    // Connection will be released automatically
   }
 }
 
@@ -352,6 +357,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
  * @returns Workflow data
  */
 export async function getWorkflow(id: string): Promise<WorkflowData> {
+  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -361,48 +367,61 @@ export async function getWorkflow(id: string): Promise<WorkflowData> {
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
+    knexInstance = knex;
     
-    // Get workflow registration
-    const registration = await knex('workflow_registrations')
+    // Get workflow registration and current version in a single query with JOIN
+    const result = await knex('workflow_registrations as wr')
+      .join(
+        'workflow_registration_versions as wrv',
+        function() {
+          this.on('wrv.registration_id', '=', 'wr.registration_id')
+              .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
+              .andOn('wrv.is_current', '=', knex.raw('true'));
+        }
+      )
       .where({
-        registration_id: id,
-        tenant_id: user.tenant,
+        'wr.registration_id': id,
+        'wr.tenant_id': user.tenant,
       })
+      .select(
+        'wr.registration_id',
+        'wr.name',
+        'wr.description',
+        'wr.tags',
+        'wr.status',
+        'wrv.version',
+        'wrv.definition'
+      )
       .first();
     
-    if (!registration) {
-      throw new Error(`Workflow with ID ${id} not found`);
-    }
-    
-    // Get current version
-    const version = await knex('workflow_registration_versions')
-      .where({
-        registration_id: id,
-        tenant_id: user.tenant,
-        is_current: true,
-      })
-      .first();
-    
-    if (!version) {
-      throw new Error(`No current version found for workflow ${id}`);
+    if (!result) {
+      throw new Error(`Workflow with ID ${id} not found or has no current version`);
     }
     
     // Parse definition
-    const definition = JSON.parse(version.definition);
+    const definition = result.definition;
     
     // Return workflow data
     return {
-      id: registration.registration_id,
-      name: registration.name,
-      description: registration.description,
-      version: version.version,
-      tags: JSON.parse(registration.tags),
-      isActive: registration.status === 'active',
+      id: result.registration_id,
+      name: result.name,
+      description: result.description,
+      version: result.version,
+      tags: Array.isArray(result.tags)
+        ? result.tags
+        : (typeof result.tags === 'string'
+            ? (result.tags.startsWith('[')
+                ? JSON.parse(result.tags)
+                : result.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean))
+            : []),
+      isActive: result.status === 'active',
       code: definition.executeFn,
     };
   } catch (error) {
     logger.error(`Error getting workflow ${id}:`, error);
     throw error;
+  } finally {
+    // Connection will be released automatically
   }
 }
 
@@ -412,56 +431,63 @@ export async function getWorkflow(id: string): Promise<WorkflowData> {
  * @returns Array of workflow data
  */
 export async function getAllWorkflows(): Promise<WorkflowData[]> {
+  let knexInstance;
   try {
-    // Get current user
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("User not authenticated");
-    }
-    
+
     // Create Knex instance
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
+    knexInstance = knex;
     
-    // Get all workflow registrations
-    const registrations = await knex('workflow_registrations')
+    // Single efficient query with JOIN to avoid N+1 problem
+    const workflowsData = await knex('workflow_registrations as wr')
+      .join(
+        'workflow_registration_versions as wrv',
+        function() {
+          this.on('wrv.registration_id', '=', 'wr.registration_id')
+              .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
+              .andOn('wrv.is_current', '=', knex.raw('true'));
+        }
+      )
       .where({
-        tenant_id: user.tenant,
+        'wr.tenant_id': tenant
       })
-      .orderBy('created_at', 'desc');
+      .select(
+        'wr.registration_id',
+        'wr.name',
+        'wr.description',
+        'wr.tags',
+        'wr.status',
+        'wrv.version',
+        'wrv.definition'
+      )
+      .orderBy('wr.created_at', 'desc');
     
-    // Get current versions for all registrations
-    const workflows: WorkflowData[] = [];
-    
-    for (const registration of registrations) {
-      const version = await knex('workflow_registration_versions')
-        .where({
-          registration_id: registration.registration_id,
-          tenant_id: user.tenant,
-          is_current: true,
-        })
-        .first();
-      
-      if (version) {
-        // Parse definition
-        const definition = JSON.parse(version.definition);
-        
-        // Add to workflows array
-        workflows.push({
-          id: registration.registration_id,
-          name: registration.name,
-          description: registration.description,
-          version: version.version,
-          tags: JSON.parse(registration.tags),
-          isActive: registration.status === 'active',
-          code: definition.executeFn,
-        });
-      }
-    }
+    // Process the results
+    const workflows: WorkflowData[] = workflowsData.map(data => {
+      const definition = data.definition;
+      return {
+        id: data.registration_id,
+        name: data.name,
+        description: data.description,
+        version: data.version,
+        tags: Array.isArray(data.tags)
+          ? data.tags
+          : (typeof data.tags === 'string'
+              ? (data.tags.startsWith('[')
+                  ? JSON.parse(data.tags)
+                  : data.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean))
+              : []),
+        isActive: data.status === 'active',
+        code: definition.executeFn,
+      };
+    });
     
     return workflows;
   } catch (error) {
     logger.error("Error getting all workflows:", error);
     throw error;
+  } finally {
+    // Connection will be released automatically
   }
 }
 
@@ -472,6 +498,7 @@ export async function getAllWorkflows(): Promise<WorkflowData[]> {
  * @returns Success status
  */
 export async function deleteWorkflow(id: string): Promise<boolean> {
+  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -481,27 +508,33 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
+    knexInstance = knex;
     
-    // Delete workflow versions
-    await knex('workflow_registration_versions')
-      .where({
-        registration_id: id,
-        tenant_id: user.tenant,
-      })
-      .delete();
-    
-    // Delete workflow registration
-    const deleted = await knex('workflow_registrations')
-      .where({
-        registration_id: id,
-        tenant_id: user.tenant,
-      })
-      .delete();
-    
-    return deleted > 0;
+    // Use a transaction to ensure both operations succeed or fail together
+    return await knex.transaction(async (trx) => {
+      // Delete workflow versions
+      await trx('workflow_registration_versions')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant,
+        })
+        .delete();
+      
+      // Delete workflow registration
+      const deleted = await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant,
+        })
+        .delete();
+      
+      return deleted > 0;
+    });
   } catch (error) {
     logger.error(`Error deleting workflow ${id}:`, error);
     throw error;
+  } finally {
+    // Connection will be released automatically
   }
 }
 
@@ -512,12 +545,17 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
  * @returns Test result
  */
 export async function testWorkflow(code: string): Promise<{ success: boolean; output: string; warnings?: string[] }> {
+  let knexInstance;
   try {
     // Get current user
     const user = await getCurrentUser();
     if (!user) {
       throw new Error("User not authenticated");
     }
+    
+    // Create Knex instance - we might need it for future operations
+    const { knex } = await createTenantKnex();
+    knexInstance = knex;
     
     // Validate workflow code
     const validation = validateWorkflowCode(code);
@@ -575,5 +613,10 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
   } catch (error) {
     logger.error("Error testing workflow:", error);
     throw error;
+  } finally {
+    // Release the knex connection to prevent connection pool exhaustion
+    if (knexInstance) {
+      await knexInstance.destroy();
+    }
   }
 }

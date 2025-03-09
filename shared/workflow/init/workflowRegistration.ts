@@ -3,6 +3,7 @@ import { getActionRegistry } from '../core/actionRegistry';
 import { invoiceApprovalWorkflow } from '../examples/invoiceApprovalWorkflow';
 import logger from '@shared/core/logger.js';
 import { Knex } from 'knex';
+import { WorkflowRegistrationModel } from '../persistence';
 
 /**
  * Register all example workflows with the runtime
@@ -47,11 +48,22 @@ export async function registerExampleWorkflows(): Promise<void> {
  */
 async function loadDatabaseWorkflows(runtime: any): Promise<void> {
   try {
-    // Dynamically import the server actions to avoid circular dependencies
-    const { getAllWorkflowRegistrations } = await import('server/src/lib/actions/workflow-runtime-actions');
+    // Create a knex instance
+    const knex = runtime.getKnexInstance();
+    if (!knex) {
+      logger.error('No knex instance available for loading database workflows');
+      return;
+    }
     
-    // Get all active workflow registrations from the database
-    const registrations = await getAllWorkflowRegistrations();
+    // Get the tenant from the context
+    const tenant = runtime.getTenant();
+    if (!tenant) {
+      logger.error('No tenant available for loading database workflows');
+      return;
+    }
+    
+    // Get all active workflow registrations from the database using the model
+    const registrations = await WorkflowRegistrationModel.getAll(knex, tenant);
     
     if (registrations.length === 0) {
       logger.info('No database-defined workflows found');

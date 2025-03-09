@@ -2,6 +2,13 @@
  * Seed file for workflow templates
  */
 exports.seed = async function(knex) {
+  // Get the tenant from the tenant table
+  const tenant = await knex('tenants').select('tenant').first();
+  if (!tenant) {
+    console.log('No tenant found, skipping workflow templates seed');
+    return;
+  }
+
   // Check if templates already exist
   const existingTemplates = await knex('workflow_templates').count('template_id as count').first();
   
@@ -38,7 +45,7 @@ exports.seed = async function(knex) {
   // Insert categories
   for (const category of categories) {
     await knex('workflow_template_categories').insert({
-      tenant_id: 'system',
+      tenant_id: tenant,
       ...category,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -590,7 +597,7 @@ export const approvalWorkflow = defineWorkflow(
     const categoryId = categoryMap[template.category];
     
     await knex('workflow_templates').insert({
-      tenant_id: 'system',
+      tenant_id: tenant.tenant,
       name: template.name,
       description: template.description,
       category: template.category,
