@@ -3,14 +3,15 @@
 import { createTenantKnex } from '../db';
 import { WorkflowEventAttachmentModel } from '../../models/workflowEventAttachment';
 import { EventCatalogModel } from '../../models/eventCatalog';
-import { 
-  IWorkflowEventAttachment, 
-  ICreateWorkflowEventAttachment, 
-  IUpdateWorkflowEventAttachment 
+import {
+  IWorkflowEventAttachment,
+  ICreateWorkflowEventAttachment,
+  IUpdateWorkflowEventAttachment
 } from '@shared/workflow/types/eventCatalog';
-import { getWorkflowRegistration } from './workflow-runtime-actions';
+import { getWorkflowRegistration, startWorkflowFromEvent } from './workflow-runtime-actions';
 import { getEventBus } from '../eventBus';
 import { WorkflowTriggerModel } from 'server/src/models/workflowTrigger';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 
 /**
  * Get all workflow event attachments for a workflow
@@ -270,13 +271,20 @@ async function subscribeWorkflowToEvent(
       .first();
     
     if (!trigger) {
-      throw new Error(`Trigger for event type "${eventType}" not found`);
+      // Create a default trigger if one doesn't exist
+      const [newTrigger] = await knex('workflow_triggers')
+        .insert({
+          event_type: eventType,
+          tenant_id: tenant,
+          name: `${eventType} Trigger`,
+          description: `Auto-generated trigger for ${eventType} events`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .returning('*');
+        
+      console.log(`Created new trigger for event type "${eventType}"`);
     }
-    
-    // Get parameter mappings for the trigger
-    const mappings = await knex('workflow_event_mappings')
-      .where('trigger_id', trigger.trigger_id)
-      .select('*');
     
     // Subscribe to the event
     await eventBus.subscribe(eventType as any, async (event) => {
@@ -287,99 +295,31 @@ async function subscribeWorkflowToEvent(
       
       // Start the workflow
       try {
-        // Create a workflow runtime instance
-        // Note: This is a placeholder - actual implementation will depend on the workflow runtime API
-        const workflowRuntime = {
-          createExecution: async (params: any) => {
-            console.log('Creating workflow execution with params:', params);
-            return `execution-${Date.now()}`;
-          },
-          enqueueEvent: async (params: any) => {
-            console.log('Enqueueing event with params:', params);
-            return true;
-          }
-        };
+        // Extract event name from payload if available, or use a default
+        const eventName = event.payload.eventName || 'event.received';
         
-        // Map event payload to workflow parameters based on mappings
-        const workflowParams: Record<string, any> = {};
-        
-        for (const mapping of mappings) {
-          // Extract value from event payload using the field path
-          const fieldPath = mapping.event_field_path.split('.');
-          let value = event.payload;
-          
-          for (const field of fieldPath) {
-            if (value && typeof value === 'object' && field in value) {
-              value = value[field];
-            } else {
-              value = undefined;
-              break;
-            }
-          }
-          
-          // Apply transform function if provided
-          if (mapping.transform_function && value !== undefined) {
-            try {
-              // Use Function constructor to create a function from the string
-              // This is safe because the transform function is validated before saving
-              const transformFn = new Function('val', `return ${mapping.transform_function}`);
-              value = transformFn(value);
-            } catch (error) {
-              console.error(`Error applying transform function for parameter ${mapping.workflow_parameter}:`, error);
-            }
-          }
-          
-          // Set the parameter value
-          if (value !== undefined) {
-            workflowParams[mapping.workflow_parameter] = value;
-          }
-        }
-        
-        // Create a new workflow execution
-        const executionId = await workflowRuntime.createExecution({
+        // Start the workflow from the event
+        const result = await startWorkflowFromEvent({
           workflowName: workflow.name,
-          workflowVersion: 'latest',
-          tenant: tenant
+          eventType,
+          eventPayload: event.payload,
+          tenant,
+          userId: event.payload.userId
         });
+        
+        const executionId = result.executionId;
         
         // Log the workflow execution
         console.log(`Started workflow ${workflowId} (${workflow.name}) for event ${eventType} with execution ID ${executionId}`);
-        
-        // Enqueue an event to start the workflow with the mapped parameters
-        await workflowRuntime.enqueueEvent({
-          executionId,
-          eventName: 'StartWorkflow',
-          tenant: tenant,
-          userRole: 'system',
-          payload: {
-            ...workflowParams,
-            eventType,
-            eventTimestamp: new Date().toISOString(),
-            sourceEventId: event.id || `event-${Date.now()}`
-          }
-        });
-        
-        // Record the workflow execution in the database
-        await knex('workflow_executions').insert({
-          execution_id: executionId,
-          tenant_id: tenant,
-          workflow_name: workflow.name,
-          current_state: 'started',
-          status: 'running',
-          context_data: {
-            eventType,
-            parameters: workflowParams,
-            sourceEventId: event.id || `event-${Date.now()}`
-          },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
       } catch (error) {
         console.error(`Error starting workflow ${workflowId} for event ${eventType}:`, error);
       }
     });
-  } finally {
-    // Connection will be released automatically
+    
+    console.log(`Successfully subscribed workflow ${workflowId} to event type ${eventType}`);
+  } catch (error) {
+    console.error(`Error subscribing workflow ${workflowId} to event ${eventType}:`, error);
+    throw error;
   }
 }
 
@@ -401,11 +341,37 @@ async function unsubscribeWorkflowFromEvent(
   const subscriptionId = `workflow:${workflowId}:event:${eventType}`;
   
   try {
+    // Check if there are any other active attachments for this workflow and event type
+    const { knex } = await createTenantKnex();
+    const otherAttachments = await knex('workflow_event_attachments as wea')
+      .join('event_catalog as ec', function() {
+        this.on('wea.event_id', 'ec.event_id')
+            .andOn('wea.tenant_id', 'ec.tenant_id');
+      })
+      .where({
+        'ec.event_type': eventType,
+        'wea.tenant_id': tenant,
+        'wea.is_active': true
+      })
+      .whereNot('wea.workflow_id', workflowId)
+      .count('* as count')
+      .first();
+    
+    // If there are other active attachments, don't unsubscribe from the event
+    if (otherAttachments && Number(otherAttachments.count) > 0) {
+      console.log(`Not unsubscribing from event ${eventType} as there are other active attachments`);
+      return;
+    }
+    
     // Unsubscribe from the event
-    // Note: This is a placeholder - actual implementation will depend on the event bus API
+    // Note: The EventBus doesn't currently support unsubscribing by handler
+    // This is a limitation that should be addressed in a future update
     console.log(`Unsubscribing workflow ${workflowId} from event ${eventType}`);
-    // The actual unsubscribe method would be called here
+    
+    // For now, we'll log the unsubscription but not actually unsubscribe
+    // This is a known limitation of the current implementation
   } catch (error) {
     console.error(`Error unsubscribing workflow ${workflowId} from event ${eventType}:`, error);
+    throw error;
   }
 }

@@ -358,7 +358,7 @@ export const approvalWorkflow = defineWorkflow(
     // Initial state
     context.setState('submitted');
     
-    // The workflow is triggered by a Submit event
+    // The workflow is triggered by a Submit event, which is passed as input
     const { triggerEvent } = context.input;
     logger.info(`Request submitted by ${triggerEvent.user_id}`);
     
@@ -416,7 +416,8 @@ export const serviceRequestWorkflow = defineWorkflow(
     // Initial state
     context.setState('received');
     
-    // The workflow is triggered by a ServiceRequest event
+    // The workflow is triggered by a ServiceRequest event, which is passed as input
+    // This workflow would be attached to the SERVICE_REQUEST event type in the event catalog
     const { triggerEvent } = context.input;
     const requestData = triggerEvent.payload;
     

@@ -10,9 +10,10 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
 import { Badge } from 'server/src/components/ui/Badge';
-import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from 'server/src/lib/actions/workflow-editor-actions';
+import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow, executeWorkflowTest } from 'server/src/lib/actions/workflow-editor-actions';
 import WorkflowEditor from 'server/src/components/workflow-editor/WorkflowEditor';
 import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
+import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
 import { toast } from 'react-hot-toast';
 
 // Default workflow template for new workflows
@@ -85,6 +86,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testWarnings, setTestWarnings] = useState<string[]>([]);
+  const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
 
   // Load workflow data if in edit mode
   useEffect(() => {
@@ -189,7 +191,8 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
       }
       
       if (result.success) {
-        toast.success(result.output);
+        // If validation succeeds, open the test modal
+        setIsTestModalOpen(true);
       } else {
         toast.error(result.output);
       }
@@ -365,6 +368,13 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           height="60vh"
         />
       </Card>
+      
+      {/* Test Modal */}
+      <TestWorkflowModal
+        isOpen={isTestModalOpen}
+        onClose={() => setIsTestModalOpen(false)}
+        workflowCode={workflowCode}
+      />
     </div>
   );
 }

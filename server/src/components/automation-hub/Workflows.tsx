@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle } from 'lucide-react';
+import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle } from 'lucide-react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
@@ -15,10 +15,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from 'server/src/components/ui/DropdownMenu';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Badge } from 'server/src/components/ui/Badge';
-import { getAllWorkflows, setActiveWorkflowVersion, getWorkflowVersions } from 'server/src/lib/actions/workflow-editor-actions';
+import {
+  getAllWorkflows,
+  setActiveWorkflowVersion,
+  getWorkflowVersions,
+  getWorkflow,
+  updateWorkflowStatus
+} from 'server/src/lib/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
+import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
 
 
 // Type for workflow data with events
@@ -43,9 +51,19 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   const [workflows, setWorkflows] = useState<WorkflowWithEvents[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showInactive, setShowInactive] = useState<boolean>(false);
+  
+  // Effect to reload workflows when showInactive changes
+  useEffect(() => {
+    console.log(`showInactive changed to: ${showInactive}`);
+    if (workflowId) return; // Don't reload if we're in editor mode
+    loadWorkflows();
+  }, [showInactive, workflowId]);
   const [activatingVersion, setActivatingVersion] = useState<{workflowId: string, versionId: string} | null>(null);
   const [showEditor, setShowEditor] = useState<boolean>(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
+  const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
+  const [workflowToTest, setWorkflowToTest] = useState<WorkflowWithEvents | null>(null);
   
   // Handle workflowId if provided
   useEffect(() => {
@@ -60,8 +78,10 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   // Load workflows from server
   const loadWorkflows = async () => {
     setLoading(true);
+    console.log(`Loading workflows with includeInactive=${showInactive}`);
     try {
-      const workflowsData = await getAllWorkflows();
+      const workflowsData = await getAllWorkflows(showInactive);
+      console.log(`Loaded ${workflowsData.length} workflows`);
       
       // TODO: Replace with actual event data when available
       // For now, we'll use placeholder event data
@@ -107,6 +127,65 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     loadWorkflows(); // Refresh the list
   };
 
+  // Handle testing a workflow
+  const handleTestWorkflow = async (id: string) => {
+    try {
+      // Find the workflow in the current list
+      const workflow = workflows.find(w => w.id === id);
+      
+      if (workflow) {
+        setWorkflowToTest(workflow);
+        setIsTestModalOpen(true);
+      } else {
+        // If not found in the current list, fetch it from the server
+        const workflowData = await getWorkflow(id);
+        if (workflowData) {
+          const workflowWithEvents: WorkflowWithEvents = {
+            ...workflowData,
+            id: workflowData.id || '',
+            events: [],
+            lastUpdated: new Date().toISOString()
+          };
+          setWorkflowToTest(workflowWithEvents);
+          setIsTestModalOpen(true);
+        } else {
+          toast.error('Workflow not found');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading workflow for testing:', error);
+      toast.error('Failed to load workflow for testing');
+    }
+  };
+  
+  // Handle activating/deactivating a workflow
+  const handleToggleWorkflowStatus = async (id: string, currentlyActive: boolean) => {
+    try {
+      console.log(`Toggle workflow status: id=${id}, currentlyActive=${currentlyActive}`);
+      
+      // We want to set it to the opposite of the current status
+      const newStatus = !currentlyActive;
+      console.log(`Setting to: ${newStatus ? 'active' : 'inactive'}`);
+      
+      const success = await updateWorkflowStatus(id, newStatus);
+      
+      if (success) {
+        toast.success(`Workflow ${newStatus ? 'activated' : 'deactivated'} successfully`);
+        
+        // Force a reload of the workflows list
+        setTimeout(() => {
+          console.log("Reloading workflows after status change");
+          loadWorkflows();
+        }, 100);
+      } else {
+        toast.error(`Failed to ${newStatus ? 'activate' : 'deactivate'} workflow`);
+      }
+    } catch (error) {
+      console.error(`Error ${currentlyActive ? 'deactivating' : 'activating'} workflow:`, error);
+      toast.error(`An error occurred while ${currentlyActive ? 'deactivating' : 'activating'} the workflow`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {showEditor ? (
@@ -122,6 +201,19 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
               <h1 className="text-xl font-semibold">Workflows</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="show-inactive-workflows"
+                  checked={showInactive}
+                  onChange={(e) => {
+                    // Update state first
+                    const newValue = e.target.checked;
+                    setShowInactive(newValue);
+                    console.log(`Show inactive set to: ${newValue}`);
+                  }}
+                  label="Show inactive workflows"
+                />
+              </div>
               <div className="relative w-64">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -277,6 +369,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                               Manage Versions
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              id={`test-${workflow.id}-menu-item`}
+                              onClick={() => handleTestWorkflow(workflow.id)}
+                            >
+                              <PlayCircle className="h-4 w-4 mr-2" />
+                              Test Workflow
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               id={`duplicate-${workflow.id}-menu-item`}
                             >
                               Duplicate
@@ -284,10 +383,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             {workflow.isActive ? (
                               <DropdownMenuItem
                                 id={`deactivate-${workflow.id}-menu-item`}
-                                onClick={async () => {
-                                  // TODO: Implement deactivate workflow functionality
-                                  toast.success('Workflow deactivated');
-                                  await loadWorkflows();
+                                onClick={() => {
+                                  console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
+                                  handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
                               >
                                 Deactivate
@@ -295,10 +393,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             ) : (
                               <DropdownMenuItem
                                 id={`activate-${workflow.id}-menu-item`}
-                                onClick={async () => {
-                                  // TODO: Implement activate workflow functionality
-                                  toast.success('Workflow activated');
-                                  await loadWorkflows();
+                                onClick={() => {
+                                  console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
+                                  handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
                               >
                                 Activate
@@ -327,6 +424,15 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
             </div>
           )}
         </Card>
+      )}
+
+      {/* Test Workflow Modal */}
+      {workflowToTest && (
+        <TestWorkflowModal
+          isOpen={isTestModalOpen}
+          onClose={() => setIsTestModalOpen(false)}
+          workflowCode={workflowToTest.code}
+        />
       )}
     </div>
   );

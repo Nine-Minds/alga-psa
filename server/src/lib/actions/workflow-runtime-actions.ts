@@ -7,6 +7,8 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import logger from '@shared/core/logger.js';
 import WorkflowRegistrationModel, { WorkflowRegistration } from '@shared/workflow/persistence/workflowRegistrationModel.js';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Get a workflow registration by name and optional version
@@ -88,5 +90,59 @@ export async function createRegistrationFromTemplate(params: {
     throw error;
   } finally {
     // Connection will be released automatically
+  }
+}
+
+/**
+ * Start a workflow execution from an event
+ * This is used by the event-driven workflow system to start workflows in response to events
+ *
+ * @param params Parameters for starting a workflow from an event
+ * @returns The workflow execution ID and initial state
+ */
+export async function startWorkflowFromEvent(params: {
+  workflowName: string;
+  eventType: string;
+  eventPayload: any;
+  tenant: string;
+  userId?: string;
+}): Promise<{
+  executionId: string;
+  currentState: string;
+}> {
+  const { workflowName, eventType, eventPayload, tenant, userId } = params;
+  const { knex } = await createTenantKnex();
+  
+  try {
+    // Get the workflow runtime
+    const runtime = getWorkflowRuntime();
+    
+    // Start the workflow
+    const result = await runtime.startWorkflow(knex, workflowName, {
+      tenant,
+      initialData: {
+        eventType,
+        eventPayload,
+        sourceEventId: eventPayload.id || uuidv4(),
+        timestamp: new Date().toISOString()
+      },
+      userId
+    });
+    
+    // Log the workflow execution
+    logger.info(`Started workflow ${workflowName} from event ${eventType}`, {
+      executionId: result.executionId,
+      tenant,
+      workflowName,
+      eventType
+    });
+    
+    return {
+      executionId: result.executionId,
+      currentState: result.currentState
+    };
+  } catch (error) {
+    logger.error(`Error starting workflow ${workflowName} from event ${eventType}:`, error);
+    throw error;
   }
 }

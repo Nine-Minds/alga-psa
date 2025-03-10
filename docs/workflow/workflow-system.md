@@ -61,8 +61,10 @@ The workflow system consists of the following major components:
 ### Data Flow
 
 1. **Event Submission**:
-   - A client submits an event for a workflow execution (e.g., "ApproveInvoice")
+   - A client publishes an event to the event bus (e.g., "INVOICE_CREATED")
    - The event is persisted to the database
+   - The system identifies workflows attached to this event type
+   - For each attached workflow, a new execution is created
    - In a distributed setup, the event is also published to Redis Streams
 
 2. **Event Processing**:
@@ -238,13 +240,23 @@ const executionId = await runtime.startWorkflow(
   }
 );
 
-// Submit an event to the workflow
+// Option 1: Submit an event to a specific workflow execution
 await runtime.submitEvent({
   execution_id: executionId,
   event_name: 'Submit',
   payload: { submittedBy: 'user-456' },
   user_id: 'user-456',
   tenant: 'acme'
+});
+
+// Option 2: Publish an event to the event bus to trigger attached workflows
+await submitWorkflowEventAction({
+  event_name: 'INVOICE_SUBMITTED',
+  event_type: 'INVOICE_SUBMITTED',
+  payload: {
+    invoiceId: 'inv-123',
+    submittedBy: 'user-456'
+  }
 });
 ```
 
@@ -458,13 +470,22 @@ import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 // Initialize the workflow runtime
 const runtime = getWorkflowRuntime();
 
-// Enqueue an event for asynchronous processing
+// Option 1: Enqueue an event for a specific workflow execution
 await runtime.enqueueEvent({
   execution_id: 'wf-123',
   event_name: 'Approve',
   payload: { approvedBy: 'user-789' },
   user_id: 'user-789',
   tenant: 'acme'
+});
+
+// Option 2: Publish an event to the event bus to trigger attached workflows
+await submitWorkflowEventAction({
+  event_type: 'INVOICE_APPROVED',
+  payload: {
+    invoiceId: 'inv-123',
+    approvedBy: 'user-789'
+  }
 });
 
 // The event will be processed asynchronously by a worker
