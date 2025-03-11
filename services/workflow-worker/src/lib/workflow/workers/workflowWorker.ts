@@ -756,7 +756,7 @@ export class WorkflowWorker {
           }
           
           // Start the workflow
-          const result = await this.workflowRuntime.startWorkflow(dbConnection, registration.name, {
+          const result = await this.workflowRuntime.startWorkflowByVersionId(dbConnection, {
             tenant: tenant,
             initialData: {
               eventId: eventData.id,
@@ -767,7 +767,8 @@ export class WorkflowWorker {
               workflowId: workflowId,
               versionId: registration.version_id
             },
-            userId: eventData.payload?.userId
+            userId: eventData.payload?.userId,
+            versionId: registration.version_id
           });
           
           logger.info(`[WorkflowWorker] Started workflow ${registration.name} with execution ID ${result.executionId}`, {

@@ -1,6 +1,5 @@
 import { getActionRegistry } from '../core/actionRegistry';
 import { getWorkflowRuntime } from '../core/workflowRuntime';
-import { registerExampleWorkflows } from './workflowRegistration';
 import logger from '@shared/core/logger.js';
 
 /**
@@ -68,8 +67,6 @@ export async function initializeWorkflowSystem(): Promise<void> {
     // Initialize workflow runtime
     getWorkflowRuntime(actionRegistry);
     
-    // Register example workflows
-    registerExampleWorkflows();
     
     logger.info('Workflow system initialized successfully');
   } catch (error) {

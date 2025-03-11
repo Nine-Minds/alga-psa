@@ -53,94 +53,80 @@ interface WorkflowMetadata {
   author?: string;
   tags?: string[];
 }
-
-function defineWorkflow(
-  nameOrMetadata: string | WorkflowMetadata,
-  executeFn: (context: WorkflowContext) => Promise<void>
-): any {
-  // Implementation details hidden
-  return { metadata: {}, execute: () => {} };
-}
 `;
 
 // Default workflow template
-const defaultWorkflowTemplate = `import { defineWorkflow } from '@shared/workflow/core/workflowDefinition';
-import { WorkflowContext } from '@shared/workflow/core/workflowContext';
-
-/**
- * Example workflow definition
+const defaultWorkflowTemplate = `/**
+ * Example workflow function
+ *
+ * @param context The workflow context provided by the runtime
  */
-export const myWorkflow = defineWorkflow(
-  {
-    name: 'MyWorkflow',
-    description: 'Description of my workflow',
-    version: '1.0.0',
-    tags: ['example', 'template']
-  },
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
+async function myWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger } = context;
+  
+  // Initial state
+  context.setState('initial');
+  logger.info('Workflow started');
+  
+  // Store some data
+  data.set('startTime', new Date().toISOString());
+  
+  // Wait for an event
+  const triggerEvent = await events.waitFor('TriggerAction');
+  logger.info('Received trigger event', triggerEvent.payload);
+  
+  // Update state
+  context.setState('processing');
+  
+  // Execute an action
+  try {
+    const result = await actions.example_action({
+      param1: triggerEvent.payload.value,
+      param2: 'some value'
+    });
     
-    // Initial state
-    context.setState('initial');
-    logger.info('Workflow started');
+    logger.info('Action completed successfully', result);
+    data.set('result', result);
     
-    // Store some data
-    data.set('startTime', new Date().toISOString());
+    // Emit an event
+    await events.emit('ActionCompleted', { success: true, result });
     
-    // Wait for an event
-    const triggerEvent = await events.waitFor('TriggerAction');
-    logger.info('Received trigger event', triggerEvent.payload);
-    
-    // Update state
-    context.setState('processing');
-    
-    // Execute an action
-    try {
-      const result = await actions.example_action({
-        param1: triggerEvent.payload.value,
-        param2: 'some value'
-      });
-      
-      logger.info('Action completed successfully', result);
-      data.set('result', result);
-      
-      // Emit an event
-      await events.emit('ActionCompleted', { success: true, result });
-      
-      // Final state
-      context.setState('completed');
-    } catch (error) {
-      logger.error('Action failed', error);
-      context.setState('failed');
-    }
+    // Final state
+    context.setState('completed');
+  } catch (error) {
+    logger.error('Action failed', error);
+    context.setState('failed');
   }
-);
+}
+
+// Export the workflow function
+export default myWorkflow;
 `;
 
 // Code snippets for common workflow patterns
 const workflowSnippets = [
   {
     label: "Basic Workflow Structure",
-    insertText: `export const myWorkflow = defineWorkflow(
-  {
-    name: 'MyWorkflow',
-    description: 'Description of my workflow',
-    version: '1.0.0',
-    tags: ['example']
-  },
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
-    
-    // Initial state
-    context.setState('initial');
-    
-    // Workflow implementation
-    $0
-    
-    // Final state
-    context.setState('completed');
-  }
-);`
+    insertText: `/**
+ * Workflow function
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function myWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger } = context;
+  
+  // Initial state
+  context.setState('initial');
+  
+  // Workflow implementation
+  $0
+  
+  // Final state
+  context.setState('completed');
+}
+
+// Export the workflow function
+export default myWorkflow;`
   },
   {
     label: "Wait for Event",
@@ -285,11 +271,6 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           metadata: WorkflowMetadata;
           execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
-
-        export function defineWorkflow(
-          nameOrMetadata: string | WorkflowMetadata,
-          executeFn: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>
-        ): WorkflowDefinition;
       }`,
       "shared-workflow-definition.d.ts"
     );

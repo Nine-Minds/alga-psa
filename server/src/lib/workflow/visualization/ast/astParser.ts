@@ -52,7 +52,7 @@ export function parseWorkflowDefinition(options: ParseOptions): ts.SourceFile {
 
 /**
  * Find the workflow execute function in a source file
- * 
+ *
  * @param sourceFile The parsed source file
  * @returns The workflow execute function or undefined if not found
  */
@@ -61,15 +61,18 @@ export function findWorkflowExecuteFunction(sourceFile: ts.SourceFile): ts.Funct
   
   // Visit each node to find the workflow execute function
   function visit(node: ts.Node) {
-    // Look for defineWorkflow calls
-    if (ts.isCallExpression(node) && 
-        ts.isIdentifier(node.expression) && 
-        node.expression.text === 'defineWorkflow') {
+    // Look for async functions that take a context parameter
+    if ((ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) &&
+        node.modifiers?.some(m => m.kind === ts.SyntaxKind.AsyncKeyword)) {
       
-      // The second argument should be the execute function
-      const executeArg = node.arguments[1];
-      if (executeArg && (ts.isArrowFunction(executeArg) || ts.isFunctionExpression(executeArg))) {
-        executeFunction = executeArg;
+      // Check if it has a parameter named 'context'
+      const parameters = node.parameters;
+      if (parameters.length > 0 &&
+          ts.isIdentifier(parameters[0].name) &&
+          parameters[0].name.text === 'context') {
+        
+        // This is likely a workflow function
+        executeFunction = node;
         return;
       }
     }

@@ -17,19 +17,9 @@ import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflo
 import { toast } from 'react-hot-toast';
 
 // Default workflow template for new workflows
-const defaultWorkflowTemplate = `import { defineWorkflow } from '@shared/workflow/core/workflowDefinition';
-import { WorkflowContext } from '@shared/workflow/core/workflowContext';
-
-/**
+const defaultWorkflowTemplate = `/**
  * New workflow definition
  */
-export const newWorkflow = defineWorkflow(
-  {
-    name: 'NewWorkflow',
-    description: 'Description of your workflow',
-    version: '1.0.0',
-    tags: ['custom']
-  },
   async (context: WorkflowContext) => {
     const { actions, data, events, logger } = context;
     
@@ -63,7 +53,7 @@ export const newWorkflow = defineWorkflow(
       context.setState('failed');
     }
   }
-);`;
+`;
 
 // WorkflowEditorComponent for editing or creating workflows
 interface WorkflowEditorComponentProps {

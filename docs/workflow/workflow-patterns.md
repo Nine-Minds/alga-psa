@@ -43,76 +43,80 @@ A basic workflow where a request is submitted and approved or rejected by a sing
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
+import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
-export const simpleApprovalWorkflow = defineWorkflow(
-  'SimpleApproval',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
-    
-    // Initial state - Processing
-    context.setState('processing');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    logger.info(`Processing request submitted by ${triggerEvent.user_id}`);
-    
-    // Store request data
-    data.set('requestData', triggerEvent.payload);
-    data.set('requestor', triggerEvent.user_id);
-    
-    // Create approval task
-    const { taskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Approve Request',
-      description: `Please review and approve the request submitted by ${submitEvent.user_id}`,
-      priority: 'medium',
-      dueDate: '2 days',
-      assignTo: {
-        roles: ['manager']
-      },
-      contextData: {
-        requestData: submitEvent.payload,
-        requestor: submitEvent.user_id
+/**
+ * Simple Approval Workflow
+ *
+ * A basic workflow where a request is submitted and approved or rejected by a single approver.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function simpleApprovalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state - Processing
+  context.setState('processing');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  logger.info(`Processing request submitted by ${triggerEvent.user_id}`);
+  
+  // Store request data
+  data.set('requestData', triggerEvent.payload);
+  data.set('requestor', triggerEvent.user_id);
+  
+  // Create approval task
+  const { taskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Approve Request',
+    description: `Please review and approve the request submitted by ${submitEvent.user_id}`,
+    priority: 'medium',
+    dueDate: '2 days',
+    assignTo: {
+      roles: ['manager']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id
+    }
+  });
+  
+  // Update state
+  context.setState('pending_approval');
+  
+  // Wait for task completion
+  const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
+  
+  // Process approval decision
+  const { approved, comments } = approvalEvent.payload;
+  
+  if (approved) {
+    // Handle approval
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_approved',
+      data: {
+        comments
       }
     });
     
-    // Update state
-    context.setState('pending_approval');
+    context.setState('approved');
+  } else {
+    // Handle rejection
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_rejected',
+      data: {
+        comments
+      }
+    });
     
-    // Wait for task completion
-    const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
-    
-    // Process approval decision
-    const { approved, comments } = approvalEvent.payload;
-    
-    if (approved) {
-      // Handle approval
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_approved',
-        data: {
-          comments
-        }
-      });
-      
-      context.setState('approved');
-    } else {
-      // Handle rejection
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_rejected',
-        data: {
-          comments
-        }
-      });
-      
-      context.setState('rejected');
-    }
-    
-    logger.info('Workflow completed');
+    context.setState('rejected');
   }
-);
+  
+  logger.info('Workflow completed');
+}
 ```
 
 #### Form Definition
@@ -163,182 +167,186 @@ A workflow where a request requires approval from multiple levels of management 
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
+import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
-export const multiLevelApprovalWorkflow = defineWorkflow(
-  'MultiLevelApproval',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
-    
-    // Initial state - Processing
-    context.setState('processing');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    
-    // Store request data
-    data.set('requestData', triggerEvent.payload);
-    data.set('requestor', triggerEvent.user_id);
-    
-    // First level approval (Team Lead)
-    context.setState('pending_team_lead_approval');
-    
-    const { taskId: teamLeadTaskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Team Lead Approval',
-      description: 'First level approval by Team Lead',
-      priority: 'medium',
-      assignTo: {
-        roles: ['team_lead']
-      },
-      contextData: {
-        requestData: submitEvent.payload,
-        requestor: submitEvent.user_id
+/**
+ * Multi-Level Approval Workflow
+ *
+ * A workflow where a request requires approval from multiple levels of management in sequence.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function multiLevelApprovalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state - Processing
+  context.setState('processing');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  
+  // Store request data
+  data.set('requestData', triggerEvent.payload);
+  data.set('requestor', triggerEvent.user_id);
+  
+  // First level approval (Team Lead)
+  context.setState('pending_team_lead_approval');
+  
+  const { taskId: teamLeadTaskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Team Lead Approval',
+    description: 'First level approval by Team Lead',
+    priority: 'medium',
+    assignTo: {
+      roles: ['team_lead']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id
+    }
+  });
+  
+  // Wait for team lead decision
+  const teamLeadEvent = await events.waitFor(`Task:${teamLeadTaskId}:Complete`);
+  
+  // If rejected by team lead, end workflow
+  if (!teamLeadEvent.payload.approved) {
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_rejected',
+      data: {
+        level: 'Team Lead',
+        comments: teamLeadEvent.payload.comments
       }
     });
     
-    // Wait for team lead decision
-    const teamLeadEvent = await events.waitFor(`Task:${teamLeadTaskId}:Complete`);
-    
-    // If rejected by team lead, end workflow
-    if (!teamLeadEvent.payload.approved) {
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_rejected',
-        data: {
-          level: 'Team Lead',
-          comments: teamLeadEvent.payload.comments
-        }
-      });
-      
-      context.setState('rejected_by_team_lead');
-      return;
+    context.setState('rejected_by_team_lead');
+    return;
+  }
+  
+  // Store team lead approval
+  data.set('teamLeadApproval', {
+    approver: teamLeadEvent.user_id,
+    timestamp: teamLeadEvent.timestamp,
+    comments: teamLeadEvent.payload.comments
+  });
+  
+  // Second level approval (Manager)
+  context.setState('pending_manager_approval');
+  
+  const { taskId: managerTaskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Manager Approval',
+    description: 'Second level approval by Manager',
+    priority: 'medium',
+    assignTo: {
+      roles: ['manager']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id,
+      teamLeadApproval: data.get('teamLeadApproval')
     }
-    
-    // Store team lead approval
-    data.set('teamLeadApproval', {
-      approver: teamLeadEvent.user_id,
-      timestamp: teamLeadEvent.timestamp,
-      comments: teamLeadEvent.payload.comments
+  });
+  
+  // Wait for manager decision
+  const managerEvent = await events.waitFor(`Task:${managerTaskId}:Complete`);
+  
+  // If rejected by manager, end workflow
+  if (!managerEvent.payload.approved) {
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_rejected',
+      data: {
+        level: 'Manager',
+        comments: managerEvent.payload.comments
+      }
     });
     
-    // Second level approval (Manager)
-    context.setState('pending_manager_approval');
+    context.setState('rejected_by_manager');
+    return;
+  }
+  
+  // Store manager approval
+  data.set('managerApproval', {
+    approver: managerEvent.user_id,
+    timestamp: managerEvent.timestamp,
+    comments: managerEvent.payload.comments
+  });
+  
+  // For high-value requests, require director approval
+  if (submitEvent.payload.amount > 10000) {
+    // Third level approval (Director)
+    context.setState('pending_director_approval');
     
-    const { taskId: managerTaskId } = await actions.createHumanTask({
+    const { taskId: directorTaskId } = await actions.createHumanTask({
       taskType: 'approval',
-      title: 'Manager Approval',
-      description: 'Second level approval by Manager',
-      priority: 'medium',
+      title: 'Director Approval',
+      description: 'Third level approval by Director (required for high-value requests)',
+      priority: 'high',
       assignTo: {
-        roles: ['manager']
+        roles: ['director']
       },
       contextData: {
         requestData: submitEvent.payload,
         requestor: submitEvent.user_id,
-        teamLeadApproval: data.get('teamLeadApproval')
+        teamLeadApproval: data.get('teamLeadApproval'),
+        managerApproval: data.get('managerApproval')
       }
     });
     
-    // Wait for manager decision
-    const managerEvent = await events.waitFor(`Task:${managerTaskId}:Complete`);
+    // Wait for director decision
+    const directorEvent = await events.waitFor(`Task:${directorTaskId}:Complete`);
     
-    // If rejected by manager, end workflow
-    if (!managerEvent.payload.approved) {
+    // If rejected by director, end workflow
+    if (!directorEvent.payload.approved) {
       await actions.sendNotification({
         recipient: data.get('requestor'),
         template: 'request_rejected',
         data: {
-          level: 'Manager',
-          comments: managerEvent.payload.comments
+          level: 'Director',
+          comments: directorEvent.payload.comments
         }
       });
       
-      context.setState('rejected_by_manager');
+      context.setState('rejected_by_director');
       return;
     }
     
-    // Store manager approval
-    data.set('managerApproval', {
-      approver: managerEvent.user_id,
-      timestamp: managerEvent.timestamp,
-      comments: managerEvent.payload.comments
+    // Store director approval
+    data.set('directorApproval', {
+      approver: directorEvent.user_id,
+      timestamp: directorEvent.timestamp,
+      comments: directorEvent.payload.comments
     });
-    
-    // For high-value requests, require director approval
-    if (submitEvent.payload.amount > 10000) {
-      // Third level approval (Director)
-      context.setState('pending_director_approval');
-      
-      const { taskId: directorTaskId } = await actions.createHumanTask({
-        taskType: 'approval',
-        title: 'Director Approval',
-        description: 'Third level approval by Director (required for high-value requests)',
-        priority: 'high',
-        assignTo: {
-          roles: ['director']
-        },
-        contextData: {
-          requestData: submitEvent.payload,
-          requestor: submitEvent.user_id,
-          teamLeadApproval: data.get('teamLeadApproval'),
-          managerApproval: data.get('managerApproval')
-        }
-      });
-      
-      // Wait for director decision
-      const directorEvent = await events.waitFor(`Task:${directorTaskId}:Complete`);
-      
-      // If rejected by director, end workflow
-      if (!directorEvent.payload.approved) {
-        await actions.sendNotification({
-          recipient: data.get('requestor'),
-          template: 'request_rejected',
-          data: {
-            level: 'Director',
-            comments: directorEvent.payload.comments
-          }
-        });
-        
-        context.setState('rejected_by_director');
-        return;
-      }
-      
-      // Store director approval
-      data.set('directorApproval', {
-        approver: directorEvent.user_id,
-        timestamp: directorEvent.timestamp,
-        comments: directorEvent.payload.comments
-      });
-    }
-    
-    // All required approvals received
-    await actions.sendNotification({
-      recipient: data.get('requestor'),
-      template: 'request_approved',
-      data: {
-        approvals: [
-          data.get('teamLeadApproval'),
-          data.get('managerApproval'),
-          data.get('directorApproval')
-        ].filter(Boolean)
-      }
-    });
-    
-    // Execute the approved request
-    await actions.executeApprovedRequest({
-      requestData: data.get('requestData'),
+  }
+  
+  // All required approvals received
+  await actions.sendNotification({
+    recipient: data.get('requestor'),
+    template: 'request_approved',
+    data: {
       approvals: [
         data.get('teamLeadApproval'),
         data.get('managerApproval'),
         data.get('directorApproval')
       ].filter(Boolean)
-    });
-    
-    context.setState('approved');
-    logger.info('Multi-level approval workflow completed');
-  }
-);
+    }
+  });
+  
+  // Execute the approved request
+  await actions.executeApprovedRequest({
+    requestData: data.get('requestData'),
+    approvals: [
+      data.get('teamLeadApproval'),
+      data.get('managerApproval'),
+      data.get('directorApproval')
+    ].filter(Boolean)
+  });
+  
+  context.setState('approved');
+  logger.info('Multi-level approval workflow completed');
+}
 ```
 
 ### Parallel Approval
@@ -348,186 +356,191 @@ A workflow where multiple approvers must review a request simultaneously, and al
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
+import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
-export const parallelApprovalWorkflow = defineWorkflow(
-  'ParallelApproval',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
-    
-    // Initial state - Processing
-    context.setState('processing');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    
-    // Store request data
-    data.set('requestData', triggerEvent.payload);
-    data.set('requestor', triggerEvent.user_id);
-    
-    // Create approval tasks for all required approvers
-    context.setState('pending_approval');
-    
-    // Create financial approval task
-    const { taskId: financialTaskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Financial Approval',
-      description: 'Financial review and approval',
-      priority: 'medium',
-      assignTo: {
-        roles: ['financial_approver']
-      },
-      contextData: {
-        requestData: submitEvent.payload,
-        requestor: submitEvent.user_id,
-        approvalType: 'financial'
-      }
-    });
-    
-    // Create technical approval task
-    const { taskId: technicalTaskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Technical Approval',
-      description: 'Technical review and approval',
-      priority: 'medium',
-      assignTo: {
-        roles: ['technical_approver']
-      },
-      contextData: {
-        requestData: submitEvent.payload,
-        requestor: submitEvent.user_id,
-        approvalType: 'technical'
-      }
-    });
-    
-    // Create legal approval task
-    const { taskId: legalTaskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Legal Approval',
-      description: 'Legal review and approval',
-      priority: 'medium',
-      assignTo: {
-        roles: ['legal_approver']
-      },
-      contextData: {
-        requestData: submitEvent.payload,
-        requestor: submitEvent.user_id,
-        approvalType: 'legal'
-      }
-    });
-    
-    // Store task IDs
-    data.set('approvalTasks', {
-      financial: financialTaskId,
-      technical: technicalTaskId,
-      legal: legalTaskId
-    });
-    
-    // Initialize approval status
-    data.set('approvalStatus', {
-      financial: null,
-      technical: null,
-      legal: null
-    });
-    
-    // Wait for all approvals in parallel
-    await Promise.all([
-      (async () => {
-        const financialEvent = await events.waitFor(`Task:${financialTaskId}:Complete`);
-        const approved = financialEvent.payload.approved;
-        
-        // Update approval status
-        const approvalStatus = data.get('approvalStatus');
-        approvalStatus.financial = {
-          approved,
-          approver: financialEvent.user_id,
-          timestamp: financialEvent.timestamp,
-          comments: financialEvent.payload.comments
-        };
-        data.set('approvalStatus', approvalStatus);
-        
-        logger.info(`Financial approval: ${approved ? 'Approved' : 'Rejected'}`);
-      })(),
-      
-      (async () => {
-        const technicalEvent = await events.waitFor(`Task:${technicalTaskId}:Complete`);
-        const approved = technicalEvent.payload.approved;
-        
-        // Update approval status
-        const approvalStatus = data.get('approvalStatus');
-        approvalStatus.technical = {
-          approved,
-          approver: technicalEvent.user_id,
-          timestamp: technicalEvent.timestamp,
-          comments: technicalEvent.payload.comments
-        };
-        data.set('approvalStatus', approvalStatus);
-        
-        logger.info(`Technical approval: ${approved ? 'Approved' : 'Rejected'}`);
-      })(),
-      
-      (async () => {
-        const legalEvent = await events.waitFor(`Task:${legalTaskId}:Complete`);
-        const approved = legalEvent.payload.approved;
-        
-        // Update approval status
-        const approvalStatus = data.get('approvalStatus');
-        approvalStatus.legal = {
-          approved,
-          approver: legalEvent.user_id,
-          timestamp: legalEvent.timestamp,
-          comments: legalEvent.payload.comments
-        };
-        data.set('approvalStatus', approvalStatus);
-        
-        logger.info(`Legal approval: ${approved ? 'Approved' : 'Rejected'}`);
-      })()
-    ]);
-    
-    // Check if all approvals were received
-    const approvalStatus = data.get('approvalStatus');
-    const allApproved = Object.values(approvalStatus).every(status => status && status.approved);
-    
-    if (allApproved) {
-      // All approvers approved
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_approved',
-        data: {
-          approvals: Object.values(approvalStatus)
-        }
-      });
-      
-      // Execute the approved request
-      await actions.executeApprovedRequest({
-        requestData: data.get('requestData'),
-        approvals: Object.values(approvalStatus)
-      });
-      
-      context.setState('approved');
-    } else {
-      // At least one approver rejected
-      const rejections = Object.entries(approvalStatus)
-        .filter(([_, status]) => status && !status.approved)
-        .map(([type, status]) => ({
-          type,
-          ...status
-        }));
-      
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_rejected',
-        data: {
-          rejections
-        }
-      });
-      
-      context.setState('rejected');
+/**
+ * Parallel Approval Workflow
+ *
+ * A workflow where multiple approvers must review a request simultaneously,
+ * and all must approve for the request to proceed.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function parallelApprovalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state - Processing
+  context.setState('processing');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  
+  // Store request data
+  data.set('requestData', triggerEvent.payload);
+  data.set('requestor', triggerEvent.user_id);
+  
+  // Create approval tasks for all required approvers
+  context.setState('pending_approval');
+  
+  // Create financial approval task
+  const { taskId: financialTaskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Financial Approval',
+    description: 'Financial review and approval',
+    priority: 'medium',
+    assignTo: {
+      roles: ['financial_approver']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id,
+      approvalType: 'financial'
     }
+  });
+  
+  // Create technical approval task
+  const { taskId: technicalTaskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Technical Approval',
+    description: 'Technical review and approval',
+    priority: 'medium',
+    assignTo: {
+      roles: ['technical_approver']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id,
+      approvalType: 'technical'
+    }
+  });
+  
+  // Create legal approval task
+  const { taskId: legalTaskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Legal Approval',
+    description: 'Legal review and approval',
+    priority: 'medium',
+    assignTo: {
+      roles: ['legal_approver']
+    },
+    contextData: {
+      requestData: submitEvent.payload,
+      requestor: submitEvent.user_id,
+      approvalType: 'legal'
+    }
+  });
+  
+  // Store task IDs
+  data.set('approvalTasks', {
+    financial: financialTaskId,
+    technical: technicalTaskId,
+    legal: legalTaskId
+  });
+  
+  // Initialize approval status
+  data.set('approvalStatus', {
+    financial: null,
+    technical: null,
+    legal: null
+  });
+  
+  // Wait for all approvals in parallel
+  await Promise.all([
+    (async () => {
+      const financialEvent = await events.waitFor(`Task:${financialTaskId}:Complete`);
+      const approved = financialEvent.payload.approved;
+      
+      // Update approval status
+      const approvalStatus = data.get('approvalStatus');
+      approvalStatus.financial = {
+        approved,
+        approver: financialEvent.user_id,
+        timestamp: financialEvent.timestamp,
+        comments: financialEvent.payload.comments
+      };
+      data.set('approvalStatus', approvalStatus);
+      
+      logger.info(`Financial approval: ${approved ? 'Approved' : 'Rejected'}`);
+    })(),
     
-    logger.info('Parallel approval workflow completed');
+    (async () => {
+      const technicalEvent = await events.waitFor(`Task:${technicalTaskId}:Complete`);
+      const approved = technicalEvent.payload.approved;
+      
+      // Update approval status
+      const approvalStatus = data.get('approvalStatus');
+      approvalStatus.technical = {
+        approved,
+        approver: technicalEvent.user_id,
+        timestamp: technicalEvent.timestamp,
+        comments: technicalEvent.payload.comments
+      };
+      data.set('approvalStatus', approvalStatus);
+      
+      logger.info(`Technical approval: ${approved ? 'Approved' : 'Rejected'}`);
+    })(),
+    
+    (async () => {
+      const legalEvent = await events.waitFor(`Task:${legalTaskId}:Complete`);
+      const approved = legalEvent.payload.approved;
+      
+      // Update approval status
+      const approvalStatus = data.get('approvalStatus');
+      approvalStatus.legal = {
+        approved,
+        approver: legalEvent.user_id,
+        timestamp: legalEvent.timestamp,
+        comments: legalEvent.payload.comments
+      };
+      data.set('approvalStatus', approvalStatus);
+      
+      logger.info(`Legal approval: ${approved ? 'Approved' : 'Rejected'}`);
+    })()
+  ]);
+  
+  // Check if all approvals were received
+  const approvalStatus = data.get('approvalStatus');
+  const allApproved = Object.values(approvalStatus).every(status => status && status.approved);
+  
+  if (allApproved) {
+    // All approvers approved
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_approved',
+      data: {
+        approvals: Object.values(approvalStatus)
+      }
+    });
+    
+    // Execute the approved request
+    await actions.executeApprovedRequest({
+      requestData: data.get('requestData'),
+      approvals: Object.values(approvalStatus)
+    });
+    
+    context.setState('approved');
+  } else {
+    // At least one approver rejected
+    const rejections = Object.entries(approvalStatus)
+      .filter(([_, status]) => status && !status.approved)
+      .map(([type, status]) => ({
+        type,
+        ...status
+      }));
+    
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_rejected',
+      data: {
+        rejections
+      }
+    });
+    
+    context.setState('rejected');
   }
-);
+  
+  logger.info('Parallel approval workflow completed');
+}
 ```
 
 ### Conditional Approval
@@ -537,72 +550,77 @@ A workflow where the approval path depends on the request attributes, such as am
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
+import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
-export const conditionalApprovalWorkflow = defineWorkflow(
-  'ConditionalApproval',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
-    
-    // Initial state - Processing
-    context.setState('processing');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    const requestData = triggerEvent.payload;
-    
-    // Store request data
-    data.set('requestData', requestData);
-    data.set('requestor', triggerEvent.user_id);
-    
-    // Determine approval path based on request attributes
-    let approvalPath;
-    
-    if (requestData.amount <= 1000) {
-      // Low value - requires only team lead approval
-      approvalPath = 'team_lead_only';
-    } else if (requestData.amount <= 10000) {
-      // Medium value - requires team lead and manager approval
-      approvalPath = 'team_lead_and_manager';
-    } else {
-      // High value - requires team lead, manager, and director approval
-      approvalPath = 'full_approval_chain';
-    }
-    
-    // Additional conditions
-    if (requestData.category === 'legal') {
-      // Legal requests always require legal review
-      approvalPath = 'legal_review';
-    } else if (requestData.risk_level === 'high') {
-      // High risk requests always require full approval chain
-      approvalPath = 'full_approval_chain';
-    }
-    
-    // Store approval path
-    data.set('approvalPath', approvalPath);
-    logger.info(`Selected approval path: ${approvalPath}`);
-    
-    // Execute the selected approval path
-    switch (approvalPath) {
-      case 'team_lead_only':
-        await executeTeamLeadOnlyPath(context);
-        break;
-      case 'team_lead_and_manager':
-        await executeTeamLeadAndManagerPath(context);
-        break;
-      case 'legal_review':
-        await executeLegalReviewPath(context);
-        break;
-      case 'full_approval_chain':
-        await executeFullApprovalChainPath(context);
-        break;
-      default:
-        throw new Error(`Unknown approval path: ${approvalPath}`);
-    }
-    
-    logger.info('Conditional approval workflow completed');
+/**
+ * Conditional Approval Workflow
+ *
+ * A workflow where the approval path depends on the request attributes,
+ * such as amount, category, or risk level.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function conditionalApprovalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state - Processing
+  context.setState('processing');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  const requestData = triggerEvent.payload;
+  
+  // Store request data
+  data.set('requestData', requestData);
+  data.set('requestor', triggerEvent.user_id);
+  
+  // Determine approval path based on request attributes
+  let approvalPath;
+  
+  if (requestData.amount <= 1000) {
+    // Low value - requires only team lead approval
+    approvalPath = 'team_lead_only';
+  } else if (requestData.amount <= 10000) {
+    // Medium value - requires team lead and manager approval
+    approvalPath = 'team_lead_and_manager';
+  } else {
+    // High value - requires team lead, manager, and director approval
+    approvalPath = 'full_approval_chain';
   }
-);
+  
+  // Additional conditions
+  if (requestData.category === 'legal') {
+    // Legal requests always require legal review
+    approvalPath = 'legal_review';
+  } else if (requestData.risk_level === 'high') {
+    // High risk requests always require full approval chain
+    approvalPath = 'full_approval_chain';
+  }
+  
+  // Store approval path
+  data.set('approvalPath', approvalPath);
+  logger.info(`Selected approval path: ${approvalPath}`);
+  
+  // Execute the selected approval path
+  switch (approvalPath) {
+    case 'team_lead_only':
+      await executeTeamLeadOnlyPath(context);
+      break;
+    case 'team_lead_and_manager':
+      await executeTeamLeadAndManagerPath(context);
+      break;
+    case 'legal_review':
+      await executeLegalReviewPath(context);
+      break;
+    case 'full_approval_chain':
+      await executeFullApprovalChainPath(context);
+      break;
+    default:
+      throw new Error(`Unknown approval path: ${approvalPath}`);
+  }
+  
+  logger.info('Conditional approval workflow completed');
+}
 
 // Helper functions for different approval paths
 

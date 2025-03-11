@@ -26,7 +26,7 @@ function randomLaterDate(startDate, maxMinutesLater = 60) {
 }
 
 // Helper function to create a workflow execution
-function createWorkflowExecution(tenant, workflowName, status = 'completed', createdAt = null, currentState = null) {
+function createWorkflowExecution(tenant, workflowName, status = 'completed', createdAt = null, currentState = null, versionId = null) {
   const executionId = uuidv4();
   return {
     execution_id: executionId,
@@ -40,7 +40,8 @@ function createWorkflowExecution(tenant, workflowName, status = 'completed', cre
     context_data: JSON.stringify({
       id: executionId,
       data: {}
-    })
+    }),
+    version_id: versionId
   };
 }
 
@@ -106,6 +107,25 @@ exports.seed = async function(knex) {
   // Use the tenant ID from the database
   const tenant = tenantRecord.tenant;
   
+  // Check if there's a registration version for InvoiceApproval
+  let invoiceApprovalVersionId = null;
+  const registration = await knex('workflow_registrations')
+    .where('tenant_id', tenant)
+    .where('name', 'InvoiceApproval')
+    .first();
+    
+  if (registration) {
+    const versionRecord = await knex('workflow_registration_versions')
+      .where('tenant_id', tenant)
+      .where('registration_id', registration.registration_id)
+      .where('is_current', true)
+      .first();
+      
+    if (versionRecord) {
+      invoiceApprovalVersionId = versionRecord.version_id;
+    }
+  }
+  
   // Create workflow executions
   const workflowExecutions = [];
   const workflowEvents = [];
@@ -129,7 +149,7 @@ exports.seed = async function(knex) {
     }
     
     // Create workflow execution
-    const execution = createWorkflowExecution(tenant, 'InvoiceApproval', status, createdAt, currentState);
+    const execution = createWorkflowExecution(tenant, 'InvoiceApproval', status, createdAt, currentState, invoiceApprovalVersionId);
     workflowExecutions.push(execution);
     
     // Create initial context data

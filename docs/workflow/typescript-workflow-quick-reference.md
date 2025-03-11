@@ -5,16 +5,6 @@ This quick reference guide provides concise information about creating TypeScrip
 ## Basic Workflow Structure
 
 ```typescript
-import { defineWorkflow } from '@shared/workflow/core/workflowDefinition';
-import { WorkflowContext } from '@shared/workflow/core/workflowContext';
-
-export const myWorkflow = defineWorkflow(
-  {
-    name: 'MyWorkflow',
-    description: 'Description of my workflow',
-    version: '1.0.0',
-    tags: ['example']
-  },
   async (context: WorkflowContext) => {
     const { actions, data, events, logger } = context;
     
@@ -26,7 +16,7 @@ export const myWorkflow = defineWorkflow(
     // Final state
     context.setState('completed');
   }
-);
+
 ```
 
 ## Workflow Context API
@@ -132,8 +122,7 @@ await Promise.all(items.map(item => actions.processItem(item)));
 ### Approval Workflow
 
 ```typescript
-export const approvalWorkflow = defineWorkflow(
-  { name: 'ApprovalWorkflow', version: '1.0.0' },
+
   async (context: WorkflowContext) => {
     const { actions, events, data } = context;
     
@@ -162,7 +151,6 @@ export const approvalWorkflow = defineWorkflow(
       context.setState('rejected');
     }
   }
-);
 ```
 
 ### Multi-Level Approval

@@ -101,10 +101,7 @@ The workflow system uses TypeScript functions for defining workflows, providing 
 #### Basic Structure
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
 
-export const myWorkflow = defineWorkflow(
-  'MyWorkflow',
   async (context: WorkflowContext) => {
     const { actions, data, events, logger } = context;
     
@@ -120,7 +117,7 @@ export const myWorkflow = defineWorkflow(
     // Update state
     context.setState('completed');
   }
-);
+
 ```
 
 #### Workflow Context
@@ -181,23 +178,6 @@ try {
   logger.error('Operation failed', error);
   await actions.handleFailure();
 }
-```
-
-#### Workflow Metadata
-
-```typescript
-const workflow = defineWorkflow(
-  {
-    name: 'InvoiceApproval',
-    description: 'Workflow for approving invoices',
-    version: '1.0.0',
-    author: 'Finance Team',
-    tags: ['finance', 'approval']
-  },
-  async (context) => {
-    // Workflow implementation
-  }
-);
 ```
 
 ## 4. Core Components
@@ -427,10 +407,6 @@ To ensure reliable event processing, the system uses:
 ### Basic TypeScript Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
-
-export const simpleApprovalWorkflow = defineWorkflow(
-  'SimpleApproval',
   async (context: WorkflowContext) => {
     const { actions, events, logger } = context;
     
@@ -458,7 +434,6 @@ export const simpleApprovalWorkflow = defineWorkflow(
     
     logger.info('Workflow completed');
   }
-);
 ```
 
 

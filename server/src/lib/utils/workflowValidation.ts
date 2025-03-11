@@ -25,7 +25,7 @@ const patterns = {
 
 /**
  * Extract metadata from workflow code using TypeScript AST
- * 
+ *
  * @param code TypeScript workflow code
  * @returns Extracted metadata or null if not found
  */
@@ -84,11 +84,6 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
           metadata: WorkflowMetadata;
           execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
-
-        export function defineWorkflow(
-          nameOrMetadata: string | WorkflowMetadata,
-          executeFn: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>
-        ): WorkflowDefinition;
       }`
     );
 
@@ -137,63 +132,53 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
     
     const sourceFile = project.createSourceFile('workflow.ts', code);
     
-    // Find all calls to defineWorkflow
-    const defineWorkflowCalls = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)
-      .filter(call => {
-        const expression = call.getExpression();
-        return expression.getText() === 'defineWorkflow';
-      });
+    // Look for object literals that might contain workflow metadata
+    const objectLiterals = sourceFile.getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression);
     
-    if (defineWorkflowCalls.length === 0) {
-      return null;
-    }
-    
-    // Get the first argument of the first defineWorkflow call
-    const firstCall = defineWorkflowCalls[0];
-    const args = firstCall.getArguments();
-    
-    if (args.length < 1) {
-      return null;
-    }
-    
-    // Check if the first argument is an object literal
-    const firstArg = args[0];
-    if (!Node.isObjectLiteralExpression(firstArg)) {
-      return null;
-    }
-    
-    // Extract metadata properties from the object literal
-    const metadata: Record<string, any> = {};
-    const objectLiteral = firstArg as ObjectLiteralExpression;
-    
-    for (const property of objectLiteral.getProperties()) {
-      if (Node.isPropertyAssignment(property)) {
-        const name = property.getName();
-        const initializer = property.getInitializer();
-        
-        if (!initializer) continue;
-        
-        // Handle different types of property values
-        if (Node.isStringLiteral(initializer)) {
-          metadata[name] = initializer.getLiteralText();
-        } else if (Node.isArrayLiteralExpression(initializer)) {
-          const elements = initializer.getElements();
-          metadata[name] = elements
-            .filter(Node.isStringLiteral)
-            .map(el => el.getLiteralText());
-        } else if (Node.isNumericLiteral(initializer)) {
-          metadata[name] = Number(initializer.getText());
-        } else if (initializer.getText() === 'true' || initializer.getText() === 'false') {
-          metadata[name] = initializer.getText() === 'true';
-        } else {
-          // For complex values, try using the text representation
-          metadata[name] = initializer.getText();
+    // Try to find an object literal that has properties matching our metadata schema
+    for (const objectLiteral of objectLiterals) {
+      const metadata: Record<string, any> = {};
+      
+      for (const property of objectLiteral.getProperties()) {
+        if (Node.isPropertyAssignment(property)) {
+          const name = property.getName();
+          const initializer = property.getInitializer();
+          
+          if (!initializer) continue;
+          
+          // Handle different types of property values
+          if (Node.isStringLiteral(initializer)) {
+            metadata[name] = initializer.getLiteralText();
+          } else if (Node.isArrayLiteralExpression(initializer)) {
+            const elements = initializer.getElements();
+            metadata[name] = elements
+              .filter(Node.isStringLiteral)
+              .map(el => el.getLiteralText());
+          } else if (Node.isNumericLiteral(initializer)) {
+            metadata[name] = Number(initializer.getText());
+          } else if (initializer.getText() === 'true' || initializer.getText() === 'false') {
+            metadata[name] = initializer.getText() === 'true';
+          } else {
+            // For complex values, try using the text representation
+            metadata[name] = initializer.getText();
+          }
+        }
+      }
+      
+      // Check if this object has the required metadata properties
+      if (metadata.name) {
+        try {
+          // Validate with Zod schema
+          return WorkflowMetadataSchema.parse(metadata);
+        } catch (error) {
+          // Not a valid metadata object, continue searching
+          continue;
         }
       }
     }
     
-    // Validate with Zod schema
-    return WorkflowMetadataSchema.parse(metadata);
+    // If we get here, we couldn't find valid metadata
+    return null;
   } catch (error) {
     logger.error("Error extracting workflow metadata using AST:", error);
     return null;
@@ -276,11 +261,6 @@ export function validateWorkflowCode(code: string): {
           metadata: WorkflowMetadata;
           execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
-
-        export function defineWorkflow(
-          nameOrMetadata: string | WorkflowMetadata,
-          executeFn: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>
-        ): WorkflowDefinition;
       }`
     );
 
@@ -328,19 +308,6 @@ export function validateWorkflowCode(code: string): {
     );
     
     const sourceFile = project.createSourceFile('workflow.ts', code);
-    
-    // Check for defineWorkflow function call
-    const defineWorkflowCalls = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression)
-      .filter(call => {
-        const expression = call.getExpression();
-        return expression.getText() === 'defineWorkflow';
-      });
-    
-    if (defineWorkflowCalls.length === 0) {
-      errors.push("Workflow must use the defineWorkflow function");
-      return { valid: false, errors, warnings, metadata };
-    }
-    
     // Extract and validate metadata
     try {
       metadata = extractWorkflowMetadata(code);
@@ -487,11 +454,6 @@ export function checkWorkflowSecurity(code: string): string[] {
           metadata: WorkflowMetadata;
           execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
         }
-
-        export function defineWorkflow(
-          nameOrMetadata: string | WorkflowMetadata,
-          executeFn: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>
-        ): WorkflowDefinition;
       }`
     );
 

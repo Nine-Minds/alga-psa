@@ -37,8 +37,55 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
     // Get all registered workflows
     const workflowDefinitions = runtime.getRegisteredWorkflows();
     
-    // Find the requested workflow
-    const workflowDefinition = workflowDefinitions.get(definitionId);
+    // Find the requested workflow in registered workflows
+    let workflowDefinition = workflowDefinitions.get(definitionId);
+    
+    // If not found in registered workflows, try to load it from the database
+    if (!workflowDefinition) {
+      console.log(`Workflow definition "${definitionId}" not found in registered workflows, trying to load from database...`);
+      
+      // Create a tenant knex instance
+      const { knex, tenant } = await createTenantKnex();
+      
+      if (!tenant) {
+        throw new Error('Tenant not found');
+      }
+      
+      // Import WorkflowRegistrationModel
+      const WorkflowRegistrationModel = (await import('@shared/workflow/persistence/workflowRegistrationModel')).default;
+      
+      // Try to get the workflow by name
+      const registration = await WorkflowRegistrationModel.getByName(knex, tenant, definitionId);
+      
+      if (registration) {
+        console.log(`Found workflow registration for "${definitionId}" in database`);
+        
+        // Convert the stored definition to a WorkflowDefinition
+        const { deserializeWorkflowDefinition } = await import('@shared/workflow/core/workflowDefinition');
+        
+        try {
+          // Create a serialized definition from the database record
+          const serializedDefinition = {
+            metadata: {
+              name: registration.name,
+              description: registration.definition.metadata?.description || '',
+              version: registration.version,
+              tags: registration.definition.metadata?.tags || []
+            },
+            executeFn: registration.definition.executeFn
+          };
+          
+          // Deserialize the workflow definition
+          workflowDefinition = deserializeWorkflowDefinition(serializedDefinition);
+          console.log(`Successfully deserialized workflow definition for "${definitionId}"`);
+        }
+        catch (error) {
+          console.error(`Error deserializing workflow definition for "${definitionId}":`, error);
+        }
+      } else {
+        console.log(`No workflow registration found for "${definitionId}" in database`);
+      }
+    }
     
     if (!workflowDefinition) {
       throw new Error(`Workflow definition not found: ${definitionId}`);
@@ -98,18 +145,39 @@ function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition):
  */
 export async function getWorkflowDSLContent(definitionId: string): Promise<string> {
   try {
-    // For the TypeScript-based workflow system, we'll look for the workflow in the examples directory
+    // First, try to find the workflow in the examples directory
     const examplesDir = path.join(process.cwd(), 'src', 'lib', 'workflow', 'examples');
     const tsFilePath = path.join(examplesDir, `${definitionId}Workflow.ts`);
     
     try {
-      // Read the TypeScript file
+      // Try to read the TypeScript file from the examples directory
       const tsContent = await fs.readFile(tsFilePath, 'utf-8');
-      console.log(`Read workflow TypeScript file: ${definitionId}, size: ${tsContent.length} bytes`);
+      console.log(`Read workflow TypeScript file from examples: ${definitionId}, size: ${tsContent.length} bytes`);
       return tsContent;
     } catch (fileError) {
       if ((fileError as NodeJS.ErrnoException).code === 'ENOENT') {
-        // File not found
+        // File not found in examples directory, try to load from database
+        console.log(`Workflow TypeScript file not found in examples directory, trying to load from database: ${definitionId}`);
+        
+        // Create a tenant knex instance
+        const { knex, tenant } = await createTenantKnex();
+        
+        if (!tenant) {
+          throw new Error('Tenant not found');
+        }
+        
+        // Import WorkflowRegistrationModel
+        const WorkflowRegistrationModel = (await import('@shared/workflow/persistence/workflowRegistrationModel')).default;
+        
+        // Try to get the workflow by name
+        const registration = await WorkflowRegistrationModel.getByName(knex, tenant, definitionId);
+        
+        if (registration && registration.definition && registration.definition.executeFn) {
+          console.log(`Found workflow registration for "${definitionId}" in database, returning executeFn`);
+          return registration.definition.executeFn;
+        }
+        
+        // If we get here, the workflow was not found in the database either
         throw new Error(`Workflow definition not found: ${definitionId}`);
       }
       // Rethrow other errors

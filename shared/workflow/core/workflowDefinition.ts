@@ -28,54 +28,6 @@ export interface SerializedWorkflowDefinition {
   metadata: WorkflowMetadata;
   executeFn: string; // Serialized function as string
 }
-
-/**
- * Define a new workflow with metadata and execution function
- *
- * @param nameOrMetadata Workflow name or complete metadata object
- * @param executeFn The workflow execution function
- * @returns A complete workflow definition
- *
- * @example
- * ```typescript
- * const myWorkflow = defineWorkflow(
- *   'MyWorkflow',
- *   async (context) => {
- *     // Workflow implementation
- *   }
- * );
- * ```
- *
- * @example
- * ```typescript
- * const myWorkflow = defineWorkflow(
- *   {
- *     name: 'MyWorkflow',
- *     description: 'A sample workflow',
- *     version: '1.0.0',
- *     author: 'John Doe',
- *     tags: ['sample', 'demo']
- *   },
- *   async (context) => {
- *     // Workflow implementation
- *   }
- * );
- * ```
- */
-export function defineWorkflow(
-  nameOrMetadata: string | WorkflowMetadata,
-  executeFn: WorkflowFunction
-): WorkflowDefinition {
-  const metadata = typeof nameOrMetadata === 'string'
-    ? { name: nameOrMetadata }
-    : nameOrMetadata;
-  
-  return {
-    metadata,
-    execute: executeFn
-  };
-}
-
 /**
  * Serialize a workflow definition to a format that can be stored in the database
  *

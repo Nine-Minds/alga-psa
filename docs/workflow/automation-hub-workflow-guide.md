@@ -79,16 +79,7 @@ Available snippets include:
 Every workflow must follow this basic structure:
 
 ```typescript
-import { defineWorkflow } from '@shared/workflow/core/workflowDefinition';
-import { WorkflowContext } from '@shared/workflow/core/workflowContext';
 
-export const myWorkflow = defineWorkflow(
-  {
-    name: 'MyWorkflow',
-    description: 'Description of my workflow',
-    version: '1.0.0',
-    tags: ['example']
-  },
   async (context: WorkflowContext) => {
     const { actions, data, events, logger } = context;
     
@@ -100,7 +91,7 @@ export const myWorkflow = defineWorkflow(
     // Final state
     context.setState('completed');
   }
-);
+
 ```
 
 ### Key Components to Include

@@ -28,25 +28,17 @@ The workflow editor consists of several key components:
 
 ### Basic Structure
 
-Every workflow is defined using the `defineWorkflow` function, which takes two parameters:
-1. Metadata object or workflow name
-2. Execution function that contains the workflow logic
+Workflows are defined as standalone async functions that take a WorkflowContext parameter. These functions are stored in the database and executed by the workflow runtime.
 
 ```typescript
-import { defineWorkflow } from '@shared/workflow/core/workflowDefinition';
-import { WorkflowContext } from '@shared/workflow/core/workflowContext';
-
-export const myWorkflow = defineWorkflow(
-  {
-    name: 'MyWorkflow',
-    description: 'Description of my workflow',
-    version: '1.0.0',
-    tags: ['example', 'custom']
-  },
-  async (context: WorkflowContext) => {
-    // Workflow implementation
-  }
-);
+/**
+ * My workflow function
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function myWorkflow(context: WorkflowContext): Promise<void> {
+  // Workflow implementation
+}
 ```
 
 ### Workflow Context
@@ -341,144 +333,142 @@ You can manage workflow versions through the Versions dialog:
 - Add comments to explain the changes in each version
 
 ## 9. Common Workflow Patterns
-
 ### Approval Workflow
 
 ```typescript
-export const approvalWorkflow = defineWorkflow(
-  {
-    name: 'ApprovalWorkflow',
-    description: 'Basic approval workflow',
-    version: '1.0.0',
-    tags: ['approval']
-  },
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
-    
-    // Initial state
-    context.setState('submitted');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    logger.info(`Request submitted by ${triggerEvent.user_id}`);
-    
-    // Store request data
-    data.set('requestData', triggerEvent.payload);
-    data.set('requestor', triggerEvent.user_id);
-    
-    // Create approval task
-    const { taskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Approve Request',
-      description: `Please review and approve the request`,
-      assignTo: { roles: ['approver'] }
+/**
+ * Approval workflow
+ *
+ * Basic workflow for handling approval requests
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function approvalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state
+  context.setState('submitted');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  logger.info(`Request submitted by ${triggerEvent.user_id}`);
+  
+  // Store request data
+  data.set('requestData', triggerEvent.payload);
+  data.set('requestor', triggerEvent.user_id);
+  
+  // Create approval task
+  const { taskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Approve Request',
+    description: `Please review and approve the request`,
+    assignTo: { roles: ['approver'] }
+  });
+  
+  // Update state
+  context.setState('pending_approval');
+  
+  // Wait for task completion
+  const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
+  
+  // Process approval decision
+  if (approvalEvent.payload.approved) {
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_approved'
     });
     
-    // Update state
-    context.setState('pending_approval');
+    context.setState('approved');
+  } else {
+    await actions.sendNotification({
+      recipient: data.get('requestor'),
+      template: 'request_rejected'
+    });
     
-    // Wait for task completion
-    const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
-    
-    // Process approval decision
-    if (approvalEvent.payload.approved) {
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_approved'
-      });
-      
-      context.setState('approved');
-    } else {
-      await actions.sendNotification({
-        recipient: data.get('requestor'),
-        template: 'request_rejected'
-      });
-      
-      context.setState('rejected');
-    }
+    context.setState('rejected');
   }
-);
+}
+```
 ```
 
 ### Service Request Workflow
 
 ```typescript
-export const serviceRequestWorkflow = defineWorkflow(
-  {
-    name: 'ServiceRequestWorkflow',
-    description: 'Workflow for handling service requests',
-    version: '1.0.0',
-    tags: ['service', 'request']
-  },
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
+/**
+ * Service Request Workflow
+ *
+ * Workflow for handling service requests
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function serviceRequestWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data, logger } = context;
+  
+  // Initial state
+  context.setState('received');
+  
+  // The workflow is triggered by a ServiceRequest event, which is passed as input
+  // This workflow would be attached to the SERVICE_REQUEST event type in the event catalog
+  const { triggerEvent } = context.input;
+  const requestData = triggerEvent.payload;
+  
+  // Validate request
+  const validationResult = await actions.validateServiceRequest(requestData);
+  
+  if (!validationResult.valid) {
+    logger.warn('Invalid service request', validationResult.errors);
+    context.setState('invalid');
     
-    // Initial state
-    context.setState('received');
-    
-    // The workflow is triggered by a ServiceRequest event, which is passed as input
-    // This workflow would be attached to the SERVICE_REQUEST event type in the event catalog
-    const { triggerEvent } = context.input;
-    const requestData = triggerEvent.payload;
-    
-    // Validate request
-    const validationResult = await actions.validateServiceRequest(requestData);
-    
-    if (!validationResult.valid) {
-      logger.warn('Invalid service request', validationResult.errors);
-      context.setState('invalid');
-      
-      await actions.notifyRequestor({
-        requestorId: triggerEvent.user_id,
-        message: 'Your service request could not be processed',
-        errors: validationResult.errors
-      });
-      
-      return;
-    }
-    
-    // Assign to technician
-    context.setState('assigning');
-    
-    const assignmentResult = await actions.assignServiceRequest({
-      requestId: requestData.id,
-      priority: requestData.priority,
-      skills: requestData.requiredSkills
+    await actions.notifyRequestor({
+      requestorId: triggerEvent.user_id,
+      message: 'Your service request could not be processed',
+      errors: validationResult.errors
     });
     
-    // Update state based on assignment
-    if (assignmentResult.assigned) {
-      context.setState('assigned');
+    return;
+  }
+  
+  // Assign to technician
+  context.setState('assigning');
+  
+  const assignmentResult = await actions.assignServiceRequest({
+    requestId: requestData.id,
+    priority: requestData.priority,
+    skills: requestData.requiredSkills
+  });
+  
+  // Update state based on assignment
+  if (assignmentResult.assigned) {
+    context.setState('assigned');
+    
+    // Wait for completion
+    const completionEvent = await events.waitFor('ServiceRequestComplete');
+    
+    // Process completion
+    if (completionEvent.payload.success) {
+      context.setState('completed');
       
-      // Wait for completion
-      const completionEvent = await events.waitFor('ServiceRequestComplete');
-      
-      // Process completion
-      if (completionEvent.payload.success) {
-        context.setState('completed');
-        
-        await actions.sendSatisfactionSurvey({
-          requestId: requestData.id,
-          requestorId: triggerEvent.user_id
-        });
-      } else {
-        context.setState('failed');
-        
-        await actions.escalateFailedRequest({
-          requestId: requestData.id,
-          reason: completionEvent.payload.reason
-        });
-      }
-    } else {
-      context.setState('unassigned');
-      
-      await actions.escalateUnassignedRequest({
+      await actions.sendSatisfactionSurvey({
         requestId: requestData.id,
-        reason: assignmentResult.reason
+        requestorId: triggerEvent.user_id
+      });
+    } else {
+      context.setState('failed');
+      
+      await actions.escalateFailedRequest({
+        requestId: requestData.id,
+        reason: completionEvent.payload.reason
       });
     }
+  } else {
+    context.setState('unassigned');
+    
+    await actions.escalateUnassignedRequest({
+      requestId: requestData.id,
+      reason: assignmentResult.reason
+    });
   }
-);
+}
 ```
 
 ## 10. Troubleshooting

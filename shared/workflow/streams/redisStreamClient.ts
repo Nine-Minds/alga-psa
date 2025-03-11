@@ -361,8 +361,8 @@ export class RedisStreamClient {
       return messages
         .filter(message => message !== null)
         .map(message => ({
-          id: message.id,
-          message: message.message
+          id: message!.id,
+          message: message!.message
         }));
     } catch (error: any) {
       // If XAUTOCLAIM is not supported (Redis < 6.2), fall back to the old method

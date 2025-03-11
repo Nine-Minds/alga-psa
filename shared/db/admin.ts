@@ -1,6 +1,6 @@
 import Knex from 'knex';
-import knexfile from './knexfile';
-import { getSecret } from '../core/getSecret';
+import knexfile from './knexfile.js';
+import { getSecret } from '../core/getSecret.js';
 import process from 'process';
 
 export async function getAdminConnection() {
