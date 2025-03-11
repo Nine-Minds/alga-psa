@@ -252,7 +252,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
   readOnly = false,
   height = "70vh"
 }) => {
-  const [editorValue, setEditorValue] = useState<string>(initialValue);
+  const [editorValue, setEditorValue] = useState<string>(initialValue || defaultWorkflowTemplate);
   const [isEditorReady, setIsEditorReady] = useState<boolean>(false);
   const [validationWarnings, setValidationWarnings] = useState<ValidationWarning[]>([]);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -270,6 +270,73 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       "workflow-types.d.ts"
     );
 
+    // Add shared module type definitions
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+      `declare module '@shared/workflow/core/workflowDefinition' {
+        export interface WorkflowMetadata {
+          name: string;
+          description?: string;
+          version?: string;
+          author?: string;
+          tags?: string[];
+        }
+
+        export interface WorkflowDefinition {
+          metadata: WorkflowMetadata;
+          execute: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>;
+        }
+
+        export function defineWorkflow(
+          nameOrMetadata: string | WorkflowMetadata,
+          executeFn: (context: import('@shared/workflow/core/workflowContext').WorkflowContext) => Promise<void>
+        ): WorkflowDefinition;
+      }`,
+      "shared-workflow-definition.d.ts"
+    );
+
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(
+      `declare module '@shared/workflow/core/workflowContext' {
+        export interface WorkflowDataManager {
+          get<T>(key: string): T;
+          set<T>(key: string, value: T): void;
+        }
+
+        export interface WorkflowEventManager {
+          waitFor(eventName: string | string[]): Promise<WorkflowEvent>;
+          emit(eventName: string, payload?: any): Promise<void>;
+        }
+
+        export interface WorkflowEvent {
+          name: string;
+          payload: any;
+          user_id?: string;
+          timestamp: string;
+          processed?: boolean;
+        }
+
+        export interface WorkflowLogger {
+          info(message: string, ...args: any[]): void;
+          warn(message: string, ...args: any[]): void;
+          error(message: string, ...args: any[]): void;
+          debug(message: string, ...args: any[]): void;
+        }
+
+        export interface WorkflowContext {
+          executionId: string;
+          tenant: string;
+          actions: Record<string, any>;
+          data: WorkflowDataManager;
+          events: WorkflowEventManager;
+          logger: WorkflowLogger;
+          getCurrentState(): string;
+          setState(state: string): void;
+        }
+
+        export type WorkflowFunction = (context: WorkflowContext) => Promise<void>;
+      }`,
+      "shared-workflow-context.d.ts"
+    );
+
     // Configure TypeScript compiler options
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
       target: monaco.languages.typescript.ScriptTarget.ES2020,
@@ -281,7 +348,8 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       jsx: monaco.languages.typescript.JsxEmit.React,
       reactNamespace: "React",
       allowJs: true,
-      typeRoots: ["node_modules/@types"]
+      typeRoots: ["node_modules/@types"],
+      lib: ["dom", "es2015", "es2016", "es2017", "es2018", "es2019", "es2020"]
     });
 
     // Register code snippets
@@ -314,6 +382,13 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       setEditorValue(value);
     }
   };
+
+  // Update editorValue when initialValue changes
+  useEffect(() => {
+    if (initialValue) {
+      setEditorValue(initialValue);
+    }
+  }, [initialValue]);
   
   // Validate code and show warnings
   const validateCode = (code: string) => {
@@ -416,7 +491,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           <Editor
             height="100%"
             defaultLanguage="typescript"
-            defaultValue={initialValue}
+            value={editorValue}
             onChange={handleEditorChange}
             onMount={handleEditorDidMount}
             options={{

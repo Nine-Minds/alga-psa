@@ -5,6 +5,11 @@
  * and an HTTP server for health checks.
  */
 
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
+
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime.js';
 import { getActionRegistry } from '@shared/workflow/core/actionRegistry.js';
 import { WorkflowWorker } from './WorkflowWorker.js';

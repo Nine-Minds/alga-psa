@@ -9,7 +9,9 @@ import {
   EventType,
   EventSchemas,
   BaseEventSchema,
-} from './events';
+  convertToWorkflowEvent
+} from '@shared/workflow/streams/eventBusSchema';
+import { WorkflowEventBaseSchema } from '@shared/workflow/streams/workflowEventSchema';
 
 // Redis client configuration
 const createRedisClient = async () => {
@@ -60,6 +62,7 @@ async function getClient() {
 
 export class EventBus {
   private static instance: EventBus;
+  private static createdConsumerGroups: Set<string> = new Set<string>();
   private handlers: Map<EventType, Set<(event: Event) => Promise<void>>>;
   private initialized: boolean = false;
   private consumerName: string;
@@ -78,6 +81,12 @@ export class EventBus {
   }
 
   private async ensureStreamAndGroup(stream: string): Promise<void> {
+    // Check if we've already created this consumer group
+    if (EventBus.createdConsumerGroups.has(stream)) {
+      // logger.debug(`[EventBus] Consumer group already ensured for stream: ${stream}`);
+      return;
+    }
+
     const client = await getClient();
     try {
       const config = getRedisConfig();
@@ -85,9 +94,13 @@ export class EventBus {
         MKSTREAM: true
       });
       logger.info(`[EventBus] Created consumer group for stream: ${stream}`);
+      // Add to the set of created consumer groups
+      EventBus.createdConsumerGroups.add(stream);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
         logger.info(`[EventBus] Consumer group already exists for stream: ${stream}`);
+        // Add to the set of created consumer groups even if it already existed
+        EventBus.createdConsumerGroups.add(stream);
       } else {
         throw err;
       }
@@ -330,15 +343,25 @@ export class EventBus {
 
       eventSchema.parse(fullEvent);
 
-      const stream = getEventStream(fullEvent.eventType);
+      // Publish to the global workflow events stream
+      const globalStream = 'workflow:events:global';
       const client = await getClient();
 
-      await this.ensureStreamAndGroup(stream);
+      await this.ensureStreamAndGroup(globalStream);
+
+      // Convert the event to the format expected by the workflow worker
+      const workflowEvent = WorkflowEventBaseSchema.parse(
+        convertToWorkflowEvent(fullEvent)
+      );
+
+      logger.info('[EventBus] Publishing event in workflow format:', {
+        workflowEvent
+      });
 
       await client.xAdd(
-        stream,
+        globalStream,
         '*',
-        { event: JSON.stringify(fullEvent) },
+        { event: JSON.stringify(workflowEvent) },
         {
           TRIM: {
             strategy: 'MAXLEN',
@@ -349,7 +372,7 @@ export class EventBus {
       );
 
       logger.info('[EventBus] Event published successfully:', {
-        stream,
+        stream: globalStream,
         eventType: fullEvent.eventType,
         eventId: fullEvent.id
       });

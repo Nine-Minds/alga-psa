@@ -70,11 +70,26 @@ export async function deleteUser(userId: string): Promise<void> {
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
+    console.log('Getting current user from session');
     const session = await getServerSession(authOptions);
-    if (!session?.user?.email) return null;
+    
+    if (!session?.user?.email) {
+      console.log('No user email found in session');
+      return null;
+    }
+    
+    console.log(`Looking up user by email: ${session.user.email}`);
     const user = await User.findUserByEmail(session.user.email);
-    if (!user) return null;
+    
+    if (!user) {
+      console.log(`User not found for email: ${session.user.email}`);
+      return null;
+    }
+    
+    console.log(`Fetching roles for user ID: ${user.user_id}`);
     const roles = await User.getUserRoles(user.user_id);
+    
+    console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
     return { ...user, roles };
   } catch (error) {
     console.error('Failed to get current user:', error);

@@ -432,6 +432,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
           isOpen={isTestModalOpen}
           onClose={() => setIsTestModalOpen(false)}
           workflowCode={workflowToTest.code}
+          workflowId={workflowToTest.id}
         />
       )}
     </div>

@@ -3,10 +3,8 @@
  */
 export const workflowConfig = {
   /**
-   * Whether to run in distributed mode (using Redis streams)
-   * or synchronous mode (direct execution)
+   * All events are processed asynchronously through Redis streams
    */
-  distributedMode: process.env.WORKFLOW_DISTRIBUTED_MODE === 'true',
 
   /**
    * Redis configuration for workflow streams

@@ -81,11 +81,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
     },
     pool: {
       min: 0,
-      max: 20,
-      idleTimeoutMillis: 1000,
-      reapIntervalMillis: 1000,
+      max: 30,
+      idleTimeoutMillis: 500,
+      reapIntervalMillis: 300,
       createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 1000
+      destroyTimeoutMillis: 300
     }
   }
 };
@@ -104,7 +104,10 @@ export async function getFullConfig(env: string): Promise<CustomKnexConfig> {
 
 // Main config getter function
 export async function getKnexConfig(env: string): Promise<CustomKnexConfig> {
-  return await getFullConfig(env);
+  const config = await getFullConfig(env);
+  console.log(`Getting knex config for environment: ${env}`);
+  console.log(`Connection pool config: min=${config.pool?.min}, max=${config.pool?.max}`);
+  return config;
 }
 
 function isValidTenantId(tenantId: string): boolean {
@@ -132,18 +135,27 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
     },
     acquireConnectionTimeout: 60000,
     afterCreate: (conn: any, done: Function) => {
+      console.log(`Creating new connection for tenant: ${tenant}`);
       conn.on('error', (err: Error) => {
         console.error('Database connection error:', err);
       });
       conn.query(`SET app.current_tenant = '${tenant}'`, (err: Error) => {
+        if (err) {
+          console.error(`Error setting tenant context: ${err.message}`);
+        } else {
+          console.log(`Successfully set tenant context to: ${tenant}`);
+        }
         done(err, conn);
       });
     },
     afterRelease: (conn: any, done: Function) => {
+      console.log('Releasing connection back to the pool');
       conn.query('SELECT 1', (err: Error) => {
         if (err) {
+          console.error(`Error checking connection health: ${err.message}`);
           done(err, conn);
         } else {
+          console.log('Connection health check passed');
           done(null, conn);
         }
       });

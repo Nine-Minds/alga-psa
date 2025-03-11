@@ -286,10 +286,10 @@ const User = {
     const {knex: db, tenant} = await createTenantKnex();
     try {
       await db('user_roles').where({ user_id, tenant }).del();
-      const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({ 
-        user_id, 
-        role_id: role.role_id, 
-        tenant 
+      const userRoles = roles.map((role): IUserRoleWithOptionalTenant => ({
+        user_id,
+        role_id: role.role_id,
+        tenant
       }));
       await db('user_roles').insert(userRoles);
     } catch (error) {

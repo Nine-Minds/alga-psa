@@ -10,6 +10,7 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/src/lib/actions/event-catalog-actions';
 import { IEventCatalogEntry } from '@shared/workflow/types/eventCatalog';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import *  as workflowEditorActions from 'server/src/lib/actions/workflow-editor-actions';
 
 // JSON Editor component
 const JsonEditor = ({ value, onChange, error, height = '200px' }: {
@@ -92,9 +93,10 @@ interface TestWorkflowModalProps {
   isOpen: boolean;
   onClose: () => void;
   workflowCode: string;
+  workflowId: string; // Make workflowId required
 }
 
-export default function TestWorkflowModal({ isOpen, onClose, workflowCode }: TestWorkflowModalProps) {
+export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workflowId }: TestWorkflowModalProps) {
   const [eventName, setEventName] = useState<string>('');
   const [eventPayload, setEventPayload] = useState<string>('{}');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -221,15 +223,13 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode }: Tes
       setJsonError(null);
       setIsSubmitting(true);
       
-      try {
-        // Import dynamically to avoid circular dependencies
-        const workflowEditorActions = await import('server/src/lib/actions/workflow-editor-actions');
-        
+      try {        
         // Execute the workflow test with the event data
         const result = await workflowEditorActions.executeWorkflowTest(
           workflowCode,
           eventName,
-          payload
+          payload,
+          workflowId // Pass the workflowId (now required)
         );
         
         if (result.success) {

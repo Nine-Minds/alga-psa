@@ -18,18 +18,16 @@ import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowE
 import WorkflowRegistrationModel from '@shared/workflow/persistence/workflowRegistrationModel.js';
 import logger from '@shared/core/logger.js';
 
-// Temporary workflowConfig until the real one is implemented
-const workflowConfig = {
-  distributedMode: true
-};
+// No configuration needed - all events are processed asynchronously
 
 /**
- * Options for workflow execution
+ * Options for workflow execution by version ID
  */
-export interface WorkflowExecutionOptions {
+export interface WorkflowVersionExecutionOptions {
   tenant: string;
   initialData?: Record<string, any>;
   userId?: string;
+  versionId: string; // Required version_id from workflow_registration_versions
 }
 
 /**
@@ -102,16 +100,15 @@ export interface TypeScriptWorkflowRuntime {
   
   getRegisteredWorkflows(): Map<string, WorkflowDefinition>;
   
-  getWorkflowDefinition(
-    workflowName: string,
-    version?: string
-  ): Promise<WorkflowDefinition | null>;
-  
-  startWorkflow(
+  getWorkflowDefinitionByVersionId(
     knex: Knex,
-    workflowName: string,
-    options: WorkflowExecutionOptions
+    versionId: string
+  ): Promise<WorkflowDefinition | null>;
+  startWorkflowByVersionId(
+    knex: Knex,
+    options: WorkflowVersionExecutionOptions
   ): Promise<WorkflowExecutionResult>;
+  
   
   submitEvent(
     knex: Knex,
@@ -215,47 +212,28 @@ export class TypeScriptWorkflowRuntime {
   }
   
   /**
-   * Get a workflow definition by name, loading from database if needed
+   * Get a workflow definition by version ID, loading from database if needed
    * This implements on-demand loading of workflow definitions
    *
-   * @param workflowName The name of the workflow to get
-   * @param version Optional version string
+   * @param versionId The version ID of the workflow to get
    * @returns The workflow definition or null if not found
    */
-  async getWorkflowDefinition(workflowName: string, version?: string): Promise<WorkflowDefinition | null> {
-    // First check if we have a code-registered workflow with this name
-    const codeWorkflow = this.workflowDefinitions.get(workflowName);
-    if (codeWorkflow) {
-      return codeWorkflow;
-    }
-    
+  async getWorkflowDefinitionByVersionId(knex: Knex, versionId: string): Promise<WorkflowDefinition | null> {
     try {
-      // Get a knex instance from the caller context
-      // This is typically passed to methods that need database access
-      const knex = this.getKnexInstance();
-      if (!knex) {
-        logger.error(`No knex instance available for loading workflow definition: ${workflowName}`);
-        return null;
-      }
-      
-      // Get the tenant from the context
-      const tenant = this.getTenant();
-      if (!tenant) {
-        logger.error(`No tenant available for loading workflow definition: ${workflowName}`);
-        return null;
-      }
-      
-      // Get the workflow registration from the database using the model
-      const registration = await WorkflowRegistrationModel.getByName(knex, tenant, workflowName, version);
+      // Get the workflow registration version by version_id
+      const registration = await knex('workflow_registration_versions')
+        .where('version_id', versionId)
+        .first();
       
       if (!registration) {
+        logger.error(`No workflow registration found for version ID: ${versionId}`);
         return null;
       }
       
       // Convert the stored definition to a WorkflowDefinition
       const serializedDefinition: SerializedWorkflowDefinition = {
         metadata: {
-          name: registration.name,
+          name: registration.name || 'Unknown',
           description: registration.definition.description || '',
           version: registration.version,
           tags: registration.definition.tags || []
@@ -266,7 +244,7 @@ export class TypeScriptWorkflowRuntime {
       // Deserialize the workflow definition
       return deserializeWorkflowDefinition(serializedDefinition);
     } catch (error) {
-      logger.error(`Failed to load workflow definition for ${workflowName}:`, error);
+      logger.error(`Failed to load workflow definition for version ID ${versionId}:`, error);
       return null;
     }
   }
@@ -291,18 +269,37 @@ export class TypeScriptWorkflowRuntime {
     return 'default';
   }
   
+  
   /**
-   * Start a new workflow execution
+   * Start a new workflow execution by version ID
+   * This is the preferred method for starting workflows
    */
-  async startWorkflow(
+  async startWorkflowByVersionId(
     knex: Knex,
-    workflowName: string,
-    options: WorkflowExecutionOptions
+    options: WorkflowVersionExecutionOptions
   ): Promise<WorkflowExecutionResult> {
-    // Try to get the workflow definition (from code or database)
-    const workflow = await this.getWorkflowDefinition(workflowName);
-    if (!workflow) {
-      throw new Error(`Workflow "${workflowName}" not found`);
+    // Get the workflow registration version
+    const versionRecord = await knex('workflow_registration_versions as wrv')
+      .join('workflow_registrations as wr', 'wrv.registration_id', 'wr.registration_id')
+      .where({
+        'wrv.version_id': options.versionId,
+        'wrv.tenant_id': options.tenant
+      })
+      .select(
+        'wr.name as workflow_name',
+        'wrv.version'
+      )
+      .first();
+    
+    if (!versionRecord) {
+      throw new Error(`Workflow version "${options.versionId}" not found`);
+    }
+    
+    // Get the workflow definition using the version ID
+    const workflowDefinition = await this.getWorkflowDefinitionByVersionId(knex, options.versionId);
+    
+    if (!workflowDefinition) {
+      throw new Error(`Failed to load workflow definition for version "${options.versionId}"`);
     }
     
     // Generate a unique execution ID
@@ -324,12 +321,13 @@ export class TypeScriptWorkflowRuntime {
       
       // Persist workflow execution record
       await WorkflowExecutionModel.create(knex, options.tenant, {
-        workflow_name: workflowName,
-        workflow_version: workflow.metadata.version || '1.0.0', // Default version if not specified
+        workflow_name: versionRecord.workflow_name,
+        workflow_version: versionRecord.version,
         current_state: 'initial',
         status: 'active',
         context_data: options.initialData || {},
-        tenant: options.tenant
+        tenant: options.tenant,
+        version_id: options.versionId
       });
       
       // Create initial workflow.started event
@@ -342,8 +340,8 @@ export class TypeScriptWorkflowRuntime {
         to_state: 'initial',
         user_id: options.userId, // This is optional in IWorkflowEvent
         payload: {
-          workflow_name: workflowName,
-          workflow_version: workflow.metadata.version || '1.0.0', // Default version if not specified
+          workflow_name: versionRecord.workflow_name,
+          workflow_version: versionRecord.version,
           initial_data: options.initialData || {}
         }
       };
@@ -355,7 +353,7 @@ export class TypeScriptWorkflowRuntime {
       const context = this.createWorkflowContext(executionId, options.tenant);
       
       // Start workflow execution in background
-      this.executeWorkflow(workflow.execute, context, executionState);
+      this.executeWorkflow(workflowDefinition.execute, context, executionState);
       
       return {
         executionId,
@@ -363,15 +361,15 @@ export class TypeScriptWorkflowRuntime {
         isComplete: executionState.isComplete
       };
     } catch (error) {
-      logger.error(`[TypeScriptWorkflowRuntime] Error starting workflow ${workflowName}:`, error);
+      logger.error(`[TypeScriptWorkflowRuntime] Error starting workflow by version ID ${options.versionId}:`, error);
       throw error;
     }
   }
   
   /**
    * Submit an event to a workflow execution
-   * This is the synchronous version that processes the event immediately
-   * but still persists the event for event sourcing
+   * This method processes the event and persists it for event sourcing
+   * Note: This method is kept for backward compatibility but should be avoided in favor of enqueueEvent
    */
   async submitEvent(knex: Knex, options: EventSubmissionOptions): Promise<WorkflowExecutionResult> {
     const { execution_id, event_name, payload, user_id, tenant } = options;
@@ -434,11 +432,12 @@ export class TypeScriptWorkflowRuntime {
 
   /**
    * Enqueues an event for asynchronous processing
+   * This is the standard way to submit events to workflows
    * Returns quickly after persisting the event and publishing to Redis
    *
    * @param knex The Knex instance
    * @param options Event submission options
-   * @returns Promise resolving to the event ID
+   * @returns Promise resolving to the event ID and processing ID
    */
   async enqueueEvent(knex: Knex, options: EventSubmissionOptions): Promise<EnqueueEventResult> {
     const { execution_id, event_name, payload, user_id, tenant, idempotency_key } = options;
@@ -796,35 +795,19 @@ export class TypeScriptWorkflowRuntime {
           });
         },
         emit: async (eventName: string, payload?: any): Promise<void> => {
-          if (workflowConfig.distributedMode) {
-            // Create a new knex instance
-            const knex = require('knex')({
-              client: 'pg',
-              connection: process.env.DATABASE_URL
-            });
-            
-            // Use distributed mode - enqueue event for asynchronous processing
-            await this.enqueueEvent(knex, {
-              execution_id: executionId,
-              event_name: eventName,
-              payload,
-              tenant
-            });
-          } else {
-            // Create a new knex instance
-            const knex = require('knex')({
-              client: 'pg',
-              connection: process.env.DATABASE_URL
-            });
-            
-            // Use synchronous mode - process event immediately
-            await this.submitEvent(knex, {
-              execution_id: executionId,
-              event_name: eventName,
-              payload,
-              tenant
-            });
-          }
+          // Create a new knex instance
+          const knex = require('knex')({
+            client: 'pg',
+            connection: process.env.DATABASE_URL
+          });
+          
+          // Enqueue event for asynchronous processing
+          await this.enqueueEvent(knex, {
+            execution_id: executionId,
+            event_name: eventName,
+            payload,
+            tenant
+          });
         }
       },
       

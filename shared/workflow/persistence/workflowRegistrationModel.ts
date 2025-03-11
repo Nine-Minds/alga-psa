@@ -18,6 +18,62 @@ export interface WorkflowRegistration {
  */
 export default {
   /**
+   * Get a workflow registration by ID and optional version
+   * If version is not provided, returns the current version
+   *
+   * @param knex The Knex instance
+   * @param tenant The tenant ID
+   * @param id The workflow registration ID
+   * @param version Optional version string
+   * @returns The workflow registration or null if not found
+   */
+  async getById(
+    knex: Knex,
+    tenant: string,
+    id: string,
+    version?: string
+  ): Promise<WorkflowRegistration | null> {
+    try {
+      // Get the workflow registration
+      const registration = await knex('workflow_registrations')
+        .select('registration_id', 'name', 'version')
+        .where('registration_id', id)
+        .where('tenant_id', tenant)
+        .first();
+        
+      if (!registration) {
+        return null;
+      }
+      
+      // Get the specific version or current version
+      let versionQuery = knex('workflow_registration_versions')
+        .where('registration_id', registration.registration_id);
+        
+      if (version) {
+        versionQuery = versionQuery.where('tenant_id', tenant);
+        versionQuery = versionQuery.where('version', version);
+      } else {
+        versionQuery = versionQuery.where('tenant_id', tenant);
+        versionQuery = versionQuery.where('is_current', true);
+      }
+      
+      const versionRecord = await versionQuery.first();
+      
+      if (!versionRecord) {
+        return null;
+      }
+      
+      return {
+        ...registration,
+        definition: versionRecord.definition,
+        parameters: versionRecord.parameters
+      };
+    } catch (error) {
+      logger.error(`Error getting workflow registration for ID ${id}:`, error);
+      throw error;
+    }
+  },
+  /**
    * Get a workflow registration by name and optional version
    * If version is not provided, returns the current version
    * 

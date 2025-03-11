@@ -11,14 +11,14 @@ import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Get a workflow registration by name and optional version
+ * Get a workflow registration by ID and optional version
  * If version is not provided, returns the current version
  *
- * @param name The workflow name
+ * @param id The workflow registration ID
  * @param version Optional version string
  * @returns The workflow registration or null if not found
  */
-export async function getWorkflowRegistration(name: string, version?: string): Promise<WorkflowRegistration | null> {
+export async function getWorkflowRegistration(id: string, version?: string): Promise<WorkflowRegistration | null> {
   const { knex, tenant } = await createTenantKnex();
   
   if (!tenant) {
@@ -26,10 +26,10 @@ export async function getWorkflowRegistration(name: string, version?: string): P
   }
   
   try {
-    // Use the model to get the workflow registration
-    return await WorkflowRegistrationModel.getByName(knex, tenant, name, version);
+    // Use the model to get the workflow registration by ID
+    return await WorkflowRegistrationModel.getById(knex, tenant, id, version);
   } catch (error) {
-    logger.error(`Error getting workflow registration for ${name}:`, error);
+    logger.error(`Error getting workflow registration for ID ${id}:`, error);
     throw error;
   } finally {
     // Connection will be released automatically
@@ -107,39 +107,43 @@ export async function startWorkflowFromEvent(params: {
   tenant: string;
   userId?: string;
 }): Promise<{
-  executionId: string;
-  currentState: string;
+  executionId?: string;
+  status: 'accepted' | 'error';
+  message: string;
 }> {
   const { workflowName, eventType, eventPayload, tenant, userId } = params;
-  const { knex } = await createTenantKnex();
   
   try {
-    // Get the workflow runtime
-    const runtime = getWorkflowRuntime();
+    // Import here to avoid circular dependencies
+    const { submitWorkflowEventAction } = await import('./workflow-event-actions');
     
-    // Start the workflow
-    const result = await runtime.startWorkflow(knex, workflowName, {
+    // Instead of directly starting the workflow, submit an event to the event bus
+    // This will be picked up by the workflow worker through the event subscription system
+    const result = await submitWorkflowEventAction({
+      event_name: eventType,
+      event_type: eventType,
       tenant,
-      initialData: {
-        eventType,
-        eventPayload,
+      payload: {
+        ...eventPayload,
+        workflowName, // Include the workflow name in the payload
         sourceEventId: eventPayload.id || uuidv4(),
-        timestamp: new Date().toISOString()
-      },
-      userId
+        timestamp: new Date().toISOString(),
+        userId
+      }
     });
     
-    // Log the workflow execution
-    logger.info(`Started workflow ${workflowName} from event ${eventType}`, {
-      executionId: result.executionId,
+    // Log the event submission
+    logger.info(`Submitted event ${eventType} to trigger workflow ${workflowName}`, {
       tenant,
       workflowName,
-      eventType
+      eventType,
+      status: result.status
     });
     
     return {
-      executionId: result.executionId,
-      currentState: result.currentState
+      executionId: result.eventId, // Use the event ID as a reference
+      status: result.status === 'error' ? 'error' : 'accepted',
+      message: result.message
     };
   } catch (error) {
     logger.error(`Error starting workflow ${workflowName} from event ${eventType}:`, error);

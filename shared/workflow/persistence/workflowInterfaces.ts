@@ -12,6 +12,7 @@ export interface IWorkflowExecution {
   context_data?: Record<string, any>;
   created_at: string;
   updated_at: string;
+  version_id?: string; // Reference to workflow_registration_versions
 }
 
 export interface IWorkflowEvent {

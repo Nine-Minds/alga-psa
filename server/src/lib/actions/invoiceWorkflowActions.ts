@@ -7,65 +7,6 @@ import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { submitWorkflowEventAction } from './workflow-event-actions';
 
 
-/**
- * Start a new invoice workflow when an invoice is created
- * This is the integration point between the domain logic and the workflow engine
- */
-export async function startInvoiceWorkflow(invoice: any): Promise<string> {
-
-  // Get current user and tenant
-  const currentUser = await getCurrentUser();
-  
-  if (!currentUser?.tenant) {
-    throw new Error('No current user found');
-  }
-
-  const tenant = currentUser.tenant;
-  
-  // Create a new workflow execution for invoice approval
-  const workflowRuntime = getWorkflowRuntime();
-  
-  // Generate a unique execution ID
-  const executionId = uuidv4();
-  const { knex } = await createTenantKnex();
-  
-  // Create the workflow execution record
-  // Note: This is a placeholder - we need to implement this method in the TypeScriptWorkflowRuntime class
-  await workflowRuntime.startWorkflow(knex, 'InvoiceApproval', {
-    tenant,
-    initialData: {
-      invoice: {
-        id: invoice.id,
-        total: invoice.total,
-        customerId: invoice.customer_id,
-        items: invoice.items,
-        created_date: toPlainDate(new Date()).toString()
-      },
-      created_by: currentUser.user_id || ''
-    },
-    userId: currentUser.user_id
-  });
-  
-  // Emit the initial event to start the workflow
-  await submitWorkflowEventAction({
-    execution_id: executionId,
-    event_name: 'CreateInvoice', // Initial event to start the workflow
-    payload: {
-      // Data for the invoice model
-      invoice: {
-        id: invoice.id,
-        total: invoice.total,
-        customerId: invoice.customer_id,
-        items: invoice.items,
-        created_date: toPlainDate(new Date()).toString()
-      },
-      // Additional context data
-      created_by: currentUser.user_id || ''
-    }
-  });
-  
-  return executionId;
-}
 
 /**
  * Process an invoice approval or rejection event

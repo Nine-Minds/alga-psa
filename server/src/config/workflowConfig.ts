@@ -4,11 +4,8 @@
 
 export const workflowConfig = {
   /**
-   * Whether to use distributed mode with Redis streams and workers
-   * When true, events are enqueued for asynchronous processing
-   * When false, events are processed synchronously
+   * All events are processed asynchronously through Redis streams and workers
    */
-  distributedMode: process.env.WORKFLOW_DISTRIBUTED_MODE === 'true' || false,
   
   /**
    * Number of worker instances to run

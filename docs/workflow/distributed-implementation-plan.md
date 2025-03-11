@@ -1,8 +1,8 @@
-# Distributed Workflow Implementation Update
+# Asynchronous Workflow Implementation Update
 
 ## Overview
 
-This document provides an update to our distributed workflow implementation plan based on an analysis of the current codebase. While many of the foundational components exist, there are critical integration gaps that need to be addressed to achieve a fully distributed workflow system.
+This document provides an update to our asynchronous workflow implementation plan based on an analysis of the current codebase. While many of the foundational components exist, there are critical integration gaps that need to be addressed to achieve a fully asynchronous workflow system.
 
 ## Current Implementation Status
 
@@ -47,7 +47,7 @@ This document provides an update to our distributed workflow implementation plan
 
 ### 1. Enhance TypeScriptWorkflowRuntime
 
-Update `server/src/lib/workflow/core/workflowRuntime.ts` to add support for distributed processing:
+Update `server/src/lib/workflow/core/workflowRuntime.ts` to add support for asynchronous processing:
 
 ```typescript
 interface ProcessQueuedEventParams {
@@ -495,18 +495,15 @@ export function getWorkflowWorkerService(workerCount?: number): WorkflowWorkerSe
 }
 ```
 
-### 5. Create Feature Flag for Distributed Mode
+### 5. Update Configuration
 
-In `server/src/config/index.ts`, add configuration for distributed mode:
+In `server/src/config/index.ts`, update configuration for workflow system:
 
 ```typescript
 export const config = {
   // ... existing config ...
   
   workflow: {
-    // Whether to use distributed mode with Redis streams and workers
-    distributedMode: process.env.WORKFLOW_DISTRIBUTED_MODE === 'true' || false,
-    
     // Number of worker instances to run
     workerCount: parseInt(process.env.WORKFLOW_WORKER_COUNT || '2', 10),
     
@@ -521,7 +518,7 @@ export const config = {
 };
 ```
 
-### 6. Update API Controllers to Use Enqueue or Process Based on Mode
+### 6. Update API Controllers to Use Enqueue
 
 Update `server/src/controllers/workflowController.ts`:
 
@@ -538,36 +535,19 @@ export class WorkflowController {
     try {
       const runtime = getWorkflowRuntime();
       
-      if (config.workflow.distributedMode) {
-        // Use distributed mode - enqueue event
-        const result = await runtime.enqueueEvent({
-          execution_id,
-          event_name,
-          payload,
-          user_id,
-          tenant
-        });
-        
-        res.status(202).json({
-          message: 'Event accepted for processing',
-          eventId: result.eventId
-        });
-      } else {
-        // Use synchronous mode - process event immediately
-        const result = await runtime.submitEvent({
-          execution_id,
-          event_name,
-          payload,
-          user_id,
-          tenant
-        });
-        
-        res.status(200).json({
-          message: 'Event processed successfully',
-          state: result.currentState,
-          isComplete: result.isComplete
-        });
-      }
+      // Enqueue event for asynchronous processing
+      const result = await runtime.enqueueEvent({
+        execution_id,
+        event_name,
+        payload,
+        user_id,
+        tenant
+      });
+      
+      res.status(202).json({
+        message: 'Event accepted for processing',
+        eventId: result.eventId
+      });
     } catch (error) {
       // Handle errors
       res.status(400).json({
@@ -583,15 +563,15 @@ export class WorkflowController {
 1. **Unit Tests for New Components**
    - Test `enqueueEvent` with Redis Stream publishing
    - Test `processQueuedEvent` for event replay and processing
-   - Test distributed event flow from submission to processing
+   - Test asynchronous event flow from submission to processing
 
 2. **Integration Tests with Worker**
    - Test worker processing of Redis stream messages
    - Test worker coordination with distributed locks
    - Test failure recovery and message reclaiming
 
-3. **End-to-End Distributed Workflow Tests**
-   - Test complete workflows running in distributed mode
+3. **End-to-End Asynchronous Workflow Tests**
+   - Test complete workflows running with asynchronous processing
    - Test system resilience to worker restarts
    - Test workflow resumption after application restart
 
@@ -605,7 +585,7 @@ export class WorkflowController {
 2. **Phase 2: Integration (1 week)**
    - Connect `WorkflowWorker` with `TypeScriptWorkflowRuntime`
    - Create `WorkflowWorkerService` for application startup
-   - Implement feature flag for distributed mode
+   - Update configuration for asynchronous processing
 
 3. **Phase 3: Testing and Validation (2 weeks)**
    - Develop unit and integration tests
@@ -619,7 +599,7 @@ export class WorkflowController {
 
 ## Conclusion
 
-The implementation plan described here will transform our current workflow system into a fully distributed execution platform. By focusing on the specific integration points required between existing components, we can leverage much of the code that already exists while filling in the critical gaps.
+The implementation plan described here will transform our current workflow system into a fully asynchronous execution platform. By focusing on the specific integration points required between existing components, we can leverage much of the code that already exists while filling in the critical gaps.
 
 Key success factors for this implementation:
 
@@ -628,4 +608,4 @@ Key success factors for this implementation:
 3. **Idempotent processing**: Guarantee that event processing is idempotent for reliability
 4. **Comprehensive testing**: Thoroughly test worker coordination and failure scenarios
 
-With these enhancements, our workflow system will gain the resilience, scalability, and fault tolerance necessary for handling mission-critical business processes in a distributed environment.
+With these enhancements, our workflow system will gain the resilience, scalability, and fault tolerance necessary for handling mission-critical business processes in an asynchronous environment.

@@ -64,10 +64,10 @@ const baseConfig: Record<string, CustomKnexConfig> = {
     pool: {
       min: 0,
       max: 20,
-      idleTimeoutMillis: 1000,
-      reapIntervalMillis: 1000,
-      createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000
+      idleTimeoutMillis: 500,
+      reapIntervalMillis: 500,
+      createTimeoutMillis: 1000,
+      destroyTimeoutMillis: 500
     }
   },
   production: {
@@ -82,10 +82,10 @@ const baseConfig: Record<string, CustomKnexConfig> = {
     pool: {
       min: 0,
       max: 20,
-      idleTimeoutMillis: 1000,
-      reapIntervalMillis: 1000,
-      createTimeoutMillis: 30000,
-      destroyTimeoutMillis: 5000
+      idleTimeoutMillis: 500,
+      reapIntervalMillis: 500,
+      createTimeoutMillis: 1000,
+      destroyTimeoutMillis: 500
     }
   }
 };

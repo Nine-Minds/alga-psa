@@ -10,7 +10,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
 import { ArrowLeft, Save, BookTemplate, AlertTriangle, Tag } from 'lucide-react';
 import { Badge } from 'server/src/components/ui/Badge';
-import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow, executeWorkflowTest } from 'server/src/lib/actions/workflow-editor-actions';
+import { createWorkflow, updateWorkflow, getWorkflow, testWorkflow } from 'server/src/lib/actions/workflow-editor-actions';
 import WorkflowEditor from 'server/src/components/workflow-editor/WorkflowEditor';
 import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
 import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
@@ -87,6 +87,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
   const [isTesting, setIsTesting] = useState<boolean>(false);
   const [testWarnings, setTestWarnings] = useState<string[]>([]);
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
+  const [savedWorkflowId, setSavedWorkflowId] = useState<string | undefined>(undefined);
 
   // Load workflow data if in edit mode
   useEffect(() => {
@@ -101,6 +102,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           setTags(workflow.tags);
           setIsActive(workflow.isActive);
           setWorkflowCode(workflow.code);
+          setSavedWorkflowId(workflow.id);
         } catch (error) {
           console.error("Error loading workflow:", error);
           toast.error("Failed to load workflow");
@@ -154,6 +156,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           code: workflowCode
         });
         toast.success("Workflow updated successfully");
+        setSavedWorkflowId(workflowId);
       } else {
         // Create new workflow
         const newWorkflowId = await createWorkflow({
@@ -165,6 +168,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           code: workflowCode
         });
         toast.success("Workflow created successfully");
+        setSavedWorkflowId(newWorkflowId);
         
         // Navigate to the workflows tab with the new workflow ID
         router.push(`/msp/automation-hub?tab=workflows&workflowId=${newWorkflowId}`);
@@ -180,6 +184,12 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
 
   // Handle test
   const handleTest = async (code: string) => {
+    // Check if we have a saved workflow ID
+    if (!savedWorkflowId) {
+      toast.error("Please save the workflow before testing");
+      return;
+    }
+
     setIsTesting(true);
     setTestWarnings([]);
     try {
@@ -242,6 +252,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
                     setTags(workflow.tags);
                     setIsActive(workflow.isActive);
                     setWorkflowCode(workflow.code);
+                    setSavedWorkflowId(workflow.id);
                     
                     toast.success("Workflow version updated");
                   } catch (error) {
@@ -369,12 +380,15 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         />
       </Card>
       
-      {/* Test Modal */}
-      <TestWorkflowModal
-        isOpen={isTestModalOpen}
-        onClose={() => setIsTestModalOpen(false)}
-        workflowCode={workflowCode}
-      />
+      {/* Test Modal - Only show if we have a saved workflow ID */}
+      {savedWorkflowId && isTestModalOpen && (
+        <TestWorkflowModal
+          isOpen={isTestModalOpen}
+          onClose={() => setIsTestModalOpen(false)}
+          workflowCode={workflowCode}
+          workflowId={savedWorkflowId}
+        />
+      )}
     </div>
   );
 }

@@ -24,7 +24,7 @@ The workflow system is built on several key principles:
 
 5. **Parallel Execution**: The system supports executing actions in parallel based on explicit dependencies, enabling efficient processing of complex workflows.
 
-6. **Distributed Architecture**: The system can operate in a distributed environment, with events processed asynchronously across multiple servers for improved scalability and fault tolerance.
+6. **Asynchronous Event Processing**: The system processes all events asynchronously through a message queue, providing improved scalability and fault tolerance.
 
 ### Key Benefits
 
@@ -240,8 +240,8 @@ const executionId = await runtime.startWorkflow(
   }
 );
 
-// Option 1: Submit an event to a specific workflow execution
-await runtime.submitEvent({
+// Option 1: Enqueue an event for a specific workflow execution
+await runtime.enqueueEvent({
   execution_id: executionId,
   event_name: 'Submit',
   payload: { submittedBy: 'user-456' },
@@ -382,9 +382,9 @@ const result = await registry.executeAction('SendInvoiceEmail', {
 });
 ```
 
-## 5. Distributed Architecture
+## 5. Asynchronous Event Processing
 
-The workflow system can operate in a distributed environment, with events processed asynchronously across multiple servers. This provides higher throughput, better fault tolerance, and improved scalability.
+The workflow system processes all events asynchronously through a message queue. This provides higher throughput, better fault tolerance, and improved scalability.
 
 ### Redis Streams Integration
 
@@ -400,9 +400,9 @@ Key features:
 
 ### Two-Phase Event Processing
 
-In the distributed architecture, event processing is split into two phases:
+Event processing is split into two phases:
 1. **Enqueue Phase**: Validate the event, persist it to the database, and publish it to Redis Streams
-2. **Process Phase**: Consume the event from Redis Streams, process it using the state machine, and execute the resulting actions
+2. **Process Phase**: Consume the event from Redis Streams, process it using the workflow runtime, and execute the resulting actions
 
 This separation allows for immediate response to clients while ensuring reliable processing of events.
 
@@ -415,11 +415,11 @@ The worker service consumes events from Redis Streams and processes them using t
 
 For more details, see the [Worker Service Documentation](worker-service.md).
 
-### Distributed Coordination
+### Reliable Processing
 
-To ensure reliable processing in a distributed environment, the system uses:
-- Redis-based distributed locks for critical sections
-- Transaction management for cross-process coordination
+To ensure reliable event processing, the system uses:
+- Redis-based locks for critical sections
+- Transaction management for data consistency
 - Error classification and recovery strategies
 
 ## 6. Usage Examples
@@ -462,7 +462,7 @@ export const simpleApprovalWorkflow = defineWorkflow(
 ```
 
 
-### Distributed Processing Example
+### Asynchronous Event Processing Example
 
 ```typescript
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
@@ -580,8 +580,8 @@ const executionId = await runtime.startWorkflow(
   }
 );
 
-// Submit an event
-await runtime.submitEvent({
+// Enqueue an event
+await runtime.enqueueEvent({
   execution_id: executionId,
   event_name: 'Submit',
   payload: { submittedBy: 'user-456' },

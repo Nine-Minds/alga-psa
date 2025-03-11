@@ -21,6 +21,8 @@ export interface RedisStreamConfig {
   blockingTimeout: number;
   claimTimeout: number;
   batchSize: number;
+  maxRetries: number;
+  deadLetterQueueSuffix: string;
   reconnectStrategy: {
     retries: number;
     initialDelay: number;
@@ -39,6 +41,8 @@ const DEFAULT_CONFIG: RedisStreamConfig = {
   blockingTimeout: 5000, // ms
   claimTimeout: 30000, // ms
   batchSize: 10,
+  maxRetries: 3, // Maximum number of retries before moving to DLQ
+  deadLetterQueueSuffix: 'dlq', // Suffix for dead letter queue streams
   reconnectStrategy: {
     retries: 10,
     initialDelay: 100, // ms
@@ -60,6 +64,7 @@ export interface ConsumeOptions {
  * Provides methods for publishing events to Redis Streams and consuming events from Redis Streams
  */
 export class RedisStreamClient {
+  private static createdConsumerGroups: Set<string> = new Set<string>();
   private client: any | null = null;
   private config: RedisStreamConfig;
   private consumerId: string;
@@ -164,15 +169,25 @@ export class RedisStreamClient {
    * @param streamName The name of the stream
    */
   private async ensureStreamAndGroup(streamName: string): Promise<void> {
+    // Check if we've already created this consumer group
+    if (RedisStreamClient.createdConsumerGroups.has(streamName)) {
+      // logger.debug(`[RedisStreamClient] Consumer group already ensured for stream: ${streamName}`);
+      return;
+    }
+
     try {
       const client = await this.getClient();
       await client.xGroupCreate(streamName, this.config.consumerGroup, '0', {
         MKSTREAM: true
       });
       logger.info(`[RedisStreamClient] Created consumer group for stream: ${streamName}`);
+      // Add to the set of created consumer groups
+      RedisStreamClient.createdConsumerGroups.add(streamName);
     } catch (err: any) {
       if (err.message.includes('BUSYGROUP')) {
         logger.info(`[RedisStreamClient] Consumer group already exists for stream: ${streamName}`);
+        // Add to the set of created consumer groups even if it already existed
+        RedisStreamClient.createdConsumerGroups.add(streamName);
       } else {
         throw err;
       }
@@ -239,29 +254,48 @@ export class RedisStreamClient {
       const count = options.count || this.config.batchSize;
       const block = options.block || this.config.blockingTimeout;
 
-      const streamEntries = await client.xReadGroup(
-        this.config.consumerGroup,
-        this.consumerId,
-        [{ key: streamName, id: '>' }], // '>' means only new messages
-        { COUNT: count, BLOCK: block }
+      // First, check if there are any pending messages for this consumer
+      const pendingInfo = await client.xPending(
+        streamName,
+        this.config.consumerGroup
       );
+
+      // If there are pending messages, read those first
+      let streamEntries;
+      if (pendingInfo && pendingInfo.pending > 0) {
+        // Read pending messages
+        streamEntries = await client.xReadGroup(
+          this.config.consumerGroup,
+          this.consumerId,
+          [{ key: streamName, id: '0' }], // '0' means read pending messages
+          { COUNT: count, BLOCK: block }
+        );
+      } else {
+        // No pending messages, read new messages
+        streamEntries = await client.xReadGroup(
+          this.config.consumerGroup,
+          this.consumerId,
+          [{ key: streamName, id: '>' }], // '>' means only new messages
+          { COUNT: count, BLOCK: block }
+        );
+      }
 
       if (!streamEntries || streamEntries.length === 0) {
         return [];
       }
 
       // Extract messages from the stream entries
-      const messages: RedisStreamMessage[] = [];
-      for (const { messages } of streamEntries) {
-        for (const message of messages) {
-          messages.push({
+      const resultMessages: RedisStreamMessage[] = [];
+      for (const { messages: streamMessages } of streamEntries) {
+        for (const message of streamMessages) {
+          resultMessages.push({
             id: message.id,
             message: message.message
           });
         }
       }
 
-      return messages;
+      return resultMessages;
     } catch (error) {
       logger.error(`[RedisStreamClient] Failed to read messages from stream for execution ${executionId}:`, error);
       throw error;
@@ -306,13 +340,59 @@ export class RedisStreamClient {
         return [];
       }
 
+      // Use XAUTOCLAIM to automatically claim messages that have been idle for too long
+      // This is more efficient than manually filtering and claiming
+      const { messages } = await client.xAutoClaim(
+        streamName,
+        this.config.consumerGroup,
+        this.consumerId,
+        this.config.claimTimeout,
+        '0-0', // Start with the oldest message
+        {
+          COUNT: Math.min(this.config.batchSize, 10) // Limit batch size to prevent memory issues
+        }
+      );
+
+      if (!messages || messages.length === 0) {
+        return [];
+      }
+
+      // Convert to RedisStreamMessage format
+      return messages
+        .filter(message => message !== null)
+        .map(message => ({
+          id: message.id,
+          message: message.message
+        }));
+    } catch (error: any) {
+      // If XAUTOCLAIM is not supported (Redis < 6.2), fall back to the old method
+      if (error.message && error.message.includes('ERR unknown command')) {
+        logger.warn(`[RedisStreamClient] XAUTOCLAIM not supported, falling back to XCLAIM`);
+        return this.claimPendingMessagesLegacy(executionId);
+      }
+      
+      logger.error(`[RedisStreamClient] Failed to claim pending messages for execution ${executionId}:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Legacy method to claim pending messages for Redis < 6.2
+   * @param executionId The workflow execution ID
+   * @returns Array of claimed messages
+   */
+  private async claimPendingMessagesLegacy(executionId: string): Promise<RedisStreamMessage[]> {
+    try {
+      const client = await this.getClient();
+      const streamName = this.getStreamName(executionId);
+      
       // Get detailed information about pending messages
       const pendingMessages = await client.xPendingRange(
         streamName,
         this.config.consumerGroup,
         '-', // Start with the oldest message
         '+', // End with the newest message
-        this.config.batchSize
+        Math.min(this.config.batchSize, 10) // Limit batch size to prevent memory issues
       );
 
       if (!pendingMessages || pendingMessages.length === 0) {
@@ -350,7 +430,7 @@ export class RedisStreamClient {
           message: message!.message
         }));
     } catch (error) {
-      logger.error(`[RedisStreamClient] Failed to claim pending messages for execution ${executionId}:`, error);
+      logger.error(`[RedisStreamClient] Failed to claim pending messages (legacy) for execution ${executionId}:`, error);
       throw error;
     }
   }
@@ -401,49 +481,134 @@ export class RedisStreamClient {
       try {
         // Process each registered execution
         for (const [executionId, handler] of this.consumerHandlers.entries()) {
-          // Read new messages
-          const messages = await this.readGroupMessages(executionId);
-          
-          // Process messages
-          for (const message of messages) {
-            try {
-              // Parse the event
-              const event = parseStreamEvent(message);
-              
-              // Process the event
-              await handler(event);
-              
-              // Acknowledge the message
-              await this.acknowledgeMessage(executionId, message.id);
-            } catch (error) {
-              logger.error(`[RedisStreamClient] Error processing message ${message.id} for execution ${executionId}:`, error);
-              // Don't acknowledge the message so it can be retried
+          try {
+            // Read new messages
+            const messages = await this.readGroupMessages(executionId);
+            
+            if (messages.length > 0) {
+              logger.debug(`[RedisStreamClient] Processing ${messages.length} messages for execution ${executionId}`);
             }
-          }
+            
+            // Process messages in batches to improve efficiency
+            const processingPromises = [];
+            
+            for (const message of messages) {
+              processingPromises.push((async () => {
+                try {
+                  // Parse the event
+                  const event = parseStreamEvent(message);
+                  
+                  // Process the event
+                  await handler(event);
+                  
+                  // Acknowledge the message
+                  await this.acknowledgeMessage(executionId, message.id);
+                } catch (error) {
+                  logger.error(`[RedisStreamClient] Error processing message ${message.id} for execution ${executionId}:`, error);
+                  
+                  // Get the number of times this message has been delivered
+                  try {
+                    const client = await this.getClient();
+                    const pendingInfo = await client.xPendingRange(
+                      this.getStreamName(executionId),
+                      this.config.consumerGroup,
+                      message.id,
+                      message.id,
+                      1
+                    );
+                    
+                    if (pendingInfo && pendingInfo.length > 0) {
+                      const deliveryCount = pendingInfo[0].deliveriesCounter;
+                      
+                      // If the message has been delivered too many times, move it to the DLQ
+                      if (deliveryCount >= this.config.maxRetries) {
+                        logger.warn(`[RedisStreamClient] Message ${message.id} has been delivered ${deliveryCount} times, moving to DLQ`);
+                        await this.moveToDeadLetterQueue(executionId, message.id, message, error);
+                      } else {
+                        logger.info(`[RedisStreamClient] Message ${message.id} will be retried (${deliveryCount}/${this.config.maxRetries})`);
+                        // Don't acknowledge the message so it can be retried
+                      }
+                    }
+                  } catch (pendingError) {
+                    logger.error(`[RedisStreamClient] Error checking pending info for message ${message.id}:`, pendingError);
+                    // Don't acknowledge the message so it can be retried
+                  }
+                }
+              })());
+            }
+            
+            // Wait for all messages to be processed
+            if (processingPromises.length > 0) {
+              await Promise.all(processingPromises);
+            }
 
-          // Claim pending messages
-          const claimedMessages = await this.claimPendingMessages(executionId);
-          
-          // Process claimed messages
-          for (const message of claimedMessages) {
-            try {
-              // Parse the event
-              const event = parseStreamEvent(message);
-              
-              // Process the event
-              await handler(event);
-              
-              // Acknowledge the message
-              await this.acknowledgeMessage(executionId, message.id);
-            } catch (error) {
-              logger.error(`[RedisStreamClient] Error processing claimed message ${message.id} for execution ${executionId}:`, error);
-              // Don't acknowledge the message so it can be retried
+            // Claim and process pending messages
+            const claimedMessages = await this.claimPendingMessages(executionId);
+            
+            if (claimedMessages.length > 0) {
+              logger.debug(`[RedisStreamClient] Processing ${claimedMessages.length} claimed messages for execution ${executionId}`);
             }
+            
+            // Process claimed messages in batches
+            const claimedProcessingPromises = [];
+            
+            for (const message of claimedMessages) {
+              claimedProcessingPromises.push((async () => {
+                try {
+                  // Parse the event
+                  const event = parseStreamEvent(message);
+                  
+                  // Process the event
+                  await handler(event);
+                  
+                  // Acknowledge the message
+                  await this.acknowledgeMessage(executionId, message.id);
+                } catch (error) {
+                  logger.error(`[RedisStreamClient] Error processing claimed message ${message.id} for execution ${executionId}:`, error);
+                  
+                  // Get the number of times this message has been delivered
+                  try {
+                    const client = await this.getClient();
+                    const pendingInfo = await client.xPendingRange(
+                      this.getStreamName(executionId),
+                      this.config.consumerGroup,
+                      message.id,
+                      message.id,
+                      1
+                    );
+                    
+                    if (pendingInfo && pendingInfo.length > 0) {
+                      const deliveryCount = pendingInfo[0].deliveriesCounter;
+                      
+                      // If the message has been delivered too many times, move it to the DLQ
+                      if (deliveryCount >= this.config.maxRetries) {
+                        logger.warn(`[RedisStreamClient] Claimed message ${message.id} has been delivered ${deliveryCount} times, moving to DLQ`);
+                        await this.moveToDeadLetterQueue(executionId, message.id, message, error);
+                      } else {
+                        logger.info(`[RedisStreamClient] Claimed message ${message.id} will be retried (${deliveryCount}/${this.config.maxRetries})`);
+                        // Don't acknowledge the message so it can be retried
+                      }
+                    }
+                  } catch (pendingError) {
+                    logger.error(`[RedisStreamClient] Error checking pending info for claimed message ${message.id}:`, pendingError);
+                    // Don't acknowledge the message so it can be retried
+                  }
+                }
+              })());
+            }
+            
+            // Wait for all claimed messages to be processed
+            if (claimedProcessingPromises.length > 0) {
+              await Promise.all(claimedProcessingPromises);
+            }
+          } catch (error) {
+            logger.error(`[RedisStreamClient] Error processing execution ${executionId}:`, error);
+            // Continue with the next execution
           }
         }
 
-        // Continue the loop
-        setImmediate(processEvents);
+        // Continue the loop with a small delay to prevent excessive CPU usage
+        setTimeout(processEvents, 100);
       } catch (error) {
         logger.error('[RedisStreamClient] Error in consumer loop:', error);
         // Continue the loop after a delay
@@ -560,6 +725,142 @@ export class RedisStreamClient {
     } catch (error) {
       logger.error(`[RedisStreamClient] Error extending lock ${key}:`, error);
       throw error;
+    }
+  }
+
+  /**
+   * List messages in the dead letter queue for a specific execution
+   * @param executionId The workflow execution ID
+   * @param count Maximum number of messages to return
+   * @returns Array of messages in the DLQ
+   */
+  public async listDeadLetterQueueMessages(
+    executionId: string,
+    count: number = 100
+  ): Promise<any[]> {
+    try {
+      const client = await this.getClient();
+      const streamName = `${this.getStreamName(executionId)}:${this.config.deadLetterQueueSuffix}`;
+      
+      // Read messages from the DLQ
+      const messages = await client.xRange(
+        streamName,
+        '-', // Start with the oldest message
+        '+', // End with the newest message
+        { COUNT: count }
+      );
+      
+      return messages.map(msg => ({
+        id: msg.id,
+        ...msg.message
+      }));
+    } catch (error) {
+      logger.error(`[RedisStreamClient] Failed to list DLQ messages for execution ${executionId}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Reprocess a message from the dead letter queue
+   * @param executionId The workflow execution ID
+   * @param dlqMessageId The ID of the message in the DLQ
+   * @returns True if the message was successfully reprocessed, false otherwise
+   */
+  public async reprocessDeadLetterQueueMessage(
+    executionId: string,
+    dlqMessageId: string
+  ): Promise<boolean> {
+    try {
+      const client = await this.getClient();
+      const dlqStreamName = `${this.getStreamName(executionId)}:${this.config.deadLetterQueueSuffix}`;
+      const targetStreamName = this.getStreamName(executionId);
+      
+      // Get the message from the DLQ
+      const messages = await client.xRange(
+        dlqStreamName,
+        dlqMessageId,
+        dlqMessageId
+      );
+      
+      if (!messages || messages.length === 0) {
+        logger.error(`[RedisStreamClient] Message ${dlqMessageId} not found in DLQ for execution ${executionId}`);
+        return false;
+      }
+      
+      const dlqMessage = messages[0];
+      
+      // Extract the original message
+      let originalMessage;
+      try {
+        originalMessage = JSON.parse(dlqMessage.message.original_message);
+      } catch (parseError) {
+        logger.error(`[RedisStreamClient] Failed to parse original message from DLQ message ${dlqMessageId}:`, parseError);
+        return false;
+      }
+      
+      // Add the message back to the original stream
+      const messageId = await client.xAdd(
+        targetStreamName,
+        '*', // Auto-generate ID
+        { event: JSON.stringify(originalMessage) }
+      );
+      
+      // Delete the message from the DLQ
+      await client.xDel(dlqStreamName, dlqMessageId);
+      
+      logger.info(`[RedisStreamClient] Reprocessed message ${dlqMessageId} from DLQ to stream ${targetStreamName} with ID ${messageId}`);
+      
+      return true;
+    } catch (error) {
+      logger.error(`[RedisStreamClient] Failed to reprocess message ${dlqMessageId} from DLQ for execution ${executionId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Move a message to the dead letter queue
+   * @param executionId The workflow execution ID
+   * @param messageId The ID of the message to move
+   * @param error The error that caused the message to be moved to DLQ
+   */
+  public async moveToDeadLetterQueue(
+    executionId: string,
+    messageId: string,
+    message: RedisStreamMessage,
+    error: any
+  ): Promise<void> {
+    try {
+      const client = await this.getClient();
+      const sourceStreamName = this.getStreamName(executionId);
+      const dlqStreamName = `${sourceStreamName}:${this.config.deadLetterQueueSuffix}`;
+      
+      // Add metadata about the error
+      const dlqMessage: Record<string, string> = {
+        original_message: JSON.stringify(message.message),
+        error_message: error instanceof Error ? error.message : String(error),
+        error_stack: error instanceof Error && error.stack ? error.stack : 'No stack trace',
+        source_stream: sourceStreamName,
+        original_id: messageId,
+        moved_at: new Date().toISOString()
+      };
+      
+      // Add the message to the DLQ
+      const dlqMessageId = await client.xAdd(
+        dlqStreamName,
+        '*', // Auto-generate ID
+        dlqMessage
+      );
+      
+      // Acknowledge the original message to remove it from pending
+      await this.acknowledgeMessage(executionId, messageId);
+      
+      logger.warn(`[RedisStreamClient] Moved message ${messageId} to DLQ ${dlqStreamName} with ID ${dlqMessageId}`, {
+        executionId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    } catch (dlqError) {
+      logger.error(`[RedisStreamClient] Failed to move message ${messageId} to DLQ for execution ${executionId}:`, dlqError);
+      // Don't throw the error, as we don't want to fail the processing of other messages
     }
   }
 

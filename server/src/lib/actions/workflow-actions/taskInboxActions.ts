@@ -7,8 +7,10 @@ import { getFormRegistry } from '@shared/workflow/core/formRegistry';
 import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
 import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
 import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, TaskEventNames } from '@shared/workflow/persistence/taskInboxInterfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from 'server/src/lib/db/db';
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+
+//TODO: we need to fix withTransaction to work with passed knex instances
 
 /**
  * Submit a task form
@@ -29,7 +31,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
     const userId = currentUser?.user_id;
     
     // Use a transaction to ensure all operations succeed or fail together
-    return await withTransaction(knex, async (trx) => {
+    return await withTransaction(tenant, async (trx) => {
       // Get task details
       const task = await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
       
@@ -343,7 +345,7 @@ export async function claimTask(taskId: string): Promise<{ success: boolean }> {
     }
     
     // Use transaction to update task and add history
-    return await withTransaction(knex, async (trx) => {
+    return await withTransaction(tenant, async (trx) => {
       // Update task status
       await WorkflowTaskModel.updateTaskStatus(
         trx,
@@ -411,7 +413,7 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
     }
     
     // Use transaction to update task and add history
-    return await withTransaction(knex, async (trx) => {
+    return await withTransaction(tenant, async (trx) => {
       // Update task status
       await WorkflowTaskModel.updateTaskStatus(
         trx,

@@ -131,9 +131,13 @@ export class WorkflowWorker {
       // Start metrics reporting interval
       this.startMetricsReporting();
       
+      // Subscribe to the global event stream
+      await this.subscribeToGlobalEventStream();
+      
       // Start processing loop
       this.processingLoop();
       
+      logger.info(`[WorkflowWorker] Listening to global event stream: workflow:events:global`);
       logger.info(`[WorkflowWorker] Worker ${this.workerId} started successfully`);
     } catch (error) {
       logger.error(`[WorkflowWorker] Failed to start worker ${this.workerId}:`, error);
@@ -295,7 +299,7 @@ export class WorkflowWorker {
    * Main processing loop
    */
   private async processingLoop(): Promise<void> {
-    const knex = await getConnection();
+    const dbConnection = await getConnection();
     while (this.running) {
       try {
         // Use withRetry for resilient processing
@@ -311,13 +315,13 @@ export class WorkflowWorker {
             
             // Process each pending event with concurrency control
             await this.processBatch(pendingEvents, async (event: WorkflowEvent) => {
-              await this.processEvent(knex, event.event_id, event.execution_id, event.processing_id, event.tenant);
+              await this.processEvent(dbConnection, event.event_id, event.execution_id, event.processing_id, event.tenant);
             });
           }
           
           // Then, check for events that need to be retried across all tenants
           const eventsToRetry = await WorkflowEventProcessingModel.getEventsToRetry(
-            knex,
+            dbConnection,
             this.config.batchSize,
             this.config.maxRetries
           );
@@ -330,8 +334,8 @@ export class WorkflowWorker {
             
             // Process each event to retry with concurrency control
             await this.processBatch(eventsToRetry, async (event: WorkflowEvent) => {
-              await WorkflowEventProcessingModel.markAsRetrying(knex, event.tenant, event.processing_id, this.workerId);
-              await this.processEvent(knex, event.event_id, event.execution_id, event.processing_id, event.tenant);
+              await WorkflowEventProcessingModel.markAsRetrying(dbConnection, event.tenant, event.processing_id, this.workerId);
+              await this.processEvent(dbConnection, event.event_id, event.execution_id, event.processing_id, event.tenant);
             });
           }
           
@@ -443,6 +447,15 @@ export class WorkflowWorker {
     const startTime = Date.now();
     this.eventsProcessed++;
     
+    // Log when an event is received
+    logger.info(`[WorkflowWorker] Received event ${eventId} for processing`, {
+      workerId: this.workerId,
+      eventId,
+      executionId,
+      tenant,
+      event_name: 'unknown' // Will be updated when we load the event
+    });
+    
     try {
       // Create parameters for processing the queued event
       const params: ProcessQueuedEventParams = {
@@ -456,25 +469,50 @@ export class WorkflowWorker {
       // Process the event using the workflow runtime with retry
       await withRetry(
         async () => {
+          // Log that we're about to process the event
+          logger.info(`[WorkflowWorker] Processing event ${eventId} with workflow runtime`, {
+            workerId: this.workerId,
+            eventId,
+            executionId,
+            tenant
+          });
+          
           const result = await this.workflowRuntime.processQueuedEvent(knex, params);
           
           if (!result.success) {
-            logger.error(`[WorkflowWorker] Failed to process event ${eventId}: ${result.errorMessage}`, {
-              workerId: this.workerId,
-              eventId,
-              executionId,
-              error: result.errorMessage
-            });
+            // Log that no workflow was found or execution failed
+            if (result.errorMessage && result.errorMessage.includes("No workflow found")) {
+              logger.warn(`[WorkflowWorker] No workflow found for event ${eventId}`, {
+                workerId: this.workerId,
+                eventId,
+                executionId,
+                tenant,
+                error: result.errorMessage,
+                message: "The system received an event but could not find a workflow to execute in response"
+              });
+            } else {
+              logger.error(`[WorkflowWorker] Failed to process event ${eventId}: ${result.errorMessage}`, {
+                workerId: this.workerId,
+                eventId,
+                executionId,
+                tenant,
+                error: result.errorMessage,
+                message: "The system found a workflow but encountered an error while executing it"
+              });
+            }
             // Throw an error to trigger retry if needed
             throw new Error(result.errorMessage);
           } else {
-            logger.info(`[WorkflowWorker] Successfully processed event ${eventId}`, {
+            // Log successful workflow execution
+            logger.info(`[WorkflowWorker] Successfully processed event ${eventId} with workflow`, {
               workerId: this.workerId,
               eventId,
               executionId,
+              tenant,
               previousState: result.previousState,
               currentState: result.currentState,
-              actionsExecuted: result.actionsExecuted.map((action: { actionName: string }) => action.actionName)
+              actionsExecuted: result.actionsExecuted.map((action: { actionName: string }) => action.actionName),
+              message: "The system found a workflow to execute in response to the event and successfully processed it"
             });
             
             this.eventsSucceeded++;
@@ -565,6 +603,197 @@ export class WorkflowWorker {
         await this.stop();
         process.exit(0);
       });
+    }
+  }
+
+  /**
+   * Subscribe to the global event stream
+   * This stream contains all events that need to be processed by workflows
+   */
+  private async subscribeToGlobalEventStream(): Promise<void> {
+    const streamName = 'workflow:events:global';
+    const consumerGroup = 'workflow-workers';
+    
+    try {
+      // Create a stream name for the consumer group
+      const streamKey = `${streamName}`;
+      
+      try {
+        // Try to create the consumer group
+        const redis = require('redis');
+        const client = redis.createClient({
+          url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`
+        });
+        
+        await client.connect();
+        
+        try {
+          logger.info(`[WorkflowWorker] Creating consumer group ${consumerGroup} for stream: ${streamKey}`);
+          await client.xGroupCreate(streamKey, consumerGroup, '0', {
+            MKSTREAM: true
+          });
+          logger.info(`[WorkflowWorker] Successfully created consumer group for stream: ${streamKey}`);
+        } catch (err: any) {
+          if (err.message && err.message.includes('BUSYGROUP')) {
+            logger.info(`[WorkflowWorker] Consumer group already exists for stream: ${streamKey}`);
+          } else {
+            logger.error(`[WorkflowWorker] Error in xGroupCreate:`, err);
+            throw err;
+          }
+        } finally {
+          await client.quit();
+        }
+      } catch (err: any) {
+        logger.error(`[WorkflowWorker] Error creating consumer group:`, err);
+        throw err;
+      }
+      
+      // Register a consumer for the global event stream
+      this.redisStreamClient.registerConsumer(
+        streamName,
+        this.processGlobalEvent.bind(this)
+      );
+      
+      logger.info(`[WorkflowWorker] Subscribed to global event stream: ${streamName}`);
+    } catch (error: any) {
+      logger.error(`[WorkflowWorker] Failed to subscribe to global event stream:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Process a global event from Redis Streams
+   * This method is called when a new event is received from the global event stream
+   *
+   * @param event The workflow event to process
+   */
+  private async processGlobalEvent(event: any): Promise<void> {
+    try {
+      // The event might be wrapped in an 'event' property if it came from the EventBus
+      const eventData = event.event ? JSON.parse(event.event) : event;
+      
+      logger.info(`[WorkflowWorker] Processing global event of type ${eventData.eventType}`, {
+        eventId: eventData.id,
+        eventType: eventData.eventType,
+        payload: eventData.payload
+      });
+      
+      // Extract tenant from the payload
+      const tenant = eventData.payload?.tenantId;
+      if (!tenant) {
+        logger.error(`[WorkflowWorker] Event is missing tenant ID, cannot process`);
+        return;
+      }
+      
+      // Find workflows attached to this event type
+      const dbConnection = await getConnection();
+      const attachments = await dbConnection('workflow_event_attachments as wea')
+        .join('event_catalog as ec', function() {
+          this.on('wea.event_id', 'ec.event_id')
+              .andOn('wea.tenant_id', 'ec.tenant_id');
+        })
+        .where({
+          'ec.event_type': eventData.eventType,
+          'wea.tenant_id': tenant,
+          'wea.is_active': true
+        })
+        .select('wea.workflow_id');
+      
+      const workflowIds = attachments.map((attachment: any) => attachment.workflow_id);
+      
+      if (workflowIds.length === 0) {
+        logger.info(`[WorkflowWorker] No workflows attached to event type ${eventData.eventType}`);
+        return;
+      }
+      
+      logger.info(`[WorkflowWorker] Found ${workflowIds.length} workflows attached to event type ${eventData.eventType}`, {
+        workflowIds,
+        eventType: eventData.eventType,
+        tenant
+      });
+      
+      // Create a workflow event record in the database
+      const workflowEvent = {
+        event_id: eventData.id,
+        tenant: tenant,
+        event_name: eventData.payload?.eventName || eventData.eventType,
+        event_type: eventData.eventType,
+        from_state: 'initial',
+        to_state: 'pending',
+        user_id: eventData.payload?.userId,
+        payload: eventData.payload || {},
+        created_at: new Date().toISOString()
+      };
+      
+      // Persist the event to the database for event sourcing
+      try {
+        await dbConnection('workflow_events').insert(workflowEvent);
+        logger.info(`[WorkflowWorker] Persisted event ${eventData.id} to database for event sourcing`);
+      } catch (error) {
+        logger.error(`[WorkflowWorker] Error persisting event ${eventData.id} to database:`, error);
+        // Continue processing even if persistence fails
+      }
+      
+      // Start each attached workflow
+      for (const workflowId of workflowIds) {
+        try {
+          // Get the workflow registration and its current version
+          const registration = await dbConnection('workflow_registrations as wr')
+            .join('workflow_registration_versions as wrv', function() {
+              this.on('wrv.registration_id', '=', 'wr.registration_id')
+                  .andOn('wrv.is_current', '=', dbConnection.raw('true'));
+            })
+            .where({
+              'wr.workflow_id': workflowId,
+              'wr.tenant_id': tenant
+            })
+            .select('wr.*', 'wrv.version_id')
+            .first();
+          
+          if (!registration) {
+            logger.error(`[WorkflowWorker] Workflow ${workflowId} not found`);
+            continue;
+          }
+          
+          // Start the workflow
+          const result = await this.workflowRuntime.startWorkflow(dbConnection, registration.name, {
+            tenant: tenant,
+            initialData: {
+              eventId: eventData.id,
+              eventType: eventData.eventType,
+              eventName: eventData.payload?.eventName || eventData.eventType,
+              eventPayload: eventData.payload || {},
+              triggerEvent: eventData,
+              workflowId: workflowId,
+              versionId: registration.version_id
+            },
+            userId: eventData.payload?.userId
+          });
+          
+          logger.info(`[WorkflowWorker] Started workflow ${registration.name} with execution ID ${result.executionId}`, {
+            workflowId,
+            workflowName: registration.name,
+            executionId: result.executionId,
+            eventId: eventData.id
+          });
+          
+          // Submit the original event to the workflow
+          await this.workflowRuntime.submitEvent(dbConnection, {
+            execution_id: result.executionId,
+            event_name: workflowEvent.event_name,
+            payload: workflowEvent.payload,
+            user_id: workflowEvent.user_id,
+            tenant: workflowEvent.tenant
+          });
+          
+          logger.info(`[WorkflowWorker] Submitted event to workflow execution ${result.executionId}`);
+        } catch (error) {
+          logger.error(`[WorkflowWorker] Error starting workflow ${workflowId} from event:`, error);
+        }
+      }
+    } catch (error) {
+      logger.error(`[WorkflowWorker] Error processing global event:`, error);
+      // Don't rethrow the error to allow processing to continue
     }
   }
 }

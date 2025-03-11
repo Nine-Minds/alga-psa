@@ -41,6 +41,7 @@ export async function createTenantKnex(): Promise<TenantConnection> {
 
     // Get database connection
     try {
+        console.log(`Creating tenant connection for tenant: ${tenant || 'default'}`);
         const knex = await getConnection(tenant);
         return { knex, tenant };
     } catch (error) {

@@ -1,6 +1,7 @@
 import Knex from 'knex';
 import knexfile from './knexfile';
-import { getSecret } from '../utils/getSecret';
+import { getSecret } from '../core/getSecret';
+import process from 'process';
 
 export async function getAdminConnection() {
     const environment = process.env.NODE_ENV || 'development';

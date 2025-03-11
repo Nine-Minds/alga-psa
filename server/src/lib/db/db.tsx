@@ -6,8 +6,7 @@ interface PoolConfig extends KnexType.PoolConfig {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
 }
 
-// Create a map to store tenant-specific Knex instances
-const knexInstances: Map<string, KnexType> = new Map();
+// Use AsyncLocalStorage for tenant context
 const asyncLocalStorage = new AsyncLocalStorage<string>();
 
 
@@ -35,55 +34,44 @@ async function setTenantContext(conn: any, tenantId?: string | null): Promise<vo
     });
   }
 }
-
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
-  const effectiveTenantId = tenantId || 'default';
-  
-  // Check if we already have an instance for this tenant
-  let knexInstance = knexInstances.get(effectiveTenantId);
-  
-  if (!knexInstance) {
-    console.log('Creating new knex instance for tenant', effectiveTenantId);
-    const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
-    const config = await getKnexConfig(environment);
-    const poolConfig: PoolConfig = config.pool as PoolConfig || {};
+  console.log('Getting connection for tenant', tenantId || 'default');
+  const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
+  const config = await getKnexConfig(environment);
+  const poolConfig: PoolConfig = config.pool as PoolConfig || {};
 
-    const finalConfig = {
-      ...config,
-      pool: {
-        ...config.pool,
-        afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
-          const originalAfterCreate = poolConfig.afterCreate;
-          
-          const setupConnection = async () => {
-            try {
-              await setTenantContext(conn, tenantId);
-              done(null, conn);
-            } catch (err) {
-              done(err as Error, conn);
-            }
-          };
-
-          if (originalAfterCreate) {
-            originalAfterCreate(conn, (err: Error | null) => {
-              if (err) {
-                done(err, conn);
-              } else {
-                setupConnection();
-              }
-            });
-          } else {
-            setupConnection();
+  const finalConfig = {
+    ...config,
+    pool: {
+      ...config.pool,
+      afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
+        const originalAfterCreate = poolConfig.afterCreate;
+        
+        const setupConnection = async () => {
+          try {
+            await setTenantContext(conn, tenantId);
+            done(null, conn);
+          } catch (err) {
+            done(err as Error, conn);
           }
-        },
-      },
-    };
+        };
 
-    knexInstance = Knex(finalConfig);
-    knexInstances.set(effectiveTenantId, knexInstance);
-  }
+        if (originalAfterCreate) {
+          originalAfterCreate(conn, (err: Error | null) => {
+            if (err) {
+              done(err, conn);
+            } else {
+              setupConnection();
+            }
+          });
+        } else {
+          setupConnection();
+        }
+      }
+    },
+  };
 
-  return knexInstance;
+  return Knex(finalConfig);
 }
 
 export async function withTransaction<T>(
@@ -94,25 +82,13 @@ export async function withTransaction<T>(
   return knex.transaction(callback);
 }
 
+// This function is no longer needed as we're not caching connections
 export async function destroyConnection(tenantId?: string): Promise<void> {
-  if (tenantId) {
-    // Destroy specific tenant connection
-    const instance = knexInstances.get(tenantId);
-    if (instance) {
-      await instance.destroy();
-      knexInstances.delete(tenantId);
-    }
-  } else {
-    // Destroy all connections
-    for (const [id, instance] of knexInstances) {
-      await instance.destroy();
-    }
-    knexInstances.clear();
-  }
+  console.log('destroyConnection is deprecated and has no effect');
 }
 
 export async function cleanupConnections(): Promise<void> {
-  await destroyConnection();
+  console.log('cleanupConnections is deprecated and has no effect');
 }
 
 // Cleanup connections on process exit
