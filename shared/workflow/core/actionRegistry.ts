@@ -117,8 +117,100 @@ export class ActionRegistry {
     // Validate parameters
     this.validateParameters(action, context.parameters);
     
-    // Execute action
-    return action.execute(context.parameters, context);
+    // Log action execution for debugging
+    console.log(`[ActionRegistry] Executing action "${actionName}" for execution ${context.executionId} with idempotency key ${context.idempotencyKey}`, { 
+      tenant: context.tenant,
+      eventId: context.eventId,
+      parameterKeys: Object.keys(context.parameters)
+    });
+    
+    try {
+      // Import models here to avoid circular dependencies
+      const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel.js');
+      
+      // Create Knex instance - assuming we can get it from a connection pool or similar
+      // This would typically be passed in the context or obtained from a service locator
+      const { getAdminConnection } = await import('@shared/db/admin.js');
+      const knex = await getAdminConnection();
+      
+      // Create action result record (pre-execution)
+      let resultId;
+      try {
+        // Import uuid for generating missing event_id
+        const { v4: uuidv4 } = await import('uuid');
+        
+        // Ensure event_id is a valid UUID - generate one if missing
+        const eventId = context.eventId && context.eventId.trim() ? context.eventId : uuidv4();
+        
+        const createResult = await WorkflowActionResultModel.create(knex, context.tenant, {
+          execution_id: context.executionId,
+          event_id: eventId,
+          action_name: actionName,
+          idempotency_key: context.idempotencyKey,
+          ready_to_execute: true,
+          success: false,
+          parameters: context.parameters,
+          tenant: context.tenant
+        });
+        
+        resultId = createResult.result_id;
+        console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
+        
+        // Mark as started
+        await WorkflowActionResultModel.markAsStarted(knex, context.tenant, resultId);
+      } catch (dbError) {
+        console.error(`[ActionRegistry] Error creating action result record:`, dbError);
+        // Continue execution even if recording fails
+      }
+      
+      // Execute action
+      try {
+        const result = await action.execute(context.parameters, context);
+        console.log(`[ActionRegistry] Action "${actionName}" executed successfully`);
+        
+        // Mark as completed successfully if we have a resultId
+        if (resultId) {
+          try {
+            await WorkflowActionResultModel.markAsCompleted(
+              knex, 
+              context.tenant, 
+              resultId, 
+              true, 
+              result
+            );
+            console.log(`[ActionRegistry] Updated action result record ${resultId} as completed successfully`);
+          } catch (dbError) {
+            console.error(`[ActionRegistry] Error updating action result record:`, dbError);
+          }
+        }
+        
+        return result;
+      } catch (error) {
+        console.error(`[ActionRegistry] Error executing action "${actionName}":`, error);
+        
+        // Mark as failed if we have a resultId
+        if (resultId) {
+          try {
+            await WorkflowActionResultModel.markAsCompleted(
+              knex, 
+              context.tenant, 
+              resultId, 
+              false, 
+              undefined, 
+              error instanceof Error ? error.message : String(error)
+            );
+            console.log(`[ActionRegistry] Updated action result record ${resultId} as failed`);
+          } catch (dbError) {
+            console.error(`[ActionRegistry] Error updating action result record:`, dbError);
+          }
+        }
+        
+        throw error;
+      }
+    } catch (error) {
+      console.error(`[ActionRegistry] Error in action execution process:`, error);
+      throw error;
+    }
   }
   
   /**

@@ -20,39 +20,33 @@ import { toast } from 'react-hot-toast';
 const defaultWorkflowTemplate = `/**
  * New workflow definition
  */
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
-    
-    // Initial state
-    context.setState('initial');
-    logger.info('Workflow started');
-    
-    // Wait for an event
-    const triggerEvent = await events.waitFor('TriggerEvent');
-    logger.info('Received trigger event', triggerEvent.payload);
-    
-    // Update state
-    context.setState('processing');
-    
-    // Execute an action
-    try {
-      const result = await actions.example_action({
-        param1: triggerEvent.payload.value,
-        param2: 'example value'
-      });
-      
-      logger.info('Action completed successfully', result);
-      
-      // Store the result
-      data.set('result', result);
-      
-      // Final state
-      context.setState('completed');
-    } catch (error) {
-      logger.error('Action failed', error);
-      context.setState('failed');
-    }
-  }
+
+const { actions, data, events, logger } = context;
+
+// Initial state
+context.setState('initial');
+logger.info('Workflow started');
+
+// Update state
+context.setState('processing');
+
+// Execute an action
+try {
+  const result = await actions.log_audit_message({
+    message: 'Hello from the workflow!'
+  });
+  
+  logger.info('Action completed successfully', result);
+  
+  // Store the result
+  data.set('result', true);
+  
+  // Final state
+  context.setState('completed');
+} catch (error) {
+  logger.error('Action failed', error);
+  context.setState('failed');
+}
 `;
 
 // WorkflowEditorComponent for editing or creating workflows

@@ -439,7 +439,82 @@ export class WorkflowWorker {
         return;
       }
       
-      // Find workflows attached to this event type
+      // Check if this is a test event with a specific version_id in the payload
+      // If so, we can directly start the workflow with that version_id
+      const versionId = eventData.payload?.versionId;
+      const workflowId = eventData.payload?.workflowId;
+      const isTestEvent = eventData.payload?.isTestEvent === true;
+      
+      if (versionId && workflowId && isTestEvent) {
+        logger.info(`[WorkflowWorker] Test event detected with specific version_id: ${versionId}`, {
+          workflowId,
+          versionId,
+          eventType: eventData.event_type
+        });
+        
+        // Get a database connection
+        const db = await getAdminConnection();
+        
+        // Get the workflow registration directly by ID and version
+        const registration = await db('workflow_registrations as wr')
+          .join('workflow_registration_versions as wrv', function() {
+            this.on('wrv.registration_id', '=', 'wr.registration_id')
+                .andOn('wrv.tenant_id', '=', 'wr.tenant_id');
+          })
+          .where({
+            'wr.registration_id': workflowId,
+            'wr.tenant_id': tenant,
+            'wrv.version_id': versionId
+          })
+          .select(
+            'wr.registration_id',
+            'wr.name',
+            'wr.description',
+            'wr.tags',
+            'wr.status',
+            'wrv.version_id',
+            'wrv.version',
+            'wrv.definition'
+          )
+          .first();
+        
+        if (registration) {
+          logger.info(`[WorkflowWorker] Starting test workflow with specific version`, {
+            workflowId,
+            versionId,
+            name: registration.name
+          });
+          
+          // Start the workflow using the version ID
+          const result = await this.workflowRuntime.startWorkflowByVersionId(db, {
+            tenant: eventData.tenant,
+            initialData: {
+              eventId: eventData.event_id,
+              eventType: eventData.event_type,
+              eventName: eventData.event_name,
+              eventPayload: eventData.payload || {},
+              triggerEvent: eventData
+            },
+            userId: eventData.user_id,
+            versionId: versionId
+          });
+          
+          // Submit the original event to the workflow
+          await this.workflowRuntime.submitEvent(db, {
+            execution_id: result.executionId,
+            event_name: eventData.event_name,
+            payload: eventData.payload,
+            user_id: eventData.user_id,
+            tenant: eventData.tenant
+          });
+          
+          return; // Skip the normal workflow attachment lookup
+        } else {
+          logger.error(`[WorkflowWorker] Test workflow with ID ${workflowId} and version ${versionId} not found`);
+        }
+      }
+      
+      // Regular event processing - find workflows attached to this event type
       const attachedWorkflows = await this.findAttachedWorkflows(eventData.event_type, tenant);
       
       if (attachedWorkflows.length === 0) {

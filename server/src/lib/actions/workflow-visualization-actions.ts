@@ -16,7 +16,7 @@ import {
   WorkflowEventModel,
   WorkflowActionResultModel
 } from '@shared/workflow/persistence';
-import { initializeServerWorkflows } from 'server/src/lib/workflow/init/serverInit';
+import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 import { createTenantKnex } from 'server/src/lib/db';
 
 /**

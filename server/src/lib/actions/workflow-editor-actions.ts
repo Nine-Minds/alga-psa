@@ -13,8 +13,6 @@ import { EventCatalogModel } from "../../models/eventCatalog";
 import {
   validateWorkflowCode,
   checkWorkflowSecurity,
-  extractWorkflowMetadata,
-  WorkflowMetadataSchema
 } from "../utils/workflowValidation";
 
 // Zod schema for workflow data
@@ -68,11 +66,8 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
     
-    // Extract metadata from code
-    const metadata = extractWorkflowMetadata(validatedData.code);
-    if (!metadata) {
-      throw new Error("Could not extract workflow metadata from code");
-    }
+    // We no longer need to extract metadata from the code
+    // The metadata comes from workflowData (validatedData)
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
@@ -83,11 +78,11 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
       // Create workflow definition
       const workflowDefinition = {
         metadata: {
-          name: metadata.name,
-          description: metadata.description || validatedData.description || '',
-          version: metadata.version || validatedData.version,
-          author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
-          tags: metadata.tags || validatedData.tags,
+          name: validatedData.name,
+          description: validatedData.description || '',
+          version: validatedData.version,
+          author: `${user.first_name} ${user.last_name}`.trim(),
+          tags: validatedData.tags,
         },
         executeFn: validatedData.code,
       };
@@ -151,11 +146,8 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
     
-    // Extract metadata from code
-    const metadata = extractWorkflowMetadata(validatedData.code);
-    if (!metadata) {
-      throw new Error("Could not extract workflow metadata from code");
-    }
+    // We no longer need to extract metadata from the code
+    // The metadata comes from workflowData (validatedData)
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
@@ -166,11 +158,11 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       // Create workflow definition
       const workflowDefinition = {
         metadata: {
-          name: metadata.name,
-          description: metadata.description || validatedData.description || '',
-          version: metadata.version || validatedData.version,
-          author: metadata.author || `${user.first_name} ${user.last_name}`.trim(),
-          tags: metadata.tags || validatedData.tags,
+          name: validatedData.name,
+          description: validatedData.description || '',
+          version: validatedData.version,
+          author: `${user.first_name} ${user.last_name}`.trim(),
+          tags: validatedData.tags,
         },
         executeFn: validatedData.code,
       };
@@ -643,7 +635,7 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
     knexInstance = knex;
     
     // Validate workflow code
-    const validation = validateWorkflowCode(code);
+    const validation = validateWorkflowCode('async function execute(context) {\n' + code + '\n}');
     
     // Check for security issues
     const securityWarnings = checkWorkflowSecurity(code);
@@ -659,39 +651,11 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
       };
     }
     
-    // Create a temporary workflow definition for testing
-    if (validation.metadata) {
-      const workflowDefinition = {
-        metadata: {
-          name: validation.metadata.name,
-          description: validation.metadata.description || '',
-          version: validation.metadata.version || '1.0.0',
-          author: validation.metadata.author || `${user.first_name} ${user.last_name}`.trim(),
-          tags: validation.metadata.tags || [],
-        },
-        executeFn: code,
-      };
-      
-      try {
-        // Skip the deserialization step for now, as it doesn't support import statements
-        // Just return success since the validation passed
-        return {
-          success: true,
-          output: "Workflow code validated successfully. The workflow appears to be correctly structured.",
-          warnings: allWarnings.length > 0 ? allWarnings : undefined
-        };
-      } catch (error) {
-        return {
-          success: false,
-          output: `Workflow validation failed: ${error instanceof Error ? error.message : String(error)}`,
-          warnings: allWarnings.length > 0 ? allWarnings : undefined
-        };
-      }
-    }
-    
+    // We no longer need to extract metadata from the code
+    // Just return success since the validation passed
     return {
-      success: false,
-      output: "Could not extract workflow metadata from code",
+      success: true,
+      output: "Workflow code validated successfully. The workflow appears to be correctly structured.",
       warnings: allWarnings.length > 0 ? allWarnings : undefined
     };
   } catch (error) {
@@ -707,8 +671,8 @@ export async function testWorkflow(code: string): Promise<{ success: boolean; ou
 
 /**
  * Execute a workflow test with the provided event data
- * This function uses the existing workflow registration, attaches it to the event,
- * and then publishes the event to trigger the workflow
+ * This function uses version_id in the event payload to directly trigger
+ * the specific workflow version without using temporary event attachments
  * 
  * @param code Workflow code
  * @param eventName Event name
@@ -722,8 +686,6 @@ export async function executeWorkflowTest(
   eventPayload: any,
   workflowId: string
 ): Promise<WorkflowTestResult> {
-  let tempAttachmentId: string | undefined = undefined;
-  
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -741,16 +703,6 @@ export async function executeWorkflowTest(
       return {
         success: false,
         message: `Workflow validation failed: ${testResult.output}`,
-        warnings: testResult.warnings
-      };
-    }
-    
-    // Extract metadata from code
-    const metadata = extractWorkflowMetadata(code);
-    if (!metadata) {
-      return {
-        success: false,
-        message: "Could not extract workflow metadata from code",
         warnings: testResult.warnings
       };
     }
@@ -777,36 +729,45 @@ export async function executeWorkflowTest(
     }
     
     // Find or create an event catalog entry for this event type
-    let eventCatalogEntry = await EventCatalogModel.getByEventType(knex, eventName, tenant || '');
-    
-    if (!eventCatalogEntry) {
-      // Create a new event catalog entry
-      eventCatalogEntry = await EventCatalogModel.create(knex, {
-        event_type: "CUSTOM_EVENT" as any, // Use a generic event type that's compatible with the system
-        name: eventName,
-        description: `Test event for workflow test`,
-        category: 'test',
-        payload_schema: {
-          type: 'object',
-          properties: {
-            tenantId: { type: 'string' }
-          },
-          required: ['tenantId']
-        },
-        is_system_event: false,
-        tenant_id: tenant || ''
-      });
+    try {
+      // First check if the event exists using the exact event name as the event_type
+      let eventCatalogEntry = await EventCatalogModel.getByEventType(knex, eventName, tenant || '');
+      
+      if (!eventCatalogEntry) {
+        // Also check if there's an existing CUSTOM_EVENT entry with this name
+        const existingCustomEvent = await knex('event_catalog')
+          .where({
+            name: eventName,
+            tenant_id: tenant || ''
+          })
+          .first();
+          
+        if (existingCustomEvent) {
+          eventCatalogEntry = existingCustomEvent;
+        } else {
+          // Create a new event catalog entry
+          eventCatalogEntry = await EventCatalogModel.create(knex, {
+            event_type: eventName, // Use the event name as the type
+            name: eventName,
+            description: `Test event for workflow test`,
+            category: 'test',
+            payload_schema: {
+              type: 'object',
+              properties: {
+                tenantId: { type: 'string' }
+              },
+              required: ['tenantId']
+            },
+            is_system_event: false,
+            tenant_id: tenant || ''
+          });
+        }
+      }
+    } catch (error) {
+      // If there's an error like a unique constraint violation, we can continue
+      // since we just need a valid event type to exist, not necessarily create a new one
+      logger.warn("Error handling event catalog entry, continuing with workflow test:", error);
     }
-    
-    // Create a temporary event attachment
-    const attachment = await createWorkflowEventAttachment({
-      workflow_id: workflowId,
-      event_id: eventCatalogEntry.event_id,
-      tenant_id: tenant || '',
-      is_active: true
-    });
-    
-    tempAttachmentId = attachment.attachment_id;
     
     // Submit the event to trigger the workflow
     // We use 'as any' to bypass the strict event type checking
@@ -820,7 +781,8 @@ export async function executeWorkflowTest(
         tenantId: tenant,
         userId: user.user_id,
         workflowId: workflowId,
-        versionId: workflowRegistration.version_id
+        versionId: workflowRegistration.version_id,
+        isTestEvent: true // Add flag to indicate this is a test event
       }
     });
     
@@ -856,20 +818,5 @@ export async function executeWorkflowTest(
       success: false,
       message: error instanceof Error ? error.message : String(error)
     };
-  } finally {
-    // Clean up temporary resources
-    try {
-      // Clean up the temporary attachment
-      if (tempAttachmentId) {
-        const { knex, tenant } = await createTenantKnex();
-        
-        await deleteWorkflowEventAttachment({
-          attachmentId: tempAttachmentId,
-          tenant: tenant || ''
-        });
-      }
-    } catch (cleanupError) {
-      logger.error("Error cleaning up temporary resources:", cleanupError);
-    }
   }
 }

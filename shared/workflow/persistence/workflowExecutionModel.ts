@@ -52,16 +52,19 @@ const WorkflowExecutionModel = {
   /**
    * Create a new workflow execution
    */
-  create: async (knex: Knex, tenant: string, execution: Omit<IWorkflowExecution, 'execution_id' | 'created_at' | 'updated_at'>): Promise<Pick<IWorkflowExecution, 'execution_id'>> => {
+  create: async (knex: Knex, tenant: string, execution: Partial<IWorkflowExecution>): Promise<Pick<IWorkflowExecution, 'execution_id'>> => {
     try {
       if (!tenant) {
         throw new Error('Tenant not found');
       }
       
+      // Use provided execution_id if it exists, otherwise one will be generated
       const [insertedExecution] = await knex<IWorkflowExecution>('workflow_executions')
         .insert({
           ...execution,
-          tenant: tenant
+          tenant: tenant,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .returning('execution_id');
       

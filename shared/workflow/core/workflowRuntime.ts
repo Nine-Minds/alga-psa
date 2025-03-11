@@ -302,8 +302,8 @@ export class TypeScriptWorkflowRuntime {
       throw new Error(`Failed to load workflow definition for version "${options.versionId}"`);
     }
     
-    // Generate a unique execution ID
-    const executionId = `wf-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    // Generate a unique execution ID using UUID
+    const executionId = uuidv4();
     
     try {
       // Create initial execution state
@@ -321,6 +321,7 @@ export class TypeScriptWorkflowRuntime {
       
       // Persist workflow execution record
       await WorkflowExecutionModel.create(knex, options.tenant, {
+        execution_id: executionId, // Use the UUID as execution_id
         workflow_name: versionRecord.workflow_name,
         workflow_version: versionRecord.version,
         current_state: 'initial',

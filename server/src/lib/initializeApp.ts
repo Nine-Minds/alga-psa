@@ -3,6 +3,7 @@ import { parsePolicy } from './auth/ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import logger from '@shared/core/logger';
+import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
 
 export async function initializeApp() {
   try {
@@ -13,6 +14,10 @@ export async function initializeApp() {
     // Initialize scheduled jobs
     await initializeScheduledJobs();
     logger.info('Scheduled jobs initialized');
+    
+    // Initialize workflow system
+    await initializeServerWorkflows();
+    logger.info('Workflow system initialized');
 
     // Register cleanup handlers
     process.on('SIGTERM', async () => {

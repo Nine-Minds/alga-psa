@@ -49,6 +49,12 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
       `
       interface Array<T> {}
       interface Boolean {}
+      interface Date {}
+      interface Error {
+        name: string;
+        message: string;
+        stack?: string;
+      }
       interface Function {}
       interface IArguments {}
       interface Number {}
@@ -59,6 +65,8 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
       
       declare var Array: any;
       declare var Boolean: any;
+      declare var Date: any;
+      declare var Error: any;
       declare var Function: any;
       declare var Number: any;
       declare var Object: any;
@@ -191,20 +199,18 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
  * @param code TypeScript workflow code
  * @returns Validation result with errors if any
  */
-export function validateWorkflowCode(code: string): { 
-  valid: boolean; 
+export function validateWorkflowCode(code: string): {
+  valid: boolean;
   errors: string[];
   warnings: string[];
-  metadata: z.infer<typeof WorkflowMetadataSchema> | null;
 } {
   const errors: string[] = [];
   const warnings: string[] = [];
-  let metadata: z.infer<typeof WorkflowMetadataSchema> | null = null;
   
   // Check if code is empty
   if (!code || code.trim() === '') {
     errors.push("Workflow code cannot be empty");
-    return { valid: false, errors, warnings, metadata };
+    return { valid: false, errors, warnings };
   }
   
   try {
@@ -226,6 +232,12 @@ export function validateWorkflowCode(code: string): {
       `
       interface Array<T> {}
       interface Boolean {}
+      interface Date {}
+      interface Error {
+        name: string;
+        message: string;
+        stack?: string;
+      }
       interface Function {}
       interface IArguments {}
       interface Number {}
@@ -236,6 +248,8 @@ export function validateWorkflowCode(code: string): {
       
       declare var Array: any;
       declare var Boolean: any;
+      declare var Date: any;
+      declare var Error: any;
       declare var Function: any;
       declare var Number: any;
       declare var Object: any;
@@ -308,15 +322,7 @@ export function validateWorkflowCode(code: string): {
     );
     
     const sourceFile = project.createSourceFile('workflow.ts', code);
-    // Extract and validate metadata
-    try {
-      metadata = extractWorkflowMetadata(code);
-      if (!metadata) {
-        errors.push("Could not extract workflow metadata");
-      }
-    } catch (error) {
-      errors.push(`Invalid workflow metadata: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    // We no longer need to extract metadata from the code
     
     // Check for context usage with AST
     const contextAccesses = sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)
@@ -386,8 +392,7 @@ export function validateWorkflowCode(code: string): {
   return {
     valid: errors.length === 0,
     errors,
-    warnings,
-    metadata
+    warnings
   };
 }
 
@@ -419,6 +424,12 @@ export function checkWorkflowSecurity(code: string): string[] {
       `
       interface Array<T> {}
       interface Boolean {}
+      interface Date {}
+      interface Error {
+        name: string;
+        message: string;
+        stack?: string;
+      }
       interface Function {}
       interface IArguments {}
       interface Number {}
@@ -429,6 +440,8 @@ export function checkWorkflowSecurity(code: string): string[] {
       
       declare var Array: any;
       declare var Boolean: any;
+      declare var Date: any;
+      declare var Error: any;
       declare var Function: any;
       declare var Number: any;
       declare var Object: any;

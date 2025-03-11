@@ -42,6 +42,19 @@ export async function initializeServerWorkflows(): Promise<void> {
     );
     
     actionRegistry.registerSimpleAction(
+      'log_audit_message',
+      'Log an audit message',
+      [
+        { name: 'message', type: 'string', required: true },
+        { name: 'user', type: 'string', required: false }
+      ],
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
+        logger.info(`[AUDIT] ${params.message} ${params.user ? `by ${params.user}` : ''}`);
+        return { success: true };
+      }
+    );
+    
+    actionRegistry.registerSimpleAction(
       'send_notification',
       'Send a notification',
       [
