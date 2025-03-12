@@ -1,12 +1,21 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import Editor, { Monaco } from "@monaco-editor/react";
-import { editor } from "monaco-editor";
+import { editor, Uri } from "monaco-editor";
 import { Card } from "server/src/components/ui/Card";
 import { Button } from "server/src/components/ui/Button";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
-import { Save, Play, Code2, AlertTriangle } from "lucide-react";
+import { Play, Code2, AlertTriangle } from "lucide-react";
+import { getRegisteredWorkflowActions } from "server/src/lib/actions/workflow-actions/workflowActionRegistry";
+import { ActionParameterDefinition } from "@shared/workflow/core/actionRegistry.js";
+
+// Serializable version of action definition
+interface SerializableActionDefinition {
+  name: string;
+  description: string;
+  parameters: ActionParameterDefinition[];
+}
 
 // TypeScript type definitions for workflow context
 const workflowTypeDefinitions = `
@@ -16,8 +25,12 @@ interface WorkflowDataManager {
 }
 
 interface WorkflowEventManager {
-  waitFor(eventName: string | string[]): Promise<WorkflowEvent>;
   emit(eventName: string, payload?: any): Promise<void>;
+}
+
+interface WorkflowInput {
+  triggerEvent: WorkflowEvent;
+  parameters?: Record<string, any>;
 }
 
 interface WorkflowEvent {
@@ -42,6 +55,7 @@ interface WorkflowContext {
   data: WorkflowDataManager;
   events: WorkflowEventManager;
   logger: WorkflowLogger;
+  input: WorkflowInput;
   getCurrentState(): string;
   setState(state: string): void;
 }
@@ -61,8 +75,10 @@ const defaultWorkflowTemplate = `/**
  *
  * @param context The workflow context provided by the runtime
  */
-async function myWorkflow(context: WorkflowContext): Promise<void> {
-  const { actions, data, events, logger } = context;
+async function workflow(context: WorkflowContext): Promise<void> {
+  // Use type assertion for better autocompletion with actions
+  const actions = context.actions as WorkflowActions;
+  const { data, events, logger } = context;
   
   // Initial state
   context.setState('initial');
@@ -71,9 +87,9 @@ async function myWorkflow(context: WorkflowContext): Promise<void> {
   // Store some data
   data.set('startTime', new Date().toISOString());
   
-  // Wait for an event
-  const triggerEvent = await events.waitFor('TriggerAction');
-  logger.info('Received trigger event', triggerEvent.payload);
+  // Get input data from the trigger event
+  const triggerEvent = context.input.triggerEvent;
+  logger.info('Processing trigger event', triggerEvent.payload);
   
   // Update state
   context.setState('processing');
@@ -98,9 +114,6 @@ async function myWorkflow(context: WorkflowContext): Promise<void> {
     context.setState('failed');
   }
 }
-
-// Export the workflow function
-export default myWorkflow;
 `;
 
 // Code snippets for common workflow patterns
@@ -112,8 +125,10 @@ const workflowSnippets = [
  *
  * @param context The workflow context provided by the runtime
  */
-async function myWorkflow(context: WorkflowContext): Promise<void> {
-  const { actions, data, events, logger } = context;
+async function workflow(context: WorkflowContext): Promise<void> {
+  // Use type assertion for better autocompletion with actions
+  const actions = context.actions as WorkflowActions;
+  const { data, events, logger } = context;
   
   // Initial state
   context.setState('initial');
@@ -123,19 +138,15 @@ async function myWorkflow(context: WorkflowContext): Promise<void> {
   
   // Final state
   context.setState('completed');
-}
-
-// Export the workflow function
-export default myWorkflow;`
+}`
   },
   {
-    label: "Wait for Event",
-    insertText: `// Wait for a specific event
-const event = await events.waitFor('EventName');
-logger.info('Received event', event.payload);
+    label: "Process Trigger Event",
+    insertText: `// Get the trigger event from the context
+const event = context.input.triggerEvent;
+logger.info('Processing event', event.payload);
 
-// Wait for one of multiple events
-const event = await events.waitFor(['Event1', 'Event2', 'Event3']);
+// Handle different event types based on event name
 if (event.name === 'Event1') {
   // Handle Event1
 } else if (event.name === 'Event2') {
@@ -147,7 +158,8 @@ $0`
   },
   {
     label: "Execute Action",
-    insertText: `try {
+    insertText: `// Note: Make sure actions is properly typed with 'as WorkflowActions' when destructuring
+try {
   const result = await actions.action_name({
     param1: 'value1',
     param2: 'value2'
@@ -224,32 +236,76 @@ interface ValidationWarning {
 }
 
 interface WorkflowEditorProps {
-  initialValue?: string;
+  initialValue: string | null;
+  isNewWorkflow: boolean;
   onSave?: (value: string) => Promise<void>;
   onTest?: (value: string) => Promise<void>;
   readOnly?: boolean;
   height?: string;
+  workflowId?: string;
 }
 
 const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
-  initialValue = defaultWorkflowTemplate,
+  initialValue,
+  isNewWorkflow,
   onSave,
   onTest,
   readOnly = false,
-  height = "70vh"
+  height = "70vh",
+  workflowId
 }) => {
-  const [editorValue, setEditorValue] = useState<string>(initialValue || defaultWorkflowTemplate);
+  // Store the current model URI
+  const modelUri = useRef<Uri | null>(null);
+  
+  // Editor state
+  const [editorValue, setEditorValue] = useState<string>("");
   const [isEditorReady, setIsEditorReady] = useState<boolean>(false);
+  const [isEditorInitialized, setIsEditorInitialized] = useState<boolean>(false);
   const [validationWarnings, setValidationWarnings] = useState<ValidationWarning[]>([]);
+  const [editorError, setEditorError] = useState<string | null>(null);
+  
+  // Refs
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
 
-  // Handle editor initialization
-  const handleEditorDidMount = (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    setIsEditorReady(true);
+  // Function to generate TypeScript definitions for actions
+  const generateActionTypeDefinitions = (actions: Record<string, SerializableActionDefinition>): string => {
+    let typeDefs = `
+interface WorkflowActions {
+`;
 
+    // Add method signatures for each action
+    for (const [actionName, action] of Object.entries(actions)) {
+      // Convert camelCase to snake_case for the method name
+      const snakeCaseName = actionName.replace(/([A-Z])/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
+      
+      // Generate parameter interface
+      typeDefs += `  /**
+   * ${action.description}
+   */\n`;
+      
+      // Add both camelCase and snake_case versions of the method
+      typeDefs += `  ${actionName}(params: {
+${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}${param.required ? '' : '?'}: ${param.type};`).join('\n')}
+  }): Promise<any>;\n\n`;
+      
+      // Only add snake_case version if it's different from camelCase
+      if (snakeCaseName !== actionName) {
+        typeDefs += `  /**
+   * ${action.description}
+   */\n`;
+        typeDefs += `  ${snakeCaseName}(params: {
+${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}${param.required ? '' : '?'}: ${param.type};`).join('\n')}
+  }): Promise<any>;\n\n`;
+      }
+    }
+
+    typeDefs += `}`;
+    return typeDefs;
+  };
+
+  // Function to setup TypeScript definitions
+  const setupTypeScriptDefinitions = async (monaco: Monaco) => {
     // Add TypeScript definitions
     monaco.languages.typescript.typescriptDefaults.addExtraLib(
       workflowTypeDefinitions,
@@ -283,8 +339,12 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         }
 
         export interface WorkflowEventManager {
-          waitFor(eventName: string | string[]): Promise<WorkflowEvent>;
           emit(eventName: string, payload?: any): Promise<void>;
+        }
+        
+        export interface WorkflowInput {
+          triggerEvent: WorkflowEvent;
+          parameters?: Record<string, any>;
         }
 
         export interface WorkflowEvent {
@@ -309,6 +369,7 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
           data: WorkflowDataManager;
           events: WorkflowEventManager;
           logger: WorkflowLogger;
+          input: WorkflowInput;
           getCurrentState(): string;
           setState(state: string): void;
         }
@@ -317,6 +378,77 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       }`,
       "shared-workflow-context.d.ts"
     );
+
+    try {
+      // Fetch registered actions using server action
+      const registeredActions = await getRegisteredWorkflowActions();
+      
+      // Generate action type definitions
+      const actionTypeDefinitions = generateActionTypeDefinitions(registeredActions);
+      
+      // Add action type definitions to the editor
+      monaco.languages.typescript.typescriptDefaults.addExtraLib(
+        `declare module '@shared/workflow/core/actionTypes' {
+          ${actionTypeDefinitions}
+        }`,
+        "workflow-action-types.d.ts"
+      );
+      
+      // Add the WorkflowActions interface to the global scope with proper declaration
+      monaco.languages.typescript.typescriptDefaults.addExtraLib(
+        actionTypeDefinitions,
+        "workflow-actions-global.d.ts"
+      );
+      
+      // Update the WorkflowContext interface to use the WorkflowActions type
+      monaco.languages.typescript.typescriptDefaults.addExtraLib(
+        `declare module '@shared/workflow/core/workflowContext' {
+          import { WorkflowActions } from '@shared/workflow/core/actionTypes';
+          
+          export interface WorkflowDataManager {
+            get<T>(key: string): T;
+            set<T>(key: string, value: T): void;
+          }
+          
+          export interface WorkflowEventManager {
+            waitFor(eventName: string | string[]): Promise<WorkflowEvent>;
+            emit(eventName: string, payload?: any): Promise<void>;
+          }
+          
+          export interface WorkflowEvent {
+            name: string;
+            payload: any;
+            user_id?: string;
+            timestamp: string;
+            processed?: boolean;
+          }
+          
+          export interface WorkflowLogger {
+            info(message: string, ...args: any[]): void;
+            warn(message: string, ...args: any[]): void;
+            error(message: string, ...args: any[]): void;
+            debug(message: string, ...args: any[]): void;
+          }
+          
+          export interface WorkflowContext {
+            executionId: string;
+            tenant: string;
+            actions: WorkflowActions;
+            data: WorkflowDataManager;
+            events: WorkflowEventManager;
+            logger: WorkflowLogger;
+            input: WorkflowInput;
+            getCurrentState(): string;
+            setState(state: string): void;
+          }
+          
+          export type WorkflowFunction = (context: WorkflowContext) => Promise<void>;
+        }`,
+        "shared-workflow-context-with-actions.d.ts"
+      );
+    } catch (error) {
+      console.error('Error fetching workflow actions:', error);
+    }
 
     // Configure TypeScript compiler options
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
@@ -332,44 +464,144 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
       typeRoots: ["node_modules/@types"],
       lib: ["dom", "es2015", "es2016", "es2017", "es2018", "es2019", "es2020"]
     });
-
-    // Register code snippets
-    monaco.languages.registerCompletionItemProvider("typescript", {
-      provideCompletionItems: (model, position) => {
-        const suggestions = workflowSnippets.map((snippet) => {
-          return {
-            label: snippet.label,
-            kind: monaco.languages.CompletionItemKind.Snippet,
-            documentation: snippet.label,
-            insertText: snippet.insertText,
-            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            range: {
-              startLineNumber: position.lineNumber,
-              endLineNumber: position.lineNumber,
-              startColumn: position.column,
-              endColumn: position.column
-            }
-          };
-        });
-
-        return { suggestions };
-      }
-    });
   };
+
+  // Create a TypeScript model
+  const createTypeScriptModel = (monaco: Monaco, content: string): editor.ITextModel => {
+    // Create a URI with a .ts extension
+    const uri = Uri.parse("file:///workflow.ts");
+    modelUri.current = uri;
+    
+    // Create a new model with TypeScript content
+    return monaco.editor.createModel(content, "typescript", uri);
+  };
+
+  // Handle editor initialization
+  const handleEditorDidMount = async (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+    console.log('Editor mounted, waiting for content before initialization');
+    
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    
+    try {
+      // First fetch registered actions and setup TypeScript definitions
+      console.log('Setting up TypeScript definitions with action types...');
+      
+      // Setup TypeScript definitions - this now includes fetching registered actions first
+      await setupTypeScriptDefinitions(monaco);
+      
+      // Register code snippets
+      monaco.languages.registerCompletionItemProvider("typescript", {
+        provideCompletionItems: (model, position) => {
+          const suggestions = workflowSnippets.map((snippet) => {
+            return {
+              label: snippet.label,
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              documentation: snippet.label,
+              insertText: snippet.insertText,
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              range: {
+                startLineNumber: position.lineNumber,
+                endLineNumber: position.lineNumber,
+                startColumn: position.column,
+                endColumn: position.column
+              }
+            };
+          });
+  
+          return { suggestions };
+        }
+      });
+      
+      console.log('Editor setup complete with proper action types');
+      setIsEditorReady(true);
+    } catch (error) {
+      console.error('Error setting up workflow editor:', error);
+      setEditorError('Failed to load workflow action types. Please refresh and try again.');
+    }
+  };
+
+  // Reference to store the timeout ID for debouncing
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced function to notify parent of content changes
+  const debouncedNotifyParent = useCallback((value: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    
+    debounceTimerRef.current = setTimeout(() => {
+      if (onSave && value !== initialValue) {
+        console.log("Editor content updated, notifying parent component (debounced)");
+        onSave(value);
+      }
+    }, 500); // 500ms debounce delay
+  }, [onSave, initialValue]);
 
   // Handle editor value change
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
       setEditorValue(value);
+      
+      // Use debounced version to avoid excessive updates
+      debouncedNotifyParent(value);
     }
   };
 
-  // Update editorValue when initialValue changes
+  // Initialize the editor with content once we have it
   useEffect(() => {
-    if (initialValue) {
-      setEditorValue(initialValue);
+    // Only initialize once
+    if (isEditorInitialized) {
+      return;
     }
-  }, [initialValue]);
+    
+    // Wait until editor is ready and we have content information
+    if (!isEditorReady || !monacoRef.current || !editorRef.current || initialValue === undefined) {
+      return;
+    }
+    
+    console.log('Initializing editor with content', {
+      initialValue,
+      isNewWorkflow,
+      workflowId
+    });
+    
+    // Handle different scenarios
+    if (initialValue === null && workflowId) {
+      // We have a workflow ID but no content - show error
+      setEditorError(`Error: Could not load workflow content for ID: ${workflowId}`);
+      return;
+    }
+    
+    // Determine what content to use
+    let contentToUse: string;
+    if (initialValue !== null) {
+      // We have content from the server
+      contentToUse = initialValue;
+      console.log('Using server content for editor');
+    } else if (isNewWorkflow) {
+      // This is a new workflow, use the default template
+      contentToUse = defaultWorkflowTemplate;
+      console.log('Using default template for new workflow');
+    } else {
+      // Fallback case - should not happen with proper props
+      contentToUse = defaultWorkflowTemplate;
+      console.log('WARNING: Falling back to default template');
+    }
+    
+    // Create a TypeScript model with the content
+    const model = createTypeScriptModel(monacoRef.current, contentToUse);
+    
+    // Set the model to the editor
+    editorRef.current.setModel(model);
+    
+    // Set the editor value
+    setEditorValue(contentToUse);
+    
+    // Mark as initialized
+    setIsEditorInitialized(true);
+    
+  }, [isEditorReady, initialValue, isNewWorkflow, workflowId, isEditorInitialized]);
   
   // Validate code and show warnings
   const validateCode = (code: string) => {
@@ -418,14 +650,32 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
 
   // Handle test button click
   const handleTest = async () => {
-    if (onTest && editorValue) {
-      await onTest(editorValue);
+    if (editorValue) {
+      // Make sure to update the parent with the latest code before testing
+      if (onSave) {
+        await onSave(editorValue);
+      }
+      
+      // Then run the test
+      if (onTest) {
+        await onTest(editorValue);
+      }
     }
   };
 
   return (
     <ReflectionContainer id="workflow-editor-container" label="Workflow Editor">
       <Card className="p-4">
+        {editorError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center mb-2">
+              <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+              <h3 className="text-sm font-medium text-red-700">Error</h3>
+            </div>
+            <p className="text-sm text-red-600">{editorError}</p>
+          </div>
+        )}
+        
         {validationWarnings.length > 0 && (
           <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <div className="flex items-center mb-2">
@@ -456,14 +706,6 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                   <Play className="h-4 w-4 mr-2" />
                   Test
                 </Button>
-                <Button
-                  id="save-workflow-button"
-                  onClick={handleSave}
-                  disabled={!isEditorReady}
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  Save
-                </Button>
               </>
             )}
           </div>
@@ -471,10 +713,11 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
         <div className="border rounded-md overflow-hidden" style={{ height }}>
           <Editor
             height="100%"
-            defaultLanguage="typescript"
-            value={editorValue}
+            language="typescript"
+            value={isEditorInitialized ? editorValue : ""}
             onChange={handleEditorChange}
             onMount={handleEditorDidMount}
+            loading={<div className="flex items-center justify-center h-full">Loading editor...</div>}
             options={{
               readOnly,
               minimap: { enabled: true },
@@ -491,6 +734,13 @@ const WorkflowEditor: React.FC<WorkflowEditorProps> = ({
                 verticalScrollbarSize: 12,
                 horizontalScrollbarSize: 12
               }
+            }}
+            beforeMount={(monaco) => {
+              // Configure Monaco to treat all files as TypeScript
+              monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
+                noSemanticValidation: false,
+                noSyntaxValidation: false
+              });
             }}
           />
         </div>

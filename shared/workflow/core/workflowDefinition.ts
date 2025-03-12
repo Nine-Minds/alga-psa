@@ -1,5 +1,6 @@
 import { WorkflowFunction } from './workflowContext.js';
 import logger from '@shared/core/logger.js';
+import * as ts from 'typescript';
 
 /**
  * Interface for workflow metadata
@@ -84,11 +85,40 @@ export function serializeWorkflowFunction(fn: WorkflowFunction): string {
  */
 export function deserializeWorkflowFunction(fnString: string): WorkflowFunction {
   try {
+    console.log('Deserializing workflow function:', fnString);
+    
+    // The function string should already be an async function with a context parameter
+    const wrappedCode = fnString;
+    
+    // Compile TypeScript to JavaScript
+    const result = ts.transpileModule(wrappedCode, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2020,
+        module: ts.ModuleKind.ESNext,
+        removeComments: true,
+        esModuleInterop: true,
+      }
+    });
+    
+    const jsCode = result.outputText;
+    console.log('Compiled JavaScript:', jsCode);
+    
+    // Extract the function body from the compiled code
+    // This regex extracts the content between the first { and the last }
+    // It matches any async function with any name that takes a context parameter
+    const functionBodyMatch = jsCode.match(/async\s+function\s+\w+\s*\(\s*context\s*\)\s*\{([\s\S]*)\}\s*$/);
+    
+    if (!functionBodyMatch || !functionBodyMatch[1]) {
+      throw new Error('Failed to extract function body from compiled code');
+    }
+    
+    const functionBody = functionBodyMatch[1].trim();
+    
     // Basic implementation (needs security review)
     // This approach has security implications and should be carefully reviewed
     // eslint-disable-next-line no-new-func
     return new Function('context', `return (async function(context) {
-      ${fnString}
+      ${functionBody}
     })(context)`) as WorkflowFunction;
   } catch (error) {
     logger.error('Error deserializing workflow function:', error);

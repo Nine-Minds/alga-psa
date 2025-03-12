@@ -68,7 +68,7 @@ The workflow editor provides a TypeScript code editor with specialized features 
 
 Available snippets include:
 - Basic Workflow Structure
-- Wait for Event
+- Process Trigger Event
 - Execute Action
 - Parallel Actions
 - Conditional Logic
@@ -79,18 +79,17 @@ Available snippets include:
 Every workflow must follow this basic structure:
 
 ```typescript
-
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
-    
-    // Initial state
-    context.setState('initial');
-    
-    // Workflow implementation
-    
-    // Final state
-    context.setState('completed');
-  }
+async function workflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger } = context;
+  
+  // Initial state
+  context.setState('initial');
+  
+  // Workflow implementation
+  
+  // Final state
+  context.setState('completed');
+}
 
 ```
 
@@ -105,9 +104,9 @@ Every workflow must follow this basic structure:
    context.setState('completed');
    ```
 
-2. **Event Handling**: Wait for events to drive the workflow
+2. **Event Handling**: Process the trigger event that started the workflow
    ```typescript
-   const event = await events.waitFor('EventName');
+   const triggerEvent = context.input.triggerEvent;
    ```
 
 3. **Action Execution**: Perform actions to interact with systems

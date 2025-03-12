@@ -981,7 +981,7 @@ describe('AST Parser', () => {
       
       export const myWorkflow = defineWorkflow(
         'MyWorkflow',
-        async (context) => {
+        async function workflow(context) {
           // Workflow implementation
           context.setState('initial');
         }
@@ -1002,7 +1002,7 @@ describe('AST Parser', () => {
       
       export const myWorkflow = defineWorkflow(
         'MyWorkflow',
-        async (context) => {
+        async function workflow(context) {
           // Workflow implementation
           context.setState('initial');
         }

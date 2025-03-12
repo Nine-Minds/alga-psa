@@ -47,12 +47,13 @@ The workflow context provides access to various capabilities:
 
 - **actions**: Execute registered actions
 - **data**: Store and retrieve workflow data
-- **events**: Wait for and emit events
+- **events**: Emit events
 - **logger**: Log information for debugging and monitoring
+- **input**: Access the trigger event and parameters
 - **setState/getCurrentState**: Manage workflow state
 
 ```typescript
-async (context: WorkflowContext) => {
+async function workflow(context: WorkflowContext): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
@@ -64,8 +65,8 @@ async (context: WorkflowContext) => {
   // Store data
   data.set('startTime', new Date().toISOString());
   
-  // Wait for events
-  const event = await events.waitFor('SomeEvent');
+  // Access the trigger event
+  const event = context.input.triggerEvent;
   
   // Execute actions
   const result = await actions.someAction({ param: 'value' });
@@ -97,19 +98,23 @@ context.setState('completed');
 
 ### Event Handling
 
-Events drive workflow progression. You can wait for specific events or any one of multiple events.
+Events drive workflow progression. Each workflow execution is triggered by an event, which is accessible via the context.input.triggerEvent property.
 
 ```typescript
-// Wait for a specific event
-const approvalEvent = await events.waitFor('ApproveRequest');
+// Access the trigger event
+const triggerEvent = context.input.triggerEvent;
 
-// Wait for one of multiple events
-const decisionEvent = await events.waitFor(['Approve', 'Reject']);
-if (decisionEvent.name === 'Approve') {
-  // Handle approval
-} else {
-  // Handle rejection
+// Check the event type
+if (triggerEvent.name === 'ApproveRequest') {
+  // Handle approval request
+  logger.info('Processing approval request', triggerEvent.payload);
+} else if (triggerEvent.name === 'RejectRequest') {
+  // Handle rejection request
+  logger.info('Processing rejection request', triggerEvent.payload);
 }
+
+// You can also emit events
+await events.emit('ProcessingStarted', { requestId: triggerEvent.payload.id });
 ```
 
 ### Data Management
@@ -225,23 +230,25 @@ await Promise.all(items.map(item => actions.processItem(item)));
 
 ### Timeouts and Delays
 
-Implement timeouts for waiting on events.
+Implement timeouts using scheduled tasks.
 
 ```typescript
-// Wait for an event with timeout
-try {
-  const event = await Promise.race([
-    events.waitFor('Response'),
-    new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), 86400000) // 24 hours
-    )
-  ]);
-  
-  // Process event
-  logger.info('Received response', event);
-} catch (error) {
+// Schedule a reminder task to execute after a delay
+const { taskId } = await actions.scheduleTask({
+  taskType: 'reminder',
+  executeAt: new Date(Date.now() + 86400000), // 24 hours from now
+  data: {
+    requestId: data.get('requestId')
+  }
+});
+
+// Store the scheduled task ID
+data.set('reminderTaskId', taskId);
+
+// In a separate workflow execution triggered by the scheduled task:
+if (context.input.triggerEvent.name === `Task:${data.get('reminderTaskId')}:Execute`) {
   // Handle timeout
-  logger.warn('Response timeout', error);
+  logger.warn('Response timeout');
   await actions.sendReminder();
 }
 ```
@@ -368,8 +375,9 @@ async function approvalWorkflow(context: WorkflowContext): Promise<void> {
   // Update state
   context.setState('pending_approval');
   
-  // Wait for task completion
-  const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
+  // The task completion will trigger a new workflow execution
+  // with the task result in the triggerEvent
+  const approvalEvent = context.input.triggerEvent;
   
   // Process approval decision
   if (approvalEvent.payload.approved) {
@@ -441,8 +449,9 @@ async function serviceRequestWorkflow(context: WorkflowContext): Promise<void> {
   if (assignmentResult.assigned) {
     context.setState('assigned');
     
-    // Wait for completion
-    const completionEvent = await events.waitFor('ServiceRequestComplete');
+    // The service request completion will trigger a new workflow execution
+    // with the completion result in the triggerEvent
+    const completionEvent = context.input.triggerEvent;
     
     // Process completion
     if (completionEvent.payload.success) {

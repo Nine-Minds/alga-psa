@@ -80,19 +80,16 @@ exports.seed = async function(knex) {
  *
  * @param context The workflow context provided by the runtime
  */
-async function autoInvoiceWorkflow(context: WorkflowContext): Promise<void> {
+async function autoInvoiceWorkflow(context): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
   context.setState('collecting_time_entries');
   logger.info('Starting auto-invoice generation workflow');
   
-  // Wait for billing cycle event
-  const billingEvent = await events.waitFor('BillingCycleComplete');
-  logger.info('Received billing cycle event', billingEvent.payload);
-  
-  // Extract client ID from event
-  const { clientId, billingPeriodStart, billingPeriodEnd } = billingEvent.payload;
+  // Get input data from the trigger event
+  const { clientId, billingPeriodStart, billingPeriodEnd } = context.input.triggerEvent.payload;
+  logger.info(\`Processing invoice for client \${clientId}\`);
   
   // Update state
   context.setState('processing_time_entries');
@@ -188,19 +185,16 @@ async function autoInvoiceWorkflow(context: WorkflowContext): Promise<void> {
  *
  * @param context The workflow context provided by the runtime
  */
-async function ticketEscalationWorkflow(context: WorkflowContext): Promise<void> {
+async function ticketEscalationWorkflow(context): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
   context.setState('monitoring');
   logger.info('Starting ticket escalation workflow');
   
-  // Wait for SLA breach event
-  const slaEvent = await events.waitFor('TicketSLABreach');
-  logger.info('Received SLA breach event', slaEvent.payload);
-  
-  // Extract ticket info
-  const { ticketId, breachType, currentAssignee } = slaEvent.payload;
+  // Get input data from the trigger event
+  const { ticketId, breachType, currentAssignee } = context.input.triggerEvent.payload;
+  logger.info(\`Processing SLA breach for ticket \${ticketId}\`);
   
   // Update state
   context.setState('escalating');
@@ -321,7 +315,7 @@ async function ticketEscalationWorkflow(context: WorkflowContext): Promise<void>
  *
  * @param context The workflow context provided by the runtime
  */
-async function assetInventoryWorkflow(context: WorkflowContext): Promise<void> {
+async function assetInventoryWorkflow(context): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
@@ -409,19 +403,16 @@ async function assetInventoryWorkflow(context: WorkflowContext): Promise<void> {
  *
  * @param context The workflow context provided by the runtime
  */
-async function approvalWorkflow(context: WorkflowContext): Promise<void> {
+async function approvalWorkflow(context): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
   context.setState('initiated');
   logger.info('Starting approval workflow');
   
-  // Wait for approval request event
-  const requestEvent = await events.waitFor('ApprovalRequested');
-  logger.info('Received approval request', requestEvent.payload);
-  
-  // Extract request details
-  const { requestId, requestType, requestedBy, itemId, approvalChain } = requestEvent.payload;
+  // Get input data from the trigger event
+  const { requestId, requestType, requestedBy, itemId, approvalChain } = context.input.triggerEvent.payload;
+  logger.info(\`Processing approval request \${requestId}\`);
   
   // Store request data
   data.set('requestId', requestId);

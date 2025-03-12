@@ -3,9 +3,10 @@
  * This file should only be imported in server components or server actions
  */
 
-import { getActionRegistry, getWorkflowRuntime, type ActionExecutionContext } from '@shared/workflow/core/index.js';
+import { getWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { registerExampleWorkflows } from '@shared/workflow/init/index.js';
 import logger from '@shared/core/logger.js';
+import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions.js';
 
 // Track initialization state
 let initialized = false;
@@ -23,72 +24,8 @@ export async function initializeServerWorkflows(): Promise<void> {
   try {
     logger.info('Initializing workflow system on server...');
     
-    // Initialize action registry
-    const actionRegistry = getActionRegistry();
-    
-    // Register common actions
-    actionRegistry.registerSimpleAction(
-      'log_audit_event',
-      'Log an audit event',
-      [
-        { name: 'eventType', type: 'string', required: true },
-        { name: 'entityId', type: 'string', required: true },
-        { name: 'user', type: 'string', required: false }
-      ],
-      async (params: Record<string, any>, context: ActionExecutionContext) => {
-        logger.info(`[AUDIT] ${params.eventType} for ${params.entityId} by ${params.user || 'system'}`);
-        return { success: true };
-      }
-    );
-    
-    actionRegistry.registerSimpleAction(
-      'log_audit_message',
-      'Log an audit message',
-      [
-        { name: 'message', type: 'string', required: true },
-        { name: 'user', type: 'string', required: false }
-      ],
-      async (params: Record<string, any>, context: ActionExecutionContext) => {
-        logger.info(`[AUDIT] ${params.message} ${params.user ? `by ${params.user}` : ''}`);
-        return { success: true };
-      }
-    );
-    
-    actionRegistry.registerSimpleAction(
-      'send_notification',
-      'Send a notification',
-      [
-        { name: 'recipient', type: 'string', required: true },
-        { name: 'message', type: 'string', required: true }
-      ],
-      async (params: Record<string, any>, context: ActionExecutionContext) => {
-        logger.info(`[NOTIFICATION] To: ${params.recipient}, Message: ${params.message}`);
-        return { success: true, notificationId: `notif-${Date.now()}` };
-      }
-    );
-    
-    actionRegistry.registerSimpleAction(
-      'get_user_role',
-      'Get user role',
-      [
-        { name: 'userId', type: 'string', required: true }
-      ],
-      async (params: Record<string, any>, context: ActionExecutionContext) => {
-        // Mock implementation - in a real system, this would query a database
-        const roles = {
-          'user1': 'user',
-          'user2': 'manager',
-          'user3': 'senior_manager',
-          'user4': 'admin'
-        };
-        
-        const role = params.userId in roles 
-          ? roles[params.userId as keyof typeof roles] 
-          : 'user';
-          
-        return role;
-      }
-    );
+    // Register all workflow actions
+    const actionRegistry = registerWorkflowActions();
     
     // Initialize workflow runtime
     getWorkflowRuntime(actionRegistry);

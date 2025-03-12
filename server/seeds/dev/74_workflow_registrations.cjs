@@ -57,12 +57,9 @@ exports.seed = async function(knex) {
   context.setState('draft');
   logger.info('Starting invoice approval workflow');
   
-  // Wait for Submit event
-  const submitEvent = await events.waitFor('Submit');
-  logger.info('Received submit event', submitEvent.payload);
-  
-  // Extract submitter from event
-  const { submittedBy } = submitEvent.payload;
+  // Get input data from the trigger event
+  const { submittedBy } = context.input.triggerEvent.payload;
+  logger.info(\`Processing invoice submission from \${submittedBy}\`);
   
   // Update state
   context.setState('submitted');
@@ -88,9 +85,9 @@ exports.seed = async function(knex) {
     }
   });
   
-  // Wait for Approve or Reject event
-  const decisionEvent = await events.waitFor(['Approve', 'Reject']);
-  logger.info('Received decision event', decisionEvent);
+  // Get decision event from the trigger event
+  const decisionEvent = context.input.triggerEvent;
+  logger.info(\`Processing decision: \${decisionEvent.name}\`);
   
   if (decisionEvent.name === 'Approve') {
     // Handle approval
@@ -125,9 +122,9 @@ exports.seed = async function(knex) {
       }
     });
     
-    // Wait for Pay event
-    const payEvent = await events.waitFor('Pay');
-    logger.info('Received pay event', payEvent);
+    // Get payment data from the trigger event
+    const payEvent = context.input.triggerEvent;
+    logger.info(\`Processing payment for invoice \${data.get('invoice.id')}\`);
     
     // Update state
     context.setState('paid');

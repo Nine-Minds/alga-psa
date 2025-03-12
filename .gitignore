@@ -90,3 +90,5 @@ secrets/
 .clinerules
 data/
 shared/dist
+
+config.ini

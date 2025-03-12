@@ -4,6 +4,17 @@ import WorkflowTaskModel, { IWorkflowTask, WorkflowTaskStatus } from '../persist
 import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInterfaces';
 import { getWorkflowRuntime } from './workflowRuntime';
 import { getFormRegistry } from './formRegistry';
+import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry';
+
+/**
+ * Extended context for workflow actions with additional properties needed for task creation
+ */
+interface TaskActionContext extends ActionExecutionContext {
+  knex: Knex;
+  userId?: string;
+  tenant: string;
+  executionId: string;
+}
 
 /**
  * Service for managing workflow tasks in the Task Inbox system
@@ -149,9 +160,9 @@ export class TaskInboxService {
    * 
    * @param actionRegistry The action registry to register with
    */
-  registerTaskActions(actionRegistry: any): void {
-    // Register createHumanTask action
-    actionRegistry.registerAction(
+  registerTaskActions(actionRegistry: ActionRegistry): void {
+    // Register createHumanTask action using registerSimpleAction
+    actionRegistry.registerSimpleAction(
       'createHumanTask',
       'Create a human task in the Task Inbox',
       [
@@ -164,13 +175,13 @@ export class TaskInboxService {
         { name: 'contextData', type: 'object', required: false },
         { name: 'formId', type: 'string', required: false }
       ],
-      async (params: any, context: any) => {
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
         try {
           const taskInboxService = new TaskInboxService();
           
           // Create the task
           const taskId = await taskInboxService.createTask(
-            context.knex,
+            (context as TaskActionContext).knex,
             context.tenant,
             context.executionId,
             {
@@ -183,7 +194,7 @@ export class TaskInboxService {
               contextData: params.contextData,
               formId: params.formId
             },
-            context.userId
+            (context as TaskActionContext).userId
           );
           
           return {

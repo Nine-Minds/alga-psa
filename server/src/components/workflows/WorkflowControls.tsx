@@ -47,7 +47,7 @@ export default function WorkflowControls({ execution }: WorkflowControlsProps) {
         id="back-to-workflows-button"
         variant="outline"
         size="sm"
-        onClick={() => router.push('/msp/jobs')}
+        onClick={() => router.push('/msp/automation-hub?tab=logs-history')}
       >
         <ArrowLeft className="h-4 w-4 mr-2" />
         Back
@@ -57,10 +57,18 @@ export default function WorkflowControls({ execution }: WorkflowControlsProps) {
         id="refresh-workflow-button"
         variant="outline"
         size="sm"
-        onClick={() => router.refresh()}
+        onClick={() => {
+          setIsLoading({ ...isLoading, refresh: true });
+          router.refresh();
+          // Add a timeout to reset the loading state since router.refresh() doesn't have a callback
+          setTimeout(() => {
+            setIsLoading({ ...isLoading, refresh: false });
+          }, 1000);
+        }}
+        disabled={isLoading['refresh']}
       >
-        <RefreshCw className="h-4 w-4 mr-2" />
-        Refresh
+        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading['refresh'] ? 'animate-spin' : ''}`} />
+        {isLoading['refresh'] ? 'Refreshing...' : 'Refresh'}
       </Button>
 
       {execution.status === 'active' && (

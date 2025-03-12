@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card } from 'server/src/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
@@ -29,7 +29,8 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("visualization");
 
-  const fetchDetails = async () => {
+  // Use useCallback to memoize the fetchDetails function
+  const fetchDetails = useCallback(async () => {
     try {
       setLoading(true);
       const details = await getWorkflowExecutionDetails(executionId);
@@ -45,7 +46,7 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
     } finally {
       setLoading(false);
     }
-  };
+  }, [executionId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -55,7 +56,7 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
 
   useEffect(() => {
     fetchDetails();
-  }, [executionId]);
+  }, [fetchDetails]);
 
   if (loading) {
     return (
@@ -151,12 +152,23 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleRefresh}
+          onClick={async () => {
+            // Explicitly call handleRefresh function
+            setRefreshing(true);
+            try {
+              await fetchDetails();
+              console.log('Workflow execution details refreshed successfully');
+            } catch (error) {
+              console.error('Error refreshing workflow execution details:', error);
+            } finally {
+              setRefreshing(false);
+            }
+          }}
           disabled={refreshing}
           id="refresh-workflow-details-button"
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 

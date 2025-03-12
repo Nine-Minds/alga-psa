@@ -5,17 +5,17 @@ This quick reference guide provides concise information about creating TypeScrip
 ## Basic Workflow Structure
 
 ```typescript
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
-    
-    // Initial state
-    context.setState('initial');
-    
-    // Workflow implementation
-    
-    // Final state
-    context.setState('completed');
-  }
+async function workflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger } = context;
+  
+  // Initial state
+  context.setState('initial');
+  
+  // Workflow implementation
+  
+  // Final state
+  context.setState('completed');
+}
 
 ```
 
@@ -27,7 +27,7 @@ This quick reference guide provides concise information about creating TypeScrip
 | `context.getCurrentState()` | Get current state | `const state = context.getCurrentState()` |
 | `context.actions` | Execute registered actions | `await actions.updateRecord(params)` |
 | `context.data` | Store/retrieve workflow data | `data.set('key', value)` |
-| `context.events` | Wait for/emit events | `await events.waitFor('EventName')` |
+| `context.events` | Emit events | `await events.emit('EventName')` |
 | `context.logger` | Log information | `logger.info('Message', data)` |
 | `context.input` | Access workflow input | `const { triggerEvent } = context.input` |
 
@@ -44,11 +44,13 @@ const requestData = data.get<{ id: string, amount: number }>('requestData');
 ## Event Handling
 
 ```typescript
-// Wait for a specific event
-const approvalEvent = await events.waitFor('ApproveRequest');
+// Access the trigger event
+const triggerEvent = context.input.triggerEvent;
 
-// Wait for one of multiple events
-const decisionEvent = await events.waitFor(['Approve', 'Reject']);
+// Check event type
+if (triggerEvent.name === 'ApproveRequest') {
+  // Handle approval request
+}
 
 // Emit an event
 await events.emit('StatusUpdated', { status: 'processing' });
@@ -122,35 +124,37 @@ await Promise.all(items.map(item => actions.processItem(item)));
 ### Approval Workflow
 
 ```typescript
-
-  async (context: WorkflowContext) => {
-    const { actions, events, data } = context;
-    
-    // Initial state
-    context.setState('submitted');
-    
-    // Get trigger event
-    const { triggerEvent } = context.input;
-    data.set('requestData', triggerEvent.payload);
-    
-    // Create approval task
-    const { taskId } = await actions.createHumanTask({
-      taskType: 'approval',
-      title: 'Approve Request',
-      assignTo: { roles: ['approver'] }
-    });
-    
-    // Wait for approval
-    context.setState('pending_approval');
-    const approvalEvent = await events.waitFor(`Task:${taskId}:Complete`);
-    
-    // Process result
-    if (approvalEvent.payload.approved) {
-      context.setState('approved');
-    } else {
-      context.setState('rejected');
-    }
+async function approvalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, data } = context;
+  
+  // Initial state
+  context.setState('submitted');
+  
+  // Get trigger event
+  const { triggerEvent } = context.input;
+  data.set('requestData', triggerEvent.payload);
+  
+  // Create approval task
+  const { taskId } = await actions.createHumanTask({
+    taskType: 'approval',
+    title: 'Approve Request',
+    assignTo: { roles: ['approver'] }
+  });
+  
+  // Set state to pending approval
+  context.setState('pending_approval');
+  
+  // The task completion will trigger a new workflow execution
+  // with the task result in the triggerEvent
+  const approvalEvent = context.input.triggerEvent;
+  
+  // Process result
+  if (approvalEvent.payload.approved) {
+    context.setState('approved');
+  } else {
+    context.setState('rejected');
   }
+}
 ```
 
 ### Multi-Level Approval
@@ -164,8 +168,11 @@ const { taskId: teamLeadTaskId } = await actions.createHumanTask({
   assignTo: { roles: ['team_lead'] }
 });
 
-const teamLeadEvent = await events.waitFor(`Task:${teamLeadTaskId}:Complete`);
-if (!teamLeadEvent.payload.approved) {
+// The team lead approval will trigger a new workflow execution
+// with the task result in the triggerEvent
+const teamLeadEvent = context.input.triggerEvent;
+if (teamLeadEvent.name === `Task:${teamLeadTaskId}:Complete` &&
+    !teamLeadEvent.payload.approved) {
   context.setState('rejected_by_team_lead');
   return;
 }
@@ -178,11 +185,15 @@ const { taskId: managerTaskId } = await actions.createHumanTask({
   assignTo: { roles: ['manager'] }
 });
 
-const managerEvent = await events.waitFor(`Task:${managerTaskId}:Complete`);
-if (managerEvent.payload.approved) {
-  context.setState('approved');
-} else {
-  context.setState('rejected_by_manager');
+// The manager approval will trigger a new workflow execution
+// with the task result in the triggerEvent
+const managerEvent = context.input.triggerEvent;
+if (managerEvent.name === `Task:${managerTaskId}:Complete`) {
+  if (managerEvent.payload.approved) {
+    context.setState('approved');
+  } else {
+    context.setState('rejected_by_manager');
+  }
 }
 ```
 
@@ -202,37 +213,58 @@ const { taskId: technical } = await actions.createHumanTask({
   assignTo: { roles: ['technical_approver'] }
 });
 
-// Wait for both approvals
-const [financialEvent, technicalEvent] = await Promise.all([
-  events.waitFor(`Task:${financial}:Complete`),
-  events.waitFor(`Task:${technical}:Complete`)
-]);
+// For parallel approvals, we need to track which approvals have been received
+// Store the task IDs
+data.set('financialTaskId', financial);
+data.set('technicalTaskId', technical);
+data.set('financialApproved', null);
+data.set('technicalApproved', null);
 
-// Check if both approved
-if (financialEvent.payload.approved && technicalEvent.payload.approved) {
-  context.setState('approved');
-} else {
-  context.setState('rejected');
+// The task completion will trigger a new workflow execution
+// with the task result in the triggerEvent
+const taskEvent = context.input.triggerEvent;
+
+// Check which task was completed
+if (taskEvent.name === `Task:${financial}:Complete`) {
+  data.set('financialApproved', taskEvent.payload.approved);
+} else if (taskEvent.name === `Task:${technical}:Complete`) {
+  data.set('technicalApproved', taskEvent.payload.approved);
+}
+
+// Check if both tasks have been completed
+const financialApproved = data.get('financialApproved');
+const technicalApproved = data.get('technicalApproved');
+
+// If both tasks have been completed, determine the final state
+if (financialApproved !== null && technicalApproved !== null) {
+  if (financialApproved && technicalApproved) {
+    context.setState('approved');
+  } else {
+    context.setState('rejected');
+  }
 }
 ```
 
 ## Timeouts and Delays
 
 ```typescript
-// Wait for an event with timeout
-try {
-  const event = await Promise.race([
-    events.waitFor('Response'),
-    new Promise<never>((_, reject) => 
-      setTimeout(() => reject(new Error('Timeout')), 86400000) // 24 hours
-    )
-  ]);
-  
-  // Process event
-  logger.info('Received response', event);
-} catch (error) {
+// For timeouts, use a scheduled task
+const { taskId } = await actions.scheduleTask({
+  taskType: 'reminder',
+  executeAt: new Date(Date.now() + 86400000), // 24 hours from now
+  data: {
+    requestId: data.get('requestId')
+  }
+});
+
+// Store the scheduled task ID
+data.set('reminderTaskId', taskId);
+
+// When the reminder task executes, it will trigger a new workflow
+// with the task result in the triggerEvent
+if (context.input.triggerEvent.name === `Task:${taskId}:Execute`) {
   // Handle timeout
-  logger.warn('Response timeout', error);
+  logger.warn('Response timeout');
   await actions.sendReminder();
 }
 ```

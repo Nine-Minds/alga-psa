@@ -43,7 +43,6 @@ A basic workflow where a request is submitted and approved or rejected by a sing
 #### Workflow Definition
 
 ```typescript
-import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
 /**
  * Simple Approval Workflow
@@ -52,7 +51,7 @@ import { WorkflowContext } from '../lib/workflow/core/workflowContext';
  *
  * @param context The workflow context provided by the runtime
  */
-async function simpleApprovalWorkflow(context: WorkflowContext): Promise<void> {
+async function simpleApprovalWorkflow(context): Promise<void> {
   const { actions, events, data, logger } = context;
   
   // Initial state - Processing
@@ -167,7 +166,6 @@ A workflow where a request requires approval from multiple levels of management 
 #### Workflow Definition
 
 ```typescript
-import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
 /**
  * Multi-Level Approval Workflow
@@ -176,7 +174,7 @@ import { WorkflowContext } from '../lib/workflow/core/workflowContext';
  *
  * @param context The workflow context provided by the runtime
  */
-async function multiLevelApprovalWorkflow(context: WorkflowContext): Promise<void> {
+async function multiLevelApprovalWorkflow(context): Promise<void> {
   const { actions, events, data, logger } = context;
   
   // Initial state - Processing
@@ -356,7 +354,6 @@ A workflow where multiple approvers must review a request simultaneously, and al
 #### Workflow Definition
 
 ```typescript
-import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
 /**
  * Parallel Approval Workflow
@@ -366,7 +363,7 @@ import { WorkflowContext } from '../lib/workflow/core/workflowContext';
  *
  * @param context The workflow context provided by the runtime
  */
-async function parallelApprovalWorkflow(context: WorkflowContext): Promise<void> {
+async function parallelApprovalWorkflow(context): Promise<void> {
   const { actions, events, data, logger } = context;
   
   // Initial state - Processing
@@ -550,7 +547,6 @@ A workflow where the approval path depends on the request attributes, such as am
 #### Workflow Definition
 
 ```typescript
-import { WorkflowContext } from '../lib/workflow/core/workflowContext';
 
 /**
  * Conditional Approval Workflow
@@ -560,7 +556,7 @@ import { WorkflowContext } from '../lib/workflow/core/workflowContext';
  *
  * @param context The workflow context provided by the runtime
  */
-async function conditionalApprovalWorkflow(context: WorkflowContext): Promise<void> {
+async function conditionalApprovalWorkflow(context): Promise<void> {
   const { actions, events, data, logger } = context;
   
   // Initial state - Processing
@@ -624,7 +620,7 @@ async function conditionalApprovalWorkflow(context: WorkflowContext): Promise<vo
 
 // Helper functions for different approval paths
 
-async function executeTeamLeadOnlyPath(context) {
+async function executeTeamLeadOnlyPath(context): Promise<void> {
   const { actions, events, data } = context;
   
   context.setState('pending_team_lead_approval');
@@ -680,7 +676,7 @@ async function executeTeamLeadOnlyPath(context) {
   }
 }
 
-async function executeTeamLeadAndManagerPath(context) {
+async function executeTeamLeadAndManagerPath(context): Promise<void> {
   const { actions, events, data } = context;
   
   // Team Lead approval
@@ -806,12 +802,15 @@ A workflow for processing credit reimbursement requests.
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
-
-export const creditReimbursementWorkflow = defineWorkflow(
-  'CreditReimbursement',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
+/**
+ * Credit Reimbursement Workflow
+ *
+ * A workflow for processing credit reimbursement requests.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function creditReimbursementWorkflow(context): Promise<void> {
+  const { actions, events, data, logger } = context;
     
     // Initial state
     context.setState('processing');
@@ -973,8 +972,7 @@ export const creditReimbursementWorkflow = defineWorkflow(
     }
     
     logger.info('Credit reimbursement workflow completed');
-  }
-);
+}
 ```
 
 #### Form Definitions
@@ -1100,12 +1098,15 @@ A workflow for reviewing and approving documents.
 #### Workflow Definition
 
 ```typescript
-import { defineWorkflow, WorkflowContext } from '../lib/workflow/core/workflowDefinition';
-
-export const documentReviewWorkflow = defineWorkflow(
-  'DocumentReview',
-  async (context: WorkflowContext) => {
-    const { actions, events, data, logger } = context;
+/**
+ * Document Review Workflow
+ *
+ * A workflow for reviewing and approving documents.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function documentReviewWorkflow(context): Promise<void> {
+  const { actions, events, data, logger } = context;
     
     // Initial state
     context.setState('processing');
@@ -1259,8 +1260,7 @@ export const documentReviewWorkflow = defineWorkflow(
     }
     
     logger.info('Document review workflow completed');
-  }
-);
+}
 ```
 
 ## Conclusion

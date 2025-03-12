@@ -66,9 +66,10 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState<string>("");
   const [isActive, setIsActive] = useState<boolean>(true);
-  const [workflowCode, setWorkflowCode] = useState<string>("");
+  const [workflowCode, setWorkflowCode] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [testWarnings, setTestWarnings] = useState<string[]>([]);
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
   const [savedWorkflowId, setSavedWorkflowId] = useState<string | undefined>(undefined);
@@ -77,6 +78,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
   useEffect(() => {
     const loadWorkflow = async () => {
       if (isEditMode && workflowId) {
+        setIsLoading(true);
         try {
           const workflow = await getWorkflow(workflowId);
           
@@ -90,19 +92,22 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         } catch (error) {
           console.error("Error loading workflow:", error);
           toast.error("Failed to load workflow");
+          // Set workflowCode to null to indicate loading error
+          setWorkflowCode(null);
+        } finally {
+          setIsLoading(false);
         }
+      } else {
+        // Not in edit mode, set loading to false
+        setIsLoading(false);
       }
     };
 
     loadWorkflow();
   }, [isEditMode, workflowId]);
 
-  // Initialize with default template for new workflows
-  useEffect(() => {
-    if (!isEditMode && !workflowCode) {
-      setWorkflowCode(defaultWorkflowTemplate);
-    }
-  }, [isEditMode, workflowCode]);
+  // No need for the default template initialization effect anymore
+  // The WorkflowEditor component will handle that based on isNewWorkflow prop
 
   // Handle tag input
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -137,7 +142,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           version,
           tags,
           isActive,
-          code: workflowCode
+          code: workflowCode || ""
         });
         toast.success("Workflow updated successfully");
         setSavedWorkflowId(workflowId);
@@ -149,7 +154,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           version,
           tags,
           isActive,
-          code: workflowCode
+          code: workflowCode || ""
         });
         toast.success("Workflow created successfully");
         setSavedWorkflowId(newWorkflowId);
@@ -356,12 +361,26 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           </div>
         )}
         
-        <WorkflowEditor
-          initialValue={workflowCode}
-          onSave={async (code) => handleCodeChange(code)}
-          onTest={handleTest}
-          height="60vh"
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center h-60vh">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading workflow...</p>
+            </div>
+          </div>
+        ) : (
+          <WorkflowEditor
+            initialValue={workflowCode}
+            isNewWorkflow={!isEditMode}
+            workflowId={workflowId || undefined}
+            onSave={async (code) => {
+              console.log("Editor content changed:", code.substring(0, 100) + "...");
+              handleCodeChange(code);
+            }}
+            onTest={handleTest}
+            height="60vh"
+          />
+        )}
       </Card>
       
       {/* Test Modal - Only show if we have a saved workflow ID */}
@@ -369,7 +388,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
         <TestWorkflowModal
           isOpen={isTestModalOpen}
           onClose={() => setIsTestModalOpen(false)}
-          workflowCode={workflowCode}
+          workflowCode={workflowCode || ""}
           workflowId={savedWorkflowId}
         />
       )}

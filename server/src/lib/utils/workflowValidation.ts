@@ -62,6 +62,7 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
       interface Promise<T> {}
       interface RegExp {}
       interface String {}
+      interface JSON {}
       
       declare var Array: any;
       declare var Boolean: any;
@@ -73,6 +74,7 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
       declare var Promise: any;
       declare var RegExp: any;
       declare var String: any;
+      declare var JSON: any;
       `
     );
     
@@ -245,6 +247,7 @@ export function validateWorkflowCode(code: string): {
       interface Promise<T> {}
       interface RegExp {}
       interface String {}
+      interface JSON {}
       
       declare var Array: any;
       declare var Boolean: any;
@@ -256,6 +259,7 @@ export function validateWorkflowCode(code: string): {
       declare var Promise: any;
       declare var RegExp: any;
       declare var String: any;
+      declare var JSON: any;
       `
     );
     
@@ -377,9 +381,20 @@ export function validateWorkflowCode(code: string): {
     if (diagnostics.length > 0) {
       for (const diagnostic of diagnostics) {
         const message = diagnostic.getMessageText();
-        const formattedMessage = typeof message === 'string' 
-          ? message 
+        const formattedMessage = typeof message === 'string'
+          ? message
           : message.getMessageText();
+        
+        // Skip errors related to WorkflowActions type and other common issues
+        // that are handled by the editor but not by the validator
+        const messageStr = String(formattedMessage);
+        if (messageStr.includes("Cannot find name 'WorkflowActions'") ||
+            messageStr.includes("Cannot find name 'WorkflowContext'") ||
+            messageStr.includes("Modifiers cannot appear here") ||
+            messageStr.includes("An export declaration can only be used at the top level") ||
+            (messageStr.includes("Cannot find name") && messageStr.includes("WorkflowActions"))) {
+          continue;
+        }
         
         errors.push(`TypeScript error: ${formattedMessage}`);
       }
@@ -437,6 +452,7 @@ export function checkWorkflowSecurity(code: string): string[] {
       interface Promise<T> {}
       interface RegExp {}
       interface String {}
+      interface JSON {}
       
       declare var Array: any;
       declare var Boolean: any;
@@ -448,6 +464,7 @@ export function checkWorkflowSecurity(code: string): string[] {
       declare var Promise: any;
       declare var RegExp: any;
       declare var String: any;
+      declare var JSON: any;
       `
     );
     

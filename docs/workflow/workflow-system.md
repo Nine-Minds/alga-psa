@@ -101,22 +101,21 @@ The workflow system uses TypeScript functions for defining workflows, providing 
 #### Basic Structure
 
 ```typescript
-
-  async (context: WorkflowContext) => {
-    const { actions, data, events, logger } = context;
-    
-    // Initial state
-    context.setState('initial');
-    
-    // Wait for events
-    const startEvent = await events.waitFor('Start');
-    
-    // Execute actions
-    await actions.doSomething({ param1: 'value1' });
-    
-    // Update state
-    context.setState('completed');
-  }
+async function workflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger } = context;
+  
+  // Initial state
+  context.setState('initial');
+  
+  // Wait for events
+  const startEvent = await events.waitFor('Start');
+  
+  // Execute actions
+  await actions.doSomething({ param1: 'value1' });
+  
+  // Update state
+  context.setState('completed');
+}
 
 ```
 
@@ -407,33 +406,33 @@ To ensure reliable event processing, the system uses:
 ### Basic TypeScript Workflow Definition
 
 ```typescript
-  async (context: WorkflowContext) => {
-    const { actions, events, logger } = context;
-    
-    // Initial state - Processing
-    context.setState('processing');
-    logger.info('Workflow started in processing state');
-    
-    // The workflow is triggered by a Submit event, which is passed as input
-    const { triggerEvent } = context.input;
-    logger.info(`Processing submission from ${triggerEvent.user_id}`);
-    
-    await actions.log_event({ message: "Item submitted for approval" });
-    context.setState('submitted');
-    
-    // Wait for Approve or Reject event
-    const decisionEvent = await events.waitFor(['Approve', 'Reject']);
-    
-    if (decisionEvent.name === 'Approve') {
-      await actions.log_event({ message: "Item approved" });
-      context.setState('approved');
-    } else {
-      await actions.log_event({ message: "Item rejected" });
-      context.setState('rejected');
-    }
-    
-    logger.info('Workflow completed');
+async function approvalWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, events, logger } = context;
+  
+  // Initial state - Processing
+  context.setState('processing');
+  logger.info('Workflow started in processing state');
+  
+  // The workflow is triggered by a Submit event, which is passed as input
+  const { triggerEvent } = context.input;
+  logger.info(`Processing submission from ${triggerEvent.user_id}`);
+  
+  await actions.log_event({ message: "Item submitted for approval" });
+  context.setState('submitted');
+  
+  // Wait for Approve or Reject event
+  const decisionEvent = await events.waitFor(['Approve', 'Reject']);
+  
+  if (decisionEvent.name === 'Approve') {
+    await actions.log_event({ message: "Item approved" });
+    context.setState('approved');
+  } else {
+    await actions.log_event({ message: "Item rejected" });
+    context.setState('rejected');
   }
+  
+  logger.info('Workflow completed');
+}
 ```
 
 

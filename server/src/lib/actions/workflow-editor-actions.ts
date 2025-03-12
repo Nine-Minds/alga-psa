@@ -147,28 +147,68 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
     // Validate input
     const validatedData = WorkflowSchema.parse(data);
     
-    // We no longer need to extract metadata from the code
-    // The metadata comes from workflowData (validatedData)
-    
     // Create Knex instance
     const { knex } = await createTenantKnex();
     knexInstance = knex;
     
     // Use a transaction to ensure all operations succeed or fail together
     return await knex.transaction(async (trx) => {
-      // Create workflow definition
+      // Get the latest version
+      const registration = await trx('workflow_registrations')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant,
+        })
+        .first();
+      
+      if (!registration) {
+        throw new Error(`Workflow with ID ${id} not found`);
+      }
+      
+      // Auto-increment the version number
+      // Format is expected to be like 1.0.0 or 1.2.3
+      // We increment the rightmost segment
+      let newVersion = validatedData.version;
+      
+      // Check for existing versions to avoid conflicts
+      const existingVersions = await trx('workflow_registration_versions')
+        .where({
+          registration_id: id,
+          tenant_id: user.tenant
+        })
+        .select('version')
+        .orderBy('created_at', 'desc');
+      
+      // Create a set of existing versions for quick lookup
+      const existingVersionSet = new Set(existingVersions.map(v => v.version));
+      
+      // Get the version parts
+      const versionParts = validatedData.version.split('.');
+      if (versionParts.length > 0) {
+        // Start with the current version and increment until we find a non-existent version
+        let lastPart = parseInt(versionParts[versionParts.length - 1], 10);
+        if (!isNaN(lastPart)) {
+          do {
+            lastPart++;
+            versionParts[versionParts.length - 1] = String(lastPart);
+            newVersion = versionParts.join('.');
+          } while (existingVersionSet.has(newVersion));
+        }
+      }
+      
+      // Create workflow definition with new version
       const workflowDefinition = {
         metadata: {
           name: validatedData.name,
           description: validatedData.description || '',
-          version: validatedData.version,
+          version: newVersion,
           author: `${user.first_name} ${user.last_name}`.trim(),
           tags: validatedData.tags,
         },
         executeFn: validatedData.code,
       };
 
-      // Update workflow registration
+      // Update workflow registration with new version
       await trx('workflow_registrations')
         .where({
           registration_id: id,
@@ -177,12 +217,12 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
         .update({
           name: validatedData.name,
           description: validatedData.description || '',
-          tags: validatedData.tags, // Pass the array directly, not as a JSON string
+          tags: validatedData.tags,
+          version: newVersion, // Update with incremented version
           status: validatedData.isActive ? 'active' : 'inactive',
-          definition: workflowDefinition, // Add the definition field
+          definition: workflowDefinition,
           updated_at: new Date().toISOString(),
         });
-      
       
       // Set all existing versions to not current
       await trx('workflow_registration_versions')
@@ -194,14 +234,14 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
           is_current: false,
         });
       
-      // Create new workflow version
+      // Create new workflow version with incremented version number
       await trx('workflow_registration_versions')
         .insert({
           registration_id: id,
           tenant_id: user.tenant,
-          version: validatedData.version,
+          version: newVersion, // Use the new version
           is_current: true,
-          definition: workflowDefinition, // Pass the object directly, not as a JSON string
+          definition: workflowDefinition,
           created_by: user.user_id,
           created_at: new Date().toISOString(),
         });
