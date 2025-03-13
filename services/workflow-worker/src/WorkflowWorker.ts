@@ -496,7 +496,7 @@ export class WorkflowWorker {
               triggerEvent: eventData
             },
             userId: eventData.user_id,
-            versionId: versionId
+            versionId: versionId as string
           });
           
           // Submit the original event to the workflow

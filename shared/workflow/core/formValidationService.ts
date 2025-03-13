@@ -3,9 +3,7 @@
  *
  * This service provides validation of form data against JSON Schema
  */
-import Ajv, { Options } from 'ajv';
-import addFormats from 'ajv-formats';
-import { FormValidationResult } from '../persistence/formRegistryInterfaces';
+import type { FormValidationResult } from '../persistence/formRegistryInterfaces.js';
 
 // Define a simplified error object type that matches what Ajv returns
 interface ValidationError {
@@ -13,21 +11,32 @@ interface ValidationError {
   message?: string;
 }
 
+// Use type 'any' for Ajv to avoid TypeScript import issues
+type AjvInstance = any;
+
 export class FormValidationService {
-  private ajv: any; // Using any to avoid type issues with Ajv
+  private ajv: AjvInstance;
 
   constructor() {
-    // Initialize Ajv with options
-    this.ajv = new Ajv({
-      allErrors: true,
-      validateFormats: true
-    } as Options);
-    
-    // Add formats like date, email, etc.
-    addFormats(this.ajv);
-    
-    // Add custom formats if needed
-    this.addCustomFormats();
+    try {
+      // Dynamic imports to avoid TypeScript issues
+      const Ajv = require('ajv');
+      const ajvFormats = require('ajv-formats');
+      
+      // Initialize Ajv with options
+      this.ajv = new (Ajv.default || Ajv)({
+        allErrors: true
+      });
+      
+      // Add formats like date, email, etc.
+      (ajvFormats.default || ajvFormats)(this.ajv);
+      
+      // Add custom formats if needed
+      this.addCustomFormats();
+    } catch (error) {
+      console.error('Error initializing Ajv:', error);
+      throw new Error('Failed to initialize validation service');
+    }
   }
 
   /**

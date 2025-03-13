@@ -51,6 +51,14 @@ exports.seed = async function(knex) {
     // Store just the function body, not the entire function declaration
     // This is what the deserializer expects
     executeFn: `
+/**
+ * Invoice Approval Workflow
+ *
+ * A workflow for approving and processing invoices.
+ *
+ * @param context The workflow context provided by the runtime
+ */
+async function invoiceApprovalWorkflow(context): Promise<void> {
   const { actions, data, events, logger } = context;
   
   // Initial state
@@ -182,6 +190,7 @@ exports.seed = async function(knex) {
     
     logger.info('Invoice rejected', { approver, reason });
   }
+}
 `
   };
   

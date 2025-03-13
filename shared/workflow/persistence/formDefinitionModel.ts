@@ -2,7 +2,7 @@
  * Form Definition Model
  */
 import { Knex } from 'knex';
-import { IFormDefinition, FormStatus } from './formRegistryInterfaces';
+import { IFormDefinition, FormStatus } from './formRegistryInterfaces.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class FormDefinitionModel {

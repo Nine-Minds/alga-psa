@@ -96,9 +96,8 @@ async function workflow(context: WorkflowContext): Promise<void> {
   
   // Execute an action
   try {
-    const result = await actions.example_action({
-      param1: triggerEvent.payload.value,
-      param2: 'some value'
+    const result = await actions.log_audit_message({
+      message: "Hello World!"
     });
     
     logger.info('Action completed successfully', result);

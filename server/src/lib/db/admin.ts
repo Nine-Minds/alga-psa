@@ -15,8 +15,7 @@ export async function getAdminConnection() {
             database: process.env.DB_NAME_SERVER
         }
     };
-console.log('Creating admin database connection');
-console.log(config);
+    console.log('Creating admin database connection');
 
-return Knex(config);
+    return Knex(config);
 }
