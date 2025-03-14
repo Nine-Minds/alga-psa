@@ -280,6 +280,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       Name
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Test
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Version
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -302,9 +305,29 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{workflow.name}</div>
+                            <div className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" onClick={() => handleEditWorkflow(workflow.id)}>
+                              {workflow.name}
+                            </div>
                             <div className="text-sm text-gray-500">{workflow.description}</div>
                           </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <Button
+                            id={`test-workflow-button-${workflow.id}`}
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTestWorkflow(workflow.id);
+                            }}
+                            title="Test Workflow"
+                          >
+                            <span className="sr-only">Test workflow</span>
+                            <PlayCircle className="h-5 w-5 text-blue-600" />
+                          </Button>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

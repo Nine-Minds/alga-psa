@@ -854,11 +854,22 @@ export class TypeScriptWorkflowRuntime {
       
       // Create a function that executes the action
       const executeAction = async (params: any) => {
+        // Get the execution state to check if we have a user ID from a received event
+        const currentExecutionState = this.executionStates.get(executionId);
+        
+        // Find the most recent event with a user_id, if any
+        const userIdFromEvents = currentExecutionState?.events
+          .slice()
+          .reverse()
+          .find((e: any) => e.user_id)?.user_id;
+          
+        // Include userId in the action context if available  
         return this.actionRegistry.executeAction(actionName, {
           tenant,
           executionId,
           parameters: params,
-          idempotencyKey: `${executionId}-${actionName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          idempotencyKey: `${executionId}-${actionName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          userId: userIdFromEvents // Include user ID from events if available
         });
       };
       

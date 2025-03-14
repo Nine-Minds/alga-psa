@@ -17,9 +17,10 @@ import {
 interface ActivityActionMenuProps {
   activity: Activity;
   onActionComplete?: () => void;
+  onViewDetails?: (activity: Activity) => void; // New prop for handling view details
 }
 
-export function ActivityActionMenu({ activity, onActionComplete }: ActivityActionMenuProps) {
+export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }: ActivityActionMenuProps) {
   const router = useRouter();
   
   const handleActionClick = async (actionId: string) => {
@@ -56,6 +57,13 @@ export function ActivityActionMenu({ activity, onActionComplete }: ActivityActio
 
   // Handle view action based on activity type
   const handleViewAction = () => {
+    // If onViewDetails is provided and this is a workflow task, use the drawer
+    if (onViewDetails && activity.type === ActivityType.WORKFLOW_TASK) {
+      onViewDetails(activity);
+      return;
+    }
+    
+    // Otherwise, navigate to the appropriate route
     switch (activity.type) {
       case ActivityType.SCHEDULE:
         router.push(`/schedule/${activity.id}`);
@@ -70,6 +78,8 @@ export function ActivityActionMenu({ activity, onActionComplete }: ActivityActio
         router.push(`/time-entries/${activity.id}`);
         break;
       case ActivityType.WORKFLOW_TASK:
+        // If we get here, onViewDetails wasn't provided, so try to navigate
+        // This is a fallback, but the route might not exist
         router.push(`/tasks/${activity.id}`);
         break;
     }
@@ -99,10 +109,17 @@ export function ActivityActionMenu({ activity, onActionComplete }: ActivityActio
   // Handle complete action
   const handleCompleteAction = async () => {
     if (activity.type === ActivityType.WORKFLOW_TASK) {
-      // For workflow tasks with forms, redirect to the form page
+      // For workflow tasks with forms, use the drawer if available
       const workflowTask = activity as any; // Type assertion for workflow-specific fields
       if (workflowTask.formId) {
-        router.push(`/tasks/${activity.id}/form`);
+        if (onViewDetails) {
+          // Use the drawer to show the form
+          onViewDetails(activity);
+          return;
+        } else {
+          // Fallback to navigation if drawer isn't available
+          router.push(`/tasks/${activity.id}/form`);
+        }
       } else {
         // For workflow tasks without forms, mark as completed
         await updateActivityStatus(activity.id, activity.type, 'completed');

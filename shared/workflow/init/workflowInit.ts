@@ -64,6 +64,7 @@ export async function initializeWorkflowSystem(): Promise<void> {
       }
     );
     
+    
     // Initialize workflow runtime
     getWorkflowRuntime(actionRegistry);
     

@@ -90,7 +90,51 @@ export class TaskInboxService {
         taskDefinitionId = newTaskDefId;
       }
       
-      // Create the task
+      // Create the task - ensure assigned_roles and assigned_users are properly formatted JSON arrays
+      // For PostgreSQL JSONB fields, we need to make sure these are valid JSON arrays
+      console.log('DEBUG createTask - Raw params assignTo:', JSON.stringify(params.assignTo, null, 2));
+      
+      let assignedRoles = undefined;
+      if (params.assignTo?.roles) {
+        console.log('DEBUG createTask - Raw roles:', params.assignTo.roles, 'Type:', typeof params.assignTo.roles);
+        
+        if (typeof params.assignTo.roles === 'string') {
+          assignedRoles = [params.assignTo.roles]; // Convert string to array
+          console.log('DEBUG createTask - Converted string role to array:', assignedRoles);
+        } else if (Array.isArray(params.assignTo.roles)) {
+          assignedRoles = params.assignTo.roles;
+          console.log('DEBUG createTask - Using array roles:', assignedRoles);
+        } else {
+          console.log('DEBUG createTask - Invalid roles format, set to undefined');
+        }
+      }
+      
+      let assignedUsers = undefined;
+      if (params.assignTo?.users) {
+        console.log('DEBUG createTask - Raw users:', params.assignTo.users, 'Type:', typeof params.assignTo.users);
+        
+        if (typeof params.assignTo.users === 'string') {
+          assignedUsers = [params.assignTo.users]; // Convert string to array
+          console.log('DEBUG createTask - Converted string user to array:', assignedUsers);
+        } else if (Array.isArray(params.assignTo.users)) {
+          assignedUsers = params.assignTo.users;
+          console.log('DEBUG createTask - Using array users:', assignedUsers);
+        } else {
+          console.log('DEBUG createTask - Invalid users format, set to undefined');
+        }
+      }
+      
+      // Final check to ensure we have arrays at this point
+      if (assignedRoles !== undefined && !Array.isArray(assignedRoles)) {
+        console.log('DEBUG createTask - Final check: roles is not an array, forcing to undefined');
+        assignedRoles = undefined;
+      }
+      
+      if (assignedUsers !== undefined && !Array.isArray(assignedUsers)) {
+        console.log('DEBUG createTask - Final check: users is not an array, forcing to undefined');
+        assignedUsers = undefined;
+      }
+      
       const task: Omit<IWorkflowTask, 'task_id' | 'created_at' | 'updated_at'> = {
         tenant,
         execution_id: executionId,
@@ -101,53 +145,71 @@ export class TaskInboxService {
         priority: params.priority || 'medium',
         due_date: params.dueDate ? new Date(params.dueDate).toISOString() : undefined,
         context_data: params.contextData,
-        assigned_roles: params.assignTo?.roles,
-        assigned_users: params.assignTo?.users,
+        assigned_roles: assignedRoles,
+        assigned_users: assignedUsers,
         created_by: userId
       };
       
-      // Insert the task
-      await WorkflowTaskModel.createTask(knex, tenant, task);
+      console.log('DEBUG createTask - Final task object assigned_roles:', 
+                  task.assigned_roles ? JSON.stringify(task.assigned_roles) : 'undefined', 
+                  'Type:', typeof task.assigned_roles);
       
-      // Add task history entry
-      await WorkflowTaskModel.addTaskHistory(knex, tenant, {
-        task_id: taskId,
-        tenant,
-        action: 'create',
-        from_status: undefined,
-        to_status: WorkflowTaskStatus.PENDING,
-        user_id: userId
-      });
+      // Insert the task - capturing the returned task ID
+      const generatedTaskId = await WorkflowTaskModel.createTask(knex, tenant, task);
+      console.log('DEBUG createTask - Task created with ID:', generatedTaskId);
       
-      // Create a task created event
-      const eventId = `evt-${uuidv4()}`;
+      // Add task history entry - using the generated task ID from the database
+      try {
+        await WorkflowTaskModel.addTaskHistory(knex, tenant, {
+          task_id: generatedTaskId, // Use the task ID returned from createTask
+          tenant,
+          action: 'create',
+          from_status: undefined,
+          to_status: WorkflowTaskStatus.PENDING,
+          user_id: userId
+        });
+        console.log('DEBUG createTask - Task history added successfully for:', generatedTaskId);
+      } catch (error) {
+        console.error('Error adding task history:', error);
+        // Continue even if history fails - the task is already created
+      }
+      
+      // Create a task created event - using the generated task ID
+      const eventId = `${uuidv4()}`;
       const event = {
         event_id: eventId,
         execution_id: executionId,
-        event_name: TaskEventNames.taskCreated(taskId),
+        event_name: TaskEventNames.taskCreated(generatedTaskId),
         event_type: 'task_created',
         tenant,
         from_state: '',
         to_state: WorkflowTaskStatus.PENDING,
         user_id: userId,
         payload: {
-          taskId,
+          taskId: generatedTaskId, // Use the generated task ID
           taskType: params.taskType,
           title: params.title,
           description: params.description,
           priority: params.priority || 'medium',
           dueDate: params.dueDate,
-          assignedRoles: params.assignTo?.roles,
-          assignedUsers: params.assignTo?.users,
+          // Use the same validated arrays we used for the task
+          assignedRoles: assignedRoles,
+          assignedUsers: assignedUsers,
           contextData: params.contextData
         },
         created_at: new Date().toISOString()
       };
       
       // Insert the event
-      await knex('workflow_events').insert(event);
+      try {
+        await knex('workflow_events').insert(event);
+        console.log('DEBUG createTask - Event created successfully for task:', generatedTaskId);
+      } catch (error) {
+        console.error('Error creating task event:', error);
+        // Continue even if event creation fails - the task is already created
+      }
       
-      return taskId;
+      return generatedTaskId; // Return the generated task ID from the database
     } catch (error) {
       console.error('Error creating task:', error);
       throw error;
@@ -161,9 +223,9 @@ export class TaskInboxService {
    * @param actionRegistry The action registry to register with
    */
   registerTaskActions(actionRegistry: ActionRegistry): void {
-    // Register createHumanTask action using registerSimpleAction
+    // Register create_human_task action using registerSimpleAction
     actionRegistry.registerSimpleAction(
-      'createHumanTask',
+      'create_human_task',
       'Create a human task in the Task Inbox',
       [
         { name: 'taskType', type: 'string', required: true },
@@ -179,9 +241,63 @@ export class TaskInboxService {
         try {
           const taskInboxService = new TaskInboxService();
           
-          // Create the task
+          // Get database connection
+          const { getAdminConnection } = await import('@shared/db/admin.js');
+          const knex = await getAdminConnection();
+          
+          // Validate and normalize inputs
+          let assignTo = undefined;
+          
+          console.log('DEBUG create_human_task - Context:', {
+            tenant: context.tenant,
+            executionId: context.executionId,
+            userId: context.userId || 'undefined', // Log userId to verify it's being passed
+            idempotencyKey: context.idempotencyKey
+          });
+          
+          console.log('DEBUG create_human_task - Input params:', JSON.stringify(params, null, 2));
+          
+          // Ensure assignTo is properly structured with valid array values
+          if (params.assignTo) {
+            console.log('DEBUG create_human_task - Original assignTo:', JSON.stringify(params.assignTo, null, 2));
+            
+            // Check if roles is a string and convert to array if needed
+            let roles = params.assignTo.roles;
+            console.log('DEBUG create_human_task - Original roles:', roles, 'Type:', typeof roles);
+            
+            if (typeof roles === 'string') {
+              roles = [roles]; // Convert single string to array
+              console.log('DEBUG create_human_task - Converted string role to array:', roles);
+            } else if (!Array.isArray(roles)) {
+              roles = undefined; // If not string or array, set to undefined
+              console.log('DEBUG create_human_task - Invalid roles format, set to undefined');
+            }
+            
+            // Check if users is a string and convert to array if needed
+            let users = params.assignTo.users;
+            console.log('DEBUG create_human_task - Original users:', users, 'Type:', typeof users);
+            
+            if (typeof users === 'string') {
+              users = [users]; // Convert single string to array
+              console.log('DEBUG create_human_task - Converted string user to array:', users);
+            } else if (!Array.isArray(users)) {
+              users = undefined; // If not string or array, set to undefined
+              console.log('DEBUG create_human_task - Invalid users format, set to undefined');
+            }
+            
+            assignTo = {
+              roles: roles,
+              users: users
+            };
+            
+            console.log('DEBUG create_human_task - Normalized assignTo:', JSON.stringify(assignTo, null, 2));
+          } else {
+            console.log('DEBUG create_human_task - No assignTo provided');
+          }
+          
+          // Create the task with validated inputs
           const taskId = await taskInboxService.createTask(
-            (context as TaskActionContext).knex,
+            knex,
             context.tenant,
             context.executionId,
             {
@@ -190,11 +306,11 @@ export class TaskInboxService {
               description: params.description,
               priority: params.priority,
               dueDate: params.dueDate,
-              assignTo: params.assignTo,
+              assignTo: assignTo,
               contextData: params.contextData,
               formId: params.formId
             },
-            (context as TaskActionContext).userId
+            context.userId
           );
           
           return {
@@ -202,7 +318,7 @@ export class TaskInboxService {
             taskId
           };
         } catch (error) {
-          console.error('Error executing createHumanTask action:', error);
+          console.error('Error executing create_human_task action:', error);
           throw error;
         }
       }

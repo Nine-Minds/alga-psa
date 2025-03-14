@@ -36,15 +36,6 @@ export function TaskForm({
       disabled: false,
       hidden: false,
       order: 0
-    },
-    {
-      id: 'save_draft',
-      label: 'Save Draft',
-      primary: false,
-      variant: 'secondary' as const,
-      disabled: false,
-      hidden: false,
-      order: 1
     }
   ];
   

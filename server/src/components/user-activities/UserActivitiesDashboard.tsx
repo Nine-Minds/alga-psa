@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ActivityFilters } from './ActivityFilters';
 import { ScheduleSection } from './ScheduleSection';
 import { TicketsSection } from './TicketsSection';
@@ -11,6 +11,7 @@ import { ActivityFilters as ActivityFiltersType } from '../../interfaces/activit
 import { fetchDashboardActivities } from '../../lib/actions/activity-actions/activityServerActions';
 import { CustomTabs } from '../ui/CustomTabs';
 import { DrawerProvider } from '../../context/DrawerContext';
+import { getCurrentUser, getUserPreference, setUserPreference } from '../../lib/actions/user-actions/userActions';
 
 export function UserActivitiesDashboard() {
   const [filters, setFilters] = useState<ActivityFiltersType>({
@@ -22,6 +23,32 @@ export function UserActivitiesDashboard() {
   });
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Load user preference when component mounts
+  useEffect(() => {
+    const loadUserPreference = async () => {
+      try {
+        setIsLoading(true);
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+        
+        if (user?.user_id) {
+          const savedViewMode = await getUserPreference(user.user_id, 'activitiesDashboardViewMode');
+          if (savedViewMode === 'cards' || savedViewMode === 'table') {
+            setViewMode(savedViewMode);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user preference:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUserPreference();
+  }, []);
 
   // Handle filter changes
   const handleFilterChange = (newFilters: ActivityFiltersType) => {
@@ -95,8 +122,13 @@ export function UserActivitiesDashboard() {
   // Table view content
   const tableViewContent = (
     <ActivitiesDataTableSection
+      key="activities-table-view" // Add key to force remounting when switching views
       title="All Activities"
-      initialFilters={filters}
+      initialFilters={{
+        ...filters,
+        types: [], // Load all activity types if none specified
+        isClosed: false // Only show open activities
+      }}
       id="all-activities-table-section"
     />
   );
@@ -112,7 +144,17 @@ export function UserActivitiesDashboard() {
                 id="card-view-button"
                 variant={viewMode === 'cards' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setViewMode('cards')}
+                onClick={async () => {
+                  setViewMode('cards');
+                  // Save preference
+                  if (currentUser?.user_id) {
+                    try {
+                      await setUserPreference(currentUser.user_id, 'activitiesDashboardViewMode', 'cards');
+                    } catch (error) {
+                      console.error('Error saving view mode preference:', error);
+                    }
+                  }
+                }}
                 className="rounded-none border-0"
               >
                 <LayoutGrid className="h-4 w-4 mr-2" />
@@ -122,7 +164,17 @@ export function UserActivitiesDashboard() {
                 id="table-view-button"
                 variant={viewMode === 'table' ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setViewMode('table')}
+                onClick={async () => {
+                  setViewMode('table');
+                  // Save preference
+                  if (currentUser?.user_id) {
+                    try {
+                      await setUserPreference(currentUser.user_id, 'activitiesDashboardViewMode', 'table');
+                    } catch (error) {
+                      console.error('Error saving view mode preference:', error);
+                    }
+                  }
+                }}
                 className="rounded-none border-0"
               >
                 <List className="h-4 w-4 mr-2" />
@@ -145,7 +197,13 @@ export function UserActivitiesDashboard() {
           </div>
         </div>
 
-        {viewMode === 'cards' ? cardViewContent : tableViewContent}
+        {isLoading ? (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-gray-500">Loading user preferences...</p>
+          </div>
+        ) : (
+          viewMode === 'cards' ? cardViewContent : tableViewContent
+        )}
       </div>
     </DrawerProvider>
   );

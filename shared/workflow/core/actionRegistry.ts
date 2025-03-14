@@ -18,6 +18,7 @@ export interface ActionExecutionContext {
   eventId?: string;
   idempotencyKey: string;
   parameters: Record<string, any>;
+  userId?: string; // Added userId field which may be present in some contexts
 }
 
 /**

@@ -37,8 +37,20 @@ export function ActivitiesDataTableSection({
   const loadActivities = async () => {
     try {
       setLoading(true);
-      // Fetch activities with current filters
-      const result = await fetchActivities(filters);
+      // Prepare filter to ensure we get activities of all types if none specified
+      const effectiveFilters = {
+        ...filters,
+        // If types array is empty, explicitly request all activity types
+        types: filters.types && filters.types.length > 0 
+          ? filters.types 
+          : Object.values(ActivityType)
+      };
+      
+      console.log('Loading activities with filters:', effectiveFilters);
+      
+      // Fetch activities with effective filters
+      const result = await fetchActivities(effectiveFilters);
+      console.log(`Loaded ${result.activities.length} activities`);
       setActivities(result.activities);
       setError(null);
     } catch (err) {

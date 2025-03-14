@@ -48,7 +48,13 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
         activity={activity}
         isOpen={true}
         onClose={drawer.closeDrawer}
-        onActionComplete={loadActivities}
+        onActionComplete={() => {
+          // First close the drawer
+          drawer.closeDrawer();
+          
+          // Then refresh the activities list
+          loadActivities();
+        }}
       />,
       activity.title
     );

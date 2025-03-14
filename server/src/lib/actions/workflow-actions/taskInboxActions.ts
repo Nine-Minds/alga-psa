@@ -4,6 +4,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { v4 as uuidv4 } from 'uuid';
 import { getFormRegistry } from '@shared/workflow/core/formRegistry';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
 import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
 import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
 import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, TaskEventNames } from '@shared/workflow/persistence/taskInboxInterfaces';
@@ -96,7 +97,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       );
       
       // 3. Create workflow event
-      const eventId = `evt-${uuidv4()}`;
+      const eventId = uuidv4(); // Use plain UUID without prefix
       const event = {
         event_id: eventId,
         execution_id: task.execution_id,
@@ -113,17 +114,29 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       await trx('workflow_events').insert(event);
       
       // 4. Publish event to workflow engine
-      // Get workflow runtime
-      const workflowRuntime = getWorkflowRuntime();
+      // Get action registry and workflow runtime
+      const actionRegistry = getActionRegistry();
+      const workflowRuntime = getWorkflowRuntime(actionRegistry);
       
-      // Enqueue event for asynchronous processing
-      await workflowRuntime.enqueueEvent(trx, {
-        execution_id: task.execution_id,
-        event_name: TaskEventNames.taskCompleted(taskId),
-        payload: finalFormData,
-        user_id: userId,
-        tenant
-      });
+      try {
+        // First, try to load the execution state to ensure it's in memory
+        await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
+        
+        // Then enqueue event for asynchronous processing
+        await workflowRuntime.enqueueEvent(trx, {
+          execution_id: task.execution_id,
+          event_name: TaskEventNames.taskCompleted(taskId),
+          payload: finalFormData,
+          user_id: userId,
+          tenant
+        });
+      } catch (error) {
+        console.error('Error enqueueing workflow event:', error);
+        
+        // If we can't enqueue the event, we'll still mark the task as completed
+        // but log the error for debugging
+        console.log('Task marked as completed but workflow event not enqueued');
+      }
       
       return { success: true };
     });

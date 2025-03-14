@@ -184,9 +184,10 @@ export function ActivitiesDataTable({
       dataIndex: 'actions',
       width: '80px',
       render: (_, record) => (
-        <ActivityActionMenu 
-          activity={record} 
+        <ActivityActionMenu
+          activity={record}
           onActionComplete={onActionComplete}
+          onViewDetails={onViewDetails}
         />
       ),
     },

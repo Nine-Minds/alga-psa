@@ -85,16 +85,69 @@ const WorkflowTaskModel = {
     try {
       const taskId = `task-${uuidv4()}`;
       
+      // Create the record with appropriate values for insertion
+      const taskRecord = {
+        ...task,
+        task_id: taskId,
+        tenant,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('DEBUG WorkflowTaskModel.createTask - About to insert task:', JSON.stringify(taskRecord, null, 2));
+      console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles type:', typeof taskRecord.assigned_roles);
+      
+      // Explicitly stringify and re-parse the JSON fields to ensure proper format
+      if (taskRecord.assigned_roles !== undefined) {
+        try {
+          // Force proper JSON format by stringifying and re-parsing
+          const jsonString = JSON.stringify(taskRecord.assigned_roles);
+          console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles stringified:', jsonString);
+          
+          // Store the raw JSON string directly to avoid any driver conversion issues
+          // This ensures PostgreSQL gets exactly what we expect
+          taskRecord.assigned_roles = JSON.parse(jsonString);
+          console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles re-parsed:', taskRecord.assigned_roles);
+        } catch (e: any) {
+          console.error('DEBUG WorkflowTaskModel.createTask - ERROR: assigned_roles JSON processing failed:', e.message);
+          taskRecord.assigned_roles = undefined;
+        }
+      }
+      
+      if (taskRecord.assigned_users !== undefined) {
+        try {
+          // Force proper JSON format by stringifying and re-parsing
+          const jsonString = JSON.stringify(taskRecord.assigned_users);
+          console.log('DEBUG WorkflowTaskModel.createTask - assigned_users stringified:', jsonString);
+          
+          // Store the raw JSON string directly to avoid any driver conversion issues
+          taskRecord.assigned_users = JSON.parse(jsonString);
+          console.log('DEBUG WorkflowTaskModel.createTask - assigned_users re-parsed:', taskRecord.assigned_users);
+        } catch (e: any) {
+          console.error('DEBUG WorkflowTaskModel.createTask - ERROR: assigned_users JSON processing failed:', e.message);
+          taskRecord.assigned_users = undefined;
+        }
+      }
+      
+      // To be extra safe, manually build the SQL to ensure proper JSON serialization
+      // This is a more direct approach when dealing with JSONB fields that may be causing issues
+      const pgTaskRecord = {
+        ...taskRecord,
+        // Force PostgreSQL to see these as proper JSON strings
+        assigned_roles: taskRecord.assigned_roles ? JSON.stringify(taskRecord.assigned_roles) : null,
+        assigned_users: taskRecord.assigned_users ? JSON.stringify(taskRecord.assigned_users) : null,
+        context_data: taskRecord.context_data ? JSON.stringify(taskRecord.context_data) : null
+      };
+      
+      console.log('DEBUG WorkflowTaskModel.createTask - Final pgTaskRecord:',
+        'assigned_roles:', pgTaskRecord.assigned_roles,
+        'type:', typeof pgTaskRecord.assigned_roles);
+      
       const [result] = await knex('workflow_tasks')
-        .insert({
-          ...task,
-          task_id: taskId,
-          tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .insert(pgTaskRecord)
         .returning('task_id');
       
+      console.log('DEBUG WorkflowTaskModel.createTask - Successfully inserted task with ID:', result.task_id);
       return result.task_id;
     } catch (error) {
       console.error('Error creating workflow task:', error);

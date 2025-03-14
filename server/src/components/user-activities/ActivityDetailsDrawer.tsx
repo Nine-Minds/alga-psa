@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, ActivityType } from '../../interfaces/activity.interfaces';
 import Drawer from '../ui/Drawer';
 import { Button } from '../ui/Button';
-import { X } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 import { ActivityActionMenu } from './ActivityActionMenu';
+import { TaskForm } from '../workflow/TaskForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/Tabs';
+import { getTaskDetails } from '../../lib/actions/workflow-actions/taskInboxActions';
 
 interface ActivityDetailsDrawerProps {
   activity: Activity;
@@ -185,27 +188,123 @@ export function ActivityDetailsDrawer({
     );
   };
 
+  // Fetch task details and form schema for workflow task
+  const fetchWorkflowTaskDetails = async (taskId: string) => {
+    try {
+      const taskDetails = await getTaskDetails(taskId);
+      return {
+        formId: taskDetails.formId,
+        formSchema: taskDetails.formSchema
+      };
+    } catch (error) {
+      console.error('Error fetching workflow task details:', error);
+      return null;
+    }
+  };
+
   // Render workflow task-specific details
   const renderWorkflowTaskDetails = () => {
     const workflowTask = activity as any; // Type assertion for workflow task-specific fields
+    const [taskDetails, setTaskDetails] = useState<{formId?: string, formSchema?: any}>({});
+    const [activeTab, setActiveTab] = useState<string>('details');
+    const [formSchema, setFormSchema] = useState<any>(null);
+    const [isLoadingForm, setIsLoadingForm] = useState<boolean>(false);
+    
+    // Fetch task details when component mounts
+    useEffect(() => {
+      setIsLoadingForm(true);
+      fetchWorkflowTaskDetails(workflowTask.id)
+        .then(details => {
+          if (details) {
+            setTaskDetails(details);
+            setFormSchema(details.formSchema);
+            // Set active tab to form if form exists
+            if (details.formId) {
+              setActiveTab('form');
+            }
+          }
+          setIsLoadingForm(false);
+        })
+        .catch(() => {
+          setIsLoadingForm(false);
+        });
+    }, [workflowTask.id]);
+    
     return (
       <div className="space-y-4">
-        {workflowTask.executionId && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Workflow:</span>
-            <span className="text-sm">{workflowTask.executionId}</span>
-          </div>
-        )}
-        {workflowTask.formId && (
-          <div className="flex items-center gap-2">
-            <Badge variant="primary">Has Form</Badge>
-          </div>
-        )}
-        {workflowTask.assignedRoles && workflowTask.assignedRoles.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Assigned Roles:</span>
-            <span className="text-sm">{workflowTask.assignedRoles.join(', ')}</span>
-          </div>
+        <div className="space-y-4 mb-4">
+          {workflowTask.executionId && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Workflow:</span>
+              <span className="text-sm">{workflowTask.executionId}</span>
+            </div>
+          )}
+          {workflowTask.assignedRoles && workflowTask.assignedRoles.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Assigned Roles:</span>
+              <span className="text-sm">{workflowTask.assignedRoles.join(', ')}</span>
+            </div>
+          )}
+        </div>
+        {taskDetails?.formId && (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="form">Form</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details">
+              <div className="bg-gray-50 p-4 rounded-md">
+                {workflowTask.description || 'No additional details available.'}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="form">
+              <div className="bg-white p-4 rounded-md border">
+                {isLoadingForm ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+                    <span className="ml-2 text-gray-500">Loading form...</span>
+                  </div>
+                ) : formSchema ? (
+                  <TaskForm
+                    taskId={workflowTask.id}
+                    schema={formSchema.jsonSchema || {}}
+                    uiSchema={formSchema.uiSchema || {}}
+                    initialFormData={workflowTask.responseData || formSchema.defaultValues || {}}
+                    onComplete={onActionComplete}
+                    contextData={workflowTask.contextData}
+                    executionId={workflowTask.executionId}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Could not load the form. Please try again later.</p>
+                    <Button
+                      id="retry-load-form-button"
+                      variant="outline"
+                      className="mt-4"
+                      onClick={() => {
+                        setIsLoadingForm(true);
+                        fetchWorkflowTaskDetails(workflowTask.id)
+                          .then(details => {
+                            if (details) {
+                              setTaskDetails(details);
+                              setFormSchema(details.formSchema);
+                            }
+                            setIsLoadingForm(false);
+                          })
+                          .catch(() => {
+                            setIsLoadingForm(false);
+                          });
+                      }}
+                    >
+                      Retry
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     );
@@ -217,13 +316,14 @@ export function ActivityDetailsDrawer({
       isOpen={isOpen}
       onClose={onClose}
     >
-      <div className="min-w-[640px]">
+      <div className="min-w-[640px] max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">{activity.title}</h2>
           <div className="flex items-center gap-2">
-            <ActivityActionMenu 
-              activity={activity} 
+            <ActivityActionMenu
+              activity={activity}
               onActionComplete={onActionComplete}
+              onViewDetails={() => {}} // Self-reference to prevent navigation
             />
             <Button id="close-drawer-button" variant="ghost" size="sm" onClick={onClose}>
               <X className="h-4 w-4" />

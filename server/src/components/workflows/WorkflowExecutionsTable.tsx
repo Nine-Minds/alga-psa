@@ -22,9 +22,15 @@ import {
 
 interface WorkflowExecutionsTableProps {
   initialData?: IWorkflowExecution[];
+  onRowClick?: (row: IWorkflowExecution) => void;
+  customizeColumns?: (defaultColumns: ColumnDefinition<IWorkflowExecution>[]) => ColumnDefinition<IWorkflowExecution>[];
 }
 
-export default function WorkflowExecutionsTable({ initialData = [] }: WorkflowExecutionsTableProps) {
+export default function WorkflowExecutionsTable({ 
+  initialData = [], 
+  onRowClick, 
+  customizeColumns 
+}: WorkflowExecutionsTableProps) {
   const [data, setData] = useState<IWorkflowExecution[]>(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [filter, setFilter] = useState({
@@ -38,7 +44,38 @@ export default function WorkflowExecutionsTable({ initialData = [] }: WorkflowEx
     {
       title: 'Workflow Name',
       dataIndex: 'workflow_name',
-      render: (value: string) => value,
+      render: (value: string, record: IWorkflowExecution) => (
+        <span 
+          className="text-gray-900 hover:text-blue-600 hover:underline cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/msp/workflows/${record.execution_id}`);
+          }}
+        >
+          {value}
+        </span>
+      ),
+    },
+    {
+      title: 'Test',
+      dataIndex: 'execution_id',
+      width: '60px',
+      render: (executionId: string) => (
+        <Button
+          id="test-workflow-button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/msp/workflows/${executionId}/test`);
+          }}
+          title="Test Workflow"
+        >
+          <span className="sr-only">Test workflow</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-play-circle"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        </Button>
+      ),
     },
     {
       title: 'Status',
@@ -185,9 +222,17 @@ export default function WorkflowExecutionsTable({ initialData = [] }: WorkflowEx
     };
   }, [data]);
 
+  // Use the provided onRowClick handler if available, otherwise use the default
   const handleRowClick = (row: IWorkflowExecution) => {
-    router.push(`/msp/workflows/${row.execution_id}`);
+    if (onRowClick) {
+      onRowClick(row);
+    } else {
+      router.push(`/msp/workflows/${row.execution_id}`);
+    }
   };
+
+  // Use customized columns if provided
+  const finalColumns = customizeColumns ? customizeColumns(columns) : columns;
 
   return (
     <div className="w-full">
@@ -263,7 +308,7 @@ export default function WorkflowExecutionsTable({ initialData = [] }: WorkflowEx
       
       <DataTable
         data={data}
-        columns={columns}
+        columns={finalColumns}
         onRowClick={handleRowClick}
         id="workflow-executions-table"
         rowClassName={() => "hover:bg-[rgb(var(--color-primary-50))] cursor-pointer"}
