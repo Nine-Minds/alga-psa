@@ -34,7 +34,7 @@ export function EventNode({ data, id }: NodeProps<EventNodeData>) {
       className={`event-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`} 
       id={automationId}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-gray-400" />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-gray-400" />
       
       <div className="node-header text-sm font-semibold text-gray-500 mb-1">
         {isWaiting ? 'Wait for Event' : 'Emit Event'}
@@ -61,7 +61,7 @@ export function EventNode({ data, id }: NodeProps<EventNodeData>) {
         )}
       </div>
       
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-gray-400" />
+      <Handle type="source" position={Position.Right} className="w-3 h-3 bg-gray-400" />
     </Card>
   );
 }

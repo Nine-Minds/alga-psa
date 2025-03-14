@@ -55,7 +55,7 @@ export function LoopNode({ data, id }: NodeProps<LoopNodeData>) {
       className={`loop-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`} 
       id={automationId}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-gray-400" />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-gray-400" />
       
       <div className="node-header text-sm font-semibold text-gray-500 mb-1 flex items-center">
         <span className="mr-1">{getLoopTypeIcon()}</span>
@@ -78,18 +78,10 @@ export function LoopNode({ data, id }: NodeProps<LoopNodeData>) {
         )}
       </div>
       
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        id="body" 
+      <Handle
+        type="source"
+        position={Position.Right}
         className="w-3 h-3 bg-teal-500"
-      />
-      
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        id="exit" 
-        className="w-3 h-3 bg-gray-500"
       />
     </Card>
   );

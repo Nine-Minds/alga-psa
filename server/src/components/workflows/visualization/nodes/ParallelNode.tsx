@@ -26,33 +26,14 @@ export function ParallelNode({ data, id }: NodeProps<ParallelNodeData>) {
     }
   };
 
-  // Create handles for each branch
-  const renderBranchHandles = () => {
-    const handles = [];
-    const branchCount = data.branchCount || 1;
-    
-    for (let i = 0; i < branchCount; i++) {
-      handles.push(
-        <Handle 
-          key={`branch-${i}`}
-          type="source" 
-          position={Position.Bottom} 
-          id={`branch-${i}`} 
-          className="w-3 h-3 bg-violet-500"
-          style={{ left: `${(i + 1) * (100 / (branchCount + 1))}%` }}
-        />
-      );
-    }
-    
-    return handles;
-  };
+  // No need for multiple branch handles anymore
 
   return (
     <Card 
       className={`parallel-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`} 
       id={automationId}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-gray-400" />
+      <Handle type="target" position={Position.Left} className="w-3 h-3 bg-gray-400" />
       
       <div className="node-header text-sm font-semibold text-gray-500 mb-1 flex items-center">
         <span className="mr-1">⫲⫳</span>
@@ -75,15 +56,11 @@ export function ParallelNode({ data, id }: NodeProps<ParallelNodeData>) {
         )}
       </div>
       
-      {/* Render branch handles */}
-      {renderBranchHandles()}
-      
-      {/* Join handle */}
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        id="join" 
-        className="w-3 h-3 bg-gray-500"
+      {/* Single source handle */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-3 h-3 bg-violet-500"
       />
     </Card>
   );

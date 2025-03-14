@@ -46,7 +46,7 @@ export function ActionNode({ data, id }: NodeProps<ActionNodeData>) {
       className={`action-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`} 
       id={automationId}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-gray-400" />
+      <Handle type="target" position={Position.Left} id="left" className="w-3 h-3 bg-gray-400" />
       
       <div className="node-header text-sm font-semibold text-gray-500 mb-1">
         Action
@@ -79,7 +79,7 @@ export function ActionNode({ data, id }: NodeProps<ActionNodeData>) {
         )}
       </div>
       
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-gray-400" />
+      <Handle type="source" position={Position.Right} id="right" className="w-3 h-3 bg-gray-400" />
     </Card>
   );
 }

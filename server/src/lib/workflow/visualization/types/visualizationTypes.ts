@@ -71,13 +71,39 @@ export interface ParallelNodeData {
 /**
  * Union type for all node data types
  */
-export type WorkflowNodeData = 
-  | StateNodeData 
-  | ActionNodeData 
-  | EventNodeData 
-  | ConditionalNodeData 
-  | LoopNodeData 
+export type WorkflowNodeData =
+  | StateNodeData
+  | ActionNodeData
+  | EventNodeData
+  | ConditionalNodeData
+  | LoopNodeData
   | ParallelNodeData;
+
+/**
+ * Common properties that can be added to any node data type
+ */
+export interface CommonNodeData {
+  isEntryPoint?: boolean;
+  depth?: number;
+  rank?: number;
+}
+
+// Extend each node data type with common properties
+export type ExtendedStateNodeData = StateNodeData & CommonNodeData;
+export type ExtendedActionNodeData = ActionNodeData & CommonNodeData;
+export type ExtendedEventNodeData = EventNodeData & CommonNodeData;
+export type ExtendedConditionalNodeData = ConditionalNodeData & CommonNodeData;
+export type ExtendedLoopNodeData = LoopNodeData & CommonNodeData;
+export type ExtendedParallelNodeData = ParallelNodeData & CommonNodeData;
+
+// Update the union type
+export type ExtendedWorkflowNodeData =
+  | ExtendedStateNodeData
+  | ExtendedActionNodeData
+  | ExtendedEventNodeData
+  | ExtendedConditionalNodeData
+  | ExtendedLoopNodeData
+  | ExtendedParallelNodeData;
 
 /**
  * Flow node type for React Flow
@@ -85,7 +111,7 @@ export type WorkflowNodeData =
 export interface FlowNode {
   id: string;
   type: 'state' | 'action' | 'event' | 'conditional' | 'loop' | 'parallel';
-  data: WorkflowNodeData;
+  data: ExtendedWorkflowNodeData;
   position: { x: number; y: number };
   selected?: boolean;
   dragging?: boolean;
@@ -98,11 +124,18 @@ export interface FlowEdge {
   id: string;
   source: string;
   target: string;
-  type?: 'controlFlow' | 'conditional' | 'loop' | 'parallel';
+  sourceHandle?: string; // Added for connecting to specific source handles
+  targetHandle?: string; // Added for connecting to specific target handles
+  type?: 'controlFlow' | 'conditional' | 'loop' | 'parallel' | 'smoothstep';
   label?: string;
   animated?: boolean;
   style?: Record<string, any>;
   selected?: boolean;
+  data?: Record<string, any>;
+  markerEnd?: string;
+  markerStart?: string;
+  labelStyle?: Record<string, any>;
+  labelBgStyle?: Record<string, any>; // Added for label background styling
 }
 
 /**

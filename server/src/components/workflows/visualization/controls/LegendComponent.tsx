@@ -33,14 +33,9 @@ export function LegendComponent() {
       
       {isExpanded && (
         <div className="legend-content p-3">
-          <div className="text-xs font-semibold text-gray-500 mb-2">Node Types</div>
+          <div className="text-xs font-semibold text-gray-500 mb-2">Control Flow Elements</div>
           
           <div className="grid grid-cols-1 gap-2 mb-4">
-            <div className="flex items-center">
-              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-white mr-2"></div>
-              <span className="text-xs text-gray-700">State</span>
-            </div>
-            
             <div className="flex items-center">
               <div className="w-4 h-4 rounded-sm border border-gray-300 bg-white mr-2"></div>
               <span className="text-xs text-gray-700">Action</span>
@@ -101,32 +96,56 @@ export function LegendComponent() {
             </div>
           </div>
           
-          <div className="text-xs font-semibold text-gray-500 mb-2">Edge Types</div>
+          <div className="text-xs font-semibold text-gray-500 mb-2">Control Flow Types</div>
           
           <div className="grid grid-cols-1 gap-2">
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-gray-400 mr-2"></div>
-              <span className="text-xs text-gray-700">Control Flow</span>
+              <div className="w-6 h-0.5 bg-gray-600 mr-2"></div>
+              <span className="text-xs text-gray-700">Sequential Flow</span>
             </div>
             
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-green-500 mr-2"></div>
+              <div className="w-6 h-0.5 bg-blue-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <span className="text-xs text-gray-700">Conditional Branch</span>
+            </div>
+            
+            <div className="flex items-center">
+              <div className="w-6 h-0.5 bg-green-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">True Branch</span>
             </div>
             
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-red-500 mr-2"></div>
+              <div className="w-6 h-0.5 bg-red-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
               <span className="text-xs text-gray-700">False Branch</span>
             </div>
             
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-violet-500 mr-2"></div>
-              <span className="text-xs text-gray-700">Parallel Branch</span>
+              <div className="w-6 h-0.5 bg-red-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
+              <span className="text-xs text-gray-700">Loop</span>
             </div>
             
             <div className="flex items-center">
-              <div className="w-6 h-0.5 bg-violet-500 border-0 border-dashed border-violet-500 mr-2" style={{ borderTopStyle: 'dashed' }}></div>
-              <span className="text-xs text-gray-700">Join</span>
+              <div className="w-6 h-0.5 bg-green-500 mr-2"></div>
+              <span className="text-xs text-gray-700">Parallel Execution</span>
+            </div>
+            
+            <div className="flex items-center">
+              <div className="w-6 h-0.5 bg-blue-500 animate-pulse mr-2"></div>
+              <span className="text-xs text-gray-700">Active Flow</span>
+            </div>
+            
+            <div className="flex items-center mt-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" className="mr-1">
+                <path
+                  d="M12 2L12 18M12 18L6 12M12 18L18 12"
+                  fill="none"
+                  stroke="#666"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span className="text-xs text-gray-700">Flow Direction (Top to Bottom)</span>
             </div>
           </div>
         </div>

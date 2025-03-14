@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { parseWorkflowDefinition, findWorkflowExecuteFunction } from '../ast/astParser';
 import { analyzeWorkflowFunction } from '../ast/workflowAnalyzer';
-import { buildFlowGraph } from '../ast/flowGraphBuilder';
-import { applyLayout } from '../services/layoutService';
+import { buildFlowGraph, applyLayout } from '../ast/flowGraphBuilder';
+// Import from our new implementation instead of the service
 import { fetchRuntimeStatus, applyRuntimeStatus } from '../services/runtimeIntegrationService';
-import { FlowGraph, FlowNode } from '../types/visualizationTypes';
+import { FlowGraph, FlowNode, FlowEdge } from '../types/visualizationTypes';
 import { getWorkflowDefinition, getWorkflowDSLContent } from 'server/src/lib/actions/workflow-visualization-actions';
 
 /**
@@ -30,16 +30,20 @@ interface UseWorkflowVisualizationResult {
 }
 
 /**
- * Hook for workflow visualization
- * 
+ * Hook for workflow visualization as a Control Flow Graph (CFG)
+ *
  * This hook handles:
  * - Loading workflow definitions
  * - Parsing and analyzing workflow code
- * - Building and laying out the flow graph
+ * - Building and laying out the control flow graph
  * - Fetching and applying runtime status
- * 
+ *
+ * Phase 1.5 Enhancement: This hook now focuses exclusively on control flow elements
+ * and completely ignores state transitions, providing a more accurate representation
+ * of the actual code execution flow.
+ *
  * @param params Hook parameters
- * @returns Hook result
+ * @returns Hook result with the control flow graph
  */
 export function useWorkflowVisualization({
   workflowDefinitionId,
@@ -57,93 +61,83 @@ export function useWorkflowVisualization({
   useEffect(() => {
     async function buildGraph() {
       try {
-        if (!initialDefinition && !workflowDSL) {
+        if (workflowDSL) {
+          // If we have DSL content, parse it and build the graph
+          // Parse the workflow definition
+          const sourceFile = parseWorkflowDefinition({
+            sourceFile: 'memory.ts',
+            sourceText: workflowDSL
+          });
+          
+          // Find the execute function
+          const executeFunction = findWorkflowExecuteFunction(sourceFile);
+          if (!executeFunction) {
+            throw new Error('Could not find workflow execute function');
+          }
+          
+          // Analyze the workflow with focus on control flow
+          const analysis = analyzeWorkflowFunction(executeFunction);
+          
+          // Explicitly remove state transitions from the analysis to ensure CFG focus
+          analysis.states = [];
+          
+          // Filter out any control flow relationships that involve state transitions
+          analysis.controlFlow = analysis.controlFlow.filter(flow =>
+            flow.from.type !== 'stateTransition' && flow.to.type !== 'stateTransition'
+          );
+          
+          // Build the flow graph with exclusive focus on control flow
+          let flowGraph = buildFlowGraph(analysis);
+          
+          // Apply layout using ELK.js (with fallback to directed layout)
+          flowGraph = await applyLayout(flowGraph);
+          
+          // If we have an execution ID and status, apply runtime status
+          if (executionId && initialExecutionStatus) {
+            flowGraph = applyRuntimeStatus(flowGraph as FlowGraph, initialExecutionStatus);
+          }
+          
+          setGraph(flowGraph as FlowGraph);
+          setLoading(false);
+          setError(null);
+          return;
+        } else if (!initialDefinition && !workflowDSL) {
           // If we don't have an initial definition or DSL, fetch them
           const [definition, dsl] = await Promise.all([
             getWorkflowDefinition(workflowDefinitionId),
             getWorkflowDSLContent(workflowDefinitionId).catch(() => null)
           ]);
           
-          // If we have DSL content, use it to build the graph
           if (dsl) {
-            try {
-              // Parse the workflow definition
-              const sourceFile = parseWorkflowDefinition({
-                sourceFile: 'memory.ts',
-                sourceText: dsl
-              });
-              
-              // Find the execute function
-              const executeFunction = findWorkflowExecuteFunction(sourceFile);
-              if (!executeFunction) {
-                throw new Error('Could not find workflow execute function');
-              }
-              
-              // Analyze the workflow
-              const analysis = analyzeWorkflowFunction(executeFunction);
-              
-              // Build the flow graph
-              let flowGraph = buildFlowGraph(analysis);
-              
-              // Apply layout
-              flowGraph = applyLayout(flowGraph as FlowGraph) as any;
-              
-              // If we have an execution ID and status, apply runtime status
-              if (executionId && initialExecutionStatus) {
-                flowGraph = applyRuntimeStatus(flowGraph as FlowGraph, initialExecutionStatus);
-              }
-              
-              setGraph(flowGraph as FlowGraph);
-              setLoading(false);
-              setError(null);
-              return;
-            } catch (err) {
-              console.error('Error parsing workflow DSL:', err);
-              // Fall back to placeholder graph if we have a definition
-              if (definition) {
-                const placeholderGraph = createPlaceholderGraph(definition);
-                setGraph(placeholderGraph);
-                setLoading(false);
-                setError(null);
-                return;
-              }
-              throw err;
-            }
-          } else if (definition) {
-            // If we only have the definition, create a placeholder graph
-            const placeholderGraph = createPlaceholderGraph(definition);
-            setGraph(placeholderGraph);
-            setLoading(false);
-            setError(null);
-            return;
-          } else {
-            throw new Error(`Could not load workflow definition: ${workflowDefinitionId}`);
-          }
-        } else if (workflowDSL) {
-          // If we have DSL content, parse it and build the graph
-          try {
-            // Parse the workflow definition
+            // Parse and analyze the workflow
             const sourceFile = parseWorkflowDefinition({
               sourceFile: 'memory.ts',
-              sourceText: workflowDSL
+              sourceText: dsl
             });
             
-            // Find the execute function
             const executeFunction = findWorkflowExecuteFunction(sourceFile);
             if (!executeFunction) {
               throw new Error('Could not find workflow execute function');
             }
             
-            // Analyze the workflow
+            // Analyze the workflow with focus on control flow
             const analysis = analyzeWorkflowFunction(executeFunction);
             
-            // Build the flow graph
+            // Explicitly remove state transitions from the analysis to ensure CFG focus
+            analysis.states = [];
+            
+            // Filter out any control flow relationships that involve state transitions
+            analysis.controlFlow = analysis.controlFlow.filter(flow =>
+              flow.from.type !== 'stateTransition' && flow.to.type !== 'stateTransition'
+            );
+            
+            // Build the flow graph with exclusive focus on control flow
             let flowGraph = buildFlowGraph(analysis);
             
-            // Apply layout
-            flowGraph = applyLayout(flowGraph as FlowGraph) as any;
+            // Apply layout using ELK.js (with fallback to directed layout)
+            flowGraph = await applyLayout(flowGraph);
             
-            // If we have an execution ID and status, apply runtime status
+            // Apply runtime status if available
             if (executionId && initialExecutionStatus) {
               flowGraph = applyRuntimeStatus(flowGraph as FlowGraph, initialExecutionStatus);
             }
@@ -152,26 +146,14 @@ export function useWorkflowVisualization({
             setLoading(false);
             setError(null);
             return;
-          } catch (err) {
-            console.error('Error parsing workflow DSL:', err);
-            // Fall back to placeholder graph if we have a definition
-            if (initialDefinition) {
-              const placeholderGraph = createPlaceholderGraph(initialDefinition);
-              setGraph(placeholderGraph);
-              setLoading(false);
-              setError(null);
-              return;
-            }
-            throw err;
+          } else {
+            // If we couldn't get DSL content, show an error
+            throw new Error(`Could not load workflow DSL for ${workflowDefinitionId}`);
           }
-        } else if (initialDefinition) {
-          // If we only have the definition, create a placeholder graph
-          const placeholderGraph = createPlaceholderGraph(initialDefinition);
-          setGraph(placeholderGraph);
-          setLoading(false);
-          setError(null);
-          return;
         }
+        
+        // If we reach here, we couldn't build a graph
+        throw new Error(`Could not build workflow graph for ${workflowDefinitionId}`);
       } catch (err) {
         console.error('Error building workflow graph:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
@@ -215,38 +197,4 @@ export function useWorkflowVisualization({
   };
 }
 
-/**
- * Helper function to create a placeholder graph from a workflow definition
- * 
- * @param definition The workflow definition
- * @returns A flow graph
- */
-function createPlaceholderGraph(definition: any): FlowGraph {
-  // Create nodes for states
-  const stateNodes = definition.states.map((state: any, index: number) => ({
-    id: `state-${state.name}`,
-    type: 'state',
-    data: { 
-      label: state.name,
-      stateName: state.name,
-      status: 'default'
-    },
-    position: { x: 100, y: index * 100 }
-  }));
-  
-  // Create edges between states based on transitions
-  const edges = definition.transitions.map((transition: any, index: number) => ({
-    id: `edge-${index}`,
-    source: `state-${transition.from}`,
-    target: `state-${transition.to}`,
-    type: 'controlFlow',
-    animated: false,
-    label: transition.event
-  }));
-  
-  // Apply layout to the graph
-  return applyLayout({
-    nodes: stateNodes,
-    edges
-  } as FlowGraph) as FlowGraph;
-}
+// Remove the createPlaceholderGraph function as it's no longer needed

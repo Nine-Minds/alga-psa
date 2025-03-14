@@ -30,10 +30,10 @@ export function ControlFlowEdge({
     targetPosition
   });
 
-  // Default style
+  // Default style with improved visibility
   const defaultStyle = {
-    stroke: '#ccc',
-    strokeWidth: 1.5,
+    stroke: '#666',
+    strokeWidth: 2,
     ...style
   };
 

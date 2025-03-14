@@ -25,6 +25,9 @@ export interface WorkflowComponent {
 export interface StateTransition extends WorkflowComponent {
   type: 'stateTransition';
   stateName: string;
+  fromState?: string;
+  event?: string;
+  condition?: string;
 }
 
 /**
@@ -74,11 +77,12 @@ export interface Loop extends WorkflowComponent {
 }
 
 /**
- * Parallel execution component (Promise.all)
+ * Parallel execution component (Promise.all, Promise.allSettled, etc.)
  */
 export interface ParallelExecution extends WorkflowComponent {
   type: 'parallelExecution';
   branches: WorkflowComponent[][];
+  executionType?: string;
 }
 
 /**

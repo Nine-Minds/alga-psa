@@ -2,6 +2,7 @@
 
 import fs from 'fs/promises';
 import path from 'path';
+import * as ts from 'typescript';
 import {
   getWorkflowRuntime,
   getActionRegistry,
@@ -111,18 +112,112 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
 
 /**
  * Extract states from a TypeScript workflow definition
- * This is a placeholder implementation that would need to be expanded
- * based on how states are defined in your TypeScript workflows
+ * Analyzes the workflow definition to find all possible states
+ *
+ * @param workflowDefinition The workflow definition to analyze
+ * @returns Array of state objects with name and description
  */
 function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[] {
-  // For now, return a basic set of states based on the invoice approval workflow
-  return [
-    { name: 'draft', description: 'Initial draft state' },
-    { name: 'submitted', description: 'Invoice submitted for approval' },
-    { name: 'approved', description: 'Invoice approved' },
-    { name: 'rejected', description: 'Invoice rejected' },
-    { name: 'paid', description: 'Invoice paid' }
-  ];
+  // Get the execute function source code
+  let executeFnSource = '';
+  
+  // Check if we have a serialized function string directly
+  if ('executeFn' in workflowDefinition && typeof (workflowDefinition as any).executeFn === 'string') {
+    executeFnSource = (workflowDefinition as any).executeFn;
+  }
+  // Otherwise, serialize the execute function to get its source
+  else if (workflowDefinition.execute) {
+    executeFnSource = workflowDefinition.execute.toString();
+  }
+  
+  if (!executeFnSource) {
+    console.warn('No execute function source found in workflow definition');
+    return [];
+  }
+  
+  try {
+    // Parse the execute function source code
+    const sourceFile = ts.createSourceFile(
+      'workflow.ts',
+      executeFnSource,
+      ts.ScriptTarget.Latest,
+      true
+    );
+    
+    // Find all state transitions (context.setState calls)
+    const states = new Map<string, { name: string; description: string }>();
+    
+    // Visitor function to find all setState calls
+    function visit(node: ts.Node) {
+      // Check if this is a setState call
+      if (ts.isCallExpression(node) &&
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isPropertyAccessExpression(node.expression.expression) &&
+          node.expression.expression.name.text === 'context' &&
+          node.expression.name.text === 'setState') {
+        
+        // Get the state argument
+        const stateArg = node.arguments[0];
+        let stateName = 'unknown';
+        
+        if (ts.isStringLiteral(stateArg)) {
+          stateName = stateArg.text;
+        } else if (ts.isIdentifier(stateArg)) {
+          stateName = `[${stateArg.text}]`; // Variable reference
+        } else if (ts.isPropertyAccessExpression(stateArg)) {
+          // Handle object property access like someObject.someProperty
+          stateName = `[${stateArg.getText()}]`;
+        } else if (stateArg) {
+          // For other expressions, use the text representation
+          stateName = `[${stateArg.getText()}]`;
+        }
+        
+        // Add the state to our map if it's not already there
+        if (!states.has(stateName)) {
+          states.set(stateName, {
+            name: stateName,
+            description: `State: ${stateName}`
+          });
+        }
+      }
+      
+      // Visit all children
+      ts.forEachChild(node, visit);
+    }
+    
+    // Start the visitor at the source file level
+    visit(sourceFile);
+    
+    // If we didn't find any states, look for state constants
+    if (states.size === 0) {
+      // Look for state constants (e.g., const DRAFT = 'draft')
+      function findStateConstants(node: ts.Node) {
+        if (ts.isVariableStatement(node)) {
+          for (const declaration of node.declarationList.declarations) {
+            if (ts.isIdentifier(declaration.name) &&
+                declaration.initializer &&
+                ts.isStringLiteral(declaration.initializer)) {
+              const name = declaration.initializer.text;
+              states.set(name, {
+                name,
+                description: `State: ${name}`
+              });
+            }
+          }
+        }
+        
+        ts.forEachChild(node, findStateConstants);
+      }
+      
+      findStateConstants(sourceFile);
+    }
+    
+    // Convert the map to an array
+    return Array.from(states.values());
+  } catch (error) {
+    console.error('Error extracting states from workflow definition:', error);
+    return [];
+  }
 }
 
 /**
@@ -131,13 +226,160 @@ function extractStatesFromWorkflow(workflowDefinition: WorkflowDefinition): any[
  * based on how transitions are defined in your TypeScript workflows
  */
 function extractTransitionsFromWorkflow(workflowDefinition: WorkflowDefinition): any[] {
-  // For now, return a basic set of transitions based on the invoice approval workflow
-  return [
-    { from: 'draft', to: 'submitted', event: 'Submit' },
-    { from: 'submitted', to: 'approved', event: 'Approve' },
-    { from: 'submitted', to: 'rejected', event: 'Reject' },
-    { from: 'approved', to: 'paid', event: 'Pay' }
-  ];
+  // Get the execute function source code
+  let executeFnSource = '';
+  
+  // Check if we have a serialized function string directly
+  if ('executeFn' in workflowDefinition && typeof (workflowDefinition as any).executeFn === 'string') {
+    executeFnSource = (workflowDefinition as any).executeFn;
+  }
+  // Otherwise, serialize the execute function to get its source
+  else if (workflowDefinition.execute) {
+    executeFnSource = workflowDefinition.execute.toString();
+  }
+  
+  if (!executeFnSource) {
+    console.warn('No execute function source found in workflow definition');
+    return [];
+  }
+  
+  try {
+    // Parse the execute function source code
+    const sourceFile = ts.createSourceFile(
+      'workflow.ts',
+      executeFnSource,
+      ts.ScriptTarget.Latest,
+      true
+    );
+    
+    // Track the current state and transitions
+    const transitions: { from: string; to: string; event: string }[] = [];
+    let currentState: string | null = null;
+    
+    // Helper function to find the nearest enclosing if condition
+    function findEnclosingCondition(node: ts.Node): string | null {
+      let parent = node.parent;
+      while (parent) {
+        if (ts.isIfStatement(parent) && parent.expression) {
+          // Check if the condition is a state check
+          const condition = parent.expression.getText();
+          
+          // Look for patterns like context.state === 'someState'
+          const stateCheckRegex = /context\.state\s*===?\s*['"]([^'"]+)['"]/;
+          const match = condition.match(stateCheckRegex);
+          if (match) {
+            return match[1];
+          }
+          
+          // Look for other state check patterns
+          if (condition.includes('context.state')) {
+            return '[conditional]';
+          }
+        }
+        parent = parent.parent;
+      }
+      return null;
+    }
+    
+    // Visitor function to find state transitions and build the transition graph
+    function visit(node: ts.Node) {
+      // Check if this is a setState call
+      if (ts.isCallExpression(node) &&
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isPropertyAccessExpression(node.expression.expression) &&
+          node.expression.expression.name.text === 'context' &&
+          node.expression.name.text === 'setState') {
+        
+        // Get the state argument
+        const stateArg = node.arguments[0];
+        let toState = 'unknown';
+        
+        if (ts.isStringLiteral(stateArg)) {
+          toState = stateArg.text;
+        } else if (ts.isIdentifier(stateArg)) {
+          toState = `[${stateArg.text}]`; // Variable reference
+        } else if (ts.isPropertyAccessExpression(stateArg)) {
+          toState = `[${stateArg.getText()}]`;
+        } else if (stateArg) {
+          toState = `[${stateArg.getText()}]`;
+        }
+        
+        // Find the enclosing condition to determine the from state
+        const fromState = findEnclosingCondition(node) || currentState || 'initial';
+        
+        // Find the event that triggered this transition
+        let event = 'unknown';
+        
+        // Look for event handling patterns
+        let parent = node.parent;
+        while (parent) {
+          // Check if we're in an event handler function
+          if (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isArrowFunction(parent)) {
+            const functionText = parent.getText();
+            
+            // Look for patterns like handleEvent, onEvent, processEvent
+            const eventHandlerRegex = /handle([A-Z]\w+)|on([A-Z]\w+)|process([A-Z]\w+)/;
+            const match = functionText.match(eventHandlerRegex);
+            if (match) {
+              event = match[1] || match[2] || match[3] || 'unknown';
+              break;
+            }
+          }
+          
+          // Check if we're in a waitForEvent call
+          if (ts.isCallExpression(parent) &&
+              ts.isPropertyAccessExpression(parent.expression) &&
+              ts.isPropertyAccessExpression(parent.expression.expression) &&
+              parent.expression.expression.name.text === 'context' &&
+              parent.expression.name.text === 'waitForEvent') {
+            
+            const eventArg = parent.arguments[0];
+            if (ts.isStringLiteral(eventArg)) {
+              event = eventArg.text;
+              break;
+            }
+          }
+          
+          parent = parent.parent;
+        }
+        
+        // Add the transition
+        transitions.push({
+          from: fromState,
+          to: toState,
+          event: event
+        });
+        
+        // Update the current state
+        currentState = toState;
+      }
+      
+      // Visit all children
+      ts.forEachChild(node, visit);
+    }
+    
+    // Start the visitor at the source file level
+    visit(sourceFile);
+    
+    // If we didn't find any transitions, create some default ones based on the states
+    if (transitions.length === 0) {
+      const states = extractStatesFromWorkflow(workflowDefinition);
+      
+      // Create transitions between consecutive states
+      for (let i = 0; i < states.length - 1; i++) {
+        transitions.push({
+          from: states[i].name,
+          to: states[i + 1].name,
+          event: `Transition_${i}`
+        });
+      }
+    }
+    
+    return transitions;
+  } catch (error) {
+    console.error('Error extracting transitions from workflow definition:', error);
+    return [];
+  }
 }
 
 /**

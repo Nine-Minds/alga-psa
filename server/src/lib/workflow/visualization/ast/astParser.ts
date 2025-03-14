@@ -18,27 +18,52 @@ export interface ParseOptions {
 export function parseWorkflowDefinition(options: ParseOptions): ts.SourceFile {
   const { sourceFile, sourceText, compilerOptions = {} } = options;
   
+  // Default compiler options needed for TypeScript to work properly
+  const defaultCompilerOptions: ts.CompilerOptions = {
+    target: ts.ScriptTarget.ES2020,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.NodeJs,
+    esModuleInterop: true,
+    allowJs: true,
+    skipLibCheck: true,
+    lib: ["es2020", "dom"],
+    noEmit: true
+  };
+  
+  // Merge default options with provided options
+  const mergedOptions = { ...defaultCompilerOptions, ...compilerOptions };
+  
   // Create a program to parse the source file
   let program: ts.Program;
   
   if (sourceText) {
-    // Create a virtual source file if source text is provided
-    const host = ts.createCompilerHost(compilerOptions);
-    const originalGetSourceFile = host.getSourceFile;
-    host.getSourceFile = (fileName, languageVersion) => {
-      if (fileName === sourceFile) {
-        return ts.createSourceFile(fileName, sourceText, languageVersion);
-      }
-      return originalGetSourceFile(fileName, languageVersion);
+    // Create a source file directly without using createCompilerHost
+    const sourceFile = ts.createSourceFile(
+      options.sourceFile,
+      sourceText,
+      mergedOptions.target || ts.ScriptTarget.ES2020,
+      true
+    );
+    
+    // Create a minimal compiler host
+    const host: ts.CompilerHost = {
+      getSourceFile: (fileName) => fileName === options.sourceFile ? sourceFile : undefined,
+      getDefaultLibFileName: () => "lib.d.ts",
+      writeFile: () => {},
+      getCurrentDirectory: () => "",
+      getCanonicalFileName: (fileName) => fileName,
+      useCaseSensitiveFileNames: () => false,
+      getNewLine: () => "\n",
+      fileExists: (fileName) => fileName === options.sourceFile,
+      readFile: () => "",
+      directoryExists: () => true,
+      getDirectories: () => []
     };
-    program = ts.createProgram([sourceFile], compilerOptions, host);
+    
+    program = ts.createProgram([options.sourceFile], mergedOptions, host);
   } else {
     // Create a program from the file system
-    program = ts.createProgram([sourceFile], {
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ESNext,
-      ...compilerOptions
-    });
+    program = ts.createProgram([sourceFile], mergedOptions);
   }
   
   // Get the source file from the program

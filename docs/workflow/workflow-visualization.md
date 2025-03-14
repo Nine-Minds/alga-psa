@@ -1,4 +1,4 @@
-# Workflow Visualization Component -- FUTURE IDEA -- NOT CURRENTLY IMPLEMENTED -- MAY BE INACURATE CURRENTLY OR REMOVED SOON
+# Workflow Visualization Component -- OUTDATED -- CURRENTLY IMPLEMENTATION MAY DIFFER
 
 The Workflow Visualization Component provides a visual representation of workflow definitions and their execution status. It is designed to be reusable across different parts of the application, from status displays for individual workflow executions to screens where users can view workflows as visualizations of business processes.
 
@@ -173,6 +173,13 @@ interface WorkflowVisualizationProps {
 2. Implement the props API for customization
 3. Add layout optimization and persistence
 4. Create documentation and examples
+
+### 7.4 Instrumentation Enhancement
+
+1. Leverage the existing TypeScript workflow definitions and AST to explicitly instrument workflow code.
+2. Detect action proxy calls as action points and conditional/switch statements as decision points.
+3. Map these instrumentation points as nodes in the ReactFlow visualization.
+4. Enhance the visualization to clearly delineate these explicit actions and decisions along with static states.
 
 ## 8. Performance Considerations
 

@@ -79,33 +79,80 @@ function WorkflowVisualizerInner({
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const reactFlowInstance = useReactFlow();
 
-  // Update nodes and edges when graph changes, preserving animation state
+  // Update nodes and edges when graph changes, with enhanced styling for control flow
   React.useEffect(() => {
     setNodes(graph.nodes);
     
-    // Preserve the 'animated' property when updating edges
     setEdges(currentEdges => {
       return graph.edges.map(newEdge => {
         // Find the corresponding edge in the current edges
         const existingEdge = currentEdges.find(e => e.id === newEdge.id);
         
-        // If the edge exists and is animated, preserve that state
-        if (existingEdge && existingEdge.animated) {
+        // Apply styling based on edge type
+        const edgeStyle = {
+          ...newEdge.style,
+          strokeWidth: 2,
+          stroke: getEdgeColor(newEdge.type)
+        };
+        
+        // Add additional data for conditional edges
+        let edgeData = newEdge.data || {};
+        
+        // For conditional edges, add label information
+        if (newEdge.type === 'conditional' && newEdge.label) {
+          // Ensure both label and condition are explicitly set
+          // This is critical for the ConditionalEdge component to determine branch type
+          edgeData = {
+            ...edgeData,
+            label: newEdge.label,
+            condition: newEdge.label, // Ensure condition is explicitly set
+            isTrueBranch: newEdge.label === 'true' // Add explicit flag for branch type
+          };
+          
+          // Set the appropriate sourceHandle based on the condition
+          // This ensures the edge connects to the correct handle on the conditional node
+          if (newEdge.label === 'true') {
+            newEdge.sourceHandle = 'right-true';
+          } else if (newEdge.label === 'false') {
+            newEdge.sourceHandle = 'right-false';
+          }
+        }
+        
+        // Check if the edge should be animated (either it was already animated or it's a new animated edge)
+        const shouldBeAnimated = (existingEdge && existingEdge.animated) || newEdge.animated;
+        
+        if (shouldBeAnimated) {
           return {
             ...newEdge,
             animated: true,
+            data: edgeData,
             style: {
-              ...newEdge.style,
+              ...edgeStyle,
               stroke: '#3498db',
-              strokeWidth: 2
+              strokeWidth: 3
             }
           };
         }
         
-        return newEdge;
+        return {
+          ...newEdge,
+          data: edgeData,
+          style: edgeStyle
+        };
       });
     });
   }, [graph, setNodes, setEdges]);
+  
+  // Helper function to get edge color based on type
+  const getEdgeColor = (type?: string) => {
+    switch (type) {
+      case 'controlFlow': return '#666';
+      case 'conditional': return '#3498db'; // Base color for conditional edges
+      case 'loop': return '#e74c3c';
+      case 'parallel': return '#2ecc71';
+      default: return '#ccc';
+    }
+  };
 
   // Handle node click
   const onNodeClick = useCallback((event: React.MouseEvent, node: any) => {

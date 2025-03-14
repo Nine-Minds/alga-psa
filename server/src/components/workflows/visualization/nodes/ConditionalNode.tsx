@@ -37,11 +37,17 @@ export function ConditionalNode({ data, id }: NodeProps<ConditionalNodeData>) {
   };
 
   return (
-    <Card 
-      className={`conditional-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`} 
+    <Card
+      className={`conditional-node p-3 rounded-md border-2 shadow-sm ${getStatusClass()}`}
       id={automationId}
     >
-      <Handle type="target" position={Position.Top} className="w-3 h-3 bg-gray-400" />
+      {/* Input handle - where edges connect to this node */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left"
+        className="w-3 h-3 bg-gray-400"
+      />
       
       <div className="node-header text-sm font-semibold text-gray-500 mb-1">
         Conditional
@@ -63,18 +69,31 @@ export function ConditionalNode({ data, id }: NodeProps<ConditionalNodeData>) {
         )}
       </div>
       
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        id="true" 
+      {/* Output handles - where edges start from this node */}
+      {/* True branch handle - positioned at the top right */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right-true"
         className="w-3 h-3 bg-green-500"
+        style={{ top: '30%' }}
       />
       
-      <Handle 
-        type="source" 
-        position={Position.Right} 
-        id="false" 
+      {/* False branch handle - positioned at the bottom right */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right-false"
         className="w-3 h-3 bg-red-500"
+        style={{ top: '70%' }}
+      />
+      
+      {/* Keep the original right handle for backward compatibility */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        className="w-3 h-3 bg-gray-400 opacity-0"
       />
     </Card>
   );
