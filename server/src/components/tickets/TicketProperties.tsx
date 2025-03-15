@@ -17,6 +17,7 @@ import { CompanyPicker } from '../companies/CompanyPicker';
 import { ContactPicker } from '../contacts/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { IntervalManagement } from '../time-management/interval-tracking/IntervalManagement';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -182,6 +183,20 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </Button>
+          
+          {/* Interval Management Section */}
+          <div className="mt-6 border-t pt-4">
+            <h3 className="text-sm font-medium mb-2">Tracked Intervals</h3>
+            {ticket.ticket_id && userId && (
+              <div {...withDataAutomationId({ id: `${id}-interval-management` })}>
+                <IntervalManagement
+                  ticketId={ticket.ticket_id}
+                  userId={userId}
+                  onCreateTimeEntry={onAddTimeEntry}
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

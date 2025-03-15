@@ -41,6 +41,8 @@ import TechnicianDispatchDashboard from '../technician-dispatch/TechnicianDispat
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { PartialBlock, StyledText } from '@blocknote/core';
+import { useTicketTimeTracking } from '../../hooks/useTicketTimeTracking';
+import { IntervalManagement } from '../time-management/interval-tracking/IntervalManagement';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -127,6 +129,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
     }, [isRunning, tick]);
+    
+    // Add automatic interval tracking using the custom hook
+    useTicketTimeTracking(
+        initialTicket.ticket_id || '',
+        initialTicket.ticket_number || '',
+        initialTicket.title || '',
+        userId || ''
+    );
 
     useEffect(() => {
         const fetchData = async () => {

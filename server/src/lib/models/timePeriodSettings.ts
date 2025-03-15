@@ -14,7 +14,7 @@ export class TimePeriodSettings {
 
       const settings = await db<ITimePeriodSettings>('time_period_settings')
         .where('is_active', true)
-        .andWhere('tenant', tenant)
+        .andWhere('tenant_id', tenant)
         .orderBy('effective_from', 'desc');
 
       if (!settings.length) {

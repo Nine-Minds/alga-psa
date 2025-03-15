@@ -1,13 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { 
-    ITimeEntry, 
-    ITimeSheet, 
+import {
+    ITimeEntry,
+    ITimeSheet,
     ITimeSheetView,
-    ITimeSheetComment, 
-    TimeSheetStatus, 
-    ITimeEntryWithWorkItemString, 
+    ITimeSheetComment,
+    TimeSheetStatus,
+    ITimeEntryWithWorkItemString,
     ITimeEntryWithWorkItem,
     ITimePeriodView
 } from 'server/src/interfaces/timeEntry.interfaces';
@@ -24,6 +24,7 @@ import { TimeSheetTable } from './TimeSheetTable';
 import { TimeSheetHeader } from './TimeSheetHeader';
 import { TimeSheetComments } from 'server/src/components/time-management/approvals/TimeSheetComments';
 import { WorkItemDrawer } from './WorkItemDrawer';
+import { IntervalSection } from 'server/src/components/time-management/interval-tracking/IntervalSection';
 
 interface TimeSheetProps {
     timeSheet: ITimeSheetView;
@@ -62,6 +63,7 @@ export function TimeSheet({
     initialDuration,
     onBack
 }: TimeSheetProps): JSX.Element {
+    const [showIntervals, setShowIntervals] = useState(false);
     const [timeSheet, setTimeSheet] = useState<ITimeSheetView>(initialTimeSheet);
     const [workItemsByType, setWorkItemsByType] = useState<Record<string, IExtendedWorkItem[]>>({});
     const [groupedTimeEntries, setGroupedTimeEntries] = useState<Record<string, ITimeEntryWithWorkItemString[]>>({});
@@ -375,6 +377,8 @@ export function TimeSheet({
                 isEditable={isEditable}
                 onSubmit={handleSubmitTimeSheet}
                 onBack={onBack}
+                showIntervals={showIntervals}
+                onToggleIntervals={() => setShowIntervals(!showIntervals)}
             />
 
             {(timeSheet.approval_status === 'CHANGES_REQUESTED' || comments.length > 0) && (
@@ -390,6 +394,17 @@ export function TimeSheet({
                             onCommentsUpdate={setComments}
                         />
                     )}
+                </div>
+            )}
+            
+            {/* Show intervals section if enabled */}
+            {showIntervals && timeSheet.time_period && (
+                <div className="mb-8">
+                    <IntervalSection
+                        userId={timeSheet.user_id}
+                        timePeriod={timeSheet.time_period}
+                        onCreateTimeEntry={handleSaveTimeEntry}
+                    />
                 </div>
             )}
 

@@ -98,6 +98,7 @@ export interface ITimeEntryWithWorkItemString extends Omit<ITimeEntryWithWorkIte
 export interface ITimePeriodView extends Omit<ITimePeriod, 'start_date' | 'end_date'> {
   start_date: string;
   end_date: string;
+  timeSheetId?: string; // Added to support time entry creation from intervals
 }
 
 export interface ITimePeriodWithStatusView extends Omit<ITimePeriodWithStatus, 'start_date' | 'end_date'> {

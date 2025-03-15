@@ -21,10 +21,14 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { Input } from 'server/src/components/ui/Input';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { getTicketsForList, deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreHorizontal, XCircle } from 'lucide-react';
+import { MoreHorizontal, XCircle, Clock } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { useIntervalTracking } from '../../hooks/useIntervalTracking';
+import { IntervalManagementDrawer } from '../time-management/interval-tracking/IntervalManagementDrawer';
+import { saveTimeEntry } from '../../lib/actions/timeEntryActions';
+import { toast } from 'react-hot-toast';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -37,10 +41,29 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
+  const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const handleDeleteTicket = (ticketId: string) => {
     setTicketToDelete(ticketId);
   };
+  
+  // Fetch current user to get user ID for interval tracking
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const user = await getCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        console.error('Error fetching current user:', error);
+      }
+    };
+    
+    fetchUser();
+  }, []);
+  
+  // Use interval tracking hook to get interval count
+  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
 
   const confirmDeleteTicket = async () => {
     if (!ticketToDelete) return;
@@ -180,6 +203,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   // Update the fetchTickets function to include category filtering
+  // Handle saving time entries created from intervals
+  const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
+    try {
+      await saveTimeEntry(timeEntry);
+      toast.success('Time entry saved successfully');
+    } catch (error) {
+      console.error('Error saving time entry:', error);
+      toast.error('Failed to save time entry');
+    }
+  };
+
   const fetchTickets = useCallback(async (isSubscribed: boolean) => {
     setIsLoading(true);
     try {
@@ -389,7 +423,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     <ReflectionContainer id={id} label="Ticketing Dashboard">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Ticketing Dashboard</h1>
-        <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsIntervalDrawerOpen(true)}
+            className="flex items-center gap-2"
+            id="view-intervals-button"
+          >
+            <Clock className="h-4 w-4" />
+            View Intervals
+            {intervalCount > 0 && (
+              <span className="bg-blue-500 text-white rounded-full px-2 py-0.5 text-xs">
+                {intervalCount}
+              </span>
+            )}
+          </Button>
+          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>Add Ticket</Button>
+        </div>
       </div>
       <div className="bg-white shadow rounded-lg p-4">
         <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
@@ -491,6 +541,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         confirmLabel="Delete"
         cancelLabel="Cancel"
       />
+      
+      {/* Interval Management Drawer */}
+      {currentUser && (
+        <IntervalManagementDrawer
+          isOpen={isIntervalDrawerOpen}
+          onClose={() => setIsIntervalDrawerOpen(false)}
+          userId={currentUser.user_id}
+          onCreateTimeEntry={handleCreateTimeEntry}
+        />
+      )}
     </ReflectionContainer>
   );
 };

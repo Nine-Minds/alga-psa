@@ -4,19 +4,26 @@ import React from 'react';
 import { TimeSheetStatus } from 'server/src/interfaces/timeEntry.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { ArrowLeftIcon } from '@radix-ui/react-icons';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
+import { Clock } from 'lucide-react';
 
 interface TimeSheetHeaderProps {
     status: TimeSheetStatus;
     isEditable: boolean;
     onSubmit: () => Promise<void>;
     onBack: () => void;
+    showIntervals?: boolean;
+    onToggleIntervals?: () => void;
 }
 
 export function TimeSheetHeader({
     status,
     isEditable,
     onSubmit,
-    onBack
+    onBack,
+    showIntervals = false,
+    onToggleIntervals
 }: TimeSheetHeaderProps): JSX.Element {
     const getStatusDisplay = (status: TimeSheetStatus): { text: string; className: string } => {
         switch (status) {
@@ -49,12 +56,29 @@ export function TimeSheetHeader({
                 <h2 className="text-2xl font-bold">Time Sheet</h2>
             </div>
             <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-medium flex items-center">
-                    Status:&nbsp; {'  '}
-                    <span className={statusDisplay.className}> {statusDisplay.text}</span>
-                </span>
+                <div className="flex items-center">
+                    <span className="text-lg font-medium flex items-center mr-6">
+                        Status:&nbsp; {'  '}
+                        <span className={statusDisplay.className}> {statusDisplay.text}</span>
+                    </span>
+                    
+                    {onToggleIntervals && (
+                        <div className="flex items-center space-x-2">
+                            <Switch
+                                id="show-intervals-toggle"
+                                checked={showIntervals}
+                                onCheckedChange={onToggleIntervals}
+                            />
+                            <Label htmlFor="show-intervals-toggle" className="flex items-center">
+                                <Clock className="h-4 w-4 mr-1" />
+                                Show Ticket Intervals
+                            </Label>
+                        </div>
+                    )}
+                </div>
+                
                 {isEditable && (
-                    <Button 
+                    <Button
                         id="submit-timesheet-button"
                         onClick={onSubmit}
                         variant="default"
