@@ -53,7 +53,12 @@ export function buildFlowGraph(analysis: WorkflowAnalysis): FlowGraph {
   const allComponents: {component: WorkflowComponent, type: string, index: number}[] = [
     ...analysis.actions.map((comp, index) => ({component: comp, type: 'action', index})),
     ...analysis.events.map((comp, index) => ({component: comp, type: 'event', index})),
-    ...analysis.conditionals.map((comp, index) => ({component: comp, type: 'conditional', index})),
+    // Filter out conditionals with empty branches (no if branch and no else branch)
+    ...analysis.conditionals
+      .filter(conditional =>
+        (conditional.thenBranch && conditional.thenBranch.length > 0) ||
+        (conditional.elseBranch && conditional.elseBranch.length > 0))
+      .map((comp, index) => ({component: comp, type: 'conditional', index})),
     ...analysis.loops.map((comp, index) => ({component: comp, type: 'loop', index}))
     // Parallel executions are filtered out
   ].sort((a, b) => {

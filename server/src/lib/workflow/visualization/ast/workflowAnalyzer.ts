@@ -114,7 +114,12 @@ function buildControlFlow(analysis: WorkflowAnalysis): void {
   const parallelBranchComponents = new Map<WorkflowComponent, boolean>();
   
   // Connect conditionals to their branches
-  analysis.conditionals.forEach(conditional => {
+  // Skip conditionals with empty branches (no if branch and no else branch)
+  analysis.conditionals
+    .filter(conditional =>
+      (conditional.thenBranch && conditional.thenBranch.length > 0) ||
+      (conditional.elseBranch && conditional.elseBranch.length > 0))
+    .forEach(conditional => {
     // Connect condition to then branch
     if (conditional.thenBranch.length > 0) {
       const firstComponent = conditional.thenBranch[0];
@@ -315,14 +320,15 @@ function buildControlFlow(analysis: WorkflowAnalysis): void {
     
     // Skip if the current component is a control structure
     // These have special handling for their next components
-    if (current.type === 'conditional' || current.type === 'loop') {
+    if (current.type === 'loop' ||
+        (current.type === 'conditional' &&
+         ((current as any).thenBranch?.length > 0 || (current as any).elseBranch?.length > 0))) {
       continue;
     }
     
-    // Skip if the next component already has an incoming edge
-    if (hasIncomingEdge.get(next)) {
-      continue;
-    }
+    // We used to skip if the next component already had an incoming edge,
+    // but this was too restrictive for patterns like action -> conditional -> action.
+    // Now we allow multiple incoming edges to the same component.
     
     // Skip if the components are not in the same scope
     // if (!areInSameScope(current, next)) {
@@ -371,17 +377,22 @@ function buildControlFlow(analysis: WorkflowAnalysis): void {
     const current = allComponents[i];
     const next = allComponents[i + 1];
     
-    // Skip if the next component is part of any branch
-    if (thenBranchComponents.get(next) ||
+    // Skip if the next component is part of any branch, but only if it's not a conditional
+    // This allows for patterns like action -> conditional -> action
+    if ((thenBranchComponents.get(next) ||
         elseBranchComponents.get(next) ||
         loopBodyComponents.get(next) ||
-        parallelBranchComponents.get(next)) {
+        parallelBranchComponents.get(next)) &&
+        next.type !== 'conditional') {
       continue;
     }
     
-    // Skip if the current component is a conditional, loop, or parallel
+    // Skip if the current component is a loop, parallel, or a conditional with branches
     // as these have special handling for their next components
-    if (current.type === 'conditional' || current.type === 'loop' || current.type === 'parallelExecution') {
+    if (current.type === 'loop' ||
+        current.type === 'parallelExecution' ||
+        (current.type === 'conditional' &&
+         ((current as any).thenBranch?.length > 0 || (current as any).elseBranch?.length > 0))) {
       continue;
     }
     
@@ -595,45 +606,55 @@ function findNextControlFlowComponent(
       let isInBranch = false;
       
       if (branchMaps) {
-        isInBranch = branchMaps.thenBranchComponents.get(nextComponent) ||
-                     branchMaps.elseBranchComponents.get(nextComponent) ||
-                     branchMaps.loopBodyComponents.get(nextComponent) ||
-                     branchMaps.parallelBranchComponents.get(nextComponent) ||
-                     false;
+        // Allow conditionals even if they're in a branch
+        if (nextComponent.type === 'conditional') {
+          isInBranch = false;
+        } else {
+          isInBranch = branchMaps.thenBranchComponents.get(nextComponent) ||
+                       branchMaps.elseBranchComponents.get(nextComponent) ||
+                       branchMaps.loopBodyComponents.get(nextComponent) ||
+                       branchMaps.parallelBranchComponents.get(nextComponent) ||
+                       false;
+        }
       } else {
         // Fallback to checking each branch individually if maps aren't provided
         // This shouldn't happen in normal operation
         console.warn('Branch maps not provided to findNextControlFlowComponent');
         
-        // Check conditionals
-        for (const conditional of analysis.conditionals) {
-          if ((conditional.thenBranch && conditional.thenBranch.includes(nextComponent)) ||
-              (conditional.elseBranch && conditional.elseBranch.includes(nextComponent))) {
-            isInBranch = true;
-            break;
-          }
-        }
-        
-        // Check loops
-        if (!isInBranch) {
-          for (const loop of analysis.loops) {
-            if (loop.body && loop.body.includes(nextComponent)) {
+        // Allow conditionals even if they're in a branch
+        if (nextComponent.type === 'conditional') {
+          isInBranch = false;
+        } else {
+          // Check conditionals
+          for (const conditional of analysis.conditionals) {
+            if ((conditional.thenBranch && conditional.thenBranch.includes(nextComponent)) ||
+                (conditional.elseBranch && conditional.elseBranch.includes(nextComponent))) {
               isInBranch = true;
               break;
             }
           }
-        }
-        
-        // Check parallel executions
-        if (!isInBranch) {
-          for (const parallel of analysis.parallelExecutions) {
-            for (const branch of parallel.branches) {
-              if (branch.includes(nextComponent)) {
+          
+          // Check loops
+          if (!isInBranch) {
+            for (const loop of analysis.loops) {
+              if (loop.body && loop.body.includes(nextComponent)) {
                 isInBranch = true;
                 break;
               }
             }
-            if (isInBranch) break;
+          }
+          
+          // Check parallel executions
+          if (!isInBranch) {
+            for (const parallel of analysis.parallelExecutions) {
+              for (const branch of parallel.branches) {
+                if (branch.includes(nextComponent)) {
+                  isInBranch = true;
+                  break;
+                }
+              }
+              if (isInBranch) break;
+            }
           }
         }
       }
