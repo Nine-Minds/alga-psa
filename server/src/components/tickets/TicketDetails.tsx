@@ -40,6 +40,7 @@ import CompanyDetails from '../companies/CompanyDetails';
 import ContactDetailsView from '../contacts/ContactDetailsView';
 import { addTicketResource, getTicketResources, removeTicketResource } from '../../lib/actions/ticketResourceActions';
 import TechnicianDispatchDashboard from '../technician-dispatch/TechnicianDispatchDashboard';
+import { WorkItemType } from '../../interfaces/workItem.interfaces';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -115,6 +116,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
+    const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
 
     const { openDrawer, closeDrawer } = useDrawer();
     const router = useRouter();
@@ -455,7 +457,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleAgentClick = (userId: string) => {
         openDrawer(
-            <TechnicianDispatchDashboard />
+            <TechnicianDispatchDashboard
+                filterWorkItemId={ticket.ticket_id}
+                filterWorkItemType="ticket"
+            />
         );
     };
 
@@ -731,7 +736,8 @@ const handleClose = () => {
 
             if (!currentTimePeriod) {
                 console.error('No current time period found');
-                toast.error('Unable to add time entry: No active time period found. Please contact your administrator.');
+                // Show the time period dialog instead of a toast
+                setIsTimeEntryPeriodDialogOpen(true);
                 return;
             }
 
@@ -944,6 +950,20 @@ const handleClose = () => {
                     title="Delete Comment"
                     message="Are you sure you want to delete this comment? This action cannot be undone."
                     confirmLabel="Delete"
+                    cancelLabel="Cancel"
+                />
+                
+                <ConfirmationDialog
+                    id={`${id}-time-period-dialog`}
+                    isOpen={isTimeEntryPeriodDialogOpen}
+                    onClose={() => setIsTimeEntryPeriodDialogOpen(false)}
+                    onConfirm={() => {
+                        setIsTimeEntryPeriodDialogOpen(false);
+                        router.push('/msp/billing?tab=time-periods');
+                    }}
+                    title="No Active Time Period"
+                    message="No active time period found. Time periods need to be set up in the billing dashboard before adding time entries."
+                    confirmLabel="Go to Time Periods Setup"
                     cancelLabel="Cancel"
                 />
 

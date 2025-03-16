@@ -6,6 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { IProject, ICompany, IStatus } from 'server/src/interfaces';
+import { toast } from 'react-hot-toast';
 import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -96,11 +97,23 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
         budgeted_hours: budgetedHours ? Number(budgetedHours) : null
       };
 
+      // Create the project
       const newProject = await createProject(projectData);
-      onProjectAdded(newProject);
+      
+      // Explicitly close the dialog first to improve user experience
       onClose();
+      
+      // Update the parent component's state through the callback
+      // This happens after dialog is closed
+      setTimeout(() => {
+        onProjectAdded(newProject);
+        // Show success toast
+        toast.success('Project created successfully');
+      }, 100);
     } catch (error) {
       console.error('Error creating project:', error);
+      // Show an error toast to the user
+      toast.error('Failed to create project. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

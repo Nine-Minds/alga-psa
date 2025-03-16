@@ -14,6 +14,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import CompaniesImportDialog from './CompaniesImportDialog';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
@@ -501,6 +502,49 @@ const Companies: React.FC = () => {
           />
         )}
       </div>
+
+      {/* Multi-delete confirmation dialog */}
+      <ConfirmationDialog
+        id="multi-delete-confirmation-dialog"
+        isOpen={isMultiDeleteDialogOpen}
+        onClose={() => setIsMultiDeleteDialogOpen(false)}
+        onConfirm={confirmMultiDelete}
+        title="Delete Selected Companies"
+        message={
+          multiDeleteError 
+            ? multiDeleteError 
+            : `Are you sure you want to delete ${selectedCompanies.length} selected companies? This action cannot be undone.`
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
+
+      {/* Single company delete confirmation dialog */}
+      <ConfirmationDialog
+        id="single-delete-confirmation-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setCompanyToDelete(null);
+          setDeleteError(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Company"
+        message={
+          deleteError 
+            ? deleteError 
+            : `Are you sure you want to delete ${companyToDelete?.company_name}? This action cannot be undone.`
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
+      
+      {/* CSV Import Dialog */}
+      <CompaniesImportDialog
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+        onImportComplete={handleImportComplete}
+      />
     </div>
   );
 };

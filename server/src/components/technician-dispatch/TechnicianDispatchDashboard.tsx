@@ -17,11 +17,19 @@ import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
 
-const TechnicianDispatchDashboard: React.FC = () => {
+interface TechnicianDispatchDashboardProps {
+  filterWorkItemId?: string;
+  filterWorkItemType?: WorkItemType;
+}
+
+const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = ({
+  filterWorkItemId,
+  filterWorkItemType
+}) => {
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [technicians, setTechnicians] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
-  const [workItems, setWorkItems] = useState<Omit<IWorkItem, "tenant">[]>([]);
+  const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,7 +88,7 @@ const TechnicianDispatchDashboard: React.FC = () => {
 
       const result = await searchWorkItems({
         searchTerm: query,
-        type: selectedType,
+        type: filterWorkItemType || selectedType,
         sortBy,
         sortOrder,
         page: currentPage,
@@ -88,7 +96,8 @@ const TechnicianDispatchDashboard: React.FC = () => {
         dateRange: {
           start,
           end
-        }
+        },
+        workItemId: filterWorkItemId // Add the filter parameter
       });
 
       setWorkItems(result.items);
@@ -348,6 +357,13 @@ const TechnicianDispatchDashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen">
+      {filterWorkItemId && (
+        <div className="p-2 mx-4 mt-2 rounded border bg-[rgb(var(--color-primary-50))] border-[rgb(var(--color-primary-200))]">
+          <p className="text-[rgb(var(--color-primary-800))] font-medium">
+            Showing filtered work items
+          </p>
+        </div>
+      )}
       <div className="flex flex-1 overflow-hidden">
         <div className="w-1/4 p-2 bg-[rgb(var(--color-border-50))] overflow-y-auto">
           <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Unassigned Work Items</h2>

@@ -120,6 +120,9 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
         <>
           <div className="flex flex-col">
             <span className="text-lg font-bold text-gray-900">{phase.wbs_code.split('.').pop()} {phase.phase_name}</span>
+            {phase.description && (
+              <span className="text-sm text-gray-600 mt-1">{phase.description}</span>
+            )}
             <div className="mt-1 text-xs text-gray-500 space-y-1">
               <div>
                 Start: {phase.start_date ? 

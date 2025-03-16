@@ -186,9 +186,13 @@ export async function deleteCompany(companyId: string): Promise<{
       counts['project'] = Number(projectCount.count);
     }
 
-    // Check for documents
-    const documentCount = await db('documents')
-      .where({ company_id: companyId, tenant })
+    // Check for documents using document_associations table
+    const documentCount = await db('document_associations')
+      .where({ 
+        entity_id: companyId, 
+        entity_type: 'company', 
+        tenant 
+      })
       .count('document_id as count')
       .first();
     console.log('Document count result:', documentCount);
@@ -278,27 +282,8 @@ export async function deleteCompany(companyId: string): Promise<{
       counts['bucket_usage'] = Number(bucketUsageCount.count);
     }
 
-    // Check for tax rates
-    const taxRateCount = await db('company_tax_rates')
-      .where({ company_id: companyId, tenant })
-      .count('* as count')
-      .first();
-    console.log('Tax rate count result:', taxRateCount);
-    if (taxRateCount && Number(taxRateCount.count) > 0) {
-      dependencies.push('tax_rate');
-      counts['tax_rate'] = Number(taxRateCount.count);
-    }
-
-    // Check for tax settings
-    const taxSettingCount = await db('company_tax_settings')
-      .where({ company_id: companyId, tenant })
-      .count('* as count')
-      .first();
-    console.log('Tax setting count result:', taxSettingCount);
-    if (taxSettingCount && Number(taxSettingCount.count) > 0) {
-      dependencies.push('tax_setting');
-      counts['tax_setting'] = Number(taxSettingCount.count);
-    }
+    // We're automatically deleting tax rates and settings when deleting the company,
+    // so we don't need to check them as dependencies
 
     // If there are dependencies, return error with details
     if (dependencies.length > 0) {
@@ -313,9 +298,7 @@ export async function deleteCompany(companyId: string): Promise<{
         'location': 'locations',
         'service_usage': 'service usage records',
         'bucket_usage': 'bucket usage records',
-        'billing_plan': 'billing plans',
-        'tax_rate': 'tax rates',
-        'tax_setting': 'tax settings'
+        'billing_plan': 'billing plans'
       };
 
       return {
@@ -336,6 +319,16 @@ export async function deleteCompany(companyId: string): Promise<{
           tagged_type: 'company',
           tenant
         })
+        .delete();
+
+      // Delete company tax settings
+      await trx('company_tax_settings')
+        .where({ company_id: companyId, tenant })
+        .delete();
+      
+      // Delete company tax rates
+      await trx('company_tax_rates')
+        .where({ company_id: companyId, tenant })
         .delete();
 
       // Delete the company

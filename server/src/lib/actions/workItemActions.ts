@@ -20,6 +20,7 @@ interface SearchOptions {
     end?: Date;
   };
   availableWorkItemIds?: string[];
+  workItemId?: string; // Add this new parameter to filter by specific work item ID
 }
 
 interface SearchResult {
@@ -249,6 +250,14 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
       
       // For ad-hoc entries, filter on scheduled_end
       adHocQuery = adHocQuery.where('se.scheduled_end', '<=', db.raw('?', [endDate]));
+    }
+
+    // Filter by specific work item ID if provided
+    if (options.workItemId) {
+      ticketsQuery = ticketsQuery.where('t.ticket_id', options.workItemId);
+      // Exclude other types when filtering by specific ticket ID
+      projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
+      adHocQuery = adHocQuery.whereRaw('1 = 0');
     }
 
     // Combine queries
