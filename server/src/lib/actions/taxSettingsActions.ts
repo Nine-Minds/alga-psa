@@ -26,7 +26,11 @@ export async function getCompanyTaxSettings(companyId: string): Promise<ICompany
     return taxSettings || null;
   } catch (error) {
     console.error('Error fetching company tax settings:', error);
-    throw new Error('Failed to fetch company tax settings');
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch company tax settings: ${error.message}`);
+    } else {
+      throw new Error('Failed to fetch company tax settings due to an unexpected error.');
+    }
   }
 }
 
@@ -88,10 +92,24 @@ export async function updateCompanyTaxSettings(
   
       return await getCompanyTaxSettings(companyId);
     } catch (error) {
-    await trx.rollback();
-    console.error('Error updating company tax settings:', error);
-    throw new Error('Failed to update company tax settings');
-  }
+      await trx.rollback();
+      console.error('Error updating company tax settings:', error);
+      
+      // Enhanced error messages with more specific information
+      if (error instanceof Error) {
+        if (error.message.includes('foreign key constraint')) {
+          throw new Error('Invalid tax rate or component reference. Please check your selections.');
+        } else if (error.message.includes('duplicate key')) {
+          throw new Error('Duplicate entry detected. Please check your tax components or thresholds.');
+        } else if (error.message.includes('not found')) {
+          throw new Error('One or more tax settings components could not be found.');
+        } else {
+          throw new Error(`Failed to update company tax settings: ${error.message}`);
+        }
+      } else {
+        throw new Error('Failed to update company tax settings due to an unexpected error.');
+      }
+    }
 }
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
@@ -104,7 +122,11 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
     return taxRates;
   } catch (error) {
     console.error('Error fetching tax rates:', error);
-    throw new Error('Failed to fetch tax rates');
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch tax rates: ${error.message}`);
+    } else {
+      throw new Error('Failed to fetch tax rates due to an unexpected error.');
+    }
   }
 }
 

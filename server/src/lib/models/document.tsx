@@ -12,8 +12,17 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('*')
-                .where({ tenant });
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
+                })
+                .where({ 'documents.tenant': tenant });
         } catch (error) {
             logger.error('Error getting all documents:', error);
             throw error;
@@ -29,10 +38,19 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('*')
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
+                })
                 .where({
-                    document_id,
-                    tenant
+                    'documents.document_id': document_id,
+                    'documents.tenant': tenant
                 })
                 .first();
         } catch (error) {
@@ -113,10 +131,19 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('documents.*')
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
                         .andOn('documents.tenant', '=', 'document_associations.tenant');
+                })
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
                 })
                 .where({
                     'documents.tenant': tenant,
@@ -138,10 +165,19 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('documents.*')
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
                         .andOn('documents.tenant', '=', 'document_associations.tenant');
+                })
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
                 })
                 .where({
                     'documents.tenant': tenant,
@@ -163,10 +199,19 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('documents.*')
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
                         .andOn('documents.tenant', '=', 'document_associations.tenant');
+                })
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
                 })
                 .where({
                     'documents.tenant': tenant,
@@ -188,10 +233,19 @@ const Document = {
             }
 
             return await db<IDocument>('documents')
-                .select('documents.*')
+                .select(
+                    'documents.*',
+                    'users.first_name',
+                    'users.last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                )
                 .join('document_associations', function() {
                     this.on('documents.document_id', '=', 'document_associations.document_id')
                         .andOn('documents.tenant', '=', 'document_associations.tenant');
+                })
+                .leftJoin('users', function() {
+                    this.on('documents.created_by', '=', 'users.user_id')
+                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
                 })
                 .where({
                     'documents.tenant': tenant,

@@ -24,7 +24,7 @@ export interface IDocument extends TenantEntity {
     file_size?: number;  // Size of the file in bytes
 
     // Additional fields (not in the database)
-    createdByFullName?: string;
+    created_by_full_name?: string;
     type_name?: string;  // Document type name from document_types or shared_document_types
     type_icon?: string;  // Document type icon from document_types or shared_document_types
 }

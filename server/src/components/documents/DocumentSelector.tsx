@@ -15,8 +15,8 @@ import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../t
 
 interface DocumentSelectorProps {
     id: string; // Made required since it's needed for reflection registration
-    entityId: string;
-    entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
+    entityId: string; // Required - the ID of the entity to associate documents with
+    entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset'; // Required - the type of entity
     onDocumentSelected?: (document: IDocument) => Promise<void>;
     onDocumentsSelected?: () => Promise<void>;
     singleSelect?: boolean;
@@ -46,12 +46,21 @@ export default function DocumentSelector({
         if (isOpen) {
             loadDocuments();
         }
-    }, [isOpen]);
+    }, [isOpen, entityId, entityType]);
 
     const loadDocuments = async () => {
         try {
             setIsLoading(true);
             setError(null);
+            
+            // Validate required props before using them
+            if (!entityId || !entityType) {
+                console.error('Missing required props: entityId or entityType is undefined');
+                setError('Configuration error: Missing entity information');
+                setIsLoading(false);
+                return;
+            }
+            
             const docs = await getAllDocuments({
                 searchTerm: searchTerm,
                 excludeEntityId: entityId,
@@ -101,6 +110,14 @@ export default function DocumentSelector({
             const selectedIds = Array.from(selectedDocuments);
             if (selectedIds.length === 0) return;
 
+            // Validate required props before using them
+            if (!entityId || !entityType) {
+                console.error('Missing required props: entityId or entityType is undefined');
+                setError('Configuration error: Missing entity information');
+                setIsSaving(false);
+                return;
+            }
+
             if (singleSelect && onDocumentSelected) {
                 const selectedDoc = documents.find(d => d.document_id === selectedIds[0]);
                 if (selectedDoc) {
@@ -124,6 +141,23 @@ export default function DocumentSelector({
             setIsSaving(false);
         }
     };
+
+    // Early validation of required props
+    if (!id || !entityId || !entityType) {
+        console.error('DocumentSelector: Missing required props', { id, entityId, entityType });
+        return (
+            <Dialog isOpen={isOpen} onClose={onClose} data-testid="document-selector-dialog">
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Configuration Error</DialogTitle>
+                    </DialogHeader>
+                    <div className="p-4 text-red-500">
+                        Missing required configuration. Please contact support.
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog isOpen={isOpen} onClose={onClose}>

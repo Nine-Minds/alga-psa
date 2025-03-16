@@ -261,6 +261,7 @@ const Documents = ({
                 id={`${id}-link-documents-btn`}
                 onClick={() => setShowSelector(true)}
                 className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                data-testid="link-documents-button"
               >
                 <Link className="w-4 h-4 mr-2" />
                 Link Documents
@@ -285,7 +286,7 @@ const Documents = ({
           </div>
         )}
 
-        {entityId && entityType && (
+        {showSelector && entityId && entityType ? (
           <DocumentSelector
             id={`${id}-selector`}
             entityId={entityId}
@@ -297,7 +298,7 @@ const Documents = ({
             isOpen={showSelector}
             onClose={() => setShowSelector(false)}
           />
-        )}
+        ) : null}
 
         {error && (
           <div className="text-center py-4 text-red-500 bg-red-50 rounded-md">
@@ -343,7 +344,7 @@ const Documents = ({
 
         {isDrawerOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
-            <div className="fixed inset-y-0 right-0 w-[800px] bg-white shadow-xl flex flex-col">
+            <div className="fixed inset-y-0 right-0 w-[1000px] max-w-[90vw] bg-white shadow-xl flex flex-col">
               <div className="flex justify-between items-center p-4 border-b">
                 <h2 className="text-lg font-semibold">
                   {isCreatingNew ? 'New Document' : 'Edit Document'}

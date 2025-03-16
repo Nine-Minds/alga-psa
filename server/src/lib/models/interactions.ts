@@ -29,8 +29,7 @@ class InteractionModel {
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
         .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id')
-            .andOn('interactions.tenant', '=', 'sit.tenant');
+          this.on('interactions.type_id', '=', 'sit.type_id');
         })
         .leftJoin('contacts', function() {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
@@ -234,8 +233,7 @@ class InteractionModel {
             .andOn('interactions.tenant', '=', 'it.tenant');
         })
         .leftJoin('system_interaction_types as sit', function() {
-          this.on('interactions.type_id', '=', 'sit.type_id')
-            .andOn('interactions.tenant', '=', 'sit.tenant');
+          this.on('interactions.type_id', '=', 'sit.type_id');
         })
         .leftJoin('contacts', function() {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')

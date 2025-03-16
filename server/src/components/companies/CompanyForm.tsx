@@ -26,7 +26,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSubmit }) => {
     properties: {
       industry: '',
       company_size: '',
-      annual_revenue: ''
+      annual_revenue: '',
+      website: ''
     },
     credit_balance: 0
   });
@@ -44,6 +45,18 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSubmit }) => {
         properties: {
           ...prev.properties,
           [propertyField]: value
+        },
+        // Sync url with properties.website when website is updated
+        ...(propertyField === 'website' ? { url: value as string } : {})
+      }));
+    } else if (field === 'url') {
+      // Sync properties.website with url when url is updated
+      setFormData(prev => ({
+        ...prev,
+        url: value as string,
+        properties: {
+          ...prev.properties,
+          website: value as string
         }
       }));
     } else {
@@ -100,12 +113,16 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ onSubmit }) => {
           </div>
 
           <div>
-            <Label htmlFor="url">URL</Label>
+            <Label htmlFor="url">Website URL</Label>
             <Input
               id="url"
               value={formData.url}
               onChange={(e) => handleChange('url', e.target.value)}
+              placeholder="https://example.com"
             />
+            <p className="text-xs text-gray-500 mt-1">
+              This will be used for both the company URL and website property
+            </p>
           </div>
 
           <div>

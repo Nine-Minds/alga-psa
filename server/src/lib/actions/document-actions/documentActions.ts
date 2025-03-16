@@ -115,17 +115,65 @@ export async function deleteDocument(documentId: string, userId: string) {
 // Get single document
 export async function getDocument(documentId: string) {
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    const document = await Document.get(documentId);
+    // Use direct query to join with users table
+    const document = await knex('documents')
+      .select(
+        'documents.*',
+        'users.first_name',
+        'users.last_name',
+        knex.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+        knex.raw(`
+          COALESCE(dt.type_name, sdt.type_name) as type_name,
+          COALESCE(dt.icon, sdt.icon) as type_icon
+        `)
+      )
+      .leftJoin('users', function() {
+        this.on('documents.created_by', '=', 'users.user_id')
+            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+      })
+      .leftJoin('document_types as dt', function() {
+        this.on('documents.type_id', '=', 'dt.type_id')
+            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+      })
+      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+      .where({
+        'documents.document_id': documentId,
+        'documents.tenant': tenant
+      })
+      .first();
+
     if (!document) {
       return null;
     }
 
-    return document;
+    // Process the document to match IDocument interface
+    const processedDoc: IDocument = {
+      document_id: document.document_id,
+      document_name: document.document_name,
+      type_id: document.type_id,
+      shared_type_id: document.shared_type_id,
+      user_id: document.user_id,
+      order_number: document.order_number || 0,
+      created_by: document.created_by,
+      tenant: document.tenant,
+      file_id: document.file_id,
+      storage_path: document.storage_path,
+      mime_type: document.mime_type,
+      file_size: document.file_size,
+      created_by_full_name: document.created_by_full_name,
+      type_name: document.type_name,
+      type_icon: document.type_icon,
+      entered_at: document.entered_at,
+      updated_at: document.updated_at,
+      edited_by: document.edited_by
+    };
+
+    return processedDoc;
   } catch (error) {
     console.error(error);
     throw new Error("Failed to get the document");
@@ -454,7 +502,7 @@ export async function getDocumentsByEntity(entity_id: string, entity_type: strin
         storage_path: doc.storage_path,
         mime_type: doc.mime_type,
         file_size: doc.file_size,
-        createdByFullName: doc.created_by_full_name,
+        created_by_full_name: doc.created_by_full_name,
         type_name: doc.type_name,
         type_icon: doc.type_icon,
         entered_at: doc.entered_at,
@@ -565,7 +613,7 @@ export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocum
         storage_path: doc.storage_path,
         mime_type: doc.mime_type,
         file_size: doc.file_size,
-        createdByFullName: doc.created_by_full_name,
+        created_by_full_name: doc.created_by_full_name,
         type_name: doc.type_name,
         type_icon: doc.type_icon,
         entered_at: doc.entered_at,

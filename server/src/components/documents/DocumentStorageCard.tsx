@@ -140,7 +140,17 @@ export default function DocumentStorageCard({
                                 </h3>
                             </div>
                             <p className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">
-                                {document.createdByFullName || document.created_by}
+                                {document.created_by_full_name || (document.created_by ? `User ${document.created_by.substring(0, 8)}...` : "Unknown User")}
+                                {document.entered_at && (
+                                    <span className="ml-1">
+                                        • {new Date(document.entered_at).toLocaleDateString()}
+                                    </span>
+                                )}
+                                {!document.entered_at && document.updated_at && (
+                                    <span className="ml-1">
+                                        • {new Date(document.updated_at).toLocaleDateString()}
+                                    </span>
+                                )}
                             </p>
                             {document.type_name && (
                                 <p className="mt-1 text-xs text-[rgb(var(--color-text-500))] truncate">

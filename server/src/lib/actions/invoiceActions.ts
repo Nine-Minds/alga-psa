@@ -1020,11 +1020,7 @@ export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceT
 }
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-  const { knex, tenant } = await createTenantKnex();
-  const templates = await knex('invoice_templates')
-    .where({ tenant })
-    .select('*')
-    .orderBy('created_at', 'desc');
+  const templates = await Invoice.getAllTemplates();
   
   return templates.map(template => ({
     ...template,

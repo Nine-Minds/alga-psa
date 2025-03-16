@@ -31,11 +31,49 @@ export async function updateCompany(companyId: string, updateData: Partial<IComp
         updated_at: new Date().toISOString()
       };
 
-      // Handle each field explicitly
-      Object.entries(updateData).forEach(([key, value]) => {
-        if (key === 'properties' && value) {
-          updateObject.properties = trx.raw('properties || ?::jsonb', JSON.stringify(value));
+      // First, get the current company data to properly merge properties
+      const currentCompany = await trx<ICompany>('companies')
+        .where({ company_id: companyId, tenant })
+        .first();
+      
+      if (!currentCompany) {
+        throw new Error('Company not found');
+      }
+
+      // Handle properties separately to ensure proper merging
+      if (updateData.properties) {
+        const currentProperties = currentCompany.properties || {};
+        const newProperties = updateData.properties;
+        
+        updateObject.properties = { ...currentProperties, ...newProperties };
+        
+        // Sync website field with url if website is being updated
+        if ('website' in newProperties) {
+          updateObject.url = newProperties.website || '';
+        }
+      }
+      
+      // Handle url field to sync with properties.website
+      if (updateData.url !== undefined) {
+        updateObject.url = updateData.url;
+        
+        // Update properties.website to match url
+        if (!updateObject.properties) {
+          updateObject.properties = {
+            ...(currentCompany.properties || {}),
+            website: updateData.url
+          };
         } else {
+          updateObject.properties = {
+            ...updateObject.properties,
+            website: updateData.url
+          };
+        }
+      }
+      
+      // Handle all other fields
+      Object.entries(updateData).forEach(([key, value]) => {
+        if (key !== 'properties' && key !== 'url') {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }
@@ -80,9 +118,25 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     throw new Error('Tenant not found');
   }
 
+  // Ensure website field is synchronized between properties.website and url
+  const companyData = { ...company };
+  
+  // If properties.website exists but url doesn't, sync url from properties.website
+  if (companyData.properties?.website && !companyData.url) {
+    companyData.url = companyData.properties.website;
+  }
+  
+  // If url exists but properties.website doesn't, sync properties.website from url
+  if (companyData.url && (!companyData.properties || !companyData.properties.website)) {
+    if (!companyData.properties) {
+      companyData.properties = {};
+    }
+    companyData.properties.website = companyData.url;
+  }
+
   const [createdCompany] = await knex<ICompany>('companies')
     .insert({
-      ...company,
+      ...companyData,
       tenant,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -457,7 +511,19 @@ export async function importCompaniesFromCSV(
             originalData: companyData
           });
         } else {
-          // Create new company
+          // Create new company with synchronized website fields
+          const properties = companyData.properties ? { ...companyData.properties } : {};
+          const url = companyData.url || '';
+          
+          // Sync website and url fields
+          if (properties.website && !url) {
+            // If only properties.website exists, use it for url
+            companyData.url = properties.website;
+          } else if (url && !properties.website) {
+            // If only url exists, use it for properties.website
+            properties.website = url;
+          }
+          
           const companyToCreate = {
             company_name: companyData.company_name,
             phone_no: companyData.phone_no || '',
@@ -468,7 +534,7 @@ export async function importCompaniesFromCSV(
             is_tax_exempt: companyData.is_tax_exempt || false,
             client_type: companyData.client_type || 'company',
             tenant: tenant,
-            properties: companyData.properties || {},
+            properties: properties,
             payment_terms: companyData.payment_terms || '',
             billing_cycle: companyData.billing_cycle || '',
             credit_limit: companyData.credit_limit || 0,
@@ -478,7 +544,7 @@ export async function importCompaniesFromCSV(
             tax_region: companyData.tax_region || '',
             tax_id_number: companyData.tax_id_number || '',
             tax_exemption_certificate: companyData.tax_exemption_certificate || '',
-            notes: companyData.notes || '', // Added notes field
+            notes: companyData.notes || '',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };

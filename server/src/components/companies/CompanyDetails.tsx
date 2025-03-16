@@ -30,6 +30,8 @@ import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
+import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface ICompany {
   company_id: string;
@@ -136,6 +138,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
+  const [noteDocument, setNoteDocument] = useState<IDocument | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -154,6 +157,34 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     fetchUser();
   }, []);
 
+  // Load note content and document metadata when component mounts
+  useEffect(() => {
+    const loadNoteContent = async () => {
+      if (company.notes_document_id) {
+        try {
+          // Get the document metadata
+          const document = await getDocument(company.notes_document_id);
+          setNoteDocument(document);
+          
+          // Get the note content
+          const content = await getBlockContent(company.notes_document_id);
+          if (content && content.block_data) {
+            // Parse the block data from JSON string
+            const blockData = typeof content.block_data === 'string'
+              ? JSON.parse(content.block_data)
+              : content.block_data;
+            
+            setCurrentContent(blockData);
+          }
+        } catch (error) {
+          console.error('Error loading note content:', error);
+        }
+      }
+    };
+
+    loadNoteContent();
+  }, [company.notes_document_id]);
+
   const handleBack = () => {
     if (isInDrawer) {
       drawer.goBack();
@@ -164,24 +195,43 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
   const handleFieldChange = (field: string, value: string | boolean) => {
     setEditedCompany(prevCompany => {
-      let updatedCompany;
+      // Create a deep copy of the previous company
+      const updatedCompany = JSON.parse(JSON.stringify(prevCompany)) as ICompany;
+      
       if (field.startsWith('properties.')) {
-        const propertyField = field.split('.')[1] as keyof ICompany['properties'];
-        updatedCompany = {
-          ...prevCompany,
-          properties: {
-            ...prevCompany.properties,
-            [propertyField]: value
-          }
-        };
+        const propertyField = field.split('.')[1];
+        
+        // Ensure properties object exists
+        if (!updatedCompany.properties) {
+          updatedCompany.properties = {};
+        }
+        
+        // Update the specific property using type assertion
+        (updatedCompany.properties as any)[propertyField] = value;
+        
+        // Sync url with properties.website when website is updated
+        if (propertyField === 'website' && typeof value === 'string') {
+          updatedCompany.url = value;
+        }
+      } else if (field === 'url') {
+        // Update the URL field
+        updatedCompany.url = value as string;
+        
+        // Sync properties.website with url
+        if (!updatedCompany.properties) {
+          updatedCompany.properties = {};
+        }
+        
+        // Use type assertion to set the website property
+        (updatedCompany.properties as any).website = value as string;
       } else {
-        updatedCompany = {
-          ...prevCompany,
-          [field]: value
-        };
+        // For all other fields, use type assertion to update directly
+        (updatedCompany as any)[field] = value;
       }
+      
       return updatedCompany;
     });
+    
     setHasUnsavedChanges(true);
   };
 
@@ -226,6 +276,50 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const handleContentChange = (blocks: PartialBlock[]) => {
     setCurrentContent(blocks);
     setHasUnsavedNoteChanges(true);
+  };
+
+  const handleSaveNote = async () => {
+    try {
+      if (!currentUser) {
+        console.error('Cannot save note: No current user');
+        return;
+      }
+
+      // Convert blocks to JSON string
+      const blockData = JSON.stringify(currentContent);
+      
+      if (company.notes_document_id) {
+        // Update existing note document
+        await updateBlockContent(company.notes_document_id, {
+          block_data: blockData,
+          user_id: currentUser.user_id
+        });
+      } else {
+        // Create new note document
+        const { document_id } = await createBlockDocument({
+          document_name: `${company.company_name} Notes`,
+          user_id: currentUser.user_id,
+          block_data: blockData,
+          entityId: company.company_id,
+          entityType: 'company'
+        });
+        
+        // Update company with the new notes_document_id
+        await updateCompany(company.company_id, {
+          notes_document_id: document_id
+        });
+        
+        // Update local state
+        setEditedCompany(prev => ({
+          ...prev,
+          notes_document_id: document_id
+        }));
+      }
+      
+      setHasUnsavedNoteChanges(false);
+    } catch (error) {
+      console.error('Error saving note:', error);
+    }
   };
 
   const handleTabChange = async (tabValue: string) => {
@@ -419,6 +513,27 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Notes",
       content: (
         <div className="space-y-4">
+          {/* Note metadata */}
+          {noteDocument && (
+            <div className="bg-gray-50 p-4 rounded-md border border-gray-200 text-sm text-gray-600">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="font-medium">Created by:</span> {noteDocument.created_by_full_name || "Unknown"}
+                  {noteDocument.entered_at && (
+                    <span className="ml-2">
+                      on {new Date(noteDocument.entered_at).toLocaleDateString()} at {new Date(noteDocument.entered_at).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+                {noteDocument.updated_at && noteDocument.updated_at !== noteDocument.entered_at && (
+                  <div>
+                    <span className="font-medium">Last updated:</span> {new Date(noteDocument.updated_at).toLocaleDateString()} at {new Date(noteDocument.updated_at).toLocaleTimeString()}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           <TextEditor
             id={`${id}-editor`}
             initialContent={currentContent}
@@ -427,7 +542,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           <div className="flex justify-end space-x-2">
             <Button
               id={`${id}-save-note-btn`}
-              onClick={handleSave}
+              onClick={handleSaveNote}
               disabled={!hasUnsavedNoteChanges}
               className={`text-white transition-colors ${
                 hasUnsavedNoteChanges
