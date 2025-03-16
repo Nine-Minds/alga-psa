@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { formatDistanceToNow } from 'date-fns';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import {
     ITicket,
@@ -42,16 +44,19 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
 import { PartialBlock, StyledText } from '@blocknote/core';
 import { useTicketTimeTracking } from '../../hooks/useTicketTimeTracking';
+import { IntervalTrackingService } from '../../services/IntervalTrackingService';
 import { IntervalManagement } from '../time-management/interval-tracking/IntervalManagement';
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
     initialTicket: ITicket & { tenant: string | undefined };
+    onClose?: () => void; // Callback when user wants to close the ticket screen
 }
 
-const TicketDetails: React.FC<TicketDetailsProps> = ({ 
+const TicketDetails: React.FC<TicketDetailsProps> = ({
     id = 'ticket-details',
-    initialTicket 
+    initialTicket,
+    onClose
 }) => {
     const { data: session } = useSession();
     const userId = session?.user?.id;
@@ -112,6 +117,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
 
     const { openDrawer, closeDrawer } = useDrawer();
+    const router = useRouter();
+    // Create a single instance of the service
+    const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
     // Timer logic
     const tick = useCallback(() => {
@@ -130,20 +138,77 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, [isRunning, tick]);
     
+    
     // Add automatic interval tracking using the custom hook
-    useTicketTimeTracking(
+    const { currentIntervalId } = useTicketTimeTracking(
         initialTicket.ticket_id || '',
         initialTicket.ticket_number || '',
         initialTicket.title || '',
         userId || ''
     );
-
+    
+    // Function to close the current interval before navigation
+    // Enhanced function to close the interval - will find and close any open interval for this ticket
+    const closeCurrentInterval = useCallback(async () => {
+        try {
+            // If we have a currentIntervalId, use it
+            if (currentIntervalId) {
+                console.debug('Closing known interval before navigation:', currentIntervalId);
+                await intervalService.endInterval(currentIntervalId);
+                return;
+            }
+            
+            // If currentIntervalId is null, try to find any open interval for this ticket
+            console.debug('No currentIntervalId available, checking for open intervals');
+            if (userId && initialTicket.ticket_id) {
+                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id, userId);
+                if (openInterval) {
+                    console.debug('Found open interval to close:', openInterval.id);
+                    await intervalService.endInterval(openInterval.id);
+                } else {
+                    console.debug('No open intervals found for this ticket');
+                }
+            }
+        } catch (error: any) {
+            console.error('Error closing interval:', error);
+        }
+    }, [currentIntervalId, intervalService, userId, initialTicket.ticket_id]);
+    
+    // Fixed navigation function - wait for interval to close before navigating
+    const handleBackToTickets = useCallback(async () => {
+        try {
+            // Wait for the interval to close
+            await closeCurrentInterval();
+            
+            // Navigate after interval is closed
+            if (onClose) {
+                onClose();
+            } else {
+                router.back();
+            }
+        } catch (error) {
+            console.error('Error closing interval before navigation:', error);
+            // Navigate anyway to prevent user from being stuck
+            if (onClose) {
+                onClose();
+            } else {
+                router.back();
+            }
+        }
+    }, [closeCurrentInterval, onClose, router]);
+    
+    // Core ticket data fetch - only depends on initialTicket.ticket_id
     useEffect(() => {
-        const fetchData = async () => {
+        let isMounted = true;
+        
+        const fetchCoreData = async () => {
             const ticketId = initialTicket.ticket_id;
+            if (!ticketId) return;
 
             try {
                 const currentUser = await getCurrentUser();
+                if (!isMounted) return;
+                
                 if (!currentUser) {
                     toast.error('No user session found');
                     return;
@@ -153,54 +218,35 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     comments,
                     docs,
                     companiesData,
-                    channel,
                     resources,
                     users,
                     statuses,
                     channels,
                     priorities
                 ] = await Promise.all([
-                    findCommentsByTicketId(ticketId || ''),
-                    getDocumentByTicketId(ticketId || ''),
+                    findCommentsByTicketId(ticketId),
+                    getDocumentByTicketId(ticketId),
                     getAllCompanies(),
-                    findChannelById(ticket.channel_id),
-                    getTicketResources(ticketId!, currentUser),
+                    getTicketResources(ticketId, currentUser),
                     getAllUsers(),
                     getTicketStatuses(),
                     getAllChannels(),
                     getAllPriorities()
                 ]);
 
+                if (!isMounted) return;
+
                 setConversations(comments);
                 setDocuments(docs);
                 setCompanies(companiesData);
-                setChannel(channel);
                 setAdditionalAgents(resources);
                 setAvailableAgents(users);
 
-                if (ticket.company_id) {
-                    const [companyData, contactsData] = await Promise.all([
-                        getCompanyById(ticket.company_id),
-                        getContactsByCompany(ticket.company_id)
-                    ]);
-                    setCompany(companyData);
-                    setContacts(contactsData || []);
-                }
-
-                if (ticket.contact_name_id) {
-                    const contactData = await getContactByContactNameId(ticket.contact_name_id);
-                    setContactInfo(contactData);
-                }
-
-                if (ticket.entered_by) {
-                    const userData = await findUserById(ticket.entered_by);
-                    setCreatedByUser(userData);
-                }
-
+                // Process user data once
                 const userMapData = users.reduce((acc, user) => {
-                    acc[user.user_id] = { 
-                        user_id: user.user_id, 
-                        first_name: user.first_name || '', 
+                    acc[user.user_id] = {
+                        user_id: user.user_id,
+                        first_name: user.first_name || '',
                         last_name: user.last_name || '',
                         email: user.email,
                         user_type: user.user_type
@@ -209,35 +255,162 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>);
                 setUserMap(userMapData);
 
-                setStatusOptions(statuses.map((status): { value: string; label: string } => ({ 
-                    value: status.status_id!, 
-                    label: status.name ?? "" 
+                // Set up options that don't depend on ticket state
+                setStatusOptions(statuses.map((status): { value: string; label: string } => ({
+                    value: status.status_id!,
+                    label: status.name ?? ""
                 })));
 
-                setAgentOptions(users.map((agent): { value: string; label: string } => ({ 
-                    value: agent.user_id, 
-                    label: `${agent.first_name} ${agent.last_name}` 
+                setAgentOptions(users.map((agent): { value: string; label: string } => ({
+                    value: agent.user_id,
+                    label: `${agent.first_name} ${agent.last_name}`
                 })));
 
                 setChannelOptions(channels.filter(channel => channel.channel_id !== undefined)
-                    .map((channel): { value: string; label: string } => ({ 
-                        value: channel.channel_id!, 
-                        label: channel.channel_name ?? "" 
+                    .map((channel): { value: string; label: string } => ({
+                        value: channel.channel_id!,
+                        label: channel.channel_name ?? ""
                     })));
 
-                setPriorityOptions(priorities.map((priority): { value: string; label: string } => ({ 
-                    value: priority.priority_id, 
-                    label: priority.priority_name 
+                setPriorityOptions(priorities.map((priority): { value: string; label: string } => ({
+                    value: priority.priority_id,
+                    label: priority.priority_name
                 })));
 
             } catch (error) {
-                console.error('Error fetching ticket data:', error);
+                if (!isMounted) return;
+                console.error('Error fetching core ticket data:', error);
                 toast.error('Failed to load ticket data');
             }
         };
 
-        fetchData();
-    }, [initialTicket.ticket_id, ticket.company_id, ticket.contact_name_id, ticket.channel_id, ticket.entered_by]);
+        fetchCoreData();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [initialTicket.ticket_id]);
+
+    // Channel-specific data fetch
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchChannelData = async () => {
+            if (!ticket.channel_id) return;
+            
+            try {
+                const channelData = await findChannelById(ticket.channel_id);
+                if (!isMounted) return;
+                
+                setChannel(channelData);
+            } catch (error) {
+                if (!isMounted) return;
+                console.error('Error fetching channel data:', error);
+            }
+        };
+        
+        fetchChannelData();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [ticket.channel_id]);
+
+    // Company-specific data fetch
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchCompanyData = async () => {
+            if (!ticket.company_id) {
+                if (isMounted) {
+                    setCompany(null);
+                    setContacts([]);
+                }
+                return;
+            }
+            
+            try {
+                const [companyData, contactsData] = await Promise.all([
+                    getCompanyById(ticket.company_id),
+                    getContactsByCompany(ticket.company_id)
+                ]);
+                
+                if (!isMounted) return;
+                
+                setCompany(companyData);
+                setContacts(contactsData || []);
+            } catch (error) {
+                if (!isMounted) return;
+                console.error('Error fetching company data:', error);
+            }
+        };
+        
+        fetchCompanyData();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [ticket.company_id]);
+
+    // Contact-specific data fetch
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchContactData = async () => {
+            if (!ticket.contact_name_id) {
+                if (isMounted) {
+                    setContactInfo(null);
+                }
+                return;
+            }
+            
+            try {
+                const contactData = await getContactByContactNameId(ticket.contact_name_id);
+                if (!isMounted) return;
+                
+                setContactInfo(contactData);
+            } catch (error) {
+                if (!isMounted) return;
+                console.error('Error fetching contact data:', error);
+            }
+        };
+        
+        fetchContactData();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [ticket.contact_name_id]);
+
+    // Created-by user data fetch
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchCreatedByData = async () => {
+            if (!ticket.entered_by) {
+                if (isMounted) {
+                    setCreatedByUser(null);
+                }
+                return;
+            }
+            
+            try {
+                const userData = await findUserById(ticket.entered_by);
+                if (!isMounted) return;
+                
+                setCreatedByUser(userData);
+            } catch (error) {
+                if (!isMounted) return;
+                console.error('Error fetching user data:', error);
+            }
+        };
+        
+        fetchCreatedByData();
+        
+        return () => {
+            isMounted = false;
+        };
+    }, [ticket.entered_by]);
 
     const handleCompanyClick = async () => {
         if (ticket.company_id) {
@@ -319,15 +492,23 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+        // Store the previous value before updating
+        const previousValue = ticket[field];
+        
+        // Optimistically update the UI
         setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
 
         try {
             const user = await getCurrentUser();
             if (!user) {
                 console.error('Failed to get user');
+                // Revert to previous value if we can't get the user
+                setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
                 return;
             }
+            
             const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
+            
             if (result === 'success') {
                 console.log(`${field} changed to: ${newValue}`);
                 
@@ -344,11 +525,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
             } else {
                 console.error(`Failed to update ticket ${field}`);
-                setTicket(prevTicket => ({ ...prevTicket, [field]: ticket[field] }));
+                // Revert to previous value on failure
+                setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
-            setTicket(prevTicket => ({ ...prevTicket, [field]: ticket[field] }));
+            // Revert to previous value on error
+            setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
         }
     };
 
@@ -454,11 +637,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             toast.error("Failed to save comment changes");
         }
     };
+const handleClose = () => {
+    setIsEditing(false);
+    setCurrentComment(null);
+};
 
-    const handleClose = () => {
-        setIsEditing(false);
-        setCurrentComment(null);
-    };
+
 
     // This function is no longer used directly - we use handleDeleteRequest instead
     // Keeping it for backward compatibility with other components that might use it
@@ -727,6 +911,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
+                <div className="flex items-center space-x-5 mb-4">
+                    <button
+                        id="back-to-tickets-button"
+                        type="button"
+                        className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+                        onClick={handleBackToTickets}
+                    >
+                        Back to Tickets
+                    </button>
+                    <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
+                    <h1 className="text-xl font-bold">{ticket.title}</h1>
+                </div>
+
+                <div className="flex items-center space-x-5 mb-5">
+                    {ticket.entered_at && (
+                        <p>Created {formatDistanceToNow(new Date(ticket.entered_at))} ago</p>
+                    )}
+                    {ticket.updated_at && (
+                        <p>Updated {formatDistanceToNow(new Date(ticket.updated_at))} ago</p>
+                    )}
+                </div>
                 {/* Confirmation Dialog for Comment Deletion */}
                 <ConfirmationDialog
                     id={`${id}-delete-comment-dialog`}

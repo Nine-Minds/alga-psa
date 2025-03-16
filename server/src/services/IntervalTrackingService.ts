@@ -78,6 +78,7 @@ export class IntervalTrackingService {
     // If there's an open interval, use it instead of creating a new one
     if (existingInterval) {
       console.debug('Using existing open interval instead of creating a new one:', existingInterval.id);
+      db.close(); // Make sure to close the database connection
       return existingInterval.id;
     }
     
@@ -126,6 +127,15 @@ export class IntervalTrackingService {
       userId
     };
     
+    // Double-check for an existing open interval right before creating a new one
+    // This helps prevent race conditions where multiple calls might create duplicate intervals
+    const doubleCheckInterval = await this.getOpenInterval(ticketId, userId);
+    if (doubleCheckInterval) {
+      console.debug('Found existing interval during double-check, using it instead:', doubleCheckInterval.id);
+      db.close(); // Make sure to close the database connection
+      return doubleCheckInterval.id;
+    }
+    
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['intervals'], 'readwrite');
       const objectStore = transaction.objectStore('intervals');
@@ -133,6 +143,7 @@ export class IntervalTrackingService {
       const request = objectStore.add(interval);
       
       request.onsuccess = () => {
+        console.debug('Successfully created new interval:', intervalId);
         db.close();
         resolve(intervalId);
       };

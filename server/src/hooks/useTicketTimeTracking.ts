@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { IntervalTrackingService } from '../services/IntervalTrackingService';
 
 /**
@@ -15,31 +15,48 @@ export function useTicketTimeTracking(
   const [isTracking, setIsTracking] = useState<boolean>(false);
   const intervalService = useMemo(() => new IntervalTrackingService(), []);
   
+  // Ref to track if a startTracking operation is in progress to prevent race conditions
+  const isStartingTrackingRef = useRef(false);
+  
   // Start tracking when component mounts
   useEffect(() => {
     let mounted = true;
     let intervalIdRef = currentIntervalId;
     
     const startTracking = async () => {
+      // If already starting tracking, skip this call to prevent race conditions
+      if (isStartingTrackingRef.current) {
+        console.debug('Skipping startTracking call - operation already in progress');
+        return;
+      }
+      
+      // Set flag to indicate tracking is starting
+      isStartingTrackingRef.current = true;
+      
       try {
         // Only track if we have valid ticket info
         if (!ticketId || !ticketNumber || !userId) {
           console.debug('Not starting tracking due to missing ticket info');
+          isStartingTrackingRef.current = false;
           return;
         }
+        
+        console.debug('Checking for existing open interval for ticket:', ticketId);
         
         // Check if there's an existing open interval for this ticket
         const existingInterval = await intervalService.getOpenInterval(ticketId, userId);
         
         if (existingInterval) {
           // If there's an existing open interval, use it for the current session
-          console.debug('Found existing open interval for this ticket, using it for current session');
+          console.debug('Found existing open interval for this ticket, using it for current session:', existingInterval.id);
           if (mounted) {
             setCurrentIntervalId(existingInterval.id);
             intervalIdRef = existingInterval.id;
             setIsTracking(true);
           }
         } else {
+          console.debug('No existing open interval found, creating a new one');
+          
           // Check if there are any previous intervals for this ticket today
           const ticketIntervals = await intervalService.getIntervalsByTicket(ticketId);
           const today = new Date();
@@ -51,22 +68,39 @@ export function useTicketTimeTracking(
             return intervalDate.getTime() === today.getTime();
           }).sort((a, b) => new Date(b.endTime || '').getTime() - new Date(a.endTime || '').getTime());
           
-          // Start a new interval
-          const intervalId = await intervalService.startInterval(
-            ticketId,
-            ticketNumber,
-            ticketTitle,
-            userId
-          );
+          // Double-check for an open interval again before creating a new one
+          // This helps prevent race conditions where another call might have created an interval
+          const doubleCheckInterval = await intervalService.getOpenInterval(ticketId, userId);
           
-          if (mounted) {
-            setCurrentIntervalId(intervalId);
-            intervalIdRef = intervalId;
-            setIsTracking(true);
+          if (doubleCheckInterval) {
+            console.debug('Found open interval on double-check, using it:', doubleCheckInterval.id);
+            if (mounted) {
+              setCurrentIntervalId(doubleCheckInterval.id);
+              intervalIdRef = doubleCheckInterval.id;
+              setIsTracking(true);
+            }
+          } else {
+            // Start a new interval
+            console.debug('Creating new interval for ticket:', ticketId);
+            const intervalId = await intervalService.startInterval(
+              ticketId,
+              ticketNumber,
+              ticketTitle,
+              userId
+            );
+            
+            if (mounted) {
+              setCurrentIntervalId(intervalId);
+              intervalIdRef = intervalId;
+              setIsTracking(true);
+            }
           }
         }
       } catch (error) {
         console.error('Error starting interval tracking:', error);
+      } finally {
+        // Reset flag when done
+        isStartingTrackingRef.current = false;
       }
     };
     
@@ -75,44 +109,12 @@ export function useTicketTimeTracking(
     // End tracking when component unmounts
     return () => {
       mounted = false;
-      
-      // Use the ref to ensure we have the latest interval ID
-      if (intervalIdRef) {
-        console.debug('Ending interval on component unmount:', intervalIdRef);
-        // End the current interval
-        intervalService.endInterval(intervalIdRef).catch(error => {
-          console.error('Error ending interval:', error);
-        });
-        
-        // Check if we should create a new interval starting from the end time of this one
-        // This will be handled in the next ticket view
-        const checkForContinuousTracking = async () => {
-          try {
-            const ticketIntervals = await intervalService.getIntervalsByTicket(ticketId);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            // Find the most recent interval for this ticket today
-            const todaysIntervals = ticketIntervals.filter(interval => {
-              const intervalDate = new Date(interval.startTime);
-              intervalDate.setHours(0, 0, 0, 0);
-              return intervalDate.getTime() === today.getTime();
-            }).sort((a, b) => new Date(b.endTime || '').getTime() - new Date(a.endTime || '').getTime());
-            
-            // Store the end time of the current interval in localStorage
-            // This will be used when the ticket is opened again
-            if (todaysIntervals.length > 0 && todaysIntervals[0].endTime) {
-              localStorage.setItem(`lastTicketEndTime_${ticketId}`, todaysIntervals[0].endTime);
-            }
-          } catch (error) {
-            console.error('Error checking for continuous tracking:', error);
-          }
-        };
-        
-        checkForContinuousTracking();
-      }
+      // We no longer close intervals on component unmount to avoid timing issues
+      // Interval closing is now handled by navigation controls before route changes
     };
   }, [ticketId, ticketNumber, ticketTitle, userId, intervalService]);
+  // Note: We don't need to include isStartingTrackingRef in the dependency array
+  // since it's a ref and we're accessing its .current property
 
   // Add event listeners for page visibility changes and beforeunload
   useEffect(() => {
