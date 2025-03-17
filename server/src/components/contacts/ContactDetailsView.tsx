@@ -280,6 +280,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               entityId={contact.contact_name_id}
               entityType="contact"
               onDocumentCreated={onDocumentCreated}
+              isInDrawer={isInDrawer}
             />
           </div>
         )}

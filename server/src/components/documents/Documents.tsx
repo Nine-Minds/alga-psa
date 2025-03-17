@@ -51,6 +51,7 @@ interface DocumentsProps {
   entityType?: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
+  isInDrawer?: boolean;
 }
 
 const Documents = ({
@@ -61,7 +62,8 @@ const Documents = ({
   entityId,
   entityType,
   isLoading = false,
-  onDocumentCreated
+  onDocumentCreated,
+  isInDrawer = false
 }: DocumentsProps): JSX.Element => {
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [showUpload, setShowUpload] = useState(false);
@@ -292,6 +294,17 @@ const Documents = ({
             entityId={entityId}
             entityType={entityType}
             onDocumentsSelected={async () => {
+              // Refresh documents list after association
+              if (entityId && entityType) {
+                try {
+                  const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
+                  setDocuments(updatedDocuments);
+                } catch (error) {
+                  console.error('Error refreshing documents:', error);
+                  setError('Failed to refresh documents');
+                }
+              }
+              
               setShowSelector(false);
               if (onDocumentCreated) await onDocumentCreated();
             }}
@@ -342,86 +355,89 @@ const Documents = ({
           </div>
         )}
 
-        {isDrawerOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50">
-            <div className="fixed inset-y-0 right-0 w-[1000px] max-w-[90vw] bg-white shadow-xl flex flex-col">
-              <div className="flex justify-between items-center p-4 border-b">
-                <h2 className="text-lg font-semibold">
-                  {isCreatingNew ? 'New Document' : 'Edit Document'}
-                </h2>
-                <Button
-                  id={`${id}-close-drawer-btn`}
-                  onClick={() => setIsDrawerOpen(false)}
-                  variant="ghost"
-                >
-                  ×
-                </Button>
+        <Drawer
+          id={`${id}-document-drawer`}
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          isInDrawer={isInDrawer}
+        >
+          <div className="flex flex-col h-full">
+            <div className="flex justify-between items-center mb-4 border-b pb-4">
+              <h2 className="text-lg font-semibold">
+                {isCreatingNew ? 'New Document' : 'Edit Document'}
+              </h2>
+              <Button
+                id={`${id}-close-drawer-btn`}
+                onClick={() => setIsDrawerOpen(false)}
+                variant="ghost"
+              >
+                ×
+              </Button>
+            </div>
+
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="mb-4">
+                <Input
+                  id={`${id}-document-name`}
+                  type="text"
+                  placeholder="Document Name"
+                  value={isCreatingNew ? newDocumentName : documentName}
+                  onChange={(e) => {
+                    if (isCreatingNew) {
+                      setNewDocumentName(e.target.value);
+                    } else {
+                      setDocumentName(e.target.value);
+                    }
+                  }}
+                />
               </div>
 
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <div className="p-4">
-                  <Input
-                    id={`${id}-document-name`}
-                    type="text"
-                    placeholder="Document Name"
-                    value={isCreatingNew ? newDocumentName : documentName}
-                    onChange={(e) => {
-                      if (isCreatingNew) {
-                        setNewDocumentName(e.target.value);
-                      } else {
-                        setDocumentName(e.target.value);
-                      }
-                    }}
-                  />
+              <div className="flex-1 overflow-y-auto border-t border-b mb-4">
+                <div className="h-full w-full">
+                  {isCreatingNew ? (
+                    <TextEditor
+                      key="editor-new"
+                      id={`${id}-editor`}
+                      initialContent={currentContent}
+                      onContentChange={handleContentChange}
+                      editorRef={editorRef}
+                    />
+                  ) : selectedDocument && !isLoadingContent ? (
+                    <TextEditor
+                      key={`editor-${selectedDocument.document_id}`}
+                      id={`${id}-editor`}
+                      initialContent={currentContent}
+                      onContentChange={handleContentChange}
+                      editorRef={editorRef}
+                    />
+                  ) : (
+                    <div className="flex justify-center items-center h-full">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                <div className="flex-1 overflow-y-auto border-t border-b">
-                  <div className="h-full">
-                    {isCreatingNew ? (
-                      <TextEditor
-                        key="editor-new"
-                        id={`${id}-editor`}
-                        initialContent={currentContent}
-                        onContentChange={handleContentChange}
-                        editorRef={editorRef}
-                      />
-                    ) : selectedDocument && !isLoadingContent ? (
-                      <TextEditor
-                        key={`editor-${selectedDocument.document_id}`}
-                        id={`${id}-editor`}
-                        initialContent={currentContent}
-                        onContentChange={handleContentChange}
-                        editorRef={editorRef}
-                      />
-                    ) : (
-                      <div className="flex justify-center items-center h-full">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 flex justify-end space-x-2">
-                  <Button
-                    id={`${id}-cancel-btn`}
-                    onClick={() => setIsDrawerOpen(false)}
-                    variant="outline"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    id={`${id}-save-btn`}
-                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
-                    disabled={isSaving}
-                    className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                  >
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
+              <div className="flex justify-end space-x-2">
+                <Button
+                  id={`${id}-cancel-btn`}
+                  onClick={() => setIsDrawerOpen(false)}
+                  variant="outline"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  id={`${id}-save-btn`}
+                  onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
+                  disabled={isSaving}
+                  className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
               </div>
             </div>
           </div>
-        )}
+        </Drawer>
       </div>
     </ReflectionContainer>
   );

@@ -9,9 +9,7 @@ import DocumentStorageCard from './DocumentStorageCard';
 import { IDocument } from '../../interfaces/document.interface';
 import { getAllDocuments, createDocumentAssociations } from '../../lib/actions/document-actions/documentActions';
 import { Text } from '@radix-ui/themes';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface DocumentSelectorProps {
     id: string; // Made required since it's needed for reflection registration
@@ -170,13 +168,7 @@ export default function DocumentSelector({
                         {/* Search Bar */}
                         <div className="relative">
                             <Input
-                                {...useAutomationIdAndRegister<FormFieldComponent>({
-                                    id: `${id}-search`,
-                                    type: 'formField',
-                                    fieldType: 'textField',
-                                    label: 'Search Documents',
-                                    value: searchTerm
-                                }).automationIdProps}
+                                id={`${id}-search`}
                                 type="text"
                                 placeholder="Search documents..."
                                 value={searchTerm}
@@ -189,11 +181,7 @@ export default function DocumentSelector({
 
                         {/* Error Message */}
                         {error && (
-                            <Text {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-error`,
-                                type: 'container',
-                                label: 'Error Message'
-                            }).automationIdProps} as="div" size="2" color="red" className="flex items-center">
+                            <Text as="div" size="2" color="red" className="flex items-center">
                                 <X className="w-4 h-4 mr-2" />
                                 {error}
                             </Text>
@@ -201,29 +189,17 @@ export default function DocumentSelector({
 
                         {/* Loading State */}
                         {isLoading ? (
-                            <div {...useAutomationIdAndRegister<ContainerComponent>({
-                                id: `${id}-loading`,
-                                type: 'container',
-                                label: 'Loading'
-                            }).automationIdProps} className="flex justify-center py-8">
+                            <div className="flex justify-center py-8">
                                 <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
                             </div>
                         ) : (
                             <>
                                 {/* Documents Grid */}
-                                <div {...useAutomationIdAndRegister<ContainerComponent>({
-                                    id: `${id}-grid`,
-                                    type: 'container',
-                                    label: 'Documents Grid'
-                                }).automationIdProps} className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-2">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto p-2">
                                     {documents.map((document): JSX.Element => (
                                         <div
                                             key={document.document_id}
-                                            {...useAutomationIdAndRegister<ContainerComponent>({
-                                                id: `${id}-document-${document.document_id}`,
-                                                type: 'container',
-                                                label: `Document ${document.document_name}`
-                                            }).automationIdProps}
+                                            id={`${id}-document-${document.document_id}`}
                                             className={`relative cursor-pointer transition-all ${
                                                 selectedDocuments.has(document.document_id)
                                                     ? 'ring-2 ring-primary-500'
@@ -245,11 +221,7 @@ export default function DocumentSelector({
                                         </div>
                                     ))}
                                     {documents.length === 0 && !isLoading && (
-                                        <div {...useAutomationIdAndRegister<ContainerComponent>({
-                                            id: `${id}-empty`,
-                                            type: 'container',
-                                            label: 'No Documents'
-                                        }).automationIdProps} className="col-span-2 text-center py-8">
+                                        <div className="col-span-2 text-center py-8">
                                             <Text as="div" size="2" color="gray">
                                                 No documents found
                                             </Text>
