@@ -8,19 +8,13 @@ import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
-import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
-import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { IChannel, ICompany } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import { Input } from 'server/src/components/ui/Input';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { getTicketsForList, deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { MoreHorizontal, XCircle, Clock } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -33,16 +27,59 @@ import { toast } from 'react-hot-toast';
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
+  // Add props for pre-fetched options
+  initialChannels: {
+    channel_id: string;
+    channel_name: string;
+    tenant: string;
+    is_inactive: boolean;
+  }[];
+  initialStatuses: SelectOption[];
+  initialPriorities: SelectOption[];
+  initialCategories: ITicketCategory[];
+  initialCompanies: ICompany[];
+  nextCursor: string | null;
+  onLoadMore: (cursor: string) => Promise<void>;
+  isLoadingMore: boolean;
 }
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
-  initialTickets
+  initialTickets,
+  initialChannels,
+  initialStatuses,
+  initialPriorities,
+  initialCategories,
+  initialCompanies,
+  nextCursor,
+  onLoadMore,
+  isLoadingMore
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Initialize state with pre-fetched data
+  const [channels, setChannels] = useState<IChannel[]>(initialChannels);
+  const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
+  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
+  const [statusOptions, setStatusOptions] = useState<SelectOption[]>(initialStatuses);
+  const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>(initialPriorities);
+  
+  const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [selectedChannel, setSelectedChannel] = useState<string>('');
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('open');
+  const [selectedPriority, setSelectedPriority] = useState<string>('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleDeleteTicket = (ticketId: string) => {
     setTicketToDelete(ticketId);
@@ -75,15 +112,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
 
       await deleteTicket(ticketToDelete, user);
-      fetchTickets(true);
+      // We would normally call fetchTickets here, but we're now using props
+      // Instead, we'll just remove the deleted ticket from the state
+      setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
+      setFilteredTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
     } catch (error) {
       console.error('Failed to delete ticket:', error);
     } finally {
       setTicketToDelete(null);
     }
   };
-
-  const [categories, setCategories] = useState<ITicketCategory[]>([]);
 
   const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
     {
@@ -168,41 +206,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         </DropdownMenu.Root>
       ),
     }
-  ], [categories]);
-
-  const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [channels, setChannels] = useState<IChannel[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
-  const [statusOptions, setStatusOptions] = useState<SelectOption[]>([]);
-  const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([]);
-  const [selectedChannel, setSelectedChannel] = useState<string>('');
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
-  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('open');
-  const [selectedPriority, setSelectedPriority] = useState<string>('all');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
-  const [isLoading, setIsLoading] = useState(false);
+  ], []);
 
   // Create columns with categories data
   const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
 
-  const fetchOptions = useCallback(async () => {
-    return Promise.all([
-      getAllChannels(),
-      getTicketStatuses(),
-      getAllPriorities(),
-      getAllUsers(),
-      getTicketCategories(),
-      getAllCompanies()
-    ]);
-  }, []);
-
-  // Update the fetchTickets function to include category filtering
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
     try {
@@ -213,36 +221,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       toast.error('Failed to save time entry');
     }
   };
-
-  const fetchTickets = useCallback(async (isSubscribed: boolean) => {
-    setIsLoading(true);
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      const tickets = await getTicketsForList(user, {
-        channelId: selectedChannel || undefined,
-        statusId: selectedStatus === 'open' ? undefined : selectedStatus !== 'all' ? selectedStatus : undefined,
-        priorityId: selectedPriority !== 'all' ? selectedPriority : undefined,
-        companyId: selectedCompany || undefined,
-        searchQuery,
-        channelFilterState,
-        showOpenOnly: selectedStatus === 'open'
-      });
-
-      if (isSubscribed) {
-        setTickets(tickets);
-        setIsLoading(false);
-      }
-    } catch (error) {
-      if (isSubscribed) {
-        console.error('Failed to fetch tickets:', error);
-        setIsLoading(false);
-      }
-    }
-  }, [selectedChannel, selectedStatus, selectedPriority, selectedCompany, searchQuery, channelFilterState]);
 
   // Add id to each ticket for DataTable keys
   const ticketsWithIds = useMemo(() =>
@@ -322,67 +300,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     setFilteredTickets(filtered);
-  }, [tickets, selectedCategories, excludedCategories]);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    (async () => {
-      try {
-        const [fetchedChannels, statuses, priorities, _, fetchedCategories, fetchedCompanies] = await fetchOptions();
-
-        if (!isMounted) return;
-
-        setChannels(fetchedChannels);
-        setCategories(fetchedCategories);
-        setCompanies(fetchedCompanies);
-
-        setStatusOptions([
-          { value: 'open', label: 'All open statuses' },
-          { value: 'all', label: 'All Statuses' },
-          ...statuses.map((status: { status_id: string; name: string | null; is_closed: boolean }): SelectOption => ({
-            value: status.status_id!,
-            label: status.name ?? "",
-            className: status.is_closed ? 'bg-gray-200 text-gray-600' : undefined
-          }))
-        ]);
-
-        setPriorityOptions([
-          { value: 'all', label: 'All Priorities' },
-          ...priorities.map((priority: { priority_id: string; priority_name: string }): SelectOption => ({
-            value: priority.priority_id,
-            label: priority.priority_name
-          }))
-        ]);
-
-      } catch (error) {
-        if (!isMounted) return;
-        console.error('Failed to fetch options:', error);
-      }
-    })();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [fetchOptions]);
-
-  // Fetch tickets when filters change
-  useEffect(() => {
-    let isSubscribed = true;
-    fetchTickets(isSubscribed);
-    return () => {
-      isSubscribed = false;
-    };
-  }, [fetchTickets]);
+  }, [tickets, selectedCategories, excludedCategories, categories]);
 
   const handleTicketAdded = useCallback((_ticket: ITicket) => {
-    let isSubscribed = true;
-    fetchTickets(isSubscribed);
+    // We would normally call fetchTickets here, but we're now using props
+    // Instead, we'll just close the quick add dialog
     setIsQuickAddOpen(false);
-    return () => {
-      isSubscribed = false;
-    };
-  }, [fetchTickets]);
+  }, []);
 
   const handleChannelSelect = useCallback((channelId: string) => {
     setSelectedChannel(channelId);
@@ -517,11 +441,27 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <span>Loading...</span>
           </div>
         ) : (
-          <DataTable
-            {...withDataAutomationId({ id: `${id}-tickets-table` })}
-            data={ticketsWithIds}
-            columns={columns}
-          />
+          <>
+            <DataTable
+              {...withDataAutomationId({ id: `${id}-tickets-table` })}
+              data={ticketsWithIds}
+              columns={columns}
+            />
+            
+            {/* Load More Button */}
+            {nextCursor && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  id="load-more-button"
+                  onClick={() => onLoadMore(nextCursor)}
+                  disabled={isLoadingMore}
+                  variant="outline"
+                >
+                  {isLoadingMore ? 'Loading...' : 'Load More Tickets'}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -24,6 +24,7 @@ interface TicketInfoProps {
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
   onUpdateDescription?: (content: string) => Promise<boolean>;
+  isSubmitting?: boolean; // Flag to indicate if a submission is in progress
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -36,6 +37,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   priorityOptions,
   onSelectChange,
   onUpdateDescription,
+  isSubmitting = false,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -299,11 +301,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         }
                       }
                     }}
+                    disabled={isSubmitting}
                   >
-                    Save
+                    {isSubmitting ? 'Saving...' : 'Save'}
                   </Button>
                   <Button
                     id="cancel-description-button"
+                    disabled={isSubmitting}
                     variant="outline"
                     onClick={() => {
                       // Reset to original content and cancel editing

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
@@ -16,7 +16,8 @@ import {
     IUser,
     IUserWithRoles,
     ITeam,
-    ITicketResource
+    ITicketResource,
+    ITicketCategory
 } from '../../interfaces';
 import TicketInfo from './TicketInfo';
 import TicketProperties from './TicketProperties';
@@ -52,12 +53,60 @@ interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
     initialTicket: ITicket & { tenant: string | undefined };
     onClose?: () => void; // Callback when user wants to close the ticket screen
+    
+    // Pre-fetched data props
+    initialComments?: IComment[];
+    initialDocuments?: any[];
+    initialCompany?: ICompany | null;
+    initialContacts?: IContact[];
+    initialContactInfo?: IContact | null;
+    initialCreatedByUser?: IUser | null;
+    initialChannel?: any;
+    initialAdditionalAgents?: ITicketResource[];
+    initialAvailableAgents?: IUserWithRoles[];
+    initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>;
+    statusOptions?: { value: string; label: string }[];
+    agentOptions?: { value: string; label: string }[];
+    channelOptions?: { value: string; label: string }[];
+    priorityOptions?: { value: string; label: string }[];
+    initialCategories?: ITicketCategory[];
+    initialCompanies?: ICompany[];
+    initialAgentSchedules?: { userId: string; minutes: number }[];
+    
+    // Optimized handlers
+    onTicketUpdate?: (field: string, value: any) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
+    onUpdateDescription?: (content: string) => Promise<boolean>;
+    isSubmitting?: boolean;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
     id = 'ticket-details',
     initialTicket,
-    onClose
+    onClose,
+    // Pre-fetched data with defaults
+    initialComments = [],
+    initialDocuments = [],
+    initialCompany = null,
+    initialContacts = [],
+    initialContactInfo = null,
+    initialCreatedByUser = null,
+    initialChannel = null,
+    initialAdditionalAgents = [],
+    initialAvailableAgents = [],
+    initialUserMap = {},
+    statusOptions = [],
+    agentOptions = [],
+    channelOptions = [],
+    priorityOptions = [],
+    initialCategories = [],
+    initialCompanies = [],
+    initialAgentSchedules = [],
+    // Optimized handlers
+    onTicketUpdate,
+    onAddComment,
+    onUpdateDescription,
+    isSubmitting = false
 }) => {
     const { data: session } = useSession();
     const userId = session?.user?.id;
@@ -67,21 +116,20 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }
 
     const [ticket, setTicket] = useState(initialTicket);
-    const [conversations, setConversations] = useState<IComment[]>([]);
-    const [documents, setDocuments] = useState<any[]>([]);
-    const [company, setCompany] = useState<ICompany | null>(null);
-    const [contactInfo, setContactInfo] = useState<IContact | null>(null);
-    const [createdByUser, setCreatedByUser] = useState<IUser | null>(null);
-    const [channel, setChannel] = useState<any>(null);
-    const [companies, setCompanies] = useState<ICompany[]>([]);
-    const [contacts, setContacts] = useState<IContact[]>([]);
+    const [conversations, setConversations] = useState<IComment[]>(initialComments);
+    const [documents, setDocuments] = useState<any[]>(initialDocuments);
+    const [company, setCompany] = useState<ICompany | null>(initialCompany);
+    const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
+    const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
+    const [channel, setChannel] = useState<any>(initialChannel);
+    const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
+    const [contacts, setContacts] = useState<IContact[]>(initialContacts);
 
-    const [statusOptions, setStatusOptions] = useState<{ value: string, label: string }[]>([]);
-    const [agentOptions, setAgentOptions] = useState<{ value: string, label: string }[]>([]);
-    const [channelOptions, setChannelOptions] = useState<{ value: string, label: string }[]>([]);
-    const [priorityOptions, setPriorityOptions] = useState<{ value: string, label: string }[]>([]);
+    // Use pre-fetched options directly
+    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>>(initialUserMap);
 
-    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>>({});
+    const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
+    const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
 
     const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
         type: "paragraph",
@@ -106,8 +154,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentTimeSheet, setCurrentTimeSheet] = useState<ITimeSheet | null>(null);
     const [currentTimePeriod, setCurrentTimePeriod] = useState<ITimePeriodView | null>(null);
 
-    const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>([]);
-    const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>([]);
     const [team, setTeam] = useState<ITeam | null>(null);
 
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
@@ -199,220 +245,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [closeCurrentInterval, onClose, router]);
     
-    // Core ticket data fetch - only depends on initialTicket.ticket_id
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchCoreData = async () => {
-            const ticketId = initialTicket.ticket_id;
-            if (!ticketId) return;
+    // Skip the core data fetch since we're now receiving all data via props
 
-            try {
-                const currentUser = await getCurrentUser();
-                if (!isMounted) return;
-                
-                if (!currentUser) {
-                    toast.error('No user session found');
-                    return;
-                }
+    // Skip the channel-specific data fetch
 
-                const [
-                    comments,
-                    docs,
-                    companiesData,
-                    resources,
-                    users,
-                    statuses,
-                    channels,
-                    priorities
-                ] = await Promise.all([
-                    findCommentsByTicketId(ticketId),
-                    getDocumentByTicketId(ticketId),
-                    getAllCompanies(),
-                    getTicketResources(ticketId, currentUser),
-                    getAllUsers(),
-                    getTicketStatuses(),
-                    getAllChannels(),
-                    getAllPriorities()
-                ]);
+    // Skip the company-specific data fetch
 
-                if (!isMounted) return;
+    // Skip the contact-specific data fetch
 
-                setConversations(comments);
-                setDocuments(docs);
-                setCompanies(companiesData);
-                setAdditionalAgents(resources);
-                setAvailableAgents(users);
-
-                // Process user data once
-                const userMapData = users.reduce((acc, user) => {
-                    acc[user.user_id] = {
-                        user_id: user.user_id,
-                        first_name: user.first_name || '',
-                        last_name: user.last_name || '',
-                        email: user.email,
-                        user_type: user.user_type
-                    };
-                    return acc;
-                }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>);
-                setUserMap(userMapData);
-
-                // Set up options that don't depend on ticket state
-                setStatusOptions(statuses.map((status): { value: string; label: string } => ({
-                    value: status.status_id!,
-                    label: status.name ?? ""
-                })));
-
-                setAgentOptions(users.map((agent): { value: string; label: string } => ({
-                    value: agent.user_id,
-                    label: `${agent.first_name} ${agent.last_name}`
-                })));
-
-                setChannelOptions(channels.filter(channel => channel.channel_id !== undefined)
-                    .map((channel): { value: string; label: string } => ({
-                        value: channel.channel_id!,
-                        label: channel.channel_name ?? ""
-                    })));
-
-                setPriorityOptions(priorities.map((priority): { value: string; label: string } => ({
-                    value: priority.priority_id,
-                    label: priority.priority_name
-                })));
-
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error fetching core ticket data:', error);
-                toast.error('Failed to load ticket data');
-            }
-        };
-
-        fetchCoreData();
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [initialTicket.ticket_id]);
-
-    // Channel-specific data fetch
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchChannelData = async () => {
-            if (!ticket.channel_id) return;
-            
-            try {
-                const channelData = await findChannelById(ticket.channel_id);
-                if (!isMounted) return;
-                
-                setChannel(channelData);
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error fetching channel data:', error);
-            }
-        };
-        
-        fetchChannelData();
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [ticket.channel_id]);
-
-    // Company-specific data fetch
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchCompanyData = async () => {
-            if (!ticket.company_id) {
-                if (isMounted) {
-                    setCompany(null);
-                    setContacts([]);
-                }
-                return;
-            }
-            
-            try {
-                const [companyData, contactsData] = await Promise.all([
-                    getCompanyById(ticket.company_id),
-                    getContactsByCompany(ticket.company_id)
-                ]);
-                
-                if (!isMounted) return;
-                
-                setCompany(companyData);
-                setContacts(contactsData || []);
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error fetching company data:', error);
-            }
-        };
-        
-        fetchCompanyData();
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [ticket.company_id]);
-
-    // Contact-specific data fetch
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchContactData = async () => {
-            if (!ticket.contact_name_id) {
-                if (isMounted) {
-                    setContactInfo(null);
-                }
-                return;
-            }
-            
-            try {
-                const contactData = await getContactByContactNameId(ticket.contact_name_id);
-                if (!isMounted) return;
-                
-                setContactInfo(contactData);
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error fetching contact data:', error);
-            }
-        };
-        
-        fetchContactData();
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [ticket.contact_name_id]);
-
-    // Created-by user data fetch
-    useEffect(() => {
-        let isMounted = true;
-        
-        const fetchCreatedByData = async () => {
-            if (!ticket.entered_by) {
-                if (isMounted) {
-                    setCreatedByUser(null);
-                }
-                return;
-            }
-            
-            try {
-                const userData = await findUserById(ticket.entered_by);
-                if (!isMounted) return;
-                
-                setCreatedByUser(userData);
-            } catch (error) {
-                if (!isMounted) return;
-                console.error('Error fetching user data:', error);
-            }
-        };
-        
-        fetchCreatedByData();
-        
-        return () => {
-            isMounted = false;
-        };
-    }, [ticket.entered_by]);
+    // Skip the created-by user data fetch
 
     const handleCompanyClick = async () => {
         if (ticket.company_id) {
@@ -504,34 +345,43 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setTicket(prevTicket => ({ ...prevTicket, [field]: newValue }));
 
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                console.error('Failed to get user');
-                // Revert to previous value if we can't get the user
-                setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
-                return;
-            }
-            
-            const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
-            
-            if (result === 'success') {
-                console.log(`${field} changed to: ${newValue}`);
+            // Use the optimized handler if provided
+            if (onTicketUpdate) {
+                await onTicketUpdate(field, newValue);
                 
-                // If we're changing the assigned_to field, refresh the additional resources
-                if (field === 'assigned_to') {
-                    try {
-                        // Refresh the additional resources
-                        const resources = await getTicketResources(ticket.ticket_id!, user);
-                        setAdditionalAgents(resources);
-                        console.log('Additional resources refreshed after assignment change');
-                    } catch (resourceError) {
-                        console.error('Error refreshing additional resources:', resourceError);
-                    }
-                }
+                // If we're changing the assigned_to field, we need to handle additional resources
+                // This will be handled by the container component and passed back in props
             } else {
-                console.error(`Failed to update ticket ${field}`);
-                // Revert to previous value on failure
-                setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                // Fallback to the original implementation if no optimized handler is provided
+                const user = await getCurrentUser();
+                if (!user) {
+                    console.error('Failed to get user');
+                    // Revert to previous value if we can't get the user
+                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                    return;
+                }
+                
+                const result = await updateTicket(ticket.ticket_id || '', { [field]: newValue }, user);
+                
+                if (result === 'success') {
+                    console.log(`${field} changed to: ${newValue}`);
+                    
+                    // If we're changing the assigned_to field, refresh the additional resources
+                    if (field === 'assigned_to') {
+                        try {
+                            // Refresh the additional resources
+                            const resources = await getTicketResources(ticket.ticket_id!, user);
+                            setAdditionalAgents(resources);
+                            console.log('Additional resources refreshed after assignment change');
+                        } catch (resourceError) {
+                            console.error('Error refreshing additional resources:', resourceError);
+                        }
+                    }
+                } else {
+                    console.error(`Failed to update ticket ${field}`);
+                    // Revert to previous value on failure
+                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                }
             }
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
@@ -570,26 +420,15 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return;
             }
     
-            const newComment: Omit<IComment, 'tenant'> = {
-                ticket_id: ticket.ticket_id || '',
-                note: JSON.stringify(newCommentContent),
-                user_id: userId,
-                author_type: 'internal',
-                is_internal: activeTab === 'Internal',
-                is_resolution: activeTab === 'Resolution',
-                is_initial_description: false,
-            };
-    
-            const commentId = await createComment(newComment);
-    
-            if (commentId) {
-                const newlyCreatedComment = await findCommentById(commentId);
-                if (!newlyCreatedComment) {
-                    console.error('Error fetching newly created comment:', commentId);
-                    return;
-                }
-    
-                setConversations(prevConversations => [...prevConversations, newlyCreatedComment]);
+            // Use the optimized handler if provided
+            if (onAddComment) {
+                await onAddComment(
+                    JSON.stringify(newCommentContent),
+                    activeTab === 'Internal',
+                    activeTab === 'Resolution'
+                );
+                
+                // Reset the comment input
                 setNewCommentContent([{
                     type: "paragraph",
                     props: {
@@ -603,7 +442,43 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         styles: {}
                     }]
                 }]);
-                console.log("New note added successfully");
+            } else {
+                // Fallback to the original implementation
+                const newComment: Omit<IComment, 'tenant'> = {
+                    ticket_id: ticket.ticket_id || '',
+                    note: JSON.stringify(newCommentContent),
+                    user_id: userId,
+                    author_type: 'internal',
+                    is_internal: activeTab === 'Internal',
+                    is_resolution: activeTab === 'Resolution',
+                    is_initial_description: false,
+                };
+        
+                const commentId = await createComment(newComment);
+        
+                if (commentId) {
+                    const newlyCreatedComment = await findCommentById(commentId);
+                    if (!newlyCreatedComment) {
+                        console.error('Error fetching newly created comment:', commentId);
+                        return;
+                    }
+        
+                    setConversations(prevConversations => [...prevConversations, newlyCreatedComment]);
+                    setNewCommentContent([{
+                        type: "paragraph",
+                        props: {
+                            textAlignment: "left",
+                            backgroundColor: "default",
+                            textColor: "default"
+                        },
+                        content: [{
+                            type: "text",
+                            text: "",
+                            styles: {}
+                        }]
+                    }]);
+                    console.log("New note added successfully");
+                }
             }
         } catch (error) {
             console.error("Error adding new note:", error);
@@ -672,51 +547,74 @@ const handleClose = () => {
 
     const handleUpdateDescription = async (content: string) => {
         try {
-            const user = await getCurrentUser();
-            if (!user) {
-                console.error('Failed to get user');
-                return false;
-            }
-
-            if (!ticket.ticket_id) {
-                console.error('Ticket ID is missing');
-                return false;
-            }
-
-            // Update the ticket's attributes.description field
-            const currentAttributes = ticket.attributes || {};
-            const updatedAttributes = {
-                ...currentAttributes,
-                description: content
-            };
-
-            // Update the ticket
-            await updateTicket(ticket.ticket_id, { 
-                attributes: updatedAttributes,
-                updated_by: user.user_id,
-                updated_at: new Date().toISOString()
-            }, user);
-
-            // Update the local ticket state
-            setTicket(prev => ({
-                ...prev,
-                attributes: updatedAttributes,
-                updated_by: user.user_id,
-                updated_at: new Date().toISOString()
-            }));
-
-            // Also update the initial description comment if it exists
-            const initialComment = conversations.find(conv => conv.is_initial_description);
-            if (initialComment?.comment_id) {
-                await updateComment(initialComment.comment_id, { note: content });
+            // Use the optimized handler if provided
+            if (onUpdateDescription) {
+                const success = await onUpdateDescription(content);
                 
-                // Refresh the comments
-                const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
-                setConversations(updatedComments);
-            }
+                if (success) {
+                    // Update the local ticket state
+                    const currentAttributes = ticket.attributes || {};
+                    const updatedAttributes = {
+                        ...currentAttributes,
+                        description: content
+                    };
+                    
+                    setTicket(prev => ({
+                        ...prev,
+                        attributes: updatedAttributes,
+                        updated_at: new Date().toISOString()
+                    }));
+                }
+                
+                return success;
+            } else {
+                // Fallback to the original implementation
+                const user = await getCurrentUser();
+                if (!user) {
+                    console.error('Failed to get user');
+                    return false;
+                }
 
-            toast.success('Description updated successfully');
-            return true;
+                if (!ticket.ticket_id) {
+                    console.error('Ticket ID is missing');
+                    return false;
+                }
+
+                // Update the ticket's attributes.description field
+                const currentAttributes = ticket.attributes || {};
+                const updatedAttributes = {
+                    ...currentAttributes,
+                    description: content
+                };
+
+                // Update the ticket
+                await updateTicket(ticket.ticket_id, {
+                    attributes: updatedAttributes,
+                    updated_by: user.user_id,
+                    updated_at: new Date().toISOString()
+                }, user);
+
+                // Update the local ticket state
+                setTicket(prev => ({
+                    ...prev,
+                    attributes: updatedAttributes,
+                    updated_by: user.user_id,
+                    updated_at: new Date().toISOString()
+                }));
+
+                // Also update the initial description comment if it exists
+                const initialComment = conversations.find(conv => conv.is_initial_description);
+                if (initialComment?.comment_id) {
+                    await updateComment(initialComment.comment_id, { note: content });
+                    
+                    // Refresh the comments
+                    const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+                    setConversations(updatedComments);
+                }
+
+                toast.success('Description updated successfully');
+                return true;
+            }
         } catch (error) {
             console.error('Error updating description:', error);
             toast.error('Failed to update description');
@@ -968,87 +866,97 @@ const handleClose = () => {
                 />
 
                 <div className="flex gap-6">
-                    <div className="flex-grow col-span-2 space-y-6">
-                        <TicketInfo
-                            id={`${id}-info`}
-                            ticket={ticket}
-                            conversations={conversations}
-                            statusOptions={statusOptions}
-                            agentOptions={agentOptions}
-                            channelOptions={channelOptions}
-                            priorityOptions={priorityOptions}
-                            onSelectChange={handleSelectChange}
-                            onUpdateDescription={handleUpdateDescription}
-                        />
-                        <TicketConversation
-                            id={`${id}-conversation`}
-                            ticket={ticket}
-                            conversations={conversations}
-                            documents={documents}
-                            userMap={userMap}
-                            currentUser={session?.user}
-                            activeTab={activeTab}
-                            isEditing={isEditing}
-                            currentComment={currentComment}
-                            editorKey={editorKey}
-                            onNewCommentContentChange={setNewCommentContent}
-                            onAddNewComment={handleAddNewComment}
-                            onTabChange={setActiveTab}
-                            onEdit={handleEdit}
-                            onSave={handleSave}
-                            onClose={handleClose}
-                            onDelete={handleDeleteRequest}
-                            onContentChange={handleContentChange}
-                        />
+                    <div className="flex-grow col-span-2 space-y-6" id="ticket-main-content">
+                        <Suspense fallback={<div id="ticket-info-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+                            <TicketInfo
+                                id={`${id}-info`}
+                                ticket={ticket}
+                                conversations={conversations}
+                                statusOptions={statusOptions}
+                                agentOptions={agentOptions}
+                                channelOptions={channelOptions}
+                                priorityOptions={priorityOptions}
+                                onSelectChange={handleSelectChange}
+                                onUpdateDescription={handleUpdateDescription}
+                                isSubmitting={isSubmitting}
+                            />
+                        </Suspense>
+                        <Suspense fallback={<div id="ticket-conversation-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                            <TicketConversation
+                                id={`${id}-conversation`}
+                                ticket={ticket}
+                                conversations={conversations}
+                                documents={documents}
+                                userMap={userMap}
+                                currentUser={session?.user}
+                                activeTab={activeTab}
+                                isEditing={isEditing}
+                                currentComment={currentComment}
+                                editorKey={editorKey}
+                                onNewCommentContentChange={setNewCommentContent}
+                                onAddNewComment={handleAddNewComment}
+                                onTabChange={setActiveTab}
+                                onEdit={handleEdit}
+                                onSave={handleSave}
+                                onClose={handleClose}
+                                onDelete={handleDeleteRequest}
+                                onContentChange={handleContentChange}
+                                isSubmitting={isSubmitting}
+                            />
+                        </Suspense>
                     </div>
-                    <div className="w-96">
-                        <TicketProperties
-                            id={`${id}-properties`}
-                            ticket={ticket}
-                            company={company}
-                            contactInfo={contactInfo}
-                            createdByUser={createdByUser}
-                            channel={channel}
-                            elapsedTime={elapsedTime}
-                            isRunning={isRunning}
-                            timeDescription={timeDescription}
-                            onStart={() => setIsRunning(true)}
-                            onPause={() => setIsRunning(false)}
-                            onStop={() => {
-                                setIsRunning(false);
-                                setElapsedTime(0);
-                            }}
-                            onTimeDescriptionChange={setTimeDescription}
-                            onAddTimeEntry={handleAddTimeEntry}
-                            onCompanyClick={handleCompanyClick}
-                            onContactClick={handleContactClick}
-                            team={team}
-                            additionalAgents={additionalAgents}
-                            availableAgents={availableAgents}
-                            onAgentClick={handleAgentClick}
-                            onAddAgent={handleAddAgent}
-                            onRemoveAgent={handleRemoveAgent}
-                            currentTimeSheet={currentTimeSheet}
-                            currentTimePeriod={currentTimePeriod}
-                            userId={userId || ''}
-                            tenant={tenant}
-                            contacts={contacts}
-                            companies={companies}
-                            companyFilterState={companyFilterState}
-                            clientTypeFilter={clientTypeFilter}
-                            onChangeContact={handleContactChange}
-                            onChangeCompany={handleCompanyChange}
-                            onCompanyFilterStateChange={setCompanyFilterState}
-                            onClientTypeFilterChange={setClientTypeFilter}
-                        />
+                    <div className="w-96" id="ticket-properties-container">
+                        <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
+                            <TicketProperties
+                                id={`${id}-properties`}
+                                ticket={ticket}
+                                company={company}
+                                contactInfo={contactInfo}
+                                createdByUser={createdByUser}
+                                channel={channel}
+                                elapsedTime={elapsedTime}
+                                isRunning={isRunning}
+                                timeDescription={timeDescription}
+                                onStart={() => setIsRunning(true)}
+                                onPause={() => setIsRunning(false)}
+                                onStop={() => {
+                                    setIsRunning(false);
+                                    setElapsedTime(0);
+                                }}
+                                onTimeDescriptionChange={setTimeDescription}
+                                onAddTimeEntry={handleAddTimeEntry}
+                                onCompanyClick={handleCompanyClick}
+                                onContactClick={handleContactClick}
+                                team={team}
+                                additionalAgents={additionalAgents}
+                                availableAgents={availableAgents}
+                                onAgentClick={handleAgentClick}
+                                onAddAgent={handleAddAgent}
+                                onRemoveAgent={handleRemoveAgent}
+                                currentTimeSheet={currentTimeSheet}
+                                currentTimePeriod={currentTimePeriod}
+                                userId={userId || ''}
+                                tenant={tenant}
+                                contacts={contacts}
+                                companies={companies}
+                                companyFilterState={companyFilterState}
+                                clientTypeFilter={clientTypeFilter}
+                                onChangeContact={handleContactChange}
+                                onChangeCompany={handleCompanyChange}
+                                onCompanyFilterStateChange={setCompanyFilterState}
+                                onClientTypeFilterChange={setClientTypeFilter}
+                            />
+                        </Suspense>
                         {ticket.company_id && ticket.ticket_id && (
-                            <div className="mt-6">
-                                <AssociatedAssets
-                                    id={`${id}-associated-assets`}
-                                    entityId={ticket.ticket_id}
-                                    entityType="ticket"
-                                    companyId={ticket.company_id}
-                                />
+                            <div className="mt-6" id="associated-assets-container">
+                                <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
+                                    <AssociatedAssets
+                                        id={`${id}-associated-assets`}
+                                        entityId={ticket.ticket_id}
+                                        entityType="ticket"
+                                        companyId={ticket.company_id}
+                                    />
+                                </Suspense>
                             </div>
                         )}
                     </div>

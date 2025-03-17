@@ -35,6 +35,7 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  isSubmitting?: boolean; // Flag to indicate if a submission is in progress
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -57,6 +58,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
   hideInternalTab = false,
+  isSubmitting = false,
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [reverseOrder, setReverseOrder] = useState(false);
@@ -240,13 +242,15 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   <Button
                     id={`${id}-add-comment-btn`}
                     onClick={handleSubmitComment}
+                    disabled={isSubmitting}
                   >
-                    Add Comment
+                    {isSubmitting ? 'Adding...' : 'Add Comment'}
                   </Button>
                   <Button
                     id={`${id}-cancel-comment-btn`}
                     onClick={handleCancelComment}
                     variant="outline"
+                    disabled={isSubmitting}
                   >
                     Cancel
                   </Button>
