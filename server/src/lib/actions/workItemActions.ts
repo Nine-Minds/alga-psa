@@ -387,7 +387,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
                 .andOn('t.tenant', '=', db.raw('?', [tenant]));
           }
         )
-        .groupBy('t.ticket_id', 't.title', 't.url', 't.ticket_number', 't.assigned_to', 't.tenant')
+        .groupBy('t.ticket_id', 't.title', 't.url', 't.ticket_number', 't.assigned_to', 't.tenant', 'tr.additional_user_ids')
         .select(
           't.ticket_id as work_item_id',
           't.title as name',

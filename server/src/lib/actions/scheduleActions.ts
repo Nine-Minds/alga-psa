@@ -61,6 +61,14 @@ export async function addScheduleEntry(
         error: 'Non-ad-hoc entries must have a valid work item ID'
       };
     }
+    
+    // Ensure work_item_type is preserved for ticket and project_task entries
+    if (entry.work_item_id && !entry.work_item_type) {
+      return {
+        success: false,
+        error: 'Work item type must be specified for entries with a work item ID'
+      };
+    }
 
     // Ensure at least one user is assigned
     if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
@@ -97,15 +105,24 @@ export async function addScheduleEntry(
 }
 
 export async function updateScheduleEntry(
-  entry_id: string, 
+  entry_id: string,
   entry: Partial<IScheduleEntry>
 ) {
   try {
+    // Ensure work_item_type is preserved for ticket and project_task entries
+    if (entry.work_item_id && !entry.work_item_type) {
+      // Fetch the existing entry to get its work_item_type
+      const existingEntry = await ScheduleEntry.get(entry_id);
+      if (existingEntry && existingEntry.work_item_type) {
+        entry.work_item_type = existingEntry.work_item_type;
+      }
+    }
+    
     // If no assigned_user_ids provided, keep existing assignments
-      const updatedEntry = await ScheduleEntry.update(entry_id, {
-        ...entry,
-        assigned_user_ids: entry.assigned_user_ids
-      }, entry.updateType || IEditScope.SINGLE);
+    const updatedEntry = await ScheduleEntry.update(entry_id, {
+      ...entry,
+      assigned_user_ids: entry.assigned_user_ids
+    }, entry.updateType || IEditScope.SINGLE);
     return { success: true, entry: updatedEntry };
   } catch (error) {
     console.error('Error updating schedule entry:', error);

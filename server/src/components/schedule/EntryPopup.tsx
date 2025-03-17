@@ -6,10 +6,13 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import { ExternalLink } from 'lucide-react';
+import { useDrawer } from "server/src/context/DrawerContext";
+import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { format, isWeekend, addYears } from 'date-fns';
 import { IScheduleEntry, IRecurrencePattern, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { AddWorkItemDialog } from 'server/src/components/time-management/time-entry/time-sheet/AddWorkItemDialog';
-import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
+import { IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import SelectedWorkItem from 'server/src/components/time-management/time-entry/time-sheet/SelectedWorkItem';
@@ -351,16 +354,21 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         <DialogTitle className="text-xl font-bold">
           {event ? 'Edit Entry' : 'New Entry'}
         </DialogTitle>
-        {event && onDelete && (
-          <Button 
-            id="delete-entry-btn" 
-            onClick={() => setShowDeleteDialog(true)} 
-            variant="destructive"
-            size="sm"
-          >
-            Delete Entry
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task') && event.work_item_id && (
+            <OpenDrawerButton event={event} />
+          )}
+          {event && onDelete && (
+            <Button
+              id="delete-entry-btn"
+              onClick={() => setShowDeleteDialog(true)}
+              variant="destructive"
+              size="sm"
+            >
+              Delete Entry
+            </Button>
+          )}
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto space-y-4 p-1">
         <div className="min-w-0">
@@ -616,6 +624,52 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           id="recurrence-edit-dialog"
         />
     </Dialog>
+  );
+};
+
+// Component for the Open Drawer button
+const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
+  const { openDrawer, closeDrawer } = useDrawer();
+
+  const handleOpenDrawer = () => {
+    const workItem = {
+      work_item_id: event.work_item_id || '',
+      type: event.work_item_type,
+      name: event.title,
+      title: event.title,
+      description: event.notes || '',
+      startTime: new Date(event.scheduled_start),
+      endTime: new Date(event.scheduled_end),
+      scheduled_start: new Date(event.scheduled_start).toISOString(),
+      scheduled_end: new Date(event.scheduled_end).toISOString(),
+      users: event.assigned_user_ids.map(id => ({ user_id: id })),
+      tenant: event.tenant,
+      is_billable: true
+    } as IExtendedWorkItem;
+
+    openDrawer(
+      <div className="h-full">
+        <WorkItemDrawer
+          workItem={workItem}
+          onClose={closeDrawer}
+          onTaskUpdate={async () => {}}
+          onScheduleUpdate={async () => {}}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <Button
+      id="open-drawer-btn"
+      onClick={handleOpenDrawer}
+      variant="outline"
+      size="sm"
+      className="flex items-center gap-1"
+    >
+      <ExternalLink className="w-4 h-4" />
+      <span>Details</span>
+    </Button>
   );
 };
 

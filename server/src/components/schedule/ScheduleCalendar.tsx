@@ -196,7 +196,6 @@ const ScheduleCalendar: React.FC = () => {
   const handleSelectEvent = (event: object, e: React.SyntheticEvent<HTMLElement>) => {
     const scheduleEvent = event as IScheduleEntry;
     const target = e.target as HTMLElement;
-    const isTicketOrTask = scheduleEvent.work_item_type === 'ticket' || scheduleEvent.work_item_type === 'project_task';
     
     // If it's a delete button click, don't open anything
     if (target.closest('.delete-entry-btn')) {
@@ -204,39 +203,9 @@ const ScheduleCalendar: React.FC = () => {
       return;
     }
     
-    // If it's a title click on a ticket or project task, open the drawer
-    if (target.classList.contains('event-title') && isTicketOrTask) {
-      e.stopPropagation(); // Prevent EntryPopup from opening
-      const workItem = {
-        work_item_id: scheduleEvent.work_item_id || '',
-        type: scheduleEvent.work_item_type,
-        name: scheduleEvent.title,
-        title: scheduleEvent.title,
-        description: scheduleEvent.notes || '',
-        startTime: new Date(scheduleEvent.scheduled_start),
-        endTime: new Date(scheduleEvent.scheduled_end),
-        scheduled_start: new Date(scheduleEvent.scheduled_start).toISOString(),
-        scheduled_end: new Date(scheduleEvent.scheduled_end).toISOString(),
-        users: scheduleEvent.assigned_user_ids.map(id => ({ user_id: id })),
-        tenant: scheduleEvent.tenant,
-        is_billable: true 
-      } as IExtendedWorkItem;
-
-      openDrawer(
-        <div className="h-full">
-          <WorkItemDrawer
-            workItem={workItem}
-            onClose={closeDrawer}
-            onTaskUpdate={handleTaskUpdate}
-            onScheduleUpdate={handleScheduleUpdate}
-          />
-        </div>
-      );
-    } else {
-      // For non-title clicks or non-ticket/task items, show the EntryPopup
-      setSelectedEvent(scheduleEvent);
-      setShowEntryPopup(true);
-    }
+    // Always show the EntryPopup first, regardless of whether it's a ticket or not
+    setSelectedEvent(scheduleEvent);
+    setShowEntryPopup(true);
   };
 
   const handleEntryPopupClose = () => {
