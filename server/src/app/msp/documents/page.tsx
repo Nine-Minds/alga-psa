@@ -16,7 +16,7 @@ export default function DocumentsPage() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
-  
+
   const [filterInputs, setFilterInputs] = useState({
     type: 'all',
     entityType: '',
@@ -24,7 +24,6 @@ export default function DocumentsPage() {
   });
 
   const documentTypes: SelectOption[] = [
-    { value: 'all', label: 'All Document Types' },
     { value: 'application/pdf', label: 'PDF' },
     { value: 'image', label: 'Images' },
     { value: 'text', label: 'Documents' },
@@ -43,24 +42,24 @@ export default function DocumentsPage() {
       setIsLoading(true);
       setError(null);
       console.log('Fetching documents with filters:', filterInputs);
-      
+
       // Only include filters that have values
       const searchFilters = {
         ...(filterInputs.type !== 'all' && { type: filterInputs.type }),
         ...(filterInputs.entityType && { entityType: filterInputs.entityType }),
         ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
       };
-      
+
       const docs = await getAllDocuments(searchFilters);
       console.log('Fetched documents:', docs);
-      
+
       if (!Array.isArray(docs)) {
         console.error('Received non-array documents:', docs);
         setDocuments([]);
         setError('Invalid document data received');
         return;
       }
-      
+
       setDocuments(docs);
     } catch (error) {
       console.error('Error fetching documents:', error);
@@ -86,7 +85,7 @@ export default function DocumentsPage() {
         // Fetch user first
         const user = await getCurrentUser();
         if (!mounted) return;
-        
+
         if (user) {
           setCurrentUserId(user.user_id);
           // Fetch documents after we have the user
@@ -125,14 +124,46 @@ export default function DocumentsPage() {
   const handleDocumentUpdate = async () => {
     await handleSearch();
   };
-
   const handleClearFilters = () => {
-    setFilterInputs({
+    // Create cleared filters object
+    const clearedFilters = {
       type: 'all',
       entityType: '',
       searchTerm: ''
-    });
-    handleSearch();
+    };
+
+    // Update the filter inputs state
+    setFilterInputs(clearedFilters);
+
+    // Call handleSearch with the cleared filters directly
+    // This ensures we don't depend on the state update timing
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('Fetching all documents after clearing filters');
+
+      // Call getAllDocuments with empty filters
+      getAllDocuments({}).then(docs => {
+        console.log('Received documents after clearing filters:', docs.length);
+        if (Array.isArray(docs)) {
+          setDocuments(docs);
+        } else {
+          console.error('Received non-array documents:', docs);
+          setDocuments([]);
+          setError('Invalid document data received');
+        }
+      }).catch(error => {
+        console.error('Error fetching documents:', error);
+        setError('Failed to fetch documents');
+        toast.error('Failed to fetch documents');
+        setDocuments([]);
+      }).finally(() => {
+        setIsLoading(false);
+      });
+    } catch (error) {
+      console.error('Error in handleClearFilters:', error);
+      setIsLoading(false);
+    }
   };
 
   // Debug log for rendering
@@ -184,9 +215,46 @@ export default function DocumentsPage() {
                 <CustomSelect
                   options={documentTypes}
                   value={filterInputs.type}
+                  placeholder='All Document Types'
                   onValueChange={(value: string) => {
+                    if (value == 'placeholder') {
+                      value = 'all';
+                    }
+
+                    // Update state
                     setFilterInputs({ ...filterInputs, type: value });
-                    handleSearch();
+                    
+                    // Call search with the new value directly instead of relying on state update
+                    const searchFilters = {
+                      ...(value !== 'all' && { type: value }),
+                      ...(filterInputs.entityType && { entityType: filterInputs.entityType }),
+                      ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
+                    };
+                    
+                    // Set loading state
+                    setIsLoading(true);
+                    setError(null);
+                    
+                    // Execute search with the new filters
+                    getAllDocuments(searchFilters)
+                      .then(docs => {
+                        if (Array.isArray(docs)) {
+                          setDocuments(docs);
+                        } else {
+                          console.error('Received non-array documents:', docs);
+                          setDocuments([]);
+                          setError('Invalid document data received');
+                        }
+                      })
+                      .catch(error => {
+                        console.error('Error fetching documents:', error);
+                        setError('Failed to fetch documents');
+                        toast.error('Failed to fetch documents');
+                        setDocuments([]);
+                      })
+                      .finally(() => {
+                        setIsLoading(false);
+                      });
                   }}
                 />
               </div>
@@ -199,8 +267,44 @@ export default function DocumentsPage() {
                   options={entityTypes}
                   value={filterInputs.entityType}
                   onValueChange={(value: string) => {
+                    if (value === 'placeholder') {
+                      value = '';
+                    }
+
+                    // Update state
                     setFilterInputs({ ...filterInputs, entityType: value });
-                    handleSearch();
+                    
+                    // Call search with the new value directly instead of relying on state update
+                    const searchFilters = {
+                      ...(filterInputs.type !== 'all' && { type: filterInputs.type }),
+                      ...(value && { entityType: value }),
+                      ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
+                    };
+                    
+                    // Set loading state
+                    setIsLoading(true);
+                    setError(null);
+                    
+                    // Execute search with the new filters
+                    getAllDocuments(searchFilters)
+                      .then(docs => {
+                        if (Array.isArray(docs)) {
+                          setDocuments(docs);
+                        } else {
+                          console.error('Received non-array documents:', docs);
+                          setDocuments([]);
+                          setError('Invalid document data received');
+                        }
+                      })
+                      .catch(error => {
+                        console.error('Error fetching documents:', error);
+                        setError('Failed to fetch documents');
+                        toast.error('Failed to fetch documents');
+                        setDocuments([]);
+                      })
+                      .finally(() => {
+                        setIsLoading(false);
+                      });
                   }}
                   placeholder="All Entities"
                 />

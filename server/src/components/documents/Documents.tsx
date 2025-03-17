@@ -80,6 +80,11 @@ const Documents = ({
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
 
+  // Keep local documents state in sync with props
+  useEffect(() => {
+    setDocuments(initialDocuments);
+  }, [initialDocuments]);
+
   const handleCreateDocument = async () => {
     setIsCreatingNew(true);
     setNewDocumentName('');

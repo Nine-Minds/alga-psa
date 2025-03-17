@@ -69,7 +69,7 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
 // Delete document
 export async function deleteDocument(documentId: string, userId: string) {
   try {
-    const { tenant } = await createTenantKnex();
+    const { tenant, knex } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
@@ -79,6 +79,17 @@ export async function deleteDocument(documentId: string, userId: string) {
     if (!document) {
       throw new Error('Document not found');
     }
+
+    // First, update any companies that reference this document as notes_document_id
+    // We need to do this manually because of the composite foreign key constraint
+    await knex('companies')
+      .where({
+        notes_document_id: documentId,
+        tenant
+      })
+      .update({
+        notes_document_id: null
+      });
 
     // If there's an associated file, delete it from storage
     if (document.file_id) {
@@ -542,30 +553,100 @@ export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocum
           COALESCE(dt.icon, sdt.icon) as type_icon
         `)
       )
-      .leftJoin('users', function() {
-        this.on('documents.created_by', '=', 'users.user_id')
-            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-      })
+      .where('documents.tenant', tenant);
+      
+    // Add joins based on filters to optimize query performance
+    // Always join with document types since we need type_name and icon
+    query = query
       // Left join with document_types to get tenant-specific types
       .leftJoin('document_types as dt', function() {
         this.on('documents.type_id', '=', 'dt.type_id')
             .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
       })
       // Left join with shared_document_types to get shared types
-      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-      .where('documents.tenant', tenant);
+      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id');
+      
+    // Only join with users table if we need user information
+    query = query.leftJoin('users', function() {
+      this.on('documents.created_by', '=', 'users.user_id')
+          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+    });
 
     // Apply filters if provided
     if (filters) {
       if (filters.searchTerm) {
-        query = query.where('documents.document_name', 'ilike', `%${filters.searchTerm}%`);
+        console.log('Applying search term filter:', filters.searchTerm);
+        
+        // Use whereRaw with LOWER function for case-insensitive search
+        // This is more compatible across different database systems
+        query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
+          [`%${filters.searchTerm.toLowerCase()}%`]);
       }
 
       if (filters.type) {
-        query = query.where(function() {
-          this.where('dt.type_name', 'like', `${filters.type}%`)
-              .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-        });
+        // Handle different document type filters
+        if (filters.type === 'application/pdf') {
+          // PDF filter - exact match for PDF and ensure file_id is not null
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', '=', 'application/pdf')
+                  .orWhere('sdt.type_name', '=', 'application/pdf');
+            }).whereNotNull('documents.file_id'); // Exclude block editor documents
+          });
+        } else if (filters.type === 'image') {
+          // Images filter - match any image/* MIME type and ensure file_id is not null
+          query = query.where(function() {
+            this.where(function() {
+              this.where('dt.type_name', 'like', 'image/%')
+                  .orWhere('sdt.type_name', 'like', 'image/%');
+            }).whereNotNull('documents.file_id'); // Exclude block editor documents
+          });
+        } else if (filters.type === 'text') {
+          // Documents filter - match text/* MIME types and block editor documents (file_id is null)
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', 'text/%')
+                .orWhere('sdt.type_name', 'like', 'text/%')
+                // Also include specific document formats
+                .orWhere('dt.type_name', '=', 'application/msword')
+                .orWhere('sdt.type_name', '=', 'application/msword')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                // Include block editor documents (where file_id is null)
+                .orWhereNull('documents.file_id');
+          });
+        } else if (filters.type === 'application') {
+          // Other filter - match application/* MIME types except PDFs and office documents
+          // Also ensure file_id is not null (exclude block editor documents)
+          query = query.where(function() {
+            this.where(function() {
+              this.where(function() {
+                this.where('dt.type_name', 'like', 'application/%')
+                    .whereNot('dt.type_name', '=', 'application/pdf')
+                    .whereNot('dt.type_name', '=', 'application/msword')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              }).orWhere(function() {
+                this.where('sdt.type_name', 'like', 'application/%')
+                    .whereNot('sdt.type_name', '=', 'application/pdf')
+                    .whereNot('sdt.type_name', '=', 'application/msword')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+              });
+            }).whereNotNull('documents.file_id'); // Exclude block editor documents
+          });
+        } else {
+          // Fallback to the original behavior for any other filter
+          query = query.where(function() {
+            this.where('dt.type_name', 'like', `${filters.type}%`)
+                .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+          });
+        }
       }
 
       // Exclude documents that are already associated with the specified entity
@@ -591,10 +672,11 @@ export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocum
       }
     }
 
-    // Get the documents
+    // Get the documents with performance optimizations
     const documents = await query
       .orderBy('documents.entered_at', 'desc')
-      .distinct('documents.*');
+      .distinct('documents.*')
+      .limit(1000); // Add reasonable limit to prevent excessive data retrieval
 
     console.log('Raw documents from database:', documents); // Debug log
 

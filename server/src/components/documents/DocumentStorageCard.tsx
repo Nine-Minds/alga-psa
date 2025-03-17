@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { IDocument } from '../../interfaces/document.interface';
 import { getDocumentPreview } from '../../lib/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl } from '../../lib/utils/documentUtils';
 import { Button } from '../ui/Button';
-import { 
-    Download, 
-    Trash2, 
-    FileText, 
-    Image, 
-    File, 
+import {
+    Download,
+    Trash2,
+    FileText,
+    Image,
+    File,
     Loader2,
     FileSpreadsheet,
     FileType,
@@ -33,9 +34,9 @@ export interface DocumentStorageCardProps {
     isContentDocument?: boolean;
 }
 
-export default function DocumentStorageCard({ 
+export default function DocumentStorageCard({
     id,
-    document, 
+    document,
     onDelete,
     onDisassociate,
     hideActions = false,
@@ -49,6 +50,8 @@ export default function DocumentStorageCard({
         error?: string;
     }>({});
     const [isLoading, setIsLoading] = useState(false);
+    const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+    const [showDisassociateConfirmation, setShowDisassociateConfirmation] = useState(false);
 
     // Debug log
     console.log('Rendering DocumentStorageCard with document:', document);
@@ -75,6 +78,12 @@ export default function DocumentStorageCard({
 
     const handleDelete = async () => {
         if (!onDelete) return;
+        setShowDeleteConfirmation(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!onDelete) return;
+        
         try {
             setIsLoading(true);
             await onDelete(document);
@@ -82,11 +91,18 @@ export default function DocumentStorageCard({
             console.error('Error deleting document:', error);
         } finally {
             setIsLoading(false);
+            setShowDeleteConfirmation(false);
         }
     };
 
     const handleDisassociate = async () => {
         if (!onDisassociate) return;
+        setShowDisassociateConfirmation(true);
+    };
+
+    const confirmDisassociate = async () => {
+        if (!onDisassociate) return;
+        
         try {
             setIsLoading(true);
             await onDisassociate(document);
@@ -94,6 +110,7 @@ export default function DocumentStorageCard({
             console.error('Error disassociating document:', error);
         } finally {
             setIsLoading(false);
+            setShowDisassociateConfirmation(false);
         }
     };
 
@@ -121,12 +138,19 @@ export default function DocumentStorageCard({
         return <FileText className="w-6 h-6" />;
     };
 
-    return (
+    return (<>
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
-            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${
-                    isContentDocument ? 'cursor-pointer' : ''
+            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${isContentDocument ? 'cursor-pointer' : ''
                 }`}
-                onClick={isContentDocument && onClick ? onClick : undefined}
+                onClick={isContentDocument && onClick ? (e) => {
+                    // Prevent click event if it's coming from the delete button
+                    if (e.target instanceof Element &&
+                        (e.target.closest('button[id^="delete-document"]') ||
+                            e.target.closest('button[id^="disassociate-document"]'))) {
+                        return;
+                    }
+                    onClick();
+                } : undefined}
                 role={isContentDocument ? "button" : undefined}
                 tabIndex={isContentDocument ? 0 : undefined}
             >
@@ -197,7 +221,7 @@ export default function DocumentStorageCard({
                                     tabIndex={0}
                                 />
                             ) : previewContent.content ? (
-                                <div 
+                                <div
                                     className="text-sm text-[rgb(var(--color-text-700))] max-h-[200px] overflow-hidden p-3 rounded-md bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] cursor-pointer"
                                     style={{
                                         display: '-webkit-box',
@@ -220,11 +244,10 @@ export default function DocumentStorageCard({
                             href={document.file_id ? getDocumentDownloadUrl(document.file_id) : '#'}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-3 ${
-                                isLoading || !document.file_id
-                                    ? 'opacity-50 cursor-not-allowed'
-                                    : 'text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))]'
-                            }`}
+                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-3 ${isLoading || !document.file_id
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))]'
+                                }`}
                             onClick={(e) => {
                                 if (isLoading || !document.file_id) {
                                     e.preventDefault();
@@ -239,7 +262,10 @@ export default function DocumentStorageCard({
                                 id={`disassociate-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
-                                onClick={handleDisassociate}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent event bubbling to parent
+                                    handleDisassociate();
+                                }}
                                 disabled={isLoading}
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
@@ -252,7 +278,10 @@ export default function DocumentStorageCard({
                                 id={`delete-document-${document.document_id}-button`}
                                 variant="ghost"
                                 size="sm"
-                                onClick={handleDelete}
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent event bubbling to parent
+                                    handleDelete();
+                                }}
                                 disabled={isLoading}
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
@@ -264,5 +293,36 @@ export default function DocumentStorageCard({
                 )}
             </div>
         </ReflectionContainer>
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+            id={`${id}-delete-confirmation`}
+            isOpen={showDeleteConfirmation}
+            onClose={() => setShowDeleteConfirmation(false)}
+            onConfirm={confirmDelete}
+            title="Delete Document"
+            message={`Are you sure you want to delete "${document.document_name}"? This action cannot be undone.`}
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            isConfirming={isLoading}
+        />
+
+        {/* Disassociate Confirmation Dialog */}
+        {
+            onDisassociate && (
+                <ConfirmationDialog
+                    id={`${id}-disassociate-confirmation`}
+                    isOpen={showDisassociateConfirmation}
+                    onClose={() => setShowDisassociateConfirmation(false)}
+                    onConfirm={confirmDisassociate}
+                    title="Remove Document"
+                    message={`Are you sure you want to remove "${document.document_name}" from this item? The document will still be available in the document library.`}
+                    confirmLabel="Remove"
+                    cancelLabel="Cancel"
+                    isConfirming={isLoading}
+                />
+            )
+        }
+        </>
     );
+
 }
