@@ -25,8 +25,8 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_PORT: ${PGBOUNCER_PORT:-6432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -46,7 +46,7 @@ services:
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
         read_only: true
-    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@postgres:5432/server && /app/entrypoint.sh"]
+    entrypoint: ["/bin/sh", "-c", "export DATABASE_URL=postgresql://app_user:$$(cat /run/secrets/db_password_server)@${PGBOUNCER_HOST:-pgbouncer}:${PGBOUNCER_PORT:-6432}/server && /app/entrypoint.sh"]
     secrets:
       - postgres_password
       - db_password_server
@@ -63,6 +63,8 @@ services:
       - app-network
     depends_on:
       postgres:
+        condition: service_started
+      pgbouncer:
         condition: service_started
       redis:
         condition: service_started
@@ -151,8 +153,8 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+      DB_PORT: ${PGBOUNCER_PORT:-6432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -186,6 +188,8 @@ services:
       - app-network
     depends_on:
       postgres:
+        condition: service_started
+      pgbouncer:
         condition: service_started
       redis:
         condition: service_started

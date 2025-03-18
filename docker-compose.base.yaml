@@ -13,6 +13,11 @@ x-environment: &shared-environment
   REDIS_HOST: ${REDIS_HOST:-redis}
   REDIS_PORT: ${REDIS_PORT:-6379}
 
+  # ---- PGBOUNCER ----
+  PGBOUNCER_HOST: ${PGBOUNCER_HOST:-pgbouncer}
+  PGBOUNCER_PORT: ${PGBOUNCER_PORT:-6432}
+  EXPOSE_PGBOUNCER_PORT: ${EXPOSE_PGBOUNCER_PORT:-6432}
+
   # ---- DATABASE ----
   DB_TYPE: ${DB_TYPE}
   DB_HOST: postgres
@@ -116,8 +121,23 @@ services:
       - redis_password
     networks:
       - app-network
+  pgbouncer:
+    extends:
+      file: ./pgbouncer/docker-compose.yaml
+      service: pgbouncer
+    environment:
+      <<: *shared-environment
+    secrets:
+      - postgres_password
+      - db_password_server
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
 
 networks:
   app-network:
     name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
+

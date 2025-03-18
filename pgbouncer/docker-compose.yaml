@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  pgbouncer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-sebastian}_pgbouncer
+    environment:
+      - POSTGRES_USER=postgres
+    secrets:
+      - postgres_password
+      - db_password_server
+    ports:
+      - "${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
+    networks:
+      - app-network
+    depends_on:
+      postgres:
+        condition: service_started
