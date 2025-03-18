@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
-import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -25,29 +24,28 @@ interface TicketingDashboardContainerProps {
     tickets: ITicketListItem[];
     nextCursor: string | null;
   };
+  currentUser: IUser;
 }
 
 export default function TicketingDashboardContainer({ 
-  consolidatedData 
+  consolidatedData,
+  currentUser
 }: TicketingDashboardContainerProps) {
-  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
 
   // Handle loading more tickets with cursor-based pagination
   const handleLoadMore = async (cursor: string) => {
-    if (!session?.user) {
+    if (!currentUser) {
       toast.error('You must be logged in to load more tickets');
       return;
     }
 
     try {
       setIsLoading(true);
-      // Need to get the current user from the server for proper permissions
       const result = await loadMoreTickets(
-        // Cast to any to avoid TypeScript errors with session.user structure
-        session.user as any,
+        currentUser,
         { channelFilterState: 'active' },
         cursor
       );
@@ -83,6 +81,7 @@ export default function TicketingDashboardContainer({
       nextCursor={nextCursor}
       onLoadMore={handleLoadMore}
       isLoadingMore={isLoading}
+      user={currentUser}
     />
   );
 }

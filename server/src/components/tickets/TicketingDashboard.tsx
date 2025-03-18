@@ -11,7 +11,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
-import { IChannel, ICompany } from 'server/src/interfaces';
+import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
@@ -41,6 +41,7 @@ interface TicketingDashboardProps {
   nextCursor: string | null;
   onLoadMore: (cursor: string) => Promise<void>;
   isLoadingMore: boolean;
+  user?: IUser; // Pass the user prop directly from container
 }
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
@@ -53,19 +54,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialCompanies,
   nextCursor,
   onLoadMore,
-  isLoadingMore
+  isLoadingMore,
+  user
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  // Initialize currentUser directly from props if available to prevent any flashing
+  const [currentUser, setCurrentUser] = useState<any>(user || null);
 
   // Initialize state with pre-fetched data
-  const [channels, setChannels] = useState<IChannel[]>(initialChannels);
-  const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
-  const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
-  const [statusOptions, setStatusOptions] = useState<SelectOption[]>(initialStatuses);
-  const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>(initialPriorities);
+  const [channels] = useState<IChannel[]>(initialChannels);
+  const [companies] = useState<ICompany[]>(initialCompanies);
+  const [categories] = useState<ITicketCategory[]>(initialCategories);
+  const [statusOptions] = useState<SelectOption[]>(initialStatuses);
+  const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedChannel, setSelectedChannel] = useState<string>('');
@@ -85,19 +88,24 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTicketToDelete(ticketId);
   };
   
-  // Fetch current user to get user ID for interval tracking
+  // Initialize currentUser state from props if available
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await getCurrentUser();
-        setCurrentUser(user);
-      } catch (error) {
-        console.error('Error fetching current user:', error);
-      }
-    };
-    
-    fetchUser();
-  }, []);
+    if (user) {
+      setCurrentUser(user);
+    } else {
+      // Fallback to fetching user if not provided in props
+      const fetchUser = async () => {
+        try {
+          const fetchedUser = await getCurrentUser();
+          setCurrentUser(fetchedUser);
+        } catch (error) {
+          console.error('Error fetching current user:', error);
+        }
+      };
+      
+      fetchUser();
+    }
+  }, [user]);
   
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
@@ -106,12 +114,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (!ticketToDelete) return;
 
     try {
-      const user = await getCurrentUser();
-      if (!user) {
+      // Use the current user from state instead of fetching it again
+      if (!currentUser) {
         throw new Error('User not found');
       }
 
-      await deleteTicket(ticketToDelete, user);
+      await deleteTicket(ticketToDelete, currentUser);
       // We would normally call fetchTickets here, but we're now using props
       // Instead, we'll just remove the deleted ticket from the state
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));

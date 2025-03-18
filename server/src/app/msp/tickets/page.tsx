@@ -1,9 +1,8 @@
-import { Suspense } from 'react';
 import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
-import TicketListSkeleton from 'server/src/components/tickets/TicketListSkeleton';
 
+// Next.js will automatically use loading.tsx while this page loads
 export default async function TicketsPage() {
   try {
     const user = await getCurrentUser();
@@ -18,9 +17,10 @@ export default async function TicketsPage() {
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
-        <Suspense fallback={<TicketListSkeleton />}>
-          <TicketingDashboardContainer consolidatedData={consolidatedData} />
-        </Suspense>
+        <TicketingDashboardContainer 
+          consolidatedData={consolidatedData} 
+          currentUser={user} 
+        />
       </div>
     );
   } catch (error) {
