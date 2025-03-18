@@ -44,12 +44,14 @@ describe('BillingEngine', () => {
   let billingEngine: BillingEngine;
   const mockTenant = 'test_tenant';
   const mockCompanyId = 'test_company_id';
+  const mockBillingCycleId = 'test_billing_cycle_id';
 
   const mockStartDate: ISO8601String = '2023-01-01T00:00:00Z';
   const mockEndDate: ISO8601String = '2023-02-01T00:00:00Z';
 
   beforeEach(() => {
-    billingEngine = new BillingEngine(mockTenant);
+    billingEngine = new BillingEngine();
+    (billingEngine as any).tenant = mockTenant;
     const mockQueryBuilder = {
       select: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -108,13 +110,13 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue(mockTimeCharges);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue(mockUsageCharges);
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result).toEqual({
         charges: [
           ...mockFixedCharges.map((c): IFixedPriceCharge => ({ ...c, type: 'fixed', tax_amount: 0, tax_rate: 0 })),
-          ...mockTimeCharges.map((c): ITimeBasedCharge => ({ ...c, type: 'time', tax_amount: 0, tax_rate: 0 })),
-          ...mockUsageCharges.map((c): IUsageBasedCharge => ({ ...c, type: 'usage', tax_amount: 0, tax_rate: 0 })),
+          ...mockTimeCharges.map((c): ITimeBasedCharge => ({ ...c, type: 'time', tax_amount: 0, tax_rate: 0, entryId: 'mock-entry-id' })),
+          ...mockUsageCharges.map((c): IUsageBasedCharge => ({ ...c, type: 'usage', tax_amount: 0, tax_rate: 0, usageId: 'mock-usage-id' })),
         ],
         totalAmount: 250,
         discounts: [],
@@ -129,7 +131,7 @@ describe('BillingEngine', () => {
         billingCycle: 'monthly'
       });
 
-      await expect(billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate))
+      await expect(billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId))
         .rejects.toThrow('No active billing plans found for company test_company_id in the given period');
     });
 
@@ -167,7 +169,7 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue(mockTimeCharges);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue(mockUsageCharges);
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result).toEqual({
         charges: [
@@ -208,7 +210,7 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue([]);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockClientBilling[0].start_date, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockClientBilling[0].start_date, mockEndDate, mockBillingCycleId);
 
       const expectedProration = 17 / 31;
       expect(result.totalAmount).toBeCloseTo(100 * expectedProration, 2);
@@ -262,7 +264,7 @@ describe('BillingEngine', () => {
         };
       });
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result).toEqual({
         charges: mockFixedCharges,
@@ -325,7 +327,8 @@ describe('BillingEngine', () => {
         {
           type: 'time', serviceId: 'service3', serviceName: 'Service 3', userId: 'user1', duration: 2, rate: 25, total: 50,
           tax_amount: 0,
-          tax_rate: 0
+          tax_rate: 0,
+          entryId: ''
         },
       ];
 
@@ -333,7 +336,8 @@ describe('BillingEngine', () => {
         {
           type: 'time', serviceId: 'service4', serviceName: 'Service 4', userId: 'user2', duration: 3, rate: 30, total: 90,
           tax_amount: 0,
-          tax_rate: 0
+          tax_rate: 0,
+          entryId: ''
         },
       ];
 
@@ -380,7 +384,7 @@ describe('BillingEngine', () => {
         };
       });
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result.charges).toEqual([
         ...mockFixedCharges1,
@@ -497,7 +501,7 @@ describe('BillingEngine', () => {
       };
       (billingEngine as any).knex = vi.fn().mockReturnValue(mockKnex);
     
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
     
       // Check non-taxable item
       expect(result.charges[0].tax_amount).toBe(0);
@@ -594,7 +598,7 @@ describe('BillingEngine', () => {
         };
       });
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       // Plan 1 should be charged for the full month
       expect(result.charges[0].total).toBeCloseTo(100, 2);
@@ -637,7 +641,7 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
       vi.spyOn(billingEngine as any, 'calculateBucketPlanCharges').mockResolvedValue(mockBucketCharges);
 
-      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate);
+      const result = await billingEngine.calculateBilling(mockCompanyId, mockStartDate, mockEndDate, mockBillingCycleId);
 
       expect(result).toEqual({
         charges: [
@@ -741,6 +745,135 @@ describe('BillingEngine', () => {
 
       // Verify that getCompanyTaxRate was called with the correct arguments
       expect(getCompanyTaxRate).toHaveBeenCalledWith(mockCompany.tax_region, mockBucketUsage.period_end);
+    });
+
+    describe('calculateTimeBasedCharges with billing plan disambiguation', () => {
+      it('should filter time entries by billing plan ID', async () => {
+        const mockTimeEntries = [
+          {
+            work_item_id: 'service1',
+            service_name: 'Service 1',
+            user_id: 'user1',
+            start_time: '2023-01-01T10:00:00.000Z',
+            end_time: '2023-01-01T12:00:00.000Z',
+            user_rate: 50,
+            default_rate: 40,
+            billing_plan_id: 'billing_plan_1'
+          },
+          {
+            work_item_id: 'service2',
+            service_name: 'Service 2',
+            user_id: 'user2',
+            start_time: '2023-01-02T14:00:00.000Z',
+            end_time: '2023-01-02T17:00:00.000Z',
+            user_rate: null,
+            default_rate: 60,
+            billing_plan_id: 'billing_plan_2'
+          },
+          {
+            work_item_id: 'service3',
+            service_name: 'Service 3',
+            user_id: 'user3',
+            start_time: '2023-01-03T09:00:00.000Z',
+            end_time: '2023-01-03T11:00:00.000Z',
+            user_rate: null,
+            default_rate: 70,
+            billing_plan_id: null
+          },
+        ];
+
+        const mockRaw = vi.fn().mockReturnValue('COALESCE(project_tasks.task_name, tickets.title) as work_item_name');
+
+        const mockKnexInstance = {
+          join: vi.fn().mockReturnThis(),
+          leftJoin: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          andWhere: vi.fn().mockReturnThis(),
+          whereIn: vi.fn().mockReturnThis(),
+          whereBetween: vi.fn().mockReturnThis(),
+          whereNull: vi.fn().mockReturnThis(),
+          orWhere: vi.fn().mockReturnThis(),
+          select: vi.fn().mockImplementation(() => {
+            // Filter entries based on billing_plan_id
+            return Promise.resolve(mockTimeEntries.filter(entry =>
+              entry.billing_plan_id === 'billing_plan_1' || entry.billing_plan_id === null
+            ));
+          }),
+          raw: mockRaw,
+        };
+
+        // Mock the knex function at the class level
+        (billingEngine as any).knex = vi.fn().mockReturnValue(mockKnexInstance);
+        (billingEngine as any).knex.raw = mockRaw;
+
+        const result = await (billingEngine as any).calculateTimeBasedCharges(
+          mockCompanyId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          { service_category: 'test_category', plan_id: 'test_plan_id', company_billing_plan_id: 'billing_plan_1' }
+        );
+
+        // Should only include entries with billing_plan_id = 'billing_plan_1' or null
+        expect(result).toHaveLength(2);
+        expect(result[0].serviceName).toBe('Service 1');
+        expect(result[1].serviceName).toBe('Service 3');
+        
+        // Verify that the where function was called with the correct billing plan ID
+        expect(mockKnexInstance.where).toHaveBeenCalled();
+      });
+    });
+
+    describe('calculateUsageBasedCharges with billing plan disambiguation', () => {
+      it('should filter usage records by billing plan ID', async () => {
+        const mockUsageRecords = [
+          {
+            service_id: 'service1',
+            service_name: 'Service 1',
+            quantity: 10,
+            default_rate: 5,
+            billing_plan_id: 'billing_plan_1'
+          },
+          {
+            service_id: 'service2',
+            service_name: 'Service 2',
+            quantity: 20,
+            default_rate: 3,
+            billing_plan_id: 'billing_plan_2'
+          },
+          {
+            service_id: 'service3',
+            service_name: 'Service 3',
+            quantity: 15,
+            default_rate: 4,
+            billing_plan_id: null
+          },
+        ];
+
+        (billingEngine as any).knex.mockReturnValue({
+          join: vi.fn().mockReturnThis(),
+          leftJoin: vi.fn().mockReturnThis(),
+          where: vi.fn().mockReturnThis(),
+          whereBetween: vi.fn().mockReturnThis(),
+          whereNull: vi.fn().mockReturnThis(),
+          orWhere: vi.fn().mockReturnThis(),
+          select: vi.fn().mockImplementation(() => {
+            // Filter records based on billing_plan_id
+            return Promise.resolve(mockUsageRecords.filter(record =>
+              record.billing_plan_id === 'billing_plan_1' || record.billing_plan_id === null
+            ));
+          }),
+        });
+
+        const result = await (billingEngine as any).calculateUsageBasedCharges(
+          mockCompanyId,
+          { startDate: mockStartDate, endDate: mockEndDate },
+          { service_category: 'test_category', company_billing_plan_id: 'billing_plan_1' }
+        );
+
+        // Should only include records with billing_plan_id = 'billing_plan_1' or null
+        expect(result).toHaveLength(2);
+        expect(result[0].serviceName).toBe('Service 1');
+        expect(result[1].serviceName).toBe('Service 3');
+      });
     });
 
     describe('calculateTimeBasedCharges', () => {

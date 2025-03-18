@@ -544,6 +544,14 @@ export class BillingEngine {
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
       .where('time_entries.end_time', '<', billingPeriod.endDate)
       .where('time_entries.invoiced', false)
+      .where(function(this: Knex.QueryBuilder) {
+        // Either the time entry has the specific billing plan ID
+        this.where('time_entries.billing_plan_id', companyBillingPlan.company_billing_plan_id)
+          // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
+          .orWhere(function(this: Knex.QueryBuilder) {
+            this.whereNull('time_entries.billing_plan_id');
+          });
+      })
       .where(function (this: Knex.QueryBuilder) {
         this.where(function (this: Knex.QueryBuilder) {
           this.where('time_entries.work_item_type', '=', 'project_task')
@@ -629,6 +637,14 @@ export class BillingEngine {
       })
       .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
       .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
+      .where(function(this: Knex.QueryBuilder) {
+        // Either the usage record has the specific billing plan ID
+        this.where('usage_tracking.billing_plan_id', companyBillingPlan.company_billing_plan_id)
+          // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
+          .orWhere(function(this: Knex.QueryBuilder) {
+            this.whereNull('usage_tracking.billing_plan_id');
+          });
+      })
       .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'plan_services.custom_rate');
 
       console.log('Usage record query:', usageRecordQuery.toQuery());

@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
@@ -15,6 +16,23 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 
   const { knex, tenant } = await createTenantKnex();
 
+  // If no billing plan ID is provided, try to determine the default one
+  let billingPlanId = data.billing_plan_id;
+  if (!billingPlanId && data.service_id && data.company_id) {
+    try {
+      const defaultPlanId = await determineDefaultBillingPlan(
+        data.company_id,
+        data.service_id
+      );
+      
+      if (defaultPlanId) {
+        billingPlanId = defaultPlanId;
+      }
+    } catch (error) {
+      console.error('Error determining default billing plan:', error);
+    }
+  }
+
   const [record] = await knex('usage_tracking')
     .insert({
       tenant,
@@ -22,6 +40,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
       service_id: data.service_id,
       quantity: data.quantity,
       usage_date: data.usage_date,
+      billing_plan_id: billingPlanId,
     })
     .returning('*');
 
@@ -37,6 +56,34 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
 
   const { knex, tenant } = await createTenantKnex();
 
+  // If billing plan ID is explicitly set to null or undefined, and we have company and service IDs,
+  // try to determine the default one
+  let billingPlanId = data.billing_plan_id;
+  if (data.billing_plan_id === null || data.billing_plan_id === undefined) {
+    // Get the current record to get company_id and service_id if not provided in the update
+    const currentRecord = await knex('usage_tracking')
+      .where({ tenant, usage_id: data.usage_id })
+      .first();
+    
+    const companyId = data.company_id || currentRecord.company_id;
+    const serviceId = data.service_id || currentRecord.service_id;
+    
+    if (companyId && serviceId) {
+      try {
+        const defaultPlanId = await determineDefaultBillingPlan(
+          companyId,
+          serviceId
+        );
+        
+        if (defaultPlanId) {
+          billingPlanId = defaultPlanId;
+        }
+      } catch (error) {
+        console.error('Error determining default billing plan:', error);
+      }
+    }
+  }
+
   const [record] = await knex('usage_tracking')
     .where({ tenant, usage_id: data.usage_id })
     .update({
@@ -44,6 +91,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
       service_id: data.service_id,
       quantity: data.quantity,
       usage_date: data.usage_date,
+      billing_plan_id: billingPlanId,
     })
     .returning('*');
 

@@ -84,6 +84,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
 
   const lastNoteInputRef = useRef<HTMLInputElement>(null);
   const [shouldFocusNotes, setShouldFocusNotes] = useState(false);
+  const hasSetInitialEditingIndex = useRef(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; index: number | null }>({
     isOpen: false,
     index: null
@@ -105,7 +106,18 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         date,
       });
     }
-  }, [isOpen, defaultStartTime, defaultEndTime, defaultTaxRegion, date, workItem]);
+  }, [isOpen]);
+  
+  // Set editing index for single entry - separate effect to avoid infinite loop
+  useEffect(() => {
+    if (isOpen && existingEntries?.length === 1 && !hasSetInitialEditingIndex.current) {
+      setEditingIndex(0);
+      hasSetInitialEditingIndex.current = true;
+    } else if (!isOpen) {
+      // Reset the flag when dialog closes
+      hasSetInitialEditingIndex.current = false;
+    }
+  }, [isOpen, existingEntries?.length]);
 
   // Focus notes input when adding new entry
   useEffect(() => {

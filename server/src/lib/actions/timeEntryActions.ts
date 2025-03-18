@@ -1,6 +1,7 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
 import { 
   ITimeEntry, 
   ITimePeriod, 
@@ -325,7 +326,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
   try {
     // Extract only the fields that exist in the database schema
-    const { 
+    const {
       entry_id,
       work_item_id,
       work_item_type,
@@ -337,6 +338,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       approval_status,
       service_id,
       tax_region,
+      billing_plan_id,
     } = timeEntry;
     
     const cleanedEntry = {
@@ -350,6 +352,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       approval_status,
       service_id,
       tax_region,
+      billing_plan_id,
       user_id: session.user.id, // Always use session user_id
       tenant: tenant as string,
       updated_at: new Date().toISOString()
@@ -359,6 +362,39 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     console.log('Cleaned entry data:', cleanedEntry);
 
     let resultingEntry: ITimeEntry | null = null;
+
+    // If no billing plan ID is provided, try to determine the default one
+    if (!billing_plan_id && service_id) {
+      try {
+        const defaultPlanId = await determineDefaultBillingPlan(
+          work_item_type === 'project_task' ?
+            (await db('project_tasks')
+              .join('project_phases', function() {
+                this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                    .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+              })
+              .join('projects', function() {
+                this.on('project_phases.project_id', '=', 'projects.project_id')
+                    .andOn('project_phases.tenant', '=', 'project_phases.tenant');
+              })
+              .where({ 'project_tasks.task_id': work_item_id, 'project_tasks.tenant': tenant })
+              .first('projects.company_id')).company_id
+            : work_item_type === 'ticket' ?
+              (await db('tickets')
+                .where({ ticket_id: work_item_id, tenant })
+                .first('company_id')).company_id
+              : null,
+          service_id
+        );
+        
+        if (defaultPlanId) {
+          cleanedEntry.billing_plan_id = defaultPlanId;
+        }
+      } catch (error) {
+        console.error('Error determining default billing plan:', error);
+      }
+    }
+    
 
     await db.transaction(async (trx) => {
       console.log('Starting transaction for time entry');
@@ -1005,4 +1041,32 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
 
   const services = await query;
   return services;
+}
+
+/**
+ * Fetches schedule entry information for a work item
+ * @param workItemId The work item ID
+ * @returns The schedule entry information or null if not found
+ */
+export async function fetchScheduleEntryForWorkItem(workItemId: string): Promise<{
+  scheduled_start: string;
+  scheduled_end: string
+} | null> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error("Tenant context not found");
+    }
+    
+    const scheduleEntry = await knex('schedule_entries')
+      .where('entry_id', workItemId)
+      .select('scheduled_start', 'scheduled_end')
+      .first();
+    
+    return scheduleEntry || null;
+  } catch (error) {
+    console.error('Error fetching schedule entry for work item:', error);
+    return null;
+  }
 }

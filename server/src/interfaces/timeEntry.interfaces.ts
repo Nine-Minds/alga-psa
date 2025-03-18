@@ -42,6 +42,7 @@ export interface ITimeEntry extends TenantEntity  {
   approval_status: TimeSheetStatus;
   service_id?: string;
   tax_region?: string;
+  billing_plan_id?: string;
 }
 
 export interface ITimeSheetComment extends TenantEntity  {

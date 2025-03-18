@@ -4,9 +4,9 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TaxRegion } from 'server/src/types/types.d';
-import { fetchCompanyTaxRateForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
+import { fetchCompanyTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
+import { getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { createTenantKnex } from 'server/src/lib/db';
 
 interface Service {
   id: string;
@@ -19,6 +19,7 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
+  company_id?: string; // Added for billing plan selection
 }
 
 interface TimeEntryState {
@@ -140,12 +141,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Load all required data in parallel
-  const [services, taxRegions, defaultTaxRegionFromCompany] = await Promise.all([
+  const [services, taxRegions, defaultTaxRegionFromCompany, companyId] = await Promise.all([
     fetchServicesForTimeEntry(workItem.type),
     fetchTaxRegions(),
-    (workItem.type === 'ticket' || workItem.type === 'project_task') 
+    (workItem.type === 'ticket' || workItem.type === 'project_task')
       ? fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type)
-      : Promise.resolve(undefined)
+      : Promise.resolve(undefined),
+    (workItem.type === 'ticket' || workItem.type === 'project_task')
+      ? getCompanyIdForWorkItem(workItem.work_item_id, workItem.type)
+      : Promise.resolve(null)
   ]);
 
       dispatch({
@@ -166,6 +170,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         tax_region: rest.tax_region || defaultTaxRegion || defaultTaxRegionFromCompany || '',
         isNew: false,
         isDirty: false,
+        company_id: companyId || undefined,
       }));
     } else if (defaultStartTime && defaultEndTime) {
       const duration = calculateDuration(defaultStartTime, defaultEndTime);
@@ -185,16 +190,17 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || '',
         isNew: true,
         tempId: crypto.randomUUID(),
+        company_id: companyId || undefined,
       }];
     } else {
       // For ad-hoc items, get the scheduled times from the schedule entry
-      const {knex: db} = await createTenantKnex();
-      const scheduleEntry = await db('schedule_entries')
-        .where('entry_id', workItem.work_item_id)
-        .select('scheduled_start', 'scheduled_end')
-        .first();
-
       let startTime, endTime;
+      let scheduleEntry = null;
+      
+      if (workItem.type === 'ad_hoc') {
+        scheduleEntry = await fetchScheduleEntryForWorkItem(workItem.work_item_id);
+      }
+
       if (scheduleEntry && workItem.type === 'ad_hoc') {
         startTime = parseISO(scheduleEntry.scheduled_start);
         endTime = parseISO(scheduleEntry.scheduled_end);
@@ -223,6 +229,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         tax_region: defaultTaxRegion || '',
         isNew: true,
         tempId: crypto.randomUUID(),
+        company_id: companyId || undefined,
       }];
     }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { getEligibleBillingPlansForUI } from 'server/src/lib/utils/planDisambiguation';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -46,6 +47,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     quantity: 0,
     usage_date: new Date().toISOString(),
   });
+  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<Array<{
+    company_billing_plan_id: string;
+    plan_name: string;
+    plan_type: string;
+  }>>([]);
+  const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
 
   const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
     type: 'container',
@@ -60,6 +67,47 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   useEffect(() => {
     loadUsageRecords();
   }, [selectedCompany, selectedService]);
+  
+  // Load eligible billing plans when company and service change in the form
+  useEffect(() => {
+    const loadEligibleBillingPlans = async () => {
+      if (!newUsage.company_id || !newUsage.service_id) {
+        setEligibleBillingPlans([]);
+        setShowBillingPlanSelector(false);
+        return;
+      }
+      
+      try {
+        const plans = await getEligibleBillingPlansForUI(newUsage.company_id, newUsage.service_id);
+        setEligibleBillingPlans(plans);
+        
+        // Always show the plan selector, but set a default when appropriate
+        setShowBillingPlanSelector(true);
+        
+        // If no plan is selected yet, try to set a default
+        if (!newUsage.billing_plan_id) {
+          if (plans.length === 1) {
+            // If there's only one plan, use it automatically
+            setNewUsage(prev => ({ ...prev, billing_plan_id: plans[0].company_billing_plan_id }));
+          } else if (plans.length > 1) {
+            // Check for bucket plans first
+            const bucketPlans = plans.filter(plan => plan.plan_type === 'Bucket');
+            if (bucketPlans.length === 1) {
+              // If there's only one bucket plan, use it as default
+              setNewUsage(prev => ({ ...prev, billing_plan_id: bucketPlans[0].company_billing_plan_id }));
+            }
+          }
+        } else if (plans.length === 0) {
+          // Clear any existing billing plan selection if no plans are available
+          setNewUsage(prev => ({ ...prev, billing_plan_id: undefined }));
+        }
+      } catch (error) {
+        console.error('Error loading eligible billing plans:', error);
+      }
+    };
+    
+    loadEligibleBillingPlans();
+  }, [newUsage.company_id, newUsage.service_id]);
 
   const loadCompanies = async () => {
     try {
@@ -176,8 +224,11 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       service_id: '',
       quantity: 0,
       usage_date: new Date().toISOString(),
+      billing_plan_id: undefined,
     });
     setEditingUsage(null);
+    setEligibleBillingPlans([]);
+    setShowBillingPlanSelector(false);
   };
 
   const columns: ColumnDefinition<IUsageRecord>[] = [
@@ -199,6 +250,15 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       render: (value) => new Date(value).toLocaleDateString(),
     },
     {
+      title: 'Billing Plan',
+      dataIndex: 'billing_plan_id',
+      render: (value, record) => {
+        // This would ideally be populated from a join in the backend
+        // For now, we'll just show the ID or "Default"
+        return value ? `Plan: ${value.substring(0, 8)}...` : "Default Plan";
+      },
+    },
+    {
       title: 'Actions',
       dataIndex: 'usage_id',
       render: (_, record) => (
@@ -213,6 +273,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 service_id: record.service_id,
                 quantity: record.quantity,
                 usage_date: record.usage_date,
+                billing_plan_id: record.billing_plan_id,
               });
               setIsAddModalOpen(true);
             }}
@@ -365,6 +426,62 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 onChange={(e) => setNewUsage({ ...newUsage, comments: e.target.value })}
               />
             </div>
+            
+            {/* Billing Plan Selector - always shown */}
+            {showBillingPlanSelector && (
+              <div>
+                <div className="flex items-center space-x-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Billing Plan <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative inline-block">
+                    <div
+                      onMouseEnter={() => {}}
+                      onMouseLeave={() => {}}
+                      className="cursor-help"
+                      title={!newUsage.company_id
+                        ? "Company information not available. The system will use the default billing plan."
+                        : eligibleBillingPlans.length > 1
+                          ? "This service appears in multiple billing plans. Please select which plan to use."
+                          : eligibleBillingPlans.length === 1
+                            ? `This usage will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
+                            : "No eligible billing plans found for this service."}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gray-500">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4M12 8h.01"></path>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <CustomSelect
+                  id="billing-plan-select"
+                  value={newUsage.billing_plan_id || ''}
+                  onValueChange={(value: string) => setNewUsage({ ...newUsage, billing_plan_id: value })}
+                  disabled={!newUsage.company_id || eligibleBillingPlans.length <= 1}
+                  placeholder={!newUsage.company_id
+                    ? "Using default billing plan"
+                    : eligibleBillingPlans.length === 0
+                      ? "No eligible plans"
+                      : eligibleBillingPlans.length === 1
+                        ? `Using ${eligibleBillingPlans[0].plan_name}`
+                        : "Select a billing plan"}
+                  options={eligibleBillingPlans.map(plan => ({
+                    value: plan.company_billing_plan_id,
+                    label: `${plan.plan_name} (${plan.plan_type})`
+                  }))}
+                />
+                {!newUsage.company_id ? (
+                  <small className="text-gray-500">
+                    Company information not available. The system will use the default billing plan.
+                  </small>
+                ) : eligibleBillingPlans.length > 1 ? (
+                  <small className="text-gray-500">
+                    This service appears in multiple billing plans. Please select which plan to use.
+                  </small>
+                ) : <></>}
+              </div>
+            )}
             <DialogFooter>
               <Button 
                 id="cancel-usage-button"

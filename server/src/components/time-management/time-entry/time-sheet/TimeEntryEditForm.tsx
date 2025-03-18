@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { getEligibleBillingPlansForUI, getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { formatISO, parseISO, addMinutes } from 'date-fns';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -8,6 +9,8 @@ import { Switch } from 'server/src/components/ui/Switch';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { MinusCircle, XCircle } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 
@@ -79,9 +82,17 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     duration?: string;
     service?: string;
     taxRegion?: string;
+    billingPlan?: string;
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
+  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<Array<{
+    company_billing_plan_id: string;
+    plan_name: string;
+    plan_type: string;
+  }>>([]);
+  const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
+  const [companyId, setCompanyId] = useState<string | null>(null);
 
   const validateTimes = useCallback(() => {
     if (!entry?.start_time || !entry?.end_time) return false;
@@ -102,6 +113,63 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     setValidationErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [entry?.start_time, entry?.end_time]);
+
+  // Get company ID from entry
+  useEffect(() => {
+    if (entry?.company_id) {
+      console.log('Using company ID from entry:', entry.company_id);
+      setCompanyId(entry.company_id);
+    } else {
+      console.log('No company ID in entry, will use default billing plan');
+      setCompanyId(null);
+    }
+  }, [entry?.company_id]);
+
+  // Load eligible billing plans when service or company ID changes
+  useEffect(() => {
+    const loadEligibleBillingPlans = async () => {
+      // Always show the plan selector
+      setShowBillingPlanSelector(true);
+      
+      if (!entry?.service_id) {
+        console.log('No service ID available, cannot load billing plans');
+        setEligibleBillingPlans([]);
+        return;
+      }
+      
+      if (!companyId) {
+        console.log('No company ID available, using default billing plan');
+        setEligibleBillingPlans([]);
+        return;
+      }
+      
+      try {
+        const plans = await getEligibleBillingPlansForUI(companyId, entry.service_id);
+        setEligibleBillingPlans(plans);
+        
+        // If no plan is selected yet, try to set a default
+        if (!entry.billing_plan_id) {
+          if (plans.length === 1) {
+            // If there's only one plan, use it automatically
+            const updatedEntry = { ...entry, billing_plan_id: plans[0].company_billing_plan_id };
+            onUpdateEntry(index, updatedEntry);
+          } else if (plans.length > 1) {
+            // Check for bucket plans first
+            const bucketPlans = plans.filter(plan => plan.plan_type === 'Bucket');
+            if (bucketPlans.length === 1) {
+              // If there's only one bucket plan, use it as default
+              const updatedEntry = { ...entry, billing_plan_id: bucketPlans[0].company_billing_plan_id };
+              onUpdateEntry(index, updatedEntry);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading eligible billing plans:', error);
+      }
+    };
+    
+    loadEligibleBillingPlans();
+  }, [entry?.service_id, companyId, entry?.billing_plan_id, index, onUpdateEntry, entry]);
 
   const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
     // If entry is billable, update duration. Otherwise keep it at 0
@@ -157,6 +225,15 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       setValidationErrors(prev => ({
         ...prev,
         taxRegion: 'Tax region is required for taxable services'
+      }));
+      return;
+    }
+    
+    // Validate billing plan selection if multiple plans are available
+    if (showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
+      setValidationErrors(prev => ({
+        ...prev,
+        billingPlan: 'Billing plan is required when multiple plans are available'
       }));
       return;
     }
@@ -259,6 +336,55 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               <span className="text-sm text-red-500">{validationErrors.taxRegion}</span>
             )}
           </div>
+          
+          {/* Billing Plan Selector - always shown */}
+          {showBillingPlanSelector && (
+            <div>
+              <div className="flex items-center space-x-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Billing Plan <span className="text-red-500">*</span>
+                </label>
+                <Tooltip content={
+                  <p className="max-w-xs">
+                    {!companyId
+                      ? "Company information not available. The system will use the default billing plan."
+                      : eligibleBillingPlans.length > 1
+                        ? "This service appears in multiple billing plans. Please select which plan to use for this time entry."
+                        : eligibleBillingPlans.length === 1
+                          ? `This time entry will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
+                          : "No eligible billing plans found for this service."}
+                  </p>
+                }>
+                  <InfoCircledIcon className="h-4 w-4 text-gray-500" />
+                </Tooltip>
+              </div>
+              <CustomSelect
+                value={entry?.billing_plan_id || ''}
+                onValueChange={(value) => {
+                  if (entry) {
+                    const updatedEntry = { ...entry, billing_plan_id: value };
+                    onUpdateEntry(index, updatedEntry);
+                  }
+                }}
+                disabled={!isEditable || !companyId || eligibleBillingPlans.length <= 1}
+                className="mt-1 w-full"
+                options={eligibleBillingPlans.map(plan => ({
+                  value: plan.company_billing_plan_id,
+                  label: `${plan.plan_name} (${plan.plan_type})`
+                }))}
+                placeholder={!companyId
+                  ? "Using default billing plan"
+                  : eligibleBillingPlans.length === 0
+                    ? "No eligible plans"
+                    : eligibleBillingPlans.length === 1
+                      ? `Using ${eligibleBillingPlans[0].plan_name}`
+                      : "Select a billing plan"}
+              />
+              {showErrors && validationErrors.billingPlan && (
+                <span className="text-sm text-red-500">{validationErrors.billingPlan}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">

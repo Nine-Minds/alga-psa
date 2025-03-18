@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, AlertTriangle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +32,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
+  const [serviceOverlaps, setServiceOverlaps] = useState<Record<string, string[]>>({});
   const tenant = useTenant();
 
   useEffect(() => {
@@ -52,6 +53,51 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       setSelectedServiceToAdd(updatedAvailableServices[0]?.service_id || null);
     }
   }, [planServices, initialServices, selectedServiceToAdd]);
+  
+  // Detect service overlaps across plans
+  useEffect(() => {
+    const detectServiceOverlaps = async () => {
+      try {
+        const allPlans = await getBillingPlans();
+        const allPlanServices: Record<string, IPlanService[]> = {};
+        
+        // Get services for each plan
+        for (const plan of allPlans) {
+          if (plan.plan_id) {
+            const services = await getPlanServices(plan.plan_id);
+            allPlanServices[plan.plan_id] = services;
+          }
+        }
+        
+        // Build a map of service_id -> plan_ids
+        const serviceToPlans: Record<string, string[]> = {};
+        
+        for (const [planId, services] of Object.entries(allPlanServices)) {
+          for (const service of services) {
+            if (!serviceToPlans[service.service_id]) {
+              serviceToPlans[service.service_id] = [];
+            }
+            serviceToPlans[service.service_id].push(planId);
+          }
+        }
+        
+        // Filter to only services that appear in multiple plans
+        const overlaps: Record<string, string[]> = {};
+        
+        for (const [serviceId, planIds] of Object.entries(serviceToPlans)) {
+          if (planIds.length > 1) {
+            overlaps[serviceId] = planIds;
+          }
+        }
+        
+        setServiceOverlaps(overlaps);
+      } catch (error) {
+        console.error('Error detecting service overlaps:', error);
+      }
+    };
+    
+    detectServiceOverlaps();
+  }, []);
 
   const fetchBillingPlans = async () => {
     try {
@@ -192,13 +238,30 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     },
   ];
 
+  // Create a memoized list of service IDs with overlaps
+  const servicesWithOverlaps = useMemo(() =>
+    Object.keys(serviceOverlaps),
+    [serviceOverlaps]
+  );
+  
   const planServiceColumns: ColumnDefinition<IPlanService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_id',
       render: (value, record) => {
         const service = initialServices.find(s => s.service_id === value);
-        return service?.service_name || '';
+        const hasOverlap = servicesWithOverlaps.includes(value);
+        
+        return (
+          <div className="flex items-center">
+            <span>{service?.service_name || ''}</span>
+            {hasOverlap && (
+              <div className="ml-2 text-amber-500 flex items-center" title="This service appears in multiple billing plans">
+                <AlertTriangle size={16} />
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -312,7 +375,15 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           <Heading as="h3" size="4" mb="4">Plan Services</Heading>
           {selectedPlan ? (
             <>
-              <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
+              <div className="flex justify-between items-center mb-4">
+                <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
+                {Object.keys(serviceOverlaps).length > 0 && (
+                  <div className="text-amber-500 flex items-center">
+                    <AlertTriangle size={16} className="mr-2" />
+                    <span className="text-sm">Warning: Some services appear in multiple plans</span>
+                  </div>
+                )}
+              </div>
               <div className="overflow-x-auto">
                 <DataTable
                   data={planServices}
@@ -338,6 +409,8 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                     }
                   }}
                   disabled={!selectedServiceToAdd || selectedServiceToAdd === 'unassigned' || availableServices.length === 0}
+                  title={servicesWithOverlaps.includes(selectedServiceToAdd || '') ?
+                    "Warning: This service already exists in other billing plans" : ""}
                 >
                   Add Service
                 </Button>
