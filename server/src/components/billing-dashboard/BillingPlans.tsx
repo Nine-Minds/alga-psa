@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, AlertTriangle } from 'lucide-react';
+import { MoreVertical, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,13 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
-import { getPlanServices, addPlanService, updatePlanService, removePlanService } from 'server/src/lib/actions/planServiceActions';
+import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 import { IBillingPlan, IPlanService, IService } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
+import { add } from 'date-fns';
 
 interface BillingPlansProps {
   initialServices: IService[];
@@ -32,7 +33,6 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
-  const [serviceOverlaps, setServiceOverlaps] = useState<Record<string, string[]>>({});
   const tenant = useTenant();
 
   useEffect(() => {
@@ -53,51 +53,6 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       setSelectedServiceToAdd(updatedAvailableServices[0]?.service_id || null);
     }
   }, [planServices, initialServices, selectedServiceToAdd]);
-  
-  // Detect service overlaps across plans
-  useEffect(() => {
-    const detectServiceOverlaps = async () => {
-      try {
-        const allPlans = await getBillingPlans();
-        const allPlanServices: Record<string, IPlanService[]> = {};
-        
-        // Get services for each plan
-        for (const plan of allPlans) {
-          if (plan.plan_id) {
-            const services = await getPlanServices(plan.plan_id);
-            allPlanServices[plan.plan_id] = services;
-          }
-        }
-        
-        // Build a map of service_id -> plan_ids
-        const serviceToPlans: Record<string, string[]> = {};
-        
-        for (const [planId, services] of Object.entries(allPlanServices)) {
-          for (const service of services) {
-            if (!serviceToPlans[service.service_id]) {
-              serviceToPlans[service.service_id] = [];
-            }
-            serviceToPlans[service.service_id].push(planId);
-          }
-        }
-        
-        // Filter to only services that appear in multiple plans
-        const overlaps: Record<string, string[]> = {};
-        
-        for (const [serviceId, planIds] of Object.entries(serviceToPlans)) {
-          if (planIds.length > 1) {
-            overlaps[serviceId] = planIds;
-          }
-        }
-        
-        setServiceOverlaps(overlaps);
-      } catch (error) {
-        console.error('Error detecting service overlaps:', error);
-      }
-    };
-    
-    detectServiceOverlaps();
-  }, []);
 
   const fetchBillingPlans = async () => {
     try {
@@ -133,7 +88,12 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           custom_rate: addedService.default_rate,
           tenant: tenant!
         };
-        await addPlanService(newPlanService);
+        await addServiceToPlan(
+          selectedPlan,
+          serviceId,
+          newPlanService.quantity,
+          newPlanService.custom_rate
+        );
         setPlanServices(prevServices => [...prevServices, newPlanService]);
         setError(null);
       }
@@ -146,7 +106,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const handleUpdatePlanService = async (serviceId: string, quantity: number, customRate: number | undefined) => {
     if (!selectedPlan) return;
     try {
-      await updatePlanService(selectedPlan, serviceId, { quantity, custom_rate: customRate });
+      await updatePlanService(selectedPlan, serviceId, { quantity, customRate });
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -158,7 +118,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const handleRemovePlanService = async (serviceId: string) => {
     if (!selectedPlan) return;
     try {
-      await removePlanService(selectedPlan, serviceId);
+      await removeServiceFromPlan(selectedPlan, serviceId);
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -238,28 +198,15 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     },
   ];
 
-  // Create a memoized list of service IDs with overlaps
-  const servicesWithOverlaps = useMemo(() =>
-    Object.keys(serviceOverlaps),
-    [serviceOverlaps]
-  );
-  
   const planServiceColumns: ColumnDefinition<IPlanService>[] = [
     {
       title: 'Service Name',
       dataIndex: 'service_id',
       render: (value, record) => {
         const service = initialServices.find(s => s.service_id === value);
-        const hasOverlap = servicesWithOverlaps.includes(value);
-        
         return (
           <div className="flex items-center">
             <span>{service?.service_name || ''}</span>
-            {hasOverlap && (
-              <div className="ml-2 text-amber-500 flex items-center" title="This service appears in multiple billing plans">
-                <AlertTriangle size={16} />
-              </div>
-            )}
           </div>
         );
       },
@@ -285,7 +232,12 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           <UnitOfMeasureInput
             value={service?.unit_of_measure || ''}
             onChange={(value) => {
-              console.log('Updating unit of measure:', value);
+              if (service) {
+                // Update the service's unit of measure in the database
+                // This would typically update the service itself, not the plan-service relationship
+                console.log('Updating unit of measure for service:', service.service_id, 'to', value);
+                // In Phase 2, implement actual service update here
+              }
             }}
           />
         );
@@ -346,81 +298,76 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card size="2">
-        <Box p="4">
-          <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
-          <div className="mb-4">
-            <BillingPlanDialog 
-              onPlanAdded={fetchBillingPlans} 
-              editingPlan={editingPlan}
-              onClose={() => setEditingPlan(null)}
-              triggerButton={
-                <Button id='add-billing-plan-button'>
-                  Add Plan
-                </Button>
-              }
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card size="2">
+          <Box p="4">
+            <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
+            <div className="mb-4">
+              <BillingPlanDialog 
+                onPlanAdded={fetchBillingPlans} 
+                editingPlan={editingPlan}
+                onClose={() => setEditingPlan(null)}
+                triggerButton={
+                  <Button id='add-billing-plan-button'>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Plan
+                  </Button>
+                }
+              />
+            </div>
+            <DataTable
+              data={billingPlans.filter(plan => plan.plan_id !== undefined)}
+              columns={billingPlanColumns}
+              pagination={false}
+              onRowClick={handleBillingPlanClick}
             />
-          </div>
-          <DataTable
-            data={billingPlans.filter(plan => plan.plan_id !== undefined)}
-            columns={billingPlanColumns}
-            pagination={false}
-            onRowClick={handleBillingPlanClick}
-          />
-        </Box>
-      </Card>
-      <Card size="2">
-        <Box p="4">
-          <Heading as="h3" size="4" mb="4">Plan Services</Heading>
-          {selectedPlan ? (
-            <>
-              <div className="flex justify-between items-center mb-4">
-                <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
-                {Object.keys(serviceOverlaps).length > 0 && (
-                  <div className="text-amber-500 flex items-center">
-                    <AlertTriangle size={16} className="mr-2" />
-                    <span className="text-sm">Warning: Some services appear in multiple plans</span>
-                  </div>
-                )}
-              </div>
-              <div className="overflow-x-auto">
-                <DataTable
-                  data={planServices}
-                  columns={planServiceColumns}
-                  pagination={false}
-                />
-              </div>
-              <div className="flex space-x-2 mt-4">
-                <CustomSelect
-                  options={availableServices.map((s): { value: string; label: string } => ({
-                    value: s.service_id!,
-                    label: s.service_name
-                  }))}
-                  onValueChange={setSelectedServiceToAdd}
-                  value={selectedServiceToAdd || 'unassigned'}
-                  placeholder="Select service..."
-                />
-                <Button
-                  id='add-button'
-                  onClick={() => {
-                    if (selectedServiceToAdd && selectedServiceToAdd !== 'unassigned') {
-                      handleAddPlanService(selectedServiceToAdd);
-                    }
-                  }}
-                  disabled={!selectedServiceToAdd || selectedServiceToAdd === 'unassigned' || availableServices.length === 0}
-                  title={servicesWithOverlaps.includes(selectedServiceToAdd || '') ?
-                    "Warning: This service already exists in other billing plans" : ""}
-                >
-                  Add Service
-                </Button>
-              </div>
-            </>
-          ) : (
-            <p>Select a plan to manage its services</p>
-          )}
-        </Box>
-      </Card>
+          </Box>
+        </Card>
+        <Card size="2">
+          <Box p="4">
+            <Heading as="h3" size="4" mb="4">Plan Services</Heading>
+            {selectedPlan ? (
+              <>
+                <div className="flex justify-between items-center mb-4">
+                  <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
+                </div>
+                <div className="overflow-x-auto">
+                  <DataTable
+                    data={planServices}
+                    columns={planServiceColumns}
+                    pagination={false}
+                  />
+                </div>
+                <div className="flex space-x-2 mt-4">
+                  <CustomSelect
+                    options={availableServices.map((s): { value: string; label: string } => ({
+                      value: s.service_id!,
+                      label: s.service_name
+                    }))}
+                    onValueChange={setSelectedServiceToAdd}
+                    value={selectedServiceToAdd || 'unassigned'}
+                    placeholder="Select service..."
+                  />
+                  <Button
+                    id='add-button'
+                    onClick={() => {
+                      if (selectedServiceToAdd && selectedServiceToAdd !== 'unassigned') {
+                        handleAddPlanService(selectedServiceToAdd);
+                      }
+                    }}
+                    disabled={!selectedServiceToAdd || selectedServiceToAdd === 'unassigned' || availableServices.length === 0}
+                  >
+                    Add Service
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p>Select a plan to manage its services</p>
+            )}
+          </Box>
+        </Card>
+      </div>
     </div>
   );
 };

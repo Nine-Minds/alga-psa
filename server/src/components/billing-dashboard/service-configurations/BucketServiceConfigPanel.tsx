@@ -1,0 +1,163 @@
+'use client'
+
+import React, { useState, useEffect } from 'react';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { Card } from 'server/src/components/ui/Card';
+import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { IPlanServiceBucketConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+
+interface BucketServiceConfigPanelProps {
+  configuration: Partial<IPlanServiceBucketConfig>;
+  onConfigurationChange: (updates: Partial<IPlanServiceBucketConfig>) => void;
+  className?: string;
+  disabled?: boolean;
+}
+
+export function BucketServiceConfigPanel({
+  configuration,
+  onConfigurationChange,
+  className = '',
+  disabled = false
+}: BucketServiceConfigPanelProps) {
+  const [totalHours, setTotalHours] = useState<number>(configuration.total_hours || 0);
+  const [billingPeriod, setBillingPeriod] = useState<string>(configuration.billing_period || 'monthly');
+  const [overageRate, setOverageRate] = useState<number>(configuration.overage_rate || 0);
+  const [allowRollover, setAllowRollover] = useState<boolean>(configuration.allow_rollover || false);
+  const [validationErrors, setValidationErrors] = useState<{
+    totalHours?: string;
+    overageRate?: string;
+  }>({});
+
+  // Update local state when props change
+  useEffect(() => {
+    setTotalHours(configuration.total_hours || 0);
+    setBillingPeriod(configuration.billing_period || 'monthly');
+    setOverageRate(configuration.overage_rate || 0);
+    setAllowRollover(configuration.allow_rollover || false);
+  }, [configuration]);
+
+  // Validate inputs when they change
+  useEffect(() => {
+    const errors: {
+      totalHours?: string;
+      overageRate?: string;
+    } = {};
+
+    if (totalHours <= 0) {
+      errors.totalHours = 'Total hours must be greater than zero';
+    }
+
+    if (overageRate < 0) {
+      errors.overageRate = 'Overage rate cannot be negative';
+    }
+
+    setValidationErrors(errors);
+  }, [totalHours, overageRate]);
+
+  const handleTotalHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setTotalHours(value);
+    onConfigurationChange({ total_hours: value });
+  };
+
+  const handleBillingPeriodChange = (value: string) => {
+    setBillingPeriod(value);
+    onConfigurationChange({ billing_period: value });
+  };
+
+  const handleOverageRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    setOverageRate(value);
+    onConfigurationChange({ overage_rate: value });
+  };
+
+  const handleAllowRolloverChange = (checked: boolean) => {
+    setAllowRollover(checked);
+    onConfigurationChange({ allow_rollover: checked });
+  };
+
+  return (
+    <Card className={`p-4 ${className}`}>
+      <div className="space-y-4">
+        <h3 className="text-md font-medium">Bucket Hours Configuration</h3>
+        
+        <div className="grid gap-4">
+          <div>
+            <Label htmlFor="bucket-total-hours">Total Hours</Label>
+            <Input
+              id="bucket-total-hours"
+              type="number"
+              value={totalHours.toString()}
+              onChange={handleTotalHoursChange}
+              placeholder="Enter total hours"
+              disabled={disabled}
+              min={1}
+              step={1}
+              className={validationErrors.totalHours ? 'border-red-500' : ''}
+            />
+            {validationErrors.totalHours ? (
+              <p className="text-sm text-red-500 mt-1">{validationErrors.totalHours}</p>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">
+                The total number of hours included in this bucket plan
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="bucket-billing-period">Billing Period</Label>
+            <CustomSelect
+              id="bucket-billing-period"
+              options={BILLING_FREQUENCY_OPTIONS}
+              onValueChange={handleBillingPeriodChange}
+              value={billingPeriod}
+              placeholder="Select billing period"
+              className="w-full"
+              disabled={disabled}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              The period over which the bucket hours are allocated
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="bucket-overage-rate">Overage Rate</Label>
+            <Input
+              id="bucket-overage-rate"
+              type="number"
+              value={overageRate.toString()}
+              onChange={handleOverageRateChange}
+              placeholder="Enter overage rate"
+              disabled={disabled}
+              min={0}
+              step={0.01}
+              className={validationErrors.overageRate ? 'border-red-500' : ''}
+            />
+            {validationErrors.overageRate ? (
+              <p className="text-sm text-red-500 mt-1">{validationErrors.overageRate}</p>
+            ) : (
+              <p className="text-sm text-gray-500 mt-1">
+                The hourly rate charged for hours used beyond the bucket limit
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2 pt-2">
+            <Switch
+              id="bucket-allow-rollover"
+              checked={allowRollover}
+              onCheckedChange={handleAllowRolloverChange}
+              disabled={disabled}
+            />
+            <Label htmlFor="bucket-allow-rollover" className="cursor-pointer">
+              Allow unused hours to roll over to next period
+            </Label>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}

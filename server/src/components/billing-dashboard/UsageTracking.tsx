@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Plus } from 'lucide-react';
+import { Plus, AlertTriangle, Info } from 'lucide-react';
 import { useToast } from 'server/src/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -427,22 +427,31 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               />
             </div>
             
-            {/* Billing Plan Selector - always shown */}
+            {/* Billing Plan Selector with enhanced guidance */}
             {showBillingPlanSelector && (
               <div>
+                {eligibleBillingPlans.length > 1 && (
+                  <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
+                    <div className="flex items-center">
+                      <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                      <p className="text-sm text-blue-700">
+                        This service appears in multiple billing plans. Please select which plan to bill against.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex items-center space-x-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
                     Billing Plan <span className="text-red-500">*</span>
                   </label>
                   <div className="relative inline-block">
                     <div
-                      onMouseEnter={() => {}}
-                      onMouseLeave={() => {}}
                       className="cursor-help"
                       title={!newUsage.company_id
                         ? "Company information not available. The system will use the default billing plan."
                         : eligibleBillingPlans.length > 1
-                          ? "This service appears in multiple billing plans. Please select which plan to use."
+                          ? "This service appears in multiple billing plans. Please select which plan to use. Bucket plans are typically used first until depleted."
                           : eligibleBillingPlans.length === 1
                             ? `This usage will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
                             : "No eligible billing plans found for this service."}
@@ -454,11 +463,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     </div>
                   </div>
                 </div>
+                
                 <CustomSelect
                   id="billing-plan-select"
                   value={newUsage.billing_plan_id || ''}
                   onValueChange={(value: string) => setNewUsage({ ...newUsage, billing_plan_id: value })}
                   disabled={!newUsage.company_id || eligibleBillingPlans.length <= 1}
+                  className={`${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                   placeholder={!newUsage.company_id
                     ? "Using default billing plan"
                     : eligibleBillingPlans.length === 0
@@ -471,13 +482,23 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                     label: `${plan.plan_name} (${plan.plan_type})`
                   }))}
                 />
+                
+                {eligibleBillingPlans.length > 1 && (
+                  <div className="mt-1 text-xs text-gray-600">
+                    <span className="flex items-center">
+                      <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
+                      Selecting the wrong plan may result in incorrect billing
+                    </span>
+                  </div>
+                )}
+                
                 {!newUsage.company_id ? (
-                  <small className="text-gray-500">
+                  <small className="text-gray-500 mt-1">
                     Company information not available. The system will use the default billing plan.
                   </small>
-                ) : eligibleBillingPlans.length > 1 ? (
-                  <small className="text-gray-500">
-                    This service appears in multiple billing plans. Please select which plan to use.
+                ) : eligibleBillingPlans.length === 0 ? (
+                  <small className="text-gray-500 mt-1">
+                    No eligible billing plans found for this service.
                   </small>
                 ) : <></>}
               </div>

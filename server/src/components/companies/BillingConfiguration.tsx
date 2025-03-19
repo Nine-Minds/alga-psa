@@ -6,6 +6,7 @@ import { IContact } from '../../interfaces/contact.interfaces';
 import { AlertDialog } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/ui/Tabs';
 import ContactModel from 'server/src/lib/models/contact';
 import { getCompanyBillingPlan, updateCompanyBillingPlan, addCompanyBillingPlan, removeCompanyBillingPlan, editCompanyBillingPlan } from '../../lib/actions/companyBillingPlanActions';
 import { getBillingPlans } from '../../lib/actions/billingPlanAction';
@@ -23,6 +24,8 @@ import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
 import CompanyZeroDollarInvoiceSettings from './CompanyZeroDollarInvoiceSettings';
 import CompanyCreditExpirationSettings from './CompanyCreditExpirationSettings';
+import CompanyServiceOverlapMatrix from './CompanyServiceOverlapMatrix';
+import CompanyPlanDisambiguationGuide from './CompanyPlanDisambiguationGuide';
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -38,6 +41,7 @@ interface CompanyBillingPlanWithStringDates extends Omit<ICompanyBillingPlan, 's
 }
 
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, onSave, contacts = [] }) => {
+    const [activeTab, setActiveTab] = useState('general');
     const [billingConfig, setBillingConfig] = useState({
         payment_terms: company.payment_terms || 'net_30',
         billing_cycle: '',
@@ -334,9 +338,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                     <AlertDialog.Content>
                         <AlertDialog.Title>Error</AlertDialog.Title>
                         <AlertDialog.Description>{errorMessage}</AlertDialog.Description>
-                        <Button 
+                        <Button
                             id="close-error-dialog-btn"
-                            onClick={() => setErrorMessage(null)} 
+                            onClick={() => setErrorMessage(null)}
                             variant="secondary"
                         >
                             Close
@@ -345,42 +349,70 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 </AlertDialog.Root>
             )}
 
-            <BillingConfigForm
-                billingConfig={billingConfig}
-                handleSelectChange={handleSelectChange}
-                contacts={contacts}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="mb-4">
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="plans">Billing Plans</TabsTrigger>
+                    <TabsTrigger value="taxRates">Tax Rates</TabsTrigger>
+                    <TabsTrigger value="overlaps">Plan Overlaps</TabsTrigger>
+                </TabsList>
+    <TabsContent value="general">
+        <BillingConfigForm
+            billingConfig={billingConfig}
+            handleSelectChange={handleSelectChange}
+            contacts={contacts}
+            companyId={company.company_id}
+        />
+        
+        <CompanyZeroDollarInvoiceSettings
+            companyId={company.company_id}
+        />
+        
+        <CompanyCreditExpirationSettings
+            companyId={company.company_id}
+        />
+    </TabsContent>
+    
+    <TabsContent value="plans">
+        <BillingPlans
+            companyBillingPlans={companyBillingPlans}
+            billingPlans={billingPlans}
+            serviceCategories={serviceCategories}
+            companyId={company.company_id}
+            onEdit={handleEditBillingPlan}
+            onDelete={handleRemoveBillingPlan}
+            onAdd={handleAddBillingPlan}
+            onCompanyPlanChange={handleCompanyPlanChange}
+            onServiceCategoryChange={handleServiceCategoryChange}
+            formatDateForDisplay={formatDateForDisplay}
+        />
+    </TabsContent>
+    
+    <TabsContent value="taxRates">
+        <CompanyTaxRates
+            companyTaxRates={companyTaxRates}
+            taxRates={taxRates}
+            selectedTaxRate={selectedTaxRate}
+            onSelectTaxRate={setSelectedTaxRate}
+            onAdd={handleAddCompanyTaxRate}
+            onRemove={handleRemoveCompanyTaxRate}
+        />
+    </TabsContent>
+    
+    <TabsContent value="overlaps">
+        <div className="space-y-6">
+            <CompanyServiceOverlapMatrix
                 companyId={company.company_id}
-            />
-
-            <CompanyZeroDollarInvoiceSettings
-                companyId={company.company_id}
-            />
-
-            <CompanyCreditExpirationSettings
-                companyId={company.company_id}
-            />
-
-            <CompanyTaxRates
-                companyTaxRates={companyTaxRates}
-                taxRates={taxRates}
-                selectedTaxRate={selectedTaxRate}
-                onSelectTaxRate={setSelectedTaxRate}
-                onAdd={handleAddCompanyTaxRate}
-                onRemove={handleRemoveCompanyTaxRate}
-            />
-
-            <BillingPlans
                 companyBillingPlans={companyBillingPlans}
-                billingPlans={billingPlans}
-                serviceCategories={serviceCategories}
-                companyId={company.company_id}
+                services={services}
                 onEdit={handleEditBillingPlan}
-                onDelete={handleRemoveBillingPlan}
-                onAdd={handleAddBillingPlan}
-                onCompanyPlanChange={handleCompanyPlanChange}
-                onServiceCategoryChange={handleServiceCategoryChange}
-                formatDateForDisplay={formatDateForDisplay}
+                className="mb-6"
             />
+            
+            <CompanyPlanDisambiguationGuide className="mb-6" />
+        </div>
+    </TabsContent>
+</Tabs>
 
             {editingBillingPlan && (
                 <AlertDialog.Root open={!!editingBillingPlan}>

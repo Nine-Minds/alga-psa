@@ -5,9 +5,11 @@ import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ITimePeriodView, IService } from 'server/src/interfaces';
 
-// Import all the components including the new GenerateInvoices component
+// Import all the components
 import Overview from './Overview';
 import BillingPlans from './BillingPlans';
+import BillingPlansOverview from './billing-plans/BillingPlansOverview';
+import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration';
 import TimePeriods from './TimePeriods';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
@@ -36,7 +38,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     // Only keep the tab parameter, clearing any other state
     const params = new URLSearchParams();
     params.set('tab', value);
-    router.push(`/msp/billing?${params.toString()}`);
+    
+    // If we're on a plan detail page and switching tabs, go back to the main billing dashboard
+    if (searchParams?.has('planId')) {
+      router.push(`/msp/billing?${params.toString()}`);
+    } else {
+      router.push(`/msp/billing?${params.toString()}`);
+    }
   };
 
   // Get current tab from URL or default to overview
@@ -104,7 +112,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="plans">
-          <BillingPlans initialServices={initialServices} />
+          {searchParams?.has('planId') ? (
+            <BillingPlanConfiguration />
+          ) : (
+            <BillingPlansOverview />
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">

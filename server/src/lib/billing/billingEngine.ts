@@ -18,6 +18,14 @@ import {
   ICompanyBillingCycle,
   BillingCycleType
 } from 'server/src/interfaces/billing.interfaces';
+import {
+  IPlanServiceConfiguration,
+  IPlanServiceFixedConfig,
+  IPlanServiceHourlyConfig,
+  IPlanServiceUsageConfig,
+  IPlanServiceBucketConfig,
+  IPlanServiceRateTier
+} from 'server/src/interfaces/planServiceConfiguration.interfaces';
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -436,27 +444,34 @@ export class BillingEngine {
     }
       
     const tenant = this.tenant; // Capture tenant value for joins
+    
+    // Use the new plan_service_configuration tables
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', function() {
-        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+      .join('plan_service_configuration', function() {
+        this.on('company_billing_plans.plan_id', '=', 'plan_service_configuration.plan_id')
+            .andOn('plan_service_configuration.tenant', '=', 'company_billing_plans.tenant');
       })
-      .join('plan_services', function() {
-        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
-            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      .join('plan_service_fixed_config', function() {
+        this.on('plan_service_configuration.config_id', '=', 'plan_service_fixed_config.config_id')
+            .andOn('plan_service_fixed_config.tenant', '=', 'plan_service_configuration.tenant');
       })
       .join('service_catalog', function() {
-        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
-            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant');
       })
       .where({
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
         'company_billing_plans.tenant': company.tenant,
-        'service_catalog.service_type': 'Fixed',
-        'billing_plans.plan_type': 'Fixed' 
+        'plan_service_configuration.configuration_type': 'Fixed'
       })
-      .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
+      .select(
+        'service_catalog.*',
+        'plan_service_configuration.quantity',
+        'plan_service_configuration.custom_rate',
+        'plan_service_fixed_config.enable_proration',
+        'plan_service_fixed_config.billing_cycle_alignment'
+      );
 
     const fixedCharges: IFixedPriceCharge[] = planServices.map((service: any):IFixedPriceCharge => {
       const charge: IFixedPriceCharge = {
@@ -504,6 +519,46 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    
+    // First get the hourly configurations for this plan
+    const hourlyConfigs = await this.knex('plan_service_configuration')
+      .join('plan_service_hourly_config', function() {
+        this.on('plan_service_configuration.config_id', '=', 'plan_service_hourly_config.config_id')
+            .andOn('plan_service_hourly_config.tenant', '=', 'plan_service_configuration.tenant');
+      })
+      .where({
+        'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
+        'plan_service_configuration.configuration_type': 'Hourly',
+        'plan_service_configuration.tenant': tenant
+      })
+      .select('plan_service_configuration.*', 'plan_service_hourly_config.*');
+    
+    // Create a map of service IDs to their hourly configurations
+    const serviceConfigMap = new Map<string, {
+      config: IPlanServiceConfiguration & IPlanServiceHourlyConfig,
+      userTypeRates: Map<string, number>
+    }>();
+    
+    for (const config of hourlyConfigs) {
+      // Get user type rates if any
+      const userTypeRates = await this.knex('user_type_rates')
+        .where({
+          config_id: config.config_id,
+          tenant
+        })
+        .select('*');
+      
+      const userRateMap = new Map<string, number>();
+      for (const rate of userTypeRates) {
+        userRateMap.set(rate.user_type, rate.rate);
+      }
+      
+      serviceConfigMap.set(config.service_id, {
+        config,
+        userTypeRates: userRateMap
+      });
+    }
+    
     const query = this.knex('time_entries')
       .join('users', function() {
         this.on('time_entries.user_id', '=', 'users.user_id')
@@ -532,11 +587,6 @@ export class BillingEngine {
       .join('service_catalog', function() {
         this.on('time_entries.service_id', '=', 'service_catalog.service_id')
             .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
-      })
-      .leftJoin('plan_services', (join) => {
-        join.on('service_catalog.service_id', '=', 'plan_services.service_id')
-            .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
-            .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
       })
       .where({
         'time_entries.tenant': company.tenant
@@ -582,15 +632,55 @@ export class BillingEngine {
     const timeBasedCharges: ITimeBasedCharge[] = timeEntries.map((entry: any):ITimeBasedCharge => {
       const startDateTime = Temporal.PlainDateTime.from(entry.start_time.toISOString().replace('Z', ''));
       const endDateTime = Temporal.PlainDateTime.from(entry.end_time.toISOString().replace('Z', ''));
-      const duration = Math.floor(startDateTime.until(endDateTime, { largestUnit: 'hours' }).hours);
-      const rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
+      
+      // Get the service configuration if available
+      const serviceConfig = serviceConfigMap.get(entry.service_id);
+      
+      // Calculate duration based on configuration settings
+      let durationMinutes = startDateTime.until(endDateTime, { largestUnit: 'minutes' }).minutes;
+      
+      if (serviceConfig) {
+        // Apply minimum billable time
+        if (durationMinutes < serviceConfig.config.minimum_billable_time) {
+          durationMinutes = serviceConfig.config.minimum_billable_time;
+        }
+        
+        // Round up to nearest increment
+        if (serviceConfig.config.round_up_to_nearest > 0) {
+          const remainder = durationMinutes % serviceConfig.config.round_up_to_nearest;
+          if (remainder > 0) {
+            durationMinutes += serviceConfig.config.round_up_to_nearest - remainder;
+          }
+        }
+      }
+      
+      // Convert to hours
+      const duration = Math.ceil(durationMinutes / 60);
+      
+      // Determine rate based on user type if applicable
+      let rate = Math.ceil(entry.custom_rate ?? entry.default_rate);
+      if (serviceConfig && serviceConfig.userTypeRates.has(entry.user_type)) {
+        rate = serviceConfig.userTypeRates.get(entry.user_type) as number;
+      }
+      
+      // Check for overtime if applicable
+      let total = Math.round(duration * rate);
+      if (serviceConfig && serviceConfig.config.enable_overtime &&
+          serviceConfig.config.overtime_threshold &&
+          duration > serviceConfig.config.overtime_threshold) {
+        const regularHours = serviceConfig.config.overtime_threshold;
+        const overtimeHours = duration - regularHours;
+        const overtimeRate = serviceConfig.config.overtime_rate || (rate * 1.5);
+        total = Math.round((regularHours * rate) + (overtimeHours * overtimeRate));
+      }
+      
       return {
         serviceId: entry.service_id,
         serviceName: entry.service_name,
         userId: entry.user_id,
         duration,
         rate,
-        total: Math.round(duration * rate),
+        total,
         type: 'time',
         tax_amount: 0,
         tax_rate: 0,
@@ -620,15 +710,49 @@ export class BillingEngine {
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
+    
+    // First get the usage configurations for this plan
+    const usageConfigs = await this.knex('plan_service_configuration')
+      .join('plan_service_usage_config', function() {
+        this.on('plan_service_configuration.config_id', '=', 'plan_service_usage_config.config_id')
+            .andOn('plan_service_usage_config.tenant', '=', 'plan_service_configuration.tenant');
+      })
+      .where({
+        'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
+        'plan_service_configuration.configuration_type': 'Usage',
+        'plan_service_configuration.tenant': tenant
+      })
+      .select('plan_service_configuration.*', 'plan_service_usage_config.*');
+    
+    // Create a map of service IDs to their usage configurations and rate tiers
+    const serviceConfigMap = new Map<string, {
+      config: IPlanServiceConfiguration & IPlanServiceUsageConfig,
+      rateTiers: IPlanServiceRateTier[]
+    }>();
+    
+    for (const config of usageConfigs) {
+      // Get rate tiers if tiered pricing is enabled
+      let rateTiers: IPlanServiceRateTier[] = [];
+      if (config.enable_tiered_pricing) {
+        rateTiers = await this.knex('plan_service_rate_tiers')
+          .where({
+            config_id: config.config_id,
+            tenant
+          })
+          .orderBy('min_quantity', 'asc')
+          .select('*');
+      }
+      
+      serviceConfigMap.set(config.service_id, {
+        config,
+        rateTiers
+      });
+    }
+    
     const usageRecordQuery = this.knex('usage_tracking')
       .join('service_catalog', function() {
         this.on('usage_tracking.service_id', '=', 'service_catalog.service_id')
             .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
-      })
-      .leftJoin('plan_services', (join) => {
-        join.on('service_catalog.service_id', '=', 'plan_services.service_id')
-            .andOn('plan_services.plan_id', '=', this.knex.raw('?', [companyBillingPlan.plan_id]))
-            .andOn('plan_services.tenant', '=', 'service_catalog.tenant');
       })
       .where({
         'usage_tracking.company_id': companyId,
@@ -645,24 +769,63 @@ export class BillingEngine {
             this.whereNull('usage_tracking.billing_plan_id');
           });
       })
-      .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate', 'plan_services.custom_rate');
+      .select('usage_tracking.*', 'service_catalog.service_name', 'service_catalog.default_rate');
 
       console.log('Usage record query:', usageRecordQuery.toQuery());
       const usageRecords = await usageRecordQuery;
 
-    const usageBasedCharges: IUsageBasedCharge[] = usageRecords.map((record: any):IUsageBasedCharge => ({
-      serviceId: record.service_id,
-      serviceName: record.service_name,
-      quantity: record.quantity,
-      rate: Math.ceil(record.custom_rate ?? record.default_rate),
-      total: Math.ceil(record.quantity * (record.custom_rate ?? record.default_rate)),
-      tax_region: record.tax_region || record.company_tax_region,
-      type: 'usage',
-      tax_amount: 0,
-      tax_rate: 0,
-      usageId: record.usage_id,
-      is_taxable: record.is_taxable !== false
-    }));
+    const usageBasedCharges: IUsageBasedCharge[] = usageRecords.map((record: any):IUsageBasedCharge => {
+      // Get the service configuration if available
+      const serviceConfig = serviceConfigMap.get(record.service_id);
+      
+      // Apply minimum usage if configured
+      let quantity = record.quantity;
+      if (serviceConfig && quantity < serviceConfig.config.minimum_usage) {
+        quantity = serviceConfig.config.minimum_usage;
+      }
+      
+      // Determine rate and calculate total
+      let rate = Math.ceil(record.default_rate);
+      let total = Math.ceil(quantity * rate);
+      
+      // If service has a custom rate in the configuration, use that
+      if (serviceConfig && serviceConfig.config.custom_rate) {
+        rate = Math.ceil(serviceConfig.config.custom_rate);
+        total = Math.ceil(quantity * rate);
+      }
+      
+      // Apply tiered pricing if enabled
+      if (serviceConfig && serviceConfig.config.enable_tiered_pricing && serviceConfig.rateTiers.length > 0) {
+        total = 0;
+        let remainingQuantity = quantity;
+        
+        for (const tier of serviceConfig.rateTiers) {
+          if (remainingQuantity <= 0) break;
+          
+          const tierMax = tier.max_quantity || Number.MAX_SAFE_INTEGER;
+          const tierQuantity = Math.min(remainingQuantity, tierMax - tier.min_quantity + 1);
+          
+          if (tierQuantity > 0) {
+            total += Math.ceil(tierQuantity * tier.rate);
+            remainingQuantity -= tierQuantity;
+          }
+        }
+      }
+      
+      return {
+        serviceId: record.service_id,
+        serviceName: record.service_name,
+        quantity,
+        rate,
+        total,
+        tax_region: record.tax_region || record.company_tax_region,
+        type: 'usage',
+        tax_amount: 0,
+        tax_rate: 0,
+        usageId: record.usage_id,
+        is_taxable: record.is_taxable !== false
+      };
+    });
 
     return usageBasedCharges;
   }
@@ -685,18 +848,16 @@ export class BillingEngine {
     }
       
     const tenant = this.tenant; // Capture tenant value for joins
+    
+    // Get product services from the configuration tables
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', function() {
-        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
-      })
-      .join('plan_services', function() {
-        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
-            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      .join('plan_service_configuration', function() {
+        this.on('company_billing_plans.plan_id', '=', 'plan_service_configuration.plan_id')
+            .andOn('plan_service_configuration.tenant', '=', 'company_billing_plans.tenant');
       })
       .join('service_catalog', function() {
-        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
-            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant');
       })
       .where({
         'company_billing_plans.company_id': companyId,
@@ -704,7 +865,11 @@ export class BillingEngine {
         'company_billing_plans.tenant': company.tenant,
         'service_catalog.service_type': 'Product'
       })
-      .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
+      .select(
+        'service_catalog.*',
+        'plan_service_configuration.quantity',
+        'plan_service_configuration.custom_rate'
+      );
 
     const productCharges: IProductCharge[] = planServices.map((service: any): IProductCharge => {
       const charge: IProductCharge = {
@@ -747,19 +912,18 @@ export class BillingEngine {
     if (!company) {
       throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
-      
+    
+    const tenant = this.tenant; // Capture tenant value for joins
+    
+    // Get license services from the configuration tables
     const planServices = await this.knex('company_billing_plans')
-      .join('billing_plans', function() {
-        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
-      })
-      .join('plan_services', function() {
-        this.on('billing_plans.plan_id', '=', 'plan_services.plan_id')
-            .andOn('plan_services.tenant', '=', 'billing_plans.tenant');
+      .join('plan_service_configuration', function() {
+        this.on('company_billing_plans.plan_id', '=', 'plan_service_configuration.plan_id')
+            .andOn('plan_service_configuration.tenant', '=', 'company_billing_plans.tenant');
       })
       .join('service_catalog', function() {
-        this.on('plan_services.service_id', '=', 'service_catalog.service_id')
-            .andOn('service_catalog.tenant', '=', 'plan_services.tenant');
+        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant');
       })
       .where({
         'company_billing_plans.company_id': companyId,
@@ -767,7 +931,11 @@ export class BillingEngine {
         'company_billing_plans.tenant': company.tenant,
         'service_catalog.service_type': 'License'
       })
-      .select('service_catalog.*', 'plan_services.quantity', 'plan_services.custom_rate');
+      .select(
+        'service_catalog.*',
+        'plan_service_configuration.quantity',
+        'plan_service_configuration.custom_rate'
+      );
 
     const licenseCharges: ILicenseCharge[] = planServices.map((service: any): ILicenseCharge => {
       const charge: ILicenseCharge = {
@@ -812,61 +980,90 @@ export class BillingEngine {
       throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
-    const bucketPlan = await this.knex('bucket_plans')
-      .where({
-        plan_id: billingPlan.plan_id,
-        tenant: company.tenant
+    // Get bucket configurations for this plan
+    const bucketConfigs = await this.knex('plan_service_configuration')
+      .join('plan_service_bucket_config', function() {
+        this.on('plan_service_configuration.config_id', '=', 'plan_service_bucket_config.config_id')
+            .andOn('plan_service_bucket_config.tenant', '=', 'plan_service_configuration.tenant');
       })
-      .first();
-
-    if (!bucketPlan) return [];
-
-    const bucketUsage = await this.knex('bucket_usage')
-      .where({
-        bucket_plan_id: bucketPlan.bucket_plan_id,
-        company_id: companyId,
-        tenant: company.tenant
+      .join('service_catalog', function() {
+        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant');
       })
-      .whereBetween('period_start', [period.startDate, period.endDate])
-      .first();
-
-    if (!bucketUsage) return [];
-
-    const service = await this.knex('service_catalog')
       .where({
-        service_id: bucketUsage.service_catalog_id,
-        tenant: company.tenant
+        'plan_service_configuration.plan_id': billingPlan.plan_id,
+        'plan_service_configuration.configuration_type': 'Bucket',
+        'plan_service_configuration.tenant': company.tenant
       })
-      .first();
+      .select(
+        'plan_service_configuration.*',
+        'plan_service_bucket_config.*',
+        'service_catalog.service_name',
+        'service_catalog.is_taxable',
+        'service_catalog.tax_region'
+      );
 
-    if (!service) return [];
+    if (!bucketConfigs || bucketConfigs.length === 0) {
+      return [];
+    }
+    
+    // Process each bucket configuration
+    const bucketCharges: IBucketCharge[] = [];
+    
+    for (const bucketConfig of bucketConfigs) {
+      // Get usage data for this service
+      const timeEntries = await this.knex('time_entries')
+        .where({
+          service_id: bucketConfig.service_id,
+          tenant: company.tenant,
+          invoiced: false
+        })
+        .where('start_time', '>=', period.startDate)
+        .where('end_time', '<', period.endDate)
+        .select('*');
+      
+      // Calculate total hours used
+      let hoursUsed = 0;
+      for (const entry of timeEntries) {
+        const startDateTime = Temporal.PlainDateTime.from(entry.start_time.toISOString().replace('Z', ''));
+        const endDateTime = Temporal.PlainDateTime.from(entry.end_time.toISOString().replace('Z', ''));
+        const duration = Math.floor(startDateTime.until(endDateTime, { largestUnit: 'hours' }).hours);
+        hoursUsed += duration;
+      }
+      
+      // Calculate overage
+      const totalHours = bucketConfig.total_hours;
+      const overageHours = Math.max(0, hoursUsed - totalHours);
+      
+      if (overageHours > 0) {
+        const taxRegion = bucketConfig.tax_region || company.tax_region;
+        const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
 
-    const taxRegion = service.tax_region || company.tax_region;
-    const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
+        const overageRate = Math.ceil(bucketConfig.overage_rate);
+        const total = Math.ceil(overageHours * overageRate);
+        const taxAmount = Math.ceil((taxRate) * total);
 
-    const overageRate = Math.ceil(bucketPlan.overage_rate);
-    const total = Math.ceil(bucketUsage.overage_hours * overageRate);
-    const taxAmount = Math.ceil((taxRate) * total);
+        const charge: IBucketCharge = {
+          type: 'bucket',
+          service_catalog_id: bucketConfig.service_id,
+          serviceName: bucketConfig.service_name,
+          rate: overageRate,
+          total: total,
+          hoursUsed: hoursUsed,
+          overageHours: overageHours,
+          overageRate: overageRate,
+          tax_rate: taxRate,
+          tax_region: taxRegion,
+          serviceId: bucketConfig.service_id,
+          tax_amount: taxAmount,
+          is_taxable: bucketConfig.is_taxable !== false
+        };
 
-    const charge: IBucketCharge = {
-      type: 'bucket',
-      service_catalog_id: bucketUsage.service_catalog_id,
-      serviceName: service ? service.service_name : 'Bucket Plan Hours',
-      rate: overageRate,
-      total: total,
-      hoursUsed: bucketUsage.hours_used,
-      overageHours: bucketUsage.overage_hours,
-      overageRate: overageRate,
-      tax_rate: taxRate,
-      tax_region: taxRegion,
-      serviceId: bucketUsage.service_catalog_id,
-      tax_amount: taxAmount,
-      is_taxable: service ? service.is_taxable !== false : true
-    };
+        bucketCharges.push(charge);
+      }
+    }
 
-    console.log('Calculated bucket charge:', charge);
-
-    return [charge];
+    return bucketCharges;
   }
 
 
@@ -919,6 +1116,16 @@ export class BillingEngine {
     console.log(`Proration factor: ${prorationFactor.toFixed(4)} (${actualDays} / ${cycleLength})`);
 
     return charges.map((charge: IBillingCharge): IBillingCharge => {
+      // Check if this charge should be prorated
+      // For fixed charges, we need to check if proration is enabled in the configuration
+      if (charge.type === 'fixed') {
+        // The enable_proration flag would be added to the charge by the calculateFixedPriceCharges method
+        if ((charge as any).enable_proration === false) {
+          console.log(`Skipping proration for charge: ${charge.serviceName} (proration disabled)`);
+          return charge;
+        }
+      }
+      
       const proratedTotal = Math.ceil(Math.ceil(charge.total) * prorationFactor);
       console.log(`Prorating charge: ${charge.serviceName}`);
       console.log(`  Original total: $${(charge.total/100).toFixed(2)}`);

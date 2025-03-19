@@ -7,7 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
-import { MinusCircle, XCircle } from 'lucide-react';
+import { MinusCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
@@ -337,11 +337,22 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             )}
           </div>
           
-          {/* Billing Plan Selector - always shown */}
+          {/* Billing Plan Selector with enhanced guidance */}
           {showBillingPlanSelector && (
             <div>
+              {eligibleBillingPlans.length > 1 && (
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
+                  <div className="flex items-center">
+                    <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
+                    <p className="text-sm text-blue-700">
+                      This service appears in multiple billing plans. Please select which plan to bill against.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center space-x-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
                   Billing Plan <span className="text-red-500">*</span>
                 </label>
                 <Tooltip content={
@@ -349,7 +360,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                     {!companyId
                       ? "Company information not available. The system will use the default billing plan."
                       : eligibleBillingPlans.length > 1
-                        ? "This service appears in multiple billing plans. Please select which plan to use for this time entry."
+                        ? "This service appears in multiple billing plans. Please select which plan to use for this time entry. Bucket plans are typically used first until depleted."
                         : eligibleBillingPlans.length === 1
                           ? `This time entry will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
                           : "No eligible billing plans found for this service."}
@@ -358,6 +369,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                   <InfoCircledIcon className="h-4 w-4 text-gray-500" />
                 </Tooltip>
               </div>
+              
               <CustomSelect
                 value={entry?.billing_plan_id || ''}
                 onValueChange={(value) => {
@@ -367,7 +379,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                   }
                 }}
                 disabled={!isEditable || !companyId || eligibleBillingPlans.length <= 1}
-                className="mt-1 w-full"
+                className={`mt-1 w-full ${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                 options={eligibleBillingPlans.map(plan => ({
                   value: plan.company_billing_plan_id,
                   label: `${plan.plan_name} (${plan.plan_type})`
@@ -380,6 +392,16 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                       ? `Using ${eligibleBillingPlans[0].plan_name}`
                       : "Select a billing plan"}
               />
+              
+              {eligibleBillingPlans.length > 1 && (
+                <div className="mt-1 text-xs text-gray-600">
+                  <span className="flex items-center">
+                    <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
+                    Selecting the wrong plan may result in incorrect billing
+                  </span>
+                </div>
+              )}
+              
               {showErrors && validationErrors.billingPlan && (
                 <span className="text-sm text-red-500">{validationErrors.billingPlan}</span>
               )}
