@@ -6,6 +6,7 @@ import TicketDetails from 'server/src/components/tickets/TicketDetails';
 import { updateTicketWithCache, addTicketCommentWithCache } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { TicketDetailsSkeleton } from 'server/src/components/tickets/TicketDetailsSkeleton';
 
 // Define the props interface based on the consolidated data structure
@@ -34,6 +35,7 @@ interface TicketDetailsContainerProps {
   };
 }
 
+
 export default function TicketDetailsContainer({ ticketData }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -48,10 +50,18 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
 
     try {
       setIsSubmitting(true);
+      
+      // Get the current user from the database
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('Failed to get current user');
+        return;
+      }
+      
       await updateTicketWithCache(
         ticketData.ticket.ticket_id,
         { [field]: value },
-        session.user as any
+        currentUser
       );
       toast.success(`${field} updated successfully`);
     } catch (error) {
@@ -71,13 +81,21 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
 
     try {
       setIsSubmitting(true);
+      
+      // Get the current user from the database
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('Failed to get current user');
+        return;
+      }
+      
       await addTicketCommentWithCache(
         ticketData.ticket.ticket_id,
         content,
         isInternal,
         isResolution,
         false, // not initial description
-        session.user as any
+        currentUser
       );
       toast.success('Comment added successfully');
     } catch (error) {
@@ -105,14 +123,21 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
         description: content
       };
 
+      // Get the current user from the database
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        toast.error('Failed to get current user');
+        return false;
+      }
+      
       await updateTicketWithCache(
         ticketData.ticket.ticket_id,
-        { 
+        {
           attributes: updatedAttributes,
-          updated_by: session.user.id,
+          updated_by: currentUser.user_id,
           updated_at: new Date().toISOString()
         },
-        session.user as any
+        currentUser
       );
 
       // Also update the initial description comment if it exists
@@ -124,7 +149,7 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
           false, // not internal
           false, // not resolution
           true,  // is initial description
-          session.user as any
+          currentUser
         );
       }
 

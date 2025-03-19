@@ -39,7 +39,7 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialCompanies: ICompany[];
   nextCursor: string | null;
-  onLoadMore: (cursor: string) => Promise<void>;
+  onLoadMore: (cursor: string, filters?: any) => Promise<void>;
   isLoadingMore: boolean;
   user?: IUser; // Pass the user prop directly from container
 }
@@ -237,78 +237,145 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       id: ticket.ticket_id
     }))
     , [filteredTickets]);
+// Apply all filters to tickets
+useEffect(() => {
+  let filtered = [...tickets];
 
-  // Filter tickets based on selected and excluded categories
-  useEffect(() => {
-    let filtered = [...tickets];
+  // Filter by channel
+  if (selectedChannel) {
+    filtered = filtered.filter(ticket => ticket.channel_id === selectedChannel);
+  } else if (channelFilterState !== 'all') {
+    // Filter by channel state (active/inactive)
+    const activeChannels = channels
+      .filter(channel => channelFilterState === 'active' ? !channel.is_inactive : channel.is_inactive)
+      .map(channel => channel.channel_id);
+    
+    filtered = filtered.filter(ticket => activeChannels.includes(ticket.channel_id || ''));
+  }
 
-    if (selectedCategories.length > 0) {
-      filtered = filtered.filter(ticket => {
-        // Handle "No Category" selection
-        if (selectedCategories.includes('no-category')) {
-          return !ticket.category_id && !ticket.subcategory_id;
+  // Filter by company
+  if (selectedCompany) {
+    filtered = filtered.filter(ticket => ticket.company_id === selectedCompany);
+  } else if (companyFilterState !== 'all') {
+    // This would require company active state information which isn't in the ticket data
+    // We would need to fetch this separately or have it in the initial data
+  }
+
+  // Filter by client type
+  if (clientTypeFilter !== 'all') {
+    // This would require additional data about whether the company is a company or individual
+    // We would need to fetch this separately or have it in the initial data
+  }
+
+  // Filter by status
+  if (selectedStatus === 'open') {
+    // Filter to only show open tickets
+    filtered = filtered.filter(ticket => {
+      const status = statusOptions.find(s => s.value === ticket.status_id);
+      return status && !status.className?.includes('bg-gray-200'); // Assuming closed statuses have this class
+    });
+  } else if (selectedStatus !== 'all') {
+    filtered = filtered.filter(ticket => ticket.status_id === selectedStatus);
+  }
+
+  // Filter by priority
+  if (selectedPriority !== 'all') {
+    filtered = filtered.filter(ticket => ticket.priority_id === selectedPriority);
+  }
+
+  // Filter by search query
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase();
+    filtered = filtered.filter(ticket =>
+      ticket.title.toLowerCase().includes(query) ||
+      ticket.ticket_number.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by categories
+  if (selectedCategories.length > 0) {
+    filtered = filtered.filter(ticket => {
+      // Handle "No Category" selection
+      if (selectedCategories.includes('no-category')) {
+        return !ticket.category_id && !ticket.subcategory_id;
+      }
+
+      for (const selectedCategoryId of selectedCategories) {
+        const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
+        if (!selectedCategory) continue;
+
+        if (selectedCategory.parent_category) {
+          // If selected category is a subcategory, match only that specific subcategory
+          return ticket.subcategory_id === selectedCategoryId;
+        } else {
+          // If selected category is a parent, match either:
+          // 1. The parent category_id directly
+          // 2. Any subcategory that belongs to this parent
+          if (ticket.category_id === selectedCategoryId) return true;
+          if (ticket.subcategory_id) {
+            const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
+            return ticketSubcategory?.parent_category === selectedCategoryId;
+          }
         }
+      }
+      return false;
+    });
+  }
 
-        for (const selectedCategoryId of selectedCategories) {
-          const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
-          if (!selectedCategory) continue;
+  // Apply excluded categories
+  if (excludedCategories.length > 0) {
+    filtered = filtered.filter(ticket => {
+      // Handle "No Category" exclusion
+      if (!ticket.category_id && !ticket.subcategory_id) {
+        return !excludedCategories.includes('no-category');
+      }
 
-          if (selectedCategory.parent_category) {
-            // If selected category is a subcategory, match only that specific subcategory
-            return ticket.subcategory_id === selectedCategoryId;
-          } else {
-            // If selected category is a parent, match either:
-            // 1. The parent category_id directly
-            // 2. Any subcategory that belongs to this parent
-            if (ticket.category_id === selectedCategoryId) return true;
-            if (ticket.subcategory_id) {
-              const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
-              return ticketSubcategory?.parent_category === selectedCategoryId;
+      // Check if any excluded category matches this ticket
+      for (const excludedId of excludedCategories) {
+        const excludedCategory = categories.find(c => c.category_id === excludedId);
+        if (!excludedCategory) continue;
+
+        // If excluding a subcategory, only exclude tickets with that exact subcategory_id
+        if (excludedCategory.parent_category) {
+          if (ticket.subcategory_id === excludedId) {
+            return false;
+          }
+        } else {
+          // If excluding a parent category, exclude tickets with:
+          // 1. The parent category_id directly
+          // 2. Any subcategory belonging to this parent
+          if (ticket.category_id === excludedId) {
+            return false;
+          }
+          if (ticket.subcategory_id) {
+            const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
+            if (ticketSubcategory?.parent_category === excludedId) {
+              return false;
             }
           }
         }
-        return false;
-      });
-    }
+      }
+      return true;
+    });
+  }
 
-    if (excludedCategories.length > 0) {
-      filtered = filtered.filter(ticket => {
-        // Handle "No Category" exclusion
-        if (!ticket.category_id && !ticket.subcategory_id) {
-          return !excludedCategories.includes('no-category');
-        }
-
-        // Check if any excluded category matches this ticket
-        for (const excludedId of excludedCategories) {
-          const excludedCategory = categories.find(c => c.category_id === excludedId);
-          if (!excludedCategory) continue;
-
-          // If excluding a subcategory, only exclude tickets with that exact subcategory_id
-          if (excludedCategory.parent_category) {
-            if (ticket.subcategory_id === excludedId) {
-              return false;
-            }
-          } else {
-            // If excluding a parent category, exclude tickets with:
-            // 1. The parent category_id directly
-            // 2. Any subcategory belonging to this parent
-            if (ticket.category_id === excludedId) {
-              return false;
-            }
-            if (ticket.subcategory_id) {
-              const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
-              if (ticketSubcategory?.parent_category === excludedId) {
-                return false;
-              }
-            }
-          }
-        }
-        return true;
-      });
-    }
-
-    setFilteredTickets(filtered);
-  }, [tickets, selectedCategories, excludedCategories, categories]);
+  setFilteredTickets(filtered);
+}, [
+  tickets,
+  selectedChannel,
+  channelFilterState,
+  selectedCompany,
+  companyFilterState,
+  clientTypeFilter,
+  selectedStatus,
+  selectedPriority,
+  searchQuery,
+  selectedCategories,
+  excludedCategories,
+  categories,
+  statusOptions,
+  channels
+]);
 
   const handleTicketAdded = useCallback((_ticket: ITicket) => {
     // We would normally call fetchTickets here, but we're now using props
@@ -461,7 +528,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               <div className="flex justify-center mt-4">
                 <Button
                   id="load-more-button"
-                  onClick={() => onLoadMore(nextCursor)}
+                  onClick={() => onLoadMore(nextCursor, {
+                    channelId: selectedChannel,
+                    statusId: selectedStatus,
+                    priorityId: selectedPriority,
+                    categoryId: selectedCategories.length === 1 ? selectedCategories[0] : null,
+                    companyId: selectedCompany,
+                    searchQuery: searchQuery,
+                    channelFilterState: channelFilterState
+                  })}
                   disabled={isLoadingMore}
                   variant="outline"
                 >

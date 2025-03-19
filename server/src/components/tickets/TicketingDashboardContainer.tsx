@@ -36,7 +36,7 @@ export default function TicketingDashboardContainer({
   const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
 
   // Handle loading more tickets with cursor-based pagination
-  const handleLoadMore = async (cursor: string) => {
+  const handleLoadMore = async (cursor: string, filters: any = {}) => {
     if (!currentUser) {
       toast.error('You must be logged in to load more tickets');
       return;
@@ -44,9 +44,19 @@ export default function TicketingDashboardContainer({
 
     try {
       setIsLoading(true);
+      // Use the filters passed from the dashboard component
       const result = await loadMoreTickets(
         currentUser,
-        { channelFilterState: 'active' },
+        {
+          channelId: filters.channelId || null,
+          statusId: filters.statusId || 'all',
+          priorityId: filters.priorityId || 'all',
+          categoryId: filters.categoryId || null,
+          companyId: filters.companyId || null,
+          searchQuery: filters.searchQuery || '',
+          channelFilterState: filters.channelFilterState || 'active',
+          showOpenOnly: filters.statusId === 'open'
+        },
         cursor
       );
       

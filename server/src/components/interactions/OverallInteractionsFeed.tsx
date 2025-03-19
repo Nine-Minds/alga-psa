@@ -34,12 +34,12 @@ const InteractionIcon = ({ type }: { type: string }) => {
 const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users, contacts }) => {
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>('');
-  const [selectedContact, setSelectedContact] = useState<string>('');
+  const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [selectedContact, setSelectedContact] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [interactionTypeId, setInteractionTypeId] = useState<string>('');
+  const [interactionTypeId, setInteractionTypeId] = useState<string>('all');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const { openDrawer } = useDrawer();
 
@@ -92,9 +92,9 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
       (interaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.company_name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (selectedUser === '' || interaction.user_id === selectedUser) &&
-      (selectedContact === '' || interaction.contact_name_id === selectedContact) &&
-      (interactionTypeId === '' || interaction.type_id === interactionTypeId) &&
+      (selectedUser === 'all' || interaction.user_id === selectedUser) &&
+      (selectedContact === 'all' || interaction.contact_name_id === selectedContact) &&
+      (interactionTypeId === 'all' || interaction.type_id === interactionTypeId) &&
       (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
       (!endDate || new Date(interaction.interaction_date) <= new Date(endDate))
     );
@@ -109,11 +109,11 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   };
 
   const resetFilters = () => {
-    setSelectedUser('');
-    setSelectedContact('');
+    setSelectedUser('all');
+    setSelectedContact('all');
     setStartDate('');
     setEndDate('');
-    setInteractionTypeId('');
+    setInteractionTypeId('all');
   };
 
   const handleApplyFilters = () => {
@@ -154,7 +154,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
           <div className="space-y-4">
             <CustomSelect
               options={[
-                { value: '', label: 'All Types' },
+                { value: 'all', label: 'All Types' },
                 ...interactionTypes.map((type): { value: string; label: string } => ({
                   value: type.type_id,
                   label: getTypeLabel(type)
@@ -165,13 +165,13 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
               placeholder="Interaction Type"
             />
             <CustomSelect
-              options={[{ value: '', label: 'All Users' }, ...users.map((user): { value: string; label: string } => ({ value: user.id, label: user.name }))]}
+              options={[{ value: 'all', label: 'All Users' }, ...users.map((user): { value: string; label: string } => ({ value: user.id, label: user.name }))]}
               value={selectedUser}
               onValueChange={setSelectedUser}
               placeholder="Filter by User"
             />
             <CustomSelect
-              options={[{ value: '', label: 'All Contacts' }, ...contacts.map((contact): { value: string; label: string } => ({ value: contact.id, label: contact.name }))]}
+              options={[{ value: 'all', label: 'All Contacts' }, ...contacts.map((contact): { value: string; label: string } => ({ value: contact.id, label: contact.name }))]}
               value={selectedContact}
               onValueChange={setSelectedContact}
               placeholder="Filter by Contact"

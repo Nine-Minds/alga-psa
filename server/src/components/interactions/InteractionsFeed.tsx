@@ -48,7 +48,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   const { openDrawer } = useDrawer();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [interactionTypes, setInteractionTypes] = useState<(IInteractionType | ISystemInteractionType)[]>([]);
-  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
@@ -105,7 +105,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     return interactions.filter(interaction =>
       (interaction.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
        interaction.type_name.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (selectedType === '' || interaction.type_id === selectedType) &&
+      (selectedType === 'all' || selectedType === '' || interaction.type_id === selectedType) &&
       (!startDate || new Date(interaction.interaction_date) >= new Date(startDate)) &&
       (!endDate || new Date(interaction.interaction_date) <= new Date(endDate))
     );
@@ -139,7 +139,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   };
 
   const resetFilters = () => {
-    setSelectedType('');
+    setSelectedType('all');
     setStartDate('');
     setEndDate('');
   };
@@ -217,7 +217,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
             <CustomSelect
               id='type-select'
               options={[
-                { value: '', label: 'All Types' },
+                { value: 'all', label: 'All Types' },
                 ...interactionTypes.map((type): { value: string; label: string } => ({
                   value: type.type_id,
                   label: getTypeLabel(type)
