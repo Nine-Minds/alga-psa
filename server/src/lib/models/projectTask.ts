@@ -543,6 +543,43 @@ const ProjectTaskModel = {
       console.error('Error getting all task ticket links:', error);
       throw error;
     }
+  },
+
+  getAllTaskResources: async (projectId: string): Promise<{ [taskId: string]: any[] }> => {
+    try {
+      const {knex: db, tenant} = await createTenantKnex();
+      const resources = await db('task_resources')
+        .join('project_tasks', function() {
+          this.on('task_resources.task_id', 'project_tasks.task_id')
+              .andOn('task_resources.tenant', 'project_tasks.tenant')
+        })
+        .join('project_phases', function() {
+          this.on('project_tasks.phase_id', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', 'project_phases.tenant')
+        })
+        .leftJoin('users', function() {
+          this.on('task_resources.additional_user_id', 'users.user_id')
+              .andOn('task_resources.tenant', 'users.tenant')
+        })
+        .where('project_phases.project_id', projectId)
+        .andWhere('task_resources.tenant', tenant!)
+        .select(
+          'task_resources.*',
+          'users.first_name',
+          'users.last_name'
+        );
+
+      return resources.reduce((acc: { [taskId: string]: any[] }, resource) => {
+        if (!acc[resource.task_id]) {
+          acc[resource.task_id] = [];
+        }
+        acc[resource.task_id].push(resource);
+        return acc;
+      }, {});
+    } catch (error) {
+      console.error('Error getting all task resources:', error);
+      throw error;
+    }
   }
 };
 

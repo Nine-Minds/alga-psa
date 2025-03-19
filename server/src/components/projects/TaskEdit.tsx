@@ -15,17 +15,19 @@ interface TaskEditProps {
   projectStatuses?: ProjectStatus[];
   users: IUserWithRoles[];
   inDrawer?: boolean;
+  projectTreeData?: any[]; // Add projectTreeData prop
 }
 
-export default function TaskEdit({ 
-  task, 
+export default function TaskEdit({
+  task,
   phase,
-  onClose, 
+  onClose,
   onTaskUpdated,
   phases,
   projectStatuses: initialStatuses,
   users,
-  inDrawer = false
+  inDrawer = false,
+  projectTreeData = []
 }: TaskEditProps): JSX.Element {
   const [statuses, setStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
@@ -77,6 +79,7 @@ export default function TaskEdit({
         mode="edit"
         onPhaseChange={handlePhaseChange}
         inDrawer={inDrawer}
+        projectTreeData={projectTreeData}
       />
     </div>
   );

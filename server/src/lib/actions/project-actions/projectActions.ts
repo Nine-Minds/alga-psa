@@ -541,8 +541,7 @@ export async function getProjectDetails(projectId: string): Promise<{
         }
 
         await checkPermission(currentUser, 'project', 'read');
-        
-        const [project, phases, rawTasks, statuses, users, checklistItemsMap, ticketLinksMap, companies] = await Promise.all([
+        const [project, phases, rawTasks, statuses, users, checklistItemsMap, ticketLinksMap, taskResourcesMap, companies] = await Promise.all([
             ProjectModel.getById(projectId),
             ProjectModel.getPhases(projectId),
             ProjectTaskModel.getTasks(projectId),
@@ -550,6 +549,7 @@ export async function getProjectDetails(projectId: string): Promise<{
             getAllUsers(),
             ProjectTaskModel.getAllTaskChecklistItems(projectId),
             ProjectTaskModel.getAllTaskTicketLinks(projectId),
+            ProjectTaskModel.getAllTaskResources(projectId),
             getAllCompanies()
         ]);
 
@@ -563,9 +563,13 @@ export async function getProjectDetails(projectId: string): Promise<{
             project.assigned_user = user || null;
         }
 
-        const tasks = rawTasks.map((task): IProjectTask & { checklist_items: ITaskChecklistItem[] } => ({
+        const tasks = rawTasks.map((task): IProjectTask & {
+            checklist_items: ITaskChecklistItem[],
+            resources: any[]
+        } => ({
             ...task,
-            checklist_items: checklistItemsMap[task.task_id] || []
+            checklist_items: checklistItemsMap[task.task_id] || [],
+            resources: taskResourcesMap[task.task_id] || []
         }));
 
         const ticketLinks = Object.values(ticketLinksMap).flat();

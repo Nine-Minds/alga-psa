@@ -64,13 +64,16 @@ export default function TaskTicketLinks({
   taskId,
   phaseId,
   projectId,
-  initialLinks = [],
+  initialLinks = undefined,
   users,
   onLinksChange
 }: TaskTicketLinksProps) {
 
-  const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[]>(initialLinks);
+  const [taskTicketLinks, setTaskTicketLinks] = useState<IProjectTicketLinkWithDetails[] | undefined>(initialLinks);
   const [availableTickets, setAvailableTickets] = useState<ITicketListItem[]>([]);
+  const [defaultStatus, setDefaultStatus] = useState<{ status_id: string, name: string } | null>(null);
+  const [ticketsLoaded, setTicketsLoaded] = useState(false);
+  const [filterOptionsLoaded, setFilterOptionsLoaded] = useState(false);
   const { openDrawer } = useDrawer();
   const [showLinkTicketDialog, setShowLinkTicketDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -128,96 +131,97 @@ export default function TaskTicketLinks({
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
+  // Lazy load tickets only when the dialog is opened
+  const fetchTickets = async () => {
+    if (ticketsLoaded) return; // Skip if already loaded
+    
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
 
-    const fetchTickets = async () => {
-      try {
-        const user = await getCurrentUser();
-        if (!user || !mounted) return;
+      const filters: ITicketListFilters = {
+        channelFilterState: 'all'
+      };
+      const tickets = await getTicketsForList(user, filters);
+      setAvailableTickets(tickets || []);
+      setTicketsLoaded(true);
+    } catch (error) {
+      console.error('Error fetching tickets:', error);
+      setAvailableTickets([]);
+    }
+  };
 
-        const filters: ITicketListFilters = {
-          channelFilterState: 'all'
-        };
-        const tickets = await getTicketsForList(user, filters);
-        if (mounted) {
-          setAvailableTickets(tickets || []);
-        }
-      } catch (error) {
-        console.error('Error fetching tickets:', error);
-        if (mounted) {
-          setAvailableTickets([]);
-        }
+  // Find the default status from the list of statuses
+  const findDefaultStatus = (statuses: any[]) => {
+    const defaultStatus = statuses.find(status => status.is_default === true);
+    if (defaultStatus) {
+      setDefaultStatus({
+        status_id: defaultStatus.status_id,
+        name: defaultStatus.name
+      });
+    }
+  };
+
+  // Lazy load filter options only when needed
+  const fetchFilterOptions = async () => {
+    if (filterOptionsLoaded) return; // Skip if already loaded
+    
+    try {
+      const [
+        fetchedCategories,
+        fetchedChannels,
+        statuses,
+        priorities
+      ] = await Promise.all([
+        getTicketCategories().catch(() => []),
+        getAllChannels().catch(() => []),
+        getTicketStatuses().catch(() => []),
+        getAllPriorities().catch(() => [])
+      ]);
+
+      setCategories(fetchedCategories || []);
+      setChannels(fetchedChannels || []);
+      
+      // Find the default status
+      if (statuses && statuses.length > 0) {
+        findDefaultStatus(statuses);
       }
-    };
+      
+      const defaultStatus = { value: 'all', label: 'All Statuses' };
+      setStatusOptions([
+        defaultStatus,
+        ...(statuses || []).map((status): SelectOption => ({
+          value: status.status_id!,
+          label: status.name ?? ""
+        }))
+      ]);
 
-    fetchTickets();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+      const defaultPriority = { value: 'all', label: 'All Priorities' };
+      setPriorityOptions([
+        defaultPriority,
+        ...(priorities || []).map((priority): SelectOption => ({
+          value: priority.priority_id,
+          label: priority.priority_name
+        }))
+      ]);
+      
+      setFilterOptionsLoaded(true);
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+      setCategories([]);
+      setChannels([]);
+      setStatusOptions([{ value: 'all', label: 'All Statuses' }]);
+      setPriorityOptions([{ value: 'all', label: 'All Priorities' }]);
+    }
+  };
 
-  useEffect(() => {
-    let mounted = true;
-
-    const fetchFilterOptions = async () => {
-      try {
-        const [
-          fetchedCategories,
-          fetchedChannels,
-          statuses,
-          priorities
-        ] = await Promise.all([
-          getTicketCategories().catch(() => []),
-          getAllChannels().catch(() => []),
-          getTicketStatuses().catch(() => []),
-          getAllPriorities().catch(() => [])
-        ]);
-
-        if (!mounted) return;
-
-        setCategories(fetchedCategories || []);
-        setChannels(fetchedChannels || []);
-        
-        const defaultStatus = { value: 'all', label: 'All Statuses' };
-        setStatusOptions([
-          defaultStatus,
-          ...(statuses || []).map((status): SelectOption => ({ 
-            value: status.status_id!, 
-            label: status.name ?? "" 
-          }))
-        ]);
-
-        const defaultPriority = { value: 'all', label: 'All Priorities' };
-        setPriorityOptions([
-          defaultPriority,
-          ...(priorities || []).map((priority): SelectOption => ({ 
-            value: priority.priority_id, 
-            label: priority.priority_name 
-          }))
-        ]);
-      } catch (error) {
-        console.error('Error fetching filter options:', error);
-        if (mounted) {
-          setCategories([]);
-          setChannels([]);
-          setStatusOptions([{ value: 'all', label: 'All Statuses' }]);
-          setPriorityOptions([{ value: 'all', label: 'All Priorities' }]);
-        }
-      }
-    };
-
-    fetchFilterOptions();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
+  // Only fetch links if initialLinks is empty and taskId is available
   useEffect(() => {
     let mounted = true;
 
     const fetchLinks = async () => {
-      if (taskId) {
+      // Skip fetching if we already have initialLinks
+      if (taskId && initialLinks) {
         try {
           const links = await getTaskTicketLinksAction(taskId);
           if (mounted) {
@@ -238,7 +242,7 @@ export default function TaskTicketLinks({
     return () => {
       mounted = false;
     };
-  }, [taskId, onLinksChange]);
+  }, [taskId, onLinksChange, initialLinks]);
 
   const filteredTicketOptions = availableTickets
     .filter(ticket => {
@@ -287,7 +291,7 @@ export default function TaskTicketLinks({
       return null;
     }
 
-    const isAlreadyLinked = taskTicketLinks.some(link => link.ticket_id === ticketDetails.ticket_id);
+    const isAlreadyLinked = (taskTicketLinks || []).some(link => link.ticket_id === ticketDetails.ticket_id);
     if (isAlreadyLinked) {
       toast.error('This ticket is already linked to this task');
       return null;
@@ -305,7 +309,7 @@ export default function TaskTicketLinks({
       status_name: 'status_name' in ticketDetails ? ticketDetails.status_name || 'New' : 'New',
       is_closed: 'closed_at' in ticketDetails ? ticketDetails.closed_at !== null : false
     };
-    const newLinks = [...taskTicketLinks, tempLink];
+    const newLinks = [...taskTicketLinks || [], tempLink];
     setTaskTicketLinks(newLinks);
     onLinksChange?.(newLinks);
     return tempLink;
@@ -317,10 +321,30 @@ export default function TaskTicketLinks({
     try {
       if (taskId) {
         await addTicketLinkAction(projectId, taskId, selectedTicketId, phaseId);
-        const links = await getTaskTicketLinksAction(taskId);
-        setTaskTicketLinks(links);
-        onLinksChange?.(links);
-        toast.success('Ticket linked successfully');
+        
+        // Find the selected ticket in available tickets
+        const selectedTicketDetails = availableTickets.find(t => t.ticket_id === selectedTicketId);
+        
+        if (selectedTicketDetails) {
+          // Create a new link object instead of fetching all links again
+          const newLink: IProjectTicketLinkWithDetails = {
+            link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+            task_id: taskId,
+            ticket_id: selectedTicketDetails.ticket_id!,
+            ticket_number: selectedTicketDetails.ticket_number,
+            title: selectedTicketDetails.title,
+            created_at: new Date(),
+            project_id: projectId,
+            phase_id: phaseId,
+            status_name: selectedTicketDetails.status_name || 'New',
+            is_closed: false
+          };
+          
+          const updatedLinks = [...taskTicketLinks || [], newLink];
+          setTaskTicketLinks(updatedLinks);
+          onLinksChange?.(updatedLinks);
+          toast.success('Ticket linked successfully');
+        }
       } else {
         // For new tasks, store the link temporarily
         const selectedTicketDetails = availableTickets.find(t => t.ticket_id === selectedTicketId);
@@ -368,12 +392,14 @@ export default function TaskTicketLinks({
     try {
       if (taskId) {
         await deleteTaskTicketLinkAction(linkId);
-        const links = await getTaskTicketLinksAction(taskId);
-        setTaskTicketLinks(links);
-        onLinksChange?.(links);
+        
+        // Update state directly instead of fetching all links again
+        const newLinks = (taskTicketLinks || []).filter(link => link.link_id !== linkId);
+        setTaskTicketLinks(newLinks);
+        onLinksChange?.(newLinks);
       } else {
         // For new tasks, just remove from state
-        const newLinks = taskTicketLinks.filter(link => link.link_id !== linkId);
+        const newLinks = (taskTicketLinks || []).filter(link => link.link_id !== linkId);
         setTaskTicketLinks(newLinks);
         onLinksChange?.(newLinks);
       }
@@ -397,9 +423,24 @@ export default function TaskTicketLinks({
     try {
       if (taskId) {
         await addTicketLinkAction(projectId, taskId, ticket.ticket_id, phaseId);
-        const links = await getTaskTicketLinksAction(taskId);
-        setTaskTicketLinks(links);
-        onLinksChange?.(links);
+        
+        // Create a new link object instead of fetching all links again
+        const newLink: IProjectTicketLinkWithDetails = {
+          link_id: `new-${Date.now()}`, // This will be replaced with the actual ID on next fetch
+          task_id: taskId,
+          ticket_id: ticket.ticket_id,
+          ticket_number: ticket.ticket_number || `#${Date.now()}`,
+          title: ticket.title,
+          created_at: new Date(),
+          project_id: projectId,
+          phase_id: phaseId,
+          status_name: defaultStatus?.name || 'New',
+          is_closed: false
+        };
+        
+        const updatedLinks = [...(taskTicketLinks || []), newLink];
+        setTaskTicketLinks(updatedLinks);
+        onLinksChange?.(updatedLinks);
       } else {
         // For new tasks, add to temporary list
         const link = addTempTicketLink(ticket);
@@ -408,15 +449,25 @@ export default function TaskTicketLinks({
         }
       }
       
-      // Update available tickets list
-      const user = await getCurrentUser();
-      if (user) {
-        const filters: ITicketListFilters = {
-          channelFilterState: 'all'
-        };
-        const tickets = await getTicketsForList(user, filters);
-        setAvailableTickets(tickets);
+      // Add the new ticket to available tickets instead of fetching all again
+      if (ticketsLoaded) {
+        setAvailableTickets(prev => [
+          ...prev,
+          {
+            ticket_id: ticket.ticket_id,
+            ticket_number: ticket.ticket_number || `#${Date.now()}`,
+            title: ticket.title,
+            status_name: defaultStatus?.name || 'New',
+            // Use type assertion to handle potential property differences
+            status_id: defaultStatus?.status_id,
+            category_id: ticket.category_id,
+            assigned_to: ticket.assigned_to,
+            channel_id: ticket.channel_id,
+            priority_id: ticket.priority_id
+          } as ITicketListItem
+        ]);
       }
+      
       setShowCreateDialog(false);
     } catch (error) {
       console.error('Error linking new ticket:', error);
@@ -433,7 +484,12 @@ export default function TaskTicketLinks({
             id="show-link-dialog-button"
             type="button"
             variant="soft"
-            onClick={() => setShowLinkTicketDialog(true)}
+            onClick={() => {
+              // Load data when dialog is opened
+              fetchTickets();
+              fetchFilterOptions();
+              setShowLinkTicketDialog(true);
+            }}
             className="flex items-center"
           >
             <Link className="h-4 w-4 mr-1" />
@@ -453,7 +509,7 @@ export default function TaskTicketLinks({
       </div>
 
       <div className="space-y-2">
-        {taskTicketLinks.map((link): JSX.Element => (
+        {(taskTicketLinks || []).map((link): JSX.Element => (
           <div key={link.link_id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
             <div className="flex flex-col">
               <span>{link.ticket_number} - {link.title}</span>

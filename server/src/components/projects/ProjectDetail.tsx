@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IProject, IProjectPhase, IProjectTask, IProjectTicketLink, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TaskQuickAdd from './TaskQuickAdd';
 import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
-import { getProjectTaskStatuses, updatePhase, deletePhase } from 'server/src/lib/actions/project-actions/projectActions';
+import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData } from 'server/src/lib/actions/project-actions/projectActions';
 import { updateTaskStatus, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
@@ -89,6 +89,7 @@ export default function ProjectDetail({
   }, [filteredTasks, projectStatuses]);
 
   const [scrollInterval, setScrollInterval] = useState<NodeJS.Timeout | null>(null);
+  const [projectTreeData, setProjectTreeData] = useState<any[]>([]);
 
   useEffect(() => {
     return () => {
@@ -98,10 +99,11 @@ export default function ProjectDetail({
     };
   }, [scrollInterval]);
   
-  // Fetch project completion metrics
+  // Fetch project completion metrics and project tree data
   useEffect(() => {
-    const fetchProjectMetrics = async () => {
+    const fetchInitialData = async () => {
       try {
+        // Fetch project metrics
         const metrics = await calculateProjectCompletion(project.project_id);
         setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
@@ -110,13 +112,17 @@ export default function ProjectDetail({
           spentHours: metrics.spentHours,
           remainingHours: metrics.remainingHours
         });
+        
+        // Fetch project tree data once
+        const treeData = await getProjectTreeData();
+        setProjectTreeData(treeData);
       } catch (error) {
-        console.error('Error fetching project metrics:', error);
-        toast.error('Failed to load project metrics');
+        console.error('Error fetching initial data:', error);
+        toast.error('Failed to load initial data');
       }
     };
     
-    fetchProjectMetrics();
+    fetchInitialData();
   }, [project.project_id]);
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -413,9 +419,33 @@ export default function ProjectDetail({
       toast.error('Please select a phase before adding a card.');
       return;
     }
+    
+    // Create an empty task object with all necessary properties initialized
+    const emptyTask: IProjectTask = {
+      task_id: '', // Will be generated on save
+      task_name: '',
+      description: '',
+      phase_id: selectedPhase.phase_id,
+      wbs_code: selectedPhase.wbs_code + '.1', // Default WBS code
+      project_status_mapping_id: status.project_status_mapping_id,
+      assigned_to: null,
+      due_date: null,
+      estimated_hours: 0,
+      actual_hours: 0,
+      created_at: new Date(),
+      updated_at: new Date(),
+      checklist_items: [], // Empty checklist for new task
+      ticket_links: [], // Empty ticket links for new task
+      resources: [] // Empty resources for new task
+    };
+    
+    // Log that we're using the cached project tree data
+    console.log('Using cached project tree data for new task dialog');
+    
     setIsAddingTask(true);
     setDefaultStatus(status);
     setCurrentPhase(selectedPhase);
+    setSelectedTask(emptyTask); // Pass the empty task with all properties initialized
     setShowQuickAdd(true);
   }, [selectedPhase]);
 
@@ -446,6 +476,9 @@ export default function ProjectDetail({
   }, [selectedTask]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
+    // Log that we're using the cached project tree data for editing
+    console.log('Using cached project tree data for edit task dialog');
+    
     setSelectedTask(task);
     setCurrentPhase(phases.find(phase => phase.phase_id === task.phase_id) || null);
     setShowQuickAdd(true);
@@ -634,6 +667,19 @@ export default function ProjectDetail({
             statuses={projectStatuses}
             isAddingTask={isAddingTask}
             selectedPhase={!!selectedPhase}
+            ticketLinks={projectTasks.reduce((acc, task) => {
+              if (task.ticket_links) {
+                acc[task.task_id] = task.ticket_links;
+              }
+              return acc;
+            }, {} as { [taskId: string]: IProjectTicketLinkWithDetails[] })}
+            taskResources={projectTasks.reduce((acc, task) => {
+              if (task.resources) {
+                acc[task.task_id] = task.resources;
+              }
+              return acc;
+            }, {} as { [taskId: string]: any[] })}
+            projectTreeData={projectTreeData} // Pass project tree data
             onDrop={handleDrop}
             onDragOver={handleDragOver}
             onAddCard={handleAddCard}
@@ -713,6 +759,7 @@ export default function ProjectDetail({
                 onTaskUpdated={handleTaskUpdated}
                 projectStatuses={projectStatuses}
                 users={users}
+                projectTreeData={projectTreeData}
               />
             ) : (
               <TaskQuickAdd
@@ -724,6 +771,8 @@ export default function ProjectDetail({
                 defaultStatus={defaultStatus || undefined}
                 onCancel={() => setIsAddingTask(false)}
                 users={users}
+                task={selectedTask || undefined} // Pass the empty task object or undefined
+                projectTreeData={projectTreeData} // Pass the project tree data
               />
             )}
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
@@ -13,12 +13,15 @@ interface StatusColumnProps {
   tasks: IProjectTask[];
   displayTasks: IProjectTask[];
   users: IUserWithRoles[];
+  ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
+  taskResources: { [taskId: string]: any[] };
   statusIcon: React.ReactNode;
   backgroundColor: string;
   darkBackgroundColor: string;
   borderColor: string;
   isAddingTask: boolean;
   selectedPhase: boolean;
+  projectTreeData?: any[]; // Add projectTreeData prop
   onDrop: (e: React.DragEvent, statusId: string, position: 'before' | 'after' | 'end', relativeTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -34,12 +37,15 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   tasks,
   displayTasks,
   users,
+  ticketLinks,
+  taskResources,
   statusIcon,
   backgroundColor,
   darkBackgroundColor,
   borderColor,
   isAddingTask,
   selectedPhase,
+  projectTreeData,
   onDrop,
   onDragOver,
   onAddCard,
@@ -210,6 +216,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
             tooltipText="Add Task"
             tooltip={true}
             className="!w-6 !h-6 !p-0 !min-w-0"
+            data-project-tree-data={JSON.stringify(projectTreeData)} // Store project tree data as a data attribute
           >
             <Plus className="w-4 h-4 text-white" />
           </Button>
@@ -227,10 +234,13 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
             <TaskCard
               task={task}
               users={users}
+              ticketLinks={ticketLinks[task.task_id]}
+              taskResources={taskResources[task.task_id]}
               onTaskSelected={onTaskSelected}
               onAssigneeChange={onAssigneeChange}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              projectTreeData={projectTreeData}
             />
             {dragOverTaskId === task.task_id && dropPosition === 'after' && (
               <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-purple-500 rounded-full" />

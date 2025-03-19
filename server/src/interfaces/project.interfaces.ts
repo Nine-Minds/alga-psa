@@ -66,6 +66,7 @@ export interface IProjectTask extends TenantEntity {
   due_date: Date | null;
   checklist_items?: ITaskChecklistItem[];
   ticket_links?: IProjectTicketLinkWithDetails[];
+  resources?: any[];
 }
 
 export interface IProjectTaskCardInfo extends IProjectTask {

@@ -45,6 +45,7 @@ interface TaskFormProps {
   mode: 'create' | 'edit';
   onPhaseChange: (phaseId: string) => void;
   inDrawer?: boolean;
+  projectTreeData?: any[]; // Add projectTreeData prop
 }
 
 export default function TaskForm({
@@ -58,7 +59,8 @@ export default function TaskForm({
   users,
   mode,
   onPhaseChange,
-  inDrawer = false
+  inDrawer = false,
+  projectTreeData = []
 }: TaskFormProps): JSX.Element {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [taskName, setTaskName] = useState(task?.task_name || '');
@@ -100,12 +102,26 @@ export default function TaskForm({
         }
 
         if (task?.task_id) {
-          const [existingChecklistItems, resources] = await Promise.all([
-            getTaskChecklistItems(task.task_id),
-            getTaskResourcesAction(task.task_id)
-          ]);
-          setChecklistItems(existingChecklistItems);
-          setTaskResources(resources);
+          // Use checklist items and resources from the task object if they exist
+          if (task.checklist_items !== undefined) {
+            console.log('Using checklist items from task object');
+            setChecklistItems(task.checklist_items);
+          } else {
+            // Only fetch if not available on the task object
+            console.log('Fetching checklist items from API');
+            const existingChecklistItems = await getTaskChecklistItems(task.task_id);
+            setChecklistItems(existingChecklistItems);
+          }
+
+          if (task.resources !== undefined) {
+            console.log('Using resources from task object');
+            setTaskResources(task.resources);
+          } else {
+            // Only fetch if not available on the task object
+            console.log('Fetching resources from API');
+            const resources = await getTaskResourcesAction(task.task_id);
+            setTaskResources(resources);
+          }
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -114,28 +130,35 @@ export default function TaskForm({
     fetchInitialData();
   }, [task]);
 
+  // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
     const fetchProjectsData = async () => {
       if (mode === 'edit') {
-        try {
-          const treeData = await getProjectTreeData();
-          if (treeData && Array.isArray(treeData) && treeData.length > 0) {
-            setProjectTreeOptions(treeData);
-          } else {
-            console.error('Invalid or empty tree data received:', treeData);
-            toast.error('No projects available with valid phases and statuses');
+        if (projectTreeData && projectTreeData.length > 0) {
+          // Use the provided project tree data
+          setProjectTreeOptions(projectTreeData);
+        } else {
+          // Fall back to fetching the data if not provided
+          try {
+            const treeData = await getProjectTreeData();
+            if (treeData && Array.isArray(treeData) && treeData.length > 0) {
+              setProjectTreeOptions(treeData);
+            } else {
+              console.error('Invalid or empty tree data received:', treeData);
+              toast.error('No projects available with valid phases and statuses');
+              setProjectTreeOptions([]);
+            }
+          } catch (error) {
+            console.error('Error fetching projects:', error);
+            toast.error('Error loading project data. Please try again.');
             setProjectTreeOptions([]);
           }
-        } catch (error) {
-          console.error('Error fetching projects:', error);
-          toast.error('Error loading project data. Please try again.');
-          setProjectTreeOptions([]);
         }
       }
     };
 
     fetchProjectsData();
-  }, [mode]);
+  }, [mode, projectTreeData]);
 
   const handleTreeSelectChange = async (
     value: string,

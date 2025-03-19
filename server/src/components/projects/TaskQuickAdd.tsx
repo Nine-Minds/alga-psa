@@ -15,6 +15,7 @@ interface TaskQuickAddProps {
   users: IUserWithRoles[];
   task?: IProjectTask;
   onPhaseChange?: (phaseId: string) => void;
+  projectTreeData?: any[]; // Add projectTreeData prop
 }
 
 export default function TaskQuickAdd({ 
@@ -27,7 +28,8 @@ export default function TaskQuickAdd({
   onCancel,
   users,
   task,
-  onPhaseChange
+  onPhaseChange,
+  projectTreeData
 }: TaskQuickAddProps): JSX.Element {
   const handleSubmit = async (resultTask: IProjectTask | null) => {
     // Ensure assigned_to is null if empty string or undefined
@@ -62,6 +64,7 @@ export default function TaskQuickAdd({
       users={users}
       mode={task ? 'edit' : 'create'}
       onPhaseChange={handlePhaseChange}
+      projectTreeData={projectTreeData}
     />
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { IProjectTask, ProjectStatus } from 'server/src/interfaces/project.interfaces';
+import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import StatusColumn from './StatusColumn';
 import styles from './ProjectDetail.module.css';
@@ -13,6 +13,9 @@ interface KanbanBoardProps {
   statuses: ProjectStatus[];
   isAddingTask: boolean;
   selectedPhase: boolean;
+  ticketLinks: { [taskId: string]: IProjectTicketLinkWithDetails[] };
+  taskResources: { [taskId: string]: any[] };
+  projectTreeData?: any[]; // Add projectTreeData prop
   onDrop: (e: React.DragEvent, statusId: string, position: 'before' | 'after' | 'end', relativeTaskId: string | null) => void;
   onDragOver: (e: React.DragEvent) => void;
   onAddCard: (status: ProjectStatus) => void;
@@ -42,6 +45,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   statuses,
   isAddingTask,
   selectedPhase,
+  ticketLinks,
+  taskResources,
+  projectTreeData,
   onDrop,
   onDragOver,
   onAddCard,
@@ -51,21 +57,58 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDragEnd,
   onReorderTasks,
 }) => {
+  // Ensure all tasks have ticket_links and resources initialized
+  const enrichedTasks = tasks.map(task => {
+    // Only create a new object if we need to add properties
+    if (task.ticket_links === undefined || task.resources === undefined) {
+      return {
+        ...task,
+        // Initialize ticket_links if undefined (preserve if already set)
+        ticket_links: task.ticket_links !== undefined ?
+          task.ticket_links :
+          (ticketLinks[task.task_id] || []),
+        // Initialize resources if undefined (preserve if already set)
+        resources: task.resources !== undefined ?
+          task.resources :
+          (taskResources[task.task_id] || [])
+      };
+    }
+    return task;
+  });
+
+  // Do the same for phase tasks
+  const enrichedPhaseTasks = phaseTasks.map(task => {
+    if (task.ticket_links === undefined || task.resources === undefined) {
+      return {
+        ...task,
+        ticket_links: task.ticket_links !== undefined ?
+          task.ticket_links :
+          (ticketLinks[task.task_id] || []),
+        resources: task.resources !== undefined ?
+          task.resources :
+          (taskResources[task.task_id] || [])
+      };
+    }
+    return task;
+  });
+  
   return (
     <div className={styles.kanbanBoard}>
       {statuses.filter(status => status.is_visible).map((status, index): JSX.Element => {
         const backgroundColor = cycleColors[index % cycleColors.length];
         const darkBackgroundColor = darkCycleColors[index % darkCycleColors.length];
         const borderColor = borderColors[index % borderColors.length];
-        const statusTasks = phaseTasks.filter((task: IProjectTask) => task.project_status_mapping_id === status.project_status_mapping_id);
+        const statusTasks = enrichedPhaseTasks.filter((task: IProjectTask) => task.project_status_mapping_id === status.project_status_mapping_id);
         
         return (
           <StatusColumn
             key={status.project_status_mapping_id}
             status={status}
-            tasks={tasks}
+            tasks={enrichedTasks}
             displayTasks={statusTasks}
             users={users}
+            ticketLinks={ticketLinks}
+            taskResources={taskResources}
             statusIcon={statusIcons[status.name] || <Circle className="w-4 h-4" />}
             backgroundColor={backgroundColor}
             darkBackgroundColor={darkBackgroundColor}
@@ -80,6 +123,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onReorderTasks={onReorderTasks}
+            projectTreeData={projectTreeData}
           />
         );
       })}
