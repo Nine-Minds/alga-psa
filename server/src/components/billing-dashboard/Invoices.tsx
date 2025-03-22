@@ -263,6 +263,42 @@ const Invoices: React.FC = () => {
                 {record.is_manual ? 'Invoice Details' : 'Manage Manual Items'}
               </DropdownMenuItem>
             )}
+            {!record.finalized_at && (
+              <DropdownMenuItem
+                id={`finalize-invoice-menu-item-${record.invoice_id}`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setError(null);
+                  try {
+                    await finalizeInvoice(record.invoice_id);
+                    await loadData();
+                  } catch (error) {
+                    console.error('Failed to finalize invoice:', error);
+                    setError('Failed to finalize invoice. Please try again.');
+                  }
+                }}
+              >
+                Finalize Invoice
+              </DropdownMenuItem>
+            )}
+            {record.finalized_at && (
+              <DropdownMenuItem
+                id={`unfinalize-invoice-menu-item-${record.invoice_id}`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setError(null);
+                  try {
+                    await unfinalizeInvoice(record.invoice_id);
+                    await loadData();
+                  } catch (error) {
+                    console.error('Failed to unfinalize invoice:', error);
+                    setError('Failed to unfinalize invoice. Please try again.');
+                  }
+                }}
+              >
+                Unfinalize Invoice
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id={`download-pdf-menu-item-${record.invoice_id}`}
               onClick={async (e) => {
@@ -279,7 +315,19 @@ const Invoices: React.FC = () => {
                   }
                 } catch (error) {
                   console.error('Failed to generate PDF:', error);
-                  setError('Failed to generate PDF. Please try again.');
+                  
+                  // Extract specific error message
+                  let errorMessage = 'Failed to generate PDF. Please try again.';
+                  if (error instanceof Error) {
+                    errorMessage = error.message;
+                    
+                    // Handle specific error types with more user-friendly messages
+                    if (errorMessage.includes('Invoice is already finalized')) {
+                      errorMessage = 'Cannot generate PDF for an already finalized invoice.';
+                    }
+                  }
+                  
+                  setError(errorMessage);
                 }
               }}
             >
@@ -301,7 +349,19 @@ const Invoices: React.FC = () => {
                   }
                 } catch (error) {
                   console.error('Failed to send email:', error);
-                  setError('Failed to send invoice email. Please try again.');
+                  
+                  // Extract specific error message
+                  let errorMessage = 'Failed to send invoice email. Please try again.';
+                  if (error instanceof Error) {
+                    errorMessage = error.message;
+                    
+                    // Handle specific error types with more user-friendly messages
+                    if (errorMessage.includes('Invoice is already finalized')) {
+                      errorMessage = 'Cannot send email for an already finalized invoice.';
+                    }
+                  }
+                  
+                  setError(errorMessage);
                 }
               }}
             >
@@ -406,7 +466,19 @@ const Invoices: React.FC = () => {
                       }
                     } catch (error) {
                       console.error('Failed to schedule PDF generation:', error);
-                      setError('Failed to generate PDFs. Please try again.');
+                      
+                      // Extract specific error message
+                      let errorMessage = 'Failed to generate PDFs. Please try again.';
+                      if (error instanceof Error) {
+                        errorMessage = error.message;
+                        
+                        // Handle specific error types with more user-friendly messages
+                        if (errorMessage.includes('Invoice is already finalized')) {
+                          errorMessage = 'Cannot generate PDFs for already finalized invoices.';
+                        }
+                      }
+                      
+                      setError(errorMessage);
                     }
                   }}
                 >
@@ -429,7 +501,19 @@ const Invoices: React.FC = () => {
                       }
                     } catch (error) {
                       console.error('Failed to schedule email sending:', error);
-                      setError('Failed to send invoice emails. Please try again.');
+                      
+                      // Extract specific error message
+                      let errorMessage = 'Failed to send invoice emails. Please try again.';
+                      if (error instanceof Error) {
+                        errorMessage = error.message;
+                        
+                        // Handle specific error types with more user-friendly messages
+                        if (errorMessage.includes('Invoice is already finalized')) {
+                          errorMessage = 'Cannot send emails for already finalized invoices.';
+                        }
+                      }
+                      
+                      setError(errorMessage);
                     }
                   }}
                 >

@@ -1,4 +1,6 @@
 import { Suspense } from 'react';
+import AddCreditButton from './AddCreditButton';
+import BackButton from './BackButton';
 import { listCredits } from './actions';
 import { getCreditExpirationSettings } from './settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
@@ -248,11 +250,13 @@ export default async function CreditsPage({ params }: { params: { companyId?: st
   
   return (
     <div className="container mx-auto py-6 space-y-6">
+      <div className="mb-4">
+        <BackButton />
+      </div>
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Credit Management</h1>
         <div className="flex space-x-2">
-          <Button id="transfer-credit-button">Transfer Credit</Button>
-          <Button id="add-credit-button" variant="default">Add Credit</Button>
+          <AddCreditButton />
         </div>
       </div>
       

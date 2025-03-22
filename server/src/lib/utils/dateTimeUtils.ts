@@ -45,10 +45,16 @@ export function getUserTimeZone(): string {
  * Convert a date string, Date object, or Temporal.PlainDate to a Temporal.PlainDate
  * Handles both date-only strings and full ISO timestamps
  */
-export function toPlainDate(date: string | Date | Temporal.PlainDate): Temporal.PlainDate {
+export function toPlainDate(date: string | Date | Temporal.PlainDate | null | undefined): Temporal.PlainDate {
+  // Handle null or undefined
+  if (date === null || date === undefined) {
+    throw new Error('Cannot convert null or undefined to PlainDate');
+  }
+
   if (date instanceof Temporal.PlainDate) {
     return date;
   }
+  
   if (typeof date === 'string') {
     // If it's a full ISO timestamp (contains 'T' or 'Z')
     if (date.includes('T') || date.includes('Z')) {
@@ -59,10 +65,17 @@ export function toPlainDate(date: string | Date | Temporal.PlainDate): Temporal.
     // If it's already a date-only string (YYYY-MM-DD)
     return Temporal.PlainDate.from(date);
   }
+  
   // If it's a Date object, convert through UTC
-  return Temporal.Instant.from(date.toISOString())
-    .toZonedDateTimeISO('UTC')
-    .toPlainDate();
+  // Make sure it's a valid Date object before calling toISOString
+  if (date instanceof Date && !isNaN(date.getTime())) {
+    return Temporal.Instant.from(date.toISOString())
+      .toZonedDateTimeISO('UTC')
+      .toPlainDate();
+  }
+  
+  // If we get here, it's an invalid date
+  throw new Error(`Invalid date value: ${date}`);
 }
 
 /**

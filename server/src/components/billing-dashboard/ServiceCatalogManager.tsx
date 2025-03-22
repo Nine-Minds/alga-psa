@@ -147,34 +147,34 @@ const ServiceCatalogManager: React.FC = () => {
       }
     ];
 
-    // Add product-specific columns if we're filtering by products
-    if (selectedServiceType === 'Product' || selectedServiceType === 'all') {
+    // Only add product-specific columns if we're filtering specifically by products
+    if (selectedServiceType === 'Product') {
       baseColumns.push(
         {
           title: 'SKU',
           dataIndex: 'sku',
-          render: (value, record) => record.service_type === 'Product' ? (value || 'N/A') : '-',
+          render: (value) => value || 'N/A',
         },
         {
           title: 'Inventory',
           dataIndex: 'inventory_count',
-          render: (value, record) => record.service_type === 'Product' ? (value || '0') : '-',
+          render: (value) => value || '0',
         }
       );
     }
 
-    // Add license-specific columns if we're filtering by licenses
-    if (selectedServiceType === 'License' || selectedServiceType === 'all') {
+    // Only add license-specific columns if we're filtering specifically by licenses
+    if (selectedServiceType === 'License') {
       baseColumns.push(
         {
           title: 'Seat Limit',
           dataIndex: 'seat_limit',
-          render: (value, record) => record.service_type === 'License' ? (value || 'Unlimited') : '-',
+          render: (value) => value || 'Unlimited',
         },
         {
           title: 'License Term',
           dataIndex: 'license_term',
-          render: (value, record) => record.service_type === 'License' ? (value || 'N/A') : '-',
+          render: (value) => value || 'N/A',
         }
       );
     }

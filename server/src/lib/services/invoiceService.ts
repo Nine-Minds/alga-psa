@@ -56,9 +56,26 @@ export function calculateNetAmount(
       const applicableAmount = requestItem.applies_to_item_id
         ? (applicableItemAmount || 0)
         : currentSubtotal;
-      return -Math.round((applicableAmount * requestItem.rate) / 100);
+      
+      // Use discount_percentage if available, otherwise fall back to rate
+      const percentage = requestItem.discount_percentage !== undefined
+        ? requestItem.discount_percentage
+        : Math.abs(requestItem.rate);
+      
+      console.log('Calculating percentage discount:', {
+        applicableAmount,
+        percentage,
+        result: -Math.round((applicableAmount * percentage) / 100)
+      });
+        
+      return -Math.round((applicableAmount * percentage) / 100);
     } else {
       // Fixed amount discount - ensure it's always negative
+      console.log('Calculating fixed discount:', {
+        rate: requestItem.rate,
+        result: -Math.abs(Math.round(requestItem.rate))
+      });
+      
       return -Math.abs(Math.round(requestItem.rate));
     }
   } else {
@@ -73,6 +90,7 @@ interface InvoiceItem extends NetAmountItem {
   tax_region?: string;
   is_taxable?: boolean;
   applies_to_service_id?: string; // Add the new field
+  discount_percentage?: number;
 }
 
 export async function persistInvoiceItems(
@@ -213,13 +231,22 @@ export async function persistInvoiceItems(
       }
     }
     
+    // Log the discount details before creating the invoice item
+    console.log('Creating discount invoice item:', {
+      discount_type: requestItem.discount_type,
+      discount_percentage: requestItem.discount_percentage,
+      rate: requestItem.rate,
+      netAmount,
+      applies_to_item_id: applicableItemId
+    });
+    
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id ? requestItem.service_id : null,
       description: requestItem.description,
       quantity: requestItem.quantity,
-      unit_price: -Math.abs(Math.round(requestItem.rate)),
+      unit_price: requestItem.discount_type === 'percentage' ? 0 : -Math.abs(Math.round(requestItem.rate)),
       net_amount: netAmount,
       tax_amount: 0, // Discounts don't get tax
       tax_region: service?.tax_region || company.tax_region,
@@ -229,12 +256,21 @@ export async function persistInvoiceItems(
       is_discount: true,
       is_taxable: false, // Discounts are not taxable
       discount_type: requestItem.discount_type || 'fixed',
+      discount_percentage: requestItem.discount_type === 'percentage' ? requestItem.discount_percentage : undefined,
       applies_to_item_id: applicableItemId,
       applies_to_service_id: requestItem.applies_to_service_id,
       created_by: session.user.id,
       created_at: Temporal.Now.plainDateISO().toString(),
       tenant
     };
+    
+    console.log('Final invoice item to be inserted:', {
+      item_id: invoiceItem.item_id,
+      discount_type: invoiceItem.discount_type,
+      discount_percentage: invoiceItem.discount_percentage,
+      unit_price: invoiceItem.unit_price,
+      net_amount: invoiceItem.net_amount
+    });
     
     try {
       await tx('invoice_items').insert(invoiceItem);

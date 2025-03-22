@@ -183,11 +183,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             <thead className="bg-white">
               {table.getHeaderGroups().map((headerGroup): JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
-                  {headerGroup.headers.map((header): JSX.Element => {
+                  {headerGroup.headers.map((header, headerIndex): JSX.Element => {
                     const columnId = header.column.columnDef.id || header.id;
                     return (
-                    <th 
-                      key={`header_${columnId}`}
+                    <th
+                      key={`header_${columnId}_${headerIndex}`}
                       onClick={header.column.getToggleSortingHandler()}
                       className="px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider cursor-pointer hover:bg-gray-50 transition-colors"
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
@@ -220,11 +220,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     hover:bg-blue-50 transition-colors cursor-pointer
                   `}
                   >
-                    {row.getVisibleCells().map((cell): JSX.Element => {
+                    {row.getVisibleCells().map((cell, cellIndex): JSX.Element => {
                       const columnId = cell.column.columnDef.id || cell.column.id;
                       return (
                         <td
-                          key={`cell_${rowId}_${columnId}`}
+                          key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           className="px-6 py-4 text-[14px] text-[rgb(var(--color-text-700))] max-w-0"
                           style={{ width: columns.find(col => col.dataIndex === cell.column.id)?.width }}
                         >

@@ -12,13 +12,14 @@ import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { listCompanyCredits, getCreditDetails } from 'server/src/lib/actions/creditActions';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -198,6 +199,7 @@ const CreditManagement: React.FC = () => {
   const [activeCredits, setActiveCredits] = useState<ICreditTracking[]>([]);
   const [expiredCredits, setExpiredCredits] = useState<ICreditTracking[]>([]);
   const [allCredits, setAllCredits] = useState<ICreditTracking[]>([]);
+  const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
   const [creditStats, setCreditStats] = useState({
     totalActive: 0,
     totalExpired: 0,
@@ -265,13 +267,13 @@ const CreditManagement: React.FC = () => {
   };
 
   const handleAddCredit = () => {
-    // In a real implementation, this would open a modal or navigate to a form
-    console.log('Add credit clicked');
+    setIsAddCreditModalOpen(true);
   };
 
-  const handleTransferCredit = () => {
-    // In a real implementation, this would open a modal or navigate to a form
-    console.log('Transfer credit clicked');
+  const handleSubmitAddCredit = () => {
+    // In a real implementation, this would submit the form data
+    console.log('Add credit submitted');
+    setIsAddCreditModalOpen(false);
   };
 
   if (loading) {
@@ -297,23 +299,19 @@ const CreditManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Credit Management</h2>
-        <div className="flex space-x-2">
-          <Button 
-            id="transfer-credit-button"
-            variant="outline"
-            onClick={handleTransferCredit}
-          >
-            Transfer Credit
-          </Button>
-          <Button 
+      <div className="flex justify-between items-center mb-4">
+        <div className="space-x-2">
+          <Button
             id="add-credit-button"
             onClick={handleAddCredit}
           >
             Add Credit
           </Button>
         </div>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Credit Management</h2>
       </div>
       
       {/* Credit Summary Cards */}
@@ -469,6 +467,36 @@ const CreditManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Add Credit Modal */}
+      <Dialog isOpen={isAddCreditModalOpen} onClose={() => setIsAddCreditModalOpen(false)}>
+        <DialogHeader>
+          <DialogTitle>Add Credit</DialogTitle>
+        </DialogHeader>
+        <DialogContent>
+          {/* Add credit form would go here */}
+          <div className="py-4">
+            <p className="text-muted-foreground">
+              Credit amount and details form would be implemented here.
+            </p>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="cancel-add-credit-button"
+            variant="outline"
+            onClick={() => setIsAddCreditModalOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            id="submit-add-credit-button"
+            onClick={handleSubmitAddCredit}
+          >
+            Add Credit
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 };

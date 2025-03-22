@@ -90,15 +90,28 @@ export const LineItem: React.FC<LineItemProps> = ({
           newState.discount_type = value as DiscountType;
           // Reset values when switching discount types
           if (value === 'percentage') {
-            // When switching to percentage, initialize with current rate if it's a valid percentage
-            const currentRate = Math.abs(prev.rate);
-            newState.discount_percentage = currentRate > 0 && currentRate <= 100 ? currentRate : 0;
+            // When switching to percentage, calculate based on the item it applies to
+            if (prev.applies_to_item_id) {
+              // This will be handled by the parent component which has access to all items
+              newState.discount_percentage = prev.discount_percentage || 10; // Default to 10%
+            } else {
+              // For invoice-level discounts, use a reasonable default or convert from fixed
+              const currentRate = Math.abs(prev.rate);
+              newState.discount_percentage = currentRate > 0 && currentRate <= 100 ? currentRate : 10;
+            }
+            // Keep rate at 0 for percentage discounts - actual calculation happens on save
             newState.rate = 0;
           } else {
             // When switching to fixed, convert percentage to monetary value if possible
-            const currentPercentage = prev.discount_percentage;
+            if (prev.discount_percentage) {
+              // For item-specific discounts, this will be handled by parent component
+              // For invoice-level discounts, use a nominal value
+              newState.rate = -Math.abs(prev.discount_percentage * 100); // Convert percentage to cents
+            } else {
+              newState.rate = -1000; // Default to $10.00
+            }
+            // Clear the percentage for fixed discounts
             newState.discount_percentage = undefined;
-            newState.rate = currentPercentage ? -(currentPercentage / 100) : 0;
           }
           break;
         case 'service_id': {

@@ -177,7 +177,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     // New manual invoice
     return [defaultItem];
   });
-  
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,6 +185,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [loading, setLoading] = useState(false);
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
+  const [itemsChanged, setItemsChanged] = useState(false);
 
   // Fetch invoice items when invoice changes
   useEffect(() => {
@@ -304,11 +304,60 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
         break;
       }
-      case 'discount_type':
-        currentItem.discount_type = value as DiscountType;
-        // Reset rate when switching discount types
-        currentItem.rate = 0;
+      case 'discount_type': {
+        const oldType = currentItem.discount_type;
+        const newType = value as DiscountType;
+        currentItem.discount_type = newType;
+        
+        // Handle conversion between percentage and fixed amount
+        if (oldType !== newType) {
+          if (newType === 'percentage') {
+            // Convert fixed amount to percentage
+            if (currentItem.applies_to_item_id) {
+              // Find the item this discount applies to
+              const appliedToItem = items.find(item => item.item_id === currentItem.applies_to_item_id);
+              if (appliedToItem) {
+                const totalAmount = appliedToItem.rate * appliedToItem.quantity;
+                if (totalAmount > 0) {
+                  // Calculate percentage based on the current fixed amount
+                  const percentage = Math.abs(currentItem.rate) * 100 / totalAmount;
+                  currentItem.discount_percentage = Math.min(percentage, 100);
+                } else {
+                  currentItem.discount_percentage = 0;
+                }
+              }
+            } else {
+              // For invoice-level discounts, use a default percentage
+              currentItem.discount_percentage = 10; // Default to 10%
+            }
+            // Keep the rate at 0 for percentage discounts
+            currentItem.rate = 0;
+          } else {
+            // Convert percentage to fixed amount
+            if (currentItem.discount_percentage) {
+              if (currentItem.applies_to_item_id) {
+                // Find the item this discount applies to
+                const appliedToItem = items.find(item => item.item_id === currentItem.applies_to_item_id);
+                if (appliedToItem) {
+                  const totalAmount = appliedToItem.rate * appliedToItem.quantity;
+                  // Calculate fixed amount based on percentage
+                  currentItem.rate = -Math.abs((currentItem.discount_percentage / 100) * totalAmount);
+                }
+              } else {
+                // For invoice-level discounts, we'll need to calculate based on subtotal
+                // For now, set a nominal value that will be adjusted when saved
+                currentItem.rate = -Math.abs(currentItem.discount_percentage);
+              }
+            } else {
+              // Default to a small fixed amount if no percentage was set
+              currentItem.rate = -1000; // $10.00
+            }
+            // Clear the percentage for fixed discounts
+            currentItem.discount_percentage = undefined;
+          }
+        }
         break;
+      }
       case 'quantity':
         currentItem.quantity = value as number;
         break;
@@ -371,45 +420,84 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           invoice_number: invoice.invoice_number,
           newItems: newItems.map(({
             service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => ({
-            service_id,
-            description,
-            quantity,
-            rate,
-            is_discount: is_discount || false,
-            discount_type,
-            applies_to_item_id,
-            discount_percentage,
-            item_id: uuidv4(),
-            invoice_id: invoice.invoice_id,
-            unit_price: rate,
-            total_price: quantity * rate,
-            tax_amount: 0,
-            is_manual: true,
-            is_taxable: false,
-            net_amount: quantity * rate
-          })),
-          updatedItems: updatedItems.map(({ 
+          }) => {
+            console.log('Preparing new item for save:', {
+              is_discount,
+              discount_type,
+              discount_percentage,
+              rate
+            });
+            
+            return {
+              service_id,
+              description,
+              quantity,
+              rate,
+              is_discount: is_discount || false,
+              discount_type,
+              applies_to_item_id,
+              discount_percentage,
+              item_id: uuidv4(),
+              invoice_id: invoice.invoice_id,
+              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
+              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
+              tax_amount: 0,
+              is_manual: true,
+              is_taxable: false,
+              net_amount: is_discount && discount_type === 'percentage' ? 0 : quantity * rate
+            };
+          }),
+          updatedItems: updatedItems.map(({
             item_id, service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => ({
-            item_id: item_id!,
-            service_id,
-            description,
-            quantity,
-            rate,
-            is_discount: is_discount || false,
-            discount_type,
-            discount_percentage,
-            applies_to_item_id,
-            invoice_id: invoice.invoice_id,
-            unit_price: rate,
-            total_price: quantity * rate,
-            tax_amount: 0,
-            is_manual: true,
-            is_taxable: false
-          })),
+          }) => {
+            console.log('Preparing updated item for save:', {
+              item_id,
+              is_discount,
+              discount_type,
+              discount_percentage,
+              rate
+            });
+            
+            return {
+              item_id: item_id!,
+              service_id,
+              description,
+              quantity,
+              rate,
+              is_discount: is_discount || false,
+              discount_type,
+              discount_percentage,
+              applies_to_item_id,
+              invoice_id: invoice.invoice_id,
+              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
+              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
+              tax_amount: 0,
+              is_manual: true,
+              is_taxable: false
+            };
+          }),
           removedItemIds
         });
+        
+        // Reset state after successful save
+        setItemsChanged(false);
+        setExpandedItems(new Set());
+        
+        // Refresh items from server to ensure we have the latest state
+        const refreshedItems = await getInvoiceLineItems(invoice.invoice_id);
+        setItems(refreshedItems.filter(item => item.is_manual).map(item => ({
+          item_id: item.item_id,
+          service_id: item.service_id || '',
+          quantity: item.quantity,
+          description: item.description,
+          rate: item.unit_price,
+          is_discount: !!item.is_discount,
+          discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+          discount_percentage: item.discount_percentage,
+          applies_to_item_id: item.applies_to_item_id,
+          isExisting: true,
+          isRemoved: false
+        })));
       } else {
         console.log('Generating new manual invoice:', {
           companyId: selectedCompany || '',
@@ -422,37 +510,68 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           expirationDate: isPrepayment ? expirationDate : undefined,
           items: items.filter(item => !item.isRemoved).map(({
             service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => ({
-            service_id,
-            description,
-            quantity,
-            rate,
-            is_discount: is_discount || false,
-            discount_type,
-            applies_to_item_id,
-            discount_percentage,
-            item_id: uuidv4(),
-            // Add missing required properties with default values
-            invoice_id: '', // Will be assigned by the server
-            unit_price: rate,
-            total_price: quantity * rate,
-            tax_amount: 0,
-            is_manual: true,
-            is_taxable: false
-          }))
+          }) => {
+            console.log('Preparing new manual invoice item:', {
+              is_discount,
+              discount_type,
+              discount_percentage,
+              rate
+            });
+            
+            return {
+              service_id,
+              description,
+              quantity,
+              rate,
+              is_discount: is_discount || false,
+              discount_type,
+              applies_to_item_id,
+              discount_percentage,
+              item_id: uuidv4(),
+              // Add missing required properties with default values
+              invoice_id: '', // Will be assigned by the server
+              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
+              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
+              tax_amount: 0,
+              is_manual: true,
+              is_taxable: false
+            };
+          })
         });
+        
+        // Reset state after successful save
+        setItemsChanged(false);
+        onGenerateSuccess();
       }
       
       // Success - stay on the page
     } catch (err: unknown) {
-      if (err instanceof Error && err.message === 'Invoice number must be unique') {
-        setError('This invoice number is already in use. Please choose a different number.');
-      } else {
-        setError(`Error ${invoice ? 'updating' : 'generating'} invoice`);
-      }
       if (IS_DEVELOPMENT) {
         console.error('Error with invoice:', err);
       }
+      
+      let errorMessage = `Error ${invoice ? 'updating' : 'generating'} invoice`;
+      
+      if (err instanceof Error) {
+        // Extract the specific error message
+        const message = err.message;
+        
+        // Handle specific error types
+        if (message === 'Invoice number must be unique') {
+          errorMessage = 'This invoice number is already in use. Please choose a different number.';
+        } else if (message.includes('No active tax rate found for region')) {
+          errorMessage = `No tax rate is configured for the selected region. Please add a tax rate for this region in the Tax Rates tab.`;
+        } else if (message.includes('Service not found')) {
+          errorMessage = `The selected service could not be found. It may have been deleted or deactivated.`;
+        } else if (message.includes('Cannot modify a paid or cancelled invoice')) {
+          errorMessage = `This invoice cannot be modified because it has already been paid or cancelled.`;
+        } else {
+          // Use the actual error message for other cases
+          errorMessage = message;
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }

@@ -77,6 +77,12 @@ export async function scheduleInvoiceZipAction(invoiceIds: string[]) {
       userId: user.user_id,
       invoiceIds
     });
-    throw new Error('Failed to schedule invoice zip job');
+    
+    // Preserve the original error message if available
+    const errorMessage = error instanceof Error
+      ? error.message
+      : 'Failed to schedule invoice zip job';
+    
+    throw new Error(errorMessage);
   }
 }

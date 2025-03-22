@@ -80,6 +80,8 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
         companyName: d.companyName
       }))
     });
-    throw new Error(`Failed to schedule invoice email job: ${errorMessage}`);
+    
+    // Preserve the original error message
+    throw new Error(errorMessage);
   }
 };

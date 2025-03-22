@@ -435,12 +435,17 @@ export async function createNextTimePeriod(settings: ITimePeriodSettings[], days
     }
 
     // Use TimePeriodSuggester to create the new period
-    const newPeriodData = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
+    const newPeriodResult = TimePeriodSuggester.suggestNewTimePeriod(settings, modelPeriods);
+    
+    // Check if the suggestion was successful
+    if (!newPeriodResult.success || !newPeriodResult.data) {
+      throw new Error(`Failed to suggest new time period: ${newPeriodResult.error || 'Unknown error'}`);
+    }
     
     // Convert string dates to Temporal.PlainDate
     const newPeriod = await createTimePeriod({
-      start_date: toPlainDate(newPeriodData.start_date),
-      end_date: toPlainDate(newPeriodData.end_date)
+      start_date: toPlainDate(newPeriodResult.data.start_date),
+      end_date: toPlainDate(newPeriodResult.data.end_date)
     });
 
     return newPeriod;

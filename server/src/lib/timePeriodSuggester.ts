@@ -11,11 +11,13 @@ export class TimePeriodSuggester {
       return date;
     }
     return Temporal.PlainDate.from(date.split('T')[0]);
-  }  
+  }
+
+  // Define a result type that includes success status and error message
   static suggestNewTimePeriod(
     settings: TimePeriodSettings[],
     existingPeriods: ITimePeriod[] = []
-  ): ITimePeriodView {
+  ): { success: boolean; data?: ITimePeriodView; error?: string } {
     let currentDate = Temporal.Now.plainDateISO();
 
     if (existingPeriods.length > 0) {
@@ -29,27 +31,30 @@ export class TimePeriodSuggester {
     // Find the next applicable setting based on the next period's start date
     const nextPeriodStartDate = existingPeriods.length > 0
       ? existingPeriods.reduce((maxDate, period) => {
-          const endDate = this.parseDateValue(period.end_date);
-          return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
-        }, this.parseDateValue(existingPeriods[0].end_date))
+        const endDate = this.parseDateValue(period.end_date);
+        return Temporal.PlainDate.compare(endDate, maxDate) > 0 ? endDate : maxDate;
+      }, this.parseDateValue(existingPeriods[0].end_date))
       : currentDate;
 
     const applicableSettings = settings.filter(setting => {
       if (!setting.start_day) return true;
-      
+
       const startDay = setting.start_day;
-      
+
       // If setting has an end_day, check if the next period's start date falls within this setting's range
       if (setting.end_day) {
         const endDay = setting.end_day === 0 ? nextPeriodStartDate.daysInMonth : setting.end_day;
         return nextPeriodStartDate.day >= startDay && nextPeriodStartDate.day <= endDay;
       }
-      
+
       return nextPeriodStartDate.day >= startDay;
     });
-
+    
     if (applicableSettings.length === 0) {
-      throw new Error('No applicable time period settings found');
+      return {
+        success: false,
+        error: 'No applicable time period settings found. Please check your time period settings.'
+      };
     }
 
     // Use the first applicable setting (could be enhanced to handle multiple)
@@ -66,27 +71,27 @@ export class TimePeriodSuggester {
         break;
       case 'month':
         // if (setting.end_day) {
-          // Handle semi-monthly periods
-          const daysInMonth = startDate.daysInMonth;
-          const endDay = setting.end_day === 0 ? daysInMonth : Math.min(setting.end_day || 1, daysInMonth);
-          
-          // Determine base date for month calculations
-          const baseDate = setting.start_day === 1 ?
-            startDate :
-            startDate.with({ day: 1 });
+        // Handle semi-monthly periods
+        const daysInMonth = startDate.daysInMonth;
+        const endDay = setting.end_day === 0 ? daysInMonth : Math.min(setting.end_day || 1, daysInMonth);
 
-          if (setting.start_day === 1 && startDate.day === 1) {
-            // First semi-monthly period (1st-16th)
-            endDate = startDate.with({ day: endDay }).add({ days: 1 });
-          } else {
-            // Second semi-monthly period (16th-EOM) or mid-month start
-            endDate = baseDate.add({ months: 1 }).with({ day: 1 });
-            
-            // If we're in the same month, use calculated end day
-            if (endDate.month === startDate.month) {
-              endDate = startDate.with({ day: endDay });
-            }
+        // Determine base date for month calculations
+        const baseDate = setting.start_day === 1 ?
+          startDate :
+          startDate.with({ day: 1 });
+
+        if (setting.start_day === 1 && startDate.day === 1) {
+          // First semi-monthly period (1st-16th)
+          endDate = startDate.with({ day: endDay }).add({ days: 1 });
+        } else {
+          // Second semi-monthly period (16th-EOM) or mid-month start
+          endDate = baseDate.add({ months: 1 }).with({ day: 1 });
+
+          // If we're in the same month, use calculated end day
+          if (endDate.month === startDate.month) {
+            endDate = startDate.with({ day: endDay });
           }
+        }
         // } else {
         //   // Regular monthly period
         //   endDate = startDate.add({ months: setting.frequency });
@@ -102,17 +107,20 @@ export class TimePeriodSuggester {
     // Find the period with the latest end date to use its ID
     const latestPeriod = existingPeriods.length > 0
       ? existingPeriods.reduce((latest, period) => {
-          const endDate = this.parseDateValue(period.end_date);
-          const latestEndDate = this.parseDateValue(latest.end_date);
-          return Temporal.PlainDate.compare(endDate, latestEndDate) > 0 ? period : latest;
-        }, existingPeriods[0])
+        const endDate = this.parseDateValue(period.end_date);
+        const latestEndDate = this.parseDateValue(latest.end_date);
+        return Temporal.PlainDate.compare(endDate, latestEndDate) > 0 ? period : latest;
+      }, existingPeriods[0])
       : null;
 
     // Return view type with string dates
     return {
-      period_id: latestPeriod ? latestPeriod.period_id : uuidv4(),
-      start_date: startDate.toString(),
-      end_date: endDate.toString()
+      success: true,
+      data: {
+        period_id: latestPeriod ? latestPeriod.period_id : uuidv4(),
+        start_date: startDate.toString(),
+        end_date: endDate.toString()
+      }
     };
   }
 

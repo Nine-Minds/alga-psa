@@ -22,6 +22,7 @@ export interface NetAmountItem {
   rate: number;
   is_discount?: boolean;
   discount_type?: DiscountType;
+  discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
 }

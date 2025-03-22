@@ -650,13 +650,13 @@ export async function listCompanyCredits(
     // Build base query
     const baseQuery = knex('credit_tracking')
         .where({
-            company_id: companyId,
-            tenant
+            'credit_tracking.company_id': companyId,
+            'credit_tracking.tenant': tenant
         });
 
     // Filter by expiration status if needed
     if (!includeExpired) {
-        baseQuery.where('is_expired', false);
+        baseQuery.where('credit_tracking.is_expired', false);
     }
 
     // Get total count for pagination

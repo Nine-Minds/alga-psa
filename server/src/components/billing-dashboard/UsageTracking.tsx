@@ -126,8 +126,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     try {
       setIsLoading(true);
       const filter: IUsageFilter = {};
-      if (selectedCompany !== null) filter.company_id = selectedCompany;
-      if (selectedService) filter.service_id = selectedService;
+      if (selectedCompany !== null && selectedCompany !== 'all_companies') filter.company_id = selectedCompany;
+      if (selectedService && selectedService !== 'all_services') filter.service_id = selectedService;
       
       const records = await getUsageRecords(filter);
       setUsageRecords(records);
@@ -316,32 +316,50 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex gap-4">
+            <div className="flex items-center space-x-2 mb-4">
               <div className="flex-1">
                 <Label htmlFor="company-filter">Company</Label>
-                <CompanyPicker
+                <CustomSelect
                   id="company-filter"
-                  companies={companies}
-                  selectedCompanyId={selectedCompany}
-                  onSelect={setSelectedCompany}
-                  filterState={filterState}
-                  onFilterStateChange={setFilterState}
-                  clientTypeFilter={clientTypeFilter}
-                  onClientTypeFilterChange={setClientTypeFilter}
+                  value={selectedCompany || 'all_companies'}
+                  onValueChange={value => setSelectedCompany(value === 'all_companies' ? null : value)}
+                  placeholder="Filter by company"
+                  options={[
+                    { value: 'all_companies', label: 'All Companies' },
+                    ...companies.map(company => ({
+                      value: company.company_id,
+                      label: company.company_name
+                    }))
+                  ]}
                 />
               </div>
               <div className="flex-1">
                 <Label htmlFor="service-filter">Service</Label>
                 <CustomSelect
                   id="service-filter"
-                  value={selectedService}
-                  onValueChange={setSelectedService}
+                  value={selectedService || 'all_services'}
+                  onValueChange={value => setSelectedService(value === 'all_services' ? '' : value)}
                   placeholder="Filter by service"
-                  options={initialServices.map(service => ({
-                    label: service.service_name,
-                    value: service.service_id
-                  }))}
+                  options={[
+                    { value: 'all_services', label: 'All Services' },
+                    ...initialServices.map(service => ({
+                      label: service.service_name,
+                      value: service.service_id
+                    }))
+                  ]}
                 />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  id="clear-filters-button"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedService('all_services');
+                    setSelectedCompany('all_companies');
+                  }}
+                >
+                  Clear Filters
+                </Button>
               </div>
             </div>
 
@@ -367,7 +385,6 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           resetForm();
         }}
         id="usage-form-dialog"
-        title={editingUsage ? 'Edit Usage Record' : 'Add Usage Record'}
       >
         <DialogContent>
           <DialogHeader>
@@ -414,7 +431,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               <Input
                 id="usage-date-input"
                 type="date"
-                value={newUsage.usage_date.toString().split('T')[0]}
+                value={newUsage.usage_date
+                  ? new Date(newUsage.usage_date).toISOString().split('T')[0]
+                  : ''}
                 onChange={(e) => setNewUsage({ ...newUsage, usage_date: new Date(e.target.value).toISOString() })}
               />
             </div>
