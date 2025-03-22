@@ -53,6 +53,21 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
         error: null
     };
 
+    // Define utility functions
+    const formatDateForInput = (date: Temporal.PlainDate | null): string => {
+        if (!date) return '';
+        return date.toString().split('T')[0];
+    };
+
+    const parseInputToDate = (inputValue: string): Temporal.PlainDate | null => {
+        if (!inputValue) return null;
+        try {
+            return toPlainDate(inputValue);
+        } catch {
+            return null;
+        }
+    };
+
     // Define action types
     type FormAction =
         | { type: 'INITIALIZE_EDIT_MODE', payload: { selectedPeriod: ITimePeriodView } }
@@ -159,20 +174,6 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
             });
         }
     }, [mode, selectedPeriod, settings, existingTimePeriods]);
-
-    const formatDateForInput = (date: Temporal.PlainDate | null): string => {
-        if (!date) return '';
-        return date.toString().split('T')[0];
-    };
-
-    const parseInputToDate = (inputValue: string): Temporal.PlainDate | null => {
-        if (!inputValue) return null;
-        try {
-            return toPlainDate(inputValue);
-        } catch {
-            return null;
-        }
-    };
 
     const handleStartDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         dispatch({
