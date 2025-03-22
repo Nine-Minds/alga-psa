@@ -9,6 +9,13 @@ import TimePeriodForm from './TimePeriodForm';
 import { getTimePeriodSettings } from 'server/src/lib/actions/timePeriodsActions';
 import { ISO8601String } from 'server/src/types/types.d';
 import { parseISO, format } from 'date-fns'; // Import date-fns functions
+import { MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 interface TimePeriodsProps {
   initialTimePeriods: ITimePeriodView[];
@@ -109,15 +116,27 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
                   <TableCell>{period.start_date.slice(0, 10)}</TableCell>
                   <TableCell>{period.end_date.slice(0, 10)}</TableCell>
                   <TableCell>
-                    <Button 
-                      id={`edit-period-${period.period_id}`}
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEdit(period)}
-                      className="mr-2"
-                    >
-                      Edit
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          id={`time-period-actions-menu-${period.period_id}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          id={`edit-period-${period.period_id}`}
+                          onClick={() => handleEdit(period)}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}

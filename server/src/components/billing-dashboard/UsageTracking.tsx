@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Plus, AlertTriangle, Info } from 'lucide-react';
+import { Plus, AlertTriangle, Info, MoreVertical } from 'lucide-react';
 import { useToast } from 'server/src/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -22,6 +22,12 @@ import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 interface UsageTrackingProps {
   initialServices: IService[];
@@ -259,37 +265,48 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       },
     },
     {
-      title: 'Actions',
+      title: 'Action',
       dataIndex: 'usage_id',
       render: (_, record) => (
-        <div className="space-x-2">
-          <Button
-            id={`edit-usage-${record.usage_id}`}
-            variant="default"
-            onClick={() => {
-              setEditingUsage(record);
-              setNewUsage({
-                company_id: record.company_id,
-                service_id: record.service_id,
-                quantity: record.quantity,
-                usage_date: record.usage_date,
-                billing_plan_id: record.billing_plan_id,
-              });
-              setIsAddModalOpen(true);
-            }}
-            disabled={isSaving}
-          >
-            Edit
-          </Button>
-          <Button
-            id={`delete-usage-${record.usage_id}`}
-            variant="destructive"
-            onClick={() => handleDeleteUsage(record.usage_id)}
-            disabled={isSaving}
-          >
-            Delete
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`usage-actions-menu-${record.usage_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`edit-usage-${record.usage_id}`}
+              onClick={() => {
+                setEditingUsage(record);
+                setNewUsage({
+                  company_id: record.company_id,
+                  service_id: record.service_id,
+                  quantity: record.quantity,
+                  usage_date: record.usage_date,
+                  billing_plan_id: record.billing_plan_id,
+                });
+                setIsAddModalOpen(true);
+              }}
+              disabled={isSaving}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`delete-usage-${record.usage_id}`}
+              onClick={() => handleDeleteUsage(record.usage_id)}
+              disabled={isSaving}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

@@ -11,6 +11,13 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { toPlainDate, parseDateSafe } from 'server/src/lib/utils/dateTimeUtils';
 import { Temporal } from '@js-temporal/polyfill';
+import { MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
@@ -115,13 +122,36 @@ const TaxRates: React.FC = () => {
       render: (value) => value ? toPlainDate(value).toLocaleString() : 'N/A'
     },
     {
-      title: 'Actions',
+      title: 'Action',
       dataIndex: 'tax_rate_id',
       render: (_, record) => (
-        <>
-          <Button id={`edit-tax-rate-${record.tax_rate_id}`} onClick={() => handleEditTaxRate(record)} className="mr-2">Edit</Button>
-          <Button id={`delete-tax-rate-${record.tax_rate_id}`} onClick={() => handleDeleteTaxRate(record.tax_rate_id!)}>Delete</Button>
-        </>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`tax-rate-actions-menu-${record.tax_rate_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`edit-tax-rate-${record.tax_rate_id}`}
+              onClick={() => handleEditTaxRate(record)}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`delete-tax-rate-${record.tax_rate_id}`}
+              onClick={() => handleDeleteTaxRate(record.tax_rate_id!)}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

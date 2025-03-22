@@ -15,6 +15,13 @@ import { Switch } from '../ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
+import { MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 // Define service type options
 const SERVICE_TYPE_OPTIONS = [
@@ -181,28 +188,39 @@ const ServiceCatalogManager: React.FC = () => {
 
     // Always add actions column at the end
     baseColumns.push({
-      title: 'Actions',
+      title: 'Action',
       dataIndex: 'service_id',
       render: (_, record) => (
-        <div className="space-x-2">
-          <Button
-            id='edit-button'
-            variant="default"
-            onClick={() => {
-              setEditingService(record);
-              setIsEditDialogOpen(true);
-            }}
-          >
-            Edit
-          </Button>
-          <Button
-            id='delete-button'
-            variant="destructive"
-            onClick={() => handleDeleteService(record.service_id!)}
-          >
-            Delete
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`service-actions-menu-${record.service_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`edit-service-${record.service_id}`}
+              onClick={() => {
+                setEditingService(record);
+                setIsEditDialogOpen(true);
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id={`delete-service-${record.service_id}`}
+              onClick={() => handleDeleteService(record.service_id!)}
+            >
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     });
 
