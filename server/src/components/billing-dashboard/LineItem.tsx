@@ -238,7 +238,7 @@ export const LineItem: React.FC<LineItemProps> = ({
             variant="secondary"
             size="sm"
           >
-            Collapse
+            Add
           </Button>
           <Button
             id={editState.isRemoved ? 'restore-line-item-button' : 'remove-line-item-button'}

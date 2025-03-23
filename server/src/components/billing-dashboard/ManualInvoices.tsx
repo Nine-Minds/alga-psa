@@ -127,6 +127,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [selectedCompany, setSelectedCompany] = useState<string | null>(
     invoice?.company_id || null
   );
+  const [invoiceNumber, setInvoiceNumber] = useState<string>(invoice?.invoice_number || '');
 
   const [items, setItems] = useState<EditableInvoiceItem[]>(() => {
     if (invoice) {
@@ -377,6 +378,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         if (invoice) {
           invoice.invoice_number = value as string;
         }
+        setInvoiceNumber(value as string);
         break;
     }
 
@@ -584,21 +586,35 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   }));
 
   const calculateTotal = () => {
-    // Calculate total in cents
-    // Since discounts are stored as negative values, we can just sum everything
-    return items
-      .filter(item => !item.isRemoved)
-      .reduce((sum, item) => {
-        const amount = item.quantity * item.rate;
-        // For percentage discounts, calculate based on current subtotal
-        if (item.is_discount && item.discount_type === 'percentage') {
-          const subtotal = items
-            .filter(i => !i.isRemoved && !i.is_discount)
-            .reduce((s, i) => s + (i.quantity * i.rate), 0);
-          return sum - (subtotal * (Math.abs(item.rate) / 100));
-        }
-        return sum + amount;
-      }, 0);
+    const nonDiscountItems = items.filter(item => !item.isRemoved && !item.is_discount);
+    const discountItems = items.filter(item => !item.isRemoved && item.is_discount);
+    
+    // Calculate subtotal from non-discount items
+    const subtotal = nonDiscountItems.reduce((sum, item) => {
+      return sum + (item.quantity * item.rate);
+    }, 0);
+    
+    // Apply discounts to the subtotal
+    let total = subtotal;
+    for (const item of discountItems) {
+      if (item.discount_type === 'percentage') {
+        // For percentage discounts, calculate based on applicable amount
+        const applicableAmount = item.applies_to_item_id
+          ? (() => {
+              const targetItem = nonDiscountItems.find(i => i.item_id === item.applies_to_item_id);
+              return targetItem ? targetItem.quantity * targetItem.rate : 0;
+            })()
+          : subtotal;
+        
+        const percentage = item.discount_percentage || Math.abs(item.rate);
+        total -= (applicableAmount * percentage) / 100;
+      } else {
+        // For fixed discounts, use the stored negative amount
+        total += item.quantity * item.rate;
+      }
+    }
+    
+    return Math.round(total);
   };
 
   const getButtonText = () => {
@@ -644,6 +660,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               </div>
             )}
 
+            {/* Invoice Number field - moved to top */}
+            {invoice && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Invoice Number
+                </label>
+                <input
+                  type="text"
+                  value={invoice.invoice_number}
+                  onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
+                  className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
                 {error}
@@ -669,6 +700,21 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
               )}
 
+              {/* For new invoices, place invoice number field after company selection */}
+              {!invoice && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Invoice Number
+                  </label>
+                  <input
+                    type="text"
+                    value={invoiceNumber}
+                    onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
+                    className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              )}
+
               {/* Show automated items for non-manual invoices */}
               {invoice && !invoice.is_manual && (
                 <AutomatedItemsTable
@@ -682,20 +728,6 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 />
               )}
 
-              {/* Invoice Number field */}
-              {invoice && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Invoice Number
-                  </label>
-                  <input
-                    type="text"
-                    value={invoice.invoice_number}
-                    onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
-                    className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              )}
 
               {/* Prepayment and Expiration Date fields */}
               {!invoice && (
@@ -782,7 +814,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     variant="secondary"
                   >
                     <PlusIcon className="w-4 h-4 mr-2" />
-                    Add Line Item
+                    Add Charge
                   </Button>
                   <Button
                     id='add-discount-button'
