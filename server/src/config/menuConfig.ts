@@ -1,7 +1,7 @@
 // server/src/config/sidebarNavigationConfig.ts
 
 import * as RadixIcons from '@radix-ui/react-icons';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, PercentIcon } from 'lucide-react';
 
 export interface MenuItem {
   name: string;
@@ -62,7 +62,68 @@ export const menuItems: MenuItem[] = [
   {
     name: 'Billing',
     icon: CreditCard,
-    href: '/msp/billing'
+    subItems: [
+      {
+        name: 'Overview',
+        icon: RadixIcons.DashboardIcon,
+        href: '/msp/billing?tab=overview'
+      },
+      {
+        name: 'Generate Invoices',
+        icon: RadixIcons.FilePlusIcon,
+        href: '/msp/billing?tab=generate-invoices'
+      },
+      {
+        name: 'Invoices',
+        icon: RadixIcons.FileTextIcon,
+        href: '/msp/billing?tab=invoices'
+      },
+      {
+        name: 'Invoice Templates',
+        icon: RadixIcons.FileMinusIcon,
+        href: '/msp/billing?tab=invoice-templates'
+      },
+      {
+        name: 'Tax Rates',
+        icon: PercentIcon,
+        href: '/msp/billing?tab=tax-rates'
+      },
+      {
+        name: 'Plans',
+        icon: RadixIcons.CardStackIcon,
+        href: '/msp/billing?tab=plans'
+      },
+      {
+        name: 'Service Catalog',
+        icon: RadixIcons.StackIcon,
+        href: '/msp/billing?tab=service-catalog'
+      },
+      {
+        name: 'Billing Cycles',
+        icon: RadixIcons.CalendarIcon,
+        href: '/msp/billing?tab=billing-cycles'
+      },
+      {
+        name: 'Time Periods',
+        icon: RadixIcons.ClockIcon,
+        href: '/msp/billing?tab=time-periods'
+      },
+      {
+        name: 'Usage Tracking',
+        icon: RadixIcons.TimerIcon,
+        href: '/msp/billing?tab=usage-tracking'
+      },
+      {
+        name: 'Credits',
+        icon: CreditCard,
+        href: '/msp/billing?tab=credits'
+      },
+      {
+        name: 'Reconciliation',
+        icon: RadixIcons.CheckCircledIcon,
+        href: '/msp/billing?tab=reconciliation'
+      }
+    ]
   },
   {
     name: 'Schedule',
