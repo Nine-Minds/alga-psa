@@ -37,7 +37,6 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
-
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
@@ -51,6 +50,8 @@ export interface IBillingCharge extends TenantEntity {
   tax_rate: number;
   tax_region?: string;
   is_taxable?: boolean;
+  company_bundle_id?: string; // Reference to the company plan bundle
+  bundle_name?: string; // Name of the bundle
 }
 
 export interface IDiscount extends TenantEntity {
@@ -83,6 +84,7 @@ export interface ICompanyBillingPlan extends TenantEntity {
   end_date: ISO8601String | null;
   is_active: boolean;
   custom_rate?: number;
+  company_bundle_id?: string; // Reference to the company plan bundle
   // Added fields from join with billing_plans
   plan_name?: string;
   billing_frequency?: string;

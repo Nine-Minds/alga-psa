@@ -272,6 +272,93 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       .first();
     const due_date = await getDueDate(company_id, cycleEnd);
 
+    // Group charges by bundle if they have bundle information
+    const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
+    const nonBundleCharges: IBillingCharge[] = [];
+
+    for (const charge of billingResult.charges) {
+      if (charge.company_bundle_id && charge.bundle_name) {
+        const bundleKey = `${charge.company_bundle_id}-${charge.bundle_name}`;
+        if (!chargesByBundle[bundleKey]) {
+          chargesByBundle[bundleKey] = [];
+        }
+        chargesByBundle[bundleKey].push(charge);
+      } else {
+        nonBundleCharges.push(charge);
+      }
+    }
+
+    // Prepare invoice items
+    const invoiceItems: IInvoiceItem[] = [];
+
+    // Add non-bundle charges
+    nonBundleCharges.forEach(charge => {
+      invoiceItems.push({
+        item_id: 'preview-' + uuidv4(),
+        invoice_id: 'preview-' + billing_cycle_id,
+        service_id: charge.serviceId,
+        description: charge.serviceName,
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        total_price: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_rate: charge.tax_rate || 0,
+        tax_region: charge.tax_region || '',
+        net_amount: charge.total - (charge.tax_amount || 0),
+        is_manual: false,
+        rate: charge.rate,
+      });
+    });
+
+    // Add bundle charges
+    for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
+      // Extract bundle information from the first charge
+      const bundleInfo = bundleKey.split('-');
+      const companyBundleId = bundleInfo[0];
+      const bundleName = bundleInfo.slice(1).join('-');
+      
+      // Create a group header for the bundle
+      const bundleHeaderId = 'preview-' + uuidv4();
+      invoiceItems.push({
+        item_id: bundleHeaderId,
+        invoice_id: 'preview-' + billing_cycle_id,
+        description: `Bundle: ${bundleName}`,
+        quantity: 1,
+        unit_price: 0, // This is just a header, not a charged item
+        total_price: 0,
+        net_amount: 0,
+        tax_amount: 0,
+        tax_rate: 0,
+        is_manual: false,
+        is_bundle_header: true,
+        company_bundle_id: companyBundleId,
+        bundle_name: bundleName,
+        rate: 0
+      });
+      
+      // Add each charge in the bundle as a child item
+      charges.forEach(charge => {
+        invoiceItems.push({
+          item_id: 'preview-' + uuidv4(),
+          invoice_id: 'preview-' + billing_cycle_id,
+          service_id: charge.serviceId,
+          description: charge.serviceName,
+          quantity: getChargeQuantity(charge),
+          unit_price: getChargeUnitPrice(charge),
+          total_price: charge.total,
+          tax_amount: charge.tax_amount || 0,
+          tax_rate: charge.tax_rate || 0,
+          tax_region: charge.tax_region || '',
+          net_amount: charge.total - (charge.tax_amount || 0),
+          is_manual: false,
+          company_bundle_id: companyBundleId,
+          bundle_name: bundleName,
+          parent_item_id: bundleHeaderId,
+          rate: charge.rate,
+        });
+      });
+    }
+
     const previewInvoice: InvoiceViewModel = {
       invoice_id: 'preview-' + billing_cycle_id,
       invoice_number: 'PREVIEW',
@@ -295,21 +382,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       credit_applied: 0,
       billing_cycle_id,
       is_manual: false,
-      invoice_items: billingResult.charges.map(charge => ({
-        item_id: 'preview-' + uuidv4(),
-        invoice_id: 'preview-' + billing_cycle_id,
-        service_id: charge.serviceId,
-        description: charge.serviceName,
-        quantity: getChargeQuantity(charge),
-        unit_price: getChargeUnitPrice(charge),
-        total_price: charge.total,
-        tax_amount: charge.tax_amount || 0,
-        tax_rate: charge.tax_rate || 0,
-        tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
-        is_manual: false,
-        rate: charge.rate,
-      }))
+      invoice_items: invoiceItems
     };
 
     return {
@@ -1602,8 +1675,24 @@ export async function createInvoiceFromBillingResult(
   }
 
   await knex.transaction(async (trx) => {
-    // Process charges
+    // Group charges by bundle if they have bundle information
+    const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
+    const nonBundleCharges: IBillingCharge[] = [];
+
     for (const charge of billingResult.charges) {
+      if (charge.company_bundle_id && charge.bundle_name) {
+        const bundleKey = `${charge.company_bundle_id}-${charge.bundle_name}`;
+        if (!chargesByBundle[bundleKey]) {
+          chargesByBundle[bundleKey] = [];
+        }
+        chargesByBundle[bundleKey].push(charge);
+      } else {
+        nonBundleCharges.push(charge);
+      }
+    }
+
+    // Process non-bundle charges
+    for (const charge of nonBundleCharges) {
       const { netAmount, taxCalculationResult } = await calculateChargeDetails(
         charge,
         companyId,
@@ -1632,6 +1721,71 @@ export async function createInvoiceFromBillingResult(
 
       await trx('invoice_items').insert(invoiceItem);
       subtotal += netAmount;
+    }
+
+    // Process bundle charges
+    for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
+      // Extract bundle information from the first charge
+      const bundleInfo = bundleKey.split('-');
+      const companyBundleId = bundleInfo[0];
+      const bundleName = bundleInfo.slice(1).join('-');
+      
+      // Create a group header for the bundle
+      const bundleHeaderId = uuidv4();
+      const bundleHeader = {
+        item_id: bundleHeaderId,
+        invoice_id: newInvoice!.invoice_id,
+        description: `Bundle: ${bundleName}`,
+        quantity: 1,
+        unit_price: 0, // This is just a header, not a charged item
+        net_amount: 0,
+        tax_amount: 0,
+        tax_rate: 0,
+        total_price: 0,
+        is_manual: false,
+        is_bundle_header: true,
+        company_bundle_id: companyBundleId,
+        bundle_name: bundleName,
+        tenant,
+        created_by: userId
+      };
+      
+      await trx('invoice_items').insert(bundleHeader);
+      
+      // Add each charge in the bundle as a child item
+      for (const charge of charges) {
+        const { netAmount, taxCalculationResult } = await calculateChargeDetails(
+          charge,
+          companyId,
+          cycleEnd,
+          taxService,
+          company.tax_region
+        );
+
+        const invoiceItem = {
+          item_id: uuidv4(),
+          invoice_id: newInvoice!.invoice_id,
+          service_id: charge.serviceId,
+          description: charge.serviceName,
+          quantity: getChargeQuantity(charge),
+          unit_price: getChargeUnitPrice(charge),
+          net_amount: netAmount,
+          tax_amount: taxCalculationResult.taxAmount,
+          tax_region: charge.tax_region || company.tax_region,
+          tax_rate: taxCalculationResult.taxRate,
+          total_price: netAmount + taxCalculationResult.taxAmount,
+          is_manual: false,
+          is_taxable: charge.is_taxable !== false,
+          company_bundle_id: companyBundleId,
+          bundle_name: bundleName,
+          parent_item_id: bundleHeaderId,
+          tenant,
+          created_by: userId
+        };
+
+        await trx('invoice_items').insert(invoiceItem);
+        subtotal += netAmount;
+      }
     }
 
     // Process discounts

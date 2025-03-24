@@ -269,7 +269,9 @@ export class BillingEngine {
 
     const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
     const tenant = this.tenant; // Capture tenant value here
-    const companyBillingPlans = await this.knex('company_billing_plans')
+    
+    // Get directly assigned billing plans
+    const directBillingPlans = await this.knex('company_billing_plans')
       .join('billing_plans', function() {
         this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
             .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
@@ -279,15 +281,73 @@ export class BillingEngine {
         'company_billing_plans.is_active': true,
         'company_billing_plans.tenant': this.tenant
       })
+      .whereNull('company_billing_plans.company_bundle_id') // Only get plans not associated with bundles
       .where('company_billing_plans.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
         this.where('company_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('company_billing_plans.end_date');
       })
       .select(
         'company_billing_plans.*',
-        'billing_plans.plan_name'
-      )
-      .orderBy('company_billing_plans.start_date', 'desc');
+        'billing_plans.plan_name',
+        'billing_plans.billing_frequency'
+      );
+
+    // Get plans from active bundles
+    const bundlePlans = await this.knex('company_plan_bundles')
+      .join('bundle_billing_plans', function() {
+        this.on('company_plan_bundles.bundle_id', '=', 'bundle_billing_plans.bundle_id')
+            .andOn('bundle_billing_plans.tenant', '=', 'company_plan_bundles.tenant');
+      })
+      .join('billing_plans', function() {
+        this.on('bundle_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'bundle_billing_plans.tenant');
+      })
+      .join('plan_bundles', function() {
+        this.on('company_plan_bundles.bundle_id', '=', 'plan_bundles.bundle_id')
+            .andOn('plan_bundles.tenant', '=', 'company_plan_bundles.tenant');
+      })
+      .where({
+        'company_plan_bundles.company_id': companyId,
+        'company_plan_bundles.is_active': true,
+        'company_plan_bundles.tenant': this.tenant
+      })
+      .where('company_plan_bundles.start_date', '<=', billingPeriod.endDate)
+      .where(function (this: any) {
+        this.where('company_plan_bundles.end_date', '>=', billingPeriod.startDate).orWhereNull('company_plan_bundles.end_date');
+      })
+      .select(
+        'bundle_billing_plans.plan_id',
+        'billing_plans.plan_name',
+        'billing_plans.billing_frequency',
+        'billing_plans.service_category',
+        'bundle_billing_plans.custom_rate',
+        'company_plan_bundles.start_date',
+        'company_plan_bundles.end_date',
+        'company_plan_bundles.company_bundle_id',
+        'plan_bundles.bundle_name'
+      );
+
+    // Convert bundle plans to company billing plan format
+    const formattedBundlePlans = bundlePlans.map((plan: any) => {
+      return {
+        company_billing_plan_id: `bundle-${plan.company_bundle_id}-${plan.plan_id}`, // Generate a virtual ID
+        company_id: companyId,
+        plan_id: plan.plan_id,
+        service_category: plan.service_category,
+        start_date: plan.start_date,
+        end_date: plan.end_date,
+        is_active: true,
+        custom_rate: plan.custom_rate,
+        company_bundle_id: plan.company_bundle_id,
+        plan_name: plan.plan_name,
+        billing_frequency: plan.billing_frequency,
+        bundle_name: plan.bundle_name,
+        tenant: this.tenant
+      };
+    });
+
+    // Combine direct plans and bundle plans
+    const companyBillingPlans = [...directBillingPlans, ...formattedBundlePlans];
 
     // Convert dates from the DB into plain ISO strings using our date utilities
     companyBillingPlans.forEach((plan: any) => {

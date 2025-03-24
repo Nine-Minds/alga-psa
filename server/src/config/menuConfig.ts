@@ -94,6 +94,11 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=plans'
       },
       {
+        name: 'Plan Bundles',
+        icon: RadixIcons.BoxIcon,
+        href: '/msp/billing?tab=plan-bundles'
+      },
+      {
         name: 'Service Catalog',
         icon: RadixIcons.StackIcon,
         href: '/msp/billing?tab=service-catalog'

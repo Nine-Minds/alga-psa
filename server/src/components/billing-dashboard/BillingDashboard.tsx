@@ -20,6 +20,8 @@ import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
+import PlanBundles from './plan-bundles/PlanBundles';
+import PlanBundleDetail from './plan-bundles/PlanBundleDetail';
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriodView[];
@@ -57,6 +59,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'invoice-templates',
     'tax-rates',
     'plans',
+    'plan-bundles',
     'service-catalog',
     'billing-cycles',
     'time-periods',
@@ -116,6 +119,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
             <BillingPlanConfiguration />
           ) : (
             <BillingPlansOverview />
+          )}
+        </Tabs.Content>
+
+        <Tabs.Content value="plan-bundles">
+          {searchParams?.has('bundleId') ? (
+            <PlanBundleDetail />
+          ) : (
+            <PlanBundles />
           )}
         </Tabs.Content>
 
