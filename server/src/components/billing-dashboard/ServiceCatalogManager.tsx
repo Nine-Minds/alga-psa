@@ -256,6 +256,10 @@ const ServiceCatalogManager: React.FC = () => {
               data={filteredServices}
               columns={columns}
               pagination={true}
+              onRowClick={(record) => {
+                setEditingService(record);
+                setIsEditDialogOpen(true);
+              }}
             />
           </div>
         </CardContent>

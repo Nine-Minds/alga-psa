@@ -140,13 +140,19 @@ const TaxRates: React.FC = () => {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               id={`edit-tax-rate-${record.tax_rate_id}`}
-              onClick={() => handleEditTaxRate(record)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditTaxRate(record);
+              }}
             >
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-tax-rate-${record.tax_rate_id}`}
-              onClick={() => handleDeleteTaxRate(record.tax_rate_id!)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteTaxRate(record.tax_rate_id!);
+              }}
             >
               Delete
             </DropdownMenuItem>
@@ -168,20 +174,23 @@ const TaxRates: React.FC = () => {
               <span className="block sm:inline">{error}</span>
             </div>
           )}
-          <Button
-            id="add-tax-rate-button"
-            onClick={() => {
-              setIsDialogOpen(true);
-              setIsEditing(false);
-              setCurrentTaxRate({});
-              setError(null);
-            }}
-          >
-            Add New Tax Rate
-          </Button>
+          <div className="flex justify-end mb-4">
+            <Button
+              id="add-tax-rate-button"
+              onClick={() => {
+                setIsDialogOpen(true);
+                setIsEditing(false);
+                setCurrentTaxRate({});
+                setError(null);
+              }}
+            >
+              Add New Tax Rate
+            </Button>
+          </div>
           <DataTable
             data={taxRates}
             columns={columns}
+            onRowClick={handleEditTaxRate}
           />
         </CardContent>
       </Card>

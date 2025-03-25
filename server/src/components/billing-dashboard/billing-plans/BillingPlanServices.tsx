@@ -42,7 +42,7 @@ interface EnhancedPlanService extends IPlanService {
 const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
-  const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string | null>(null);
+  const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
@@ -86,16 +86,8 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
       setPlanServices(enhancedServices);
       setAvailableServices(services);
       
-      // Set default selected service if available
-      const updatedAvailableServices = services.filter(
-        s => !planServicesData.some(ps => ps.service_id === s.service_id)
-      );
-      
-      if (updatedAvailableServices.length > 0) {
-        setSelectedServiceToAdd(updatedAvailableServices[0].service_id || null);
-      } else {
-        setSelectedServiceToAdd(null);
-      }
+      // Initialize with empty selection
+      setSelectedServicesToAdd([]);
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load services data');
@@ -105,23 +97,27 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
   };
 
   const handleAddService = async () => {
-    if (!plan.plan_id || !selectedServiceToAdd) return;
+    if (!plan.plan_id || selectedServicesToAdd.length === 0) return;
     
     try {
-      const serviceToAdd = availableServices.find(s => s.service_id === selectedServiceToAdd);
-      if (serviceToAdd) {
-        await addPlanService(
-          plan.plan_id,
-          selectedServiceToAdd,
-          1, // quantity
-          serviceToAdd.default_rate // customRate
-        );
-        
-        fetchData(); // Refresh data
+      // Add each selected service to the plan
+      for (const serviceId of selectedServicesToAdd) {
+        const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
+        if (serviceToAdd) {
+          await addPlanService(
+            plan.plan_id,
+            serviceId,
+            1, // quantity
+            serviceToAdd.default_rate // customRate
+          );
+        }
       }
+      
+      fetchData(); // Refresh data
+      setSelectedServicesToAdd([]); // Clear selection after adding
     } catch (error) {
-      console.error('Error adding service:', error);
-      setError('Failed to add service');
+      console.error('Error adding services:', error);
+      setError('Failed to add services');
     }
   };
 
@@ -239,10 +235,8 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
     },
   ];
 
-  // Filter available services to only show those not already in the plan
-  const filteredAvailableServices = availableServices.filter(
-    service => !planServices.some(ps => ps.service_id === service.service_id)
-  );
+  // Make all services available for selection
+  const filteredAvailableServices = availableServices;
 
   return (
     <Card size="2">
@@ -268,24 +262,47 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
               />
             </div>
             
-            <div className="flex space-x-2 mt-4">
-              <CustomSelect
-                options={filteredAvailableServices.map(s => ({
-                  value: s.service_id!,
-                  label: s.service_name
-                }))}
-                onValueChange={setSelectedServiceToAdd}
-                value={selectedServiceToAdd || ''}
-                placeholder="Select service..."
-                className="flex-grow"
-              />
+            <div className="mt-4">
+              <h4 className="text-md font-medium mb-2">Add Services to Plan</h4>
+              <div className="mb-3">
+                <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+                  {filteredAvailableServices.map(service => {
+                    const isAlreadyInPlan = planServices.some(ps => ps.service_id === service.service_id);
+                    return (
+                      <div
+                        key={service.service_id}
+                        className={`flex items-center space-x-2 p-2 border rounded ${isAlreadyInPlan ? 'bg-gray-50' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          id={`service-${service.service_id}`}
+                          checked={selectedServicesToAdd.includes(service.service_id!)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
+                            } else {
+                              setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
+                            }
+                          }}
+                        />
+                        <label htmlFor={`service-${service.service_id}`} className="flex-grow">
+                          {service.service_name}
+                          {isAlreadyInPlan && <span className="ml-2 text-xs text-blue-600">(Already in plan)</span>}
+                        </label>
+                        <span className="text-sm text-gray-500">${parseFloat(service.default_rate.toString()).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               <Button
-                id="add-service-button"
+                id="add-services-button"
                 onClick={handleAddService}
-                disabled={!selectedServiceToAdd || filteredAvailableServices.length === 0}
+                disabled={selectedServicesToAdd.length === 0 || filteredAvailableServices.length === 0}
+                className="w-full"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Service
+                Add {selectedServicesToAdd.length} Selected {selectedServicesToAdd.length === 1 ? 'Service' : 'Services'}
               </Button>
             </div>
           </>

@@ -389,6 +389,17 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 data={usageRecords}
                 columns={columns}
                 pagination={true}
+                onRowClick={(record) => {
+                  setEditingUsage(record);
+                  setNewUsage({
+                    company_id: record.company_id,
+                    service_id: record.service_id,
+                    quantity: record.quantity,
+                    usage_date: record.usage_date,
+                    billing_plan_id: record.billing_plan_id,
+                  });
+                  setIsAddModalOpen(true);
+                }}
               />
             )}
           </div>

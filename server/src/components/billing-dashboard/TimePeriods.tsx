@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from 'server/src/components/ui/Table';
 import { Button } from 'server/src/components/ui/Button';
 import { ITimePeriodSettings, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import TimePeriodForm from './TimePeriodForm';
 import { getTimePeriodSettings } from 'server/src/lib/actions/timePeriodsActions';
 import { ISO8601String } from 'server/src/types/types.d';
-import { parseISO, format } from 'date-fns'; // Import date-fns functions
 import { MoreVertical } from 'lucide-react';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,10 +27,12 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<ITimePeriodView | null>(null);
   const [mode, setMode] = useState<'create' | 'edit'>('create');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize] = useState<number>(10);
 
   const handleTimePeriodCreated = (newPeriod: ITimePeriodView) => {
     if (mode === 'edit') {
-      setTimePeriods(timePeriods.map((p):ITimePeriodView => 
+      setTimePeriods(timePeriods.map((p):ITimePeriodView =>
         p.period_id === newPeriod.period_id ? newPeriod : p
       ));
     } else {
@@ -56,6 +58,14 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
     setMode('create');
   };
 
+  const handleRowClick = (period: ITimePeriodView) => {
+    handleEdit(period);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
   useEffect(() => {
     console.log('initial time periods', initialTimePeriods);
 
@@ -67,17 +77,55 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
     fetchSettings();
   }, []);
 
-  // Function to format ISO8601 string to a readable date string
-  const formatDate = (isoString: ISO8601String): string => {
-    // Parse as UTC and format in UTC
-    return isoString.slice(0, 10);
-  };
+  // Define column definitions for the DataTable
+  const columns: ColumnDefinition<ITimePeriodView>[] = [
+    {
+      title: 'Start Date',
+      dataIndex: 'start_date',
+      render: (value) => value.slice(0, 10)
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'end_date',
+      render: (value) => value.slice(0, 10)
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'period_id',
+      render: (_, record) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`time-period-actions-menu-${record.period_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`edit-period-${record.period_id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(record);
+              }}
+            >
+              Edit
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ];
 
   return (
     <>
-      <Button 
+      <Button
         id="create-time-period-button"
-        className="mb-4" 
+        className="mb-4"
         onClick={() => {
           setMode('create');
           setSelectedPeriod(null);
@@ -102,46 +150,16 @@ const TimePeriods: React.FC<TimePeriodsProps> = ({ initialTimePeriods }) => {
           <p className="text-sm text-gray-500">Manage billing cycles and time periods</p>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {timePeriods.map((period): JSX.Element => (
-                <TableRow key={period.period_id}>
-                  <TableCell>{period.start_date.slice(0, 10)}</TableCell>
-                  <TableCell>{period.end_date.slice(0, 10)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          id={`time-period-actions-menu-${period.period_id}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          id={`edit-period-${period.period_id}`}
-                          onClick={() => handleEdit(period)}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable
+            id="time-periods-table"
+            data={timePeriods}
+            columns={columns}
+            onRowClick={handleRowClick}
+            pagination={true}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+            pageSize={pageSize}
+          />
         </CardContent>
       </Card>
     </>

@@ -16,9 +16,16 @@ import { AlertCircle } from 'lucide-react';
 interface BillingPlanFormProps {
   plan: IBillingPlan;
   onPlanUpdated: () => void;
+  selectedServices?: string[];
+  onSelectedServicesChange?: (services: string[]) => void;
 }
 
-const BillingPlanForm: React.FC<BillingPlanFormProps> = ({ plan, onPlanUpdated }) => {
+const BillingPlanForm: React.FC<BillingPlanFormProps> = ({
+  plan,
+  onPlanUpdated,
+  selectedServices = [],
+  onSelectedServicesChange
+}) => {
   const [planName, setPlanName] = useState(plan.plan_name || '');
   const [billingFrequency, setBillingFrequency] = useState(plan.billing_frequency || '');
   const [planType, setPlanType] = useState<PlanType>(plan.plan_type as PlanType || 'Fixed');
@@ -45,6 +52,11 @@ const BillingPlanForm: React.FC<BillingPlanFormProps> = ({ plan, onPlanUpdated }
 
     if (!billingFrequency) {
       errors.billingFrequency = 'Billing frequency is required';
+    }
+    
+    // Validate service selection if this is a new plan
+    if (!plan.plan_id && selectedServices.length === 0) {
+      errors.services = 'At least one service must be selected for the plan';
     }
 
     return errors;

@@ -13,6 +13,7 @@ import { Checkbox } from '../ui/Checkbox';
 import { createBillingPlan, updateBillingPlan, getBillingPlans } from 'server/src/lib/actions/billingPlanAction';
 import { createBucketPlan, getBucketPlanByPlanId, updateBucketPlan } from 'server/src/lib/actions/bucketPlanAction';
 import { IBillingPlan, IBucketPlan, IService } from 'server/src/interfaces/billing.interfaces';
+import { addServiceToPlan as addPlanService } from 'server/src/lib/actions/planServiceActions';
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -49,6 +50,10 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     existingPlans: IBillingPlan[];
   }>>([]);
   const [pendingPlanData, setPendingPlanData] = useState<any>(null);
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [isAddingServices, setIsAddingServices] = useState(false);
+  const [availableServices, setAvailableServices] = useState<IService[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Plan type specific state
   // Fixed plan
@@ -143,6 +148,23 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       loadBucketPlanData();
     }
   }, [editingPlan]);
+
+  // Load available services
+  useEffect(() => {
+    const loadServices = async () => {
+      setIsLoading(true);
+      try {
+        const services = await getServices();
+        setAvailableServices(services);
+      } catch (error) {
+        console.error('Error loading services:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadServices();
+  }, []);
 
   const handlePlanTypeChange = (value: string) => {
     if (['Fixed', 'Bucket', 'Hourly', 'Usage'].includes(value)) {
@@ -361,6 +383,38 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             await createBucketPlan(bucketPlanData);
           }
         }
+
+        // Add selected services to the plan
+        if (selectedServices.length > 0) {
+          setIsAddingServices(true);
+          try {
+            // Get all services to determine default rates
+            const allServices = await getServices();
+            
+            // Add each selected service to the plan
+            for (const serviceId of selectedServices) {
+              const serviceToAdd = allServices.find(s => s.service_id === serviceId);
+              if (serviceToAdd) {
+                try {
+                  await addPlanService(
+                    planId,
+                    serviceId,
+                    1, // default quantity
+                    serviceToAdd.default_rate // use default rate
+                  );
+                } catch (serviceError) {
+                  console.error(`Error adding service ${serviceId} to plan:`, serviceError);
+                  // Continue with other services even if one fails
+                }
+              }
+            }
+          } catch (servicesError) {
+            console.error('Error adding services to plan:', servicesError);
+            // Don't throw here to allow plan creation to succeed even if service addition fails
+          } finally {
+            setIsAddingServices(false);
+          }
+        }
       }
 
       // Clear form fields and close dialog
@@ -372,7 +426,10 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       }
     } catch (error) {
       console.error('Error saving billing plan:', error);
-      // Handle error (e.g., show error message to user)
+      setValidationErrors({
+        general: `Failed to save billing plan: ${error instanceof Error ? error.message : String(error)}`
+      });
+      setShowValidationSummary(true);
     }
   };
 
@@ -381,6 +438,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     setBillingFrequency('');
     setPlanType('Fixed');
     setIsCustom(false);
+    setSelectedServices([]);
 
     // Reset Fixed plan state
     setBaseRate(undefined);
@@ -540,7 +598,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                     billingCycleAlignment={billingCycleAlignment}
                     onBillingCycleAlignmentChange={setBillingCycleAlignment}
                     serviceCatalogId={fixedPlanServiceId}
-                    onServiceCatalogIdChange={setFixedPlanServiceId}
+                    onServiceCatalogIdChange={(id) => {
+                      setFixedPlanServiceId(id);
+                      // Add to selected services if not already included
+                      if (id && !selectedServices.includes(id)) {
+                        setSelectedServices([...selectedServices, id]);
+                      }
+                    }}
                   />
                 )}
 
@@ -591,7 +655,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                     overageRate={overageRate}
                     onOverageRateChange={setOverageRate}
                     serviceCatalogId={serviceCatalogId}
-                    onServiceCatalogIdChange={setServiceCatalogId}
+                    onServiceCatalogIdChange={(id) => {
+                      setServiceCatalogId(id);
+                      // Add to selected services if not already included
+                      if (id && !selectedServices.includes(id)) {
+                        setSelectedServices([...selectedServices, id]);
+                      }
+                    }}
                     allowRollover={allowRollover}
                     onAllowRolloverChange={setAllowRollover}
                     validationErrors={{
@@ -600,6 +670,51 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                     }}
                   />
                 )}
+                {/* Service Selection Section */}
+                <div className="mt-6 border-t pt-4">
+                  <h4 className="text-md font-medium mb-2">Additional Services</h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Select additional services to include in this plan:
+                  </p>
+                  
+                  <div className="max-h-60 overflow-y-auto border rounded-md p-2">
+                    {isLoading ? (
+                      <div className="text-center py-4">Loading services...</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {availableServices?.map((service: IService) => (
+                          <div
+                            key={service.service_id}
+                            className="flex items-center space-x-2 p-2 border rounded hover:bg-gray-50"
+                          >
+                            <input
+                              type="checkbox"
+                              id={`service-${service.service_id}`}
+                              checked={selectedServices.includes(service.service_id!)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedServices([...selectedServices, service.service_id!]);
+                                } else {
+                                  setSelectedServices(selectedServices.filter(id => id !== service.service_id));
+                                }
+                              }}
+                            />
+                            <label htmlFor={`service-${service.service_id}`} className="flex-grow cursor-pointer">
+                              {service.service_name}
+                            </label>
+                            <span className="text-sm text-gray-500">${parseFloat(service.default_rate.toString()).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {selectedServices.length > 0 && (
+                    <div className="mt-2 text-sm text-blue-600">
+                      {selectedServices.length} service{selectedServices.length !== 1 ? 's' : ''} selected
+                    </div>
+                  )}
+                </div>
               </TabsContent>
             </Tabs>
 
@@ -613,8 +728,12 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               >
                 Cancel
               </Button>
-              <Button id='save-billing-plan-button' type="submit">
-                {editingPlan ? 'Update Plan' : 'Save Plan'}
+              <Button id='save-billing-plan-button' type="submit" disabled={isAddingServices}>
+                {isAddingServices
+                  ? 'Adding Services...'
+                  : editingPlan
+                    ? 'Update Plan'
+                    : 'Save Plan'}
               </Button>
             </div>
           </form>

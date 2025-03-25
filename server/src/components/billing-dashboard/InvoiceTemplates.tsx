@@ -5,9 +5,10 @@ import { Button } from 'server/src/components/ui/Button';
 import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceActions';
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import InvoiceTemplateManager from './InvoiceTemplateManager';
-import CustomSelect from '../ui/CustomSelect';
 import { FileTextIcon } from 'lucide-react';
-import { GearIcon } from '@radix-ui/react-icons';
+import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
@@ -73,6 +74,67 @@ const InvoiceTemplates: React.FC = () => {
     }
   };
 
+  const templateColumns: ColumnDefinition<IInvoiceTemplate>[] = [
+    {
+      title: 'Template Name',
+      dataIndex: 'name',
+      render: (value, record) => (
+        <div className="flex items-center gap-2">
+          {record.isStandard ? (
+            <><FileTextIcon className="w-4 h-4" /> {value} (Standard)</>
+          ) : (
+            <div className="flex items-center gap-1">
+              <GearIcon className="w-4 h-4" />
+              {value}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: 'Type',
+      dataIndex: 'isStandard',
+      render: (value) => value ? 'Standard' : 'Custom',
+    },
+    {
+      title: 'Default',
+      dataIndex: 'is_default',
+      render: (value) => value ? <CheckCircledIcon className="w-4 h-4 text-blue-500" /> : null,
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'template_id',
+      render: (_, record) => (
+        <div className="flex gap-2">
+          <Button
+            id="clone-template-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCloneTemplate(record);
+            }}
+            variant="outline"
+            size="sm"
+          >
+            Clone
+          </Button>
+          {!record.isStandard && (
+            <Button
+              id="set-default-template-button"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSetDefaultTemplate(record);
+              }}
+              variant="outline"
+              size="sm"
+              disabled={record.is_default}
+            >
+              {record.is_default ? 'Default' : 'Set as Default'}
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <Card>
@@ -86,54 +148,12 @@ const InvoiceTemplates: React.FC = () => {
           </div>
         )}
         <div className="space-y-4">
-          <div className="flex gap-4 items-center">
-            <div className="w-[400px]">
-              <CustomSelect
-                options={invoiceTemplates.map((template): { value: string; label: JSX.Element } => ({
-                  value: template.template_id,
-                  label: (
-                    <div className="flex items-center gap-2">
-                      {template.isStandard ? (
-                        <><FileTextIcon className="w-4 h-4" /> {template.name} (Standard)</>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <GearIcon className="w-4 h-4" /> 
-                          {template.name}
-                          {template.is_default && <span className="text-blue-500">(Default)</span>}
-                        </div>
-                      )}
-                    </div>
-                  )
-                }))}
-                onValueChange={(value) => handleTemplateSelect(invoiceTemplates.find(t => t.template_id === value)!)}
-                value={selectedTemplate?.template_id || ''}
-                placeholder="Select invoice template..."
-              />
-            </div>
-            {selectedTemplate && (
-              <div className="flex gap-2">
-                <Button
-                  id="clone-template-button"
-                  onClick={() => handleCloneTemplate(selectedTemplate)}
-                  variant="outline"
-                  size="sm"
-                >
-                  Clone Template
-                </Button>
-                {!selectedTemplate.isStandard && (
-                  <Button
-                    id="set-default-template-button"
-                    onClick={() => handleSetDefaultTemplate(selectedTemplate)}
-                    variant="outline"
-                    size="sm"
-                    disabled={selectedTemplate.is_default}
-                  >
-                    {selectedTemplate.is_default ? 'Default Template' : 'Set as Default'}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
+          <DataTable
+            data={invoiceTemplates}
+            columns={templateColumns}
+            pagination={false}
+            onRowClick={handleTemplateSelect}
+          />
           {selectedTemplate && (
             <InvoiceTemplateManager
               templates={invoiceTemplates}

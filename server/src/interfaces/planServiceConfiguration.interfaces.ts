@@ -11,6 +11,7 @@ export interface IPlanServiceConfiguration extends TenantEntity {
   configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   custom_rate?: number;
   quantity?: number;
+  instance_name?: string;
   tenant: string;
   created_at: Date;
   updated_at: Date;
