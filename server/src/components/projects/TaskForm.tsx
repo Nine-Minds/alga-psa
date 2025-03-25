@@ -316,7 +316,7 @@ export default function TaskForm({
       // Convert empty string to null for database
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
 
-      if (mode === 'edit' && task) {
+      if (mode === 'edit' && task?.task_id) {
         // Edit mode - handle cross-project moves properly
         const movedTask = await moveTaskToPhase(
           task.task_id, 
