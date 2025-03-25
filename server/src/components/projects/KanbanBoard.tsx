@@ -98,6 +98,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
         const backgroundColor = cycleColors[index % cycleColors.length];
         const darkBackgroundColor = darkCycleColors[index % darkCycleColors.length];
         const borderColor = borderColors[index % borderColors.length];
+        
+        // using filter here updates the dependency array, which triggers a re-render
         const statusTasks = enrichedPhaseTasks.filter((task: IProjectTask) => task.project_status_mapping_id === status.project_status_mapping_id);
         
         return (

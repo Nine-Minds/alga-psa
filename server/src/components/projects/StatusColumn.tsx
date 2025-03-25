@@ -6,7 +6,7 @@ import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 
 interface StatusColumnProps {
   status: ProjectStatus;
@@ -189,8 +189,17 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     }
   };
 
-  // Sort display tasks by WBS code
-  const sortedTasks = [...displayTasks].sort((a, b) => a.wbs_code.localeCompare(b.wbs_code));
+  // Using JSON.stringify in the dependency array ensures we detect changes to task objects
+  const sortedTasks = useMemo(() => {
+    console.log(`Sorting ${displayTasks.length} tasks in status column:`, status.name);
+    
+    // Debug: Log task IDs to help troubleshoot
+    if (displayTasks.length > 0) {
+      console.log('Task IDs in this column:', displayTasks.map(t => t.task_id).join(', '));
+    }
+    
+    return [...displayTasks].sort((a, b) => a.wbs_code.localeCompare(b.wbs_code));
+  }, [displayTasks]);
 
   return (
     <div

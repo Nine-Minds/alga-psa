@@ -95,16 +95,10 @@ exports.up = function(knex) {
     
     // Add company_bundle_id to company_billing_plans
     .alterTable('company_billing_plans', function(table) {
-      // Add company_bundle_id column
+      // Add company_bundle_id column (no foreign key due to CitusDB limitations)
       table.uuid('company_bundle_id').nullable();
-      
-      // Add foreign key constraint
-      table.foreign(['tenant', 'company_bundle_id'])
-        .references(['tenant', 'company_bundle_id'])
-        .inTable('company_plan_bundles')
-        .onDelete('SET NULL');
-      
-      // Add index
+       
+      // Add index for query performance
       table.index(['company_bundle_id']);
     });
 };

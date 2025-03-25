@@ -62,7 +62,7 @@ export default function TaskQuickAdd({
       projectStatuses={projectStatuses}
       defaultStatus={defaultStatus}
       users={users}
-      mode={task ? 'edit' : 'create'}
+      mode={task && task.task_id ? 'edit' : 'create'}
       onPhaseChange={handlePhaseChange}
       projectTreeData={projectTreeData}
     />

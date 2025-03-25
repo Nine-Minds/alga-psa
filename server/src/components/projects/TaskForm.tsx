@@ -578,7 +578,7 @@ export default function TaskForm({
   const renderContent = () => (
     <div className="h-full">
       <div className="text-lg font-medium mb-4">
-        {mode === 'edit' ? 'Edit Task' : 'Add New Task'}
+        {mode === 'edit' && task ? 'Edit Task' : 'Add New Task'}
       </div>
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         <div className="space-y-4">

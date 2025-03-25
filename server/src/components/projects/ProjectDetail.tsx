@@ -177,10 +177,20 @@ export default function ProjectDetail({
         // Status change with position
         const updatedTask = await updateTaskStatus(taskId, targetStatusId, positionIndex);
         const checklistItems = await getTaskChecklistItems(taskId);
-        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
         
         // Remove from current status and add to new status
         setProjectTasks(prevTasks => {
+          // Find the original task to preserve ticket_links and resources
+          const originalTask = prevTasks.find(t => t.task_id === taskId);
+          
+          // Create a merged task with updated fields, checklist items, and preserved ticket_links and resources
+          const taskWithChecklist = {
+            ...updatedTask,
+            checklist_items: checklistItems,
+            ticket_links: originalTask?.ticket_links || updatedTask.ticket_links || [],
+            resources: originalTask?.resources || updatedTask.resources || []
+          };
+          
           const newTasks = prevTasks.filter(t => t.task_id !== taskId);
           return [...newTasks, taskWithChecklist];
         });
@@ -359,13 +369,23 @@ export default function ProjectDetail({
       );
       
       const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
-      const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
       
-      setProjectTasks(prevTasks =>
-        prevTasks.map((task): IProjectTask =>
+      setProjectTasks(prevTasks => {
+        // Find the original task to preserve ticket_links and resources
+        const originalTask = prevTasks.find(t => t.task_id === moveConfirmation.taskId);
+        
+        // Create a merged task with updated fields, checklist items, and preserved ticket_links and resources
+        const taskWithChecklist = {
+          ...updatedTask,
+          checklist_items: checklistItems,
+          ticket_links: originalTask?.ticket_links || updatedTask.ticket_links || [],
+          resources: originalTask?.resources || updatedTask.resources || []
+        };
+        
+        return prevTasks.map((task): IProjectTask =>
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
-        )
-      );
+        );
+      });
           
       toast.success(`Task moved to ${moveConfirmation.targetPhase.phase_name}`);
     } catch (error) {
@@ -383,9 +403,22 @@ export default function ProjectDetail({
     try {
       if (selectedPhase && newTask.wbs_code.startsWith(selectedPhase.wbs_code)) {
         const checklistItems = await getTaskChecklistItems(newTask.task_id);
-        const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
         
+        // Initialize the task with all necessary properties
+        const taskWithChecklist = {
+          ...newTask,
+          checklist_items: checklistItems,
+          ticket_links: newTask.ticket_links || [],
+          resources: newTask.resources || []
+        };
+        
+        console.log('Adding new task to state:', taskWithChecklist);
+        
+        // Update project tasks state with the new task
         setProjectTasks((prevTasks) => [...prevTasks, taskWithChecklist]);
+        
+        // The KanbanBoard component handles deriving ticketLinks and taskResources
+        // from the projectTasks, so we just need to ensure the task is properly initialized
         setShowQuickAdd(false);
         toast.success('New task added successfully!');
       } else {
@@ -420,32 +453,13 @@ export default function ProjectDetail({
       return;
     }
     
-    // Create an empty task object with all necessary properties initialized
-    const emptyTask: IProjectTask = {
-      task_id: '', // Will be generated on save
-      task_name: '',
-      description: '',
-      phase_id: selectedPhase.phase_id,
-      wbs_code: selectedPhase.wbs_code + '.1', // Default WBS code
-      project_status_mapping_id: status.project_status_mapping_id,
-      assigned_to: null,
-      due_date: null,
-      estimated_hours: 0,
-      actual_hours: 0,
-      created_at: new Date(),
-      updated_at: new Date(),
-      checklist_items: [], // Empty checklist for new task
-      ticket_links: [], // Empty ticket links for new task
-      resources: [] // Empty resources for new task
-    };
-    
-    // Log that we're using the cached project tree data
-    console.log('Using cached project tree data for new task dialog');
+    // When adding from status column, use the same approach as adding from phase list
+    console.log('Adding new task from status column for status:', status.name);
     
     setIsAddingTask(true);
     setDefaultStatus(status);
     setCurrentPhase(selectedPhase);
-    setSelectedTask(emptyTask); // Pass the empty task with all properties initialized
+    setSelectedTask(null); // Set to null to use TaskQuickAdd instead of TaskEdit
     setShowQuickAdd(true);
   }, [selectedPhase]);
 
@@ -453,13 +467,24 @@ export default function ProjectDetail({
     if (updatedTask) {
       try {
         const checklistItems = await getTaskChecklistItems(updatedTask.task_id);
-        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
         
-        setProjectTasks((prevTasks) =>
-          prevTasks.map((task): IProjectTask => 
+        setProjectTasks((prevTasks) => {
+          // Find the original task to preserve ticket_links and resources
+          const originalTask = prevTasks.find(task => task.task_id === updatedTask.task_id);
+          
+          // Create a merged task with updated fields, checklist items, and preserved ticket_links and resources
+          const taskWithChecklist = {
+            ...updatedTask,
+            checklist_items: checklistItems,
+            ticket_links: originalTask?.ticket_links || updatedTask.ticket_links || [],
+            resources: originalTask?.resources || updatedTask.resources || []
+          };
+          
+          return prevTasks.map((task): IProjectTask =>
             task.task_id === updatedTask.task_id ? taskWithChecklist : task
-          )
-        );
+          );
+        });
+        
         toast.success('Task updated successfully!');
       } catch (error) {
         console.error('Error updating task:', error);
@@ -502,13 +527,24 @@ export default function ProjectDetail({
   
       if (updatedTask) {
         const checklistItems = await getTaskChecklistItems(taskId);
-        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
         
-        setProjectTasks(prevTasks =>
-          prevTasks.map((task): IProjectTask =>
-            task.task_id === taskId ? taskWithChecklist : task
-          )
-        );
+        setProjectTasks(prevTasks => {
+          // Find the original task to preserve ticket_links and resources
+          const originalTask = prevTasks.find(t => t.task_id === taskId);
+          
+          // Create a merged task with updated fields, checklist items, and preserved ticket_links and resources
+          const taskWithChecklist = {
+            ...updatedTask,
+            checklist_items: checklistItems,
+            ticket_links: originalTask?.ticket_links || updatedTask.ticket_links || [],
+            resources: originalTask?.resources || updatedTask.resources || []
+          };
+          
+          return prevTasks.map((t): IProjectTask =>
+            t.task_id === taskId ? taskWithChecklist : t
+          );
+        });
+        
         toast.success('Task assignee updated successfully!');
       }
     } catch (error) {
