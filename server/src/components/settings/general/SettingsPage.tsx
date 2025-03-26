@@ -14,6 +14,7 @@ import UserManagement from './UserManagement';
 import TeamManagement from './TeamManagement';
 import InteractionTypesSettings from './InteractionTypeSettings';
 import TimePeriodSettings from '../billing/TimePeriodSettings';
+import ServiceTypeSettings from '../billing/ServiceTypeSettings'; // Import the new component
 import NumberingSettings from './NumberingSettings';
 import NotificationsTab from './NotificationsTab';
 import { useRouter } from 'next/navigation';
@@ -116,6 +117,7 @@ const SettingsPage = (): JSX.Element =>  {
                 <NumberingSettings entityType="INVOICE" />
                 <ZeroDollarInvoiceSettings />
                 <CreditExpirationSettings />
+                <ServiceTypeSettings /> {/* Add the new component here */}
               </div>
             </div>
           </CardContent>

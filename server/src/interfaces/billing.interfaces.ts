@@ -131,7 +131,7 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
 export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
-  service_type: string; // Repurposed for category
+  service_type_id: string; // Changed from service_type: string
   billing_method: 'fixed' | 'per_unit';
   default_rate: number;
   category_id: string | null;
@@ -142,6 +142,25 @@ export interface IService extends TenantEntity {
   inventory_count?: number;   // For products
   seat_limit?: number;        // For licenses
   license_term?: string;      // For licenses (e.g., 'monthly', 'annual')
+}
+
+// New interface for standard service types (cross-tenant)
+export interface IStandardServiceType {
+  id: string;
+  name: string;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
+}
+
+// New interface for tenant-specific service types
+export interface IServiceType extends TenantEntity {
+  id: string;
+  name: string;
+  standard_service_type_id?: string | null; // Link to standard type if applicable
+  is_active: boolean;
+  description?: string | null;
+  created_at: ISO8601String;
+  updated_at: ISO8601String;
 }
 
 export interface IBillingPlan extends TenantEntity {

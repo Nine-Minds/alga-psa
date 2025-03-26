@@ -6,17 +6,20 @@ import { Input } from 'server/src/components/ui/Input'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { createService } from 'server/src/lib/actions/serviceActions'
-import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
-import { IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'
+// Note: getServiceCategories might be removable if categories are fully replaced by service types
+import { getServiceCategories } from 'server/src/lib/actions/categoryActions' 
+import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
 import { UnitOfMeasureInput } from './UnitOfMeasureInput'
 import { useTenant } from '../TenantProvider'
 
 interface QuickAddServiceProps {
-  onServiceAdded: () => void
+  onServiceAdded: () => void;
+  allServiceTypes: (IServiceType & { is_standard?: boolean })[]; // Added prop
 }
 
-// Updated interface to remove category_id as service_type is now the category string
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> {
+// Updated interface to use service_type_id
+interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id' | 'service_type'> {
+  service_type_id: string; // Changed from service_type
   sku?: string;
   inventory_count?: number;
   seat_limit?: number;
@@ -25,7 +28,7 @@ interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'cate
 
 // Removed old SERVICE_TYPE_OPTIONS
 
-// Define service category options (as per plan)
+// Define service category options (as per plan) - This might become obsolete or used differently
 const SERVICE_CATEGORY_OPTIONS = [
   { value: 'Labor - Support', label: 'Labor - Support' },
   { value: 'Labor - Project', label: 'Labor - Project' },
@@ -48,16 +51,16 @@ const BILLING_METHOD_OPTIONS = [
   { value: 'per_unit', label: 'Per Unit' }
 ];
 
-export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
+export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddServiceProps) { // Destructure new prop
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [categories, setCategories] = useState<IServiceCategory[]>([])
+  const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
   const tenant = useTenant()
 
-  // Initialize service state with all fields
+  // Initialize service state with service_type_id
   const [serviceData, setServiceData] = useState<ServiceFormData>({
     service_name: '',
-    service_type: '', // This is now the category string
+    service_type_id: '', // Changed from service_type
     billing_method: 'fixed',
     default_rate: 0,
     unit_of_measure: '',
@@ -70,6 +73,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
     license_term: 'monthly'
   })
 
+  // This useEffect might be removable if categories are fully replaced by service types
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -88,29 +92,32 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
     e.preventDefault()
     try {
       // Validate required fields
-      if (!serviceData.service_type) {
-        setError('Category is required') // Updated label
+      if (!serviceData.service_type_id) { // Check ID
+        setError('Service Type is required') // Updated label
         return
       }
       // Removed category_id validation
 
+      // Find the selected service type name for conditional checks
+      const selectedServiceTypeName = allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name;
+
       // Validate product-specific fields
-      if (serviceData.service_type === 'Hardware') { // Updated category check
+      if (selectedServiceTypeName === 'Hardware') { // Check name
         if (!serviceData.sku) {
-          setError('SKU is required for products')
+          setError('SKU is required for Hardware')
           return
         }
       }
 
       // Validate license-specific fields
-      if (serviceData.service_type === 'Software License') { // Updated category check
+      if (selectedServiceTypeName === 'Software License') { // Check name
         if (!serviceData.license_term) {
-          setError('License term is required')
+          setError('License term is required for Software Licenses')
           return
         }
       }
 
-      // Only include valid service type when submitting
+      // Prepare data for submission, ensuring service_type_id is included
       const submitData: Omit<IService, 'service_id' | 'tenant'> = {
         ...serviceData,
         category_id: null, // Explicitly set optional category_id to null
@@ -125,8 +132,8 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
       // Reset form
       setServiceData({
         service_name: '',
-        service_type: '',
-        billing_method: 'fixed', // Added billing_method reset
+        service_type_id: '', // Reset ID
+        billing_method: 'fixed',
         default_rate: 0,
         unit_of_measure: '',
         // category_id removed from reset
@@ -169,14 +176,14 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
               />
             </div>
 
-            {/* Changed to Category dropdown */}
+            {/* Updated to Service Type dropdown using allServiceTypes */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
+              <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700">Service Type</label>
               <CustomSelect
-                options={SERVICE_CATEGORY_OPTIONS}
-                value={serviceData.service_type}
-                onValueChange={(value) => setServiceData({ ...serviceData, service_type: value })}
-                placeholder="Select category..."
+                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
+                value={serviceData.service_type_id} // Bind to ID
+                onValueChange={(value) => setServiceData({ ...serviceData, service_type_id: value })} // Update ID
+                placeholder="Select service type..."
                 className="w-full"
               />
             </div>
@@ -238,8 +245,8 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
             </div>
 
             {/* Product-specific fields */}
-            {/* Conditional fields based on Category */}
-            {serviceData.service_type === 'Hardware' && (
+            {/* Conditional fields based on Service Type Name */}
+            {allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name === 'Hardware' && (
               <>
                 <div>
                   <label htmlFor="sku" className="block text-sm font-medium text-gray-700">SKU</label>
@@ -264,7 +271,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
             )}
 
             {/* License-specific fields */}
-            {serviceData.service_type === 'Software License' && (
+            {allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name === 'Software License' && (
               <>
                 <div>
                   <label htmlFor="seatLimit" className="block text-sm font-medium text-gray-700">Seat Limit</label>

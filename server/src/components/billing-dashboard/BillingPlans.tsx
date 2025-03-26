@@ -14,7 +14,9 @@ import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
-import { IBillingPlan, IPlanService, IService } from 'server/src/interfaces/billing.interfaces';
+// Import new action and type
+import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
+import { IBillingPlan, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -33,11 +35,30 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
+  // Add state for all service types (standard + tenant-specific)
+  const [allServiceTypes, setAllServiceTypes] = useState<(IServiceType & { is_standard?: boolean })[]>([]);
   const tenant = useTenant();
 
   useEffect(() => {
     fetchBillingPlans();
+    fetchAllServiceTypes(); // Fetch service types on mount
   }, []);
+
+  // Effect to fetch all service types
+  const fetchAllServiceTypes = async () => {
+    try {
+      const types = await getServiceTypesForSelection();
+      setAllServiceTypes(types);
+    } catch (fetchError) {
+      console.error('Error fetching service types:', fetchError);
+      // Correctly handle unknown error type
+      if (fetchError instanceof Error) {
+        setError(fetchError.message);
+      } else {
+        setError('An unknown error occurred while fetching service types');
+      }
+    }
+  };
 
   useEffect(() => {
     if (selectedPlan) {
@@ -305,9 +326,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
             <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
             <div className="mb-4">
               <BillingPlanDialog 
-                onPlanAdded={fetchBillingPlans} 
+                onPlanAdded={fetchBillingPlans}
                 editingPlan={editingPlan}
                 onClose={() => setEditingPlan(null)}
+                allServiceTypes={allServiceTypes} // Pass service types down
                 triggerButton={
                   <Button id='add-billing-plan-button'>
                     <Plus className="h-4 w-4 mr-2" />

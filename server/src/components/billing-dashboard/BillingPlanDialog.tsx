@@ -12,7 +12,7 @@ import { Checkbox } from '../ui/Checkbox';
 
 import { createBillingPlan, updateBillingPlan, getBillingPlans } from 'server/src/lib/actions/billingPlanAction';
 import { createBucketPlan, getBucketPlanByPlanId, updateBucketPlan } from 'server/src/lib/actions/bucketPlanAction';
-import { IBillingPlan, IBucketPlan, IService } from 'server/src/interfaces/billing.interfaces';
+import { IBillingPlan, IBucketPlan, IService, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
 import { addServiceToPlan as addPlanService } from 'server/src/lib/actions/planServiceActions';
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -37,6 +37,7 @@ interface BillingPlanDialogProps {
   editingPlan?: IBillingPlan | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
+  allServiceTypes: (IServiceType & { is_standard?: boolean })[]; // Added prop
 }
 
 export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: BillingPlanDialogProps) {
@@ -707,7 +708,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                             <label htmlFor={`service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col">
                               <span>{service.service_name}</span>
                               <span className="text-xs text-gray-400">
-                                Category: {service.service_type} | Method: {BILLING_METHOD_OPTIONS.find((opt: { value: string; label: string }) => opt.value === service.billing_method)?.label || service.billing_method}
+                                Category: {service.service_type_id} | Method: {BILLING_METHOD_OPTIONS.find((opt: { value: string; label: string }) => opt.value === service.billing_method)?.label || service.billing_method}
                               </span>
                             </label>
                             <span className="text-sm text-gray-600">${(service.default_rate / 100).toFixed(2)}</span> {/* Display rate in dollars */}
