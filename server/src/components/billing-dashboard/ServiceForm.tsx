@@ -5,14 +5,15 @@ import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { createService } from 'server/src/lib/actions/serviceActions'
-import { ServiceType } from 'server/src/interfaces'
+// Removed ServiceType import
 import { UnitOfMeasureInput } from './UnitOfMeasureInput'
 
 export const ServiceForm: React.FC = () => {
   const [serviceName, setServiceName] = useState('')
-  const [serviceType, setServiceType] = useState<ServiceType>('Time')
+  const [serviceType, setServiceType] = useState<string>('Time') // Changed type to string
   const [defaultRate, setDefaultRate] = useState('')
   const [unitOfMeasure, setUnitOfMeasure] = useState('')
+  const [billingMethod, setBillingMethod] = useState<'fixed' | 'per_unit'>('fixed') // Added state for billing method
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -22,13 +23,15 @@ export const ServiceForm: React.FC = () => {
         service_type: serviceType,
         default_rate: parseFloat(defaultRate),
         unit_of_measure: unitOfMeasure,
-        category_id: ''
+        category_id: '',
+        billing_method: billingMethod // Added billing method to payload
       })
       // Clear form fields after successful submission
       setServiceName('')
-      setServiceType('Time')
+      setServiceType('Time') // No change needed here, already string
       setDefaultRate('')
       setUnitOfMeasure('')
+      setBillingMethod('fixed') // Reset billing method state
     } catch (error) {
       console.error('Error creating service:', error)
       // Handle error (e.g., show error message to user)
@@ -51,8 +54,18 @@ export const ServiceForm: React.FC = () => {
           { value: 'Usage', label: 'Usage-Based' }
         ]}
         value={serviceType}
-        onValueChange={(value) => setServiceType(value as ServiceType)}
+        onValueChange={(value) => setServiceType(value)} // Removed 'as ServiceType' cast
         placeholder="Select Service Type"
+      />
+      
+      <CustomSelect
+        options={[
+          { value: 'fixed', label: 'Fixed Price' },
+          { value: 'per_unit', label: 'Per Unit' }
+        ]}
+        value={billingMethod}
+        onValueChange={(value) => setBillingMethod(value as 'fixed' | 'per_unit')}
+        placeholder="Select Billing Method"
       />
 
       <Input

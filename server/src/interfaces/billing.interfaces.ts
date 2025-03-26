@@ -108,8 +108,6 @@ export interface IServiceCategory extends TenantEntity {
   description?: string;
 }
 
-export type ServiceType = 'Fixed' | 'Time' | 'Usage' | 'Product' | 'License';
-
 export interface IProductCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;
@@ -133,7 +131,8 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
 export interface IService extends TenantEntity {
   service_id: string;
   service_name: string;
-  service_type: ServiceType;
+  service_type: string; // Repurposed for category
+  billing_method: 'fixed' | 'per_unit';
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;

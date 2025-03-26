@@ -30,6 +30,12 @@ import BillingPlanServiceForm from './BillingPlanServiceForm';
 import { Badge } from 'server/src/components/ui/Badge';
 import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
+// Define billing method options
+const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string }> = [
+  { value: 'fixed', label: 'Fixed Price' },
+  { value: 'per_unit', label: 'Per Unit' }
+];
+
 interface BillingPlanServicesProps {
   plan: IBillingPlan;
 }
@@ -168,6 +174,22 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
       },
     },
     {
+      title: 'Category',
+      dataIndex: 'service_id',
+      render: (value) => {
+        const service = availableServices.find(s => s.service_id === value);
+        return service?.service_type || 'N/A';
+      },
+    },
+    {
+      title: 'Billing Method',
+      dataIndex: 'service_id',
+      render: (value) => {
+        const service = availableServices.find(s => s.service_id === value);
+        return BILLING_METHOD_OPTIONS.find(opt => opt.value === service?.billing_method)?.label || service?.billing_method || 'N/A';
+      },
+    },
+    {
       title: 'Configuration Type',
       dataIndex: 'configurationType',
       render: (value) => (
@@ -285,11 +307,16 @@ const BillingPlanServices: React.FC<BillingPlanServicesProps> = ({ plan }) => {
                             }
                           }}
                         />
-                        <label htmlFor={`service-${service.service_id}`} className="flex-grow">
-                          {service.service_name}
-                          {isAlreadyInPlan && <span className="ml-2 text-xs text-blue-600">(Already in plan)</span>}
+                        <label htmlFor={`service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col">
+                          <span>
+                            {service.service_name}
+                            {isAlreadyInPlan && <span className="ml-2 text-xs text-blue-600">(Already in plan)</span>}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            Category: {service.service_type} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method}
+                          </span>
                         </label>
-                        <span className="text-sm text-gray-500">${parseFloat(service.default_rate.toString()).toFixed(2)}</span>
+                        <span className="text-sm text-gray-600">${(service.default_rate / 100).toFixed(2)}</span> {/* Display rate in dollars */}
                       </div>
                     );
                   })}

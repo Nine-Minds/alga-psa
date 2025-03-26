@@ -69,7 +69,7 @@ export function BucketServiceConfigPanel({
   };
 
   const handleOverageRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value);
+    const value = Math.round(Number(e.target.value) * 100); // Store in cents
     setOverageRate(value);
     onConfigurationChange({ overage_rate: value });
   };
@@ -128,7 +128,7 @@ export function BucketServiceConfigPanel({
             <Input
               id="bucket-overage-rate"
               type="number"
-              value={overageRate.toString()}
+              value={(overageRate / 100).toString()} // Display in dollars
               onChange={handleOverageRateChange}
               placeholder="Enter overage rate"
               disabled={disabled}

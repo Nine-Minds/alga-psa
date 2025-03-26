@@ -23,7 +23,8 @@ export const serviceSchema = z.object({
   service_id: z.string(),
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
-  service_type: z.enum(['Fixed', 'Time', 'Usage']),
+  service_type: z.string(), // Changed from enum to string
+  billing_method: z.enum(['fixed', 'per_unit']), // Added billing_method
   default_rate: z.number(),
   unit_of_measure: z.string(),
   category_id: z.string().nullable()
@@ -55,6 +56,7 @@ const Service = {
           'service_id',
           'service_name',
           'service_type',
+          'billing_method', // Added billing_method
           db.raw('CAST(default_rate AS FLOAT) as default_rate'),
           'unit_of_measure',
           'category_id',
@@ -97,6 +99,7 @@ const Service = {
           'service_id',
           'service_name',
           'service_type',
+          'billing_method', // Added billing_method
           db.raw('CAST(default_rate AS FLOAT) as default_rate'),
           'unit_of_measure',
           'category_id',
@@ -137,7 +140,8 @@ const Service = {
       category_id: serviceData.category_id || null,
       // Optional fields
       is_taxable: serviceData.is_taxable || false,
-      tax_region: serviceData.tax_region || null
+      tax_region: serviceData.tax_region || null,
+      billing_method: serviceData.billing_method // Added billing_method
     };
 
     log.info('[Service.create] Constructed newService object:', newService);
@@ -179,6 +183,7 @@ const Service = {
           'service_id',
           'service_name',
           'service_type',
+          'billing_method', // Added billing_method
           db.raw('CAST(default_rate AS FLOAT) as default_rate'),
           'unit_of_measure',
           'category_id',
@@ -243,6 +248,7 @@ const Service = {
           'service_id',
           'service_name',
           'service_type',
+          'billing_method', // Added billing_method
           db.raw('CAST(default_rate AS FLOAT) as default_rate'),
           'unit_of_measure',
           'category_id',

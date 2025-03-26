@@ -143,7 +143,7 @@ export function UsageServiceConfigPanel({
       id: Date.now().toString(),
       min_quantity: tiers.length > 0 ? (tiers[tiers.length - 1].max_quantity || 0) + 1 : 1,
       max_quantity: tiers.length > 0 ? (tiers[tiers.length - 1].max_quantity || 0) + 100 : 100,
-      rate: 0
+      rate: 0 // Rate is stored in cents
     };
     
     // If this is the first tier, set min_quantity to 0
@@ -160,7 +160,7 @@ export function UsageServiceConfigPanel({
       config_id: '', // This will be set by the backend
       min_quantity: tier.min_quantity,
       max_quantity: tier.max_quantity === null ? undefined : tier.max_quantity,
-      rate: tier.rate,
+      rate: tier.rate, // Already in cents
       tenant: '', // This will be set by the backend
       created_at: new Date(),
       updated_at: new Date()
@@ -181,7 +181,7 @@ export function UsageServiceConfigPanel({
       config_id: '', // This will be set by the backend
       min_quantity: tier.min_quantity,
       max_quantity: tier.max_quantity === null ? undefined : tier.max_quantity,
-      rate: tier.rate,
+      rate: tier.rate, // Already in cents
       tenant: '', // This will be set by the backend
       created_at: new Date(),
       updated_at: new Date()
@@ -195,7 +195,8 @@ export function UsageServiceConfigPanel({
     
     const updatedTiers = tiers.map(tier => {
       if (tier.id === id) {
-        return { ...tier, [field]: value };
+        // Store rate in cents if the field is 'rate'
+        return { ...tier, [field]: field === 'rate' && typeof value === 'number' ? Math.round(value * 100) : value };
       }
       return tier;
     });
@@ -208,7 +209,7 @@ export function UsageServiceConfigPanel({
       config_id: '', // This will be set by the backend
       min_quantity: tier.min_quantity,
       max_quantity: tier.max_quantity === null ? undefined : tier.max_quantity,
-      rate: tier.rate,
+      rate: tier.rate, // Already in cents
       tenant: '', // This will be set by the backend
       created_at: new Date(),
       updated_at: new Date()
@@ -342,8 +343,8 @@ export function UsageServiceConfigPanel({
                         <Input
                           id={`tier-${tier.id}-rate`}
                           type="number"
-                          value={tier.rate}
-                          onChange={(e) => handleTierChange(tier.id, 'rate', Number(e.target.value))}
+                          value={(tier.rate / 100).toString()} // Display in dollars
+                          onChange={(e) => handleTierChange(tier.id, 'rate', Number(e.target.value))} // handleTierChange will convert to cents
                           disabled={disabled}
                           min={0}
                           step={0.01}

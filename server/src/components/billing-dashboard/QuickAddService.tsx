@@ -7,7 +7,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { createService } from 'server/src/lib/actions/serviceActions'
 import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
-import { IService, IServiceCategory, ServiceType } from 'server/src/interfaces/billing.interfaces'
+import { IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'
 import { UnitOfMeasureInput } from './UnitOfMeasureInput'
 import { useTenant } from '../TenantProvider'
 
@@ -15,26 +15,37 @@ interface QuickAddServiceProps {
   onServiceAdded: () => void
 }
 
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'service_type'> {
-  service_type: string;
+// Updated interface to remove category_id as service_type is now the category string
+interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> {
   sku?: string;
   inventory_count?: number;
   seat_limit?: number;
   license_term?: string;
 }
 
-const SERVICE_TYPE_OPTIONS = [
-  { value: 'Fixed', label: 'Fixed Price' },
-  { value: 'Time', label: 'Time Based' },
-  { value: 'Usage', label: 'Usage Based' },
-  { value: 'Product', label: 'Product' },
-  { value: 'License', label: 'Software License' }
+// Removed old SERVICE_TYPE_OPTIONS
+
+// Define service category options (as per plan)
+const SERVICE_CATEGORY_OPTIONS = [
+  { value: 'Labor - Support', label: 'Labor - Support' },
+  { value: 'Labor - Project', label: 'Labor - Project' },
+  { value: 'Managed Service - Server', label: 'Managed Service - Server' },
+  { value: 'Managed Service - Workstation', label: 'Managed Service - Workstation' },
+  { value: 'Software License', label: 'Software License' },
+  { value: 'Hardware', label: 'Hardware' },
+  { value: 'Hosting', label: 'Hosting' },
+  { value: 'Consulting', label: 'Consulting' },
 ];
 
 const LICENSE_TERM_OPTIONS = [
   { value: 'monthly', label: 'Monthly' },
   { value: 'annual', label: 'Annual' },
   { value: 'perpetual', label: 'Perpetual' }
+];
+
+const BILLING_METHOD_OPTIONS = [
+  { value: 'fixed', label: 'Fixed Price' },
+  { value: 'per_unit', label: 'Per Unit' }
 ];
 
 export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
@@ -46,10 +57,11 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
   // Initialize service state with all fields
   const [serviceData, setServiceData] = useState<ServiceFormData>({
     service_name: '',
-    service_type: '',
+    service_type: '', // This is now the category string
+    billing_method: 'fixed',
     default_rate: 0,
     unit_of_measure: '',
-    category_id: '',
+    // category_id removed
     is_taxable: true,
     tax_region: '',
     sku: '',
@@ -77,17 +89,13 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
     try {
       // Validate required fields
       if (!serviceData.service_type) {
-        setError('Service Type is required')
+        setError('Category is required') // Updated label
         return
       }
-
-      if (!serviceData.category_id) {
-        setError('Category is required')
-        return
-      }
+      // Removed category_id validation
 
       // Validate product-specific fields
-      if (serviceData.service_type === 'Product') {
+      if (serviceData.service_type === 'Hardware') { // Updated category check
         if (!serviceData.sku) {
           setError('SKU is required for products')
           return
@@ -95,7 +103,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
       }
 
       // Validate license-specific fields
-      if (serviceData.service_type === 'License') {
+      if (serviceData.service_type === 'Software License') { // Updated category check
         if (!serviceData.license_term) {
           setError('License term is required')
           return
@@ -105,24 +113,30 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
       // Only include valid service type when submitting
       const submitData: Omit<IService, 'service_id' | 'tenant'> = {
         ...serviceData,
-        service_type: serviceData.service_type as ServiceType
+        category_id: null, // Explicitly set optional category_id to null
       }
 
       console.log('[QuickAddService] Submitting service data:', submitData)
       await createService(submitData)
       console.log('[QuickAddService] Service created successfully')
-      
+
       onServiceAdded()
       setOpen(false)
       // Reset form
       setServiceData({
         service_name: '',
         service_type: '',
+        billing_method: 'fixed', // Added billing_method reset
         default_rate: 0,
         unit_of_measure: '',
-        category_id: '',
+        // category_id removed from reset
         is_taxable: true,
-        tax_region: ''
+        tax_region: '',
+        // Reset optional fields too
+        sku: '',
+        inventory_count: 0,
+        seat_limit: 0,
+        license_term: 'monthly'
       })
       setError(null)
     } catch (error) {
@@ -131,10 +145,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
     }
   }
 
-  const categoryOptions = categories.map((cat): { value: string; label: string } => ({ 
-    value: cat.category_id || 'None', 
-    label: cat.category_name 
-  }))
+  // Removed unused categoryOptions derived from fetched categories
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -158,13 +169,25 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
               />
             </div>
 
+            {/* Changed to Category dropdown */}
             <div>
-              <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700">Service Type</label>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
               <CustomSelect
-                options={SERVICE_TYPE_OPTIONS}
+                options={SERVICE_CATEGORY_OPTIONS}
                 value={serviceData.service_type}
                 onValueChange={(value) => setServiceData({ ...serviceData, service_type: value })}
-                placeholder="Select service type..."
+                placeholder="Select category..."
+                className="w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="billingMethod" className="block text-sm font-medium text-gray-700">Billing Method</label>
+              <CustomSelect
+                options={BILLING_METHOD_OPTIONS}
+                value={serviceData.billing_method}
+                onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' })}
+                placeholder="Select billing method..."
                 className="w-full"
               />
             </div>
@@ -174,32 +197,27 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
               <Input
                 id="defaultRate"
                 type="number"
-                value={serviceData.default_rate}
-                onChange={(e) => setServiceData({ ...serviceData, default_rate: parseFloat(e.target.value) })}
+                step="0.01" // Allow cents
+                value={serviceData.default_rate / 100} // Display in dollars
+                onChange={(e) => setServiceData({ ...serviceData, default_rate: Math.round(parseFloat(e.target.value) * 100) || 0 })} // Store in cents, default to 0 if invalid
                 placeholder="Default Rate"
                 required
               />
             </div>
+            {/* Conditional Unit of Measure */}
+            {serviceData.billing_method === 'per_unit' && (
+              <div>
+                <label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700">Unit of Measure</label>
+                <UnitOfMeasureInput
+                  value={serviceData.unit_of_measure}
+                  onChange={(value) => setServiceData({ ...serviceData, unit_of_measure: value })}
+                  placeholder="Select unit of measure..."
+                />
+              </div>
+            )}
 
-            <div>
-              <label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700">Unit of Measure</label>
-              <UnitOfMeasureInput
-                value={serviceData.unit_of_measure}
-                onChange={(value) => setServiceData({ ...serviceData, unit_of_measure: value })}
-                placeholder="Select unit of measure..."
-              />
-            </div>
+            {/* Removed separate Category dropdown (category_id) */}
 
-            <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category</label>
-              <CustomSelect
-                options={categoryOptions}
-                onValueChange={(value) => setServiceData({ ...serviceData, category_id: value })}
-                value={serviceData.category_id || 'None'}
-                placeholder="Select category..."
-                className="w-full"
-              />
-            </div>
 
             <div className="flex items-center space-x-2">
               <Switch
@@ -220,7 +238,8 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
             </div>
 
             {/* Product-specific fields */}
-            {serviceData.service_type === 'Product' && (
+            {/* Conditional fields based on Category */}
+            {serviceData.service_type === 'Hardware' && (
               <>
                 <div>
                   <label htmlFor="sku" className="block text-sm font-medium text-gray-700">SKU</label>
@@ -245,7 +264,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
             )}
 
             {/* License-specific fields */}
-            {serviceData.service_type === 'License' && (
+            {serviceData.service_type === 'Software License' && (
               <>
                 <div>
                   <label htmlFor="seatLimit" className="block text-sm font-medium text-gray-700">Seat Limit</label>
@@ -262,7 +281,7 @@ export function QuickAddService({ onServiceAdded }: QuickAddServiceProps) {
                   <CustomSelect
                     options={LICENSE_TERM_OPTIONS}
                     value={serviceData.license_term || 'monthly'}
-                    onValueChange={(value) => setServiceData({ ...serviceData, license_term: value })}
+                    onValueChange={(value) => setServiceData({ ...serviceData, license_term: value })} // Corrected prop name
                     placeholder="Select license term..."
                     className="w-full"
                   />

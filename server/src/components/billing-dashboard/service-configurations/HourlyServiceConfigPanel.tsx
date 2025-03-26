@@ -123,7 +123,7 @@ export function HourlyServiceConfigPanel({
   };
 
   const handleOvertimeRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
+    const value = e.target.value === '' ? undefined : Math.round(Number(e.target.value) * 100); // Store in cents
     setOvertimeRate(value);
     onConfigurationChange({ overtime_rate: value });
   };
@@ -146,7 +146,7 @@ export function HourlyServiceConfigPanel({
   };
 
   const handleNewUserTypeRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
+    const value = e.target.value === '' ? undefined : Math.round(Number(e.target.value) * 100); // Store in cents
     setNewUserTypeRate(value);
   };
 
@@ -157,7 +157,7 @@ export function HourlyServiceConfigPanel({
 
     const newRate: Partial<IUserTypeRate> = {
       user_type: newUserType,
-      rate: newUserTypeRate
+      rate: newUserTypeRate // Already in cents from state
     };
 
     onUserTypeRatesChange([...userTypeRates, newRate as IUserTypeRate]);
@@ -245,7 +245,7 @@ export function HourlyServiceConfigPanel({
                   {userTypeRates.map((item, index) => (
                     <div key={index} className="grid grid-cols-3 gap-2 items-center mb-1">
                       <div>{userTypeOptions.find(opt => opt.value === item.user_type)?.label || item.user_type}</div>
-                      <div>${item.rate.toFixed(2)}</div>
+                      <div>${(item.rate / 100).toFixed(2)}</div> {/* Display in dollars */}
                       <Button
                         type="button"
                         onClick={() => handleRemoveUserTypeRate(index)}
@@ -279,7 +279,7 @@ export function HourlyServiceConfigPanel({
                   <Input
                     id="new-user-type-rate"
                     type="number"
-                    value={newUserTypeRate?.toString() || ''}
+                    value={(newUserTypeRate !== undefined ? newUserTypeRate / 100 : '').toString()} // Display in dollars
                     onChange={handleNewUserTypeRateChange}
                     placeholder="Enter rate"
                     disabled={disabled}
@@ -323,7 +323,7 @@ export function HourlyServiceConfigPanel({
                 <Input
                   id="overtime-rate"
                   type="number"
-                  value={overtimeRate?.toString() || ''}
+                  value={(overtimeRate !== undefined ? overtimeRate / 100 : '').toString()} // Display in dollars
                   onChange={handleOvertimeRateChange}
                   placeholder="Enter overtime rate"
                   disabled={disabled}

@@ -95,25 +95,23 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
             custom_rate: planService.custom_rate
           });
           
-          // Set default type config based on service type
+          // Set default type config based on service billing_method and category (service_type)
           if (service) {
-            let configType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = 'Fixed';
-            
-            switch (service.service_type) {
-              case 'Time':
-                configType = 'Hourly';
-                break;
-              case 'Usage':
-                configType = 'Usage';
-                break;
-              case 'Fixed':
-              case 'Product':
-              case 'License':
-              default:
-                configType = 'Fixed';
-                break;
+            let configType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = 'Fixed'; // Default to Fixed
+
+            if (service.billing_method === 'fixed') {
+              configType = 'Fixed';
+            } else if (service.billing_method === 'per_unit') {
+              // Check category for per_unit services
+              const laborCategories = ['Labor - Support', 'Labor - Project', 'Consulting'];
+              if (laborCategories.includes(service.service_type)) {
+                configType = 'Hourly'; // Default labor categories to Hourly
+              } else {
+                configType = 'Usage'; // Default other per_unit categories to Usage
+              }
             }
-            
+            // Note: 'Bucket' type is not set as a default here, it must be explicitly chosen.
+
             setBaseConfig(prev => ({
               ...prev,
               configuration_type: configType

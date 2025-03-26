@@ -923,7 +923,7 @@ export class BillingEngine {
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
         'company_billing_plans.tenant': company.tenant,
-        'service_catalog.service_type': 'Product'
+        'service_catalog.service_type': 'Hardware' // Updated filter to use new category
       })
       .select(
         'service_catalog.*',
@@ -989,7 +989,7 @@ export class BillingEngine {
         'company_billing_plans.company_id': companyId,
         'company_billing_plans.company_billing_plan_id': companyBillingPlan.company_billing_plan_id,
         'company_billing_plans.tenant': company.tenant,
-        'service_catalog.service_type': 'License'
+        'service_catalog.service_type': 'Software License' // Updated filter to use new category
       })
       .select(
         'service_catalog.*',
