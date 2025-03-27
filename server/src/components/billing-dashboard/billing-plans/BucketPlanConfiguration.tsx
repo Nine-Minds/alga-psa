@@ -11,11 +11,12 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { getServices } from 'server/src/lib/actions/serviceActions'; // Assuming this action exists
-import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction'; // Corrected path
-import { getPlanServices } from 'server/src/lib/actions/planServiceActions'; // Assuming this action exists
-import GenericPlanServicesList from './GenericPlanServicesList'; // Import the generic list
-import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces'; // Added IPlanService
+import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction';
+import { updateBucketPlan } from 'server/src/lib/actions/bucketPlanAction'; // Corrected action name
+import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
+import GenericPlanServicesList from './GenericPlanServicesList';
+import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces'; // Removed IBucketPlanConfig
 
 // Define the expected shape of the plan object returned by getBillingPlanById for Bucket
 type BucketPlanData = IBillingPlan & {
@@ -106,22 +107,28 @@ export function BucketPlanConfiguration({
     fetchServices(); // Fetch services initially
   }, [fetchPlanData, fetchServices]);
 
-  // Validate inputs
-  useEffect(() => {
+  // Validation logic moved to handleSave
+
+  const handleSave = async () => {
+    // Perform validation on save attempt
     const errors: typeof validationErrors = {};
     if (totalHours === undefined || totalHours <= 0) errors.totalHours = 'Total hours must be greater than zero';
     if (overageRate === undefined || overageRate < 0) errors.overageRate = 'Overage rate cannot be negative';
-    if (!billingPeriod) errors.billingPeriod = 'Billing period is required'; // Should be set from plan
-    // Add serviceCatalogId validation if it's mandatory and selectable here
-    // if (!serviceCatalogId) errors.serviceCatalogId = 'Please select a service';
-    setValidationErrors(errors);
-  }, [totalHours, overageRate, billingPeriod, serviceCatalogId]);
+    // billingPeriod comes from plan, no need to validate here
+    // if (!serviceCatalogId) errors.serviceCatalogId = 'Please select a service'; // Add if service selection is mandatory
 
-  const handleSave = async () => {
-    if (!plan || Object.values(validationErrors).some(e => e)) {
-        setSaveError("Cannot save, validation errors exist or plan not loaded.");
+    setValidationErrors(errors); // Update errors state
+
+    if (Object.keys(errors).length > 0) {
+        setSaveError("Cannot save, please fix the validation errors.");
+        return; // Stop saving if errors exist
+    }
+
+    if (!plan) {
+        setSaveError("Cannot save, plan not loaded.");
         return;
     }
+
     setSaving(true);
     setSaveError(null);
     try {
@@ -133,11 +140,11 @@ export function BucketPlanConfiguration({
             allow_rollover: allowRollover,
             // Service association updates likely handled separately
         };
-        // Update plan config. Service association might need separate handling.
-        await updateBillingPlan(planId, updatePayload as Partial<IBillingPlan>); // Cast payload
+        // Update bucket plan config using the specific action
+        await updateBucketPlan(planId, updatePayload); // Use the correct action and payload type
         // Optionally re-fetch or show success
     } catch (err) {
-        console.error('Error saving plan configuration:', err);
+        console.error('Error saving bucket plan configuration:', err);
         setSaveError('Failed to save configuration. Please try again.');
     } finally {
         setSaving(false);
@@ -190,10 +197,11 @@ export function BucketPlanConfiguration({
               <AlertDescription>{saveError}</AlertDescription>
             </Alert>
           )}
-
+          <p className="text-sm text-muted-foreground">* Indicates required fields</p>
+  
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="bucket-plan-total-hours">Total Hours in Bucket</Label>
+              <Label htmlFor="bucket-plan-total-hours">Total Hours in Bucket <span className="text-destructive">*</span></Label>
               <Input
                 id="bucket-plan-total-hours" type="number"
                 value={totalHours?.toString() || ''}
@@ -207,20 +215,15 @@ export function BucketPlanConfiguration({
 
             <div>
               <Label htmlFor="bucket-plan-billing-period">Billing Period</Label>
-              <CustomSelect
-                id="bucket-plan-billing-period"
-                options={BILLING_FREQUENCY_OPTIONS}
-                onValueChange={() => {}} // Value comes from plan, maybe disable or just display
-                value={billingPeriod}
-                placeholder="Select period"
-                className="w-full"
-                disabled={true} // Typically set on the plan level, not config
-              />
+              {/* Display as text since it's derived from the plan and not editable here */}
+              <div className="mt-1 text-sm font-medium p-2 border border-input bg-muted rounded-md min-h-[calc(1.5rem+0.75rem+2px)] flex items-center">
+                {BILLING_FREQUENCY_OPTIONS.find(opt => opt.value === billingPeriod)?.label || billingPeriod || 'N/A'}
+              </div>
               <p className="text-sm text-muted-foreground mt-1">Frequency the bucket resets (set on plan).</p>
             </div>
 
             <div>
-              <Label htmlFor="bucket-plan-overage-rate">Overage Rate per Hour</Label>
+              <Label htmlFor="bucket-plan-overage-rate">Overage Rate per Hour <span className="text-destructive">*</span></Label>
               <Input
                 id="bucket-plan-overage-rate" type="number"
                 value={overageRate?.toString() || ''}

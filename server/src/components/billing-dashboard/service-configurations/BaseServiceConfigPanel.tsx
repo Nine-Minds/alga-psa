@@ -55,7 +55,7 @@ export function BaseServiceConfigPanel({
   }, [configuration.custom_rate, configuration.quantity]);
 
   const handleCustomRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Math.round(Number(e.target.value) * 100); // Store in cents
+    const value = e.target.value === '' ? undefined : Number(e.target.value); // Handle as decimal
     onConfigurationChange({ custom_rate: value });
   };
 
@@ -129,9 +129,9 @@ export function BaseServiceConfigPanel({
             <Input
               id="service-custom-rate"
               type="number"
-              value={(configuration.custom_rate !== undefined ? configuration.custom_rate / 100 : '').toString()} // Display in dollars
+              value={(configuration.custom_rate !== undefined ? configuration.custom_rate : '').toString()} // Display as decimal
               onChange={handleCustomRateChange}
-              placeholder={service?.default_rate !== undefined ? `Default: $${(service.default_rate / 100).toFixed(2)}` : 'Enter rate'} // Display default in dollars
+              placeholder={service?.default_rate !== undefined ? `Default: ${service.default_rate.toFixed(2)}` : 'Enter rate'} // Display default as decimal
               disabled={disabled}
               min={0}
               step={0.01}
@@ -141,8 +141,8 @@ export function BaseServiceConfigPanel({
               <p className="text-sm text-red-500 mt-1">{validationErrors.custom_rate}</p>
             ) : (
               <p className="text-sm text-gray-500 mt-1">
-                {service?.default_rate 
-                  ? `Leave blank to use default rate ($${(service.default_rate / 100).toFixed(2)})` // Display default in dollars
+                {service?.default_rate !== undefined
+                  ? `Leave blank to use default rate (${service.default_rate.toFixed(2)})` // Display default as decimal
                   : 'Custom rate for this service'}
               </p>
             )}

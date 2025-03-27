@@ -20,7 +20,7 @@ import { AlertCircle } from 'lucide-react';
 import { BILLING_FREQUENCY_OPTIONS, PLAN_TYPE_OPTIONS } from 'server/src/constants/billing';
 // Removed getServices, getPlanServices imports
 // Removed OverlapWarningDialog import
-import { PlanTypeSelector, PlanType } from './plan-types/PlanTypeSelector';
+import { PlanTypeSelector, PlanType } from './billing-plans/PlanTypeSelector';
 // Removed ConfigPanel imports
 
 interface BillingPlanDialogProps {

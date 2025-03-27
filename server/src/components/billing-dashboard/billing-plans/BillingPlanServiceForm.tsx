@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { IPlanService, IService } from 'server/src/interfaces/billing.interfaces';
-import { 
+import {
   IPlanServiceConfiguration,
   IPlanServiceFixedConfig,
   IPlanServiceHourlyConfig,
@@ -25,18 +25,18 @@ import { ServiceConfigurationPanel } from '../service-configurations/ServiceConf
 
 interface BillingPlanServiceFormProps {
   planService: IPlanService;
-  services: IService[];
-  serviceCategories: IServiceCategory[]; // Added prop for category lookup
+  services: IService[]; // services might need updating to include service_type_name if not already done
+  // Removed serviceCategories prop
   onClose: () => void;
   onServiceUpdated: () => void;
 }
 
-import { IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Ensure this import exists or add it
+// Removed IServiceCategory import
 
 const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   planService,
   services,
-  serviceCategories, // Destructure the new prop
+  // Removed serviceCategories destructuring
   onClose,
   onServiceUpdated
 }) => {
@@ -44,9 +44,26 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const tenant = useTenant()!;
-  
+
   const service = services.find(s => s.service_id === planService.service_id);
-  
+
+  // Helper function to derive config type from service properties
+  const getDerivedConfigType = (svc: IService | undefined): 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined => {
+    if (!svc) return undefined;
+
+    if (svc.billing_method === 'fixed') {
+      return 'Fixed';
+    } else if (svc.billing_method === 'per_unit') {
+      if (svc.unit_of_measure?.toLowerCase().includes('hour')) {
+        return 'Hourly';
+      } else {
+        return 'Usage';
+      }
+    }
+    // Add logic for 'Bucket' if applicable based on service properties
+    return undefined; // Default if no match
+  };
+
   // State for configuration
   const [baseConfig, setBaseConfig] = useState<Partial<IPlanServiceConfiguration>>({
     plan_id: planService.plan_id,
@@ -55,7 +72,7 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
     quantity: planService.quantity || 1,
     custom_rate: planService.custom_rate
   });
-  
+
   const [typeConfig, setTypeConfig] = useState<Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null>(null);
   const [rateTiers, setRateTiers] = useState<IPlanServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
@@ -64,28 +81,28 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   useEffect(() => {
     const loadConfiguration = async () => {
       if (!planService.plan_id || !planService.service_id) return;
-      
+
       setIsLoading(true);
       try {
         // Check if configuration exists
         const config = await getConfigurationForService(planService.plan_id, planService.service_id);
-        
+
         if (config) {
           // Load full configuration details
           const configDetails = await getConfigurationWithDetails(config.config_id);
-          
+
           setBaseConfig({
             ...configDetails.baseConfig,
             quantity: planService.quantity || configDetails.baseConfig.quantity,
             custom_rate: planService.custom_rate !== undefined ? planService.custom_rate : configDetails.baseConfig.custom_rate
           });
-          
+
           setTypeConfig(configDetails.typeConfig);
-          
+
           if (configDetails.rateTiers) {
             setRateTiers(configDetails.rateTiers);
           }
-          
+
           if (configDetails.userTypeRates) {
             setUserTypeRates(configDetails.userTypeRates);
           }
@@ -98,7 +115,7 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
             quantity: planService.quantity || 1,
             custom_rate: planService.custom_rate
           });
-          
+
           // Set default type config based on service billing_method and category (service_type)
           if (service) {
             let configType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = 'Fixed'; // Default to Fixed
@@ -106,12 +123,15 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
             if (service.billing_method === 'fixed') {
               configType = 'Fixed';
             } else if (service.billing_method === 'per_unit') {
-              // Check category for per_unit services
-              const laborCategories = ['Labor - Support', 'Labor - Project', 'Consulting'];
-              // Find the category name using the service_type_id
-              const categoryName = serviceCategories.find(cat => cat.category_id === service.service_type_id)?.category_name;
-              if (categoryName && laborCategories.includes(categoryName)) {
-                configType = 'Hourly'; // Default labor categories to Hourly
+              // Check service type name for per_unit services
+              const laborServiceTypes = ['Labor - Support', 'Labor - Project', 'Consulting']; // Assuming these are potential service type names
+              // Use service_type_name directly from the service object
+              // Note: The 'service' object here comes from the 'services' prop.
+              // We need to ensure 'service_type_name' is included there.
+              // For now, we'll cast to 'any' as a temporary measure.
+              const serviceTypeName = (service as any).service_type_name;
+              if (serviceTypeName && laborServiceTypes.includes(serviceTypeName)) {
+                configType = 'Hourly'; // Default labor service types to Hourly
               } else {
                 configType = 'Usage'; // Default other per_unit categories to Usage
               }
@@ -131,7 +151,7 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
         setIsLoading(false);
       }
     };
-    
+
     loadConfiguration();
   }, [planService, service]);
 
@@ -159,10 +179,10 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
       setError('Missing plan or service information');
       return;
     }
-    
+
     setIsSubmitting(true);
     setError(null);
-    
+
     try {
       // Update the plan service with the new configuration
       await updatePlanService(
@@ -174,7 +194,7 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
           typeConfig: typeConfig || undefined
         }
       );
-      
+
       onServiceUpdated();
     } catch (error) {
       console.error('Error updating service:', error);
@@ -191,12 +211,16 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
           <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
             Edit Service Configuration
           </Dialog.Title>
-          
+
           {isLoading ? (
             <div className="py-8 text-center">Loading service configuration...</div>
           ) : (
             <ServiceConfigurationPanel
-              configuration={baseConfig}
+              // Pass a configuration object with the DERIVED type
+              configuration={{
+                ...baseConfig,
+                configuration_type: getDerivedConfigType(service) || baseConfig.configuration_type // Fallback to original if derivation fails
+              }}
               service={service}
               typeConfig={typeConfig}
               rateTiers={rateTiers}

@@ -22,7 +22,8 @@ import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import PlanBundles from './plan-bundles/PlanBundles';
 import PlanBundleDetail from './plan-bundles/PlanBundleDetail';
-import { PlanTypeRouter } from './PlanTypeRouter'; // Import the new router
+import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
+import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriodView[];
@@ -41,7 +42,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     // Only keep the tab parameter, clearing any other state
     const params = new URLSearchParams();
     params.set('tab', value);
-    
+
     // If we're on a plan detail page and switching tabs, go back to the main billing dashboard
     if (searchParams?.has('planId')) {
       router.push(`/msp/billing?${params.toString()}`);
@@ -114,10 +115,17 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         <Tabs.Content value="tax-rates">
           <TaxRates />
         </Tabs.Content>
-
         <Tabs.Content value="plans">
-          {searchParams?.get('planId') ? ( // Get the actual planId
-            <PlanTypeRouter planId={searchParams.get('planId')!} /> // Use PlanTypeRouter and pass planId
+          {searchParams?.get('planId') ? (
+            <>
+              {/* Use BackNav component */}
+              <BackNav>
+                &larr; Back to Plans List {/* Using HTML entity for left arrow */}
+              </BackNav>
+              <div className="mt-4"> {/* Add margin top for spacing */}
+                <PlanTypeRouter planId={searchParams.get('planId')!} />
+              </div>
+            </>
           ) : (
             <BillingPlansOverview />
           )}

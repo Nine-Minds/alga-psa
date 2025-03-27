@@ -107,7 +107,9 @@ const BillingPlansOverview: React.FC = () => {
               id="edit-billing-plan-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
-                setEditingPlan({...record});
+                if (record.plan_id) {
+                  router.push(`/msp/billing?tab=plans&planId=${record.plan_id}`);
+                }
               }}
             >
               Edit

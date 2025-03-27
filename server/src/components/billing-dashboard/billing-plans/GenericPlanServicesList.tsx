@@ -23,11 +23,12 @@ import {
   removeServiceFromPlan as removePlanService
 } from 'server/src/lib/actions/planServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
+import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Import action to get plan details
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import BillingPlanServiceForm from './billing-plans/BillingPlanServiceForm'; // Adjusted path
+import BillingPlanServiceForm from './BillingPlanServiceForm'; // Adjusted path
 import { Badge } from 'server/src/components/ui/Badge';
 import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
@@ -41,12 +42,13 @@ interface GenericPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
 }
 
+
 interface EnhancedPlanService extends IPlanService {
   configuration?: IPlanServiceConfiguration;
   configurationType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   // Added fields for display consistency
   service_name?: string;
-  service_category?: string; // Will hold name
+  service_type_name?: string; // Changed from service_category
   billing_method?: string;
   unit_of_measure?: string;
   default_rate?: number;
@@ -55,11 +57,12 @@ interface EnhancedPlanService extends IPlanService {
 const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId }) => {
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
-  const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state
+  // Removed serviceCategories state
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
+  const [planType, setPlanType] = useState<IBillingPlan['plan_type'] | null>(null); // State for plan type
   // Removed tenant state
 
   const fetchData = useCallback(async () => { // Added useCallback
@@ -69,24 +72,24 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     setError(null);
 
     try {
-      // Fetch services, configurations, and categories
-      const [allAvailableServices, servicesWithConfigurations, categories] = await Promise.all([
+      // Fetch plan details, services, and configurations
+      const [planDetails, allAvailableServices, servicesWithConfigurations] = await Promise.all([
+        getBillingPlanById(planId), // Fetch the plan details
         getServices(),
         getPlanServicesWithConfigurations(planId),
-        getServiceCategories() // Fetch categories
       ]);
 
-      setServiceCategories(categories); // Store categories
-
-      // Create category map
-      const categoryMap = new Map(categories.map(cat => [cat.category_id, cat.category_name]));
+      if (!planDetails) {
+        throw new Error(`Billing plan with ID ${planId} not found.`);
+      }
+      setPlanType(planDetails.plan_type); // Store the plan type
 
       // Enhance services with details and configuration
       const enhancedServices: EnhancedPlanService[] = servicesWithConfigurations.map(configInfo => {
-        const serviceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
-        const categoryName = serviceDetails?.service_type_id
-           ? categoryMap.get(serviceDetails.service_type_id) || 'N/A' // Lookup name
-           : 'N/A';
+        // Find the corresponding full service details from the getServices() call
+        // Note: configInfo.service already contains service_type_name from the updated action
+        const fullServiceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
+        
         return {
            plan_id: planId,
            service_id: configInfo.configuration.service_id,
@@ -97,17 +100,16 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
            updated_at: configInfo.configuration.updated_at,
            configuration: configInfo.configuration,
            configurationType: configInfo.configuration.configuration_type,
-           service_name: serviceDetails?.service_name || 'Unknown Service',
-           service_category: categoryName, // Assign name
-           billing_method: serviceDetails?.billing_method,
-           unit_of_measure: serviceDetails?.unit_of_measure || 'N/A',
-           default_rate: serviceDetails?.default_rate
+           service_name: configInfo.service.service_name || 'Unknown Service',
+           service_type_name: configInfo.service.service_type_name || 'N/A', // Use directly from joined data
+           billing_method: configInfo.service.billing_method,
+           unit_of_measure: configInfo.service.unit_of_measure || 'N/A',
+           default_rate: configInfo.service.default_rate
         };
      });
 
       setPlanServices(enhancedServices);
-      setAvailableServices(allAvailableServices);
-      setSelectedServicesToAdd([]);
+      setAvailableServices(allAvailableServices); // Keep this to know which services *can* be added
     } catch (error) {
       console.error('Error fetching data:', error);
       setError('Failed to load services data');
@@ -177,20 +179,39 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
   const planServiceColumns: ColumnDefinition<EnhancedPlanService>[] = [
     { title: 'Service Name', dataIndex: 'service_name' },
-    { title: 'Category', dataIndex: 'service_category' }, // Displays name now
+    { title: 'Service Type', dataIndex: 'service_type_name' }, // Changed title and dataIndex
     {
       title: 'Billing Method',
       dataIndex: 'billing_method',
       render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
     },
     {
-      title: 'Configuration Type',
-      dataIndex: 'configurationType',
-      render: (value) => (
-        <Badge className={`${getConfigTypeColor(value)}`}>
-          {value || 'Default'} {/* Show Default if type is missing */}
-        </Badge>
-      ),
+      title: 'Derived Config Type', // Changed title slightly for clarity
+      dataIndex: 'billing_method', // Use billing_method and unit_of_measure from record
+      render: (_, record) => { // Use record instead of value
+        let derivedType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | undefined; // Allow undefined
+
+        if (record.billing_method === 'fixed') {
+          derivedType = 'Fixed';
+        } else if (record.billing_method === 'per_unit') {
+          if (record.unit_of_measure?.toLowerCase().includes('hour')) {
+            derivedType = 'Hourly';
+          } else {
+            derivedType = 'Usage';
+          }
+        }
+        // Note: 'Bucket' type might need different logic if applicable
+
+        // Determine display text, defaulting to 'Default' if derivedType is undefined
+        const displayText = derivedType || 'Default';
+
+        return (
+          // Pass potentially undefined derivedType to getConfigTypeColor
+          <Badge className={`${getConfigTypeColor(derivedType)}`}>
+            {displayText}
+          </Badge>
+        );
+      },
     },
     { title: 'Quantity', dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
     { title: 'Unit of Measure', dataIndex: 'unit_of_measure' },
@@ -199,8 +220,8 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
-        // Assuming rate is stored in cents in the database
-        return rate !== undefined ? `$${(rate / 100).toFixed(2)}` : 'N/A';
+        // Display rate directly as decimal
+        return rate !== undefined ? `$${parseFloat(rate).toFixed(2)}` : 'N/A';
       },
     },
     {
@@ -240,12 +261,32 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     },
   ];
 
-  const servicesAvailableToAdd = availableServices.filter(
-    availService => !planServices.some(ps => ps.service_id === availService.service_id)
-  );
+  // Filter available services based on plan type and already added services
+  const servicesAvailableToAdd = availableServices.filter(availService => {
+    // Check if service is already added
+    const isAlreadyAdded = planServices.some(ps => ps.service_id === availService.service_id);
+    if (isAlreadyAdded) {
+      return false;
+    }
 
-  // Create category map for rendering add list
-  const categoryMap = new Map(serviceCategories.map(cat => [cat.category_id, cat.category_name]));
+    // Apply filtering logic based on plan type and the service's own billing_method
+    if (planType === 'Hourly') {
+      // For Hourly plans, exclude services with 'fixed' billing method directly from the service record
+      return availService.billing_method !== 'fixed';
+    }
+
+    // TODO: Add filtering logic for other plan types if needed (using availService.billing_method)
+    // Example:
+    // if (planType === 'Fixed') {
+    //   // Only allow services with 'fixed' billing method?
+    //   return availService.billing_method === 'fixed';
+    // }
+
+    // Default: allow service if not already added and no specific filter applies
+    return true;
+  });
+
+  // Removed category map for rendering add list
 
   return (
     // Using div instead of Card
@@ -279,9 +320,8 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
                     <div className="mb-3">
                         <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                         {servicesAvailableToAdd.map(service => {
-                            const categoryName = service.service_type_id
-                                ? categoryMap.get(service.service_type_id) || 'N/A' // Lookup name
-                                : 'N/A';
+                            // Use service_type_name directly from the service object (fetched via updated getServices)
+                            const serviceTypeName = (service as any).service_type_name || 'N/A'; // Cast needed as IService doesn't have it yet
                             return (
                                 <div
                                 key={service.service_id}
@@ -303,7 +343,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
                                 <label htmlFor={`add-generic-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
                                     <span>{service.service_name}</span>
                                     <span className="text-xs text-muted-foreground">
-                                    Category: {categoryName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ (service.default_rate / 100).toFixed(2)}
+                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${service.default_rate.toFixed(2)}
                                     </span>
                                 </label>
                                 </div>
@@ -330,7 +370,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         <BillingPlanServiceForm
           planService={editingService}
           services={availableServices} // Pass all available services for context if needed by form
-          serviceCategories={serviceCategories} // Pass fetched categories down
+          // Removed serviceCategories prop
           onClose={() => setEditingService(null)}
           onServiceUpdated={handleServiceUpdated}
         />

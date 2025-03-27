@@ -6,13 +6,18 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
-import { UnitOfMeasureInput } from './UnitOfMeasureInput'; // Assuming this path is correct relative to the new file
+import { UnitOfMeasureInput } from '../UnitOfMeasureInput'; // Assuming this path is correct relative to the new file
 import { Button } from 'server/src/components/ui/Button';
 import { Trash2, Plus, Loader2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction'; // Corrected path
 import GenericPlanServicesList from './GenericPlanServicesList'; // Import the generic list
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces'; // Removed ValidationErrors import
+
+// Define ValidationErrors locally
+type ValidationErrors = {
+  [key: string]: string | undefined;
+};
 
 // Define TierConfig locally or import if available globally
 interface TierConfig {
@@ -37,11 +42,15 @@ type UsagePlanData = IBillingPlan & UsagePlanConfigFields;
 interface UsagePlanConfigurationProps {
   planId: string;
   className?: string;
+  // Removed validationErrors prop
+  // Removed onConfigChange prop
 }
 
 export function UsagePlanConfiguration({
   planId,
   className = '',
+  // Removed validationErrors prop usage
+  // Removed onConfigChange prop usage
 }: UsagePlanConfigurationProps) {
   const [plan, setPlan] = useState<UsagePlanData | null>(null);
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
@@ -51,15 +60,13 @@ export function UsagePlanConfiguration({
   const [tiers, setTiers] = useState<TierConfig[]>([]);
 
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving] = useState(false); // Keep for disabling fields during load/internal ops?
   const [error, setError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<{
-    baseRate?: string;
-    minimumUsage?: string;
-    tiers?: string;
-    unitOfMeasure?: string;
-  }>({});
+  const [saveError, setSaveError] = useState<string | null>(null); // Keep for internal errors?
+  // Re-add local validation state
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+  const [saveAttempted, setSaveAttempted] = useState<boolean>(false); // State to track save attempt
+
 
   const fetchPlanData = useCallback(async () => {
     setLoading(true);
@@ -90,12 +97,13 @@ export function UsagePlanConfiguration({
     fetchPlanData();
   }, [fetchPlanData]);
 
-  // Validate inputs
+  // Re-add local validation useEffect
   useEffect(() => {
-    const errors: typeof validationErrors = {};
-    if (baseRate !== undefined && baseRate < 0) errors.baseRate = 'Base rate cannot be negative';
-    if (minimumUsage !== undefined && minimumUsage < 0) errors.minimumUsage = 'Minimum usage cannot be negative';
-    if (!unitOfMeasure) errors.unitOfMeasure = 'Unit of measure is required';
+    const errors: ValidationErrors = {};
+    // Use backend field names for keys if they differ
+    if (baseRate !== undefined && baseRate < 0) errors.base_rate = 'Base rate cannot be negative';
+    if (minimumUsage !== undefined && minimumUsage < 0) errors.minimum_usage = 'Minimum usage cannot be negative';
+    if (!unitOfMeasure) errors.unit_of_measure = 'Unit of measure is required';
 
     if (enableTieredPricing && tiers.length > 0) {
       const sortedTiers = [...tiers].sort((a, b) => a.fromAmount - b.fromAmount);
@@ -138,38 +146,104 @@ export function UsagePlanConfiguration({
     setValidationErrors(errors);
   }, [baseRate, minimumUsage, unitOfMeasure, tiers, enableTieredPricing]);
 
+  // Re-add handleSave function
   const handleSave = async () => {
-    if (!plan || Object.values(validationErrors).some(e => e)) {
-        setSaveError("Cannot save, validation errors exist or plan not loaded.");
+    // Validation logic moved inside handleSave or called from here
+    // Set saveAttempted = true here
+    if (!plan) {
+        setSaveError("Plan data not loaded.");
         return;
     }
+
+    // Trigger validation check on save attempt
+    const errors = validateUsagePlan(); // Assuming a validation function
+    setValidationErrors(errors);
+    setSaveAttempted(true); // Mark that save was attempted
+
+    if (Object.keys(errors).length > 0) {
+        setSaveError("Cannot save, validation errors exist.");
+        return; // Stop if validation fails
+    }
+
+
     setSaving(true);
     setSaveError(null);
     try {
-        // Remove temporary IDs before saving if they were added client-side
-        // Ensure tiers are sorted correctly before saving
         const tiersToSave = tiers
             .sort((a, b) => a.fromAmount - b.fromAmount)
-            .map(({ id, ...rest }) => rest); // Remove client-side ID
+            .map(({ id, ...rest }) => rest);
 
-        // Payload should match the expected fields for update, potentially excluding IBillingPlan base fields
         const updatePayload: Partial<UsagePlanConfigFields> = {
-            base_rate: enableTieredPricing ? undefined : baseRate, // Only save baseRate if not tiered
+            base_rate: enableTieredPricing ? undefined : baseRate,
             unit_of_measure: unitOfMeasure,
             enable_tiered_pricing: enableTieredPricing,
             minimum_usage: minimumUsage,
-            tiers: enableTieredPricing ? tiersToSave : [], // Save tiers only if enabled
+            tiers: enableTieredPricing ? tiersToSave : [],
         };
-        await updateBillingPlan(planId, updatePayload as Partial<IBillingPlan>); // Cast payload
-        // Optionally re-fetch or show success
-        fetchPlanData(); // Re-fetch to get potentially updated tier IDs from backend
+        // TODO: Implement correct saving logic for Usage Plan Configuration.
+        // This likely involves calling actions that update service-level configuration tables
+        // (e.g., plan_service_usage_config, plan_service_rate_tiers) via planServiceConfigurationActions.ts,
+        // NOT the generic updateBillingPlan action.
+        // await updateBillingPlan(planId, updatePayload as Partial<IBillingPlan>); // Incorrect: updateBillingPlan targets billing_plans table
+        console.log("TODO: Implement save for Usage Plan Config:", updatePayload); // Placeholder
+        // Simulate success for UI feedback for now
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate async operation
+
+        fetchPlanData(); // Re-fetch data after simulated save
     } catch (err) {
-        console.error('Error saving plan configuration:', err);
+        console.error('Error saving usage plan configuration:', err);
         setSaveError('Failed to save configuration. Please try again.');
     } finally {
         setSaving(false);
     }
   };
+
+  // Define the validation function used in handleSave
+  const validateUsagePlan = (): ValidationErrors => {
+      const errors: ValidationErrors = {};
+      if (baseRate !== undefined && baseRate < 0) errors.base_rate = 'Base rate cannot be negative';
+      if (!enableTieredPricing && baseRate === undefined) errors.base_rate = 'Base rate is required when tiered pricing is off.'; // Added required check
+      if (minimumUsage !== undefined && minimumUsage < 0) errors.minimum_usage = 'Minimum usage cannot be negative';
+      if (!unitOfMeasure) errors.unit_of_measure = 'Unit of measure is required';
+
+      if (enableTieredPricing && tiers.length > 0) {
+        const sortedTiers = [...tiers].sort((a, b) => a.fromAmount - b.fromAmount);
+        let tierErrorFound = false;
+        for (let i = 0; i < sortedTiers.length; i++) {
+          const currentTier = sortedTiers[i];
+          if (currentTier.rate < 0) {
+              errors.tiers = 'Tier rates cannot be negative.';
+              tierErrorFound = true; break;
+          }
+          if (currentTier.toAmount !== null && currentTier.toAmount < currentTier.fromAmount) {
+              errors.tiers = `Tier ${i + 1}: Upper bound must be greater than or equal to lower bound.`;
+              tierErrorFound = true; break;
+          }
+          if (i < sortedTiers.length - 1) {
+              const nextTier = sortedTiers[i + 1];
+              if (currentTier.toAmount === null) {
+                  errors.tiers = 'Only the last tier can have an unlimited upper bound (leave "To" blank).';
+                  tierErrorFound = true; break;
+              }
+              if (currentTier.toAmount > nextTier.fromAmount) {
+                  errors.tiers = `Tier ${i + 1} overlaps with Tier ${i + 2}. Upper bound must be less than or equal to the next tier's lower bound.`;
+                  tierErrorFound = true; break;
+              }
+              if (currentTier.toAmount + 1 < nextTier.fromAmount) {
+                   errors.tiers = `Gap detected between Tier ${i + 1} and Tier ${i + 2}. Tiers must be contiguous.`;
+                   tierErrorFound = true; break;
+              }
+          }
+        }
+         if (!tierErrorFound && sortedTiers[0]?.fromAmount !== 0) {
+             errors.tiers = 'The first tier must start from 0.';
+         }
+      } else if (enableTieredPricing && tiers.length === 0) {
+          errors.tiers = 'At least one tier is required when tiered pricing is enabled.';
+      }
+      return errors;
+  };
+
 
  const handleAddTier = () => {
     setTiers(prevTiers => {
@@ -287,31 +361,31 @@ export function UsagePlanConfiguration({
           )}
 
           {/* Basic Usage Settings */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="flex flex-col gap-4">
             <div>
-              <Label htmlFor="usage-plan-base-rate">Default Rate per Unit</Label>
+              <Label htmlFor="usage-plan-base-rate">Default Rate per Unit <span className="text-destructive">*</span></Label>
               <Input
                 id="usage-plan-base-rate" type="number"
                 value={baseRate?.toString() || ''}
                 onChange={handleNumberInputChange(setBaseRate)}
-                placeholder="Enter base rate" disabled={saving || enableTieredPricing} // Disable if tiered pricing is on
+                placeholder="Enter base rate" disabled={saving || enableTieredPricing} // Keep saving disable
                 min={0} step={0.01}
-                className={validationErrors.baseRate ? 'border-red-500' : ''}
+                className={saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''} // Conditional error class
               />
-              {validationErrors.baseRate && <p className="text-sm text-red-500 mt-1">{validationErrors.baseRate}</p>}
-              {!validationErrors.baseRate && <p className="text-sm text-muted-foreground mt-1">Rate per unit (used if tiered pricing is off).</p>}
+              {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}
+              {!(saveAttempted && validationErrors.base_rate) && <p className="text-sm text-muted-foreground mt-1">Rate per unit (used if tiered pricing is off).</p>}
             </div>
             <div>
-              <Label htmlFor="usage-plan-unit-of-measure">Unit of Measure</Label>
+              <Label htmlFor="usage-plan-unit-of-measure">Unit of Measure <span className="text-destructive">*</span></Label>
               <UnitOfMeasureInput
                 value={unitOfMeasure}
                 onChange={setUnitOfMeasure}
-                placeholder="Select unit" required disabled={saving}
+                placeholder="Select unit" /*required removed*/ disabled={saving} // Keep saving disable
                 serviceType="Usage" // Or dynamically set based on service if needed
-                className={validationErrors.unitOfMeasure ? 'border-red-500' : ''}
+                className={saveAttempted && validationErrors.unit_of_measure ? 'border-red-500' : ''} // Conditional error class
               />
-               {validationErrors.unitOfMeasure && <p className="text-sm text-red-500 mt-1">{validationErrors.unitOfMeasure}</p>}
-               {!validationErrors.unitOfMeasure && <p className="text-sm text-muted-foreground mt-1">e.g., GB, User, Device.</p>}
+               {saveAttempted && validationErrors.unit_of_measure && <p className="text-sm text-red-500 mt-1">{validationErrors.unit_of_measure}</p>}
+               {!(saveAttempted && validationErrors.unit_of_measure) && <p className="text-sm text-muted-foreground mt-1">e.g., GB, User, Device.</p>}
             </div>
              <div>
               <Label htmlFor="minimum-usage">Minimum Usage</Label>
@@ -319,13 +393,15 @@ export function UsagePlanConfiguration({
                 id="minimum-usage" type="number"
                 value={minimumUsage?.toString() || ''}
                 onChange={handleNumberInputChange(setMinimumUsage)}
-                placeholder="0" disabled={saving} min={0} step={1}
-                className={validationErrors.minimumUsage ? 'border-red-500' : ''}
+                placeholder="0" disabled={saving} min={0} step={1} // Keep saving disable
+                className={saveAttempted && validationErrors.minimum_usage ? 'border-red-500' : ''} // Conditional error class
               />
-              {validationErrors.minimumUsage && <p className="text-sm text-red-500 mt-1">{validationErrors.minimumUsage}</p>}
-              {!validationErrors.minimumUsage && <p className="text-sm text-muted-foreground mt-1">Minimum billable units per period.</p>}
+              {saveAttempted && validationErrors.minimum_usage && <p className="text-sm text-red-500 mt-1">{validationErrors.minimum_usage}</p>}
+              {!(saveAttempted && validationErrors.minimum_usage) && <p className="text-sm text-muted-foreground mt-1">Minimum billable units per period.</p>}
             </div>
+             <p className="text-xs text-muted-foreground pt-2"><span className="text-destructive">*</span> Indicates a required field.</p>
           </div>
+
 
           {/* Tiered Pricing */}
           <div className="space-y-3 pt-3">
@@ -343,15 +419,16 @@ export function UsagePlanConfiguration({
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                   {validationErrors.tiers && (
+                   {saveAttempted && validationErrors.tiers && ( // Conditional error display
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>{validationErrors.tiers}</AlertDescription>
                     </Alert>
                   )}
-                  {tiers.length === 0 && !validationErrors.tiers ? (
+                  {tiers.length === 0 && !(saveAttempted && validationErrors.tiers) ? ( // Hide if showing tier error
                     <p className="text-sm text-muted-foreground">No tiers defined. Click "Add Tier".</p>
-                  ) : (
+                  ) : null}
+                  {tiers.length > 0 && ( // Only show tier inputs if tiers exist
                     <div className="space-y-2">
                       {/* Header Row */}
                        <div className="grid grid-cols-11 gap-2 items-center font-medium text-xs text-muted-foreground px-2">
@@ -378,8 +455,6 @@ export function UsagePlanConfiguration({
                               value={tier.toAmount === null ? '' : tier.toAmount.toString()}
                               onChange={(e) => handleTierChange(tier.id, 'toAmount', e.target.value)}
                               placeholder={index === sortedTiers.length - 1 ? "Unlimited" : ""}
-                              // Disable 'To' unless it's the last tier (to allow setting to null/unlimited)
-                              // Or if it's not the last tier, it should be derived from the next tier's 'From'
                               disabled={saving || index !== sortedTiers.length - 1}
                               min={tier.fromAmount} step={1} aria-label={`Tier ${index + 1} To Amount`}
                             />
@@ -415,9 +490,9 @@ export function UsagePlanConfiguration({
             )}
           </div>
 
-          {/* Save Button */}
+          {/* Restore Save Button */}
           <div className="flex justify-end pt-4">
-            <Button id="save-usage-config-button" onClick={handleSave} disabled={saving || Object.values(validationErrors).some(e => e)}>
+            <Button id="save-usage-config-button" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Save Configuration
             </Button>

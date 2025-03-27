@@ -29,13 +29,6 @@ export function HourlyServiceConfigPanel({
 }: HourlyServiceConfigPanelProps) {
   const [minimumBillableTime, setMinimumBillableTime] = useState(configuration.minimum_billable_time || 15);
   const [roundUpToNearest, setRoundUpToNearest] = useState(configuration.round_up_to_nearest || 15);
-  const [enableOvertime, setEnableOvertime] = useState(configuration.enable_overtime || false);
-  const [overtimeRate, setOvertimeRate] = useState<number | undefined>(configuration.overtime_rate);
-  const [overtimeThreshold, setOvertimeThreshold] = useState<number | undefined>(configuration.overtime_threshold || 40);
-  const [enableAfterHoursRate, setEnableAfterHoursRate] = useState(configuration.enable_after_hours_rate || false);
-  const [afterHoursMultiplier, setAfterHoursMultiplier] = useState<number | undefined>(
-    configuration.after_hours_multiplier || 1.5
-  );
   const [newUserType, setNewUserType] = useState('');
   const [newUserTypeRate, setNewUserTypeRate] = useState<number | undefined>(undefined);
   const [validationErrors, setValidationErrors] = useState<{
@@ -51,11 +44,6 @@ export function HourlyServiceConfigPanel({
   useEffect(() => {
     setMinimumBillableTime(configuration.minimum_billable_time || 15);
     setRoundUpToNearest(configuration.round_up_to_nearest || 15);
-    setEnableOvertime(configuration.enable_overtime || false);
-    setOvertimeRate(configuration.overtime_rate);
-    setOvertimeThreshold(configuration.overtime_threshold || 40);
-    setEnableAfterHoursRate(configuration.enable_after_hours_rate || false);
-    setAfterHoursMultiplier(configuration.after_hours_multiplier || 1.5);
   }, [configuration]);
 
   // Validate inputs when they change
@@ -77,18 +65,6 @@ export function HourlyServiceConfigPanel({
       errors.roundUpToNearest = 'Round up value cannot be negative';
     }
 
-    if (enableOvertime && overtimeRate !== undefined && overtimeRate < 0) {
-      errors.overtimeRate = 'Overtime rate cannot be negative';
-    }
-
-    if (enableOvertime && overtimeThreshold !== undefined && overtimeThreshold < 0) {
-      errors.overtimeThreshold = 'Overtime threshold cannot be negative';
-    }
-
-    if (enableAfterHoursRate && afterHoursMultiplier !== undefined && afterHoursMultiplier < 1) {
-      errors.afterHoursMultiplier = 'After hours multiplier must be at least 1';
-    }
-
     if (newUserTypeRate !== undefined && newUserTypeRate < 0) {
       errors.newUserTypeRate = 'User type rate cannot be negative';
     }
@@ -97,11 +73,6 @@ export function HourlyServiceConfigPanel({
   }, [
     minimumBillableTime,
     roundUpToNearest,
-    enableOvertime,
-    overtimeRate,
-    overtimeThreshold,
-    enableAfterHoursRate,
-    afterHoursMultiplier,
     newUserTypeRate
   ]);
 
@@ -115,34 +86,6 @@ export function HourlyServiceConfigPanel({
     const value = Number(e.target.value);
     setRoundUpToNearest(value);
     onConfigurationChange({ round_up_to_nearest: value });
-  };
-
-  const handleEnableOvertimeChange = (checked: boolean) => {
-    setEnableOvertime(checked);
-    onConfigurationChange({ enable_overtime: checked });
-  };
-
-  const handleOvertimeRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Math.round(Number(e.target.value) * 100); // Store in cents
-    setOvertimeRate(value);
-    onConfigurationChange({ overtime_rate: value });
-  };
-
-  const handleOvertimeThresholdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
-    setOvertimeThreshold(value);
-    onConfigurationChange({ overtime_threshold: value });
-  };
-
-  const handleEnableAfterHoursRateChange = (checked: boolean) => {
-    setEnableAfterHoursRate(checked);
-    onConfigurationChange({ enable_after_hours_rate: checked });
-  };
-
-  const handleAfterHoursMultiplierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value === '' ? undefined : Number(e.target.value);
-    setAfterHoursMultiplier(value);
-    onConfigurationChange({ after_hours_multiplier: value });
   };
 
   const handleNewUserTypeRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,103 +243,6 @@ export function HourlyServiceConfigPanel({
                   Add Rate
                 </Button>
               </div>
-            </div>
-          )}
-
-          {/* Overtime Section */}
-          <div className="flex items-center space-x-2 pt-2">
-            <Switch
-              id="enable-overtime"
-              checked={enableOvertime}
-              onCheckedChange={handleEnableOvertimeChange}
-              disabled={disabled}
-            />
-            <Label htmlFor="enable-overtime" className="cursor-pointer">
-              Enable Overtime Rates
-            </Label>
-          </div>
-
-          {enableOvertime && (
-            <div className="grid grid-cols-2 gap-4 pl-6 border-l-2 border-gray-200">
-              <div>
-                <Label htmlFor="overtime-rate">Overtime Rate</Label>
-                <Input
-                  id="overtime-rate"
-                  type="number"
-                  value={(overtimeRate !== undefined ? overtimeRate / 100 : '').toString()} // Display in dollars
-                  onChange={handleOvertimeRateChange}
-                  placeholder="Enter overtime rate"
-                  disabled={disabled}
-                  min={0}
-                  step={0.01}
-                  className={validationErrors.overtimeRate ? 'border-red-500' : ''}
-                />
-                {validationErrors.overtimeRate ? (
-                  <p className="text-sm text-red-500 mt-1">{validationErrors.overtimeRate}</p>
-                ) : (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Rate applied to overtime hours
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="overtime-threshold">Overtime Threshold (hours)</Label>
-                <Input
-                  id="overtime-threshold"
-                  type="number"
-                  value={overtimeThreshold?.toString() || ''}
-                  onChange={handleOvertimeThresholdChange}
-                  placeholder="40"
-                  disabled={disabled}
-                  min={0}
-                  step={1}
-                  className={validationErrors.overtimeThreshold ? 'border-red-500' : ''}
-                />
-                {validationErrors.overtimeThreshold ? (
-                  <p className="text-sm text-red-500 mt-1">{validationErrors.overtimeThreshold}</p>
-                ) : (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Hours per period before overtime applies
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* After Hours Rate Section */}
-          <div className="flex items-center space-x-2 pt-2">
-            <Switch
-              id="enable-after-hours"
-              checked={enableAfterHoursRate}
-              onCheckedChange={handleEnableAfterHoursRateChange}
-              disabled={disabled}
-            />
-            <Label htmlFor="enable-after-hours" className="cursor-pointer">
-              Enable After-Hours Rate Multiplier
-            </Label>
-          </div>
-
-          {enableAfterHoursRate && (
-            <div className="pl-6 border-l-2 border-gray-200">
-              <Label htmlFor="after-hours-multiplier">After-Hours Rate Multiplier</Label>
-              <Input
-                id="after-hours-multiplier"
-                type="number"
-                value={afterHoursMultiplier?.toString() || ''}
-                onChange={handleAfterHoursMultiplierChange}
-                placeholder="1.5"
-                disabled={disabled}
-                min={1}
-                step={0.1}
-                className={validationErrors.afterHoursMultiplier ? 'border-red-500' : ''}
-              />
-              {validationErrors.afterHoursMultiplier ? (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.afterHoursMultiplier}</p>
-              ) : (
-                <p className="text-sm text-gray-500 mt-1">
-                  Multiplier applied to standard rate for after-hours work (e.g., 1.5 = 150% of standard rate)
-                </p>
-              )}
             </div>
           )}
         </div>

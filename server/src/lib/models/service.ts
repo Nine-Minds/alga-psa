@@ -24,7 +24,9 @@ export const serviceSchema = z.object({
   tenant: z.string().min(1, 'Tenant is required'),
   service_name: z.string(),
   service_type_id: z.string(), // Changed from service_type
-  billing_method: z.enum(['fixed', 'per_unit']), // Added billing_method
+  service_type_name: z.string().nullable().optional(), // Allow null or undefined
+  service_type_billing_method: z.enum(['fixed', 'per_unit']).nullable().optional(), // Billing method from the standard type
+  billing_method: z.enum(['fixed', 'per_unit']), // Billing method specific to this service instance
   default_rate: z.number(),
   unit_of_measure: z.string(),
   category_id: z.string().nullable()
@@ -49,28 +51,32 @@ const Service = {
 
     log.info(`[Service.getAll] Fetching all services for tenant: ${tenant}`);
 
-    try {
-      const services = await db<IService>('service_catalog')
-        .where({ tenant })
-        .select(
-          'service_id',
-          'service_name',
-          'service_type_id', // Changed from service_type
-          'billing_method', // Added billing_method
-          db.raw('CAST(default_rate AS FLOAT) as default_rate'),
-          'unit_of_measure',
-          'category_id',
-          'is_taxable',
-          'tax_region',
-          'tenant'
-        );
-      log.info(`[Service.getAll] Found ${services.length} services`);
-      
-      const validatedServices = services.map((service): IService =>
-        validateData(serviceSchema, service)
-      );
-      log.info(`[Service.getAll] Services data validated successfully`);
-
+    
+        try {
+          const services = await db('service_catalog as sc') // Alias service_catalog as sc
+            .leftJoin('standard_service_types as st', 'sc.service_type_id', 'st.id') // Corrected join table and column
+            .where({ 'sc.tenant': tenant }) // Use alias for where clause
+            .select(
+              'sc.service_id',
+              'sc.service_name',
+              'sc.service_type_id',
+              'st.name as service_type_name', // Select the name from service_types
+              'st.billing_method as service_type_billing_method', // Select the billing_method from service_types
+              'sc.billing_method', // Keep the service's specific billing method too
+              db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+              'sc.unit_of_measure',
+              'sc.category_id',
+              'sc.is_taxable',
+              'sc.tax_region',
+              'sc.tenant'
+            );
+          log.info(`[Service.getAll] Found ${services.length} services`);
+          
+          // Adjust the type hint for the map function if necessary, though validateData should handle it
+          const validatedServices = services.map((service): IService & { service_type_name?: string } =>
+            validateData(serviceSchema, service) as IService & { service_type_name?: string } // Cast result of validation
+          );
+          log.info(`[Service.getAll] Services data validated successfully`);
       return validatedServices;
     } catch (error) {
       log.error(`[Service.getAll] Error fetching services:`, error);

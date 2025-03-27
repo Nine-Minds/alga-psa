@@ -3,7 +3,7 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { 
+import {
   IPlanServiceConfiguration,
   IPlanServiceFixedConfig,
   IPlanServiceHourlyConfig,
@@ -21,14 +21,14 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
+
   const services = await knex('plan_services')
     .where({
       plan_id: planId,
       tenant
     })
     .select('*');
-  
+
   return services;
 }
 
@@ -40,7 +40,7 @@ export async function getPlanService(planId: string, serviceId: string): Promise
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
+
   const service = await knex('plan_services')
     .where({
       plan_id: planId,
@@ -48,7 +48,7 @@ export async function getPlanService(planId: string, serviceId: string): Promise
       tenant
     })
     .first();
-  
+
   return service || null;
 }
 
@@ -56,9 +56,9 @@ export async function getPlanService(planId: string, serviceId: string): Promise
  * Add a service to a plan with configuration
  */
 export async function addServiceToPlan(
-  planId: string, 
-  serviceId: string, 
-  quantity?: number, 
+  planId: string,
+  serviceId: string,
+  quantity?: number,
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
   typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
@@ -67,19 +67,23 @@ export async function addServiceToPlan(
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
-  // Get service details to determine configuration type if not provided
-  const service = await knex('service_catalog')
+
+  // Get service details and join with standard_service_types to get the type's billing_method
+  const serviceWithType = await knex('service_catalog as sc')
+    .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
     .where({
-      service_id: serviceId,
-      tenant
+      'sc.service_id': serviceId,
+      'sc.tenant': tenant
     })
-    .first() as IService;
-  
-  if (!service) {
+    .select('sc.*', 'sst.billing_method as service_type_billing_method') // Select the billing_method from the type table
+    .first() as IService & { service_type_billing_method?: 'fixed' | 'per_unit' }; // Add type info
+
+  if (!serviceWithType) {
     throw new Error(`Service ${serviceId} not found`);
   }
-  
+  // Use serviceWithType which includes service_type_billing_method for logic below
+  const service = serviceWithType; // Keep using 'service' variable name for compatibility with validation block
+
   // Get plan details
   const plan = await knex('billing_plans')
     .where({
@@ -87,17 +91,41 @@ export async function addServiceToPlan(
       tenant
     })
     .first();
-  
+
   if (!plan) {
     throw new Error(`Plan ${planId} not found`);
   }
-  
-  // Determine configuration type
-  const configurationType = configType || 
-    (service.service_type_id === 'Fixed' || service.service_type_id === 'Product' || service.service_type_id === 'License' ? 'Fixed' :
-     service.service_type_id === 'Time' ? 'Hourly' :
-     service.service_type_id === 'Usage' ? 'Usage' : 'Fixed');
-  
+
+  // --- BEGIN SERVER-SIDE VALIDATION ---
+  if (plan.plan_type === 'Hourly' && service.billing_method === 'fixed') {
+    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly billing plan.`);
+  }
+  // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed plans?)
+  // --- END SERVER-SIDE VALIDATION ---
+
+  // Determine configuration type based on standard service type's billing method, prioritizing explicit configType
+  let determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket'; // Bucket might need separate logic
+
+  if (configType) {
+    determinedConfigType = configType;
+  } else if (serviceWithType?.service_type_billing_method === 'fixed') {
+    determinedConfigType = 'Fixed';
+  } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
+    // Use the service's specific unit_of_measure
+    if (serviceWithType.unit_of_measure?.toLowerCase().includes('hour')) {
+       determinedConfigType = 'Hourly';
+    } else {
+       determinedConfigType = 'Usage'; // Default for other per_unit types
+    }
+  } else {
+    // Fallback or error for missing/unknown standard service type billing method
+    console.warn(`Could not determine standard billing method for service type of ${serviceId}. Defaulting configuration type to 'Fixed'.`);
+    // Consider service.billing_method as secondary fallback? For now, default to Fixed.
+    determinedConfigType = 'Fixed';
+  }
+
+  const configurationType = determinedConfigType;
+
   // Create configuration
   const configId = await planServiceConfigActions.createConfiguration(
     {
@@ -110,7 +138,7 @@ export async function addServiceToPlan(
     },
     typeConfig || {}
   );
-  
+
   return configId;
 }
 
@@ -118,8 +146,8 @@ export async function addServiceToPlan(
  * Update a service in a plan
  */
 export async function updatePlanService(
-  planId: string, 
-  serviceId: string, 
+  planId: string,
+  serviceId: string,
   updates: {
     quantity?: number;
     customRate?: number;
@@ -130,14 +158,14 @@ export async function updatePlanService(
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
+
   // Get configuration ID
   const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
-  
+
   if (!config) {
     throw new Error(`Configuration for service ${serviceId} in plan ${planId} not found`);
   }
-  
+
   // Update configuration
   const baseUpdates: Partial<IPlanServiceConfiguration> = {};
   if (updates.quantity !== undefined) {
@@ -146,13 +174,13 @@ export async function updatePlanService(
   if (updates.customRate !== undefined) {
     baseUpdates.custom_rate = updates.customRate;
   }
-  
+
   await planServiceConfigActions.updateConfiguration(
     config.config_id,
     Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
     updates.typeConfig
   );
-  
+
   return true;
 }
 
@@ -164,23 +192,23 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
+
   // Get configuration ID
   const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
-  
+
   // Remove configuration if it exists
   if (config) {
     await planServiceConfigActions.deleteConfiguration(config.config_id);
   }
-  
+
   return true;
 }
 
 /**
- * Get all services in a plan with their configurations
+ * Get all services in a plan with their configurations and service type name
  */
 export async function getPlanServicesWithConfigurations(planId: string): Promise<{
-  service: IService;
+  service: IService & { service_type_name?: string }; // Add service_type_name to the service object
   configuration: IPlanServiceConfiguration;
   typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
 }[]> {
@@ -188,32 +216,35 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   if (!tenant) {
     throw new Error("tenant context not found");
   }
-  
+
   // Get all configurations for the plan
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
-  
-  // Get service details for each configuration
+
+  // Get service details including service type name for each configuration
   const result = [];
   for (const config of configurations) {
-    const service = await knex('service_catalog')
+    // Join service_catalog with standard_service_types to get the name
+    const service = await knex('service_catalog as sc')
+      .leftJoin('standard_service_types as st', 'sc.service_type_id', 'st.id') // Corrected join table and column
       .where({
-        service_id: config.service_id,
-        tenant
+        'sc.service_id': config.service_id,
+        'sc.tenant': tenant
       })
-      .first() as IService;
-    
+      .select('sc.*', 'st.name as service_type_name') // Select all from service_catalog and the name from service_types
+      .first() as IService & { service_type_name?: string }; // Cast to include the new field
+
     if (!service) {
       continue;
     }
-    
+
     const configDetails = await planServiceConfigActions.getConfigurationWithDetails(config.config_id);
-    
+
     result.push({
-      service,
+      service, // This now includes service_type_name
       configuration: config,
       typeConfig: configDetails.typeConfig
     });
   }
-  
+
   return result;
 }

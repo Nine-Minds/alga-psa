@@ -14,7 +14,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction'; // Corrected path
 import { getPlanServices } from 'server/src/lib/actions/planServiceActions'; // Assuming this action exists
 import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces'; // Added IPlanService
-import FixedPlanServicesList from './FixedPlanServicesList'; // Import the actual component
+import FixedPlanServicesList from '../FixedPlanServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
   planId: string;
@@ -155,6 +155,13 @@ export function FixedPlanConfiguration({
     { value: 'anniversary', label: 'Anniversary Date' }
   ];
 
+  const alignmentDescriptions: Record<string, string> = {
+    start: 'Proration is calculated based on the start date of the billing cycle.',
+    end: 'Proration is calculated based on the end date of the billing cycle.',
+    calendar: 'Proration aligns to the calendar month (e.g., the 1st of the month).',
+    anniversary: 'Proration aligns to the anniversary date of the subscription or plan start.'
+  };
+
   // Service options might only be needed if the service is selectable/changeable here.
   const serviceOptions = services.map(service => ({
     value: service.service_id,
@@ -263,7 +270,7 @@ export function FixedPlanConfiguration({
                     disabled={saving}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Determines how partial periods are calculated for proration.
+                    {alignmentDescriptions[billingCycleAlignment]}
                   </p>
                 </div>
              )}
