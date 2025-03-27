@@ -63,7 +63,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [services, setServices] = useState<IService[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
-        service_type: 'Time', // Removed 'as ServiceType' cast
+        service_type_id: 'Time', // Corrected property name
         service_name: '',
         default_rate: 0,
         category_id: '',
@@ -263,7 +263,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             await createService(newService as IService);
             setNewService({
                 unit_of_measure: 'hour',
-                service_type: 'Time', // Removed 'as ServiceType' cast
+                service_type_id: 'Time', // Corrected property name
                 service_name: '',
                 default_rate: 0,
                 category_id: '',

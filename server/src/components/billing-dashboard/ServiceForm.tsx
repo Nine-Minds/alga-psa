@@ -20,7 +20,7 @@ export const ServiceForm: React.FC = () => {
     try {
       await createService({
         service_name: serviceName,
-        service_type: serviceType,
+        service_type_id: serviceType, // Corrected property name
         default_rate: parseFloat(defaultRate),
         unit_of_measure: unitOfMeasure,
         category_id: '',

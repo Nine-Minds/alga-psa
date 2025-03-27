@@ -9,7 +9,7 @@ import { ITimePeriodView, IService } from 'server/src/interfaces';
 import Overview from './Overview';
 import BillingPlans from './BillingPlans';
 import BillingPlansOverview from './billing-plans/BillingPlansOverview';
-import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration';
+// import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration'; // No longer used directly here
 import TimePeriods from './TimePeriods';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
@@ -22,6 +22,7 @@ import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import PlanBundles from './plan-bundles/PlanBundles';
 import PlanBundleDetail from './plan-bundles/PlanBundleDetail';
+import { PlanTypeRouter } from './PlanTypeRouter'; // Import the new router
 
 interface BillingDashboardProps {
   initialTimePeriods: ITimePeriodView[];
@@ -115,8 +116,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="plans">
-          {searchParams?.has('planId') ? (
-            <BillingPlanConfiguration />
+          {searchParams?.get('planId') ? ( // Get the actual planId
+            <PlanTypeRouter planId={searchParams.get('planId')!} /> // Use PlanTypeRouter and pass planId
           ) : (
             <BillingPlansOverview />
           )}

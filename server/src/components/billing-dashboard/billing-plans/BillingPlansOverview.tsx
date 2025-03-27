@@ -13,7 +13,8 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { BillingPlanDialog } from '../BillingPlanDialog';
 import { getBillingPlans, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
+import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
@@ -22,10 +23,12 @@ const BillingPlansOverview: React.FC = () => {
   const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [allServiceTypes, setAllServiceTypes] = useState<(IServiceType & { is_standard?: boolean })[]>([]); // Added state for service types
   const router = useRouter();
 
   useEffect(() => {
     fetchBillingPlans();
+    fetchAllServiceTypes(); // Fetch service types on mount
   }, []);
 
   const fetchBillingPlans = async () => {
@@ -36,6 +39,17 @@ const BillingPlansOverview: React.FC = () => {
     } catch (error) {
       console.error('Error fetching billing plans:', error);
       setError('Failed to fetch billing plans');
+    }
+  };
+
+  // Function to fetch all service types
+  const fetchAllServiceTypes = async () => {
+    try {
+      const types = await getServiceTypesForSelection();
+      setAllServiceTypes(types);
+    } catch (error) {
+      console.error('Error fetching service types:', error);
+      // Optionally set an error state specific to service types
     }
   };
 
@@ -137,6 +151,7 @@ const BillingPlansOverview: React.FC = () => {
                 Add Plan
               </Button>
             }
+            allServiceTypes={allServiceTypes} // Pass the fetched service types
           />
         </div>
         

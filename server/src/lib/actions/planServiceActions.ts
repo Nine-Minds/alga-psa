@@ -94,9 +94,9 @@ export async function addServiceToPlan(
   
   // Determine configuration type
   const configurationType = configType || 
-    (service.service_type === 'Fixed' || service.service_type === 'Product' || service.service_type === 'License' ? 'Fixed' : 
-     service.service_type === 'Time' ? 'Hourly' : 
-     service.service_type === 'Usage' ? 'Usage' : 'Fixed');
+    (service.service_type_id === 'Fixed' || service.service_type_id === 'Product' || service.service_type_id === 'License' ? 'Fixed' :
+     service.service_type_id === 'Time' ? 'Hourly' :
+     service.service_type_id === 'Usage' ? 'Usage' : 'Fixed');
   
   // Create configuration
   const configId = await planServiceConfigActions.createConfiguration(

@@ -245,7 +245,7 @@ const CompanyServiceOverlapMatrix: React.FC<CompanyServiceOverlapMatrixProps> = 
                           )}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {service.service_type} • {service.unit_of_measure}
+                          {service.service_type_id} • {service.unit_of_measure}
                         </div>
                       </TableCell>
                       

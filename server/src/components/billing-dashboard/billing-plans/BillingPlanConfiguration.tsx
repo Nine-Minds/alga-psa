@@ -12,7 +12,7 @@ import { createBucketPlan, getBucketPlanByPlanId, updateBucketPlan } from 'serve
 import { useTenant } from 'server/src/components/TenantProvider';
 import BillingPlanHeader from './BillingPlanHeader';
 import BillingPlanForm from './BillingPlanForm';
-import BillingPlanServices from './BillingPlanServices';
+// import BillingPlanServices from './BillingPlanServices'; // Removed - Replaced by specialized lists in specialized config components
 import { FixedPlanConfigPanel } from '../plan-types/FixedPlanConfigPanel';
 import { HourlyPlanConfigPanel } from '../plan-types/HourlyPlanConfigPanel';
 import { UsagePlanConfigPanel } from '../plan-types/UsagePlanConfigPanel';
@@ -350,7 +350,7 @@ const BillingPlanConfiguration: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="services">
-          <BillingPlanServices plan={plan} />
+          {/* <BillingPlanServices plan={plan} /> */} {/* Removed - Replaced by specialized lists in specialized config components */}
         </TabsContent>
 
         <TabsContent value="configuration">

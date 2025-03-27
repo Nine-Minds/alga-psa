@@ -119,6 +119,34 @@ const BillingPlan = {
       throw error;
     }
   },
+
+  findById: async (planId: string): Promise<IBillingPlan | null> => {
+    const {knex: db, tenant} = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant context is required for fetching a billing plan');
+    }
+
+    try {
+      // Assume config fields are columns on billing_plans table
+      const plan = await db<IBillingPlan>('billing_plans')
+        .where({
+          plan_id: planId,
+          tenant: tenant
+        })
+        .first(); // Use .first() to get a single object or undefined
+
+      if (!plan) {
+        console.warn(`Billing plan ${planId} not found for tenant ${tenant}`);
+        return null;
+      }
+
+      console.log(`Retrieved billing plan ${planId} for tenant ${tenant}`);
+      return plan;
+    } catch (error) {
+      console.error(`Error fetching billing plan ${planId}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default BillingPlan;

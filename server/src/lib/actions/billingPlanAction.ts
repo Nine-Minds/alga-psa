@@ -23,6 +23,32 @@ export async function getBillingPlans(): Promise<IBillingPlan[]> {
     }
 }
 
+// New function to get a single billing plan by ID
+export async function getBillingPlanById(planId: string): Promise<IBillingPlan | null> {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error("tenant context not found");
+    }
+
+    try {
+        // Assuming the BillingPlan model has a method like findById
+        // This might need adjustment based on the actual model implementation
+        // It should ideally fetch the base plan and potentially join/fetch config details
+        const plan = await BillingPlan.findById(planId);
+        return plan; // The model method should return the plan with necessary fields
+    } catch (error) {
+        console.error(`Error fetching billing plan with ID ${planId}:`, error);
+        if (error instanceof Error) {
+            // Handle specific errors like 'not found' if the model throws them
+            if (error.message.includes('not found')) { // Example check
+                return null;
+            }
+            throw error;
+        }
+        throw new Error(`Failed to fetch billing plan ${planId} in tenant ${tenant}: ${error}`);
+    }
+}
+
 export async function createBillingPlan(
     planData: Omit<IBillingPlan, 'plan_id'>
 ): Promise<IBillingPlan> {

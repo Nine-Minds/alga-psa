@@ -84,7 +84,7 @@ export function ServiceSelectionDialog({
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(service => 
         service.service_name.toLowerCase().includes(query) ||
-        service.service_type.toLowerCase().includes(query) ||
+        (service.service_type_id || '').toLowerCase().includes(query) || // Use service_type_id
         service.unit_of_measure.toLowerCase().includes(query)
       );
     }
@@ -145,7 +145,7 @@ export function ServiceSelectionDialog({
   // Group services by type for quick selection
   const serviceTypes = React.useMemo(() => {
     const types = new Set<string>();
-    services.forEach(service => types.add(service.service_type));
+    services.forEach(service => { if (service.service_type_id) types.add(service.service_type_id) }); // Use service_type_id
     return Array.from(types);
   }, [services]);
 
@@ -226,7 +226,7 @@ export function ServiceSelectionDialog({
                         </div>
                       </TableCell>
                       <TableCell>{service.service_name}</TableCell>
-                      <TableCell>{service.service_type}</TableCell>
+                      <TableCell>{service.service_type_id}</TableCell>
                       <TableCell>{service.unit_of_measure}</TableCell>
                       <TableCell>${service.default_rate}</TableCell>
                     </TableRow>
@@ -249,7 +249,7 @@ export function ServiceSelectionDialog({
                 onClick={() => {
                   // Find all services of this type and select them
                   const serviceIdsOfType = services
-                    .filter(s => s.service_type === type)
+                    .filter(s => s.service_type_id === type) // Use service_type_id
                     .map(s => s.service_id);
                   
                   setSelectedServices(prev => {

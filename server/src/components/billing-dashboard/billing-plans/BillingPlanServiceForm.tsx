@@ -26,13 +26,17 @@ import { ServiceConfigurationPanel } from '../service-configurations/ServiceConf
 interface BillingPlanServiceFormProps {
   planService: IPlanService;
   services: IService[];
+  serviceCategories: IServiceCategory[]; // Added prop for category lookup
   onClose: () => void;
   onServiceUpdated: () => void;
 }
 
+import { IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Ensure this import exists or add it
+
 const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   planService,
   services,
+  serviceCategories, // Destructure the new prop
   onClose,
   onServiceUpdated
 }) => {
@@ -104,7 +108,9 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
             } else if (service.billing_method === 'per_unit') {
               // Check category for per_unit services
               const laborCategories = ['Labor - Support', 'Labor - Project', 'Consulting'];
-              if (laborCategories.includes(service.service_type)) {
+              // Find the category name using the service_type_id
+              const categoryName = serviceCategories.find(cat => cat.category_id === service.service_type_id)?.category_name;
+              if (categoryName && laborCategories.includes(categoryName)) {
                 configType = 'Hourly'; // Default labor categories to Hourly
               } else {
                 configType = 'Usage'; // Default other per_unit categories to Usage
