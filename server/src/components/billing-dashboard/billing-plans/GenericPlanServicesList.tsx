@@ -41,6 +41,7 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
 interface GenericPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
   onServicesChanged?: () => void; // Optional callback when services are added/removed
+  disableEditing?: boolean; // New prop to disable edit actions
 }
 
 
@@ -55,7 +56,7 @@ interface EnhancedPlanService extends IPlanService {
   default_rate?: number;
 }
 
-const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId, onServicesChanged }) => {
+const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId, onServicesChanged, disableEditing = false }) => {
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -244,13 +245,15 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              id={`edit-generic-plan-service-${value}`}
-              onClick={() => handleEditService(record)}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Configure
-            </DropdownMenuItem>
+            {!disableEditing && ( // Conditionally render Configure item
+              <DropdownMenuItem
+                id={`edit-generic-plan-service-${value}`}
+                onClick={() => handleEditService(record)}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Configure
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem
               id={`remove-generic-plan-service-${value}`}
               className="text-red-600 focus:text-red-600"
@@ -314,7 +317,8 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
               data={planServices}
               columns={planServiceColumns}
               pagination={false}
-              onRowClick={(row) => handleEditService(row)} // Pass row data directly
+              // Conditionally disable row click
+              onRowClick={!disableEditing ? (row) => handleEditService(row) : undefined}
             />
             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
           </div>

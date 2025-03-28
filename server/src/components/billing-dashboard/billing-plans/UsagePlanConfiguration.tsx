@@ -424,14 +424,31 @@ export function UsagePlanConfiguration({
             className="w-full space-y-2"
             // Consider managing open state if needed to auto-open on error
           >
-            {planServices.sort((a, b) => (a.service?.service_name || '').localeCompare(b.service?.service_name || '')).map((service) => (
-              <Accordion.Item key={service.configuration.service_id} value={service.configuration.service_id} className="border rounded overflow-hidden">
+            {planServices.sort((a, b) => (a.service?.service_name || '').localeCompare(b.service?.service_name || '')).map((service, index) => ( // Add index
+              // Use slate-100 for a subtle alternating background
+              <Accordion.Item key={service.configuration.service_id} value={service.configuration.service_id} className="border rounded overflow-hidden odd:bg-slate-100">
                 <Accordion.Header className="flex">
                   <Accordion.Trigger
-                    id={`accordion-trigger-${service.configuration.service_id}`} // Corrected ID
-                    className="flex flex-1 items-center justify-between p-3 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180 bg-muted/20" // Corrected HTML entity
+                    id={`accordion-trigger-${service.configuration.service_id}`}
+                    className="flex flex-1 items-center justify-between p-3 font-medium transition-all hover:bg-muted/50 [&[data-state=open]>svg]:rotate-180 bg-muted/20"
                   >
-                    {service.service?.service_name || `Service ID: ${service.configuration.service_id}`} {/* Corrected name and ID access */}
+                    <div className="flex flex-col text-left"> {/* Use flex-col for name and summary */}
+                      <span>{service.service?.service_name || `Service ID: ${service.configuration.service_id}`}</span>
+                      {/* Add Summary Span */}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {(() => {
+                          const config = serviceConfigs[service.configuration.service_id];
+                          if (!config) return 'Loading...';
+                          if (config.enable_tiered_pricing) {
+                            return `Tiered Pricing (${config.tiers?.length || 0} tiers)`;
+                          } else {
+                            const rate = config.base_rate !== undefined ? `$${config.base_rate.toFixed(2)}` : 'Not Set';
+                            const unit = config.unit_of_measure || 'Unit';
+                            return `${rate} / ${unit}`;
+                          }
+                        })()}
+                      </span>
+                    </div>
                     <ChevronDownIcon className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
                   </Accordion.Trigger>
                 </Accordion.Header>
@@ -476,7 +493,7 @@ export function UsagePlanConfiguration({
                <CardTitle>Manage Plan Services</CardTitle>
            </CardHeader>
            <CardContent>
-               <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} />
+               <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} disableEditing={true} />
            </CardContent>
        </Card>
     </div>
