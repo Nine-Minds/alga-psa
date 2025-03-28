@@ -443,6 +443,7 @@ The billing system uses a strongly-typed service type system to determine how ea
 - Rate is multiplied by the usage amount
 - Used for services like storage, bandwidth, or per-user licensing
 - Calculated by the billing engine's `calculateUsageBasedCharges()` method
+- **Note:** Usage-based services are now configured at the individual service level within a plan using the `plan_service_configuration`, `plan_service_usage_config` (which includes a `base_rate`), and `plan_service_rate_tiers` tables, allowing for flexible tiered pricing per service.
 
 ### Product Services
 - Similar to fixed price services but typically for tangible goods
@@ -541,6 +542,18 @@ This typing ensures that only valid service types can be assigned, maintaining d
     - **Purpose:** Tracks usage against bucket of hours/retainer plans
     - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `bucket_plan_id`, `company_id`, `period_start`, `period_end`, `hours_used`, `overage_hours`
 
+15. **`plan_service_configuration`** *(Updated for Service-Level Config)*
+    - **Purpose:** Links a specific service within a plan to its configuration settings (e.g., usage-based, fixed). Acts as the parent for specific config types.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `service_id` (FK to `service_catalog`), `configuration_type` ('Usage', 'Fixed', etc.)
+
+16. **`plan_service_usage_config`** *(Updated for Service-Level Config)*
+    - **Purpose:** Stores detailed configuration for usage-based services within a plan, linked to `plan_service_configuration`.
+    - **Key Fields:** `tenant` (UUID, PK), `config_id` (UUID, PK, FK to `plan_service_configuration`), `unit_of_measure`, `minimum_usage` (integer), `enable_tiered_pricing` (boolean), `base_rate` (numeric, nullable)
+
+17. **`plan_service_rate_tiers`** *(Updated for Service-Level Config)*
+    - **Purpose:** Defines the pricing tiers for usage-based services when tiered pricing is enabled, linked to `plan_service_configuration`.
+    - **Key Fields:** `tenant` (UUID, PK), `tier_id` (UUID, PK), `config_id` (FK to `plan_service_configuration`), `min_quantity` (integer), `max_quantity` (integer, nullable), `rate` (numeric)
+
 15. **`invoice_templates`** *(New)*
     - **Purpose:** Stores invoice templates with DSL for dynamic generation
     - **Key Fields:** `tenant`, `template_id` (UUID, PK), `name`, `version`, `dsl`, `is_default`, `created_at`, `updated_at`
@@ -557,7 +570,7 @@ This typing ensures that only valid service types can be assigned, maintaining d
     - **Purpose:** Links usage records to specific invoice items
     - **Key Fields:** `invoice_usage_record_id` (UUID, PK), `invoice_id`, `usage_id`, `tenant`, `created_at`
 
-### **New Tables**
+### **Other New Tables**
 
 15. **`discounts`** *(New)*
     - **Purpose:** Defines discounts and promotions
@@ -613,7 +626,10 @@ This typing ensures that only valid service types can be assigned, maintaining d
 - **`companies`** are associated with **`plan_bundles`** through the **`company_plan_bundles`** table.
 - **`plan_bundles`** contain multiple **`billing_plans`** through the **`bundle_billing_plans`** table.
 - **`company_billing_plans`** can be linked to **`company_plan_bundles`** through the `company_bundle_id` field.
-- **`billing_plans`** are composed of services defined in **`service_catalog`** through the **`plan_services`** table.
+- **`billing_plans`** and **`service_catalog`** are linked via **`plan_service_configuration`** to define service-specific settings.
+- **`plan_service_configuration`** connects to **`plan_service_usage_config`** for usage-based details (including `base_rate`).
+- **`plan_service_configuration`** connects to **`plan_service_rate_tiers`** when `enable_tiered_pricing` is true in **`plan_service_usage_config`**.
+- **Note:** The older `plan_services` table might still be used for simpler plan-service associations, but detailed usage configuration relies on the `plan_service_configuration` structure.
 - **`service_catalog`** items are categorized using **`service_categories`**, can have dependencies (**`service_dependencies`**), and can be bundled (**`service_bundles`**, **`bundle_services`**).
 - **`time_entries`** and **`usage_tracking`** are linked to **`companies`** and **`service_catalog`** for billing calculations, and may require approval (**`approvals`**).
 - **`invoices`** are generated for **`companies`** and contain **`invoice_items`** that reference **`service_catalog`**, apply discounts (**`plan_discounts`**), and tax rates (**`tax_rates`**).
@@ -1035,6 +1051,11 @@ service_bundles ||--o{ bundle_services : groups
 
 approvals ||--o{ audit_logs : generates
 
+    billing_plans ||--o{ plan_service_configuration : has_config_for
+    service_catalog ||--o{ plan_service_configuration : has_config_for
+    plan_service_configuration ||--|{ plan_service_usage_config : usage_details
+    plan_service_configuration ||--o{ plan_service_rate_tiers : has_tiers
+
 %% Table Definitions
 tenants {
     UUID tenant PK
@@ -1267,6 +1288,32 @@ audit_logs {
     UUID record_id
     string changed_data
     timestamp timestamp
+}
+
+plan_service_configuration {
+    UUID tenant PK,FK
+    UUID config_id PK
+    UUID plan_id FK
+    UUID service_id FK
+    string configuration_type
+}
+
+plan_service_usage_config {
+    UUID tenant PK,FK
+    UUID config_id PK,FK
+    string unit_of_measure
+    integer minimum_usage
+    boolean enable_tiered_pricing
+    numeric base_rate
+}
+
+plan_service_rate_tiers {
+    UUID tenant PK,FK
+    UUID tier_id PK
+    UUID config_id FK
+    integer min_quantity
+    integer max_quantity
+    numeric rate
 }
 
 %% Additional Relationships

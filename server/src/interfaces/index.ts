@@ -23,3 +23,4 @@ export * from './interaction.interfaces';
 export * from './ticketResource.interfaces';
 export * from './asset.interfaces';
 export * from './status.interface';
+export * from './planServiceConfiguration.interfaces';

@@ -40,6 +40,7 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
 
 interface GenericPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
+  onServicesChanged?: () => void; // Optional callback when services are added/removed
 }
 
 
@@ -54,7 +55,7 @@ interface EnhancedPlanService extends IPlanService {
   default_rate?: number;
 }
 
-const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId }) => {
+const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planId, onServicesChanged }) => {
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -138,8 +139,9 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
           );
         }
       }
-      fetchData();
+      await fetchData(); // Ensure data is fetched before calling callback
       setSelectedServicesToAdd([]);
+      onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
       console.error('Error adding services:', error);
       setError('Failed to add services');
@@ -151,7 +153,8 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
     try {
       await removePlanService(planId, serviceId);
-      fetchData();
+      await fetchData(); // Ensure data is fetched before calling callback
+      onServicesChanged?.(); // Call the callback if provided
     } catch (error) {
       console.error('Error removing service:', error);
       setError('Failed to remove service');

@@ -53,7 +53,8 @@ export interface IPlanServiceUsageConfig extends TenantEntity {
   config_id: string;
   unit_of_measure: string;
   enable_tiered_pricing: boolean;
-  minimum_usage: number;
+  minimum_usage?: number | null; // Make nullable to match DB and input
+  base_rate?: number | null; // Add the new base_rate field
   tenant: string;
   created_at: Date;
   updated_at: Date;
@@ -85,6 +86,15 @@ export interface IPlanServiceRateTier extends TenantEntity {
   tenant: string;
   created_at: Date;
   updated_at: Date;
+}
+
+/**
+ * Input interface for creating/updating rate tiers (omits DB-generated fields)
+ */
+export interface IPlanServiceRateTierInput {
+  min_quantity: number;
+  max_quantity?: number | null; // Allow null for the last tier
+  rate: number;
 }
 
 /**
