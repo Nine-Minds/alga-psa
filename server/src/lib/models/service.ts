@@ -54,14 +54,18 @@ const Service = {
     
         try {
           const services = await db('service_catalog as sc') // Alias service_catalog as sc
-            .leftJoin('standard_service_types as st', 'sc.service_type_id', 'st.id') // Corrected join table and column
+            .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id') // Join standard types
+            .leftJoin('service_types as tst', function() { // Join tenant-specific types
+              this.on('sc.service_type_id', '=', 'tst.id')
+                  .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
+            })
             .where({ 'sc.tenant': tenant }) // Use alias for where clause
             .select(
               'sc.service_id',
               'sc.service_name',
               'sc.service_type_id',
-              'st.name as service_type_name', // Select the name from service_types
-              'st.billing_method as service_type_billing_method', // Select the billing_method from service_types
+              db.raw('COALESCE(sst.name, tst.name) as service_type_name'), // Use COALESCE for name
+              'sst.billing_method as service_type_billing_method', // Keep billing method from standard for now
               'sc.billing_method', // Keep the service's specific billing method too
               db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
               'sc.unit_of_measure',
@@ -96,22 +100,29 @@ const Service = {
     log.info(`[Service.getById] Fetching service with ID: ${service_id} for tenant: ${tenant}`);
 
     try {
-      const [service] = await db<IService>('service_catalog')
+      const [service] = await db('service_catalog as sc') // Alias service_catalog as sc
+        .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id') // Join standard types
+        .leftJoin('service_types as tst', function() { // Join tenant-specific types
+          this.on('sc.service_type_id', '=', 'tst.id')
+              .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
+        })
         .where({
-          service_id,
-          tenant
+          'sc.service_id': service_id, // Use alias
+          'sc.tenant': tenant // Use alias
         })
         .select(
-          'service_id',
-          'service_name',
-          'service_type_id', // Changed from service_type
-          'billing_method', // Added billing_method
-          db.raw('CAST(default_rate AS FLOAT) as default_rate'),
-          'unit_of_measure',
-          'category_id',
-          'is_taxable',
-          'tax_region',
-          'tenant'
+          'sc.service_id',
+          'sc.service_name',
+          'sc.service_type_id',
+          db.raw('COALESCE(sst.name, tst.name) as service_type_name'), // Use COALESCE for name
+          'sst.billing_method as service_type_billing_method', // Keep billing method from standard for now
+          'sc.billing_method', // Keep the service's specific billing method too
+          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.unit_of_measure',
+          'sc.category_id',
+          'sc.is_taxable',
+          'sc.tax_region',
+          'sc.tenant'
         );
 
       if (!service) {
@@ -245,22 +256,29 @@ const Service = {
     }
 
     try {
-      const services = await db<IService>('service_catalog')
+      const services = await db('service_catalog as sc') // Alias service_catalog as sc
+        .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id') // Join standard types
+        .leftJoin('service_types as tst', function() { // Join tenant-specific types
+          this.on('sc.service_type_id', '=', 'tst.id')
+              .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
+        })
         .where({
-          category_id,
-          tenant
+          'sc.category_id': category_id, // Use alias
+          'sc.tenant': tenant // Use alias
         })
         .select(
-          'service_id',
-          'service_name',
-          'service_type_id', // Changed from service_type
-          'billing_method', // Added billing_method
-          db.raw('CAST(default_rate AS FLOAT) as default_rate'),
-          'unit_of_measure',
-          'category_id',
-          'is_taxable',
-          'tax_region',
-          'tenant'
+          'sc.service_id',
+          'sc.service_name',
+          'sc.service_type_id',
+          db.raw('COALESCE(sst.name, tst.name) as service_type_name'), // Use COALESCE for name
+          'sst.billing_method as service_type_billing_method', // Keep billing method from standard for now
+          'sc.billing_method', // Keep the service's specific billing method too
+          db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+          'sc.unit_of_measure',
+          'sc.category_id',
+          'sc.is_taxable',
+          'sc.tax_region',
+          'sc.tenant'
         );
 
       log.info(`[Service.getByCategoryId] Found ${services.length} services for category ${category_id}`);

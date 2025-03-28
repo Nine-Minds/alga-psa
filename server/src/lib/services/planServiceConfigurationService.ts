@@ -212,7 +212,8 @@ export class PlanServiceConfigurationService {
   async updateConfiguration(
     configId: string,
     baseConfig?: Partial<IPlanServiceConfiguration>,
-    typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+    typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
+    rateTiers?: IPlanServiceRateTier[] // Add rateTiers parameter
   ): Promise<boolean> {
     await this.initKnex();
     
@@ -256,6 +257,24 @@ export class PlanServiceConfigurationService {
             break;
         }
       }
+      // Handle rate tiers update if provided and config type is Usage
+      if (rateTiers && currentConfig.configuration_type === 'Usage') {
+        // Delete existing rate tiers for this configuration
+        await usageConfigModel.deleteRateTiersByConfigId(configId); // Assuming this method exists or will be added
+
+        // Insert new rate tiers
+        for (const tierData of rateTiers) {
+          // Ensure tenant is set correctly and only pass necessary fields
+          await usageConfigModel.addRateTier({
+            config_id: configId,
+            min_quantity: tierData.min_quantity,
+            max_quantity: tierData.max_quantity,
+            rate: tierData.rate,
+            tenant: this.tenant // Ensure tenant is passed
+          });
+        }
+      }
+      // TODO: Add similar logic for userTypeRates if needed for Hourly config updates
       
       return true;
     });

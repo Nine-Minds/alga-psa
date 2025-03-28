@@ -7,7 +7,7 @@ import {
   IPlanServiceHourlyConfig,
   IPlanServiceUsageConfig,
   IPlanServiceBucketConfig,
-  IPlanServiceRateTier,
+  IPlanServiceRateTier, // Import the rate tier interface
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
@@ -83,7 +83,8 @@ export async function createConfiguration(
 export async function updateConfiguration(
   configId: string,
   baseConfig?: Partial<IPlanServiceConfiguration>,
-  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
+  typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
+  rateTiers?: IPlanServiceRateTier[] // Add rateTiers parameter
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -91,7 +92,7 @@ export async function updateConfiguration(
   }
   const configService = new PlanServiceConfigurationService(knex, tenant);
   
-  return await configService.updateConfiguration(configId, baseConfig, typeConfig);
+  return await configService.updateConfiguration(configId, baseConfig, typeConfig, rateTiers); // Pass rateTiers
 }
 
 /**

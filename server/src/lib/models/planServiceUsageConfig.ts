@@ -196,4 +196,22 @@ export default class PlanServiceUsageConfig {
     
     return result > 0;
   }
+
+  /**
+   * Delete all rate tiers for a specific configuration ID
+   */
+  async deleteRateTiersByConfigId(configId: string): Promise<boolean> {
+    await this.initKnex();
+    
+    const result = await this.knex('plan_service_rate_tiers')
+      .where({
+        config_id: configId,
+        tenant: this.tenant
+      })
+      .delete();
+    
+    // Return true if any rows were deleted, false otherwise.
+    // Note: delete() returns the number of affected rows.
+    return result >= 0; // Return true even if 0 rows were deleted (idempotency)
+  }
 }

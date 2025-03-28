@@ -89,24 +89,24 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         // Find the corresponding full service details from the getServices() call
         // Note: configInfo.service already contains service_type_name from the updated action
         const fullServiceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
-        
+
         return {
-           plan_id: planId,
-           service_id: configInfo.configuration.service_id,
-           quantity: configInfo.configuration.quantity,
-           custom_rate: configInfo.configuration.custom_rate,
-           tenant: configInfo.configuration.tenant,
-           created_at: configInfo.configuration.created_at,
-           updated_at: configInfo.configuration.updated_at,
-           configuration: configInfo.configuration,
-           configurationType: configInfo.configuration.configuration_type,
-           service_name: configInfo.service.service_name || 'Unknown Service',
-           service_type_name: configInfo.service.service_type_name || 'N/A', // Use directly from joined data
-           billing_method: configInfo.service.billing_method,
-           unit_of_measure: configInfo.service.unit_of_measure || 'N/A',
-           default_rate: configInfo.service.default_rate
+          plan_id: planId,
+          service_id: configInfo.configuration.service_id,
+          quantity: configInfo.configuration.quantity,
+          custom_rate: configInfo.configuration.custom_rate,
+          tenant: configInfo.configuration.tenant,
+          created_at: configInfo.configuration.created_at,
+          updated_at: configInfo.configuration.updated_at,
+          configuration: configInfo.configuration,
+          configurationType: configInfo.configuration.configuration_type,
+          service_name: configInfo.service.service_name || 'Unknown Service',
+          service_type_name: configInfo.service.service_type_name || 'N/A', // Use directly from joined data
+          billing_method: configInfo.service.billing_method,
+          unit_of_measure: configInfo.service.unit_of_measure || 'N/A',
+          default_rate: configInfo.service.default_rate
         };
-     });
+      });
 
       setPlanServices(enhancedServices);
       setAvailableServices(allAvailableServices); // Keep this to know which services *can* be added
@@ -274,6 +274,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       // For Hourly plans, exclude services with 'fixed' billing method directly from the service record
       return availService.billing_method !== 'fixed';
     }
+    else if (planType === 'Usage') {
+      // For Usage plans, exclude services with 'fixed' billing method
+      return availService.billing_method !== 'fixed';
+    }
 
     // TODO: Add filtering logic for other plan types if needed (using availService.billing_method)
     // Example:
@@ -307,61 +311,62 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
               data={planServices}
               columns={planServiceColumns}
               pagination={false}
+              onRowClick={(row) => handleEditService(row)} // Pass row data directly
             />
-             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
+            {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
           </div>
 
           <div className="mt-6 border-t pt-4">
             <h4 className="text-md font-medium mb-2">Add Services to Plan</h4>
-             {servicesAvailableToAdd.length === 0 ? (
-                 <p className="text-sm text-muted-foreground">All available services are already associated with this plan.</p>
-             ) : (
-                 <>
-                    <div className="mb-3">
-                        <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
-                        {servicesAvailableToAdd.map(service => {
-                            // Use service_type_name directly from the service object (fetched via updated getServices)
-                            const serviceTypeName = (service as any).service_type_name || 'N/A'; // Cast needed as IService doesn't have it yet
-                            return (
-                                <div
-                                key={service.service_id}
-                                className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
-                                >
-                                <input
-                                    type="checkbox"
-                                    id={`add-generic-service-${service.service_id}`}
-                                    checked={selectedServicesToAdd.includes(service.service_id!)}
-                                    onChange={(e) => {
-                                    if (e.target.checked) {
-                                        setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
-                                    } else {
-                                        setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
-                                    }
-                                    }}
-                                    className="cursor-pointer"
-                                />
-                                <label htmlFor={`add-generic-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
-                                    <span>{service.service_name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${service.default_rate.toFixed(2)}
-                                    </span>
-                                </label>
-                                </div>
-                            );
-                        })}
+            {servicesAvailableToAdd.length === 0 ? (
+              <p className="text-sm text-muted-foreground">All available services are already associated with this plan.</p>
+            ) : (
+              <>
+                <div className="mb-3">
+                  <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
+                    {servicesAvailableToAdd.map(service => {
+                      // Use service_type_name directly from the service object (fetched via updated getServices)
+                      const serviceTypeName = (service as any).service_type_name || 'N/A'; // Cast needed as IService doesn't have it yet
+                      return (
+                        <div
+                          key={service.service_id}
+                          className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`add-generic-service-${service.service_id}`}
+                            checked={selectedServicesToAdd.includes(service.service_id!)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
+                              } else {
+                                setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
+                              }
+                            }}
+                            className="cursor-pointer"
+                          />
+                          <label htmlFor={`add-generic-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
+                            <span>{service.service_name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${service.default_rate.toFixed(2)}
+                            </span>
+                          </label>
                         </div>
-                    </div>
-                    <Button
-                        id="add-generic-plan-services-button"
-                        onClick={handleAddService}
-                        disabled={selectedServicesToAdd.length === 0}
-                        className="w-full sm:w-auto"
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                         Add Selected {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''} Services
-                    </Button>
-                 </>
-             )}
+                      );
+                    })}
+                  </div>
+                </div>
+                <Button
+                  id="add-generic-plan-services-button"
+                  onClick={handleAddService}
+                  disabled={selectedServicesToAdd.length === 0}
+                  className="w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Selected {selectedServicesToAdd.length > 0 ? `(${selectedServicesToAdd.length})` : ''} Services
+                </Button>
+              </>
+            )}
           </div>
         </>
       )}

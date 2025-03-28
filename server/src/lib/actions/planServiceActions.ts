@@ -1,6 +1,7 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from '../../lib/db';
+import { IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import {
@@ -99,6 +100,9 @@ export async function addServiceToPlan(
   // --- BEGIN SERVER-SIDE VALIDATION ---
   if (plan.plan_type === 'Hourly' && service.billing_method === 'fixed') {
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly billing plan.`);
+  } else if (plan.plan_type === 'Usage' && service.billing_method === 'fixed') {
+    // Prevent adding fixed-price services to Usage-Based plans
+    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based billing plan.`);
   }
   // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed plans?)
   // --- END SERVER-SIDE VALIDATION ---
@@ -152,7 +156,8 @@ export async function updatePlanService(
     quantity?: number;
     customRate?: number;
     typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>;
-  }
+  },
+  rateTiers?: IPlanServiceRateTier[] // Add rateTiers here
 ): Promise<boolean> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -178,7 +183,9 @@ export async function updatePlanService(
   await planServiceConfigActions.updateConfiguration(
     config.config_id,
     Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
-    updates.typeConfig
+    updates.typeConfig,
+    // Pass rateTiers if they exist
+    rateTiers // Pass the rateTiers variable directly
   );
 
   return true;
@@ -225,12 +232,16 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   for (const config of configurations) {
     // Join service_catalog with standard_service_types to get the name
     const service = await knex('service_catalog as sc')
-      .leftJoin('standard_service_types as st', 'sc.service_type_id', 'st.id') // Corrected join table and column
+      .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id') // Join standard types
+      .leftJoin('service_types as tst', function() { // Join tenant-specific types
+        this.on('sc.service_type_id', '=', 'tst.id')
+            .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
+      })
       .where({
         'sc.service_id': config.service_id,
         'sc.tenant': tenant
       })
-      .select('sc.*', 'st.name as service_type_name') // Select all from service_catalog and the name from service_types
+      .select('sc.*', knex.raw('COALESCE(sst.name, tst.name) as service_type_name')) // Use COALESCE for name
       .first() as IService & { service_type_name?: string }; // Cast to include the new field
 
     if (!service) {

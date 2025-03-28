@@ -153,7 +153,7 @@ export function UnitOfMeasureInput({
         placeholder={placeholder}
         className="w-full"
         disabled={disabled || isSaving}
-        label="Unit of Measure"
+        // label="Unit of Measure" // Removed: Label is provided by the parent component
         required={required}
       />
       {selectedUnit === 'custom' && (

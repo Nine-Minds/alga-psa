@@ -192,7 +192,8 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
           quantity: baseConfig.quantity,
           customRate: baseConfig.custom_rate,
           typeConfig: typeConfig || undefined
-        }
+        },
+        rateTiers // Pass the rateTiers state here
       );
 
       onServiceUpdated();

@@ -8,11 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Switch } from 'server/src/components/ui/Switch';
 import { UnitOfMeasureInput } from '../UnitOfMeasureInput'; // Assuming this path is correct relative to the new file
 import { Button } from 'server/src/components/ui/Button';
-import { Trash2, Plus, Loader2, AlertCircle } from 'lucide-react';
+import { Trash2, Plus, Loader2, AlertCircle, Info } from 'lucide-react'; // Added Info
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction'; // Corrected path
 import GenericPlanServicesList from './GenericPlanServicesList'; // Import the generic list
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces'; // Removed ValidationErrors import
+import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { Tooltip } from 'server/src/components/ui/Tooltip'; // Added Tooltip import
 
 // Define ValidationErrors locally
 type ValidationErrors = {
@@ -363,7 +364,11 @@ export function UsagePlanConfiguration({
           {/* Basic Usage Settings */}
           <div className="flex flex-col gap-4">
             <div>
-              <Label htmlFor="usage-plan-base-rate">Default Rate per Unit <span className="text-destructive">*</span></Label>
+              <Label htmlFor="usage-plan-base-rate" className="inline-flex items-center">Default Rate per Unit <span className="text-destructive">*</span>
+                <Tooltip content="Rate per unit (used if tiered pricing is off).">
+                  <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
+                </Tooltip>
+              </Label>
               <Input
                 id="usage-plan-base-rate" type="number"
                 value={baseRate?.toString() || ''}
@@ -373,10 +378,14 @@ export function UsagePlanConfiguration({
                 className={saveAttempted && validationErrors.base_rate ? 'border-red-500' : ''} // Conditional error class
               />
               {saveAttempted && validationErrors.base_rate && <p className="text-sm text-red-500 mt-1">{validationErrors.base_rate}</p>}
-              {!(saveAttempted && validationErrors.base_rate) && <p className="text-sm text-muted-foreground mt-1">Rate per unit (used if tiered pricing is off).</p>}
+              {/* Removed description paragraph */}
             </div>
             <div>
-              <Label htmlFor="usage-plan-unit-of-measure">Unit of Measure <span className="text-destructive">*</span></Label>
+              <Label htmlFor="usage-plan-unit-of-measure" className="inline-flex items-center">Unit of Measure <span className="text-destructive">*</span>
+                <Tooltip content="e.g., GB, User, Device.">
+                  <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
+                </Tooltip>
+              </Label>
               <UnitOfMeasureInput
                 value={unitOfMeasure}
                 onChange={setUnitOfMeasure}
@@ -385,10 +394,14 @@ export function UsagePlanConfiguration({
                 className={saveAttempted && validationErrors.unit_of_measure ? 'border-red-500' : ''} // Conditional error class
               />
                {saveAttempted && validationErrors.unit_of_measure && <p className="text-sm text-red-500 mt-1">{validationErrors.unit_of_measure}</p>}
-               {!(saveAttempted && validationErrors.unit_of_measure) && <p className="text-sm text-muted-foreground mt-1">e.g., GB, User, Device.</p>}
+               {/* Removed description paragraph */}
             </div>
              <div>
-              <Label htmlFor="minimum-usage">Minimum Usage</Label>
+              <Label htmlFor="minimum-usage" className="inline-flex items-center">Minimum Usage
+                <Tooltip content="Minimum billable units per period.">
+                  <Info className="h-4 w-4 text-muted-foreground ml-1 cursor-help" />
+                </Tooltip>
+              </Label>
               <Input
                 id="minimum-usage" type="number"
                 value={minimumUsage?.toString() || ''}
@@ -397,7 +410,7 @@ export function UsagePlanConfiguration({
                 className={saveAttempted && validationErrors.minimum_usage ? 'border-red-500' : ''} // Conditional error class
               />
               {saveAttempted && validationErrors.minimum_usage && <p className="text-sm text-red-500 mt-1">{validationErrors.minimum_usage}</p>}
-              {!(saveAttempted && validationErrors.minimum_usage) && <p className="text-sm text-muted-foreground mt-1">Minimum billable units per period.</p>}
+              {/* Removed description paragraph */}
             </div>
              <p className="text-xs text-muted-foreground pt-2"><span className="text-destructive">*</span> Indicates a required field.</p>
           </div>
