@@ -139,6 +139,12 @@ export function UsageServiceConfigPanel({
   const handleAddTier = () => {
     if (!onRateTiersChange) return;
     
+    // Ensure tiered pricing is enabled when adding tiers
+    if (!enableTieredPricing) {
+      setEnableTieredPricing(true);
+      onConfigurationChange({ enable_tiered_pricing: true });
+    }
+    
     const newTier: TierData = {
       id: Date.now().toString(),
       min_quantity: tiers.length > 0 ? (tiers[tiers.length - 1].max_quantity || 0) + 1 : 1,

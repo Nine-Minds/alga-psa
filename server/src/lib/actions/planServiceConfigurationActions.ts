@@ -393,7 +393,8 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
         configId = baseConfig.config_id;
         await trx('plan_service_configuration')
           .where({ config_id: configId, tenant: tenant })
-          .update({ updated_at: new Date() }); // Touch updated_at
+          // Ensure type is 'Usage' on update as well
+          .update({ configuration_type: 'Usage', updated_at: new Date() });
       } else {
         // Create if not exists
         const newBaseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
