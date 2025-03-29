@@ -489,3 +489,57 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
     throw new Error("Failed to upsert plan service configuration.");
   }
 }
+
+
+/**
+ * Input type for upserting plan service bucket configuration.
+ */
+export interface IUpsertPlanServiceBucketConfigurationInput {
+  planId: string;
+  serviceId: string;
+  // Fields from IPlanServiceBucketConfig (excluding generated/tenant/config_id)
+  total_hours?: number | null;
+  billing_period?: string | null;
+  overage_rate?: number | null;
+  allow_rollover?: boolean;
+}
+
+/**
+ * Upserts the bucket-specific configuration for a service within a plan.
+ * This action ensures the base configuration exists and is set to type 'Bucket',
+ * then creates or updates the associated bucket configuration record.
+ */
+export async function upsertPlanServiceBucketConfigurationAction(
+  input: IUpsertPlanServiceBucketConfigurationInput
+): Promise<string> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+  const configService = new PlanServiceConfigurationService(knex, tenant);
+
+  const { planId, serviceId, ...bucketConfigData } = input;
+
+  // Prepare the data, ensuring correct types and handling nulls if necessary
+  const dataForService: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = {
+      total_hours: bucketConfigData.total_hours !== undefined && bucketConfigData.total_hours !== null ? Number(bucketConfigData.total_hours) : undefined,
+      billing_period: bucketConfigData.billing_period !== undefined && bucketConfigData.billing_period !== null ? String(bucketConfigData.billing_period) : undefined,
+      overage_rate: bucketConfigData.overage_rate !== undefined && bucketConfigData.overage_rate !== null ? Number(bucketConfigData.overage_rate) : undefined,
+      allow_rollover: bucketConfigData.allow_rollover !== undefined ? Boolean(bucketConfigData.allow_rollover) : undefined,
+  };
+
+  try {
+    console.log(`Upserting bucket config for plan ${planId}, service ${serviceId} with data:`, dataForService);
+    const configId = await configService.upsertPlanServiceBucketConfiguration(
+      planId,
+      serviceId,
+      dataForService
+    );
+    console.log(`Upsert successful, configId: ${configId}`);
+    return configId;
+  } catch (error) {
+    console.error("Error in upsertPlanServiceBucketConfigurationAction:", error);
+    // Consider more specific error handling/logging
+    throw new Error("Failed to upsert bucket configuration.");
+  }
+}

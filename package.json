@@ -32,6 +32,8 @@
     "@hocuspocus/provider": "^2.13.5",
     "@huggingface/inference": "^2.8.0",
     "@js-temporal/polyfill": "^0.4.4",
+    "@mantine/core": "^7.17.3",
+    "@mantine/form": "^7.17.3",
     "@nestjs/common": "^11.0.3",
     "@nestjs/config": "^4.0.0",
     "@radix-ui/react-checkbox": "^1.1.1",

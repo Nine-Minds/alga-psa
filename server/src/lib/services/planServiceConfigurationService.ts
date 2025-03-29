@@ -14,6 +14,7 @@ import PlanServiceFixedConfig from 'server/src/lib/models/planServiceFixedConfig
 import PlanServiceHourlyConfig from 'server/src/lib/models/planServiceHourlyConfig';
 import PlanServiceUsageConfig from 'server/src/lib/models/planServiceUsageConfig';
 import PlanServiceBucketConfig from 'server/src/lib/models/planServiceBucketConfig';
+import BillingPlan from 'server/src/lib/models/billingPlan'; // Added import
 
 export class PlanServiceConfigurationService {
   private knex: Knex;
@@ -23,6 +24,7 @@ export class PlanServiceConfigurationService {
   private hourlyConfigModel: PlanServiceHourlyConfig;
   private usageConfigModel: PlanServiceUsageConfig;
   private bucketConfigModel: PlanServiceBucketConfig;
+  // Removed billingPlanModel property
 
   constructor(knex?: Knex, tenant?: string) {
     this.knex = knex as Knex;
@@ -32,6 +34,7 @@ export class PlanServiceConfigurationService {
     this.hourlyConfigModel = new PlanServiceHourlyConfig(knex, tenant);
     this.usageConfigModel = new PlanServiceUsageConfig(knex, tenant);
     this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+    // Removed billingPlanModel initialization
   }
 
   /**
@@ -52,6 +55,7 @@ export class PlanServiceConfigurationService {
       this.hourlyConfigModel = new PlanServiceHourlyConfig(knex, tenant);
       this.usageConfigModel = new PlanServiceUsageConfig(knex, tenant);
       this.bucketConfigModel = new PlanServiceBucketConfig(knex, tenant);
+      // Removed billingPlanModel initialization
     }
   }
 
@@ -70,33 +74,50 @@ export class PlanServiceConfigurationService {
     if (!baseConfig) {
       throw new Error(`Configuration with ID ${configId} not found`);
     }
+
+    // Fetch the associated plan to check its type
+    const plan = await BillingPlan.findById(baseConfig.plan_id);
+    if (!plan) {
+      // This case should ideally not happen if baseConfig exists, but handle defensively
+      console.warn(`Plan with ID ${baseConfig.plan_id} not found for config ${configId}`);
+      // Proceed using the baseConfig.configuration_type as fallback
+    }
     
     let typeConfig = null;
     let rateTiers = undefined;
     let userTypeRates = undefined;
-    
-    switch (baseConfig.configuration_type) {
-      case 'Fixed':
-        typeConfig = await this.fixedConfigModel.getByConfigId(configId);
-        break;
-        
-      case 'Hourly':
-        typeConfig = await this.hourlyConfigModel.getByConfigId(configId);
-        if (typeConfig) {
-          userTypeRates = await this.hourlyConfigModel.getUserTypeRates(configId);
-        }
-        break;
-        
-      case 'Usage':
-        typeConfig = await this.usageConfigModel.getByConfigId(configId);
-        if (typeConfig && (typeConfig as IPlanServiceUsageConfig).enable_tiered_pricing) {
-          rateTiers = await this.usageConfigModel.getRateTiers(configId);
-        }
-        break;
-        
-      case 'Bucket':
-        typeConfig = await this.bucketConfigModel.getByConfigId(configId);
-        break;
+
+    // If the plan is a Bucket plan, always fetch from bucket config table
+    if (plan?.plan_type === 'Bucket') {
+      typeConfig = await this.bucketConfigModel.getByConfigId(configId);
+      // Note: Rate tiers and user type rates are not applicable to Bucket configs
+    } else {
+      // Otherwise, use the configuration_type from the base config record
+      switch (baseConfig.configuration_type) {
+        case 'Fixed':
+          typeConfig = await this.fixedConfigModel.getByConfigId(configId);
+          break;
+          
+        case 'Hourly':
+          typeConfig = await this.hourlyConfigModel.getByConfigId(configId);
+          if (typeConfig) {
+            userTypeRates = await this.hourlyConfigModel.getUserTypeRates(configId);
+          }
+          break;
+          
+        case 'Usage':
+          typeConfig = await this.usageConfigModel.getByConfigId(configId);
+          if (typeConfig && (typeConfig as IPlanServiceUsageConfig).enable_tiered_pricing) {
+            rateTiers = await this.usageConfigModel.getRateTiers(configId);
+          }
+          break;
+          
+        case 'Bucket':
+          // This case might occur if a service was initially Bucket type
+          // but the plan type changed, or if the plan fetch failed.
+          typeConfig = await this.bucketConfigModel.getByConfigId(configId);
+          break;
+      }
     }
     
     return {
@@ -320,5 +341,78 @@ export class PlanServiceConfigurationService {
     await this.initKnex();
     
     return await this.planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+  }
+
+  /**
+   * Upserts the bucket-specific configuration for a service within a plan.
+   * Ensures the base configuration exists and has type 'Bucket'.
+   */
+  async upsertPlanServiceBucketConfiguration(
+    planId: string,
+    serviceId: string,
+    bucketConfigData: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+  ): Promise<string> {
+    await this.initKnex();
+
+    return await this.knex.transaction(async (trx) => {
+      // Create models with transaction
+      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+
+      // 1. Find existing base configuration
+      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+      let configId: string;
+
+      if (!baseConfig) {
+        // 2. Create base configuration if it doesn't exist, force type to Bucket
+        console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Bucket.`);
+        const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+          plan_id: planId,
+          service_id: serviceId,
+          configuration_type: 'Bucket', // Force type to Bucket
+          // is_enabled: true, // Removed: Field does not exist on base config interface
+          tenant: this.tenant,
+        };
+        configId = await planServiceConfigModel.create(newBaseConfigData);
+        console.log(`Created base config with ID: ${configId}`);
+      } else {
+        configId = baseConfig.config_id;
+        // 3. Update base configuration type if it's not Bucket
+        if (baseConfig.configuration_type !== 'Bucket') {
+          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Bucket.`);
+          await planServiceConfigModel.update(configId, { configuration_type: 'Bucket' });
+        }
+      }
+
+      // 4. Upsert bucket-specific configuration
+      const dataToUpsert = {
+        ...bucketConfigData,
+        config_id: configId,
+        tenant: this.tenant,
+      };
+
+      // Try updating first
+      const updatedCount = await bucketConfigModel.update(configId, dataToUpsert);
+
+      if (!updatedCount) { // Check if update returned false (no rows affected)
+        // If update didn't affect any rows (meaning it didn't exist), create it
+        console.log(`No existing bucket config for ${configId}. Creating.`);
+        // Ensure all required fields for creation are present, potentially using defaults
+        const createData: Omit<IPlanServiceBucketConfig, 'created_at' | 'updated_at'> = {
+            config_id: configId,
+            total_hours: bucketConfigData.total_hours ?? 0, // Provide defaults if needed
+            billing_period: bucketConfigData.billing_period ?? 'monthly',
+            overage_rate: bucketConfigData.overage_rate ?? 0,
+            allow_rollover: bucketConfigData.allow_rollover ?? false,
+            tenant: this.tenant,
+        };
+        await bucketConfigModel.create(createData);
+      } else {
+         console.log(`Updated existing bucket config for ${configId}.`);
+      }
+
+
+      return configId;
+    });
   }
 }

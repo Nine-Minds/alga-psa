@@ -284,6 +284,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       // For Usage plans, exclude services with 'fixed' billing method
       return availService.billing_method !== 'fixed';
     }
+    else if (planType === 'Bucket') {
+      // For Bucket plans, exclude services with 'fixed' billing method
+      return availService.billing_method !== 'fixed';
+    }
 
     // TODO: Add filtering logic for other plan types if needed (using availService.billing_method)
     // Example:

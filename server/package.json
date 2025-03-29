@@ -23,6 +23,7 @@
     "@hocuspocus/provider": "^2.15.2",
     "@huggingface/inference": "^3.3.3",
     "@js-temporal/polyfill": "^0.4.4",
+    "@mantine/form": "^7.17.3",
     "@monaco-editor/react": "^4.7.0",
     "@nestjs/common": "^11.0.4",
     "@nestjs/core": "^11.0.4",
