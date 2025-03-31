@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../../lib/db';
-import { IPlanServiceRateTier } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import {
@@ -212,12 +212,13 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
 }
 
 /**
- * Get all services in a plan with their configurations and service type name
+ * Get all services in a plan with their configurations, service type name, and user type rates (for hourly).
  */
 export async function getPlanServicesWithConfigurations(planId: string): Promise<{
-  service: IService & { service_type_name?: string }; // Add service_type_name to the service object
+  service: IService & { service_type_name?: string };
   configuration: IPlanServiceConfiguration;
   typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
+  userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
 }[]> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -250,10 +251,22 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
 
     const configDetails = await planServiceConfigActions.getConfigurationWithDetails(config.config_id);
 
+    let userTypeRates: IUserTypeRate[] | undefined = undefined;
+
+    // If it's an hourly config, fetch user type rates
+    if (config.configuration_type === 'Hourly') {
+      // Assuming PlanServiceHourlyConfig model is accessible or we use an action
+      // For simplicity, let's assume we can access the model instance via the service
+      // This might need adjustment based on actual service/model structure
+      const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
+      userTypeRates = await hourlyConfigModel.getUserTypeRates(config.config_id);
+    }
+
     result.push({
-      service, // This now includes service_type_name
+      service,
       configuration: config,
-      typeConfig: configDetails.typeConfig
+      typeConfig: configDetails.typeConfig,
+      userTypeRates: userTypeRates // Add the fetched rates
     });
   }
 

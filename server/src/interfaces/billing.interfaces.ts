@@ -171,6 +171,19 @@ export interface IBillingPlan extends TenantEntity {
   is_custom: boolean;
   service_category?: string;
   plan_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+  // Add potentially existing hourly fields (to be deprecated for Hourly type)
+  hourly_rate?: number | null;
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
+  // Add other plan-wide fields that might exist (like overtime, etc.)
+  enable_overtime?: boolean | null;
+  overtime_rate?: number | null;
+  overtime_threshold?: number | null; // Assuming threshold is numeric
+  enable_after_hours_rate?: boolean | null;
+  after_hours_multiplier?: number | null;
+  // user_type_rates might be handled differently (e.g., separate table/JSON)
+  // If it's a JSONB column in billing_plans, it could be:
+  // user_type_rates?: Record<string, number> | null;
 }
 
 export interface IPlanService extends TenantEntity {

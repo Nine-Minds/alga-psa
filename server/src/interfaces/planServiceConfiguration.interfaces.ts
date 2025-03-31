@@ -34,13 +34,10 @@ export interface IPlanServiceFixedConfig extends TenantEntity {
  */
 export interface IPlanServiceHourlyConfig extends TenantEntity {
   config_id: string;
+  hourly_rate: number; // Added
   minimum_billable_time: number;
   round_up_to_nearest: number;
-  enable_overtime: boolean;
-  overtime_rate?: number;
-  overtime_threshold?: number;
-  enable_after_hours_rate: boolean;
-  after_hours_multiplier?: number;
+  // Removed plan-wide fields: enable_overtime, overtime_rate, overtime_threshold, enable_after_hours_rate, after_hours_multiplier
   tenant: string;
   created_at: Date;
   updated_at: Date;

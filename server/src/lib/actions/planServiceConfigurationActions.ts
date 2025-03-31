@@ -1,5 +1,6 @@
 'use server';
 
+import { z } from 'zod'; // Add Zod import
 import { createTenantKnex } from 'server/src/lib/db';
 import {
   IPlanServiceConfiguration,
@@ -205,6 +206,54 @@ export async function deleteUserTypeRate(rateId: string): Promise<boolean> {
   const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
   
   return await hourlyConfigModel.deleteUserTypeRate(rateId);
+}
+
+// --- Zod Schema for User Type Rate Input ---
+const UserTypeRateInputSchema = z.object({
+  user_type: z.string().min(1, "User type cannot be empty"),
+  rate: z.number().min(0, "Rate cannot be negative"),
+});
+
+const UpsertUserTypeRatesInputSchema = z.object({
+  configId: z.string().uuid("Invalid Configuration ID"),
+  rates: z.array(UserTypeRateInputSchema),
+});
+
+/**
+ * Upserts (replaces) all user type rates for a specific hourly configuration.
+ * Deletes existing rates and inserts the provided ones within a transaction.
+ */
+export async function upsertUserTypeRatesForConfig(
+  input: z.infer<typeof UpsertUserTypeRatesInputSchema>
+): Promise<void> {
+  // Validate input
+  const validationResult = UpsertUserTypeRatesInputSchema.safeParse(input);
+  if (!validationResult.success) {
+    // Combine Zod error messages for clarity
+    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+    throw new Error(`Validation Error: ${errorMessages}`);
+  }
+
+  const { configId, rates } = validationResult.data;
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  // Use the service, assuming it has a method for this bulk operation
+  // If not, we'd implement the transaction logic here or add the method to the service.
+  const configService = new PlanServiceConfigurationService(knex, tenant);
+
+  try {
+    // Assuming a method like this exists or will be added to the service:
+    await configService.upsertUserTypeRates(configId, rates);
+  } catch (error) {
+    console.error(`Error upserting user type rates for config ${configId}:`, error);
+    if (error instanceof Error) {
+      throw error; // Re-throw specific errors
+    }
+    throw new Error(`Failed to update user type rates for config ${configId}.`);
+  }
 }
 
 // --- New Actions for Tiered Service Pricing ---
@@ -541,5 +590,81 @@ export async function upsertPlanServiceBucketConfigurationAction(
     console.error("Error in upsertPlanServiceBucketConfigurationAction:", error);
     // Consider more specific error handling/logging
     throw new Error("Failed to upsert bucket configuration.");
+  }
+}
+
+
+// --- Hourly Configuration Actions ---
+
+// Define Zod schema for input validation
+const UpsertPlanServiceHourlyConfigurationInputSchema = z.object({
+  planId: z.string().uuid({ message: "Invalid Plan ID format" }),
+  serviceId: z.string().uuid({ message: "Invalid Service ID format" }),
+  hourly_rate: z.coerce.number({ invalid_type_error: "Hourly rate must be a number" }) // Coerce to number
+                 .min(0, { message: "Hourly rate cannot be negative" })
+                 .nullable()
+                 .optional(),
+  minimum_billable_time: z.coerce.number({ invalid_type_error: "Minimum billable time must be a number" }) // Coerce to number
+                           .min(0, { message: "Minimum billable time cannot be negative" })
+                           .nullable()
+                           .optional(),
+  round_up_to_nearest: z.coerce.number({ invalid_type_error: "Round up value must be a number" }) // Coerce to number
+                         .min(0, { message: "Round up value cannot be negative" })
+                         .nullable()
+                         .optional(),
+});
+
+type UpsertPlanServiceHourlyConfigurationInput = z.infer<typeof UpsertPlanServiceHourlyConfigurationInputSchema>;
+
+
+/**
+ * Upserts the hourly configuration (hourly_rate, minimum_billable_time, round_up_to_nearest)
+ * for a specific service within a plan. Creates the base plan_service_configuration
+ * record with type 'Hourly' if it doesn't exist.
+ * Returns the config_id of the upserted configuration.
+ */
+export async function upsertPlanServiceHourlyConfiguration(
+  input: UpsertPlanServiceHourlyConfigurationInput
+): Promise<string> { // Changed return type to string (config_id)
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("Tenant context not found");
+  }
+
+  // --- Validation ---
+  const validationResult = UpsertPlanServiceHourlyConfigurationInputSchema.safeParse(input);
+  if (!validationResult.success) {
+    console.error("Validation failed for upsertPlanServiceHourlyConfiguration:", validationResult.error.errors);
+    // Combine error messages for a clearer error
+    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.') || 'input'}: ${e.message}`).join('; ');
+    throw new Error(`Validation Error: ${errorMessages}`);
+  }
+  const validatedInput = validationResult.data;
+  // --- End Validation ---
+
+  const configService = new PlanServiceConfigurationService(knex, tenant);
+
+  try {
+    // Prepare the hourly config data object, converting nulls to undefined
+    const hourlyConfigData: Partial<IPlanServiceHourlyConfig> = {
+        hourly_rate: validatedInput.hourly_rate ?? undefined,
+        minimum_billable_time: validatedInput.minimum_billable_time ?? undefined,
+        round_up_to_nearest: validatedInput.round_up_to_nearest ?? undefined,
+    };
+
+    // Call the service method with separate arguments
+    const configId = await configService.upsertPlanServiceHourlyConfiguration(
+      validatedInput.planId,
+      validatedInput.serviceId,
+      hourlyConfigData
+    );
+    return configId; // Return the config_id
+  } catch (error) {
+    console.error("Error upserting plan service hourly configuration:", error);
+    if (error instanceof Error) {
+        throw new Error(`Failed to upsert plan service hourly configuration: ${error.message}`);
+    } else {
+        throw new Error("An unknown error occurred while upserting plan service hourly configuration.");
+    }
   }
 }

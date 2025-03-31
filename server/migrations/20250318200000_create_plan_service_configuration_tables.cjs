@@ -7,7 +7,7 @@ exports.up = function(knex) {
     // Base configuration table
     .createTable('plan_service_configuration', function(table) {
       // Primary key
-      table.uuid('config_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('config_id').notNullable().defaultTo(knex.raw('gen_random_uuid()')); // Remove .primary() here
       
       // Foreign keys
       table.uuid('plan_id').notNullable();
@@ -31,6 +31,8 @@ exports.up = function(knex) {
       
       // Constraints
       table.unique(['plan_id', 'service_id', 'tenant']);
+      // Define composite primary key including tenant
+      table.primary(['tenant', 'config_id']);
       
       // Indexes
       table.index(['plan_id']);
@@ -41,8 +43,9 @@ exports.up = function(knex) {
     // Fixed price configuration
     .createTable('plan_service_fixed_config', function(table) {
       // Primary key (same as config_id)
-      table.uuid('config_id').primary();
-      table.foreign('config_id').references('config_id').inTable('plan_service_configuration').onDelete('CASCADE');
+      table.uuid('config_id').notNullable(); // Remove .primary()
+      // Composite Foreign Key
+      table.foreign(['tenant', 'config_id']).references(['tenant', 'config_id']).inTable('plan_service_configuration').onDelete('CASCADE');
       
       // Configuration fields
       table.boolean('enable_proration').notNullable().defaultTo(false);
@@ -61,8 +64,9 @@ exports.up = function(knex) {
     // Hourly configuration
     .createTable('plan_service_hourly_config', function(table) {
       // Primary key (same as config_id)
-      table.uuid('config_id').primary();
-      table.foreign('config_id').references('config_id').inTable('plan_service_configuration').onDelete('CASCADE');
+      table.uuid('config_id').notNullable(); // Remove .primary()
+      // Composite Foreign Key
+      table.foreign(['tenant', 'config_id']).references(['tenant', 'config_id']).inTable('plan_service_configuration').onDelete('CASCADE');
       
       // Configuration fields
       table.integer('minimum_billable_time').notNullable().defaultTo(15);
@@ -86,8 +90,9 @@ exports.up = function(knex) {
     // Usage-based configuration
     .createTable('plan_service_usage_config', function(table) {
       // Primary key (same as config_id)
-      table.uuid('config_id').primary();
-      table.foreign('config_id').references('config_id').inTable('plan_service_configuration').onDelete('CASCADE');
+      table.uuid('config_id').notNullable(); // Remove .primary()
+      // Composite Foreign Key
+      table.foreign(['tenant', 'config_id']).references(['tenant', 'config_id']).inTable('plan_service_configuration').onDelete('CASCADE');
       
       // Configuration fields
       table.string('unit_of_measure', 50).notNullable().defaultTo('Unit');
@@ -107,8 +112,9 @@ exports.up = function(knex) {
     // Bucket configuration
     .createTable('plan_service_bucket_config', function(table) {
       // Primary key (same as config_id)
-      table.uuid('config_id').primary();
-      table.foreign('config_id').references('config_id').inTable('plan_service_configuration').onDelete('CASCADE');
+      table.uuid('config_id').notNullable(); // Remove .primary()
+      // Composite Foreign Key
+      table.foreign(['tenant', 'config_id']).references(['tenant', 'config_id']).inTable('plan_service_configuration').onDelete('CASCADE');
       
       // Configuration fields
       table.integer('total_hours').notNullable();
@@ -133,7 +139,8 @@ exports.up = function(knex) {
       
       // Foreign key to configuration
       table.uuid('config_id').notNullable();
-      table.foreign('config_id').references('config_id').inTable('plan_service_configuration').onDelete('CASCADE');
+      // Composite Foreign Key
+      table.foreign(['tenant', 'config_id']).references(['tenant', 'config_id']).inTable('plan_service_configuration').onDelete('CASCADE');
       
       // Tier range
       table.integer('min_quantity').notNullable();
@@ -163,7 +170,7 @@ exports.up = function(knex) {
       
       // Foreign key to hourly configuration
       table.uuid('config_id').notNullable();
-      table.foreign('config_id').references('config_id').inTable('plan_service_hourly_config').onDelete('CASCADE');
+      table.foreign('config_id').references('config_id').inTable('plan_service_hourly_configs').onDelete('CASCADE'); // Corrected referenced table name (plural)
       
       // User type and rate
       table.string('user_type', 50).notNullable();

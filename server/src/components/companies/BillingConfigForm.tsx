@@ -110,18 +110,16 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                         <ContactPicker
                             id="company-billing-contact-select"
                             contacts={contacts}
-                            onSelect={(contactId) => {
+                            onValueChange={(contactId: string) => { // Use onValueChange and add type
                                 handleSelectChange('billing_contact_id')(contactId);
                                 // Clear billing email if contact is selected, keep it if contact is cleared
                                 if (contactId) {
                                     handleSelectChange('billing_email')('');
                                 }
                             }}
-                            selectedContactId={billingConfig.billing_contact_id || null}
+                            value={billingConfig.billing_contact_id || ''}
                             companyId={companyId}
-                            filterState={contactFilterState}
-                            onFilterStateChange={setContactFilterState}
-                            fitContent={false}
+                            // Removed filterState, onFilterStateChange, and fitContent props
                         />
                     </div>
                     <div className="space-y-2">

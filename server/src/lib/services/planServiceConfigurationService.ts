@@ -66,7 +66,7 @@ export class PlanServiceConfigurationService {
     baseConfig: IPlanServiceConfiguration;
     typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
     rateTiers?: IPlanServiceRateTier[];
-    userTypeRates?: IUserTypeRate[];
+    // userTypeRates removed as they are plan-wide for Hourly plans now
   }> {
     await this.initKnex();
     
@@ -85,7 +85,7 @@ export class PlanServiceConfigurationService {
     
     let typeConfig = null;
     let rateTiers = undefined;
-    let userTypeRates = undefined;
+    // let userTypeRates = undefined; // Removed
 
     // If the plan is a Bucket plan, always fetch from bucket config table
     if (plan?.plan_type === 'Bucket') {
@@ -100,9 +100,10 @@ export class PlanServiceConfigurationService {
           
         case 'Hourly':
           typeConfig = await this.hourlyConfigModel.getByConfigId(configId);
-          if (typeConfig) {
-            userTypeRates = await this.hourlyConfigModel.getUserTypeRates(configId);
-          }
+          // userTypeRates are now plan-wide, not fetched here
+          // if (typeConfig) {
+          //   userTypeRates = await this.hourlyConfigModel.getUserTypeRates(configId);
+          // }          
           break;
           
         case 'Usage':
@@ -124,7 +125,7 @@ export class PlanServiceConfigurationService {
       baseConfig,
       typeConfig,
       rateTiers,
-      userTypeRates
+      // userTypeRates // Removed
     };
   }
 
@@ -163,29 +164,22 @@ export class PlanServiceConfigurationService {
           break;
           
         case 'Hourly':
+          // Ensure typeConfig has the required fields for the new hourly structure
+          const hourlyData = typeConfig as Partial<IPlanServiceHourlyConfig>;
+          if (!hourlyData || typeof hourlyData.hourly_rate === 'undefined') {
+             throw new Error('Hourly rate is required for Hourly configuration type.');
+          }
           await hourlyConfigModel.create({
             config_id: configId,
-            minimum_billable_time: (typeConfig as IPlanServiceHourlyConfig)?.minimum_billable_time ?? 15,
-            round_up_to_nearest: (typeConfig as IPlanServiceHourlyConfig)?.round_up_to_nearest ?? 15,
-            enable_overtime: (typeConfig as IPlanServiceHourlyConfig)?.enable_overtime ?? false,
-            overtime_rate: (typeConfig as IPlanServiceHourlyConfig)?.overtime_rate,
-            overtime_threshold: (typeConfig as IPlanServiceHourlyConfig)?.overtime_threshold,
-            enable_after_hours_rate: (typeConfig as IPlanServiceHourlyConfig)?.enable_after_hours_rate ?? false,
-            after_hours_multiplier: (typeConfig as IPlanServiceHourlyConfig)?.after_hours_multiplier,
+            hourly_rate: hourlyData.hourly_rate, // Use new field
+            minimum_billable_time: hourlyData.minimum_billable_time ?? 15, // Use new field
+            round_up_to_nearest: hourlyData.round_up_to_nearest ?? 15, // Use new field
+            // Removed plan-wide fields: enable_overtime, overtime_rate, etc.
             tenant: this.tenant
           });
           
-          // Add user type rates if provided
-          if (userTypeRates && userTypeRates.length > 0) {
-            for (const rateData of userTypeRates) {
-              await hourlyConfigModel.addUserTypeRate({
-                config_id: configId,
-                user_type: rateData.user_type,
-                rate: rateData.rate,
-                tenant: this.tenant
-              });
-            }
-          }
+          // User type rates are plan-wide, not handled here anymore
+          // if (userTypeRates && userTypeRates.length > 0) { ... }
           break;
           
         case 'Usage':
@@ -234,7 +228,8 @@ export class PlanServiceConfigurationService {
     configId: string,
     baseConfig?: Partial<IPlanServiceConfiguration>,
     typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
-    rateTiers?: IPlanServiceRateTier[] // Add rateTiers parameter
+    rateTiers?: IPlanServiceRateTier[], // Add rateTiers parameter
+    // userTypeRates parameter removed as it's not used for hourly updates here
   ): Promise<boolean> {
     await this.initKnex();
     
@@ -266,7 +261,22 @@ export class PlanServiceConfigurationService {
             break;
             
           case 'Hourly':
-            await hourlyConfigModel.update(configId, typeConfig as Partial<IPlanServiceHourlyConfig>);
+            // Ensure only hourly-specific fields from the new schema are passed
+            const hourlyUpdateData = typeConfig as Partial<IPlanServiceHourlyConfig>;
+            const updatePayload: Partial<IPlanServiceHourlyConfig> = {};
+            if (typeof hourlyUpdateData.hourly_rate !== 'undefined') {
+              updatePayload.hourly_rate = hourlyUpdateData.hourly_rate;
+            }
+            if (typeof hourlyUpdateData.minimum_billable_time !== 'undefined') {
+              updatePayload.minimum_billable_time = hourlyUpdateData.minimum_billable_time;
+            }
+            if (typeof hourlyUpdateData.round_up_to_nearest !== 'undefined') {
+              updatePayload.round_up_to_nearest = hourlyUpdateData.round_up_to_nearest;
+            }
+            
+            if (Object.keys(updatePayload).length > 0) {
+               await hourlyConfigModel.update(configId, updatePayload);
+            }
             break;
             
           case 'Usage':
@@ -295,7 +305,7 @@ export class PlanServiceConfigurationService {
           });
         }
       }
-      // TODO: Add similar logic for userTypeRates if needed for Hourly config updates
+      // User type rates are plan-wide and not updated here.
       
       return true;
     });
@@ -317,8 +327,31 @@ export class PlanServiceConfigurationService {
     return await this.knex.transaction(async (trx) => {
       // Create models with transaction
       const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
+      const fixedConfigModel = new PlanServiceFixedConfig(trx, this.tenant);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
+      const usageConfigModel = new PlanServiceUsageConfig(trx, this.tenant);
+      const bucketConfigModel = new PlanServiceBucketConfig(trx, this.tenant);
+
+      // Explicitly delete type-specific configuration first (no CASCADE)
+      switch (currentConfig.configuration_type) {
+        case 'Fixed':
+          await fixedConfigModel.delete(configId);
+          break;
+        case 'Hourly':
+          // Explicitly delete from plan_service_hourly_configs first
+          await hourlyConfigModel.delete(configId);
+          break;
+        case 'Usage':
+          // Also delete rate tiers if applicable
+          await usageConfigModel.deleteRateTiersByConfigId(configId);
+          await usageConfigModel.delete(configId);
+          break;
+        case 'Bucket':
+          await bucketConfigModel.delete(configId);
+          break;
+      }
       
-      // Delete base configuration (will cascade to type-specific configurations)
+      // Delete base configuration
       await planServiceConfigModel.delete(configId);
       
       return true;
@@ -413,6 +446,117 @@ export class PlanServiceConfigurationService {
 
 
       return configId;
+    });
+  }
+
+  /**
+   * Upserts the hourly-specific configuration for a service within a plan.
+   * Ensures the base configuration exists and has type 'Hourly'.
+   */
+  async upsertPlanServiceHourlyConfiguration(
+    planId: string,
+    serviceId: string,
+    hourlyConfigData: Partial<Omit<IPlanServiceHourlyConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>>
+  ): Promise<string> {
+    await this.initKnex();
+
+    return await this.knex.transaction(async (trx) => {
+      // Create models with transaction
+      const planServiceConfigModel = new PlanServiceConfiguration(trx, this.tenant);
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
+
+      // 1. Find existing base configuration
+      let baseConfig = await planServiceConfigModel.getByPlanAndServiceId(planId, serviceId);
+      let configId: string;
+
+      if (!baseConfig) {
+        // 2. Create base configuration if it doesn't exist, force type to Hourly
+        console.log(`No base config found for plan ${planId}, service ${serviceId}. Creating one with type Hourly.`);
+        const newBaseConfigData: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
+          plan_id: planId,
+          service_id: serviceId,
+          configuration_type: 'Hourly', // Force type to Hourly
+          tenant: this.tenant,
+        };
+        configId = await planServiceConfigModel.create(newBaseConfigData);
+        console.log(`Created base config with ID: ${configId}`);
+      } else {
+        configId = baseConfig.config_id;
+        // 3. Update base configuration type if it's not Hourly
+        if (baseConfig.configuration_type !== 'Hourly') {
+          console.log(`Base config ${configId} type is ${baseConfig.configuration_type}. Updating to Hourly.`);
+          await planServiceConfigModel.update(configId, { configuration_type: 'Hourly' });
+        }
+      }
+
+      // 4. Upsert hourly-specific configuration
+      const dataToUpsert = {
+        ...hourlyConfigData,
+        config_id: configId,
+        tenant: this.tenant,
+      };
+
+      // Try updating first
+      const updatedCount = await hourlyConfigModel.update(configId, dataToUpsert);
+
+      if (!updatedCount) { // Check if update returned false (no rows affected)
+        // If update didn't affect any rows (meaning it didn't exist), create it
+        console.log(`No existing hourly config for ${configId}. Creating.`);
+        // Ensure all required fields for creation are present
+        if (typeof hourlyConfigData.hourly_rate === 'undefined') {
+          throw new Error('Hourly rate is required when creating hourly configuration.');
+        }
+        const createData: Omit<IPlanServiceHourlyConfig, 'created_at' | 'updated_at'> = {
+            config_id: configId,
+            hourly_rate: hourlyConfigData.hourly_rate,
+            minimum_billable_time: hourlyConfigData.minimum_billable_time ?? 15, // Provide defaults
+            round_up_to_nearest: hourlyConfigData.round_up_to_nearest ?? 15, // Provide defaults
+            tenant: this.tenant,
+        };
+        await hourlyConfigModel.create(createData);
+      } else {
+         console.log(`Updated existing hourly config for ${configId}.`);
+      }
+
+      return configId;
+    });
+  }
+
+  /**
+   * Upserts (replaces) all user type rates for a specific hourly configuration.
+   * Deletes existing rates and inserts the provided ones within a transaction.
+   */
+  async upsertUserTypeRates(
+    configId: string,
+    rates: Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>[]
+  ): Promise<void> {
+    await this.initKnex();
+
+    // Ensure the config exists and is of type 'Hourly' before proceeding
+    const baseConfig = await this.planServiceConfigModel.getById(configId);
+    if (!baseConfig) {
+      throw new Error(`Configuration with ID ${configId} not found.`);
+    }
+    if (baseConfig.configuration_type !== 'Hourly') {
+      throw new Error(`Configuration with ID ${configId} is not an Hourly configuration.`);
+    }
+
+    await this.knex.transaction(async (trx) => {
+      // Create model with transaction
+      const hourlyConfigModel = new PlanServiceHourlyConfig(trx, this.tenant);
+
+      // 1. Delete existing rates for this config_id
+      await hourlyConfigModel.deleteUserTypeRatesByConfigId(configId); // Assuming this method exists or will be added
+
+      // 2. Insert new rates if provided
+      if (rates && rates.length > 0) {
+        const ratesToInsert = rates.map(rate => ({
+          ...rate,
+          config_id: configId,
+          tenant: this.tenant,
+        }));
+        await hourlyConfigModel.addUserTypeRates(ratesToInsert); // Assuming addUserTypeRates can handle an array
+      }
     });
   }
 }

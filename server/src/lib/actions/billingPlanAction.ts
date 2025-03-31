@@ -81,16 +81,40 @@ export async function updateBillingPlan(
     }
 
     try {
+        // Fetch the existing plan to check its type
+        const existingPlan = await BillingPlan.findById(planId);
+        if (!existingPlan) {
+            // Handle case where plan is not found before update attempt
+            throw new Error(`Billing plan with ID ${planId} not found.`);
+        }
+
         // Remove tenant field if present in updateData to prevent override
+        // Use Object.assign to create a mutable copy if needed, or rely on delete below
         const { tenant: _, ...safeUpdateData } = updateData;
+
+        // If the plan is hourly, remove the per-service fields from the update data
+        if (existingPlan.plan_type === 'Hourly') {
+            delete safeUpdateData.hourly_rate;
+            delete safeUpdateData.minimum_billable_time;
+            delete safeUpdateData.round_up_to_nearest;
+            // Optional: Log that fields were removed for debugging
+            // console.log(`Hourly plan update: Removed per-service fields for plan ${planId}`);
+        }
+
+        // Proceed with the update using the potentially modified data
+        // Ensure BillingPlan.update handles empty updateData gracefully if all fields were removed
         const plan = await BillingPlan.update(planId, safeUpdateData);
         return plan;
     } catch (error) {
         console.error('Error updating billing plan:', error);
         if (error instanceof Error) {
-            throw error; // Preserve specific error messages
+            // Re-throw specific errors like 'not found' if they weren't caught above
+            if (error.message.includes('not found')) {
+                 throw new Error(`Billing plan with ID ${planId} not found during update.`);
+            }
+            throw error; // Preserve other specific error messages
         }
-        throw new Error(`Failed to update billing plan in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to update billing plan ${planId} in tenant ${tenant}: ${error}`);
     }
 }
 

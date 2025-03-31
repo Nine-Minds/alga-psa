@@ -577,6 +577,18 @@ export class BillingEngine {
     if (!company) {
       throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
+    
+    // Fetch the billing plan details to get plan-wide settings
+    const plan = await this.knex('billing_plans')
+      .where({
+        plan_id: companyBillingPlan.plan_id,
+        tenant: this.tenant
+      })
+      .first();
+      
+    if (!plan) {
+        throw new Error(`Billing plan ${companyBillingPlan.plan_id} not found for company ${companyId}`);
+    }
 
     const tenant = this.tenant; // Capture tenant value for joins
     
@@ -725,12 +737,14 @@ export class BillingEngine {
       
       // Check for overtime if applicable
       let total = Math.round(duration * rate);
-      if (serviceConfig && serviceConfig.config.enable_overtime &&
-          serviceConfig.config.overtime_threshold &&
-          duration > serviceConfig.config.overtime_threshold) {
-        const regularHours = serviceConfig.config.overtime_threshold;
+      // Use plan-wide settings from the fetched 'plan' object
+      if (plan.enable_overtime &&
+          plan.overtime_threshold &&
+          duration > plan.overtime_threshold) {
+        const regularHours = plan.overtime_threshold;
         const overtimeHours = duration - regularHours;
-        const overtimeRate = serviceConfig.config.overtime_rate || (rate * 1.5);
+        // Use plan's overtime_rate, fallback to 1.5x the calculated rate (user or service specific)
+        const overtimeRate = plan.overtime_rate || (rate * 1.5);
         total = Math.round((regularHours * rate) + (overtimeHours * overtimeRate));
       }
       
