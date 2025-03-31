@@ -11,9 +11,13 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction'; // Corrected path
-import { getPlanServices } from 'server/src/lib/actions/planServiceActions'; // Assuming this action exists
-import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces'; // Added IPlanService
+import {
+  getBillingPlanById,
+  updateFixedPlanConfiguration,
+  getFixedPlanConfiguration
+} from 'server/src/lib/actions/billingPlanAction';
+import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
+import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedPlanServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
@@ -45,21 +49,36 @@ export function FixedPlanConfiguration({
     setLoading(true);
     setError(null);
     try {
-      const fetchedPlan = await getBillingPlanById(planId) as IBillingPlan & { base_rate?: number, enable_proration?: boolean, billing_cycle_alignment?: string }; // Assume fields are added by action
-      if (fetchedPlan && fetchedPlan.plan_type === 'Fixed') { // Match enum case
+      // Fetch the basic plan data
+      const fetchedPlan = await getBillingPlanById(planId);
+      if (fetchedPlan && fetchedPlan.plan_type === 'Fixed') {
         setPlan(fetchedPlan);
-        // Assume config fields are returned directly on the plan object by the action
-        setBaseRate(fetchedPlan.base_rate);
-        setEnableProration(fetchedPlan.enable_proration ?? false);
-        setBillingCycleAlignment(fetchedPlan.billing_cycle_alignment ?? 'start');
-
-        // Fetch associated services separately
+        
+        // Fetch associated services
         const associatedServices: IPlanService[] = await getPlanServices(planId);
-        // Assume the first service is the relevant one for a fixed plan's base rate config
+        
+        // If we have associated services, get the fixed plan configuration
         if (associatedServices.length > 0) {
-            setServiceCatalogId(associatedServices[0].service_id);
+          const serviceId = associatedServices[0].service_id;
+          setServiceCatalogId(serviceId);
+          
+          // Fetch the fixed plan configuration for this service
+          const fixedConfig = await getFixedPlanConfiguration(planId, serviceId);
+          
+          if (fixedConfig) {
+            // Set the configuration values
+            setBaseRate(fixedConfig.base_rate ?? undefined);
+            setEnableProration(fixedConfig.enable_proration);
+            setBillingCycleAlignment(fixedConfig.billing_cycle_alignment);
+          } else {
+            // No configuration exists yet, use defaults
+            setBaseRate(undefined);
+            setEnableProration(false);
+            setBillingCycleAlignment('start');
+          }
         } else {
-            setServiceCatalogId(undefined); // No service associated
+          setServiceCatalogId(undefined); // No service associated
+          setError('No services associated with this plan. Please add a service first.');
         }
       } else {
         setError('Invalid plan type or plan not found.');
@@ -112,32 +131,30 @@ export function FixedPlanConfiguration({
   };
 
   const handleSave = async () => {
-    if (!plan || Object.keys(validationErrors).length > 0) {
-        setSaveError("Cannot save, validation errors exist or plan not loaded.");
+    if (!plan || Object.keys(validationErrors).length > 0 || !serviceCatalogId) {
+        setSaveError("Cannot save, validation errors exist, plan not loaded, or no service selected.");
         return;
     }
     setSaving(true);
     setSaveError(null);
     try {
-        // Construct payload based on assumed structure updateBillingPlan expects
-        const updatePayload: Partial<IBillingPlan & { base_rate: number | undefined, enable_proration: boolean, billing_cycle_alignment: string | undefined }> = {
-            base_rate: baseRate,
-            enable_proration: enableProration,
-            billing_cycle_alignment: enableProration ? billingCycleAlignment : undefined,
-            // Service association updates likely handled separately (e.g., via planServiceActions)
-            // or potentially within updateBillingPlan if it supports it.
-            // For now, only sending config-related fields.
-        };
-
-
-        // This assumes updateBillingPlan handles these specific fields.
-        // Service association might need a separate step or different handling within updateBillingPlan.
-        await updateBillingPlan(planId, updatePayload);
+        // Use the new updateFixedPlanConfiguration function to update the fixed plan configuration
+        // This function handles updating the configuration in the plan_service_fixed_config table
+        await updateFixedPlanConfiguration(
+            planId,
+            serviceCatalogId,
+            {
+                base_rate: baseRate,
+                enable_proration: enableProration,
+                billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' | 'prorated' : 'start',
+            }
+        );
 
         // Optionally re-fetch data to confirm changes
-        // await fetchPlanData();
+        await fetchPlanData();
 
-        // Show success feedback (e.g., toast notification)
+        // Show success feedback
+        console.log('Fixed plan configuration updated successfully');
 
     } catch (err) {
         console.error('Error saving plan configuration:', err);

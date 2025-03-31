@@ -28,6 +28,8 @@ const config: Config = {
         },
       },
       colors: {
+        card: 'white',
+        'card-foreground': 'rgb(var(--color-text-900))',
         primary: {
           50: 'rgb(var(--color-primary-50) / <alpha-value>)',
           100: 'rgb(var(--color-primary-100) / <alpha-value>)',

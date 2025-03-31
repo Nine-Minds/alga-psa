@@ -14,10 +14,12 @@ import {
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IBillingPlan, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import {
   getPlanServices,
   addServiceToPlan as addPlanService,
-  removeServiceFromPlan as removePlanService
+  removeServiceFromPlan as removePlanService,
+  getPlanServicesWithConfigurations
 } from 'server/src/lib/actions/planServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
@@ -43,6 +45,13 @@ interface SimplePlanService extends IPlanService {
   default_rate?: number;
 }
 
+// Define the structure returned by getPlanServicesWithConfigurations
+type PlanServiceWithConfig = {
+  service: IService & { service_type_name?: string };
+  configuration: IPlanServiceConfiguration;
+  typeConfig?: any;
+};
+
 const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId }) => {
   const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -59,31 +68,24 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
     setError(null);
 
     try {
-      // Fetch associated services and all available services
-      // Fetch associated services, all available services, and service categories
-      const [associatedServices, allAvailableServices, categories] = await Promise.all([
-        getPlanServices(planId),
-        getServices(),
-        getServiceCategories() // Fetch categories
-      ]);
-
-      setServiceCategories(categories); // Store categories
-
-      // Create a map for quick category lookup
-      const categoryMap = new Map(categories.map(cat => [cat.category_id, cat.category_name]));
-
+      // Fetch services with configurations to get service_type_name directly
+      const servicesWithConfigs = await getPlanServicesWithConfigurations(planId);
+      const allAvailableServices = await getServices();
+      
+      // No need to fetch categories separately as we get service_type_name directly
+      
       // Enhance associated services with details for display
-      const enhancedServices: SimplePlanService[] = associatedServices.map(ps => {
-        const serviceDetails = allAvailableServices.find(s => s.service_id === ps.service_id);
-        const categoryName = serviceDetails?.service_type_id
-          ? categoryMap.get(serviceDetails.service_type_id) || 'N/A' // Lookup category name
-          : 'N/A';
+      const enhancedServices: SimplePlanService[] = servicesWithConfigs.map((configInfo: PlanServiceWithConfig) => {
         return {
-          ...ps,
-          service_name: serviceDetails?.service_name || 'Unknown Service',
-          service_category: categoryName, // Assign category name
-          billing_method: serviceDetails?.billing_method,
-          default_rate: serviceDetails?.default_rate
+          plan_id: planId,
+          service_id: configInfo.configuration.service_id,
+          tenant: configInfo.configuration.tenant,
+          created_at: configInfo.configuration.created_at,
+          updated_at: configInfo.configuration.updated_at,
+          service_name: configInfo.service.service_name || 'Unknown Service',
+          service_category: configInfo.service.service_type_name || 'N/A', // Use service_type_name directly
+          billing_method: configInfo.service.billing_method,
+          default_rate: configInfo.service.default_rate
         };
       });
 
@@ -197,9 +199,6 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
     availService => !planServices.some(ps => ps.service_id === availService.service_id)
   );
 
-  // Create category map for rendering in the add list
-  const categoryMap = new Map(serviceCategories.map(cat => [cat.category_id, cat.category_name]));
-
   return (
     // Using div instead of Card directly to avoid nested Card issues if used within another Card
     <div>
@@ -232,9 +231,9 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
                     <div className="mb-3">
                         <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                         {servicesAvailableToAdd.map(service => {
-                            const categoryName = service.service_type_id
-                                ? categoryMap.get(service.service_type_id) || 'N/A' // Lookup category name
-                                : 'N/A';
+                            // Use service_type_name directly from the service object if available
+                            // Cast to any since IService might not have service_type_name yet
+                            const serviceTypeName = (service as any).service_type_name || 'N/A';
                             return (
                                 <div
                                 key={service.service_id}
@@ -256,7 +255,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
                                 <label htmlFor={`add-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
                                     <span>{service.service_name}</span>
                                     <span className="text-xs text-muted-foreground">
-                                    Category: {categoryName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ (service.default_rate / 100).toFixed(2)}
+                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ (service.default_rate / 100).toFixed(2)}
                                     </span>
                                 </label>
                                 </div>

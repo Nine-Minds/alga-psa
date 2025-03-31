@@ -15,7 +15,7 @@ import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
 import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Corrected import path
-import GenericPlanServicesList from './GenericPlanServicesList'; // Keep for potential future use (Add Service button?)
+import GenericPlanServicesList from './GenericPlanServicesList';
 import { IBillingPlan, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
@@ -197,6 +197,12 @@ export function HourlyPlanConfiguration({
       setLoading(false);
     }
   }, [planId]);
+
+  // Callback to refresh data when services are added/removed
+  const handleServicesChanged = useCallback(() => {
+    console.log('Services changed, refetching plan data...');
+    fetchPlanData();
+  }, [fetchPlanData]);
 
   useEffect(() => {
     fetchPlanData();
@@ -601,16 +607,13 @@ export function HourlyPlanConfiguration({
                 </Button>
             </div>
 
-            {/* Add/Remove Services Section */}
+            {/* Add Services to Plan */}
             <Card>
                 <CardHeader>
                     <CardTitle>Manage Plan Services</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <GenericPlanServicesList
-                        planId={planId}
-                        onServicesChanged={fetchPlanData} // Re-fetch data when services are added/removed
-                    />
+                    <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} disableEditing={true} />
                 </CardContent>
             </Card>
         </div>

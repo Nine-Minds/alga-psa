@@ -51,6 +51,7 @@ export default class PlanServiceFixedConfig {
     
     await this.knex('plan_service_fixed_config').insert({
       config_id: data.config_id,
+      base_rate: data.base_rate,
       enable_proration: data.enable_proration,
       billing_cycle_alignment: data.billing_cycle_alignment,
       tenant: this.tenant,

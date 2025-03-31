@@ -115,7 +115,8 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           newPlanService.quantity,
           newPlanService.custom_rate
         );
-        setPlanServices(prevServices => [...prevServices, newPlanService]);
+        // setPlanServices(prevServices => [...prevServices, newPlanService]); // Remove optimistic update
+        fetchPlanServices(selectedPlan); // Re-fetch the list from the server
         setError(null);
       }
     } catch (error) {

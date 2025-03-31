@@ -116,7 +116,7 @@ export function UsagePlanConfiguration({
           }));
           initialConfigs[serviceId] = {
             // Handle potential null values from DB by converting to undefined for state
-            base_rate: config.base_rate === null ? undefined : config.base_rate,
+            base_rate: config.base_rate === null ? undefined : Number(config.base_rate),
             unit_of_measure: config.unit_of_measure,
             enable_tiered_pricing: config.enable_tiered_pricing,
             minimum_usage: config.minimum_usage === null ? undefined : config.minimum_usage,
@@ -127,7 +127,7 @@ export function UsagePlanConfiguration({
           // Initialize with default/empty values
           initialConfigs[serviceId] = {
              // Access nested service properties correctly
-             base_rate: servicesList.find(s => s.configuration.service_id === serviceId)?.service?.default_rate,
+             base_rate: Number(servicesList.find(s => s.configuration.service_id === serviceId)?.service?.default_rate) || undefined,
              unit_of_measure: servicesList.find(s => s.configuration.service_id === serviceId)?.service?.unit_of_measure || '',
              enable_tiered_pricing: false,
              minimum_usage: 0,

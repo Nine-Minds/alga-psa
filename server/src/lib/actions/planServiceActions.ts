@@ -130,18 +130,49 @@ export async function addServiceToPlan(
 
   const configurationType = determinedConfigType;
 
-  // Create configuration
-  const configId = await planServiceConfigActions.createConfiguration(
-    {
+  // Check if the service is already in the plan
+  const existingPlanService = await getPlanService(planId, serviceId);
+  
+  // If not, add it to the plan_services table
+  if (!existingPlanService) {
+    await knex('plan_services').insert({
       plan_id: planId,
       service_id: serviceId,
-      configuration_type: configurationType,
-      custom_rate: customRate,
-      quantity: quantity || 1,
-      tenant
-    },
-    typeConfig || {}
-  );
+      tenant: tenant
+    });
+  }
+
+  // Check if a configuration already exists for this plan-service combination
+  const existingConfig = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
+  
+  let configId: string;
+  
+  if (existingConfig) {
+    // Update existing configuration instead of creating a new one
+    await planServiceConfigActions.updateConfiguration(
+      existingConfig.config_id,
+      {
+        configuration_type: configurationType,
+        custom_rate: customRate,
+        quantity: quantity || 1
+      },
+      typeConfig || {}
+    );
+    configId = existingConfig.config_id;
+  } else {
+    // Create new configuration if one doesn't exist
+    configId = await planServiceConfigActions.createConfiguration(
+      {
+        plan_id: planId,
+        service_id: serviceId,
+        configuration_type: configurationType,
+        custom_rate: customRate,
+        quantity: quantity || 1,
+        tenant
+      },
+      typeConfig || {}
+    );
+  }
 
   return configId;
 }
@@ -207,6 +238,15 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
   if (config) {
     await planServiceConfigActions.deleteConfiguration(config.config_id);
   }
+
+  // Remove the service from the plan_services table
+  await knex('plan_services')
+    .where({
+      plan_id: planId,
+      service_id: serviceId,
+      tenant
+    })
+    .delete();
 
   return true;
 }

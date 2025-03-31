@@ -157,6 +157,7 @@ export class PlanServiceConfigurationService {
         case 'Fixed':
           await fixedConfigModel.create({
             config_id: configId,
+            base_rate: (typeConfig as IPlanServiceFixedConfig)?.base_rate ?? null,
             enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false,
             billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start',
             tenant: this.tenant
