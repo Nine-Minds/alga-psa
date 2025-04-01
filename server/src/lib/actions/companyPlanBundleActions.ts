@@ -262,17 +262,14 @@ export async function applyBundleToCompany(companyBundleId: string): Promise<voi
         } else {
           // Create a new company billing plan
           await trx('company_billing_plans').insert({
-            company_billing_plan_id: db.raw('UUID()'),
+            company_billing_plan_id: db.raw('gen_random_uuid()'),
             company_id: companyBundle.company_id,
             plan_id: plan.plan_id,
             start_date: companyBundle.start_date,
             end_date: companyBundle.end_date,
             is_active: true,
-            custom_rate: plan.custom_rate,
             company_bundle_id: companyBundleId,
-            tenant,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            tenant
           });
         }
       }

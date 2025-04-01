@@ -1,15 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment } from 'react'; // Added Fragment
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, Calendar } from 'lucide-react';
+import { Plus, MoreVertical, Calendar, Info } from 'lucide-react'; // Added Info icon
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger, // Keep Trigger
+  DialogFooter,
+} from "server/src/components/ui/Dialog"; // Removed DialogClose
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -36,7 +44,8 @@ interface CompanyBundleAssignmentProps {
 interface DetailedCompanyBundle extends ICompanyPlanBundle {
   bundle_name: string;
   description?: string;
-  plan_count: number;
+  plan_count: number; // Keep for potential other uses or backward compatibility
+  plan_names?: string[]; // Added field for plan names
 }
 
 const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ companyId }) => {
@@ -45,7 +54,8 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
   const [selectedBundleToAdd, setSelectedBundleToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingBundle, setEditingBundle] = useState<DetailedCompanyBundle | null>(null);
+  const [editingBundle, setEditingBundle] = useState<DetailedCompanyBundle | null>(null); // Keep state for editing dialog
+  // Remove state for separate details dialog
 
   useEffect(() => {
     if (companyId) {
@@ -74,7 +84,8 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
               ...bundle,
               bundle_name: detailedBundle.bundle_name,
               description: detailedBundle.description,
-              plan_count: detailedBundle.plans ? detailedBundle.plans.length : 0
+              plan_count: detailedBundle.plan_count || 0, // Use the count from the backend
+              plan_names: detailedBundle.plan_names || [] // Use the names from the backend
             });
           }
         }
@@ -165,6 +176,8 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
     {
       title: 'Bundle Name',
       dataIndex: 'bundle_name',
+      // Revert to just displaying the value, no button/dialog trigger needed here
+      render: (value) => value,
     },
     {
       title: 'Description',
@@ -192,8 +205,14 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
     },
     {
       title: 'Plans',
-      dataIndex: 'plan_count',
-      render: (value) => value || 0,
+      dataIndex: 'plan_names', // Change dataIndex to plan_names
+      render: (planNames: string[] | undefined) => {
+        if (!planNames || planNames.length === 0) {
+          return '0'; // Or 'No plans'
+        }
+        // Simple comma-separated list for now. Consider a tooltip/popover for better UX if many plans.
+        return planNames.join(', ');
+      },
     },
     {
       title: 'Actions',
@@ -217,15 +236,18 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
               onClick={() => handleEditBundle(record)}
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Edit Dates
+              Edit {/* Changed text */}
             </DropdownMenuItem>
             {record.is_active && (
               <DropdownMenuItem
                 id="deactivate-company-bundle-menu-item"
                 className="text-red-600 focus:text-red-600"
-                onClick={() => handleDeactivateBundle(value)}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent event bubbling to row click
+                  handleDeactivateBundle(value);
+                }}
               >
-                Deactivate
+                Unassign {/* Updated text only */}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -265,6 +287,8 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
                   data={companyBundles}
                   columns={bundleColumns}
                   pagination={false}
+                  onRowClick={handleEditBundle} // Keep row click handler
+                  rowClassName={() => 'cursor-pointer'} // Use function for type compatibility
                 />
               )}
             </div>
@@ -306,8 +330,11 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
           }
           initialStartDate={editingBundle.start_date}
           initialEndDate={editingBundle.end_date}
+          planNames={editingBundle.plan_names} // Pass plan names now that dialog is updated
         />
       )}
+
+      {/* Removed the separate details dialog */}
     </Card>
   );
 };

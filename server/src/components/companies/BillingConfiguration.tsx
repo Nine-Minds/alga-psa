@@ -26,6 +26,7 @@ import CompanyZeroDollarInvoiceSettings from './CompanyZeroDollarInvoiceSettings
 import CompanyCreditExpirationSettings from './CompanyCreditExpirationSettings';
 import CompanyServiceOverlapMatrix from './CompanyServiceOverlapMatrix';
 import CompanyPlanDisambiguationGuide from './CompanyPlanDisambiguationGuide';
+import CompanyBundleAssignment from './CompanyBundleAssignment'; // Added import
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -373,7 +374,11 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         />
     </TabsContent>
     
-    <TabsContent value="plans">
+    <TabsContent value="plans" className="space-y-6"> {/* Added space-y for layout */}
+        {/* Added CompanyBundleAssignment component */}
+        <CompanyBundleAssignment companyId={company.company_id} />
+        
+        {/* Existing BillingPlans component */}
         <BillingPlans
             companyBillingPlans={companyBillingPlans}
             billingPlans={billingPlans}

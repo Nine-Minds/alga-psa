@@ -16,6 +16,7 @@ interface CompanyBundleDialogProps {
   isOpen?: boolean;
   initialStartDate?: string;
   initialEndDate?: string | null;
+  planNames?: string[]; // Added optional prop for plan names
 }
 
 export function CompanyBundleDialog({ 
@@ -24,7 +25,8 @@ export function CompanyBundleDialog({
   triggerButton, 
   isOpen = false,
   initialStartDate,
-  initialEndDate
+  initialEndDate,
+  planNames // Destructure the new prop
 }: CompanyBundleDialogProps) {
   const [open, setOpen] = useState(isOpen);
   const [startDate, setStartDate] = useState<string>(
@@ -88,8 +90,18 @@ export function CompanyBundleDialog({
           <Dialog.Title className="text-lg font-medium text-gray-900 mb-2">
             {initialStartDate ? 'Edit Bundle Assignment' : 'Assign Bundle to Company'}
           </Dialog.Title>
-          
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Display Plan Names if provided (likely in edit mode) - Moved inside form */}
+            {planNames && planNames.length > 0 && (
+              <div className="mb-4 border-b pb-4">
+                <h4 className="font-semibold mb-2 text-sm text-gray-700">Included Plans:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
+                  {planNames.map((planName: string, index: number) => ( // Added explicit types
+                    <li key={index}>{planName}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />

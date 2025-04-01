@@ -67,20 +67,39 @@ const CompanyPlanBundle = {
     }
 
     try {
+      // Step 1: Fetch the main company bundle details
       const companyBundle = await db('company_plan_bundles as cpb')
         .join('plan_bundles as pb', 'cpb.bundle_id', 'pb.bundle_id')
-        .where({ 
+        .where({
           'cpb.company_bundle_id': companyBundleId,
-          'cpb.tenant': tenant 
+          'cpb.tenant': tenant
         })
         .select(
           'cpb.*',
-          'pb.bundle_name',
-          'pb.description'
+          'pb.bundle_name'
+          // 'pb.description' // Removed non-existent column
         )
         .first();
 
-      return companyBundle || null;
+      if (!companyBundle) {
+        return null;
+      }
+
+      // Step 2: Fetch the names of the plans associated with the bundle
+      const plans = await db('bundle_billing_plans as bbp')
+        .join('billing_plans as bp', 'bbp.plan_id', 'bp.plan_id')
+        .where({
+          'bbp.bundle_id': companyBundle.bundle_id,
+          'bbp.tenant': tenant // Ensure tenant isolation for plans as well
+        })
+        .select('bp.plan_name');
+
+      // Step 3: Attach the plan names to the result object
+      companyBundle.plan_names = plans.map(p => p.plan_name);
+      // Keep plan_count for potential backward compatibility or other uses
+      companyBundle.plan_count = plans.length;
+
+      return companyBundle;
     } catch (error) {
       console.error(`Error fetching detailed company plan bundle ${companyBundleId}:`, error);
       throw error;
@@ -346,7 +365,7 @@ const CompanyPlanBundle = {
           'bp.plan_name',
           'bp.billing_frequency',
           'bp.is_custom',
-          'bp.service_category',
+          // 'bp.service_category', // Removed non-existent column
           'bp.plan_type'
         );
 
