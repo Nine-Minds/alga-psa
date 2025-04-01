@@ -78,7 +78,7 @@ export function FixedPlanConfiguration({
           }
         } else {
           setServiceCatalogId(undefined); // No service associated
-          setError('No services associated with this plan. Please add a service first.');
+          // Having no services initially is a valid state, not an error
         }
       } else {
         setError('Invalid plan type or plan not found.');

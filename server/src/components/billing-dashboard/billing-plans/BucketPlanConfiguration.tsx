@@ -46,7 +46,7 @@ interface BucketPlanConfigurationProps {
 
 const DEFAULT_BUCKET_CONFIG: Partial<IPlanServiceBucketConfig> = {
   total_hours: 0,
-  overage_rate: 0,
+  overage_rate: undefined, // Use undefined to allow backend default
   allow_rollover: false,
 };
 
@@ -84,8 +84,9 @@ export function BucketPlanConfiguration({
 
           const configData = bucketConfig
             ? {
+                // Use nullish coalescing (??) to fall back to default only if bucketConfig value is null or undefined
                 total_hours: bucketConfig.total_hours ?? DEFAULT_BUCKET_CONFIG.total_hours,
-                overage_rate: bucketConfig.overage_rate ?? DEFAULT_BUCKET_CONFIG.overage_rate,
+                overage_rate: bucketConfig.overage_rate ?? DEFAULT_BUCKET_CONFIG.overage_rate, // Will now default to undefined if not set
                 allow_rollover: bucketConfig.allow_rollover ?? DEFAULT_BUCKET_CONFIG.allow_rollover,
               }
             : { ...DEFAULT_BUCKET_CONFIG }; // Use defaults if no specific config exists

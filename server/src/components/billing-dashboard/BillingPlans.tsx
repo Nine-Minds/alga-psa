@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,12 +13,13 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { BillingPlanDialog } from './BillingPlanDialog';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
-import { getBillingPlans, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { getBillingPlans, getBillingPlanById, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { IBillingPlan, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
+import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
@@ -28,6 +30,7 @@ interface BillingPlansProps {
 }
 
 const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
+  const router = useRouter();
   const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [planServices, setPlanServices] = useState<IPlanService[]>([]);
@@ -203,11 +206,19 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                 try {
                   await deleteBillingPlan(record.plan_id!);
                   fetchBillingPlans();
+                  toast.success('Billing plan deleted successfully');
                 } catch (error) {
                   if (error instanceof Error) {
-                    alert(error.message);
+                    // Display user-friendly error message using toast
+                    if (error.message.includes('associated services')) {
+                      toast.error('Cannot delete plan that has associated services. Please remove all services from this plan before deleting.');
+                    } else if (error.message.includes('in use')) {
+                      toast.error('Cannot delete plan that is currently in use by companies.');
+                    } else {
+                      toast.error(error.message);
+                    }
                   } else {
-                    alert('Failed to delete plan');
+                    toast.error('Failed to delete plan');
                   }
                 }
               }}
@@ -326,8 +337,25 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           <Box p="4">
             <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
             <div className="mb-4">
-              <BillingPlanDialog 
-                onPlanAdded={fetchBillingPlans}
+              <BillingPlanDialog
+                onPlanAdded={(newPlanId) => {
+                  fetchBillingPlans().then(async () => {
+                    if (newPlanId) {
+                      setSelectedPlan(newPlanId);
+                      
+                      // Fetch the newly created plan and navigate to its configuration page
+                      try {
+                        const newPlan = await getBillingPlanById(newPlanId);
+                        if (newPlan) {
+                          // Navigate to the appropriate configuration page based on plan type
+                          router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
+                        }
+                      } catch (error) {
+                        console.error('Error fetching new plan for configuration:', error);
+                      }
+                    }
+                  });
+                }}
                 editingPlan={editingPlan}
                 onClose={() => setEditingPlan(null)}
                 allServiceTypes={allServiceTypes} // Pass service types down

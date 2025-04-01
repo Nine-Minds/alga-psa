@@ -27,6 +27,29 @@ const BillingPlan = {
     }
   },
 
+  hasAssociatedServices: async (planId: string): Promise<boolean> => {
+    const {knex: db, tenant} = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant context is required for checking billing plan services');
+    }
+
+    try {
+      const result = await db('plan_services')
+        .where({
+          plan_id: planId,
+          tenant
+        })
+        .count('service_id as count')
+        .first() as { count: string };
+      
+      return parseInt(result?.count || '0', 10) > 0;
+    } catch (error) {
+      console.error(`Error checking billing plan ${planId} services:`, error);
+      throw error;
+    }
+  },
+
   delete: async (planId: string): Promise<void> => {
     const {knex: db, tenant} = await createTenantKnex();
     

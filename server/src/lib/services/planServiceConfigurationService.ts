@@ -151,7 +151,6 @@ export class PlanServiceConfigurationService {
       
       // Create base configuration
       const configId = await planServiceConfigModel.create(baseConfig);
-      
       // Create type-specific configuration
       switch (baseConfig.configuration_type) {
         case 'Fixed':
@@ -207,11 +206,19 @@ export class PlanServiceConfigurationService {
           break;
           
         case 'Bucket':
+          // Fetch service default rate for defaulting
+          const service = await trx('service_catalog')
+            .where({ service_id: baseConfig.service_id, tenant: this.tenant })
+            .select('default_rate')
+            .first();
+          const serviceDefaultRate = service?.default_rate;
+
           await bucketConfigModel.create({
             config_id: configId,
             total_hours: (typeConfig as IPlanServiceBucketConfig)?.total_hours ?? 0,
             billing_period: (typeConfig as IPlanServiceBucketConfig)?.billing_period ?? 'monthly',
-            overage_rate: (typeConfig as IPlanServiceBucketConfig)?.overage_rate ?? 0,
+            // Use provided rate, else service default, else 0
+            overage_rate: (typeConfig as IPlanServiceBucketConfig)?.overage_rate ?? serviceDefaultRate ?? 0,
             allow_rollover: (typeConfig as IPlanServiceBucketConfig)?.allow_rollover ?? false,
             tenant: this.tenant
           });

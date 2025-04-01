@@ -126,10 +126,16 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
     }
 
     try {
-        // Check if plan is in use before attempting to delete
+        // Check if plan is in use by companies before attempting to delete
         const isInUse = await BillingPlan.isInUse(planId);
         if (isInUse) {
             throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
+        }
+
+        // Check if plan has associated services before attempting to delete
+        const hasServices = await BillingPlan.hasAssociatedServices(planId);
+        if (hasServices) {
+            throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
         }
 
         await BillingPlan.delete(planId);
@@ -138,6 +144,12 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
         if (error instanceof Error) {
             if (error.message.includes('in use')) {
                 throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
+            }
+            if (error.message.includes('associated services')) {
+                throw error; // Preserve the user-friendly error message
+            }
+            if (error.message.includes('foreign key constraint')) {
+                throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
             }
             throw error; // Preserve other specific error messages
         }

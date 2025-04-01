@@ -120,10 +120,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       // No need to save specific config or add services here
 
       resetForm();
-      setOpen(false);
       onPlanAdded(savedPlanId); // Pass the ID back
-      if (onClose) onClose();
-
     } catch (error) {
       console.error('Error saving billing plan:', error);
       setValidationErrors({

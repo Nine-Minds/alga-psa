@@ -220,7 +220,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     { title: 'Quantity', dataIndex: 'quantity', render: (value) => value ?? 1 }, // Default to 1 if null/undefined
     { title: 'Unit of Measure', dataIndex: 'unit_of_measure' },
     {
-      title: 'Custom Rate',
+      title: planType === 'Bucket' ? 'Service Rate' : 'Custom Rate',
       dataIndex: 'custom_rate',
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;

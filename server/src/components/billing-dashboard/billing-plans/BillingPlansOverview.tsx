@@ -144,7 +144,12 @@ const BillingPlansOverview: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <Heading as="h3" size="4">Billing Plans</Heading>
           <BillingPlanDialog 
-            onPlanAdded={fetchBillingPlans} 
+            onPlanAdded={(newPlanId) => {
+              if (newPlanId) {
+                // Navigate directly. PlanTypeRouter will fetch the plan details.
+                router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
+              }
+            }}
             editingPlan={editingPlan}
             onClose={() => setEditingPlan(null)}
             triggerButton={

@@ -569,11 +569,25 @@ export async function upsertPlanServiceBucketConfigurationAction(
 
   const { planId, serviceId, ...bucketConfigData } = input;
 
+  // Get service details to access default_rate
+  const service = await knex('service_catalog')
+    .where({
+      service_id: serviceId,
+      tenant
+    })
+    .first();
+
+  if (!service) {
+    throw new Error(`Service ${serviceId} not found`);
+  }
+
   // Prepare the data, ensuring correct types and handling nulls if necessary
   const dataForService: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = {
       total_hours: bucketConfigData.total_hours !== undefined && bucketConfigData.total_hours !== null ? Number(bucketConfigData.total_hours) : undefined,
       billing_period: bucketConfigData.billing_period !== undefined && bucketConfigData.billing_period !== null ? String(bucketConfigData.billing_period) : undefined,
-      overage_rate: bucketConfigData.overage_rate !== undefined && bucketConfigData.overage_rate !== null ? Number(bucketConfigData.overage_rate) : undefined,
+      // Use service's default_rate if overage_rate is not provided
+      // Use input rate if provided, otherwise use service default, falling back to 0 if service default is null/undefined
+      overage_rate: (bucketConfigData.overage_rate !== undefined && bucketConfigData.overage_rate !== null) ? Number(bucketConfigData.overage_rate) : (service.default_rate ?? 0),
       allow_rollover: bucketConfigData.allow_rollover !== undefined ? Boolean(bucketConfigData.allow_rollover) : undefined,
   };
 

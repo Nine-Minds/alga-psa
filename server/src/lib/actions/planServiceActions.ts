@@ -110,25 +110,35 @@ export async function addServiceToPlan(
   // Determine configuration type based on standard service type's billing method, prioritizing explicit configType
   let determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket'; // Bucket might need separate logic
 
+  // Determine configuration type: Prioritize explicit param, then plan type, then service type
   if (configType) {
     determinedConfigType = configType;
+  } else if (plan.plan_type === 'Bucket') { // Check if the plan itself is a Bucket plan
+    determinedConfigType = 'Bucket';
   } else if (serviceWithType?.service_type_billing_method === 'fixed') {
     determinedConfigType = 'Fixed';
   } else if (serviceWithType?.service_type_billing_method === 'per_unit') {
-    // Use the service's specific unit_of_measure
+    // Use the service's specific unit_of_measure for per_unit services on non-Bucket plans
     if (serviceWithType.unit_of_measure?.toLowerCase().includes('hour')) {
        determinedConfigType = 'Hourly';
     } else {
        determinedConfigType = 'Usage'; // Default for other per_unit types
     }
   } else {
-    // Fallback or error for missing/unknown standard service type billing method
-    console.warn(`Could not determine standard billing method for service type of ${serviceId}. Defaulting configuration type to 'Fixed'.`);
-    // Consider service.billing_method as secondary fallback? For now, default to Fixed.
+    // Fallback for missing/unknown service billing method on non-Bucket plans
+    console.warn(`Could not determine standard billing method for service type of ${serviceId} on a non-Bucket plan. Defaulting configuration type to 'Fixed'.`);
     determinedConfigType = 'Fixed';
   }
 
   const configurationType = determinedConfigType;
+
+  // If this is a Bucket configuration and overage_rate is not provided, set it to the service's default_rate
+  if (configurationType === 'Bucket') {
+    typeConfig = typeConfig || {};
+    if ((typeConfig as Partial<IPlanServiceBucketConfig>)?.overage_rate === undefined) {
+      (typeConfig as Partial<IPlanServiceBucketConfig>).overage_rate = service.default_rate;
+    }
+  }
 
   // Check if the service is already in the plan
   const existingPlanService = await getPlanService(planId, serviceId);
