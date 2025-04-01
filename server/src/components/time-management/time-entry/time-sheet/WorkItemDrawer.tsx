@@ -94,6 +94,7 @@ export function WorkItemDrawer({
                         <div className="min-w-auto h-full bg-white">
                             <TicketDetails 
                                 initialTicket={ticketData}
+                                onClose={onClose} // Pass onClose prop
                             />
                         </div>
                     );

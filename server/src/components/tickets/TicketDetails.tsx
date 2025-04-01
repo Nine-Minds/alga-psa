@@ -845,14 +845,17 @@ const handleClose = () => {
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100">
                 <div className="flex items-center space-x-5 mb-4">
-                    <button
-                        id="back-to-tickets-button"
-                        type="button"
-                        className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
-                        onClick={handleBackToTickets}
-                    >
-                        Back to Tickets
-                    </button>
+                    {/* Only show the Back button if onClose is NOT provided (i.e., not in a drawer) */}
+                    {!onClose && (
+                        <button
+                            id="back-to-tickets-button"
+                            type="button"
+                            className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300"
+                            onClick={handleBackToTickets}
+                        >
+                            Back to Tickets
+                        </button>
+                    )}
                     <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
                     <h1 className="text-xl font-bold">{ticket.title}</h1>
                 </div>

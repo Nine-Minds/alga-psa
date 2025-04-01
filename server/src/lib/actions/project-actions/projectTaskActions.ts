@@ -337,6 +337,7 @@ export async function getTaskChecklistItems(taskId: string): Promise<ITaskCheckl
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
+    const {knex: db, tenant} = await createTenantKnex(); // Get Knex instance and tenant
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -344,6 +345,20 @@ export async function deleteTask(taskId: string): Promise<void> {
         }
 
         await checkPermission(currentUser, 'project', 'delete');
+ 
+        // Check for associated time entries before proceeding
+        const timeEntryCount = await db('time_entries')
+            .where({
+                work_item_id: taskId,
+                work_item_type: 'project_task',
+                tenant: tenant!
+            })
+            .count('* as count')
+            .first();
+ 
+        if (timeEntryCount && Number(timeEntryCount.count) > 0) {
+            throw new Error(`Cannot delete task: ${timeEntryCount.count} associated time entries exist.`);
+        }
 
         const ticketLinks = await ProjectTaskModel.getTaskTicketLinks(taskId);
         
@@ -637,11 +652,11 @@ export async function getTaskWithDetails(taskId: string, user: IUser) {
         const task = await db('project_tasks')
             .where('project_tasks.task_id', taskId)
             .andWhere('project_tasks.tenant', tenant!)
-            .join('project_phases', function() {
+            .leftJoin('project_phases', function() { // Changed to leftJoin
                 this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
                     .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
             })
-            .join('project_status_mappings', function() {
+            .leftJoin('project_status_mappings', function() { // Changed to leftJoin
                 this.on('project_tasks.project_status_mapping_id', '=', 'project_status_mappings.project_status_mapping_id')
                     .andOn('project_tasks.tenant', '=', 'project_status_mappings.tenant');
             })

@@ -128,7 +128,7 @@ export default function TaskForm({
       }
     };
     fetchInitialData();
-  }, [task]);
+  }, [task?.task_id]);
 
   // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
@@ -158,7 +158,7 @@ export default function TaskForm({
     };
 
     fetchProjectsData();
-  }, [mode, projectTreeData]);
+  }, [mode, projectTreeData.length]);
 
   const handleTreeSelectChange = async (
     value: string,
@@ -787,15 +787,18 @@ export default function TaskForm({
             />
 
                 <div className="flex justify-between mt-6">
-                  <Button 
-                    id='cancel-button'
-                    type="button" 
-                    variant="ghost" 
-                    onClick={handleCancelClick} 
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </Button>
+                  {/* Only show Cancel button if not in drawer */}
+                  {!inDrawer && (
+                    <Button
+                      id='cancel-button'
+                      type="button"
+                      variant="ghost"
+                      onClick={handleCancelClick}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </Button>
+                  )}
                   {mode === 'edit' && (
                     <Button
                       id='delete-button'

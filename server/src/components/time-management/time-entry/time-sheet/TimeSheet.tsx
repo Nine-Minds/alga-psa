@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     ITimeEntry,
     ITimeSheet,
@@ -308,7 +308,7 @@ export function TimeSheet({
         }
     };
 
-    const handleTaskUpdate = async (updated: any) => {
+    const handleTaskUpdate = useCallback(async (updated: any) => {
         try {
             const fetchedWorkItems = await fetchWorkItemsForTimeSheet(timeSheet.id);
             const fetchedWorkItemsByType = fetchedWorkItems.reduce((acc: Record<string, IExtendedWorkItem[]>, item) => {
@@ -326,9 +326,9 @@ export function TimeSheet({
             console.error('Error updating task:', error);
             toast.error('Failed to update task');
         }
-    };
+    }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
 
-    const handleScheduleUpdate = async (updated: any) => {
+    const handleScheduleUpdate = useCallback(async (updated: any) => {
         try {
             const result = await updateScheduleEntry(updated.entry_id, {
                 title: updated.title,
@@ -360,7 +360,7 @@ export function TimeSheet({
             console.error('Error updating schedule entry:', error);
             toast.error('Failed to save changes');
         }
-    };
+    }, [timeSheet.id, closeDrawer]); // Added useCallback and dependencies
 
     const dates = timeSheet.time_period ? getDatesInPeriod({
         period_id: timeSheet.time_period.period_id,
