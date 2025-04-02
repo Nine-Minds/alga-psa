@@ -439,10 +439,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 value={newUsage.service_id}
                 onValueChange={(value: string) => setNewUsage({ ...newUsage, service_id: value })}
                 placeholder="Select service"
-                options={initialServices.map(service => ({
-                  label: service.service_name,
-                  value: service.service_id
-                }))}
+                options={initialServices
+                  .filter(service => service.billing_method === 'per_unit')
+                  .map(service => ({
+                    label: service.service_name,
+                    value: service.service_id
+                  }))}
               />
             </div>
             <div>

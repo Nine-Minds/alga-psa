@@ -182,13 +182,22 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
         throw new Error(`Unknown work item type: ${entry.work_item_type}`);
     }
 
-    // Fetch service information
-    const [service] = await db('service_catalog')
-      .where({ 
-        service_id: entry.service_id,
-        'service_catalog.tenant': tenant
+    // Fetch service information with new schema (using billing_method instead of service_type)
+    const [service] = await db('service_catalog as sc')
+      .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
+      .leftJoin('service_types as tst', function() {
+        this.on('sc.service_type_id', '=', 'tst.id')
+            .andOn('sc.tenant', '=', 'tst.tenant_id');
       })
-      .select('service_name', 'service_type', 'default_rate');
+      .where({ 
+        'sc.service_id': entry.service_id,
+        'sc.tenant': tenant
+      })
+      .select(
+        'sc.service_name', 
+        'sc.billing_method as service_type', // Use billing_method as service_type for backwards compatibility
+        db.raw('CAST(sc.default_rate AS FLOAT) as default_rate')
+      );
 
     return {
       ...workItem,
@@ -1025,19 +1034,24 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
 export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; is_taxable: boolean }[]> {
   const {knex: db, tenant} = await createTenantKnex();
 
-  let query = db('service_catalog')
-    .where({ 'service_catalog.tenant': tenant })
+  let query = db('service_catalog as sc')
+    .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
+    .leftJoin('service_types as tst', function() {
+      this.on('sc.service_type_id', '=', 'tst.id')
+          .andOn('sc.tenant', '=', 'tst.tenant_id');
+    })
+    .where({ 'sc.tenant': tenant })
     .select(
-      'service_id as id',
-      'service_name as name',
-      'billing_method as type',
-      'is_taxable'
+      'sc.service_id as id',
+      'sc.service_name as name',
+      'sc.billing_method as type', // Use billing_method as type
+      'sc.is_taxable'
     );
 
   // For ad_hoc entries, only show Time-based services
   if (workItemType === 'ad_hoc') {
     // Assuming 'Time' service type maps to 'per_unit' billing method based on migrations
-    query = query.where('billing_method', 'per_unit');
+    query = query.where('sc.billing_method', 'per_unit');
   }
 
   const services = await query;

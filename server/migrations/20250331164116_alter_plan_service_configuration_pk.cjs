@@ -3,7 +3,8 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // Define dependent tables and their FK constraint names
+  // Define dependent tables and their FK constraint names 
+  // We're using the ACTUAL constraint names as they exist in the database
   const dependents = [
     { table: 'plan_service_fixed_config', constraint: 'plan_service_fixed_config_config_id_foreign' },
     { table: 'plan_service_hourly_config', constraint: 'plan_service_hourly_config_config_id_foreign' }, // Note: This table might not exist yet when this runs first time, handle potential error
@@ -14,20 +15,18 @@ exports.up = async function(knex) {
     // Based on 20250318200000 migration, user_type_rates depends on plan_service_hourly_config, so it's indirectly handled.
   ];
 
-  // 1. Drop dependent foreign key constraints (assuming they are composite ['tenant', 'config_id'])
+  // 1. Drop dependent foreign key constraints - using only config_id since that's what exists
   for (const dep of dependents) {
     const tableExists = await knex.schema.hasTable(dep.table);
     if (tableExists) {
         await knex.schema.alterTable(dep.table, function(table) {
           try {
-            console.log(`Attempting to drop composite FK on ['tenant', 'config_id'] for table ${dep.table}`);
-            // Drop by columns, letting Knex find the constraint name automatically
-            table.dropForeign(['tenant', 'config_id']);
-            console.log(`Successfully dropped composite FK for table ${dep.table}`);
+            console.log(`Attempting to drop FK ${dep.constraint} on 'config_id' for table ${dep.table}`);
+            table.dropForeign('config_id', dep.constraint);
+            console.log(`Successfully dropped FK ${dep.constraint} on config_id for table ${dep.table}`);
           } catch (e) {
-            // Log error but continue, it might be that the constraint doesn't exist (already dropped or never created)
-            console.warn(`Could not drop composite FK constraint on table ${dep.table} using columns ['tenant', 'config_id']: ${e.message}. This might be okay.`);
-            // Optional: Check for specific error messages if needed, e.g., if (!e.message.includes('does not exist')) throw e;
+            // Log error but continue, it might be that the constraint doesn't exist
+            console.warn(`Could not drop FK constraint ${dep.constraint} on table ${dep.table}: ${e.message}. This might be okay if the constraint doesn't exist.`);
           }
         });
     } else {
@@ -52,17 +51,33 @@ exports.up = async function(knex) {
     table.primary(['tenant', 'config_id']);
   });
 
-  // 4. Re-add the foreign key constraints referencing the new composite key
+  // 4. Re-add the foreign key constraints as new composite keys
   for (const dep of dependents) {
      // Check if table exists before trying to add constraint (for plan_service_hourly_config case)
      const tableExists = await knex.schema.hasTable(dep.table);
      if (tableExists) {
+        // First, add tenant to the table if it doesn't exist (all tables should have tenant already)
         await knex.schema.alterTable(dep.table, function(table) {
-            console.log(`Re-adding composite FK constraint ${dep.constraint} on table ${dep.table}`);
-            table.foreign(['tenant', 'config_id'], dep.constraint) // Use original constraint name
-                 .references(['tenant', 'config_id'])
-                 .inTable('plan_service_configuration')
-                 .onDelete('CASCADE'); // Ensure CASCADE is reapplied if needed
+            try {
+                console.log(`Adding composite FK constraint ${dep.constraint} on table ${dep.table}`);
+                table.foreign(['tenant', 'config_id'], dep.constraint) // Use original constraint name
+                     .references(['tenant', 'config_id'])
+                     .inTable('plan_service_configuration')
+                     .onDelete('CASCADE'); // Ensure CASCADE is reapplied if needed
+            } catch (e) {
+                console.error(`Failed to add composite FK to ${dep.table}: ${e.message}. Will try adding non-composite FK.`);
+                
+                // Fallback to non-composite FK if composite fails
+                try {
+                    console.log(`Re-adding original FK constraint ${dep.constraint} on table ${dep.table}`);
+                    table.foreign('config_id', dep.constraint)
+                         .references('config_id')
+                         .inTable('plan_service_configuration')
+                         .onDelete('CASCADE');
+                } catch (e2) {
+                    console.error(`Failed to re-add original FK to ${dep.table}: ${e2.message}. Manual fix required.`);
+                }
+            }
         });
      } else {
          console.log(`Table ${dep.table} does not exist, skipping FK re-add.`);
@@ -85,17 +100,36 @@ exports.down = async function(knex) {
     { table: 'plan_service_rate_tiers', constraint: 'plan_service_rate_tiers_config_id_foreign' },
   ];
 
-  // 1. Drop the composite foreign key constraints
+  // 1. Drop the foreign key constraints
   for (const dep of dependents) {
      const tableExists = await knex.schema.hasTable(dep.table);
      if (tableExists) {
+        // Try dropping composite FK first with and without constraint name
         await knex.schema.alterTable(dep.table, function(table) {
           try {
-            console.log(`Rolling back: Dropping composite FK ${dep.constraint} on ${dep.table}`);
+            console.log(`Rolling back: Dropping composite FK on ${dep.table}`);
+            table.dropForeign(['tenant', 'config_id']);
+          } catch (e) {
+            console.warn(`Error dropping unnamed composite FK on ${dep.table} during rollback: ${e.message}`);
+          }
+        });
+        
+        await knex.schema.alterTable(dep.table, function(table) {
+          try {
+            console.log(`Rolling back: Dropping named FK ${dep.constraint} on ${dep.table}`);
             table.dropForeign(['tenant', 'config_id'], dep.constraint);
           } catch (e) {
-            console.error(`Error dropping composite FK ${dep.constraint} on ${dep.table} during rollback: ${e.message}`);
-            // Don't throw, try to continue rollback
+            console.warn(`Error dropping named composite FK ${dep.constraint} on ${dep.table} during rollback: ${e.message}`);
+          }
+        });
+        
+        // Also try dropping by single column config_id
+        await knex.schema.alterTable(dep.table, function(table) {
+          try {
+            console.log(`Rolling back: Dropping FK on config_id for ${dep.table}`);
+            table.dropForeign('config_id');
+          } catch (e) {
+            console.warn(`Error dropping FK on config_id for ${dep.table} during rollback: ${e.message}`);
           }
         });
      }
@@ -129,11 +163,25 @@ exports.down = async function(knex) {
      const tableExists = await knex.schema.hasTable(dep.table);
      if (tableExists) {
         await knex.schema.alterTable(dep.table, function(table) {
-          console.log(`Rolling back: Re-adding simple FK ${dep.constraint} on ${dep.table}`);
-          table.foreign('config_id', dep.constraint) // Use original constraint name
-               .references('config_id')
-               .inTable('plan_service_configuration')
-               .onDelete('CASCADE');
+          try {
+            console.log(`Rolling back: Re-adding simple FK ${dep.constraint} on ${dep.table}`);
+            table.foreign('config_id', dep.constraint) // Use original constraint name
+                 .references('config_id')
+                 .inTable('plan_service_configuration')
+                 .onDelete('CASCADE');
+          } catch (e) {
+            console.error(`Error re-adding simple FK ${dep.constraint} on ${dep.table}: ${e.message}`);
+            // Try without specifying constraint name
+            try {
+              console.log(`Rolling back: Re-adding unnamed simple FK on ${dep.table}`);
+              table.foreign('config_id')
+                   .references('config_id')
+                   .inTable('plan_service_configuration')
+                   .onDelete('CASCADE');
+            } catch (e2) {
+              console.error(`Error re-adding unnamed simple FK on ${dep.table}: ${e2.message}. Manual fix may be required.`);
+            }
+          }
         });
      }
   }

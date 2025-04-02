@@ -71,7 +71,7 @@ export async function getEligibleBillingPlans(
       'service_catalog.service_id': serviceId,
       'service_catalog.tenant': tenant
     })
-    .first('category_id', 'service_type');
+    .first('category_id', 'service_type_id');
   
   if (!serviceInfo) {
     console.warn(`Service not found: ${serviceId}`);
