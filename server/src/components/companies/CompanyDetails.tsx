@@ -32,6 +32,7 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard'; // Import the new dashboard component
 
 interface ICompany {
   company_id: string;
@@ -423,6 +424,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           onSave={handleBillingConfigSave}
           contacts={contacts}
         />
+      )
+    },
+    {
+      label: "Billing Dashboard", // New Tab
+      content: (
+        <ClientBillingDashboard companyId={company.company_id} />
       )
     },
     {
