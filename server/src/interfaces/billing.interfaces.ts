@@ -133,7 +133,7 @@ export interface IService extends TenantEntity {
   service_name: string;
   service_type_id: string; // Changed from service_type: string
   service_type_billing_method?: 'fixed' | 'per_unit' | null; // Billing method from the standard type (optional, allow null)
-  billing_method: 'fixed' | 'per_unit'; // Billing method specific to this service instance
+  billing_method: 'fixed' | 'per_unit' | null; // Billing method specific to this service instance (Allow null temporarily)
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;

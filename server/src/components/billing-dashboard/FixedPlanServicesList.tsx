@@ -41,7 +41,7 @@ interface FixedPlanServicesListProps {
 interface SimplePlanService extends IPlanService {
   service_name?: string;
   service_category?: string; // This will now hold the name
-  billing_method?: string;
+  billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
   default_rate?: number;
 }
 

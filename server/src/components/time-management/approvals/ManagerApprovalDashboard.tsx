@@ -17,7 +17,7 @@ import {
 import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
 import { IUser } from 'server/src/interfaces';
 import { TimeSheetApproval } from './TimeSheetApproval';
-import { useDrawer } from "server/src/context/DrawerContext"; // Assuming you're using a drawer for the approval view
+import { useDrawer } from "server/src/context/DrawerContext";
 import { parseISO } from 'date-fns';
 
 interface ManagerApprovalDashboardProps {
@@ -29,7 +29,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
   const [selectedTimeSheets, setSelectedTimeSheets] = useState<string[]>([]);
   const [showApproved, setShowApproved] = useState(false);
   const { isManager, managedTeams } = useTeamAuth(currentUser);
-  const { openDrawer } = useDrawer();
+  const { openDrawer, closeDrawer } = useDrawer();
 
   useEffect(() => {
     if (isManager) {
@@ -93,16 +93,19 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           timeSheet={timeSheetWithComments}
           timeEntries={timeEntries}
           onApprove={async () => {
-            await approveTimeSheet(timeSheet.id, currentUser.user_id);
-            loadTimeSheets();
+           await approveTimeSheet(timeSheet.id, currentUser.user_id);
+           await loadTimeSheets();
+           closeDrawer();
           }}
           onRequestChanges={async () => {
-            await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
-            loadTimeSheets();
+           await requestChangesForTimeSheet(timeSheet.id, currentUser.user_id);
+           await loadTimeSheets();
+           closeDrawer();
           }}
           onReverseApproval={async () => {
-            await handleReverseApproval(timeSheet);
-          }}
+           await handleReverseApproval(timeSheet); // This already calls loadTimeSheets
+           closeDrawer();
+         }}
         />
       );
     } catch (error) {

@@ -6,7 +6,7 @@ import { PartialBlock } from '@blocknote/core';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import Contacts from 'server/src/components/contacts/Contacts';
+import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
@@ -427,14 +427,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     },
     {
       label: "Contacts",
-      content: currentUser ? (
-        <Contacts
-          initialContacts={contacts}
+      content: (
+        <CompanyContactsList
           companyId={company.company_id}
-          preSelectedCompanyId={company.company_id}
+          companies={[]} // Pass the list of all companies if available, otherwise an empty array
+                         // TODO: Consider fetching all companies here or passing them down if needed by ContactDetailsView via CompanyContactsList
         />
-      ) : (
-        <div>Loading...</div>
       )
     },
     {

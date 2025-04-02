@@ -26,7 +26,7 @@ export const serviceSchema = z.object({
   service_type_id: z.string(), // Changed from service_type
   service_type_name: z.string().nullable().optional(), // Allow null or undefined
   service_type_billing_method: z.enum(['fixed', 'per_unit']).nullable().optional(), // Billing method from the standard type
-  billing_method: z.enum(['fixed', 'per_unit']), // Billing method specific to this service instance
+  billing_method: z.enum(['fixed', 'per_unit']).nullable(), // Billing method specific to this service instance (Allow null temporarily)
   default_rate: z.number(),
   unit_of_measure: z.string(),
   category_id: z.string().nullable()

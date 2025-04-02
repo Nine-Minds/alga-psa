@@ -198,12 +198,12 @@ export function UIStateProvider({ children, initialPageState }: {
    */
   const registerComponent = useCallback((component: UIComponent | undefined) => {
     if (!component) {
-      console.warn('Attempted to register undefined component');
+      console.log('Attempted to register undefined component');
       return;
     }
 
     if (componentDictRef.current[component.id]) {
-      console.warn(`Component with ID ${component.id} already exists. Skipping registration.`);
+      console.log(`Component with ID ${component.id} already exists. Skipping registration.`);
       return;
     }
 
@@ -253,7 +253,7 @@ export function UIStateProvider({ children, initialPageState }: {
    */
   const unregisterComponent = useCallback((id: string) => {
     if (!componentDictRef.current[id]) {
-      console.warn(`Component with ID ${id} does not exist. Skipping unregistration.`);
+      console.log(`Component with ID ${id} does not exist. Skipping unregistration.`);
       return;
     }
 
