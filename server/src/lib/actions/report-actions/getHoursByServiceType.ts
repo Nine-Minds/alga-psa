@@ -58,8 +58,8 @@ export async function getHoursByServiceType(
   try {
     // Base query for time entries within the date range and for the tenant
     const timeEntriesQuery = knex<ITimeEntry>('time_entries')
-      .where('tenant', tenant) // Separate where clauses
-      .where('is_billable', true) // Assuming we only want billable hours as per plan
+      .where('time_entries.tenant', tenant) // Separate where clauses
+      .where('time_entries.billable_duration', '>', 0) // Use billable_duration to determine billable hours
       .where('start_time', '>=', startDate)
       .where('start_time', '<=', endDate); // Use start_time for date filtering
 

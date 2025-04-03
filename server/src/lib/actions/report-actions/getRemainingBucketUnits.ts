@@ -2,7 +2,18 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
-import { ICompanyBillingPlan, IBillingPlan, IBucketPlan, IBucketUsage } from '../../../interfaces/billing.interfaces';
+// Import interfaces from correct files
+import {
+  ICompanyBillingPlan,
+  IBillingPlan,
+  IBucketUsage,
+  IPlanService,
+  IService // Added IService for service_catalog join
+} from '../../../interfaces/billing.interfaces';
+import {
+  IPlanServiceConfiguration,
+  IPlanServiceBucketConfig
+} from '../../../interfaces/planServiceConfiguration.interfaces'; // Corrected import path
 import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters
@@ -17,6 +28,9 @@ const InputSchema = z.object({
 export interface RemainingBucketUnitsResult {
   plan_id: string;
   plan_name: string;
+  service_id: string; // Added service_id
+  service_name: string; // Added service_name
+  display_label: string; // Added combined label for chart
   total_hours: number;
   hours_used: number;
   remaining_hours: number;
@@ -56,12 +70,33 @@ export async function getRemainingBucketUnits(
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
       })
-      .join<IBucketPlan>('bucket_plans as bup', function() {
-        this.on('bp.plan_id', '=', 'bup.plan_id')
-            .andOn('bp.tenant', '=', 'bup.tenant'); // Assuming bucket_plans is also tenanted
+      // Removed join to bucket_plans
+      // Add joins for new configuration structure
+      .join<IPlanService>('plan_services as ps', function() {
+        this.on('bp.plan_id', '=', 'ps.plan_id')
+            .andOn('bp.tenant', '=', 'ps.tenant');
+      })
+      // Join to service_catalog to get service_name
+      .join<IService>('service_catalog as sc', function() {
+        this.on('ps.service_id', '=', 'sc.service_id')
+            .andOn('ps.tenant', '=', 'sc.tenant');
+      })
+      .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() { 
+        this.on('ps.plan_id', '=', 'psc.plan_id')
+            .andOn('ps.service_id', '=', 'psc.service_id') // Need service_id for the join
+            .andOn('ps.tenant', '=', 'psc.tenant');
+      })
+      .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
+        this.on('psc.config_id', '=', 'psbc.config_id')
+            .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        this.on('bup.bucket_plan_id', '=', 'bu.bucket_plan_id')
+        // Update join condition to use bp.plan_id AND ps.service_id
+        // Assuming bucket_usage might need service context if a plan has multiple bucket services
+        // If bucket_usage only stores plan-level usage, joining on plan_id is sufficient.
+        // Sticking with plan_id only for now based on previous structure.
+        // If issues arise, consider adding service_id to bucket_usage table and join condition.
+        this.on('bp.plan_id', '=', 'bu.plan_id')
             .andOn('cbp.company_id', '=', 'bu.company_id') // Join on company_id as well
             .andOn('cbp.tenant', '=', 'bu.tenant')
             // Filter bucket_usage for the period containing currentDate
@@ -81,24 +116,41 @@ export async function getRemainingBucketUnits(
       .select(
         'bp.plan_id',
         'bp.plan_name',
-        'bup.total_hours',
+        'ps.service_id', // Select service_id
+        'sc.service_name', // Select service_name
+        // Select total_hours from the new table alias
+        'psbc.total_hours',
         // Use COALESCE to default hours_used to 0 if no usage record found for the period
         knex.raw('COALESCE(bu.hours_used, 0) as hours_used'),
         'bu.period_start', // Include period from usage record if found
         'bu.period_end'    // Include period from usage record if found
       );
 
+    console.log('Generated SQL:', query.toString()); // Log the generated SQL for debugging
+
     const rawResults: any[] = await query;
+
+    // Calculate remaining hours and map to the final structure
+      // Add GROUP BY clause if necessary (depends on DB strictness)
+      // .groupBy('bp.plan_id', 'bp.plan_name', 'ps.service_id', 'sc.service_name', 'psbc.total_hours', 'bu.hours_used', 'bu.period_start', 'bu.period_end');
+
+    // console.log('Generated SQL:', query.toString()); // Log the generated SQL for debugging - Removed duplicate
+
+    // const rawResults: any[] = await query; // Removed duplicate
 
     // Calculate remaining hours and map to the final structure
     const results: RemainingBucketUnitsResult[] = rawResults.map(row => {
       const totalHours = typeof row.total_hours === 'string' ? parseFloat(row.total_hours) : row.total_hours;
       const hoursUsed = typeof row.hours_used === 'string' ? parseFloat(row.hours_used) : row.hours_used;
       const remainingHours = totalHours - hoursUsed;
+      const displayLabel = `${row.plan_name} - ${row.service_name}`; // Construct combined label
 
       return {
         plan_id: row.plan_id,
         plan_name: row.plan_name,
+        service_id: row.service_id, // Added service_id
+        service_name: row.service_name, // Added service_name
+        display_label: displayLabel, // Added combined label
         total_hours: totalHours,
         hours_used: hoursUsed,
         remaining_hours: remainingHours,

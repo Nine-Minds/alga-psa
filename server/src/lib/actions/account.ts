@@ -448,11 +448,17 @@ export async function getActiveServices(): Promise<Service[]> {
       this.on('ps.service_id', '=', 'sc.service_id')
           .andOn('ps.tenant', '=', 'sc.tenant');
     })
-    .leftJoin('bucket_plans as bucket', function(this: Knex.JoinClause) {
-      this.on('bp.plan_id', '=', 'bucket.plan_id')
-          .andOn('bp.tenant', '=', 'bucket.tenant');
+    // Removed old join to bucket_plans
+    .leftJoin('plan_service_configurations as psc', function(this: Knex.JoinClause) { // Added join for configurations
+      this.on('ps.plan_id', '=', 'psc.plan_id')
+          .andOn('ps.service_id', '=', 'psc.service_id')
+          .andOn('ps.tenant', '=', 'psc.tenant');
     })
-    .where({ 
+    .leftJoin('plan_service_bucket_configs as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
+      this.on('psc.config_id', '=', 'psbc.config_id')
+          .andOn('psc.tenant', '=', 'psbc.tenant');
+    })
+    .where({
       'cbp.company_id': session.user.companyId,
       'cbp.tenant': session.user.tenant,
       'bp.tenant': session.user.tenant,
@@ -478,9 +484,13 @@ export async function getActiveServices(): Promise<Service[]> {
       'bp.is_custom',
       'bp.billing_frequency',
       'bp.description as plan_description',
-      'bucket.total_hours',
-      'bucket.overage_rate',
-      'bucket.billing_period as bucket_period',
+      // 'bucket.total_hours', // Removed old bucket field
+      // 'bucket.overage_rate', // Removed old bucket field
+      // 'bucket.billing_period as bucket_period', // Removed old bucket field
+      'psc.config_id', // Added config_id
+      'psbc.total_hours as psbc_total_hours', // Added new bucket field
+      'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
+      'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
       knex.raw("'active' as status"),
       'cbp.start_date',
       'cbp.end_date'
@@ -498,9 +508,13 @@ export async function getActiveServices(): Promise<Service[]> {
       'bp.is_custom',
       'bp.billing_frequency',
       'bp.description',
-      'bucket.total_hours',
-      'bucket.overage_rate',
-      'bucket.billing_period',
+      // 'bucket.total_hours', // Removed old bucket field
+      // 'bucket.overage_rate', // Removed old bucket field
+      // 'bucket.billing_period', // Removed old bucket field
+      'psc.config_id', // Added config_id
+      'psbc.total_hours', // Added new bucket field
+      'psbc.overage_rate', // Added new bucket field
+      'psbc.allow_rollover', // Added new bucket field
       'cbp.start_date',
       'cbp.end_date'
     );
@@ -521,7 +535,10 @@ export async function getActiveServices(): Promise<Service[]> {
     unit_of_measure: string | null;
     total_hours: number | null;
     overage_rate: number | null;
-    bucket_period: string | null;
+    // bucket_period: string | null; // Removed
+    psbc_total_hours: number | null; // Added from new join
+    psbc_overage_rate: number | null; // Added from new join
+    psbc_allow_rollover: boolean | null; // Added from new join
     start_date: string;
     end_date: string | null;
   }): Service => {
@@ -542,9 +559,9 @@ export async function getActiveServices(): Promise<Service[]> {
       `${service.quantity} ${service.unit_of_measure || 'units'}` :
       'N/A';
 
-    // Format bucket display
-    const bucketDisplay = service.total_hours ?
-      `${service.total_hours} hours${service.overage_rate ? ` (+$${(service.overage_rate / 100).toFixed(2)}/hr overage)` : ''}` :
+    // Format bucket display using new fields
+    const bucketDisplay = service.psbc_total_hours ? // Use new field
+      `${service.psbc_total_hours} hours${service.psbc_overage_rate ? ` (+$${(service.psbc_overage_rate / 100).toFixed(2)}/hr overage)` : ''}` : // Use new field
       'N/A';
 
     // Format billing display
@@ -567,14 +584,18 @@ export async function getActiveServices(): Promise<Service[]> {
         unit: service.unit_of_measure || 'units',
         display: quantityDisplay
       } : undefined,
-      bucket: isBucketPlan && service.total_hours ? {
-        totalHours: service.total_hours.toString(),
-        overageRate: service.overage_rate ? 
-          `$${(service.overage_rate / 100).toFixed(2)}` : 
+      // Update bucket object creation using new fields
+      bucket: isBucketPlan && service.psbc_total_hours ? { // Check new field
+        totalHours: service.psbc_total_hours.toString(), // Use new field
+        overageRate: service.psbc_overage_rate ? // Use new field
+          `$${(service.psbc_overage_rate / 100).toFixed(2)}` :
           'N/A',
+        // periodStart/End are derived from the company_billing_plan dates
         periodStart: formatDate(service.start_date),
         periodEnd: formatDate(service.end_date),
         display: bucketDisplay
+        // Consider adding allow_rollover if needed in the UI:
+        // allowRollover: service.psbc_allow_rollover ?? false,
       } : undefined,
       billing: {
         type: service.plan_type,

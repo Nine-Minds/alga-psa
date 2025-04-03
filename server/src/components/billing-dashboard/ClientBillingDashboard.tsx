@@ -15,17 +15,19 @@ import {
  getRemainingBucketUnits, RemainingBucketUnitsResult,
  getUsageDataMetrics, UsageMetricResult // Import usage action and type
 } from 'server/src/lib/actions/report-actions'; // Import actions and types
+// Re-add recharts imports needed for stacked bar chart
 import {
- BarChart,
- Bar,
+ BarChart, // Keep BarChart for now, might remove later if only Radial is used
+ Bar,      // Keep Bar for now
  XAxis,
  YAxis,
- CartesianGrid,
  Tooltip,
  ResponsiveContainer,
- Legend,
- Cell // Import Cell for coloring bars
-} from 'recharts'; // Import recharts components
+ RadialBarChart, // Add RadialBarChart
+ RadialBar,      // Add RadialBar
+ PolarAngleAxis, // Needed for RadialBarChart
+} from 'recharts';
+// Removed Progress import
 
 interface ClientBillingDashboardProps {
   companyId: string;
@@ -98,6 +100,23 @@ const usageColumns: ColumnDefinition<UsageMetricResult>[] = [
 },
 ];
 
+// Custom Tooltip Component for Bucket Chart
+const CustomBucketTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload; // Access the full data point for the hovered bar
+    return (
+      <div className="bg-white p-2 border border-gray-300 rounded shadow-md text-sm">
+        <p className="font-medium">{label}</p> {/* display_label */}
+        <p className="text-primary-600">{`Used: ${data.hours_used.toFixed(1)} hours`}</p>
+        <p className="text-gray-600">{`Remaining: ${data.remaining_hours.toFixed(1)} hours`}</p>
+        <p className="text-gray-600">{`Total: ${data.total_hours} hours`}</p>
+      </div>
+    );
+  }
+
+  return null;
+};
+
 
 const ClientBillingDashboard: React.FC<ClientBillingDashboardProps> = ({ companyId }) => {
  // State for Invoices
@@ -121,6 +140,8 @@ const [hoursData, setHoursData] = useState<HoursByServiceResult[]>([]);
 // State for Bucket Usage
 const [loadingBuckets, setLoadingBuckets] = useState(true);
 const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
+// Derived state for chart-specific data (optional, could transform inline)
+// const [chartBucketData, setChartBucketData] = useState<any[]>([]);
 
 // State for Usage Metrics
 const [loadingUsage, setLoadingUsage] = useState(true);
@@ -268,26 +289,60 @@ useEffect(() => {
        </CardHeader>
        <CardContent>
          {loadingBuckets ? (
-           <Skeleton className="h-64 w-full" />
+           // Skeleton for grid layout
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             {[1, 2, 3].map(i => (
+               <div key={i} className="flex flex-col items-center space-y-2">
+                 <Skeleton className="h-6 w-3/4" />
+                 <Skeleton className="h-20 w-20 rounded-full" />
+                 <Skeleton className="h-4 w-1/2" />
+               </div>
+             ))}
+           </div>
          ) : bucketData.length > 0 ? (
-           <div className="h-64"> {/* Set a fixed height for the chart container */}
-             <ResponsiveContainer width="100%" height="100%">
-               <BarChart
-                 data={bucketData}
-                 layout="vertical" // Use vertical layout for better label readability
-                 margin={{ top: 5, right: 30, left: 100, bottom: 5 }} // Adjust margins for labels
-               >
-                 <CartesianGrid strokeDasharray="3 3" />
-                 <XAxis type="number" domain={[0, (dataMax: number) => Math.max(dataMax, 10)]} /> {/* Ensure X axis shows hours */}
-                 <YAxis dataKey="plan_name" type="category" width={100} /> {/* Use plan name for Y axis */}
-                 <Tooltip formatter={(value: number) => `${value.toFixed(1)} hours`} />
-                 <Legend />
-                 <Bar dataKey="remaining_hours" name="Remaining Hours" fill="rgb(var(--color-primary-400))" />
-                 <Bar dataKey="hours_used" name="Hours Used" fill="rgb(var(--color-secondary-400))" />
-                 {/* Optional: Add total hours bar if needed */}
-                 {/* <Bar dataKey="total_hours" name="Total Hours" fill="rgb(var(--color-accent-200))" /> */}
-               </BarChart>
-             </ResponsiveContainer>
+           // Render radial charts in a grid
+           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             {bucketData.map((bucket) => (
+               <div key={`${bucket.plan_id}-${bucket.service_id}`} className="flex flex-col items-center text-center p-4 border rounded-lg">
+                 <span className="text-sm font-medium text-gray-700 mb-2 h-10 flex items-center justify-center">{bucket.display_label}</span>
+                 <div className="w-24 h-24 mb-2"> {/* Container for the chart */}
+                   <ResponsiveContainer width="100%" height="100%">
+                     <RadialBarChart
+                       cx="50%"
+                       cy="50%"
+                       innerRadius="70%" // Adjust for thickness
+                       outerRadius="90%" // Adjust for thickness
+                        barSize={10} // Adjust bar size
+                         data={[bucket]} // Pass single data item in an array
+                         startAngle={225} // Start at bottom-left
+                         endAngle={-45}  // End at bottom-right (270 degree sweep)
+                       >
+                         {/* Background track */}
+                         <PolarAngleAxis
+                         type="number"
+                         domain={[0, bucket.total_hours > 0 ? bucket.total_hours : 1]} // Domain is 0 to total hours
+                         angleAxisId={0}
+                          tick={false}
+                        />
+                        <RadialBar
+                          background={{ fill: 'rgb(var(--color-secondary-100))' }} 
+                          dataKey="hours_used"
+                          angleAxisId={0}
+                          fill="rgb(var(--color-primary-500))" // Use theme primary color for fill
+                          cornerRadius={5} // Rounded corners
+                        />
+                        {/* Optional: Add text inside the circle */}
+                       {/* <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-semibold">
+                         {`${((bucket.hours_used / (bucket.total_hours || 1)) * 100).toFixed(0)}%`}
+                       </text> */}
+                     </RadialBarChart>
+                   </ResponsiveContainer>
+                 </div>
+                 <span className="text-xs text-gray-500">
+                   {bucket.hours_used.toFixed(1)} / {bucket.total_hours} hours used
+                 </span>
+               </div>
+             ))}
            </div>
          ) : (
            <Text>No active bucket plans found.</Text>
