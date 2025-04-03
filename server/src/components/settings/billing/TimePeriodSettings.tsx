@@ -68,6 +68,7 @@ const TimePeriodSettings: React.FC = () => {
 
   const handleAddSetting = async () => {
     try {
+      setError(null); // Clear previous error before attempting to add
       const createdSetting = await createTimePeriodSettings(newSetting);
       setSettings([...settings, createdSetting]);
       setNewSetting({
@@ -79,14 +80,19 @@ const TimePeriodSettings: React.FC = () => {
         effective_from: formatISO(new Date()) as ISO8601String,
       });
       setShowNewSettingForm(false);
-    } catch (error) {
-      console.error('Error adding time period setting:', error);
-      setError('Failed to add time period setting');
+    } catch (err) {
+      console.error('Error adding time period setting:', err);
+      if (err instanceof Error && err.message === 'The specified time period overlaps with existing time periods') {
+        setError('Error: This time period setting overlaps with an existing active setting.');
+      } else {
+        setError('Failed to add time period setting. Please check the values and try again.');
+      }
     }
   };
 
   const handleUpdateSetting = async (updatedSetting: ITimePeriodSettings) => {
     try {
+      setError(null); // Clear previous error before attempting to update
       await updateTimePeriodSettings(updatedSetting);
       await fetchSettings();
     } catch (error) {
@@ -115,6 +121,26 @@ const TimePeriodSettings: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
+          {/* Help Text Section */}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
+            <p className="text-sm text-blue-800 font-medium mb-1">Understanding Time Period Settings</p>
+            <p className="text-xs text-blue-700">
+              You can define multiple active settings to create complex billing cycles. For example, to set up bi-monthly periods (1st-15th (eod) and 16th-End of Month):
+            </p>
+            <ul className="list-disc list-inside text-xs text-blue-700 mt-1 space-y-1">
+              <li>
+                <strong>Setting 1:</strong> Frequency: 1, Unit: Month, Start Day: 1, End Day: 16
+              </li>
+              <li>
+                <strong>Setting 2:</strong> Frequency: 1, Unit: Month, Start Day: 16, End Day: End of month (select checkbox)
+              </li>
+            </ul>
+            <p className="text-xs text-blue-700 mt-1">
+              The system uses these settings to suggest and generate time periods for billing. Ensure your settings cover the entire desired cycle without gaps or overlaps based on their effective dates and frequency rules.
+            </p>
+          </div>
+          {/* End Help Text Section */}
+
           {settings.map((setting): JSX.Element => (
             <TimePeriodSettingItem
               key={setting.time_period_settings_id}

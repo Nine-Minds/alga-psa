@@ -139,7 +139,8 @@ const CompanyServiceOverlapMatrix: React.FC<CompanyServiceOverlapMatrixProps> = 
       // plus the plan_type from the billing plan
       return {
         ...plan,
-        plan_type: billingPlan?.plan_type
+        plan_type: billingPlan?.plan_type,
+        plan_name: billingPlan?.plan_name // Add plan_name here
       };
     }).sort((a, b) => {
       const dateA = new Date(a.start_date).getTime();

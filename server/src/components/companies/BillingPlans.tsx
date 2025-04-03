@@ -5,7 +5,13 @@ import { ICompanyBillingPlan, IBillingPlan, IServiceCategory } from 'server/src/
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 interface BillingPlansProps {
     companyBillingPlans: ICompanyBillingPlan[];
@@ -80,26 +86,40 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
             title: 'Actions',
             dataIndex: 'company_billing_plan_id',
             render: (value, record) => (
-                <div className="flex items-center space-x-2">
-                    <Button
-                        id={`edit-billing-plan-${record.company_billing_plan_id}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(record)}
-                        className="hover:bg-[rgb(var(--color-border-100))]"
-                    >
-                        <Pencil className="h-4 w-4 text-[rgb(var(--color-text-600))]" />
-                    </Button>
-                    <Button
-                        id={`delete-billing-plan-${value}`}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(value)}
-                        className="hover:bg-[rgb(var(--color-accent-50))]"
-                    >
-                        <Trash2 className="h-4 w-4 text-[rgb(var(--color-accent-600))]" />
-                    </Button>
-                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            id={`company-billing-plan-actions-menu-${record.company_billing_plan_id}`}
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={(e) => e.stopPropagation()} // Prevent row click when opening menu
+                        >
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                            id={`edit-company-billing-plan-menu-item-${record.company_billing_plan_id}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(record);
+                            }}
+                        >
+                            Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            id={`delete-company-billing-plan-menu-item-${value}`}
+                            className="text-red-600 focus:text-red-600"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(value);
+                            }}
+                        >
+                            Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             )
         }
     ];
@@ -129,6 +149,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                 <DataTable
                     data={companyBillingPlans}
                     columns={columns}
+                    onRowClick={onEdit} // Add row click handler
                 />
             </div>
             <PlanPickerDialog

@@ -26,22 +26,28 @@ const SettingsPage = (): JSX.Element =>  {
   const tabParam = searchParams?.get('tab');
   
 
-  const tabMap: Record<string, string> = {
+  // Map URL slugs (kebab-case) to Tab Labels
+  const slugToLabelMap: Record<string, string> = {
+    'general': 'General',
+    'users': 'Users',
     'teams': 'Teams',
-    'users': 'Users'
+    'ticketing': 'Ticketing',
+    'interaction-types': 'Interaction Types',
+    'notifications': 'Notifications',
+    'time-entry': 'Time Entry',
+    'billing': 'Billing'
   };
 
+  // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = React.useState<string>(() => {
-    if (tabParam) {
-      const mappedTab = tabMap[tabParam.toLowerCase()];
-      return mappedTab || 'General';
-    }
-    return 'General';
+    const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
+    return initialLabel || 'General'; // Default to 'General' if param is missing or invalid
   });
 
+  // Update active tab when URL parameter changes
   React.useEffect(() => {
-    const mappedTab = tabParam ? tabMap[tabParam.toLowerCase()] : 'General';
-    setActiveTab(mappedTab || 'General');
+    const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
+    setActiveTab(currentLabel || 'General');
   }, [tabParam]);
 
   const tabContent: TabContent[] = [
@@ -138,17 +144,21 @@ const SettingsPage = (): JSX.Element =>  {
         tabs={tabContent}
         defaultTab={activeTab}
         onTabChange={(tab) => {
-          const reverseTabMap: Record<string, string> = {
-            'Teams': 'teams',
-            'Users': 'users'
-          };
-          setActiveTab(tab);
-          
-          const urlParam = reverseTabMap[tab];
-          const newUrl = urlParam 
-            ? `/msp/settings?tab=${urlParam}` 
+          // Map Tab Labels back to URL slugs (kebab-case)
+          const labelToSlugMap: Record<string, string> = Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
+            acc[label] = slug;
+            return acc;
+          }, {} as Record<string, string>);
+
+          setActiveTab(tab); // Update the state for the CustomTabs component
+
+          const urlSlug = labelToSlugMap[tab];
+          // Update URL using pushState to avoid full page reload
+          // Default to '/msp/settings' if the slug is 'general' or not found
+          const newUrl = urlSlug && urlSlug !== 'general'
+            ? `/msp/settings?tab=${urlSlug}`
             : '/msp/settings';
-          
+
           window.history.pushState({}, '', newUrl);
         }}
         tabStyles={tabStyles}

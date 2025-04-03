@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useReducer } from 'react';
+import Link from 'next/link'; // Import Link
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -292,10 +293,11 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
                 const newStart = startDate;
                 const newEnd = endDate || newStart;
 
+                    // Overlap occurs if existing.start_date < newEnd AND existing.end_date > newStart
+                    // This allows periods to touch at boundaries (e.g., newStart == existingEnd)
                     return (
-                        (Temporal.PlainDate.compare(newStart, existingStart) >= 0 && Temporal.PlainDate.compare(newStart, existingEnd) <= 0) ||
-                        (Temporal.PlainDate.compare(newEnd, existingStart) >= 0 && Temporal.PlainDate.compare(newEnd, existingEnd) <= 0) ||
-                        (Temporal.PlainDate.compare(newStart, existingStart) <= 0 && Temporal.PlainDate.compare(newEnd, existingEnd) >= 0)
+                        Temporal.PlainDate.compare(existingStart, newEnd) < 0 &&
+                        Temporal.PlainDate.compare(existingEnd, newStart) > 0
                     );
                 } catch (error) {
                     console.error('Error comparing dates:', error);
@@ -365,17 +367,32 @@ const TimePeriodForm: React.FC<TimePeriodFormProps> = (props) => {
     return (
         <Dialog isOpen={isOpen} onClose={onClose} title={mode === 'create' ? "Create New Time Period" : "Edit Time Period"}>
             <div className="p-4">
-                {error && <div className="text-red-600 mb-2">{error}</div>}
+                {error && (
+                    <div className="text-red-600 mb-2">
+                        {error}
+                        {error === 'No time period settings available. Unable to create a new time period.' && (
+                            <>
+                                {' '} Please{' '}
+                                <Link href="/msp/settings?tab=time-entry" className="underline text-blue-600 hover:text-blue-800">
+                                    check your time period settings
+                                </Link>
+                                .
+                            </>
+                        )}
+                    </div>
+                )}
                 {settings ? (
                     <>
-                        <div className="mb-4">
-                            <p>Based on your settings, the next time period is suggested.</p>
-                            {settings[0] && (
-                                <p>
-                                    Frequency: {settings[0].frequency} {settings[0].frequency_unit}(s)
-                                </p>
-                            )}
-                        </div>
+                        {mode === 'create' && (
+                            <div className="mb-4">
+                                <p>Based on your settings, the next time period is suggested.</p>
+                                {settings[0] && (
+                                    <p>
+                                        Frequency: {settings[0].frequency} {settings[0].frequency_unit}(s)
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <div className="mb-4">
                             <Checkbox
                                 label="Override suggested dates"
