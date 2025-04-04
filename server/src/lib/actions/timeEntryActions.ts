@@ -1,7 +1,9 @@
 'use server'
 
+import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
 import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
+import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
 import { 
   ITimeEntry, 
   ITimePeriod, 
@@ -23,6 +25,7 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { validateData } from 'server/src/lib/utils/validation';
 import { z } from 'zod';
 import { timeEntrySchema } from 'server/src/lib/schemas/timeSheet.schemas';
+import { TentTree } from 'lucide-react';
 
 // Parameter schemas
 const fetchTimeEntriesParamsSchema = z.object({
@@ -63,6 +66,32 @@ const fetchTimePeriodsParamsSchema = z.object({
 });
 
 type FetchTimePeriodsParams = z.infer<typeof fetchTimePeriodsParamsSchema>;
+
+// Helper function to get company_id from work_item
+async function getCompanyIdForWorkItem(trx: Knex.Transaction, tenant: string, workItemId: string, workItemType: string): Promise<string | null> {
+    if (workItemType === 'ticket') {
+        const ticket = await trx('tickets')
+            .where({ ticket_id: workItemId, tenant })
+            .first('company_id');
+        return ticket?.company_id || null;
+    } else if (workItemType === 'project_task') {
+        const task = await trx('project_tasks')
+            .join('project_phases', function() {
+                this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+                    .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+            })
+            .join('projects', function() {
+                this.on('project_phases.project_id', '=', 'projects.project_id')
+                    .andOn('project_phases.tenant', '=', 'projects.tenant');
+            })
+            .where({ 'project_tasks.task_id': workItemId, 'project_tasks.tenant': tenant })
+            .first('projects.company_id');
+        return task?.company_id || null;
+    }
+    // Add other work item types if they can be associated with companies and buckets (e.g., ad_hoc if linked to a company)
+    // For now, only tickets and project tasks are assumed to link to companies for billing plans.
+    return null;
+}
 
 // Rest of the functions remain the same, but with proper type assertions for validateData results
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
@@ -327,6 +356,10 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
   const {knex: db, tenant} = await createTenantKnex();
   const session = await getServerSession(options);
+
+  if (!tenant) {
+    throw new Error("Tenant not found");
+  }
   
   // Check for session and user ID
   if (!session?.user?.id) {
@@ -407,17 +440,30 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
     await db.transaction(async (trx) => {
       console.log('Starting transaction for time entry');
+      let oldDuration = 0; // Initialize oldDuration
       if (entry_id) {
+        // Fetch original entry before update to calculate delta
+        const originalEntryForUpdate = await trx('time_entries')
+          .where({ entry_id, tenant })
+          .select('billable_duration')
+          .first();
+        // If original entry not found, maybe throw error or handle gracefully?
+        // Throwing error for now as update shouldn't happen if original is gone.
+        if (!originalEntryForUpdate) {
+             throw new Error(`Original time entry with ID ${entry_id} not found for update.`);
+        }
+        oldDuration = originalEntryForUpdate.billable_duration || 0;
+
         // Update existing entry
         const [updated] = await trx('time_entries')
-          .where({ entry_id })
+          .where({ entry_id, tenant }) // Ensure tenant match
           .update(cleanedEntry)
           .returning('*');
 
         if (!updated) {
           throw new Error('Failed to update time entry');
         }
-        
+
         resultingEntry = updated;
         console.log('Updated entry:', resultingEntry);
         
@@ -593,6 +639,71 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           }
         }
       }
+      // --- Bucket Usage Update Logic ---
+      // Check if billable based on duration > 0
+      if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
+        // Ensure work_item_id and work_item_type exist and call helper
+        let companyId: string | null = null;
+        if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
+            // Now TypeScript knows both are strings here
+            companyId = await getCompanyIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+        }
+        const currentPlanId = resultingEntry.billing_plan_id; // Use the plan ID associated with the entry
+
+        if (companyId && currentPlanId) {
+          // Check if the plan is a 'Bucket' type plan
+          // Correctly check plan_type by joining company_billing_plans with billing_plans
+          const planInfo = await trx('company_billing_plans as cbp')
+            .join('billing_plans as bp', function() {
+                this.on('cbp.plan_id', '=', 'bp.plan_id')
+                    .andOn('cbp.tenant', '=', 'bp.tenant');
+            })
+            .where('cbp.company_billing_plan_id', currentPlanId) // Use the ID from the time entry
+            .andWhere('cbp.tenant', tenant)
+            .first('bp.plan_type'); // Select plan_type from billing_plans table
+
+          if (planInfo && planInfo.plan_type === 'Bucket') {
+            console.log(`Time entry ${resultingEntry.entry_id} linked to Bucket plan ${currentPlanId}. Updating usage.`);
+
+            const newDuration = resultingEntry.billable_duration || 0;
+            // Calculate delta in MINUTES first
+            const durationDeltaMinutes = newDuration - oldDuration; // oldDuration is 0 for inserts
+            // Convert delta to HOURS for bucket usage service
+            const hoursDelta = durationDeltaMinutes / 60.0;
+
+            if (hoursDelta !== 0) {
+              try {
+                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+                  trx,
+                  companyId,
+                  resultingEntry.service_id,
+                  resultingEntry.start_time // Use entry's start time to find the correct period
+                );
+
+                await updateBucketUsageMinutes(
+                  trx,
+                  bucketUsageRecord.usage_id,
+                  hoursDelta
+                );
+                console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id}`);
+              } catch (bucketError) {
+                console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
+                // Re-throwing ensures data consistency.
+                throw new Error(`Failed to update bucket usage: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+              }
+            } else {
+               console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+            }
+          } else {
+             console.log(`Time entry ${resultingEntry.entry_id} service/plan is not a Bucket type or plan not found.`);
+          }
+        } else {
+           console.log(`Could not determine company ID or billing plan for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+        }
+      } else {
+         console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
+      }
+      // --- End Bucket Usage Update Logic ---
     });
 
     if (!resultingEntry) {
@@ -954,52 +1065,129 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
     throw new Error("User not authenticated");
   }
 
+  if (!tenant) {
+    throw new Error("Tenant not found");
+  }
+
   try {
     await db.transaction(async (trx) => {
-      // Get the time entry to be deleted
-      const timeEntry = await trx('time_entries')
-        .where({ 
-          entry_id: entryId,
-          tenant
-        })
-        .first();
-      
-      if (!timeEntry) {
-        throw new Error('Time entry not found');
+      console.log(`Starting transaction to delete time entry ${entryId}`);
+
+      // 1. Fetch the entry details BEFORE deleting it
+      const entryToDelete = await trx('time_entries') // Renaming variable locally for clarity below
+        .where({ entry_id: entryId, tenant })
+        .first<ITimeEntry | undefined>(); // Use ITimeEntry type
+
+      if (!entryToDelete) {
+        // If already deleted or doesn't exist, maybe log or just return successfully
+        console.warn(`Time entry with ID ${entryId} not found for deletion.`);
+        return; // Exit transaction successfully
       }
-      
-      // Delete the time entry
-      await trx('time_entries')
-        .where({ 
-          entry_id: entryId,
-          tenant
-        })
+
+      // --- Bucket Usage Update Logic (Before Delete) ---
+      // Check if billable based on duration > 0
+      if (entryToDelete.service_id && (entryToDelete.billable_duration || 0) > 0) {
+        // Ensure work_item_id and work_item_type exist before calling helper
+        const companyId = (entryToDelete.work_item_id && entryToDelete.work_item_type)
+            ? await getCompanyIdForWorkItem(trx, tenant, entryToDelete.work_item_id, entryToDelete.work_item_type)
+            : null;
+        const currentPlanId = entryToDelete.billing_plan_id;
+
+        if (companyId && currentPlanId) {
+          // Check if the plan is a 'Bucket' type plan
+          // Correctly check plan_type by joining company_billing_plans with billing_plans
+          const planInfo = await trx('company_billing_plans as cbp')
+            .join('billing_plans as bp', function() {
+                this.on('cbp.plan_id', '=', 'bp.plan_id')
+                    .andOn('cbp.tenant', '=', 'bp.tenant');
+            })
+            .where('cbp.company_billing_plan_id', currentPlanId) // Use the ID from the time entry
+            .andWhere('cbp.tenant', tenant)
+            .first('bp.plan_type'); // Select plan_type from billing_plans table
+
+          if (planInfo && planInfo.plan_type === 'Bucket') {
+            console.log(`Time entry ${entryId} linked to Bucket plan ${currentPlanId}. Updating usage before delete.`);
+
+            const durationMinutes = entryToDelete.billable_duration || 0;
+            // Calculate NEGATIVE delta in HOURS
+            const hoursDelta = -(durationMinutes / 60.0);
+
+            if (hoursDelta !== 0) {
+              try {
+                // Find the record - it *should* exist if time was previously logged against it
+                const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
+                  trx,
+                  companyId,
+                  entryToDelete.service_id,
+                  entryToDelete.start_time // Use entry's start time
+                );
+
+                // Update with the negative delta
+                await updateBucketUsageMinutes(
+                  trx,
+                  bucketUsageRecord.usage_id,
+                  hoursDelta
+                );
+                 console.log(`Successfully updated (decremented) bucket usage for deleted entry ${entryId}`);
+              } catch (bucketError) {
+                console.error(`Error updating bucket usage before deleting time entry ${entryId}:`, bucketError);
+                // Decide on error handling: re-throw to rollback, or log and continue?
+                // Re-throwing ensures data consistency.
+                throw new Error(`Failed to update bucket usage before delete: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+              }
+            } else {
+               console.log(`Deleted time entry ${entryId} had zero duration, skipping bucket update.`);
+            }
+          } else {
+             console.log(`Deleted time entry ${entryId} service/plan is not a Bucket type or plan not found.`);
+          }
+        } else {
+           console.log(`Could not determine company ID or billing plan for deleted time entry ${entryId}, skipping bucket update.`);
+        }
+      } else {
+         console.log(`Deleted time entry ${entryId} was not billable or missing service ID, skipping bucket update.`);
+      }
+      // --- End Bucket Usage Update Logic ---
+
+
+      // 2. Delete the time entry
+      const deleteCount = await trx('time_entries')
+        .where({ entry_id: entryId, tenant })
         .delete();
-      
-      // If this was a project task, update the actual_hours in the project_tasks table
-      if (timeEntry.work_item_type === 'project_task') {
-        // Get all remaining time entries for this task to calculate total actual hours
+
+      if (deleteCount === 0) {
+         // This shouldn't happen if the initial fetch succeeded, but handle defensively
+         console.warn(`Attempted to delete time entry ${entryId}, but it was not found (possibly deleted concurrently).`);
+      } else {
+         console.log(`Successfully deleted time entry ${entryId}`);
+      }
+
+
+      // 3. Update Project Task Actual Hours (if applicable) - AFTER deleting the entry
+      if (entryToDelete.work_item_type === 'project_task') {
+        // Get remaining time entries for this task
         const timeEntries = await trx('time_entries')
           .where({
-            work_item_id: timeEntry.work_item_id,
+            work_item_id: entryToDelete.work_item_id,
             work_item_type: 'project_task',
             tenant
           })
           .select('billable_duration');
-        
-        // Calculate total minutes from all time entries
-        const totalMinutes = timeEntries.reduce((total, entry) => total + entry.billable_duration, 0);
-        
-        // Store actual_hours as minutes in the database (integer)
+
+        // Calculate total minutes from remaining entries
+        const totalMinutes = timeEntries.reduce((total, entry) => total + (entry.billable_duration || 0), 0);
+
+        // Update actual_hours in project_tasks table
         await trx('project_tasks')
           .where({
-            task_id: timeEntry.work_item_id,
+            task_id: entryToDelete.work_item_id,
             tenant
           })
           .update({
             actual_hours: totalMinutes,
-            updated_at: new Date()
+            updated_at: new Date() // Use DB function if preferred: trx.fn.now()
           });
+         console.log(`Updated actual_hours for project task ${entryToDelete.work_item_id}`);
       }
     });
   } catch (error) {

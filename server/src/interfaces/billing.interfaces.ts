@@ -203,14 +203,14 @@ export interface IBucketPlan extends TenantEntity {
 
 export interface IBucketUsage extends TenantEntity {
   usage_id: string;
-  // bucket_plan_id: string; // Removed as it's deprecated
-  plan_id?: string; // Added plan_id, assuming it might be needed here now
+  plan_id?: string;
   company_id: string;
   period_start: ISO8601String;
   period_end: ISO8601String;
-  hours_used: number;
-  overage_hours: number;
+  minutes_used: number;
+  overage_minutes: number;
   service_catalog_id: string;
+  rolled_over_minutes: number;
 }
 
 export interface PaymentMethod extends TenantEntity {

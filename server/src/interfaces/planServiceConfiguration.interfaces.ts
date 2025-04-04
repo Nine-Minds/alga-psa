@@ -63,7 +63,7 @@ export interface IPlanServiceUsageConfig extends TenantEntity {
  */
 export interface IPlanServiceBucketConfig extends TenantEntity {
   config_id: string;
-  total_hours: number;
+  total_minutes: number;
   billing_period: string;
   overage_rate: number;
   allow_rollover: boolean;

@@ -1,0 +1,249 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Knex } from 'knex';
+// Mock Knex and dependencies
+// vi.mock('knex'); // More sophisticated mocking might be needed
+
+// Import functions to test
+import {
+  findOrCreateCurrentBucketUsageRecord,
+  updateBucketUsageMinutes,
+  reconcileBucketUsageRecord,
+  // Assuming calculatePeriod is exported if direct testing is needed, otherwise test via findOrCreate
+} from 'server/src/lib/services/bucketUsageService';
+
+// Mock data and setup
+const mockTenant = 'test-tenant';
+const mockCompanyId = 'company-uuid-123';
+const mockServiceId = 'service-uuid-456';
+const mockPlanId = 'plan-uuid-789';
+const mockUsageId = 'usage-uuid-abc';
+
+// Mock Knex transaction object
+const mockTrx = {
+  // Mock necessary Knex methods used by the service functions
+  // e.g., select, where, join, insert, update, first, transaction, raw, fn.now()
+  // This needs to be comprehensive based on actual usage within the functions.
+  // Example:
+  select: vi.fn().mockReturnThis(),
+  where: vi.fn().mockReturnThis(),
+  andWhere: vi.fn().mockReturnThis(),
+  orWhereNull: vi.fn().mockReturnThis(),
+  join: vi.fn().mockReturnThis(),
+  leftJoin: vi.fn().mockReturnThis(),
+  on: vi.fn().mockReturnThis(),
+  andOn: vi.fn().mockReturnThis(),
+  andOnVal: vi.fn().mockReturnThis(),
+  first: vi.fn().mockResolvedValue(undefined), // Default mock
+  insert: vi.fn().mockReturnThis(),
+  returning: vi.fn().mockResolvedValue([]), // Default mock
+  update: vi.fn().mockResolvedValue(0), // Default mock
+  sum: vi.fn().mockReturnThis(),
+  raw: vi.fn((sql, bindings) => ({ sql, bindings })), // Simple mock for raw
+  fn: {
+    now: vi.fn(() => new Date().toISOString()), // Mock now()
+  },
+  client: { // Mock client config for tenant context
+    config: {
+      tenant: mockTenant,
+    },
+  },
+  // Mock transaction commit/rollback if needed, though often handled by test runner setup/teardown
+  commit: vi.fn().mockResolvedValue(undefined),
+  rollback: vi.fn().mockResolvedValue(undefined),
+} as unknown as Knex.Transaction; // Cast to Transaction type
+
+describe('BucketUsageService Unit Tests', () => {
+
+  beforeEach(() => {
+    // Reset mocks before each test
+    vi.clearAllMocks();
+    // Reset mock implementations to defaults if necessary
+    (mockTrx.first as any).mockResolvedValue(undefined);
+    (mockTrx.returning as any).mockResolvedValue([]);
+    (mockTrx.update as any).mockResolvedValue(0);
+    (mockTrx.sum as any).mockReturnThis(); // Reset sum chaining
+  });
+
+  describe('findOrCreateCurrentBucketUsageRecord', () => {
+    it.skip('should find an existing bucket usage record for the correct period', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns a valid period
+      // - trx('bucket_usage').where(...).first() returns a mock existing record
+      // Assert:
+      // - The function returns the mocked existing record.
+      // - No insert call is made.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should create a new bucket usage record if none exists for the period (no rollover)', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns a valid period
+      // - trx('bucket_usage').where(...).first() returns undefined (for current period)
+      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = false
+      // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
+      // Assert:
+      // - The function returns the new mock record.
+      // - The new record has minutes_used = 0, overage_minutes = 0, rolled_over_minutes = 0.
+      // - Correct period_start, period_end, plan_id, etc. are used in insert.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should create a new record and calculate rollover hours correctly when rollover is enabled and previous period exists', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns a valid period
+      // - trx('bucket_usage').where(...).first() returns undefined (for current period)
+      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true, total_hours = 100
+      // - trx('bucket_usage').where(...) for *previous* period returns a record with hours_used = 80
+      // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
+      // Assert:
+      // - The function returns the new mock record.
+      // - The new record has rolled_over_hours = 20 (100 - 80).
+      expect(true).toBe(false); // Placeholder
+    });
+
+     it.skip('should create a new record with zero rollover hours if rollover is enabled but previous period does not exist', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns a valid period
+      // - trx('bucket_usage').where(...).first() returns undefined (for current period)
+      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true
+      // - trx('bucket_usage').where(...) for *previous* period returns undefined
+      // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
+      // Assert:
+      // - The function returns the new mock record.
+      // - The new record has rolled_over_hours = 0.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the billing period cannot be calculated', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns null
+      // Assert:
+      // - The function throws an appropriate error.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the bucket configuration is missing', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - calculatePeriod returns a valid period
+      // - trx('bucket_usage').where(...).first() returns undefined
+      // - trx('plan_service_bucket_config').where(...).first() returns undefined
+      // Assert:
+      // - The function throws an appropriate error.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    // TODO: Add tests for different billing frequencies (monthly, quarterly, annually) in calculatePeriod if testing directly
+  });
+
+  describe('updateBucketUsageMinutes', () => {
+    it.skip('should correctly increment minutes_used and calculate overage_minutes', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns { minutes_used: 50, rolled_over_minutes: 10, total_minutes: 100 }
+      // - trx('bucket_usage').where(...).update(...) returns 1 (update successful)
+      // Input: minutesDelta = 60
+      // Assert:
+      // - The update call receives { minutes_used: 110, overage_minutes: 0 } (110 - 110 = 0)
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should correctly decrement hours_used and calculate overage_hours (should become 0)', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns { hours_used: 120, rolled_over_hours: 0, total_hours: 100 } (currently in overage)
+      // - trx('bucket_usage').where(...).update(...) returns 1
+      // Input: hoursDelta = -30
+      // Assert:
+      // - The update call receives { hours_used: 90, overage_hours: 0 } (90 - 100 is negative, so 0)
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should not change hours if hoursDelta is 0', async () => {
+      // TODO: Implement test
+      // Input: hoursDelta = 0
+      // Assert:
+      // - No database update call is made.
+      // - The function returns void/Promise<void> successfully.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the bucket usage record or config is not found', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns undefined
+      // Assert:
+      // - The function throws an appropriate error.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the update fails (returns 0 rows updated)', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns valid data
+      // - trx('bucket_usage').where(...).update(...) returns 0
+      // Assert:
+      // - The function throws an appropriate error.
+      expect(true).toBe(false); // Placeholder
+    });
+  });
+
+  describe('reconcileBucketUsageRecord', () => {
+    it.skip('should correctly calculate total hours from time entries and usage tracking and update the record', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns a record with period, company, service, total_hours=100
+      // - trx('time_entries').where(...).sum(...) returns { total_duration_minutes: 120 * 60 } (120 hours)
+      // - trx('usage_tracking').where(...).sum(...) returns { total_quantity: 30 } (30 hours)
+      // - trx('bucket_usage').where(...).update(...) returns 1
+      // Assert:
+      // - Calculated totalHoursUsed = 150 (120 + 30)
+      // - Calculated newOverageHours = 50 (150 - 100)
+      // - The update call receives { hours_used: 150, overage_hours: 50 }
+      expect(true).toBe(false); // Placeholder
+    });
+
+     it.skip('should handle cases with no time entries or no usage tracking records', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns a record, total_hours=50
+      // - trx('time_entries').where(...).sum(...) returns { total_duration_minutes: null } or { total_duration_minutes: 0 }
+      // - trx('usage_tracking').where(...).sum(...) returns { total_quantity: 10 }
+      // - trx('bucket_usage').where(...).update(...) returns 1
+      // Assert:
+      // - Calculated totalHoursUsed = 10
+      // - Calculated newOverageHours = 0
+      // - The update call receives { hours_used: 10, overage_hours: 0 }
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the bucket usage record or config is not found', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns undefined
+      // Assert:
+      // - The function throws an appropriate error.
+      // - No sum or update calls are made.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    it.skip('should throw an error if the update fails', async () => {
+      // TODO: Implement test
+      // Mock DB calls:
+      // - trx('bucket_usage').join(...).where(...).first() returns valid data
+      // - Sum calls return valid data
+      // - trx('bucket_usage').where(...).update(...) returns 0
+      // Assert:
+      // - The function throws an appropriate error.
+      expect(true).toBe(false); // Placeholder
+    });
+
+    // TODO: Add tests considering different data types for sum results (e.g., string vs number) if necessary
+  });
+
+});

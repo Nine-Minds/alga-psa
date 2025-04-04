@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob } from './index';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from 'server/src/lib/db';
 
@@ -44,11 +44,20 @@ export async function initializeScheduledJobs(): Promise<void> {
       if (reconciliationJobId) {
         logger.info(`Scheduled credit reconciliation job for tenant ${tenantId} with job ID ${reconciliationJobId}`);
       } else {
-        logger.error(`Failed to schedule credit reconciliation job for tenant ${tenantId}`);
-      }
-    }
-    
-    logger.info('All scheduled jobs initialized');
+       logger.error(`Failed to schedule credit reconciliation job for tenant ${tenantId}`);
+     }
+     
+     // Schedule daily job to reconcile bucket usage (runs at 3:00 AM)
+     const reconcileJobId = await scheduleReconcileBucketUsageJob(tenantId); // Uses default cron '0 3 * * *'
+     
+     if (reconcileJobId) {
+       logger.info(`Scheduled bucket usage reconciliation job for tenant ${tenantId} with job ID ${reconcileJobId}`);
+     } else {
+       logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`);
+     }
+   }
+   
+   logger.info('All scheduled jobs initialized');
   } catch (error: any) {
     logger.error('Failed to initialize scheduled jobs:', error);
     throw error;

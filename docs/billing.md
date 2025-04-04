@@ -2,7 +2,7 @@
 
 ## System Purpose
 
-The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of hours/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, plan bundles, refunds and adjustments, and approval workflows. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements. Plan bundles provide a way to group related billing plans together for easier management and clearer client invoicing.
+The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, plan bundles, refunds and adjustments, and approval workflows. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements. Plan bundles provide a way to group related billing plans together for easier management and clearer client invoicing.
 
 ## Manual Invoicing
 
@@ -538,9 +538,9 @@ This typing ensures that only valid service types can be assigned, maintaining d
     - **Purpose:** Defines bucket of hours/retainer plans
     - **Key Fields:** `tenant`, `bucket_plan_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `total_hours`, `billing_period`, `overage_rate`
 
-14. **`bucket_usage`** *(From Original Plan)*
-    - **Purpose:** Tracks usage against bucket of hours/retainer plans
-    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `bucket_plan_id`, `company_id`, `period_start`, `period_end`, `hours_used`, `overage_hours`
+14. **`bucket_usage`** *(Updated)*
+    - **Purpose:** Tracks usage against bucket of minutes/retainer plans for specific billing periods. Usage (`minutes_used`) is automatically updated based on associated billable `time_entries` and `usage_tracking` records.
+    - **Key Fields:** `tenant`, `usage_id` (UUID, PK), `plan_id` (FK to `billing_plans`), `service_catalog_id` (FK to `service_catalog`), `company_id` (FK to `companies`), `period_start`, `period_end`, `minutes_used`, `overage_minutes`, `rolled_over_minutes` (Stores unused minutes rolled over from the previous period if `allow_rollover` is enabled in the corresponding `plan_service_bucket_config`).
 
 15. **`plan_service_configuration`** *(Updated for Service-Level Config)*
     - **Purpose:** Links a specific service within a plan to its configuration settings (e.g., usage-based, fixed). Acts as the parent for specific config types.
@@ -893,11 +893,12 @@ The credit reconciliation system ensures the integrity of credit balances by det
      - **j.** Combinations of the above
    - Handle scenarios where multiple plans may apply to the same service or category.
 
-3. **Bucket of Hours/Retainer Billing** *(From Original Plan)*
-   - Track hours used against the allocated bucket for each billing period.
-   - Calculate overage charges when bucket hours are exceeded.
-   - Support rollover of unused hours if specified in the plan.
-
+3. **Bucket of Hours/Retainer Billing** *(Updated)*
+   - **Automatic Tracking:** The system now automatically tracks `hours_used` in the `bucket_usage` table. When billable `time_entries` or `usage_tracking` records linked to a bucket service are created, updated, or deleted, the corresponding `bucket_usage` record for the correct period is automatically updated via the `BucketUsageService`.
+   - **Period Management:** The `findOrCreateCurrentBucketUsageRecord` function in `BucketUsageService` ensures a `bucket_usage` record exists for the relevant billing period (determined by `company_billing_plans` and `billing_plans.billing_frequency`) whenever usage needs to be recorded.
+   - **Rollover Support:** If `allow_rollover` is enabled in the `plan_service_bucket_config` for the service, unused hours from the previous period (`total_hours` - `hours_used`) are calculated and stored in the `rolled_over_hours` field of the *new* period's `bucket_usage` record when it's created. The `getRemainingBucketUnits` report action includes these rolled-over hours in the remaining balance calculation (`remaining_hours = total_hours + rolled_over_hours - hours_used`).
+   - **Overage Calculation:** `overage_hours` are automatically calculated within `updateBucketUsageHours` and `reconcileBucketUsageRecord` as `max(0, hours_used - total_hours)`. Note that `rolled_over_hours` provide additional available hours but do not change the threshold for calculating overage against the period's base `total_hours`.
+   - **Reconciliation:** A daily scheduled job (`reconcileBucketUsageJob`) runs the `reconcileBucketUsageRecord` function for active bucket usage records. This function recalculates `hours_used` by summing all associated billable `time_entries` (duration) and `usage_tracking` (quantity) within the record's period, ensuring data accuracy and correcting any potential drift.
 4. **Proration** *(From Original Plan)*
    - Implement logic to handle prorated billing for mid-cycle plan changes or service additions/removals.
    - Consider proration scenarios when multiple plans are active simultaneously.

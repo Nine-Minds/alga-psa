@@ -28,14 +28,15 @@ const InputSchema = z.object({
 export interface RemainingBucketUnitsResult {
   plan_id: string;
   plan_name: string;
-  service_id: string; // Added service_id
-  service_name: string; // Added service_name
-  display_label: string; // Added combined label for chart
-  total_hours: number;
-  hours_used: number;
-  remaining_hours: number;
-  period_start?: string; // Optional, from bucket_usage
-  period_end?: string;   // Optional, from bucket_usage
+  service_id: string;
+  service_name: string;
+  display_label: string;
+  total_minutes: number;
+  minutes_used: number;
+  rolled_over_minutes: number;
+  remaining_minutes: number;
+  period_start?: string;
+  period_end?: string;
 }
 
 /**
@@ -116,51 +117,43 @@ export async function getRemainingBucketUnits(
       .select(
         'bp.plan_id',
         'bp.plan_name',
-        'ps.service_id', // Select service_id
-        'sc.service_name', // Select service_name
-        // Select total_hours from the new table alias
-        'psbc.total_hours',
-        // Use COALESCE to default hours_used to 0 if no usage record found for the period
-        knex.raw('COALESCE(bu.hours_used, 0) as hours_used'),
-        'bu.period_start', // Include period from usage record if found
-        'bu.period_end'    // Include period from usage record if found
+        'ps.service_id',
+        'sc.service_name',
+        'psbc.total_minutes',
+        knex.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
+        knex.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
+        'bu.period_start',
+        'bu.period_end'
       );
-
-    console.log('Generated SQL:', query.toString()); // Log the generated SQL for debugging
-
-    const rawResults: any[] = await query;
-
-    // Calculate remaining hours and map to the final structure
-      // Add GROUP BY clause if necessary (depends on DB strictness)
-      // .groupBy('bp.plan_id', 'bp.plan_name', 'ps.service_id', 'sc.service_name', 'psbc.total_hours', 'bu.hours_used', 'bu.period_start', 'bu.period_end');
-
-    // console.log('Generated SQL:', query.toString()); // Log the generated SQL for debugging - Removed duplicate
-
-    // const rawResults: any[] = await query; // Removed duplicate
-
-    // Calculate remaining hours and map to the final structure
-    const results: RemainingBucketUnitsResult[] = rawResults.map(row => {
-      const totalHours = typeof row.total_hours === 'string' ? parseFloat(row.total_hours) : row.total_hours;
-      const hoursUsed = typeof row.hours_used === 'string' ? parseFloat(row.hours_used) : row.hours_used;
-      const remainingHours = totalHours - hoursUsed;
-      const displayLabel = `${row.plan_name} - ${row.service_name}`; // Construct combined label
-
-      return {
-        plan_id: row.plan_id,
-        plan_name: row.plan_name,
-        service_id: row.service_id, // Added service_id
-        service_name: row.service_name, // Added service_name
-        display_label: displayLabel, // Added combined label
-        total_hours: totalHours,
-        hours_used: hoursUsed,
-        remaining_hours: remainingHours,
-        period_start: row.period_start ? row.period_start.toISOString().split('T')[0] : undefined, // Format date if exists
-        period_end: row.period_end ? row.period_end.toISOString().split('T')[0] : undefined,     // Format date if exists
-      };
-    });
-
-    console.log(`Found ${results.length} active bucket plans for company ${companyId}`);
-    return results;
+      
+      console.log('Generated SQL:', query.toString());
+      
+      const rawResults: any[] = await query;
+      
+      const results: RemainingBucketUnitsResult[] = rawResults.map(row => {
+        const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
+        const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
+        const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
+        const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
+        const displayLabel = `${row.plan_name} - ${row.service_name}`;
+      
+        return {
+          plan_id: row.plan_id,
+          plan_name: row.plan_name,
+          service_id: row.service_id,
+          service_name: row.service_name,
+          display_label: displayLabel,
+          total_minutes: totalMinutes,
+          minutes_used: minutesUsed,
+          rolled_over_minutes: rolledOverMinutes,
+          remaining_minutes: remainingMinutes,
+          period_start: row.period_start ? row.period_start.toISOString().split('T')[0] : undefined,
+          period_end: row.period_end ? row.period_end.toISOString().split('T')[0] : undefined,
+        };
+      });
+      
+      console.log(`Found ${results.length} active bucket plans for company ${companyId}`);
+      return results;
 
   } catch (error) {
     console.error(`Error fetching remaining bucket units for company ${companyId} in tenant ${tenant}:`, error);

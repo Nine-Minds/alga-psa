@@ -7,6 +7,8 @@ import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generate
 import { expiredCreditsHandler, ExpiredCreditsJobData } from './handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from './handlers/expiringCreditsNotificationHandler';
 import { creditReconciliationHandler, CreditReconciliationJobData } from './handlers/creditReconciliationHandler';
+// Import the new handler
+import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from './handlers/reconcileBucketUsageHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -64,13 +66,20 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         await InvoiceEmailHandler.handle(job.id, job.data);
       });
     }
+
+    // Register reconcile bucket usage handler
+    jobScheduler.registerJobHandler<ReconcileBucketUsageJobData>('reconcile-bucket-usage', async (job: Job<ReconcileBucketUsageJobData>) => {
+      // Directly call the handler function
+      await handleReconcileBucketUsage(job);
+    });
+
   }
   return jobScheduler;
 };
 
-// Export types
-export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData };
 
+// Export types
+export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
   companyId: string,
@@ -153,6 +162,26 @@ export const scheduleExpiringCreditsNotificationJob = async (
     'expiring-credits-notification',
     cronExpression,
     { tenantId, companyId }
+  );
+};
+
+/**
+ * Schedule a recurring job to reconcile bucket usage records.
+ * This job recalculates usage based on time entries and usage tracking.
+ *
+ * @param tenantId The tenant ID for which to reconcile records.
+ * @param cronExpression Cron expression for job scheduling (e.g., '0 3 * * *' for daily at 3:00 AM).
+ * @returns Job ID if successful, null otherwise.
+ */
+export const scheduleReconcileBucketUsageJob = async (
+  tenantId: string,
+  cronExpression: string = '0 3 * * *' // Default: daily at 3:00 AM
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ReconcileBucketUsageJobData>(
+    'reconcile-bucket-usage',
+    cronExpression,
+    { tenantId } // Only needs tenantId
   );
 };
 

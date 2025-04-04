@@ -320,7 +320,7 @@ useEffect(() => {
                          {/* Background track */}
                          <PolarAngleAxis
                          type="number"
-                         domain={[0, bucket.total_hours > 0 ? bucket.total_hours : 1]} // Domain is 0 to total hours
+                         domain={[0, bucket.total_minutes > 0 ? bucket.total_minutes / 60 : 1]} // Domain is 0 to total hours
                          angleAxisId={0}
                           tick={false}
                         />
@@ -339,7 +339,7 @@ useEffect(() => {
                    </ResponsiveContainer>
                  </div>
                  <span className="text-xs text-gray-500">
-                   {bucket.hours_used.toFixed(1)} / {bucket.total_hours} hours used
+                   {(bucket.minutes_used / 60).toFixed(2)} / {(bucket.total_minutes / 60).toFixed(2)} hours used
                  </span>
                </div>
              ))}
