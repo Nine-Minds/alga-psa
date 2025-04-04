@@ -360,7 +360,6 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   if (!tenant) {
     throw new Error("Tenant not found");
   }
-
   // Check for session and user ID
   if (!session?.user?.id) {
     throw new Error("Unauthorized: Please log in to continue");
@@ -1130,13 +1129,17 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
       }
       // --- End Bucket Usage Update Logic ---
 
-      // Delete the time entry
-      await trx('time_entries')
-        .where({
-          entry_id: entryId,
-          tenant
-        })
+      // 2. Delete the time entry
+      const deleteCount = await trx('time_entries')
+        .where({ entry_id: entryId, tenant })
         .delete();
+
+      if (deleteCount === 0) {
+         // This shouldn't happen if the initial fetch succeeded, but handle defensively
+         console.warn(`Attempted to delete time entry ${entryId}, but it was not found (possibly deleted concurrently).`);
+      } else {
+         console.log(`Successfully deleted time entry ${entryId}`);
+      }
 
       // If this was a project task, update the actual_hours in the project_tasks table
       if (timeEntry.work_item_type === 'project_task') {
@@ -1162,6 +1165,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             actual_hours: totalMinutes,
             updated_at: new Date()
           });
+         console.log(`Updated actual_hours for project task ${timeEntry.work_item_id}`);
       }
     });
   } catch (error) {

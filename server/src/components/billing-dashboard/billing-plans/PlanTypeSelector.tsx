@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { PLAN_TYPE_OPTIONS } from 'server/src/constants/billing';
-import { Card } from 'server/src/components/ui/Card';
-import { CheckCircle, DollarSign, Clock, BarChart3, Package } from 'lucide-react';
+// Removed Card import as we'll use divs for custom styling
+import { Clock, Package, Shapes, Layers } from 'lucide-react'; // Import original icons: Shapes, Layers. Remove DollarSign, BarChart3, CheckCircle if unused.
 
 export type PlanType = 'Fixed' | 'Bucket' | 'Hourly' | 'Usage';
 
@@ -24,11 +24,12 @@ const PLAN_TYPE_DESCRIPTIONS: Record<PlanType, string> = {
   'Usage': 'Usage-based billing with tiered pricing options. Perfect for services measured by consumption.'
 };
 
-const PLAN_TYPE_ICONS: Record<PlanType, React.ReactNode> = {
-  'Fixed': <DollarSign className="h-6 w-6 text-green-500" />,
-  'Bucket': <Package className="h-6 w-6 text-blue-500" />,
-  'Hourly': <Clock className="h-6 w-6 text-purple-500" />,
-  'Usage': <BarChart3 className="h-6 w-6 text-orange-500" />
+// Define icons as components for easier styling control, using the original set
+const PLAN_TYPE_ICONS: Record<PlanType, React.ElementType> = {
+  'Fixed': Package, // Originally proposed Package for Fixed
+  'Bucket': Layers, // Originally proposed Layers for Tiered/Bucket concept
+  'Hourly': Clock,  // Kept Clock for Hourly
+  'Usage': Shapes  // Originally proposed Shapes for Per Unit/Usage concept
 };
 
 export function PlanTypeSelector({
@@ -54,37 +55,43 @@ export function PlanTypeSelector({
     return (
       <div className={className}>
         <label className="block mb-2 text-sm font-medium text-gray-700">Plan Type</label>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {(Object.keys(PLAN_TYPE_DESCRIPTIONS) as PlanType[]).map((planType) => (
-            <Card
-              key={planType}
-              className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                value === planType
-                  ? 'border-2 border-blue-500 bg-blue-50'
-                  : 'border border-gray-200'
-              }`}
-              onClick={() => !disabled && onChange(planType)}
-            >
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  {PLAN_TYPE_ICONS[planType]}
-                </div>
-                <div className="flex-grow">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium">
-                      {PLAN_TYPE_OPTIONS.find(opt => opt.value === planType)?.label}
-                    </h3>
-                    {value === planType && (
-                      <CheckCircle className="h-5 w-5 text-blue-500" />
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {PLAN_TYPE_DESCRIPTIONS[planType]}
-                  </p>
-                </div>
+        <div className="grid grid-cols-2 gap-4 mt-2"> {/* Use gap-4 like the original proposal */}
+          {(Object.keys(PLAN_TYPE_DESCRIPTIONS) as PlanType[]).map((planType) => {
+            const IconComponent = PLAN_TYPE_ICONS[planType];
+            const isSelected = value === planType;
+            const planLabel = PLAN_TYPE_OPTIONS.find(opt => opt.value === planType)?.label || planType;
+
+            return (
+              <div
+                key={planType}
+                id={`plan-type-card-${planType.toLowerCase()}`} // Add ID for consistency
+                className={`
+                  border rounded-lg p-4 cursor-pointer transition-all duration-150 ease-in-out
+                  flex flex-col items-center text-center space-y-2  /* Centered layout */
+                  ${isSelected
+                    ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200' // Preferred selected style
+                    : 'border-border-300 hover:border-primary-300 hover:bg-gray-50' // Preferred hover style
+                  }
+                  ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                `}
+                onClick={() => !disabled && onChange(planType)}
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={disabled ? -1 : 0} // Make focusable only if not disabled
+                onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) onChange(planType); }} // Allow selection with keyboard
+              >
+                <IconComponent className={`h-8 w-8 mb-1 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} /> {/* Larger icon, dynamic color */}
+                <span className={`font-medium ${isSelected ? 'text-primary-700' : 'text-gray-800'}`}>
+                  {planLabel}
+                </span>
+                {/* Keep description if showDescriptions is true */}
+                {showDescriptions && (
+                   <p className="text-xs text-gray-500">{PLAN_TYPE_DESCRIPTIONS[planType]}</p>
+                )}
+                {/* Removed CheckCircle as selection is indicated by border/bg */}
               </div>
-            </Card>
-          ))}
+            );
+          })}
         </div>
       </div>
     );

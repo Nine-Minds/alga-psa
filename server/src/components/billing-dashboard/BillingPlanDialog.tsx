@@ -17,10 +17,10 @@ import { IBillingPlan, IServiceType } from 'server/src/interfaces/billing.interf
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { BILLING_FREQUENCY_OPTIONS, PLAN_TYPE_OPTIONS } from 'server/src/constants/billing';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed PLAN_TYPE_OPTIONS
 // Removed getServices, getPlanServices imports
 // Removed OverlapWarningDialog import
-import { PlanTypeSelector, PlanType } from './billing-plans/PlanTypeSelector';
+import { PlanTypeSelector, PlanType } from './billing-plans/PlanTypeSelector'; // Import PlanTypeSelector again
 // Removed ConfigPanel imports
 
 interface BillingPlanDialogProps {
@@ -213,24 +213,15 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                 )}
               </div>
               <div>
-                <Label>Plan Type</Label> {/* Changed from PlanTypeSelector for simplicity, could revert if needed */}
-                 <CustomSelect
-                    id="plan-type"
-                    options={PLAN_TYPE_OPTIONS}
-                    onValueChange={(value) => setPlanType(value as PlanType)}
-                    value={planType}
-                    placeholder="Select plan type"
-                    className="w-full"
-                    required
-                 />
-                 {/* Or keep PlanTypeSelector if preferred:
-                 <PlanTypeSelector
-                    value={planType}
-                    onChange={setPlanType}
-                    className="w-full"
-                    showDescriptions={true} // Keep descriptions for clarity
-                    showCards={true}
-                 /> */}
+                {/* Use PlanTypeSelector with cards */}
+                <PlanTypeSelector
+                   value={planType}
+                   onChange={setPlanType}
+                   className="w-full"
+                   showDescriptions={true} // Keep descriptions for clarity
+                   showCards={true} // Enable card view
+                />
+                {/* Removed CustomSelect */}
               </div>
               <div className="flex items-center space-x-2 pt-2">
                 <Checkbox
