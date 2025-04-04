@@ -118,6 +118,7 @@ export function ClientDashboard() {
           </CardContent>
         </Card>
 
+        {/*
         <Card className="bg-white">
           <CardContent className="p-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
@@ -133,6 +134,7 @@ export function ClientDashboard() {
             </div>
           </CardContent>
         </Card>
+        */}
       </div>
 
       {/* Recent Activity */}

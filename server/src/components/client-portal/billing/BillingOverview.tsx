@@ -20,22 +20,16 @@ import {
   PaymentMethod 
 } from 'server/src/interfaces/billing.interfaces';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
-
-interface Invoice {
-  id: string;
-  invoice_number: string;
-  created_at: string;
-  total_amount: number;
-  status: string;
-}
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceActions';
+import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 
 interface InvoiceDetailsDialogProps {
-  invoice: Invoice | null;
+  invoice: InvoiceViewModel | null;
   isOpen: boolean;
   onClose: () => void;
   formatCurrency: (amount: number) => string;
-  formatDate: (date: string) => string;
-}
+  formatDate: (date: string | { toString(): string }) => string;
+};
 
 const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({ 
   invoice, 
@@ -60,7 +54,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Date</p>
-              <p className="mt-1">{formatDate(invoice.created_at)}</p>
+              <p className="mt-1">{formatDate(invoice.invoice_date as any)}</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-500">Amount</p>
@@ -74,6 +68,52 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
                 {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
               </span>
             </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Manual Invoice</p>
+              <p className="mt-1">{invoice.is_manual ? 'Yes' : 'No'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Credits</p>
+              <p className="mt-1">{formatCurrency(invoice.credit_applied)}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-500">Adjustments</p>
+              {/* Adjustments not available in InvoiceViewModel */}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mt-4">Line Items</h4>
+            <table className="min-w-full divide-y divide-gray-200 mt-2">
+              <thead>
+                <tr>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {invoice.invoice_items.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="px-3 py-2">{item.description}</td>
+                    <td className="px-3 py-2">{item.quantity}</td>
+                    <td className="px-3 py-2">{formatCurrency(item.unit_price)}</td>
+                    <td className="px-3 py-2">{formatCurrency(item.total_price)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <h4 className="font-semibold mt-4">Tax Breakdown</h4>
+            <ul className="mt-2 space-y-1">
+              <li className="flex justify-between">
+                <span>Tax</span>
+                <span>{formatCurrency(invoice.tax)}</span>
+              </li>
+            </ul>
           </div>
         </div>
       </DialogContent>
@@ -88,14 +128,14 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = ({
 export default function BillingOverview() {
   const [currentTab, setCurrentTab] = useState('Overview');
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [usage, setUsage] = useState<{ bucketUsage: IBucketUsage | null; services: IService[] }>({
     bucketUsage: null,
     services: []
   });
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -127,20 +167,28 @@ export default function BillingOverview() {
     }).format(amount);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
+  const formatDate = (date: string | { toString(): string }) => {
+    const dateStr = typeof date === 'string' ? date : date.toString();
+    return new Date(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
   };
 
-  const handleInvoiceClick = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
+
+  const handleInvoiceClick = async (invoice: InvoiceViewModel) => {
+    try {
+      const fullInvoice = await getInvoiceForRendering(invoice.invoice_id);
+      setSelectedInvoice(fullInvoice);
+    } catch (error) {
+      console.error('Failed to fetch invoice details:', error);
+      setSelectedInvoice(invoice); // fallback to basic invoice
+    }
     setIsInvoiceDialogOpen(true);
   };
 
-  const invoiceColumns: ColumnDefinition<Invoice>[] = [
+  const invoiceColumns: ColumnDefinition<InvoiceViewModel>[] = [
     {
       title: 'Invoice #',
       dataIndex: 'invoice_number'
@@ -217,7 +265,7 @@ export default function BillingOverview() {
                   {invoices.length > 0 ? (
                     <>
                       <p className="mt-2 text-3xl font-semibold">{formatCurrency(invoices[0].total_amount)}</p>
-                      <p className="mt-1 text-sm text-gray-500">Due {formatDate(invoices[0].created_at)}</p>
+                      <p className="mt-1 text-sm text-gray-500">Due {formatDate(invoices[0].invoice_date as any)}</p>
                     </>
                   ) : (
                     <p className="mt-2 text-lg">No upcoming invoices</p>
