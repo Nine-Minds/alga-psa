@@ -237,8 +237,8 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         company_id: context.companyId,
         period_start: '2023-01-01',
         period_end: '2023-01-31',
-        hours_used: 45,
-        overage_hours: 5,
+        minutes_used: 45,
+        overage_minutes: 5,
         service_catalog_id: serviceId,
         tenant: context.tenantId
       });

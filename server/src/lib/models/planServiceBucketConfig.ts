@@ -51,7 +51,7 @@ export default class PlanServiceBucketConfig {
     
     await this.knex('plan_service_bucket_config').insert({
       config_id: data.config_id,
-      total_hours: data.total_hours,
+      total_minutes: data.total_minutes,
       billing_period: data.billing_period,
       overage_rate: data.overage_rate,
       allow_rollover: data.allow_rollover,

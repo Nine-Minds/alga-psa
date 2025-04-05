@@ -23,7 +23,7 @@ interface BillingPlansProps {
     onAdd: (selectedPlan: Omit<ICompanyBillingPlan, "company_billing_plan_id" | "tenant">) => Promise<void>;
     onCompanyPlanChange: (companyBillingPlanId: string, planId: string) => void;
     onServiceCategoryChange: (companyBillingPlanId: string, categoryId: string) => void;
-    formatDateForDisplay: (date: string | Date | null) => string;
+    formatDateForDisplay: (dateString: string | null) => string;
 }
 
 const BillingPlans: React.FC<BillingPlansProps> = ({

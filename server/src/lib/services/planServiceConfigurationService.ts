@@ -215,7 +215,7 @@ export class PlanServiceConfigurationService {
 
           await bucketConfigModel.create({
             config_id: configId,
-            total_hours: (typeConfig as IPlanServiceBucketConfig)?.total_hours ?? 0,
+            total_minutes: (typeConfig as IPlanServiceBucketConfig)?.total_minutes ?? 0,
             billing_period: (typeConfig as IPlanServiceBucketConfig)?.billing_period ?? 'monthly',
             // Use provided rate, else service default, else 0
             overage_rate: (typeConfig as IPlanServiceBucketConfig)?.overage_rate ?? serviceDefaultRate ?? 0,
@@ -441,7 +441,7 @@ export class PlanServiceConfigurationService {
         // Ensure all required fields for creation are present, potentially using defaults
         const createData: Omit<IPlanServiceBucketConfig, 'created_at' | 'updated_at'> = {
             config_id: configId,
-            total_hours: bucketConfigData.total_hours ?? 0, // Provide defaults if needed
+            total_minutes: bucketConfigData.total_minutes ?? 0, // Provide defaults if needed
             billing_period: bucketConfigData.billing_period ?? 'monthly',
             overage_rate: bucketConfigData.overage_rate ?? 0,
             allow_rollover: bucketConfigData.allow_rollover ?? false,

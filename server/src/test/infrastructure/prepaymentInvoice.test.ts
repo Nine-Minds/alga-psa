@@ -349,8 +349,8 @@ describe('Prepayment Invoice System', () => {
         company_id: context.companyId,
         period_start: startDate,
         period_end: dateHelpers.startOf(now, 'month'),
-        hours_used: 45,
-        overage_hours: 5,
+        minutes_used: 45,
+        overage_minutes: 5,
         service_catalog_id: bucketServiceId,
         tenant: context.tenantId
       });
@@ -481,8 +481,8 @@ describe('Multiple Credit Applications', () => {
         company_id: context.companyId,
         period_start: dateHelpers.startOf(now, 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        hours_used: 45,
-        overage_hours: 5,
+        minutes_used: 45,
+        overage_minutes: 5,
         service_catalog_id: bucketServiceId,
         tenant: context.tenantId
       },
@@ -492,8 +492,8 @@ describe('Multiple Credit Applications', () => {
         company_id: context.companyId,
         period_start: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
-        hours_used: 50,
-        overage_hours: 10,
+        minutes_used: 50,
+        overage_minutes: 10,
         service_catalog_id: bucketServiceId,
         tenant: context.tenantId
       }

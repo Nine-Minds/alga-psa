@@ -20,9 +20,9 @@ interface IBucketUsage {
     service_catalog_id: string;
     period_start: ISO8601String;
     period_end: ISO8601String;
-    hours_used: number; // Treat as minutes_used
-    overage_hours: number; // Treat as overage_minutes
-    rolled_over_hours: number; // Treat as rolled_over_minutes
+    minutes_used: number;
+    overage_minutes: number;
+    rolled_over_minutes: number;
     created_at?: Date;
     updated_at?: Date;
 }
@@ -34,7 +34,7 @@ interface IPlanServiceBucketConfig {
     config_id: string;
     plan_id: string;
     service_catalog_id: string;
-    total_hours: number; // Treat as total_minutes
+    total_minutes: number;
     allow_rollover: boolean;
     tenant: string;
     // other fields...
@@ -76,6 +76,8 @@ async function calculatePeriod(
     const targetDate = toPlainDate(date);
     const targetDateISO = toISODate(targetDate); // Use consistent ISO format for DB queries
 
+    console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, companyId=${companyId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
+
     // Find the active company billing plan that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
     const companyPlan = await trx('company_billing_plans as cbp')
@@ -83,11 +85,14 @@ async function calculatePeriod(
             this.on('cbp.plan_id', '=', 'bp.plan_id')
                 .andOn('cbp.tenant', '=', 'bp.tenant');
         })
+        .join('plan_service_configuration as psc', function() {
+            this.on('bp.plan_id', '=', 'psc.plan_id')
+                .andOn('bp.tenant', '=', 'psc.tenant')
+                .andOnVal('psc.service_id', '=', serviceCatalogId);
+        })
         .join('plan_service_bucket_config as psbc', function() {
-            // Ensure the plan has a bucket config for the specific service
-            this.on('bp.plan_id', '=', 'psbc.plan_id')
-                .andOn('bp.tenant', '=', 'psbc.tenant')
-                .andOnVal('psbc.service_catalog_id', '=', serviceCatalogId);
+            this.on('psc.config_id', '=', 'psbc.config_id')
+                .andOn('psc.tenant', '=', 'psbc.tenant');
         })
         .where('cbp.company_id', companyId)
         .andWhere('cbp.tenant', tenant)
@@ -107,9 +112,11 @@ async function calculatePeriod(
         .first<{ plan_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
 
     if (!companyPlan) {
-        console.warn(`No active billing plan with bucket config for service ${serviceCatalogId} found for company ${companyId} covering date ${date}`);
+        console.warn(`[calculatePeriod] No active billing plan with bucket config found. tenant=${tenant}, companyId=${companyId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
+
+    console.debug(`[calculatePeriod] Found companyPlan: plan_id=${companyPlan.plan_id}, start_date=${companyPlan.start_date}, billing_frequency=${companyPlan.billing_frequency}`);
 
     const planStartDate = toPlainDate(companyPlan.start_date);
     const frequency = companyPlan.billing_frequency;
@@ -146,10 +153,11 @@ async function calculatePeriod(
                 throw new Error(`Unsupported billing frequency: ${frequency}`);
         }
     } catch (error) {
-        console.error(`Error calculating period dates: ${error}`);
+        console.error(`[calculatePeriod] Error calculating period dates: ${error}`);
         throw new Error(`Failed to calculate period dates for frequency ${frequency}.`);
     }
 
+    console.debug(`[calculatePeriod] Calculated period: start=${periodStart.toString()}, end=${periodEnd.toString()}`);
 
     return {
         periodStart,
@@ -217,17 +225,30 @@ export async function findOrCreateCurrentBucketUsageRecord(
     }
 
     // 3. Create New Record - Fetch Bucket Configuration
-    const bucketConfig = await trx('plan_service_bucket_config')
+
+    // First, get the plan_service_configuration to find the config_id
+    const planServiceConfig = await trx('plan_service_configuration')
         .where({
             tenant: tenant,
             plan_id: planId,
-            service_catalog_id: serviceCatalogId,
+            service_id: serviceCatalogId,
+        })
+        .first<{ config_id: string }>();
+
+    if (!planServiceConfig) {
+        throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
+    }
+
+    const bucketConfig = await trx('plan_service_bucket_config')
+        .where({
+            tenant: tenant,
+            config_id: planServiceConfig.config_id,
         })
         .first<IPlanServiceBucketConfig | undefined>();
 
     if (!bucketConfig) {
         // A bucket usage record cannot exist without its configuration.
-        throw new Error(`Bucket configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
+        throw new Error(`Bucket configuration not found for config_id ${planServiceConfig.config_id} (plan ${planId}, service ${serviceCatalogId}) in tenant ${tenant}. Cannot create usage record.`);
     }
 
     let rolledOverMinutes = 0;
@@ -279,10 +300,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
         if (previousRecord) {
             // Calculate unused minutes from the previous period.
             // Calculate unused minutes from the previous period.
-            // Use existing DB field names (`total_hours`, `hours_used`) but treat them as minutes conceptually.
-            // Phase 2/4 will handle actual schema renames.
-            const totalMinutesInPeriod = bucketConfig.total_hours; // Treat as total_minutes
-            const minutesUsedInPrevPeriod = previousRecord.hours_used; // Treat as minutes_used
+            const totalMinutesInPeriod = bucketConfig.total_minutes;
+            const minutesUsedInPrevPeriod = previousRecord.minutes_used;
             const unusedMinutes = totalMinutesInPeriod - minutesUsedInPrevPeriod;
             rolledOverMinutes = Math.max(0, unusedMinutes); // Rollover cannot be negative
         }
@@ -298,9 +317,9 @@ export async function findOrCreateCurrentBucketUsageRecord(
         service_catalog_id: serviceCatalogId,
         period_start: periodStartISO,
         period_end: periodEndISO,
-        hours_used: 0,       // Starts at 0 for a new period (using current DB field name)
-        overage_hours: 0,    // Starts at 0 (using current DB field name)
-        rolled_over_hours: rolledOverMinutes, // Assign calculated minutes to current DB field name
+        minutes_used: 0,
+        overage_minutes: 0,
+        rolled_over_minutes: rolledOverMinutes,
         // created_at, updated_at should be handled by DB defaults (e.g., DEFAULT now())
     };
 
@@ -348,10 +367,15 @@ export async function updateBucketUsageMinutes(
     }
 
     const currentUsage = await trx('bucket_usage as bu')
+        .join('plan_service_configuration as psc', function() {
+            this.on('bu.plan_id', '=', 'psc.plan_id')
+                .andOn('bu.service_catalog_id', '=', 'psc.service_id')
+                .andOn('bu.tenant', '=', 'psc.tenant');
+        })
         .join('plan_service_bucket_config as psbc', function() {
-            this.on('bu.plan_id', '=', 'psbc.plan_id')
-                .andOn('bu.service_catalog_id', '=', 'psbc.service_catalog_id')
-                .andOn('bu.tenant', '=', 'psbc.tenant');
+            this.on('psc.config_id', '=', 'psbc.config_id')
+                .andOn('psc.tenant', '=', 'psbc.tenant')
+                .andOn('bu.tenant', '=', 'psbc.tenant')
         })
         .where('bu.usage_id', bucketUsageId)
         .andWhere('bu.tenant', tenant)
@@ -380,7 +404,6 @@ export async function updateBucketUsageMinutes(
         .update({
             minutes_used: newMinutesUsed,
             overage_minutes: newOverageMinutes,
-            updated_at: trx.fn.now(),
         });
 
     if (updateCount === 0) {
@@ -414,10 +437,15 @@ export async function reconcileBucketUsageRecord(
 
    // 2. Fetch Bucket Usage Record and Config
    const usageRecord = await trx('bucket_usage as bu')
+       .join('plan_service_configuration as psc', function() {
+           this.on('bu.plan_id', '=', 'psc.plan_id')
+               .andOn('bu.service_catalog_id', '=', 'psc.service_id')
+               .andOn('bu.tenant', '=', 'psc.tenant')
+       })
        .join('plan_service_bucket_config as psbc', function() {
-           this.on('bu.plan_id', '=', 'psbc.plan_id')
-               .andOn('bu.service_catalog_id', '=', 'psbc.service_catalog_id')
-               .andOn('bu.tenant', '=', 'psbc.tenant');
+           this.on('psc.config_id', '=', 'psbc.config_id')
+               .andOn('psc.tenant', '=', 'psbc.tenant')
+               .andOn('bu.tenant', '=', 'psbc.tenant')
        })
        .where('bu.usage_id', bucketUsageId)
        .andWhere('bu.tenant', tenant)

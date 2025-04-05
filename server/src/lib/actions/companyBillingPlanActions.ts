@@ -91,7 +91,15 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
     }
 
     // Only include service_category in insert if it's provided
-    const insertData = { ...newBilling, tenant };
+    const insertData = {
+      ...newBilling,
+      tenant,
+      // Convert string date to Date object if it's a string
+      start_date: newBilling.start_date ? new Date(newBilling.start_date) : new Date(),
+      // Handle end_date similarly if it exists
+      end_date: newBilling.end_date ? new Date(newBilling.end_date) : null
+    };
+    
     if (!newBilling.service_category) {
       delete insertData.service_category;
     }
@@ -142,10 +150,14 @@ export async function editCompanyBillingPlan(companyBillingPlanId: string, updat
 
   try {
     const {knex: db, tenant} = await createTenantKnex();
-    const updateData: any = { ...updates };
-
-    // Assuming start_date and end_date are already in the correct format (ISO string)
-    // If they need to be converted, you would do that here
+    
+    // Convert dates to proper format
+    const updateData: any = {
+      ...updates,
+      // Convert string dates to Date objects if they exist
+      start_date: updates.start_date ? new Date(updates.start_date) : undefined,
+      end_date: updates.end_date ? new Date(updates.end_date) : null
+    };
 
     const result = await db('company_billing_plans')
       .where({ 

@@ -13,6 +13,18 @@ import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
 import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
+import { ISO8601String } from 'server/src/types/types.d';
+
+// Define the expected structure returned by getEligibleBillingPlansForUI,
+// including the date fields needed for filtering.
+// Type matching the apparent return structure of getEligibleBillingPlansForUI
+interface EligiblePlanUI {
+  company_billing_plan_id: string;
+  plan_name: string;
+  plan_type: string;
+  start_date: ISO8601String; // Required for filtering
+  end_date?: ISO8601String | null; // Required for filtering
+}
 
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
   id,
@@ -34,13 +46,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry?.work_item_type === 'ad_hoc' && entry.start_time && entry.end_time) {
       const start = parseISO(entry.start_time);
       const end = parseISO(entry.end_time);
-      
+
       const newStartInput = formatTimeForInput(start);
       const newEndInput = formatTimeForInput(end);
-      
+
       // Only update if the formatted times are different from current inputs
-      if (timeInputs[`start-${index}`] !== newStartInput || 
-          timeInputs[`end-${index}`] !== newEndInput) {
+      if (timeInputs[`start-${index}`] !== newStartInput ||
+        timeInputs[`end-${index}`] !== newEndInput) {
         onUpdateTimeInputs({
           [`start-${index}`]: newStartInput,
           [`end-${index}`]: newEndInput
@@ -49,21 +61,21 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     }
   }, [entry?.work_item_type, entry?.start_time, entry?.end_time, index, onUpdateTimeInputs, timeInputs]);
   const { hours: durationHours, minutes: durationMinutes } = useMemo(
-    () => entry?.start_time && entry?.end_time 
+    () => entry?.start_time && entry?.end_time
       ? getDurationParts(calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time)))
       : { hours: 0, minutes: 0 },
     [entry?.start_time, entry?.end_time]
   );
 
-  const serviceOptions = useMemo(() => 
-    services.map((service): { value: string; label: string } => ({
+  const serviceOptions = useMemo(() => {
+    if (!services) return [];
+    return services.map((service): { value: string; label: string } => ({
       value: service.id,
       label: service.name
-    })),
-    []
-  );
+    }))
+  },[]);
 
-  const taxRegionOptions = useMemo(() => 
+  const taxRegionOptions = useMemo(() =>
     taxRegions.map((region): { value: string; label: string } => ({
       value: region.name,
       label: region.name
@@ -71,7 +83,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     []
   );
 
-  const selectedService = useMemo(() => 
+  const selectedService = useMemo(() =>
     services.find(s => s.id === entry?.service_id),
     [entry?.service_id]
   );
@@ -86,11 +98,8 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<Array<{
-    company_billing_plan_id: string;
-    plan_name: string;
-    plan_type: string;
-  }>>([]);
+  // Use a more complete type that includes dates
+  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<EligiblePlanUI[]>([]);
   const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
@@ -130,23 +139,36 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     const loadEligibleBillingPlans = async () => {
       // Always show the plan selector
       setShowBillingPlanSelector(true);
-      
+
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
         setEligibleBillingPlans([]);
         return;
       }
-      
+
       if (!companyId) {
         console.log('No company ID available, using default billing plan');
         setEligibleBillingPlans([]);
         return;
       }
-      
+
       try {
-        const plans = await getEligibleBillingPlansForUI(companyId, entry.service_id);
-        setEligibleBillingPlans(plans);
-        
+        // Assume the function returns the necessary fields, cast to our defined type
+        // Assume the function returns the necessary fields, cast to our defined type
+        const plans = await getEligibleBillingPlansForUI(companyId, entry.service_id) as EligiblePlanUI[];
+
+        // Filter plans based on the entry date being within the plan's active range
+        const entryDate = new Date(entry.start_time);
+        const filteredPlans = plans.filter(plan => {
+          // Ensure start_date is treated as a string before parsing
+          const start = new Date(plan.start_date as string);
+          // Handle potentially null end_date
+          const end = plan.end_date ? new Date(plan.end_date as string) : null;
+          return start <= entryDate && (!end || end >= entryDate);
+        });
+
+        setEligibleBillingPlans(filteredPlans);
+
         // If no plan is selected yet, try to set a default
         if (!entry.billing_plan_id) {
           if (plans.length === 1) {
@@ -167,7 +189,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.error('Error loading eligible billing plans:', error);
       }
     };
-    
+
     loadEligibleBillingPlans();
   }, [entry?.service_id, companyId, entry?.billing_plan_id, index, onUpdateEntry, entry]);
 
@@ -198,7 +220,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({ [`${type}-${index}`]: formatTimeForInput(newTime) });
-    
+
     setValidationErrors({}); // Clear errors on change
     if (showErrors) {
       validateTimes();
@@ -210,7 +232,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (!validateTimes()) {
       return;
     }
-    
+
     // Ensure we have required fields
     if (!entry?.service_id) {
       setValidationErrors(prev => ({
@@ -228,7 +250,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       }));
       return;
     }
-    
+
     // Validate billing plan selection if multiple plans are available
     if (showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
       setValidationErrors(prev => ({
@@ -240,7 +262,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     // Clear any existing validation errors
     setValidationErrors({});
-    
+
     // Call parent's onSave with the current entry
     onSave(index);
   }, [onSave, validateTimes]);
@@ -249,13 +271,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (!entry) return;
     const hours = type === 'hours' ? value : durationHours;
     const minutes = type === 'minutes' ? value : durationMinutes;
-    
+
     if (hours < 0 || minutes < 0) return; // Silently ignore negative values
-    
+
     const startTime = parseISO(entry.start_time);
     const newEndTime = addMinutes(startTime, hours * 60 + minutes);
     const totalMinutes = hours * 60 + minutes;
-    
+
     const updatedEntry = updateBillableDuration(
       {
         ...entry,
@@ -263,7 +285,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       },
       totalMinutes
     );
-    
+
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({
       [`end-${index}`]: formatTimeForInput(newEndTime),
@@ -336,7 +358,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               <span className="text-sm text-red-500">{validationErrors.taxRegion}</span>
             )}
           </div>
-          
+
           {/* Billing Plan Selector with enhanced guidance */}
           {showBillingPlanSelector && (
             <div>
@@ -350,7 +372,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                   </div>
                 </div>
               )}
-              
+
               <div className="flex items-center space-x-1">
                 <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
                   Billing Plan <span className="text-red-500">*</span>
@@ -369,7 +391,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                   <InfoCircledIcon className="h-4 w-4 text-gray-500" />
                 </Tooltip>
               </div>
-              
+
               <CustomSelect
                 value={entry?.billing_plan_id || ''}
                 onValueChange={(value) => {
@@ -382,7 +404,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                 className={`mt-1 w-full ${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
                 options={eligibleBillingPlans.map(plan => ({
                   value: plan.company_billing_plan_id,
-                  label: `${plan.plan_name} (${plan.plan_type})`
+                  label: `${plan.plan_name} (${plan.plan_type})` // Now plan_type exists on EligiblePlanUI
                 }))}
                 placeholder={!companyId
                   ? "Using default billing plan"
@@ -392,7 +414,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                       ? `Using ${eligibleBillingPlans[0].plan_name}`
                       : "Select a billing plan"}
               />
-              
+
               {eligibleBillingPlans.length > 1 && (
                 <div className="mt-1 text-xs text-gray-600">
                   <span className="flex items-center">
@@ -401,7 +423,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                   </span>
                 </div>
               )}
-              
+
               {showErrors && validationErrors.billingPlan && (
                 <span className="text-sm text-red-500">{validationErrors.billingPlan}</span>
               )}
@@ -480,7 +502,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                       parseISO(entry.start_time),
                       parseISO(entry.end_time)
                     );
-                    
+
                     onUpdateEntry(
                       index,
                       checked

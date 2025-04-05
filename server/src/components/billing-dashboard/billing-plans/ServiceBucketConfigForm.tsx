@@ -10,7 +10,7 @@ import { Tooltip } from '../../ui/Tooltip';
 
 // Define type for validation errors passed from parent
 type FormErrors = {
-  total_hours?: string;
+  total_minutes?: string;
   overage_rate?: string;
   // Add other fields if needed
 };
@@ -85,19 +85,24 @@ export function ServiceBucketConfigForm({
           id={`total-${unitNamePluralLower}-input-${serviceId}`}
           data-testid={`total-${unitNamePluralLower}-input-${serviceId}`}
           type="number"
-          placeholder={`Enter total ${unitNamePluralLower}`}
+          placeholder={`Enter total hours`}
           min={0}
-          name="total_hours"
-          value={config.total_hours ?? ''} // Use value from prop, handle null/undefined
-          onChange={handleInputChange}
+          step={0.01}
+          name="total_minutes"
+          value={config.total_minutes != null ? (config.total_minutes / 60) : ''} // Display hours
+          onChange={(e) => {
+            const hours = parseFloat(e.target.value);
+            const minutes = isNaN(hours) ? null : Math.round(hours * 60);
+            onConfigChange(serviceId, 'total_minutes', minutes);
+          }}
           disabled={disabled}
-          className={`mt-1 ${hasError('total_hours') ? 'border-red-500' : ''}`}
-          aria-invalid={hasError('total_hours')}
-          aria-describedby={hasError('total_hours') ? `total-hours-error-${serviceId}` : undefined}
+          className={`mt-1 ${hasError('total_minutes') ? 'border-red-500' : ''}`}
+          aria-invalid={hasError('total_minutes')}
+          aria-describedby={hasError('total_minutes') ? `total-minutes-error-${serviceId}` : undefined}
         />
-        {hasError('total_hours') && (
-          <p id={`total-hours-error-${serviceId}`} className="text-xs text-red-500 mt-1">
-            {validationErrors.total_hours}
+        {hasError('total_minutes') && (
+          <p id={`total-minutes-error-${serviceId}`} className="text-xs text-red-500 mt-1">
+            {validationErrors.total_minutes}
           </p>
         )}
       </div>

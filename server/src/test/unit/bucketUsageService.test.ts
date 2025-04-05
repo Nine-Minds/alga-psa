@@ -95,12 +95,12 @@ describe('BucketUsageService Unit Tests', () => {
       // Mock DB calls:
       // - calculatePeriod returns a valid period
       // - trx('bucket_usage').where(...).first() returns undefined (for current period)
-      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true, total_hours = 100
-      // - trx('bucket_usage').where(...) for *previous* period returns a record with hours_used = 80
+      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true, total_minutes = 6000
+      // - trx('bucket_usage').where(...) for *previous* period returns a record with minutes_used = 4800
       // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
       // Assert:
       // - The function returns the new mock record.
-      // - The new record has rolled_over_hours = 20 (100 - 80).
+      // - The new record has rolled_over_minutes = 1200 (6000 - 4800).
       expect(true).toBe(false); // Placeholder
     });
 
@@ -153,14 +153,14 @@ describe('BucketUsageService Unit Tests', () => {
       expect(true).toBe(false); // Placeholder
     });
 
-    it.skip('should correctly decrement hours_used and calculate overage_hours (should become 0)', async () => {
+    it.skip('should correctly decrement minutes_used and calculate overage_minutes (should become 0)', async () => {
       // TODO: Implement test
       // Mock DB calls:
-      // - trx('bucket_usage').join(...).where(...).first() returns { hours_used: 120, rolled_over_hours: 0, total_hours: 100 } (currently in overage)
+      // - trx('bucket_usage').join(...).where(...).first() returns { minutes_used: 7200, rolled_over_minutes: 0, total_minutes: 6000 } (currently in overage)
       // - trx('bucket_usage').where(...).update(...) returns 1
-      // Input: hoursDelta = -30
+      // Input: minutesDelta = -1800
       // Assert:
-      // - The update call receives { hours_used: 90, overage_hours: 0 } (90 - 100 is negative, so 0)
+      // - The update call receives { minutes_used: 5400, overage_minutes: 0 } (5400 - 6000 is negative, so 0)
       expect(true).toBe(false); // Placeholder
     });
 
@@ -194,17 +194,17 @@ describe('BucketUsageService Unit Tests', () => {
   });
 
   describe('reconcileBucketUsageRecord', () => {
-    it.skip('should correctly calculate total hours from time entries and usage tracking and update the record', async () => {
+    it.skip('should correctly calculate total minutes from time entries and usage tracking and update the record', async () => {
       // TODO: Implement test
       // Mock DB calls:
-      // - trx('bucket_usage').join(...).where(...).first() returns a record with period, company, service, total_hours=100
-      // - trx('time_entries').where(...).sum(...) returns { total_duration_minutes: 120 * 60 } (120 hours)
-      // - trx('usage_tracking').where(...).sum(...) returns { total_quantity: 30 } (30 hours)
+      // - trx('bucket_usage').join(...).where(...).first() returns a record with period, company, service, total_minutes=6000
+      // - trx('time_entries').where(...).sum(...) returns { total_duration_minutes: 7200 } (120 hours)
+      // - trx('usage_tracking').where(...).sum(...) returns { total_quantity: 1800 } (30 hours)
       // - trx('bucket_usage').where(...).update(...) returns 1
       // Assert:
-      // - Calculated totalHoursUsed = 150 (120 + 30)
-      // - Calculated newOverageHours = 50 (150 - 100)
-      // - The update call receives { hours_used: 150, overage_hours: 50 }
+      // - Calculated totalMinutesUsed = 9000 (7200 + 1800)
+      // - Calculated newOverageMinutes = 3000 (9000 - 6000)
+      // - The update call receives { minutes_used: 9000, overage_minutes: 3000 }
       expect(true).toBe(false); // Placeholder
     });
 
@@ -217,8 +217,8 @@ describe('BucketUsageService Unit Tests', () => {
       // - trx('bucket_usage').where(...).update(...) returns 1
       // Assert:
       // - Calculated totalHoursUsed = 10
-      // - Calculated newOverageHours = 0
-      // - The update call receives { hours_used: 10, overage_hours: 0 }
+      // - Calculated newOverageMinutes = 0
+      // - The update call receives { minutes_used: 600, overage_minutes: 0 }
       expect(true).toBe(false); // Placeholder
     });
 

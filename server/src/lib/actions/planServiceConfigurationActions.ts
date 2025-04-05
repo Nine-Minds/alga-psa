@@ -547,7 +547,7 @@ export interface IUpsertPlanServiceBucketConfigurationInput {
   planId: string;
   serviceId: string;
   // Fields from IPlanServiceBucketConfig (excluding generated/tenant/config_id)
-  total_hours?: number | null;
+  total_minutes?: number | null;
   billing_period?: string | null;
   overage_rate?: number | null;
   allow_rollover?: boolean;
@@ -583,7 +583,7 @@ export async function upsertPlanServiceBucketConfigurationAction(
 
   // Prepare the data, ensuring correct types and handling nulls if necessary
   const dataForService: Partial<Omit<IPlanServiceBucketConfig, 'config_id' | 'tenant' | 'created_at' | 'updated_at'>> = {
-      total_hours: bucketConfigData.total_hours !== undefined && bucketConfigData.total_hours !== null ? Number(bucketConfigData.total_hours) : undefined,
+      total_minutes: bucketConfigData.total_minutes !== undefined && bucketConfigData.total_minutes !== null ? Number(bucketConfigData.total_minutes) : undefined,
       billing_period: bucketConfigData.billing_period !== undefined && bucketConfigData.billing_period !== null ? String(bucketConfigData.billing_period) : undefined,
       // Use service's default_rate if overage_rate is not provided
       // Use input rate if provided, otherwise use service default, falling back to 0 if service default is null/undefined

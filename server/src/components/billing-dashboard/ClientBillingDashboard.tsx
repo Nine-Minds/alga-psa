@@ -107,9 +107,9 @@ const CustomBucketTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white p-2 border border-gray-300 rounded shadow-md text-sm">
         <p className="font-medium">{label}</p> {/* display_label */}
-        <p className="text-primary-600">{`Used: ${data.hours_used.toFixed(1)} hours`}</p>
-        <p className="text-gray-600">{`Remaining: ${data.remaining_hours.toFixed(1)} hours`}</p>
-        <p className="text-gray-600">{`Total: ${data.total_hours} hours`}</p>
+        <p className="text-primary-600">{`Used: ${(data.minutes_used / 60).toFixed(2)} hours`}</p>
+        <p className="text-gray-600">{`Remaining: ${(data.remaining_minutes / 60).toFixed(2)} hours`}</p>
+        <p className="text-gray-600">{`Total: ${(data.total_minutes / 60).toFixed(2)} hours`}</p>
       </div>
     );
   }
@@ -320,13 +320,13 @@ useEffect(() => {
                          {/* Background track */}
                          <PolarAngleAxis
                          type="number"
-                         domain={[0, bucket.total_minutes > 0 ? bucket.total_minutes / 60 : 1]} // Domain is 0 to total hours
+                         domain={[0, (bucket.total_minutes + bucket.rolled_over_minutes) > 0 ? (bucket.total_minutes + bucket.rolled_over_minutes) : 1]} // Domain is 0 to total *available* minutes (total + rollover)
                          angleAxisId={0}
                           tick={false}
                         />
                         <RadialBar
                           background={{ fill: 'rgb(var(--color-secondary-100))' }} 
-                          dataKey="hours_used"
+                          dataKey="minutes_used"
                           angleAxisId={0}
                           fill="rgb(var(--color-primary-500))" // Use theme primary color for fill
                           cornerRadius={5} // Rounded corners
@@ -339,7 +339,7 @@ useEffect(() => {
                    </ResponsiveContainer>
                  </div>
                  <span className="text-xs text-gray-500">
-                   {(bucket.minutes_used / 60).toFixed(2)} / {(bucket.total_minutes / 60).toFixed(2)} hours used
+                   {(bucket.minutes_used / 60).toFixed(2)} / {((bucket.total_minutes + bucket.rolled_over_minutes) / 60).toFixed(2)} hours used
                  </span>
                </div>
              ))}

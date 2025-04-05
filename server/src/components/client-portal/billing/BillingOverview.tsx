@@ -239,14 +239,15 @@ export default function BillingOverview() {
                   <div className="flex justify-between mb-2">
                     <span className="text-sm text-gray-500">Support Hours</span>
                     <span className="text-sm font-medium">
-                      {usage.bucketUsage.hours_used}/{usage.bucketUsage.hours_used + usage.bucketUsage.overage_hours} hours used
+                      {((usage.bucketUsage.minutes_used) / 60).toFixed(2)}/
+                      {((usage.bucketUsage.minutes_used + usage.bucketUsage.overage_minutes) / 60).toFixed(2)} hours used
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full" 
                       style={{ 
-                        width: `${(usage.bucketUsage.hours_used / (usage.bucketUsage.hours_used + usage.bucketUsage.overage_hours)) * 100}%`
+                        width: `${(usage.bucketUsage.minutes_used / (usage.bucketUsage.minutes_used + usage.bucketUsage.overage_minutes)) * 100}%`
                       }}
                     ></div>
                   </div>

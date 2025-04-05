@@ -225,10 +225,13 @@ export async function getEligibleBillingPlansForUI(
     const plans = await getEligibleBillingPlans(knex, tenant, companyId, serviceId);
     
     // Transform to a simpler structure for UI
+    // Transform to the structure expected by the UI, including dates
     return plans.map(plan => ({
       company_billing_plan_id: plan.company_billing_plan_id,
       plan_name: plan.plan_name || 'Unnamed Plan',
-      plan_type: plan.plan_type
+      plan_type: plan.plan_type,
+      start_date: plan.start_date, // Include start_date
+      end_date: plan.end_date // Include end_date
     }));
   } catch (error) {
     console.error('Error getting eligible billing plans for UI:', error);

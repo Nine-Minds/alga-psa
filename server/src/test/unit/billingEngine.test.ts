@@ -678,12 +678,12 @@ describe('BillingEngine', () => {
 
       const mockBucketUsage: IBucketUsage = {
         usage_id: 'usage1',
-        bucket_plan_id: 'bucket1',
         company_id: mockCompanyId,
         period_start: '2023-01-01T00:00:00Z',
         period_end: '2023-02-01T00:00:00Z',
-        hours_used: 45,
-        overage_hours: 5,
+        minutes_used: 45,
+        overage_minutes: 5,
+        rolled_over_minutes: 0,
         service_catalog_id: ''
       };
 

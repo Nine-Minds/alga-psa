@@ -73,10 +73,40 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [companyTaxRates, setCompanyTaxRates] = useState<ICompanyTaxRate[]>([]);
     const [selectedTaxRate, setSelectedTaxRate] = useState<string>('');
 
-    const formatStartDate = (date: any): string => {
-        if (!date) return new Date().toISOString().split('T')[0];
-        if (typeof date === 'string') return date.includes('T') ? date.split('T')[0] : date;
-        return new Date().toISOString().split('T')[0];
+    // Formats a Date object or string into 'YYYY-MM-DD' string, handling potential UTC interpretation
+    const formatStartDate = (date: Date | string | null): string => {
+        // Log the input received by the function on the client side
+        console.log("BillingConfiguration formatStartDate received:", date, typeof date);
+        if (!date) return ''; // Return empty string or a default if preferred
+        
+        let d: Date;
+        if (typeof date === 'string') {
+            // If it's already a string, assume YYYY-MM-DD or ISO and try parsing
+            // Handle potential 'T' separator from ISO strings
+            const dateString = date.includes('T') ? date.split('T')[0] : date;
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                 // Construct date using UTC values to avoid timezone shifts during parsing
+                 // Construct date using UTC values to avoid timezone shifts during parsing
+                d = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+            } else {
+                d = new Date(date); // Fallback parsing
+            }
+        } else {
+            // If it's a Date object, use it directly
+            d = date;
+        }
+
+        if (isNaN(d.getTime())) {
+            return ''; // Handle invalid date
+        }
+
+        // Extract year, month, day using UTC methods to match the UTC date parsed/received
+        const year = d.getUTCFullYear();
+        const month = (d.getUTCMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
+        const day = d.getUTCDate().toString().padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
     };
 
     useEffect(() => {
@@ -322,14 +352,37 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         }
     };
 
-    const formatDateForDisplay = (date: string | Date | null): string => {
-        if (!date) return 'N/A';
-        const d = typeof date === 'string' ? new Date(date) : date;
-        return d.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
+    // Displays a 'YYYY-MM-DD' string in a user-friendly format, treating it as UTC
+    const formatDateForDisplay = (dateString: string | null): string => {
+        if (!dateString) return 'N/A';
+
+        // Parse YYYY-MM-DD string reliably, treating components as UTC date parts
+        const parts = dateString.split('-');
+        if (parts.length !== 3) return 'Invalid Date Format';
+
+        try {
+             // Construct date using UTC values to avoid timezone shifts during parsing
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+            const day = parseInt(parts[2]);
+            const d = new Date(Date.UTC(year, month, day));
+
+            if (isNaN(d.getTime())) {
+                return 'Invalid Date';
+            }
+
+            // Format the date using toLocaleDateString, specifying UTC timezone
+            // This ensures the displayed date matches the UTC date components
+            return d.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                timeZone: 'UTC' // Specify UTC timezone for consistent display
+            });
+        } catch (error) {
+            console.error("Error formatting date for display:", error);
+            return 'Formatting Error';
+        }
     };
 
     return (

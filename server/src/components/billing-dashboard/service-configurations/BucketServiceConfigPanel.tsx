@@ -22,18 +22,18 @@ export function BucketServiceConfigPanel({
   className = '',
   disabled = false
 }: BucketServiceConfigPanelProps) {
-  const [totalHours, setTotalHours] = useState<number>(configuration.total_hours || 0);
+  const [totalMinutes, setTotalMinutes] = useState<number>(configuration.total_minutes || 0);
   const [billingPeriod, setBillingPeriod] = useState<string>(configuration.billing_period || 'monthly');
   const [overageRate, setOverageRate] = useState<number>(configuration.overage_rate || 0);
   const [allowRollover, setAllowRollover] = useState<boolean>(configuration.allow_rollover || false);
   const [validationErrors, setValidationErrors] = useState<{
-    totalHours?: string;
+    totalMinutes?: string;
     overageRate?: string;
   }>({});
 
   // Update local state when props change
   useEffect(() => {
-    setTotalHours(configuration.total_hours || 0);
+    setTotalMinutes(configuration.total_minutes || 0);
     setBillingPeriod(configuration.billing_period || 'monthly');
     setOverageRate(configuration.overage_rate || 0);
     setAllowRollover(configuration.allow_rollover || false);
@@ -42,12 +42,12 @@ export function BucketServiceConfigPanel({
   // Validate inputs when they change
   useEffect(() => {
     const errors: {
-      totalHours?: string;
+      totalMinutes?: string;
       overageRate?: string;
     } = {};
 
-    if (totalHours <= 0) {
-      errors.totalHours = 'Total hours must be greater than zero';
+    if (totalMinutes <= 0) {
+      errors.totalMinutes = 'Total minutes must be greater than zero';
     }
 
     if (overageRate < 0) {
@@ -55,12 +55,12 @@ export function BucketServiceConfigPanel({
     }
 
     setValidationErrors(errors);
-  }, [totalHours, overageRate]);
+  }, [totalMinutes, overageRate]);
 
-  const handleTotalHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTotalMinutesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value);
-    setTotalHours(value);
-    onConfigurationChange({ total_hours: value });
+    setTotalMinutes(value);
+    onConfigurationChange({ total_minutes: value });
   };
 
   const handleBillingPeriodChange = (value: string) => {
@@ -86,23 +86,23 @@ export function BucketServiceConfigPanel({
         
         <div className="grid gap-4">
           <div>
-            <Label htmlFor="bucket-total-hours">Total Hours</Label>
+            <Label htmlFor="bucket-total-minutes">Total Minutes</Label>
             <Input
-              id="bucket-total-hours"
+              id="bucket-total-minutes"
               type="number"
-              value={totalHours.toString()}
-              onChange={handleTotalHoursChange}
+              value={totalMinutes.toString()}
+              onChange={handleTotalMinutesChange}
               placeholder="Enter total hours"
               disabled={disabled}
               min={1}
               step={1}
-              className={validationErrors.totalHours ? 'border-red-500' : ''}
+              className={validationErrors.totalMinutes ? 'border-red-500' : ''}
             />
-            {validationErrors.totalHours ? (
-              <p className="text-sm text-red-500 mt-1">{validationErrors.totalHours}</p>
+            {validationErrors.totalMinutes ? (
+              <p className="text-sm text-red-500 mt-1">{validationErrors.totalMinutes}</p>
             ) : (
               <p className="text-sm text-gray-500 mt-1">
-                The total number of hours included in this bucket plan
+                The total number of minutes included in this bucket plan
               </p>
             )}
           </div>

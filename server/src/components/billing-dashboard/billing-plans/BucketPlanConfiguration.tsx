@@ -27,7 +27,7 @@ type ServiceConfigsState = {
 // Type for validation errors
 type ServiceValidationErrors = {
   [serviceId: string]: {
-    total_hours?: string;
+    total_minutes?: string;
     overage_rate?: string;
     // Add other fields if needed
   };
@@ -45,7 +45,7 @@ interface BucketPlanConfigurationProps {
 }
 
 const DEFAULT_BUCKET_CONFIG: Partial<IPlanServiceBucketConfig> = {
-  total_hours: 0,
+  total_minutes: 0,
   overage_rate: undefined, // Use undefined to allow backend default
   allow_rollover: false,
 };
@@ -85,7 +85,7 @@ export function BucketPlanConfiguration({
           const configData = bucketConfig
             ? {
                 // Use nullish coalescing (??) to fall back to default only if bucketConfig value is null or undefined
-                total_hours: bucketConfig.total_hours ?? DEFAULT_BUCKET_CONFIG.total_hours,
+                total_minutes: bucketConfig.total_minutes ?? DEFAULT_BUCKET_CONFIG.total_minutes,
                 overage_rate: bucketConfig.overage_rate ?? DEFAULT_BUCKET_CONFIG.overage_rate, // Will now default to undefined if not set
                 allow_rollover: bucketConfig.allow_rollover ?? DEFAULT_BUCKET_CONFIG.allow_rollover,
               }
@@ -146,11 +146,11 @@ export function BucketPlanConfiguration({
   const validateConfig = (config: Partial<IPlanServiceBucketConfig>): ServiceValidationErrors['string'] => {
     const errors: ServiceValidationErrors['string'] = {};
     // Ensure values are treated as numbers, handling null/undefined from state
-    const totalHours = config.total_hours === null || config.total_hours === undefined ? null : Number(config.total_hours);
+    const totalMinutes = config.total_minutes === null || config.total_minutes === undefined ? null : Number(config.total_minutes);
     const overageRate = config.overage_rate === null || config.overage_rate === undefined ? null : Number(config.overage_rate);
 
-    if (totalHours === null || isNaN(totalHours) || totalHours < 0) {
-      errors.total_hours = 'Total hours must be a non-negative number.';
+    if (totalMinutes === null || isNaN(totalMinutes) || totalMinutes < 0) {
+      errors.total_minutes = 'Total minutes must be a non-negative number.';
     }
     if (overageRate === null || isNaN(overageRate) || overageRate < 0) {
       errors.overage_rate = 'Overage rate must be a non-negative number.';
