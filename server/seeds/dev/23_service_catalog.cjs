@@ -25,10 +25,10 @@ exports.seed = async function (knex) { // Changed to async function
         console.warn(`[SEED 23_service_catalog] Tenant ${tenantId} is missing required service types: ${missingTypes.join(', ')}. Attempting to create them...`);
 
         try {
-            // Fetch the standard type IDs for the missing types
+            // Fetch the standard type IDs and billing_method for the missing types
             const standardTypesToCreate = await knex('standard_service_types')
                 .whereIn('name', missingTypes)
-                .select('id', 'name');
+                .select('id', 'name', 'billing_method');
 
             if (standardTypesToCreate.length !== missingTypes.length) {
                 const foundStdNames = standardTypesToCreate.map(st => st.name);
@@ -42,6 +42,7 @@ exports.seed = async function (knex) { // Changed to async function
                 name: stdType.name,
                 standard_service_type_id: stdType.id,
                 is_active: true,
+                billing_method: stdType.billing_method || 'per_unit', // Use the billing_method from standard type or default to 'per_unit'
             }));
 
             // Insert missing types, ignoring conflicts just in case
@@ -56,7 +57,7 @@ exports.seed = async function (knex) { // Changed to async function
                 const updatedServiceTypes = await knex('service_types')
                     .where({ tenant_id: tenantId })
                     .whereIn('name', requiredTypes)
-                    .select('id', 'name');
+                    .select('id', 'name', 'billing_method');
 
                 // Re-populate the typeMap
                 typeMap = updatedServiceTypes.reduce((map, type) => {
@@ -86,7 +87,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Rabbit Tracking',
             description: 'Locating and tracking white rabbits',
-            service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            billing_method: 'per_unit', // Add required billing_method
             default_rate: 75.00,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
@@ -95,7 +97,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Looking Glass Maintenance',
             description: 'Cleaning and repairing magical mirrors',
-            service_type_id: typeMap['Fixed Price'], // Use fetched ID
+            custom_service_type_id: typeMap['Fixed Price'], // Use fetched ID
+            billing_method: 'fixed', // Add required billing_method
             default_rate: 150.00,
             unit_of_measure: 'Service',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Security Services' }).select('category_id').first()
@@ -104,7 +107,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Shrinking Potion',
             description: 'Potion to reduce size',
-            service_type_id: typeMap['Usage Based'], // Use fetched ID
+            custom_service_type_id: typeMap['Usage Based'], // Use fetched ID
+            billing_method: 'per_unit', // Add required billing_method
             default_rate: 25.00,
             unit_of_measure: 'Dose',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Cloud Services' }).select('category_id').first()
@@ -113,7 +117,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Yellow Brick Road Repair',
             description: 'Fixing and maintaining the yellow brick road',
-            service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            billing_method: 'per_unit', // Add required billing_method
             default_rate: 100.00,
             unit_of_measure: 'Hour',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Network Services' }).select('category_id').first()
@@ -122,7 +127,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Emerald City Security',
             description: '24/7 magical security for Emerald City',
-            service_type_id: typeMap['Fixed Price'], // Use fetched ID
+            custom_service_type_id: typeMap['Fixed Price'], // Use fetched ID
+            billing_method: 'fixed', // Add required billing_method
             default_rate: 5000.00,
             unit_of_measure: 'Month',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Security Services' }).select('category_id').first()
@@ -131,7 +137,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId,
             service_name: 'Basic Support',
             description: 'Standard support package',
-            service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            billing_method: 'per_unit', // Add required billing_method
             default_rate: 100.00,
             unit_of_measure: 'Hour',
             tax_region: 'US-NY',
@@ -141,7 +148,8 @@ exports.seed = async function (knex) { // Changed to async function
             tenant: tenantId, // Corrected tenant reference
             service_name: 'Premium Support',
             description: 'Premium support package with priority response',
-            service_type_id: typeMap['Hourly Time'], // Added missing service_type_id
+            custom_service_type_id: typeMap['Hourly Time'], // Use fetched ID
+            billing_method: 'per_unit', // Add required billing_method
             default_rate: 150.00,
             unit_of_measure: 'Hour',
             tax_region: 'US-NY',

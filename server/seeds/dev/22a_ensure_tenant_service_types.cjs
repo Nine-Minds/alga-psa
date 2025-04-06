@@ -9,7 +9,7 @@ exports.seed = async function(knex) {
   const tenants = await knex('tenants').select('tenant');
 
   // Fetch all standard service types
-  const standardTypes = await knex('standard_service_types').select('id', 'name');
+  const standardTypes = await knex('standard_service_types').select('id', 'name', 'billing_method');
 
   // Log fetched counts
   console.log(`[SEED 22a_ensure_tenant_service_types] Fetched ${tenants.length} tenants.`);
@@ -42,6 +42,7 @@ exports.seed = async function(knex) {
             name: stdType.name,
             standard_service_type_id: stdType.id,
             is_active: true,
+            billing_method: stdType.billing_method || 'per_unit', // Use the billing_method from standard type or default to 'per_unit'
           });
           insertedCount++;
           // console.log(`Inserted service type '${stdType.name}' for tenant ${tenantId}`);
