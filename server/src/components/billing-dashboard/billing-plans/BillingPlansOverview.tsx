@@ -23,7 +23,7 @@ const BillingPlansOverview: React.FC = () => {
   const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
   const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [allServiceTypes, setAllServiceTypes] = useState<(IServiceType & { is_standard?: boolean })[]>([]); // Added state for service types
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]); // Added state for service types
   const router = useRouter();
 
   useEffect(() => {

@@ -115,7 +115,9 @@ export function FixedPlanConfiguration({
   // Validate inputs
   useEffect(() => {
     const errors: { baseRate?: string; serviceCatalogId?: string } = {};
-    if (baseRate !== undefined && baseRate < 0) {
+    if (baseRate === undefined || baseRate === null) {
+      errors.baseRate = 'Base rate is required';
+    } else if (baseRate < 0) {
       errors.baseRate = 'Base rate cannot be negative';
     }
     // Add validation for serviceCatalogId if it's mandatory and editable here
@@ -131,8 +133,14 @@ export function FixedPlanConfiguration({
   };
 
   const handleSave = async () => {
-    if (!plan || Object.keys(validationErrors).length > 0 || !serviceCatalogId) {
-        setSaveError("Cannot save, validation errors exist, plan not loaded, or no service selected.");
+    // Prioritize checking for a selected service
+    if (!serviceCatalogId) {
+        setSaveError("Please select a primary service for the base rate before saving.");
+        return;
+    }
+    // Check for other validation errors or if the plan hasn't loaded
+    if (!plan || Object.keys(validationErrors).length > 0) {
+        setSaveError("Cannot save due to validation errors or plan not being loaded.");
         return;
     }
     setSaving(true);
@@ -215,6 +223,21 @@ export function FixedPlanConfiguration({
               <AlertDescription>{saveError}</AlertDescription>
             </Alert>
           )}
+
+          {/* Validation Error Alert */}
+          {Object.keys(validationErrors).length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please fix the following errors:
+                <ul className="list-disc pl-5 mt-1">
+                  {Object.values(validationErrors).map((errorMsg, index) => (
+                    <li key={index}>{errorMsg}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <Label htmlFor="fixed-plan-base-rate">Base Rate</Label>
@@ -227,15 +250,12 @@ export function FixedPlanConfiguration({
                 disabled={saving}
                 min={0}
                 step={0.01}
-                className={validationErrors.baseRate ? 'border-red-500' : ''}
+                // className={validationErrors.baseRate ? 'border-red-500' : ''} // Removed inline error style
               />
-              {validationErrors.baseRate ? (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.baseRate}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground mt-1">
-                  The base rate for this fixed plan.
-                </p>
-              )}
+              {/* Removed inline error display */}
+              <p className="text-sm text-muted-foreground mt-1">
+                The base rate for this fixed plan.
+              </p>
             </div>
 
             {/* Service Selection - Keep only if the primary service is changeable here */}

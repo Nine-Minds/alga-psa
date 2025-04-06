@@ -288,13 +288,10 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       // For Bucket plans, exclude services with 'fixed' billing method
       return availService.billing_method !== 'fixed';
     }
-
-    // TODO: Add filtering logic for other plan types if needed (using availService.billing_method)
-    // Example:
-    // if (planType === 'Fixed') {
-    //   // Only allow services with 'fixed' billing method?
-    //   return availService.billing_method === 'fixed';
-    // }
+    else if (planType === 'Fixed') {
+      // For Fixed plans, only allow services with 'fixed' billing method
+      return availService.billing_method === 'fixed';
+    }
 
     // Default: allow service if not already added and no specific filter applies
     return true;
@@ -337,7 +334,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
                   <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                     {servicesAvailableToAdd.map(service => {
                       // Use service_type_name directly from the service object (fetched via updated getServices)
-                      const serviceTypeName = (service as any).service_type_name || 'N/A'; // Cast needed as IService doesn't have it yet
+                      const serviceTypeName = service.service_type_name || 'N/A'; // No cast needed now that IService includes service_type_name
                       return (
                         <div
                           key={service.service_id}

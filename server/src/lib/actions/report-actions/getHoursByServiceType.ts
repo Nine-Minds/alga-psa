@@ -104,7 +104,7 @@ export async function getHoursByServiceType(
             .andOn('time_entries.tenant', '=', 'sc.tenant');
       })
       .leftJoin<IServiceType>('service_types as st', function() { // Left join in case service type is null
-        this.on('sc.service_type_id', '=', 'st.id')
+        this.on('sc.custom_service_type_id', '=', 'st.id')
             .andOn('sc.tenant', '=', 'st.tenant_id'); // Use tenant_id for service_types
       });
 
@@ -116,11 +116,11 @@ export async function getHoursByServiceType(
       .select(
         'sc.service_id',
         'sc.service_name',
-        'sc.service_type_id',
+        knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id) as service_type_id'),
         knex.raw(`${groupBySelect}`), // Select either service_name or service_type_name based on flag
         knex.raw('SUM(time_entries.billable_duration) as total_duration') // Summing billable_duration (assuming it's in minutes)
       )
-      .groupBy('sc.service_id', 'sc.service_name', 'sc.service_type_id', groupByColumn) // Group by selected columns
+      .groupBy('sc.service_id', 'sc.service_name', knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), groupByColumn) // Group by selected columns
       .orderBy(groupByColumn); // Order by the grouped column
 
     // Knex type inference might not capture the aggregated structure, so treat as 'any' initially

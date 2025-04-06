@@ -83,7 +83,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
           created_at: configInfo.configuration.created_at,
           updated_at: configInfo.configuration.updated_at,
           service_name: configInfo.service.service_name || 'Unknown Service',
-          service_category: configInfo.service.service_type_name || 'N/A', // Use service_type_name directly
+          service_category: configInfo.service.service_type_name || 'N/A', // Now using service_type_name from IService
           billing_method: configInfo.service.billing_method,
           default_rate: configInfo.service.default_rate
         };
@@ -161,7 +161,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
     {
       title: 'Default Rate', // Show default rate for reference
       dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${(value / 100).toFixed(2)}` : 'N/A', // Assuming rate is in cents
+      render: (value) => value !== undefined ? `$${Number(value).toFixed(2)}` : 'N/A', // Display rate directly as dollars
     },
     {
       title: 'Actions',
@@ -194,9 +194,13 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
     },
   ];
 
-  // Filter out services already in the plan from the add list
+  // Filter out services already in the plan from the add list and only include services with 'fixed' billing method
   const servicesAvailableToAdd = availableServices.filter(
-    availService => !planServices.some(ps => ps.service_id === availService.service_id)
+    availService =>
+      // Check if service is not already added to the plan
+      !planServices.some(ps => ps.service_id === availService.service_id) &&
+      // Only include services with 'fixed' billing method for Fixed plans
+      availService.billing_method === 'fixed'
   );
 
   return (
@@ -231,9 +235,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
                     <div className="mb-3">
                         <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto border rounded p-2">
                         {servicesAvailableToAdd.map(service => {
-                            // Use service_type_name directly from the service object if available
-                            // Cast to any since IService might not have service_type_name yet
-                            const serviceTypeName = (service as any).service_type_name || 'N/A';
+                            // Use service_type_name directly from the service object
+                            const serviceTypeName = service.service_type_name || 'N/A';
                             return (
                                 <div
                                 key={service.service_id}
@@ -255,7 +258,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
                                 <label htmlFor={`add-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
                                     <span>{service.service_name}</span>
                                     <span className="text-xs text-muted-foreground">
-                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ (service.default_rate / 100).toFixed(2)}
+                                    Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ Number(service.default_rate).toFixed(2)}
                                     </span>
                                 </label>
                                 </div>

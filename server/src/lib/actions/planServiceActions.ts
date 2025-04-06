@@ -71,7 +71,7 @@ export async function addServiceToPlan(
 
   // Get service details and join with standard_service_types to get the type's billing_method
   const serviceWithType = await knex('service_catalog as sc')
-    .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
+    .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
     .where({
       'sc.service_id': serviceId,
       'sc.tenant': tenant
@@ -283,9 +283,9 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   for (const config of configurations) {
     // Join service_catalog with standard_service_types to get the name
     const service = await knex('service_catalog as sc')
-      .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id') // Join standard types
+      .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id') // Join standard types
       .leftJoin('service_types as tst', function() { // Join tenant-specific types
-        this.on('sc.service_type_id', '=', 'tst.id')
+        this.on('sc.custom_service_type_id', '=', 'tst.id')
             .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
       })
       .where({

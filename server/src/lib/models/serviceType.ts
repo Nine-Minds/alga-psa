@@ -46,7 +46,6 @@ export const ServiceTypeModel = {
     const dataToInsert = {
       ...data,
       tenant_id: tenant,
-      standard_service_type_id: data.standard_service_type_id || null, // Ensure null if undefined
     };
     delete dataToInsert.tenant; 
 
@@ -73,61 +72,30 @@ export const ServiceTypeModel = {
   },
 
   // Find service types including standard ones (useful for dropdowns) - CORRECTED LOGIC
-  async findAllIncludingStandard(tenantOverride?: string): Promise<(IServiceType & { is_standard?: boolean })[]> {
+  // Find service types including standard ones (useful for dropdowns) - REVISED for simplified model
+  async findAllIncludingStandard(tenantOverride?: string): Promise<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
 
     // 1. Fetch all standard types
-    const standardTypesData: IStandardServiceType[] = await knex('standard_service_types').select('*');
-    const standardTypeMap = new Map(standardTypesData.map(st => [st.id, st]));
+    const standardTypes = await knex('standard_service_types')
+      .select('id', 'name', 'billing_method')
+      .then(types => types.map(st => ({ ...st, is_standard: true })));
 
-    // 2. Fetch all active tenant types for the current tenant
-    const tenantTypesData: IServiceType[] = await knex(TABLE_NAME)
-        .where({ tenant_id: tenant, is_active: true })
-        .select('*');
+    // 2. Fetch all active tenant-specific custom types
+    const customTypes = await knex<IServiceType>(TABLE_NAME)
+      .where('tenant_id', tenant)
+      .andWhere('is_active', true)
+      .select('id', 'name', 'billing_method')
+      .then(types => types.map(ct => ({ ...ct, is_standard: false })));
 
-    // 3. Create a Set of standard_service_type_ids present in tenantTypesData
-    const representedStandardIds = new Set(
-        tenantTypesData
-            .map(t => t.standard_service_type_id)
-            .filter(id => id != null)
-    );
+    // 3. Combine the lists
+    const combinedTypes = [...standardTypes, ...customTypes];
 
-    // 4. Build the result array
-    // 4a. Map tenantTypesData, marking standard/custom based on standard_service_type_id
-    const mappedTenantTypes = tenantTypesData.map(tt => ({
-        ...tt,
-        is_standard: tt.standard_service_type_id != null // True if linked to a standard type, false if custom
-    }));
-
-    // 4b. Filter standardTypesData to find those NOT represented in tenantTypesData
-    const missingStandardTypes = standardTypesData.filter(std => !representedStandardIds.has(std.id));
-
-    // 4c. Map the missing standard types to the IServiceType structure
-    const mappedMissingStandardTypes = missingStandardTypes.map(std => ({
-        // Synthesize IServiceType fields
-        id: std.id, // Use standard ID for consistency in this fallback case
-        tenant_id: tenant,
-        name: std.name,
-        standard_service_type_id: std.id,
-        is_active: true, // Assume active
-        description: null,
-        created_at: std.created_at, // Use standard timestamps
-        updated_at: std.updated_at,
-        tenant: tenant, // Add tenant property from TenantEntity
-        // Mark as standard
-        is_standard: true 
-    }));
-
-    // 4d. Combine the lists
-    const combinedTypes = [
-        ...mappedTenantTypes,
-        ...mappedMissingStandardTypes
-    ];
-
-    // 5. Sort alphabetically by name
+    // 4. Sort alphabetically by name
     combinedTypes.sort((a, b) => a.name.localeCompare(b.name));
 
-    return combinedTypes;
+    // Ensure the return type matches the promise signature
+    return combinedTypes as { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[];
   }
 };

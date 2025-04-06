@@ -62,12 +62,16 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     const [editingBillingPlan, setEditingBillingPlan] = useState<CompanyBillingPlanWithStringDates | null>(null);
     const [billingPlanToDelete, setBillingPlanToDelete] = useState<string | null>(null);
     const [services, setServices] = useState<IService[]>([]);
+    const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
     const [newService, setNewService] = useState<Partial<IService>>({
         unit_of_measure: 'hour',
-        service_type_id: 'Time', // Corrected property name
+        // Use standard_service_type_id for default Time service
+        standard_service_type_id: '', // Will be set after fetching service types
         service_name: '',
         default_rate: 0,
-        category_id: '',
+        category_id: null,
+        billing_method: 'fixed',
+        description: '', // Add description field
     });
     const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
     const [companyTaxRates, setCompanyTaxRates] = useState<ICompanyTaxRate[]>([]);
@@ -130,6 +134,22 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
             const fetchedServices = await getServices();
             setServices(fetchedServices);
+
+            // Fetch service types for the dropdown
+            const { getServiceTypesForSelection } = await import('../../lib/actions/serviceActions');
+            const types = await getServiceTypesForSelection();
+            setServiceTypes(types);
+            
+            // Find a default "Time" service type if it exists
+            const timeType = types.find(t => t.name === 'Time');
+            if (timeType) {
+                // Set the appropriate ID based on whether it's standard or custom
+                if (timeType.is_standard) {
+                    setNewService(prev => ({ ...prev, standard_service_type_id: timeType.id, billing_method: timeType.billing_method }));
+                } else {
+                    setNewService(prev => ({ ...prev, custom_service_type_id: timeType.id, billing_method: timeType.billing_method }));
+                }
+            }
 
             const fetchedTaxRates = await getTaxRates();
             setTaxRates(fetchedTaxRates);
@@ -291,17 +311,52 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 
     const handleAddService = async () => {
         try {
-            await createService(newService as IService);
+            // Ensure we have either standard_service_type_id or custom_service_type_id
+            if (!newService.standard_service_type_id && !newService.custom_service_type_id) {
+                setErrorMessage('Please select a service type');
+                return;
+            }
+            
+            await createService(newService as any);
+            
+            // Reset the form
             setNewService({
                 unit_of_measure: 'hour',
-                service_type_id: 'Time', // Corrected property name
+                standard_service_type_id: undefined,
+                custom_service_type_id: undefined,
                 service_name: '',
                 default_rate: 0,
-                category_id: '',
+                category_id: null,
+                billing_method: 'fixed',
+                description: '', // Reset description field
             });
+            
+            // Find a default "Time" service type if it exists
+            const timeType = serviceTypes.find(t => t.name === 'Time');
+            if (timeType) {
+                // Set the appropriate ID based on whether it's standard or custom
+                if (timeType.is_standard) {
+                    setNewService(prev => ({
+                        ...prev,
+                        standard_service_type_id: timeType.id,
+                        billing_method: timeType.billing_method,
+                        description: prev.description || '' // Preserve description
+                    }));
+                } else {
+                    setNewService(prev => ({
+                        ...prev,
+                        custom_service_type_id: timeType.id,
+                        billing_method: timeType.billing_method,
+                        description: prev.description || '' // Preserve description
+                    }));
+                }
+            }
+            
             const updatedServices = await getServices();
             setServices(updatedServices);
+            setErrorMessage(null);
         } catch (error) {
+            console.error('Error creating service:', error);
             setErrorMessage('Failed to add service. Please try again.');
         }
     };

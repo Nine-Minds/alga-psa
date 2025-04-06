@@ -117,7 +117,7 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
                 onChange={() => {}} // Handled internally by the component
                 serviceId={service.service_id}
                 onSaveComplete={handleServiceUpdate}
-                serviceType={service.service_type_id}
+                serviceType={service.service_type_name}
                 required
               />
             </div>

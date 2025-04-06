@@ -71,7 +71,7 @@ export async function getEligibleBillingPlans(
       'service_catalog.service_id': serviceId,
       'service_catalog.tenant': tenant
     })
-    .first('category_id', 'service_type_id');
+    .first('category_id', knex.raw('COALESCE(standard_service_type_id, custom_service_type_id) as service_type_id'));
   
   if (!serviceInfo) {
     console.warn(`Service not found: ${serviceId}`);

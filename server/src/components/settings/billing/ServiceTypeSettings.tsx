@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'serve
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Input } from 'server/src/components/ui/Input';
-import { TextArea } from 'server/src/components/ui/TextArea'; // Assuming TextArea exists
+import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Label } from 'server/src/components/ui/Label';
 import { MoreVertical, Plus } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,10 +27,17 @@ import {
     deleteServiceType 
 } from 'server/src/lib/actions/serviceActions';
 
+// Type for the data returned by getServiceTypesForSelection
+type ServiceTypeSelectionItem = {
+  id: string;
+  name: string;
+  billing_method: 'fixed' | 'per_unit';
+  is_standard: boolean;
+};
+
 const ServiceTypeSettings: React.FC = () => {
-  const [allTypes, setAllTypes] = useState<(IServiceType & { is_standard?: boolean })[]>([]);
+  const [allTypes, setAllTypes] = useState<ServiceTypeSelectionItem[]>([]);
   const [tenantTypes, setTenantTypes] = useState<IServiceType[]>([]);
-  const [standardTypes, setStandardTypes] = useState<IServiceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,9 +55,19 @@ const ServiceTypeSettings: React.FC = () => {
     try {
       const fetchedTypes = await getServiceTypesForSelection();
       setAllTypes(fetchedTypes);
-      // Separate standard and tenant types for display
-      setStandardTypes(fetchedTypes.filter(t => t.is_standard));
-      setTenantTypes(fetchedTypes.filter(t => !t.is_standard));
+      
+      // Filter for tenant-specific (custom) types
+      const customTypes = fetchedTypes.filter(t => !t.is_standard).map(t => ({
+        id: t.id,
+        name: t.name,
+        billing_method: t.billing_method,
+        is_active: true, // Default to true if not provided
+        created_at: new Date().toISOString(), // Placeholder
+        updated_at: new Date().toISOString(), // Placeholder
+        // Any other required IServiceType fields
+      } as IServiceType));
+      
+      setTenantTypes(customTypes);
     } catch (fetchError) {
       console.error("Error fetching service types:", fetchError);
       setError(fetchError instanceof Error ? fetchError.message : "Failed to fetch service types");
@@ -81,29 +100,33 @@ const ServiceTypeSettings: React.FC = () => {
   const handleSaveType = async () => {
     if (!editingType) return;
     setError(null);
+    
+    // Validation
+    if (!editingType.name) {
+      setError("Service Type name cannot be empty.");
+      return;
+    }
+    
+    // Billing method is now mandatory for custom types
+    if (!editingType.billing_method) {
+      setError("Billing Method is required.");
+      return;
+    }
 
     try {
       if (editingType.id) { // Update existing
-        // Prepare update data (exclude non-updatable fields from the IServiceType interface)
-        const { id, tenant, created_at, updated_at, standard_service_type_id, ...updateData } = editingType;
-        if (!updateData.name) {
-            setError("Service Type name cannot be empty.");
-            return;
-        }
+        // Prepare update data (exclude non-updatable fields)
+        const { id, tenant, created_at, updated_at, ...updateData } = editingType;
         await updateServiceType(id, updateData);
       } else { // Create new
-        if (!editingType.name) {
-            setError("Service Type name cannot be empty.");
-            return;
-        }
-        // Prepare create data (ensure name is present)
+        // Prepare create data with required fields
         const createData = {
             name: editingType.name,
+            billing_method: editingType.billing_method, // Now required
             description: editingType.description || null,
-            is_active: editingType.is_active ?? true, // Default to active if not set
-            // standard_service_type_id is null for custom types
+            is_active: editingType.is_active ?? true, // Default to active
         };
-        await createServiceType(createData as any); // Cast needed as createServiceType expects specific Omit type
+        await createServiceType(createData);
       }
       handleCloseEditDialog();
       await fetchTypes(); // Refresh list
@@ -133,19 +156,18 @@ const ServiceTypeSettings: React.FC = () => {
     } catch (deleteError) {
       console.error("Error deleting service type:", deleteError);
       setError(deleteError instanceof Error ? deleteError.message : "Failed to delete service type");
-      // Keep dialog open on error? Or close? Closing for now.
       handleCloseDeleteDialog();
     }
   };
 
   // --- Column Definitions ---
-  const standardColumns: ColumnDefinition<IServiceType>[] = [
-    { title: 'Name', dataIndex: 'name' },
-    // Add other read-only fields if needed
-  ];
-
   const tenantColumns: ColumnDefinition<IServiceType>[] = [
     { title: 'Name', dataIndex: 'name' },
+    { 
+      title: 'Billing Method', 
+      dataIndex: 'billing_method', 
+      render: (value) => value === 'fixed' ? 'Fixed' : 'Per Unit'
+    },
     { title: 'Description', dataIndex: 'description', render: (value) => value || '-' },
     { 
       title: 'Active', 
@@ -153,8 +175,6 @@ const ServiceTypeSettings: React.FC = () => {
       render: (value, record) => (
         <Switch 
           checked={value} 
-          // Consider adding direct toggle functionality here later if needed
-          // onCheckedChange={(checked) => handleToggleActive(record.id, checked)} 
           disabled // Read-only for now, edit via dialog
         />
       ) 
@@ -191,18 +211,7 @@ const ServiceTypeSettings: React.FC = () => {
     <div className="space-y-6">
       {error && <div className="text-red-500 mb-4 p-4 border border-red-500 rounded">{error}</div>}
 
-      {/* Standard Service Types */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Standard Service Types</CardTitle>
-          <CardDescription>These are system-defined types and cannot be modified.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable columns={standardColumns} data={standardTypes} pagination={false} />
-        </CardContent>
-      </Card>
-
-      {/* Tenant-Specific Service Types */}
+      {/* Main card - only for custom types now */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -247,15 +256,24 @@ const ServiceTypeSettings: React.FC = () => {
                 placeholder="Describe this service type"
               />
             </div>
-             {/* Optionally add is_active switch here if needed during add/edit */}
-             {/* <div className="flex items-center space-x-2">
-               <Switch
-                 id="typeActive"
-                 checked={editingType?.is_active ?? true}
-                 onCheckedChange={(checked) => setEditingType({ ...editingType, is_active: checked })}
-               />
-               <label htmlFor="typeActive">Active</label>
-             </div> */}
+            <div>
+              <Label htmlFor="billing-method-select">Billing Method</Label>
+              <CustomSelect
+                id="billing-method-select"
+                options={[
+                  { value: 'fixed', label: 'Fixed' },
+                  { value: 'per_unit', label: 'Per Unit' },
+                ]}
+                value={editingType?.billing_method || ''}
+                onValueChange={(value: string) => {
+                  if (value === 'fixed' || value === 'per_unit') {
+                    setEditingType({ ...editingType, billing_method: value as 'fixed' | 'per_unit' });
+                  }
+                }}
+                placeholder="Select billing method"
+                required
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button id="cancel-edit-type-button" variant="outline" onClick={handleCloseEditDialog}>Cancel</Button>

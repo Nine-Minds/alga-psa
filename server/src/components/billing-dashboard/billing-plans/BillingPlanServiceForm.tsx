@@ -126,10 +126,8 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
               // Check service type name for per_unit services
               const laborServiceTypes = ['Labor - Support', 'Labor - Project', 'Consulting']; // Assuming these are potential service type names
               // Use service_type_name directly from the service object
-              // Note: The 'service' object here comes from the 'services' prop.
-              // We need to ensure 'service_type_name' is included there.
-              // For now, we'll cast to 'any' as a temporary measure.
-              const serviceTypeName = (service as any).service_type_name;
+              // The 'service' object comes from the 'services' prop which now includes service_type_name
+              const serviceTypeName = service.service_type_name;
               if (serviceTypeName && laborServiceTypes.includes(serviceTypeName)) {
                 configType = 'Hourly'; // Default labor service types to Hourly
               } else {

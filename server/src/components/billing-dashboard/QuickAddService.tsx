@@ -14,12 +14,18 @@ import { useTenant } from '../TenantProvider'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: (IServiceType & { is_standard?: boolean })[]; // Added prop
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]; // Updated type
 }
 
-// Updated interface to use service_type_id
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id' | 'service_type'> {
-  service_type_id: string; // Changed from service_type
+// Updated interface to use standard_service_type_id or custom_service_type_id
+interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> {
+  // Temporary field for UI selection - not sent to API
+  service_type_id: string;
+  // Fields that will be sent to API
+  standard_service_type_id?: string;
+  custom_service_type_id?: string;
+  description?: string | null;
+  // Fields to remove from final submission
   sku?: string;
   inventory_count?: number;
   seat_limit?: number;
@@ -57,16 +63,18 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
   const tenant = useTenant()
 
-  // Initialize service state with service_type_id
+  // Initialize service state with service_type_id for UI selection
   const [serviceData, setServiceData] = useState<ServiceFormData>({
     service_name: '',
-    service_type_id: '', // Changed from service_type
+    service_type_id: '', // Used for UI selection only
+    standard_service_type_id: undefined,
+    custom_service_type_id: undefined,
     billing_method: 'fixed',
     default_rate: 0,
     unit_of_measure: '',
-    // category_id removed
     is_taxable: true,
     tax_region: '',
+    description: '',
     sku: '',
     inventory_count: 0,
     seat_limit: 0,
@@ -116,15 +124,43 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
           return
         }
       }
+// Find the selected service type to determine if it's standard or custom
+const selectedServiceType = allServiceTypes.find(t => t.id === serviceData.service_type_id);
 
-      // Prepare data for submission, ensuring service_type_id is included
-      const submitData: Omit<IService, 'service_id' | 'tenant'> = {
-        ...serviceData,
-        category_id: null, // Explicitly set optional category_id to null
-      }
+if (!selectedServiceType) {
+  setError('Selected service type not found');
+  return;
+}
 
-      console.log('[QuickAddService] Submitting service data:', submitData)
-      await createService(submitData)
+// Create base data without the service type IDs
+const baseData = {
+  service_name: serviceData.service_name,
+  billing_method: serviceData.billing_method,
+  default_rate: serviceData.default_rate,
+  unit_of_measure: serviceData.unit_of_measure,
+  is_taxable: serviceData.is_taxable,
+  tax_region: serviceData.tax_region || '',
+  category_id: null, // Explicitly set optional category_id to null
+  description: serviceData.description || '', // Include description field
+};
+
+// Create the final data with the correct service type ID based on is_standard flag
+let submitData;
+if (selectedServiceType.is_standard) {
+  submitData = {
+    ...baseData,
+    standard_service_type_id: serviceData.service_type_id,
+  };
+} else {
+  submitData = {
+    ...baseData,
+    custom_service_type_id: serviceData.service_type_id,
+  };
+}
+
+console.log('[QuickAddService] Submitting service data:', submitData);
+await createService(submitData);
+console.log('[QuickAddService] Service created successfully');
       console.log('[QuickAddService] Service created successfully')
 
       onServiceAdded()
@@ -132,12 +168,14 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
       // Reset form
       setServiceData({
         service_name: '',
-        service_type_id: '', // Reset ID
+        service_type_id: '', // Reset UI selection ID
+        standard_service_type_id: undefined,
+        custom_service_type_id: undefined,
         billing_method: 'fixed',
         default_rate: 0,
         unit_of_measure: '',
-        // category_id removed from reset
         is_taxable: true,
+        description: '',
         tax_region: '',
         // Reset optional fields too
         sku: '',
@@ -181,8 +219,17 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
               <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700">Service Type</label>
               <CustomSelect
                 options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
-                value={serviceData.service_type_id} // Bind to ID
-                onValueChange={(value) => setServiceData({ ...serviceData, service_type_id: value })} // Update ID
+                value={serviceData.service_type_id} // Bind to ID for UI selection
+                onValueChange={(value) => {
+                  // Find if the selected type is standard or custom
+                  const selectedType = allServiceTypes.find(t => t.id === value);
+                  
+                  // Update service data with the selected type ID and reset the other type ID
+                  setServiceData({
+                    ...serviceData,
+                    service_type_id: value,
+                  });
+                }}
                 placeholder="Select service type..."
                 className="w-full"
               />
@@ -196,6 +243,16 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
                 onValueChange={(value) => setServiceData({ ...serviceData, billing_method: value as 'fixed' | 'per_unit' })}
                 placeholder="Select billing method..."
                 className="w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <Input
+                id="description"
+                value={serviceData.description || ''}
+                onChange={(e) => setServiceData({ ...serviceData, description: e.target.value })}
+                placeholder="Service Description"
               />
             </div>
 

@@ -28,7 +28,7 @@ interface BillingPlanDialogProps {
   editingPlan?: IBillingPlan | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
-  allServiceTypes: (IServiceType & { is_standard?: boolean })[]; // Kept for potential future use, though not used in simplified version
+  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]; // Updated to match getServiceTypesForSelection return type
 }
 
 export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: BillingPlanDialogProps) {

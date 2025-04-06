@@ -213,9 +213,9 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
 
     // Fetch service information with new schema (using billing_method instead of service_type)
     const [service] = await db('service_catalog as sc')
-      .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
+      .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
       .leftJoin('service_types as tst', function() {
-        this.on('sc.service_type_id', '=', 'tst.id')
+        this.on('sc.custom_service_type_id', '=', 'tst.id')
             .andOn('sc.tenant', '=', 'tst.tenant_id');
       })
       .where({
@@ -1201,9 +1201,9 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
   const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog as sc')
-    .leftJoin('standard_service_types as sst', 'sc.service_type_id', 'sst.id')
+    .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
     .leftJoin('service_types as tst', function() {
-      this.on('sc.service_type_id', '=', 'tst.id')
+      this.on('sc.custom_service_type_id', '=', 'tst.id')
           .andOn('sc.tenant', '=', 'tst.tenant_id');
     })
     .where({ 'sc.tenant': tenant })

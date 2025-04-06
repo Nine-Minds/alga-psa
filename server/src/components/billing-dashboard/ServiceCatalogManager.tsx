@@ -54,9 +54,15 @@ const LICENSE_TERM_OPTIONS = [
 const ServiceCatalogManager: React.FC = () => {
   const [services, setServices] = useState<IService[]>([]);
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
-  // Add state for all service types
-  const [allServiceTypes, setAllServiceTypes] = useState<(IServiceType & { is_standard?: boolean })[]>([]);
-  const [editingService, setEditingService] = useState<IService | null>(null);
+  // Update state type to match what getServiceTypesForSelection returns
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
+  // Extend IService with the fields we need for UI but aren't in the database
+  const [editingService, setEditingService] = useState<(IService & {
+    sku?: string;
+    inventory_count?: number;
+    seat_limit?: number;
+    license_term?: string;
+  }) | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -65,8 +71,11 @@ const ServiceCatalogManager: React.FC = () => {
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
 
   const filteredServices = services.filter(service => {
-    // Assuming selectedCategory now holds the service_type_id
-    const categoryMatch = selectedCategory === 'all' || service.service_type_id === selectedCategory;
+    // Get the effective service type ID (either standard or custom)
+    const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
+    
+    // Match based on the effective service type ID
+    const categoryMatch = selectedCategory === 'all' || effectiveServiceTypeId === selectedCategory;
     const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
     return categoryMatch && billingMethodMatch;
   });
@@ -116,8 +125,8 @@ const ServiceCatalogManager: React.FC = () => {
 
   const handleUpdateService = async () => {
     if (!editingService) return;
-    // Check for service_type_id instead of service_type
-    if (!editingService.service_type_id) {
+    // Check for either standard_service_type_id or custom_service_type_id
+    if (!editingService.standard_service_type_id && !editingService.custom_service_type_id) {
       setError('Service Type is required');
       return;
     }
@@ -161,11 +170,13 @@ const ServiceCatalogManager: React.FC = () => {
         dataIndex: 'service_name',
       },
       {
-        title: 'Service Type', // Changed title back
-        dataIndex: 'service_type_id', // Use the ID
-        render: (value) => { // Render the name using the fetched types
-          const type = allServiceTypes.find(t => t.id === value);
-          return type?.name || 'N/A';
+        title: 'Service Type',
+        dataIndex: 'service_type_name', // Use the service_type_name field that comes from the join
+        render: (value, record) => {
+          // Get the effective service type ID (either standard or custom)
+          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
+          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          return type?.name || value || 'N/A';
         },
       },
       {
@@ -207,7 +218,9 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'SKU',
         dataIndex: 'sku',
         render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.service_type_id);
+          // Get the effective service type ID (either standard or custom)
+          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
+          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
           return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
         },
       },
@@ -215,7 +228,9 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'Inventory',
         dataIndex: 'inventory_count',
         render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.service_type_id);
+          // Get the effective service type ID (either standard or custom)
+          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
+          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
           return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         },
       },
@@ -223,15 +238,19 @@ const ServiceCatalogManager: React.FC = () => {
         title: 'Seat Limit',
         dataIndex: 'seat_limit',
         render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.service_type_id);
-          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0\
+          // Get the effective service type ID (either standard or custom)
+          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
+          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
+          return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         },
       },
       {
         title: 'License Term',
         dataIndex: 'license_term',
         render: (value, record) => {
-          const type = allServiceTypes.find(t => t.id === record.service_type_id);
+          // Get the effective service type ID (either standard or custom)
+          const effectiveServiceTypeId = record.standard_service_type_id || record.custom_service_type_id;
+          const type = allServiceTypes.find(t => t.id === effectiveServiceTypeId);
           return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
         }
       }
@@ -331,12 +350,32 @@ const ServiceCatalogManager: React.FC = () => {
               value={editingService?.service_name || ''}
               onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
             />
-            {/* Updated CustomSelect to use service_type_id and allServiceTypes */}
+            {/* Updated CustomSelect to use standard_service_type_id or custom_service_type_id */}
             <CustomSelect
               options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
-              value={editingService?.service_type_id || ''} // Use ID for value
-              onValueChange={(value) => setEditingService({ ...editingService!, service_type_id: value })} // Set ID on change
-              placeholder="Select service type..." // Updated placeholder
+              // Use the effective service type ID for the value
+              value={(editingService?.standard_service_type_id || editingService?.custom_service_type_id) || ''}
+              onValueChange={(value) => {
+                // Find if the selected type is standard or custom
+                const selectedType = allServiceTypes.find(t => t.id === value);
+                if (!selectedType) return;
+                
+                // Update the appropriate field based on whether it's a standard or custom type
+                if (selectedType.is_standard) {
+                  setEditingService({
+                    ...editingService!,
+                    standard_service_type_id: value,
+                    custom_service_type_id: undefined
+                  });
+                } else {
+                  setEditingService({
+                    ...editingService!,
+                    standard_service_type_id: undefined,
+                    custom_service_type_id: value
+                  });
+                }
+              }}
+              placeholder="Select service type..."
             />
             {/* Added Billing Method dropdown */}
             <CustomSelect
@@ -345,6 +384,15 @@ const ServiceCatalogManager: React.FC = () => {
               onValueChange={(value) => setEditingService({ ...editingService!, billing_method: value as 'fixed' | 'per_unit' })}
               placeholder="Select billing method..."
             />
+            
+            <div>
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+              <Input
+                placeholder="Description"
+                value={editingService?.description || ''}
+                onChange={(e) => setEditingService({ ...editingService!, description: e.target.value })}
+              />
+            </div>
             <Input
               type="number"
               placeholder="Default Rate"
@@ -384,33 +432,63 @@ const ServiceCatalogManager: React.FC = () => {
 
             {/* Removed conditional rendering based on old service_type */}
             {/* Conditional Fields based on Service Type Name */}
-            {allServiceTypes.find(t => t.id === editingService?.service_type_id)?.name === 'Hardware' && (
+            {/* Get the effective service type ID for conditional rendering */}
+            {allServiceTypes.find(t => t.id === (editingService?.standard_service_type_id || editingService?.custom_service_type_id))?.name === 'Hardware' && (
               <>
                 <Input
                   placeholder="SKU"
                   value={editingService?.sku || ''}
-                  onChange={(e) => setEditingService({ ...editingService!, sku: e.target.value })}
+                  onChange={(e) => {
+                    if (editingService) {
+                      setEditingService({
+                        ...editingService,
+                        sku: e.target.value
+                      });
+                    }
+                  }}
                 />
                 <Input
                   type="number"
                   placeholder="Inventory Count"
                   value={editingService?.inventory_count ?? ''} // Use ?? for 0
-                  onChange={(e) => setEditingService({ ...editingService!, inventory_count: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    if (editingService) {
+                      setEditingService({
+                        ...editingService,
+                        inventory_count: parseInt(e.target.value) || 0
+                      });
+                    }
+                  }}
                 />
               </>
             )}
-            {allServiceTypes.find(t => t.id === editingService?.service_type_id)?.name === 'Software License' && (
+            {/* Get the effective service type ID for conditional rendering */}
+            {allServiceTypes.find(t => t.id === (editingService?.standard_service_type_id || editingService?.custom_service_type_id))?.name === 'Software License' && (
               <>
                 <Input
                   type="number"
                   placeholder="Seat Limit"
                   value={editingService?.seat_limit ?? ''} // Use ?? for 0
-                  onChange={(e) => setEditingService({ ...editingService!, seat_limit: parseInt(e.target.value) || 0 })}
+                  onChange={(e) => {
+                    if (editingService) {
+                      setEditingService({
+                        ...editingService,
+                        seat_limit: parseInt(e.target.value) || 0
+                      });
+                    }
+                  }}
                 />
                 <CustomSelect
                   options={LICENSE_TERM_OPTIONS}
                   value={editingService?.license_term || 'monthly'}
-                  onValueChange={(value) => setEditingService({ ...editingService!, license_term: value })}
+                  onValueChange={(value) => {
+                    if (editingService) {
+                      setEditingService({
+                        ...editingService,
+                        license_term: value
+                      });
+                    }
+                  }}
                   placeholder="Select license term..."
                 />
               </>
