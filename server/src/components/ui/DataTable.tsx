@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { DataTableComponent, AutomationProps } from 'server/src/types/ui-reflection/types';
 import {
@@ -53,17 +53,107 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     totalItems,
     editableConfig
   } = props;
+  
+  // Reference to the table container for measuring available width
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  
+  // State to track which columns should be visible
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
+    columns.map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex)
+  );
+  
+  // Function to calculate which columns should be visible based on available width
+  const updateVisibleColumns = () => {
+    if (!tableContainerRef.current) return;
+    
+    const containerWidth = tableContainerRef.current.clientWidth;
+    const minColumnWidth = 150; // Minimum width for a column in pixels
+    const prioritizedColumns = [...columns].sort((a, b) => {
+      // Keep ID column and any columns with explicit width as highest priority
+      const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
+      const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
+      
+      if (aIsId && !bIsId) return -1;
+      if (!aIsId && bIsId) return 1;
+      
+      // Then prioritize columns with explicit width
+      if (a.width && !b.width) return -1;
+      if (!a.width && b.width) return 1;
+      
+      return 0;
+    });
+    
+    // Calculate how many columns we can fit
+    const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
+    
+    // Get the IDs of columns that should be visible
+    const newVisibleColumnIds = prioritizedColumns
+      .slice(0, maxColumns)
+      .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
+    
+    setVisibleColumnIds(newVisibleColumnIds);
+  };
+  
+  // Add resize event listener
+  useEffect(() => {
+    // Define updateVisibleColumns inside the effect to properly capture the columns dependency
+    const updateVisibleColumnsEffect = () => {
+      if (!tableContainerRef.current) return;
+      
+      const containerWidth = tableContainerRef.current.clientWidth;
+      const minColumnWidth = 150; // Minimum width for a column in pixels
+      const prioritizedColumns = [...columns].sort((a, b) => {
+        // Keep ID column and any columns with explicit width as highest priority
+        const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
+        const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
+        
+        if (aIsId && !bIsId) return -1;
+        if (!aIsId && bIsId) return 1;
+        
+        // Then prioritize columns with explicit width
+        if (a.width && !b.width) return -1;
+        if (!a.width && b.width) return 1;
+        
+        return 0;
+      });
+      
+      // Calculate how many columns we can fit
+      const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
+      
+      // Get the IDs of columns that should be visible
+      const newVisibleColumnIds = prioritizedColumns
+        .slice(0, maxColumns)
+        .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
+      
+      setVisibleColumnIds(newVisibleColumnIds);
+    };
+    
+    updateVisibleColumnsEffect();
+    
+    const handleResize = () => {
+      updateVisibleColumnsEffect();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [columns]); // Re-run when columns change
 
   // Register with UI reflection system if id is provided
   const updateMetadata = id ? useRegisterUIComponent<DataTableComponent>({
     id: `${id}-table`,
     type: 'dataTable',
-    columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean } => ({
-      id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
-      title: String(col.title), // Convert ReactNode to string
-      dataIndex: col.dataIndex,
-      hasCustomRender: !!col.render
-    })),
+    columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
+      const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+      return {
+        id: colId,
+        title: String(col.title), // Convert ReactNode to string
+        dataIndex: col.dataIndex,
+        hasCustomRender: !!col.render,
+        visible: visibleColumnIds.includes(colId)
+      };
+    }),
     pagination: {
       enabled: pagination,
       currentPage,
@@ -79,16 +169,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     isEditable: !!editableConfig
   }) : undefined;
 
-  // Create stable column definitions
+  // Create stable column definitions, filtering out columns that shouldn't be visible
   const tableColumns = useMemo<ColumnDef<T>[]>(
     () =>
-      columns.map((col): ColumnDef<T> => ({
-        id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
-        accessorFn: (row) => getNestedValue(row, col.dataIndex),
-        header: () => col.title,
-        cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
-      })),
-    [columns]
+      columns
+        .filter(col => {
+          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+          return visibleColumnIds.includes(colId);
+        })
+        .map((col): ColumnDef<T> => ({
+          id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
+          accessorFn: (row) => getNestedValue(row, col.dataIndex),
+          header: () => col.title,
+          cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
+        })),
+    [columns, visibleColumnIds]
   );
 
   // Keep internal pagination state synced with props
@@ -141,7 +236,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       onPageChange(pageIndex + 1);
     }
 
-    // Update reflection metadata when pagination or sorting changes
+    // Update reflection metadata when pagination, sorting, or column visibility changes
     if (updateMetadata) {
       updateMetadata({
         pagination: {
@@ -159,10 +254,20 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         sortedBy: table.getState().sorting[0] ? {
           column: table.getState().sorting[0].id,
           direction: table.getState().sorting[0].desc ? 'desc' : 'asc'
-        } : undefined
+        } : undefined,
+        columns: columns.map((col): { id: string; title: string; dataIndex: string | string[]; hasCustomRender: boolean; visible: boolean } => {
+          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+          return {
+            id: colId,
+            title: String(col.title),
+            dataIndex: col.dataIndex,
+            hasCustomRender: !!col.render,
+            visible: visibleColumnIds.includes(colId)
+          };
+        })
       });
     }
-  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, onPageChange, updateMetadata, table]);
+  }, [pageIndex, currentPageSize, data.length, totalItems, pagination, onPageChange, updateMetadata, table, visibleColumnIds, columns]);
 
   const handlePreviousPage = () => {
     table.previousPage();
@@ -176,8 +281,19 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     <div
       className="datatable-container overflow-hidden bg-white rounded-lg border border-gray-200"
       data-automation-id={id}
+      ref={tableContainerRef}
     >
       <ReflectionContainer id={`${id}-table`}>
+        {visibleColumnIds.length < columns.length && (
+          <div className="px-4 py-2 bg-blue-50 text-blue-700 text-sm border-b border-gray-200">
+            <span className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {columns.length - visibleColumnIds.length} columns hidden due to limited space. Resize browser to see more.
+            </span>
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-white">

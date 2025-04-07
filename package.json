@@ -13,7 +13,7 @@
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
     "generate:proto": "mkdir -p ee/server/src/generated && protoc --plugin=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=ee/server/src/generated --ts_proto_opt=esModuleInterop=true,outputServices=false,useExactTypes=false --proto_path=ee/server/protos workflow.proto",
     "predev": "cd server && node --loader ts-node/esm src/scripts/validateEnvStartup.ts",
-    "dev": "cd server && NEXT_PUBLIC_EDITION=enterprise next dev",
+    "dev": "cd server && NEXT_PUBLIC_EDITION=enterprise next dev -p 12000 -H 0.0.0.0",
     "build": "cd server && next build",
     "build:ee": "cd server && NEXT_PUBLIC_EDITION=enterprise next build",
     "start": "next start",
