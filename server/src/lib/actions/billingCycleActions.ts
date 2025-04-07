@@ -17,9 +17,9 @@ export async function getBillingCycle(companyId: string): Promise<BillingCycleTy
   const {knex: conn, tenant} = await createTenantKnex();
 
   const result = await conn('companies')
-    .where({ 
+    .where({
       company_id: companyId,
-      tenant 
+      tenant
     })
     .select('billing_cycle')
     .first();
@@ -28,7 +28,7 @@ export async function getBillingCycle(companyId: string): Promise<BillingCycleTy
 }
 
 export async function updateBillingCycle(
-  companyId: string, 
+  companyId: string,
   billingCycle: BillingCycleType,
 ): Promise<void> {
   const session = await getServerSession(options);
@@ -38,11 +38,11 @@ export async function updateBillingCycle(
   const {knex: conn, tenant} = await createTenantKnex();
 
   await conn('companies')
-    .where({ 
+    .where({
       company_id: companyId,
-      tenant 
+      tenant
     })
-    .update({ 
+    .update({
       billing_cycle: billingCycle,
       updated_at: new Date().toISOString()
     });
@@ -61,9 +61,9 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
 
   // Get the company's current billing cycle type
   const company = await conn('companies')
-    .where({ 
+    .where({
       company_id: companyId,
-      tenant 
+      tenant
     })
     .first();
 
@@ -73,7 +73,7 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
 
   // Get the latest billing cycle
   const lastCycle = await conn('company_billing_cycles')
-    .where({ 
+    .where({
       company_id: companyId,
       is_active: true,
       tenant
@@ -134,6 +134,7 @@ export async function createNextBillingCycle(
   return await createCompanyBillingCycles(conn, company, { manual: true });
 }
 
+// function for rollback (deactivate cycle, delete invoice)
 export async function removeBillingCycle(cycleId: string): Promise<void> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
@@ -149,9 +150,9 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   // Get the billing cycle first to ensure it exists and get company_id
   const billingCycle = await knex('company_billing_cycles')
-    .where({ 
+    .where({
       billing_cycle_id: cycleId,
-      tenant 
+      tenant
     })
     .first();
 
@@ -161,9 +162,9 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   // Check for existing invoices
   const invoice = await knex('invoices')
-    .where({ 
+    .where({
       billing_cycle_id: cycleId,
-      tenant 
+      tenant
     })
     .first();
 
@@ -174,11 +175,11 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   // Mark billing cycle as inactive instead of deleting
   await knex('company_billing_cycles')
-    .where({ 
+    .where({
       billing_cycle_id: cycleId,
-      tenant 
+      tenant
     })
-    .update({ 
+    .update({
       is_active: false,
       period_end_date: new Date().toISOString() // Set end date to now
     });
@@ -191,6 +192,62 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
   if (!nextBillingDate) {
     throw new Error('Failed to verify future billing periods');
+  }
+}
+
+// function for hard delete (delete cycle and invoice)
+export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
+  const session = await getServerSession(options);
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Only allow admins to remove billing cycles
+  // if (session.user.user_type !== 'admin') {
+  //   throw new Error('Only admins can remove billing cycles');
+  // }
+
+  const { knex, tenant } = await createTenantKnex();
+
+  // Get the billing cycle first to ensure it exists and get company_id
+  const billingCycle = await knex('company_billing_cycles')
+    .where({
+      billing_cycle_id: cycleId,
+      tenant
+    })
+    .first();
+
+  if (!billingCycle) {
+    throw new Error('Billing cycle not found');
+  }
+
+  // Check for existing invoices
+  const invoice = await knex('invoices')
+    .where({
+      billing_cycle_id: cycleId,
+      tenant
+    })
+    .first();
+
+  if (invoice) {
+    // Use the hardDeleteInvoice function to properly clean up the invoice
+    await hardDeleteInvoice(invoice.invoice_id);
+  }
+
+  // Delete the billing cycle record
+  const deletedCount = await knex('company_billing_cycles')
+    .where({
+      billing_cycle_id: cycleId,
+      tenant
+    })
+    .del();
+
+  if (deletedCount === 0) {
+    // This might happen if the cycle was already deleted in a race condition,
+    // but the invoice deletion succeeded. Log a warning.
+    console.warn(`Billing cycle ${cycleId} was not found for deletion, but associated invoice might have been deleted.`);
+  } else {
+    console.log(`Successfully deleted billing cycle ${cycleId}`);
   }
 }
 

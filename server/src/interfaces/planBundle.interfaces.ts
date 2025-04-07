@@ -8,7 +8,7 @@ import { ISO8601String } from '../types/types.d';
 export interface IPlanBundle extends TenantEntity {
   bundle_id: string;
   bundle_name: string;
-  description?: string;
+  bundle_description?: string; // Renamed from description to match DB schema
   is_active: boolean;
   created_at?: ISO8601String;
   updated_at?: ISO8601String;

@@ -7,12 +7,16 @@ export interface IBillingPeriod extends TenantEntity {
 }
 
 export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
-  serviceId: string;
+  serviceId?: string;
   serviceName: string;
   quantity: number;
   rate: number;
   total: number;
   type: 'fixed';
+  planId?: string;
+  enable_proration?: boolean;
+  billing_cycle_alignment?: string;
+  taxAllocationDetails?: any[]; // For audit purposes
 }
 
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
@@ -40,6 +44,7 @@ type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
+  company_billing_plan_id?: string; // Link back to the specific plan assignment
   serviceName: string;
   rate: number;
   total: number;
@@ -89,6 +94,7 @@ export interface ICompanyBillingPlan extends TenantEntity {
   // Added fields from join with billing_plans
   plan_name?: string;
   billing_frequency?: string;
+  bundle_name?: string; // Name of the bundle (added dynamically for bundled plans)
 }
 
 export interface ICompanyBillingCycle extends TenantEntity {

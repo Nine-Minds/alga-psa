@@ -33,7 +33,6 @@ export function FixedPlanConfiguration({
   const [baseRate, setBaseRate] = useState<number | undefined>(undefined);
   const [enableProration, setEnableProration] = useState<boolean>(false);
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>('start');
-  const [serviceCatalogId, setServiceCatalogId] = useState<string | undefined>(undefined); // Assuming fixed plans link to one service directly for the base rate
 
   const [services, setServices] = useState<IService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +59,6 @@ export function FixedPlanConfiguration({
         // If we have associated services, get the fixed plan configuration
         if (associatedServices.length > 0) {
           const serviceId = associatedServices[0].service_id;
-          setServiceCatalogId(serviceId);
           
           // Fetch the fixed plan configuration for this service
           const fixedConfig = await getFixedPlanConfiguration(planId, serviceId);
@@ -77,8 +75,11 @@ export function FixedPlanConfiguration({
             setBillingCycleAlignment('start');
           }
         } else {
-          setServiceCatalogId(undefined); // No service associated
           // Having no services initially is a valid state, not an error
+          // Set defaults for a new plan
+          setBaseRate(undefined);
+          setEnableProration(false);
+          setBillingCycleAlignment('start');
         }
       } else {
         setError('Invalid plan type or plan not found.');
@@ -92,20 +93,18 @@ export function FixedPlanConfiguration({
   }, [planId]);
 
   const fetchServices = useCallback(async () => {
-    // Only fetch services if needed (e.g., if service selection is part of this config)
-    if (!serviceCatalogId) { // Or based on some other condition
-        setLoading(true); // Consider separate loading state for services
-        try {
-            const fetchedServices = await getServices();
-            setServices(fetchedServices);
-        } catch (err) {
-            console.error('Error fetching services:', err);
-            setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
-        } finally {
-            setLoading(false); // Adjust loading state management
-        }
+    // Fetch services for the service list component
+    setLoading(true); // Consider separate loading state for services
+    try {
+        const fetchedServices = await getServices();
+        setServices(fetchedServices);
+    } catch (err) {
+        console.error('Error fetching services:', err);
+        setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
+    } finally {
+        setLoading(false); // Adjust loading state management
     }
-  }, [serviceCatalogId]); // Dependency might change based on logic
+  }, []); // No dependencies needed
 
   useEffect(() => {
     fetchPlanData();
@@ -114,18 +113,14 @@ export function FixedPlanConfiguration({
 
   // Validate inputs
   useEffect(() => {
-    const errors: { baseRate?: string; serviceCatalogId?: string } = {};
+    const errors: { baseRate?: string } = {};
     if (baseRate === undefined || baseRate === null) {
       errors.baseRate = 'Base rate is required';
     } else if (baseRate < 0) {
       errors.baseRate = 'Base rate cannot be negative';
     }
-    // Add validation for serviceCatalogId if it's mandatory and editable here
-    // if (!serviceCatalogId) {
-    //   errors.serviceCatalogId = 'Please select a service';
-    // }
     setValidationErrors(errors);
-  }, [baseRate, serviceCatalogId]);
+  }, [baseRate]);
 
   const handleBaseRateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === '' ? undefined : Number(e.target.value);
@@ -133,11 +128,7 @@ export function FixedPlanConfiguration({
   };
 
   const handleSave = async () => {
-    // Prioritize checking for a selected service
-    if (!serviceCatalogId) {
-        setSaveError("Please select a primary service for the base rate before saving.");
-        return;
-    }
+    // Only base rate is required
     // Check for other validation errors or if the plan hasn't loaded
     if (!plan || Object.keys(validationErrors).length > 0) {
         setSaveError("Cannot save due to validation errors or plan not being loaded.");
@@ -146,17 +137,27 @@ export function FixedPlanConfiguration({
     setSaving(true);
     setSaveError(null);
     try {
-        // Use the new updateFixedPlanConfiguration function to update the fixed plan configuration
-        // This function handles updating the configuration in the plan_service_fixed_config table
-        await updateFixedPlanConfiguration(
-            planId,
-            serviceCatalogId,
-            {
-                base_rate: baseRate,
-                enable_proration: enableProration,
-                billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' | 'prorated' : 'start',
-            }
-        );
+        // Get all associated services
+        const associatedServices: IPlanService[] = await getPlanServices(planId);
+        
+        if (associatedServices.length === 0) {
+            setSaveError("Please add at least one service to the plan first. You can do this in the 'Associated Services' section below.");
+            setSaving(false);
+            return;
+        }
+
+        // Update the fixed plan configuration for each service
+        for (const service of associatedServices) {
+            await updateFixedPlanConfiguration(
+                planId,
+                service.service_id,
+                {
+                    base_rate: baseRate,
+                    enable_proration: enableProration,
+                    billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' | 'prorated' : 'start',
+                }
+            );
+        }
 
         // Optionally re-fetch data to confirm changes
         await fetchPlanData();
@@ -250,35 +251,11 @@ export function FixedPlanConfiguration({
                 disabled={saving}
                 min={0}
                 step={0.01}
-                // className={validationErrors.baseRate ? 'border-red-500' : ''} // Removed inline error style
               />
-              {/* Removed inline error display */}
               <p className="text-sm text-muted-foreground mt-1">
-                The base rate for this fixed plan.
+                The base rate for this fixed plan. This rate will be applied to all services associated with this plan.
               </p>
             </div>
-
-            {/* Service Selection - Keep only if the primary service is changeable here */}
-            {/* This might be handled in the Services List instead */}
-            {/* <div>
-              <Label htmlFor="fixed-plan-service">Primary Service</Label>
-              <CustomSelect
-                id="fixed-plan-service"
-                options={serviceOptions}
-                onValueChange={setServiceCatalogId} // Adjust state update logic
-                value={serviceCatalogId}
-                placeholder={loading ? "Loading services..." : "Select a service"}
-                className="w-full"
-                disabled={saving || loading || services.length === 0}
-              />
-              {validationErrors.serviceCatalogId ? (
-                <p className="text-sm text-red-500 mt-1">{validationErrors.serviceCatalogId}</p>
-              ) : (
-                <p className="text-sm text-muted-foreground mt-1">
-                  The primary service associated with the base rate.
-                </p>
-              )}
-            </div> */}
           </div>
 
           <div className="space-y-4 pt-4">
@@ -328,7 +305,13 @@ export function FixedPlanConfiguration({
               <CardTitle>Associated Services</CardTitle>
           </CardHeader>
           <CardContent>
-              <FixedPlanServicesList planId={planId} />
+              <FixedPlanServicesList
+                  planId={planId}
+                  onServiceAdded={() => {
+                      // Refresh the plan data when a service is added
+                      fetchPlanData();
+                  }}
+              />
           </CardContent>
       </Card>
     </div>

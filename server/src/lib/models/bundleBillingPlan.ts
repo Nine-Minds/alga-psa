@@ -188,11 +188,6 @@ const BundleBillingPlan = {
       // Remove fields that shouldn't be updated
       const { tenant: _, bundle_id, plan_id, created_at, ...dataToUpdate } = updateData;
 
-      // Add updated timestamp
-      const dataWithTimestamp = {
-        ...dataToUpdate,
-        updated_at: new Date().toISOString()
-      };
 
       const [updatedBundlePlan] = await db<IBundleBillingPlan>('bundle_billing_plans')
         .where({
@@ -200,7 +195,7 @@ const BundleBillingPlan = {
           plan_id: planId,
           tenant
         })
-        .update(dataWithTimestamp)
+        .update(dataToUpdate)
         .returning('*');
 
       if (!updatedBundlePlan) {

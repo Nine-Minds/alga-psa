@@ -34,7 +34,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
-import {getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction} from 'server/src/lib/services/invoiceService';
+import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 
 interface ManualInvoiceUpdate {
   service_id?: string;
@@ -68,9 +68,9 @@ interface ManualItemsUpdate {
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
   const { knex, tenant } = await createTenantKnex();
   const taxRates = await knex('tax_rates')
-    .where({ 
+    .where({
       region: taxRegion,
-      tenant 
+      tenant
     })
     .andWhere('start_date', '<=', date)
     .andWhere(function () {
@@ -116,13 +116,13 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
     // Get all billing cycles that don't have invoices
     console.log('Querying for available billing periods');
     const availablePeriods = await knex('company_billing_cycles as cbc')
-      .join('companies as c', function() {
+      .join('companies as c', function () {
         this.on('c.company_id', '=', 'cbc.company_id')
-            .andOn('c.tenant', '=', 'cbc.tenant');
+          .andOn('c.tenant', '=', 'cbc.tenant');
       })
-      .leftJoin('invoices as i', function() {
+      .leftJoin('invoices as i', function () {
         this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-            .andOn('i.tenant', '=', 'cbc.tenant');
+          .andOn('i.tenant', '=', 'cbc.tenant');
       })
       .where('cbc.tenant', tenant)
       .whereNotNull('cbc.period_end_date')
@@ -167,7 +167,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
         const billingEngine = new BillingEngine();
         let total_unbilled = 0;
-        
+
         try {
           const billingResult = await billingEngine.calculateBilling(
             period.company_id,
@@ -179,12 +179,12 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
         } catch (_error) {
           console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
         }
-        
+
         console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
 
         // Allow generation of invoices even if period hasn't ended
         const can_generate = true;
-        
+
         // Convert dates using our utility functions with error handling
         let periodEndDate;
         try {
@@ -230,12 +230,12 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
 export async function previewInvoice(billing_cycle_id: string): Promise<PreviewInvoiceResponse> {
   const { knex, tenant } = await createTenantKnex();
-  
+
   // Get billing cycle details
   const billingCycle = await knex('company_billing_cycles')
-    .where({ 
+    .where({
       billing_cycle_id,
-      tenant 
+      tenant
     })
     .first();
 
@@ -265,9 +265,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     // Create invoice view model without persisting
     const company = await knex('companies')
-      .where({ 
+      .where({
         company_id,
-        tenant 
+        tenant
       })
       .first();
     const due_date = await getDueDate(company_id, cycleEnd);
@@ -316,7 +316,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       const bundleInfo = bundleKey.split('-');
       const companyBundleId = bundleInfo[0];
       const bundleName = bundleInfo.slice(1).join('-');
-      
+
       // Create a group header for the bundle
       const bundleHeaderId = 'preview-' + uuidv4();
       invoiceItems.push({
@@ -335,7 +335,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         bundle_name: bundleName,
         rate: 0
       });
-      
+
       // Add each charge in the bundle as a child item
       charges.forEach(charge => {
         invoiceItems.push({
@@ -441,9 +441,9 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
 
   // Check if an invoice already exists for this billing cycle
   const existingInvoice = await knex('invoices')
-    .where({ 
+    .where({
       billing_cycle_id,
-      tenant 
+      tenant
     })
     .first();
 
@@ -462,13 +462,13 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   const companySettings = await knex('company_billing_settings')
     .where({ company_id: company_id, tenant })
     .first();
-  
+
   const defaultSettings = await knex('default_billing_settings')
     .where({ tenant: tenant })
     .first();
-  
+
   const settings = companySettings || defaultSettings;
-  
+
   if (!settings) {
     throw new Error('No billing settings found');
   }
@@ -478,7 +478,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     if (settings.zero_dollar_invoice_handling === 'suppress') {
       return null;
     }
-    
+
     const createdInvoice = await createInvoiceFromBillingResult(
       billingResult,
       company_id,
@@ -487,11 +487,11 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
       billing_cycle_id,
       session.user.id
     );
-    
+
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, session.user.id);
     }
-    
+
     return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
   }
 
@@ -514,8 +514,15 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     session.user.id
   );
 
-  const nextBillingStartDate = await getNextBillingDate(company_id, cycleEnd);
-  await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingStartDate);
+  // Get the next billing date as a PlainDate string (YYYY-MM-DD)
+  const nextBillingDateStr = await getNextBillingDate(company_id, cycleEnd);
+  
+  // Convert the PlainDate string to a proper ISO 8601 timestamp for rolloverUnapprovedTime
+  const nextBillingDate = toPlainDate(nextBillingDateStr);
+  const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
+  
+  // Pass the ISO timestamp to rolloverUnapprovedTime
+  await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingTimestamp);
 
   return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
 }
@@ -561,7 +568,7 @@ async function calculatePreviewTax(
 async function createInvoice(billingResult: IBillingResult, companyId: string, startDate: ISO8601String, endDate: ISO8601String, billing_cycle_id: string): Promise<IInvoice> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies')
-    .where({ 
+    .where({
       company_id: companyId,
       tenant
     })
@@ -611,21 +618,21 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
       break;
     } catch (error: unknown) {
       if (error instanceof Error &&
-          'code' in error &&
-          typeof error.code === 'string' &&
-          error.code === '23505' &&
-          'constraint' in error &&
-          typeof error.constraint === 'string' &&
-          error.constraint === 'unique_invoice_number_per_tenant') {
+        'code' in error &&
+        typeof error.code === 'string' &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        typeof error.constraint === 'string' &&
+        error.constraint === 'unique_invoice_number_per_tenant') {
         // Handle uniqueness constraint violation
         retryCount++;
-        
+
         // Get current max invoice number by extracting numeric portion
         const maxInvoiceNumber = await knex('invoices')
           .where({ tenant: invoiceData.tenant })
           .select(knex.raw(`MAX(CAST(SUBSTRING(invoice_number FROM '\\d+$') AS INTEGER)) as max_number`))
           .first();
-        
+
         if (maxInvoiceNumber?.max_number) {
           // Update last_number to be max + 1
           await knex('next_number')
@@ -635,7 +642,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
             })
             .update({ last_number: maxInvoiceNumber.max_number });
         }
-        
+
         if (retryCount >= maxRetries) {
           throw new Error('Failed to generate unique invoice number after multiple attempts');
         }
@@ -652,7 +659,7 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   await knex.transaction(async (trx) => {
     if (!company.tax_region) {
       throw new Error(`Company ${companyId} must have a tax region configured`);
-    }    
+    }
 
     // Get current balance
     const currentBalance = await trx('transactions')
@@ -736,8 +743,8 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
     for (const discount of billingResult.discounts) {
       const netAmount = Math.round(-(discount.amount || 0));
       const taxCalculationResult = await taxService.calculateTax(
-        companyId, 
-        netAmount, 
+        companyId,
+        netAmount,
         endDate
       );
 
@@ -855,34 +862,34 @@ async function createInvoice(billingResult: IBillingResult, companyId: string, s
   return viewModel;
 }
 
-  async function calculateChargeDetails(
-    charge: IBillingCharge,
-    companyId: string,
-    endDate: ISO8601String,
-    taxService: TaxService,
-    defaultTaxRegion: string
-  ): Promise<{ netAmount: number; taxCalculationResult: ITaxCalculationResult }> {
-    let netAmount: number;
+async function calculateChargeDetails(
+  charge: IBillingCharge,
+  companyId: string,
+  endDate: ISO8601String,
+  taxService: TaxService,
+  defaultTaxRegion: string
+): Promise<{ netAmount: number; taxCalculationResult: ITaxCalculationResult }> {
+  let netAmount: number;
 
-    if ('overageHours' in charge && 'overageRate' in charge) {
-      const bucketCharge = charge as IBucketCharge;
-      netAmount = bucketCharge.overageHours > 0 ? Math.ceil(bucketCharge.total) : 0;
-    } else {
-      netAmount = Math.ceil(charge.total);
-    }
-
-    // Calculate tax only for taxable items with positive amounts
-    const taxCalculationResult = charge.is_taxable !== false && netAmount > 0
-      ? await taxService.calculateTax(
-          companyId,
-          netAmount,
-          endDate,
-          charge.tax_region || defaultTaxRegion
-        )
-      : { taxAmount: 0, taxRate: 0 };
-
-    return { netAmount, taxCalculationResult };
+  if ('overageHours' in charge && 'overageRate' in charge) {
+    const bucketCharge = charge as IBucketCharge;
+    netAmount = bucketCharge.overageHours > 0 ? Math.ceil(bucketCharge.total) : 0;
+  } else {
+    netAmount = Math.ceil(charge.total);
   }
+
+  // Calculate tax only for taxable items with positive amounts
+  const taxCalculationResult = charge.is_taxable !== false && netAmount > 0
+    ? await taxService.calculateTax(
+      companyId,
+      netAmount,
+      endDate,
+      charge.tax_region || defaultTaxRegion
+    )
+    : { taxAmount: 0, taxRate: 0 };
+
+  return { netAmount, taxCalculationResult };
+}
 
 export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {
   const numberingService = new NumberingService();
@@ -905,7 +912,7 @@ function getPaymentTermDays(paymentTerms: string): number {
 export async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('companies')
-    .where({ 
+    .where({
       company_id: companyId,
       tenant
     })
@@ -933,7 +940,7 @@ export async function getDueDate(companyId: string, billingEndDate: ISO8601Strin
 export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
   const { knex, tenant } = await createTenantKnex();
   const company = await knex('company_billing_cycles')
-    .where({ 
+    .where({
       company_id: companyId,
       tenant
     })
@@ -941,6 +948,8 @@ export async function getNextBillingDate(companyId: string, currentEndDate: ISO8
     .first();
 
   const billingCycle = (company?.billing_cycle || 'monthly') as BillingCycleType;
+  
+  // Convert to PlainDate for consistent date arithmetic
   const currentDate = toPlainDate(currentEndDate);
   let nextDate;
 
@@ -966,8 +975,10 @@ export async function getNextBillingDate(companyId: string, currentEndDate: ISO8
     default:
       nextDate = currentDate.add({ months: 1 });
   }
-
-  return nextDate.toString();
+  
+  // Return a PlainDate ISO string (YYYY-MM-DD) instead of a timestamp
+  // This avoids timezone issues when parsing later
+  return toISODate(nextDate);
 }
 
 // Helper function to create basic invoice view model
@@ -1003,12 +1014,12 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
   try {
     console.log('Fetching basic invoice info');
     const { knex, tenant } = await createTenantKnex();
-    
+
     // Get invoices with company info in a single query
     const invoices = await knex('invoices')
-      .join('companies', function() {
+      .join('companies', function () {
         this.on('invoices.company_id', '=', 'companies.company_id')
-            .andOn('invoices.tenant', '=', 'companies.tenant');
+          .andOn('invoices.tenant', '=', 'companies.tenant');
       })
       .where('invoices.tenant', tenant)
       .select(
@@ -1134,7 +1145,7 @@ export async function getInvoiceLineItems(invoiceId: string): Promise<IInvoiceIt
 export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceTemplate | null> {
   const { knex, tenant } = await createTenantKnex();
   const template = await knex('invoice_templates')
-    .where({ 
+    .where({
       template_id: _templateId,
       tenant
     })
@@ -1150,7 +1161,7 @@ export async function getInvoiceTemplate(_templateId: string): Promise<IInvoiceT
 
 export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
   const templates = await Invoice.getAllTemplates();
-  
+
   return templates.map(template => ({
     ...template,
     parsed: template.dsl ? parseInvoiceTemplate(template.dsl) : null
@@ -1159,11 +1170,11 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
 
 export async function setDefaultTemplate(templateId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  
+
   await knex.transaction(async (trx) => {
     // First, unset any existing default template
     await trx('invoice_templates')
-      .where({ 
+      .where({
         is_default: true,
         tenant
       })
@@ -1171,7 +1182,7 @@ export async function setDefaultTemplate(templateId: string): Promise<void> {
 
     // Then set the new default template
     await trx('invoice_templates')
-      .where({ 
+      .where({
         template_id: templateId,
         tenant
       })
@@ -1182,23 +1193,23 @@ export async function setDefaultTemplate(templateId: string): Promise<void> {
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
   const { knex, tenant } = await createTenantKnex();
   const template = await knex('invoice_templates')
-    .where({ 
+    .where({
       is_default: true,
       tenant
     })
     .first();
-  
+
   if (template) {
     template.parsed = template.dsl ? parseInvoiceTemplate(template.dsl) : null;
   }
-  
+
   return template;
 }
 
 export async function setCompanyTemplate(companyId: string, templateId: string | null): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
   await knex('companies')
-    .where({ 
+    .where({
       company_id: companyId,
       tenant
     })
@@ -1208,7 +1219,7 @@ export async function setCompanyTemplate(companyId: string, templateId: string |
 export async function finalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
   const session = await getServerSession(options);
-  
+
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -1227,12 +1238,12 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
-  
+
   // First transaction to update invoice status
   await knex.transaction(async (trx) => {
     // Check if invoice exists and is not already finalized
     invoice = await trx('invoices')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
@@ -1270,12 +1281,12 @@ export async function finalizeInvoiceWithKnex(
       }
     );
   });
-  
+
   // Check if this is a prepayment invoice (no billing_cycle_id)
   if (invoice && !invoice.billing_cycle_id) {
     // For prepayment invoices, update the company's credit balance
     await CompanyBillingPlan.updateCompanyCredit(invoice.company_id, invoice.subtotal);
-    
+
     // Log the credit update
     console.log(`Updated credit balance for company ${invoice.company_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
   }
@@ -1283,7 +1294,7 @@ export async function finalizeInvoiceWithKnex(
   else if (invoice && invoice.total_amount < 0) {
     // Get absolute value of negative total
     const creditAmount = Math.abs(invoice.total_amount);
-    
+
     // Update company credit balance and record transaction in a single transaction
     // We handle this directly without using CompanyBillingPlan.updateCompanyCredit to avoid validation issues
     await knex.transaction(async (trx) => {
@@ -1292,11 +1303,11 @@ export async function finalizeInvoiceWithKnex(
         .where({ company_id: invoice.company_id, tenant })
         .select('credit_balance')
         .first();
-      
+
       if (!company) {
         throw new Error(`Company ${invoice.company_id} not found`);
       }
-      
+
       // Get company's credit expiration settings or default settings
       const companySettings = await trx('company_billing_settings')
         .where({
@@ -1304,11 +1315,11 @@ export async function finalizeInvoiceWithKnex(
           tenant
         })
         .first();
-      
+
       const defaultSettings = await trx('default_billing_settings')
         .where({ tenant })
         .first();
-      
+
       // Determine expiration days - use company setting if available, otherwise use default
       let expirationDays: number | undefined;
       if (companySettings?.credit_expiration_days !== undefined) {
@@ -1316,7 +1327,7 @@ export async function finalizeInvoiceWithKnex(
       } else if (defaultSettings?.credit_expiration_days !== undefined) {
         expirationDays = defaultSettings.credit_expiration_days;
       }
-      
+
       // Calculate expiration date if applicable
       let expirationDate: string | undefined;
       if (expirationDays && expirationDays > 0) {
@@ -1325,10 +1336,10 @@ export async function finalizeInvoiceWithKnex(
         expDate.setDate(today.getDate() + expirationDays);
         expirationDate = expDate.toISOString();
       }
-      
+
       // Calculate new balance
       const newBalance = (company.credit_balance || 0) + creditAmount;
-      
+
       // Update company credit balance within the transaction
       await trx('companies')
         .where({ company_id: invoice.company_id, tenant })
@@ -1336,7 +1347,7 @@ export async function finalizeInvoiceWithKnex(
           credit_balance: newBalance,
           updated_at: new Date().toISOString()
         });
-      
+
       // Record transaction with the correct balance and expiration date
       // Skip validation for negative invoices since we're creating credit
       const transactionId = uuidv4();
@@ -1353,7 +1364,7 @@ export async function finalizeInvoiceWithKnex(
         tenant,
         expiration_date: expirationDate
       });
-      
+
       // Create credit tracking entry
       await trx('credit_tracking').insert({
         credit_id: uuidv4(),
@@ -1367,7 +1378,7 @@ export async function finalizeInvoiceWithKnex(
         is_expired: false,
         updated_at: new Date().toISOString()
       });
-      
+
       // Log audit
       await auditLog(
         trx,
@@ -1389,24 +1400,24 @@ export async function finalizeInvoiceWithKnex(
         }
       );
     });
-    
+
     // Log the credit update
     console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
   }
   // For regular invoices, check if there's available credit to apply
   else if (invoice && invoice.company_id) {
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(invoice.company_id);
-    
+
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
       const updatedInvoice = await knex('invoices')
         .where({ invoice_id: invoiceId, tenant })
         .first();
-      
+
       if (updatedInvoice && updatedInvoice.total_amount > 0) {
         // Calculate how much credit to apply
         const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
-        
+
         if (creditToApply > 0) {
           // Apply credit to the invoice
           await applyCreditToInvoice(invoice.company_id, invoiceId, creditToApply);
@@ -1419,7 +1430,7 @@ export async function finalizeInvoiceWithKnex(
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
   const session = await getServerSession(options);
-  
+
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -1443,7 +1454,7 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
     }
 
     await trx('invoices')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
@@ -1484,11 +1495,11 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
       tenant
     }
   );
-  
+
   const fileRecord = await pdfGenerationService.generateAndStore({
     invoiceId
   });
-  
+
   return { file_id: fileRecord.file_id };
 }
 
@@ -1512,7 +1523,7 @@ export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tena
 
   // Remove the temporary flags and parsed field before saving
   const { isClone, isStandard, parsed, ...templateToSaveWithoutFlags } = templateToSave;
-  
+
   const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutFlags);
 
   // Add the parsed result to the returned object
@@ -1712,10 +1723,10 @@ export async function createInvoiceFromBillingResult(
       break;
     } catch (error: unknown) {
       if (error instanceof Error &&
-          'code' in error &&
-          error.code === '23505' &&
-          'constraint' in error &&
-          error.constraint === 'unique_invoice_number_per_tenant') {
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'unique_invoice_number_per_tenant') {
         retryCount++;
         if (retryCount >= maxRetries) {
           throw new Error('Failed to generate unique invoice number after multiple attempts');
@@ -1757,7 +1768,7 @@ export async function createInvoiceFromBillingResult(
         company.tax_region
       );
 
-      const invoiceItem = {
+      const invoiceItem: any = { // Use 'any' temporarily to allow conditional property
         item_id: uuidv4(),
         invoice_id: newInvoice!.invoice_id,
         service_id: charge.serviceId,
@@ -1772,8 +1783,12 @@ export async function createInvoiceFromBillingResult(
         is_manual: false,
         is_taxable: charge.is_taxable !== false,
         tenant,
-        created_by: userId
+        created_by: userId,
       };
+      // Add company_billing_plan_id if it exists on the charge
+      if (charge.company_billing_plan_id) {
+        invoiceItem.company_billing_plan_id = charge.company_billing_plan_id;
+      }
 
       await trx('invoice_items').insert(invoiceItem);
       subtotal += netAmount;
@@ -1785,29 +1800,11 @@ export async function createInvoiceFromBillingResult(
       const bundleInfo = bundleKey.split('-');
       const companyBundleId = bundleInfo[0];
       const bundleName = bundleInfo.slice(1).join('-');
-      
-      // Create a group header for the bundle
-      const bundleHeaderId = uuidv4();
-      const bundleHeader = {
-        item_id: bundleHeaderId,
-        invoice_id: newInvoice!.invoice_id,
-        description: `Bundle: ${bundleName}`,
-        quantity: 1,
-        unit_price: 0, // This is just a header, not a charged item
-        net_amount: 0,
-        tax_amount: 0,
-        tax_rate: 0,
-        total_price: 0,
-        is_manual: false,
-        is_bundle_header: true,
-        company_bundle_id: companyBundleId,
-        bundle_name: bundleName,
-        tenant,
-        created_by: userId
-      };
-      
-      await trx('invoice_items').insert(bundleHeader);
-      
+
+      // REMOVED: Bundle header insertion - these columns don't exist
+      // The grouping logic should happen during invoice rendering/retrieval
+      // based on the company_billing_plan_id relationship.
+
       // Add each charge in the bundle as a child item
       for (const charge of charges) {
         const { netAmount, taxCalculationResult } = await calculateChargeDetails(
@@ -1818,7 +1815,7 @@ export async function createInvoiceFromBillingResult(
           company.tax_region
         );
 
-        const invoiceItem = {
+        const invoiceItem: any = { // Use 'any' temporarily to allow conditional property
           item_id: uuidv4(),
           invoice_id: newInvoice!.invoice_id,
           service_id: charge.serviceId,
@@ -1832,12 +1829,16 @@ export async function createInvoiceFromBillingResult(
           total_price: netAmount + taxCalculationResult.taxAmount,
           is_manual: false,
           is_taxable: charge.is_taxable !== false,
-          company_bundle_id: companyBundleId,
-          bundle_name: bundleName,
-          parent_item_id: bundleHeaderId,
+          // REMOVED: company_bundle_id: companyBundleId, // Column does not exist
+          // REMOVED: bundle_name: bundleName, // Column does not exist
+          // REMOVED: parent_item_id: bundleHeaderId, // Header row removed
           tenant,
-          created_by: userId
+          created_by: userId,
         };
+        // Add company_billing_plan_id if it exists on the charge
+        if (charge.company_billing_plan_id) {
+          invoiceItem.company_billing_plan_id = charge.company_billing_plan_id;
+        }
 
         await trx('invoice_items').insert(invoiceItem);
         subtotal += netAmount;
@@ -1871,7 +1872,7 @@ export async function createInvoiceFromBillingResult(
 
     // Calculate tax based on positive taxable amounts before discounts
     let totalTax = 0;
-    
+
     // Get all invoice items
     const items = await trx('invoice_items')
       .where({
@@ -1923,7 +1924,7 @@ export async function createInvoiceFromBillingResult(
       for (const [region, items] of itemsByRegion) {
         // Calculate regional total from positive taxable items
         const regionalTotal = items.reduce((sum, item) => sum + parseInt(item.net_amount), 0);
-        
+
         // Get tax rate and amount for this region
         const regionalTaxResult = await taxService.calculateTax(
           companyId,
@@ -1973,7 +1974,7 @@ export async function createInvoiceFromBillingResult(
     // Update invoice with final totals, ensuring tax is properly stored
     const finalTax = Math.ceil(totalTax);
     const finalSubtotal = Math.ceil(subtotal);
-    
+
     // Update the invoice with subtotal, tax, and total amount
     await trx('invoices')
       .where({ invoice_id: newInvoice!.invoice_id })
@@ -2064,10 +2065,10 @@ export async function updateManualInvoiceItems(
         });
     } catch (error: unknown) {
       if (error instanceof Error &&
-          'code' in error &&
-          error.code === '23505' &&
-          'constraint' in error &&
-          error.constraint === 'unique_invoice_number_per_tenant') {
+        'code' in error &&
+        error.code === '23505' &&
+        'constraint' in error &&
+        error.constraint === 'unique_invoice_number_per_tenant') {
         throw new Error('Invoice number must be unique');
       }
       throw error;
@@ -2084,7 +2085,7 @@ export async function addManualInvoiceItems(
   tenant: string
 ): Promise<void> {
   const { knex } = await createTenantKnex();
-  
+
   const invoice = await knex('invoices')
     .where({ invoice_id: invoiceId, tenant })
     .first();
@@ -2129,24 +2130,24 @@ export async function addManualInvoiceItems(
 
 export async function hardDeleteInvoice(invoiceId: string) {
   const { knex, tenant } = await createTenantKnex();
-  
+
   await knex.transaction(async (trx) => {
     // 1. Get invoice details
     const invoice = await trx('invoices')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
       .first();
-      
+
     // 2. Handle payments
     const payments = await trx('transactions')
-      .where({ 
-        invoice_id: invoiceId, 
+      .where({
+        invoice_id: invoiceId,
         type: 'payment',
         tenant
       });
-      
+
     if (payments.length > 0) {
       // Insert reversal transactions
       await trx('transactions').insert(
@@ -2164,7 +2165,7 @@ export async function hardDeleteInvoice(invoiceId: string) {
         }))
       );
     }
-    
+
     // 3. Handle credit
     if (invoice.credit_applied > 0) {
       await trx('transactions').insert({
@@ -2174,40 +2175,40 @@ export async function hardDeleteInvoice(invoiceId: string) {
         description: `Credit reissued from deleted invoice ${invoiceId}`,
         tenant
       });
-      
+
       await CompanyBillingPlan.updateCompanyCredit(
         invoice.company_id,
         invoice.credit_applied
       );
     }
-    
+
     // 4. Unmark time entries
     await trx('time_entries')
-      .whereIn('entry_id', 
+      .whereIn('entry_id',
         trx('invoice_time_entries')
           .select('entry_id')
-          .where({ 
+          .where({
             invoice_id: invoiceId,
             tenant
           })
       )
       .update({ invoiced: false });
-      
+
     // 5. Unmark usage records
     await trx('usage_tracking')
       .whereIn('usage_id',
         trx('invoice_usage_records')
           .select('usage_id')
-          .where({ 
-        invoice_id: invoiceId,
-        tenant
-      })
+          .where({
+            invoice_id: invoiceId,
+            tenant
+          })
       )
       .update({ invoiced: false });
-      
+
     // 6. Delete transactions
     await trx('transactions')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
@@ -2215,30 +2216,30 @@ export async function hardDeleteInvoice(invoiceId: string) {
 
     // 7. Delete join records
     await trx('invoice_time_entries')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
       .delete();
-      
+
     await trx('invoice_usage_records')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
       .delete();
-      
+
     // 8. Delete invoice items
     await trx('invoice_items')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })
       .delete();
-      
+
     // 9. Delete invoice record
     await trx('invoices')
-      .where({ 
+      .where({
         invoice_id: invoiceId,
         tenant
       })

@@ -6,15 +6,26 @@ import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip';
-import { Info, AlertTriangle, X } from 'lucide-react';
+import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
 import { generateInvoice } from '../../lib/actions/invoiceActions';
-import { getInvoicedBillingCycles, removeBillingCycle } from '../../lib/actions/billingCycleActions';
+// Updated import for billing cycle actions
+import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
 import { previewInvoice } from '../../lib/actions/invoiceActions';
-
+// Added imports for DropdownMenu
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  // DropdownMenuLabel, // Removed - not exported/needed
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/DropdownMenu";
+// Use ConfirmationDialog instead of AlertDialog
+import { ConfirmationDialog } from '../ui/ConfirmationDialog'; // Corrected import
 interface AutomaticInvoicesProps {
   periods: (ICompanyBillingCycle & {
     company_name: string;
@@ -52,6 +63,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   const [previewData, setPreviewData] = useState<InvoiceViewModel | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  // State for delete confirmation
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedCycleToDelete, setSelectedCycleToDelete] = useState<{
+    id: string;
+    company: string;
+    period: string;
+  } | null>(null);
   const itemsPerPage = 10;
 
   const filteredPeriods = periods.filter(period => 
@@ -178,6 +197,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setIsReversing(false);
   };
 
+  const handleDeleteBillingCycle = async () => {
+    if (!selectedCycleToDelete) return;
+
+    setIsDeleting(true);
+    setErrors({}); // Clear previous errors
+    try {
+      await hardDeleteBillingCycle(selectedCycleToDelete.id);
+      // Refresh invoiced periods list after successful deletion
+      const cycles = await getInvoicedBillingCycles();
+      setInvoicedPeriods(cycles.map((cycle):Period => ({
+        ...cycle,
+        can_generate: false,
+        is_early: false
+      })));
+      setShowDeleteDialog(false);
+      setSelectedCycleToDelete(null);
+      // Refresh the 'Ready to Invoice' list by calling the prop function
+      onGenerateSuccess();
+    } catch (error) {
+      setErrors({
+        [selectedCycleToDelete.company]: error instanceof Error ? error.message : 'Failed to delete billing cycle'
+      });
+      // Keep dialog open on error to show message? Or close it? Closing for now.
+      setShowDeleteDialog(false);
+    }
+    setIsDeleting(false);
+  };
+
   return (
     <>
       <div className="space-y-8">
@@ -225,6 +272,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
           <DataTable
             data={filteredPeriods}
+            // Add onRowClick prop - implementation depends on DataTable component
+            // Assuming it takes a function like this:
+            onRowClick={(record: Period) => {
+              if (record.billing_cycle_id) {
+                handlePreviewInvoice(record.billing_cycle_id);
+              }
+            }}
             columns={[
               {
                 title: (
@@ -240,7 +294,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                   <Checkbox
                     id={`select-${record.billing_cycle_id}`}
                     checked={selectedPeriods.has(record.billing_cycle_id || '')}
-                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => handleSelectPeriod(record.billing_cycle_id, event)}
+                    // Stop propagation to prevent row click when clicking checkbox
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+                      event.stopPropagation();
+                      handleSelectPeriod(record.billing_cycle_id, event);
+                    }}
+                    onClick={(e) => e.stopPropagation()} // Also stop propagation on click
                   />
                 ) : null
               },
@@ -263,43 +322,65 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
               },
               {
-                title: 'Status',
-                dataIndex: 'can_generate',
-                render: (_: boolean, record: Period) => {
+                title: 'Actions', // Renamed from Status
+                dataIndex: 'billing_cycle_id', // Use ID for actions
+                render: (_: unknown, record: Period) => {
+                  // Only show actions if it's a valid, generatable period
+                  if (!record.billing_cycle_id || !record.can_generate) {
+                    return null; // Or some placeholder if needed
+                  }
                   return (
-                    <div className="flex items-center gap-2">
-                      {!record.can_generate && (
-                        <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-                          Period Active
-                        </span>
-                      )}
+                    // Centered the content horizontally
+                    <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}> {/* Stop row click propagation */}
                       {record.is_early && (
-                        <div className="flex items-center">
-                            <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${toPlainDate(record.period_end_date).toLocaleString()})`}>
-                            <div className="flex items-center">
-                              <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded mr-2">
-                                Early Invoice
-                              </span>
-                              <Info className="h-4 w-4 text-yellow-500" />
-                            </div>
-                          </Tooltip>
-                        </div>
+                         <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${toPlainDate(record.period_end_date).toLocaleString()})`}>
+                           <div className="flex items-center mr-2">
+                             <Info className="h-4 w-4 text-yellow-500" />
+                           </div>
+                         </Tooltip>
                       )}
-                      <Button
-                        id={`preview-invoice-${record.billing_cycle_id}`}
-                        onClick={() => handlePreviewInvoice(record.billing_cycle_id || '')}
-                        disabled={isPreviewLoading || !record.billing_cycle_id}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Preview
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button id={`actions-trigger-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            id={`preview-invoice-${record.billing_cycle_id}`}
+                            onClick={() => handlePreviewInvoice(record.billing_cycle_id || '')}
+                            disabled={isPreviewLoading} // Disable only during preview loading
+                          >
+                            Preview
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {/* Delete Option Moved Here */}
+                          <DropdownMenuItem
+                            id={`delete-billing-cycle-${record.billing_cycle_id}`}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                            onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
+                            onClick={() => {
+                              setSelectedCycleToDelete({
+                                id: record.billing_cycle_id || '',
+                                company: record.company_name,
+                                period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
+                              });
+                              setShowDeleteDialog(true); // Open the confirmation dialog
+                            }}
+                          >
+                            Delete Cycle
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   );
                 }
               }
             ]}
             pagination={false}
+            // Fixed rowClassName prop
+            rowClassName={() => "cursor-pointer hover:bg-muted/50"}
           />
         </div>
 
@@ -334,21 +415,33 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                     title: 'Actions',
                     dataIndex: 'billing_cycle_id',
                     render: (_: unknown, record: Period) => (
-                      <Button
-                        id={`reverse-billing-cycle-${record.billing_cycle_id}`}
-                        onClick={() => {
-                          setSelectedCycleToReverse({
-                            id: record.billing_cycle_id || '',
-                            company: record.company_name,
-                            period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
-                          });
-                          setShowReverseDialog(true);
-                        }}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        Reverse
-                      </Button>
+                      // Centered the content horizontally
+                      <div className="flex justify-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button id={`actions-trigger-invoiced-${record.billing_cycle_id}`} variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              id={`reverse-billing-cycle-${record.billing_cycle_id}`}
+                              onClick={() => {
+                                setSelectedCycleToReverse({
+                                  id: record.billing_cycle_id || '',
+                                  company: record.company_name,
+                                  period: `${toPlainDate(record.period_start_date).toLocaleString()} - ${toPlainDate(record.period_end_date).toLocaleString()}`
+                                });
+                                setShowReverseDialog(true);
+                              }}
+                            >
+                              Reverse Invoice
+                            </DropdownMenuItem>
+                            {/* Delete option removed from this table */}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     )
                   }
                 ]}
@@ -508,6 +601,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
           </Button>
         </DialogFooter>
       </Dialog>
+
+      {/* Delete Confirmation Dialog - Moved outside the table render loop */}
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setSelectedCycleToDelete(null); // Clear selection on close
+        }}
+        onConfirm={handleDeleteBillingCycle}
+        title="Permanently Delete Billing Cycle?"
+        // Use the 'message' prop (string) instead of 'description'
+        message={`This action cannot be undone. This will permanently delete the billing cycle and any associated invoice data for:\nCompany: ${selectedCycleToDelete?.company}\nPeriod: ${selectedCycleToDelete?.period}`}
+        confirmLabel={isDeleting ? 'Deleting...' : 'Yes, Delete Permanently'} // Renamed prop
+        isConfirming={isDeleting}
+        // Removed unsupported props: confirmButtonVariant, icon
+        id="delete-billing-cycle-confirmation" // Added an ID for consistency
+      />
     </>
   );
 };

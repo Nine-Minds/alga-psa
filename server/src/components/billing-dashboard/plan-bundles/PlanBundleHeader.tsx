@@ -17,8 +17,8 @@ const PlanBundleHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
           {bundle.is_active ? 'Active' : 'Inactive'}
         </Badge>
       </div>
-      {bundle.description && (
-        <p className="text-gray-600 mt-1">{bundle.description}</p>
+      {bundle.bundle_description && (
+        <p className="text-gray-600 mt-1">{bundle.bundle_description}</p>
       )}
       <div className="text-sm text-gray-500 mt-1">
         Bundle ID: {bundle.bundle_id}

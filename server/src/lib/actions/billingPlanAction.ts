@@ -214,6 +214,9 @@ export async function getFixedPlanConfiguration(
  * Updates a fixed plan configuration with the provided data
  * This function handles the special fields like base_rate and enable_proration
  * that are stored in the plan_service_fixed_config table
+ *
+ * The fixed fee rate is stored independently of any service from the service catalog.
+ * All services associated with this plan will use the same base_rate.
  */
 export async function updateFixedPlanConfiguration(
     planId: string,

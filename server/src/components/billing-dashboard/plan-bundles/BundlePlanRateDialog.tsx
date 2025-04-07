@@ -17,14 +17,15 @@ interface BundlePlanRateDialogProps {
     default_rate?: number;
   };
   onClose: () => void;
-  onSave: (customRate: number) => void;
+  onSave: (customRate: number | undefined) => void; // Allow undefined
 }
 
 export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDialogProps) {
   const [customRate, setCustomRate] = useState<number>(
-    plan.custom_rate !== undefined ? plan.custom_rate : (plan.default_rate || 0)
+    plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0) // Use default if null or undefined
   );
-  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(plan.custom_rate === undefined);
+  // Check for both null and undefined to determine if default rate is being used
+  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(plan.custom_rate === undefined || plan.custom_rate === null);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,9 +36,9 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
       return;
     }
     
-    // If using default rate, pass null or undefined to reset to default
+    // If using default rate, pass undefined to reset to default (will be saved as NULL)
     // Otherwise pass the custom rate
-    onSave(useDefaultRate ? 0 : customRate);
+    onSave(useDefaultRate ? undefined : customRate);
   };
 
   return (

@@ -35,6 +35,7 @@ const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string
 
 interface FixedPlanServicesListProps {
   planId: string; // Changed from plan object to just planId
+  onServiceAdded?: () => void; // Callback for when a service is added
 }
 
 // Simplified interface for display
@@ -51,8 +52,7 @@ type PlanServiceWithConfig = {
   configuration: IPlanServiceConfiguration;
   typeConfig?: any;
 };
-
-const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId }) => {
+const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {
   const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state for categories
@@ -112,7 +112,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
       for (const serviceId of selectedServicesToAdd) {
         const serviceToAdd = availableServices.find(s => s.service_id === serviceId);
         if (serviceToAdd) {
-          // For fixed plans, quantity/custom rate might not be relevant here, default to 1 and default_rate
+          // For fixed plans, all services share the same base rate configured at the plan level
+          // Here we just add the service with default values
           await addPlanService(
             planId,
             serviceId,
@@ -123,6 +124,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
       }
       fetchData();
       setSelectedServicesToAdd([]);
+      
+      // Call the onServiceAdded callback if provided
+      if (onServiceAdded) {
+        onServiceAdded();
+      }
     } catch (error) {
       console.error('Error adding services:', error);
       setError('Failed to add services');
@@ -135,6 +141,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId })
     try {
       await removePlanService(planId, serviceId);
       fetchData();
+      
+      // Call the onServiceAdded callback if provided (also useful when removing services)
+      if (onServiceAdded) {
+        onServiceAdded();
+      }
     } catch (error) {
       console.error('Error removing service:', error);
       setError('Failed to remove service');

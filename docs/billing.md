@@ -212,6 +212,103 @@ await assignBundleToCompany({
 - **Consider Bundle Lifecycle**: Plan for how bundles will be updated or retired over time
 - **Document Bundle Contents**: Keep clear documentation of what each bundle includes for sales and support teams
 
+## Fixed Fee Plan Billing
+
+### Purpose
+Fixed Fee Plans allow MSPs to offer clients a predictable, flat-rate billing option that covers multiple services for a single price. This model simplifies client billing while providing flexibility in how services are allocated and taxed internally.
+
+### Key Characteristics
+
+#### Fixed Fee Structure
+- A single base rate covers multiple services
+- The rate is stored in the plan configuration, not tied to any specific service
+- All services within the plan are treated equally in terms of billing presentation
+- Internally, the system allocates the fee across services for tax and reporting purposes
+
+#### Tax Allocation
+- The system uses a weighted allocation method based on Fair Market Value (FMV)
+- Each service's proportion of the total FMV determines its allocation of the fixed fee
+- Tax is calculated separately for each service based on its:
+  - Allocated portion of the fixed fee
+  - Tax status (taxable or non-taxable)
+  - Applicable tax region and rate
+- This approach ensures accurate tax calculation while maintaining a simple client-facing invoice
+
+#### Consolidated Billing
+- Despite internal allocation, clients see a single line item on invoices
+- The consolidated charge shows the total fixed fee and calculated tax
+- Detailed allocation information is stored for audit and compliance purposes
+
+### Implementation Details
+
+#### Weighted Allocation Algorithm
+The system uses the following algorithm to allocate the fixed fee and calculate tax:
+
+1. **Calculate Total FMV**
+   ```typescript
+   const totalFMV = planServices.reduce((sum, service) => {
+     const serviceFMV = service.default_rate * (service.quantity || 1);
+     return sum + serviceFMV;
+   }, 0);
+   ```
+
+2. **Allocate Fixed Fee to Each Service**
+   ```typescript
+   const proportion = serviceFMV / totalFMV;
+   const allocatedAmount = baseRate * proportion;
+   ```
+
+3. **Calculate Tax for Each Service**
+   ```typescript
+   if (!company.is_tax_exempt && isTaxable) {
+     const taxRegion = service.tax_region || company.tax_region || '';
+     if (taxRegion) {
+       taxRate = await getCompanyTaxRate(taxRegion, billingPeriod.endDate);
+       taxAmount = allocatedAmount * taxRate;
+     }
+   }
+   ```
+
+4. **Create Consolidated Charge**
+   ```typescript
+   const consolidatedCharge: IFixedPriceCharge = {
+     serviceId: 'fixed-fee-plan',
+     serviceName: `${billingPlanDetails.plan_name} (Fixed Fee Plan)`,
+     quantity: 1,
+     rate: baseRate,
+     total: baseRate,
+     type: 'fixed',
+     tax_amount: totalTaxAmount,
+     tax_rate: totalTaxAmount / baseRate, // Effective tax rate
+     tax_region: company.tax_region,
+     is_taxable: totalTaxableAmount > 0,
+     taxAllocationDetails: serviceAllocations // For audit purposes
+   };
+   ```
+
+#### Database Structure
+- `plan_service_fixed_config.base_rate`: Stores the fixed fee rate for the plan
+- `plan_service_fixed_config.enable_proration`: Controls whether the fixed fee is prorated
+- `plan_service_fixed_config.billing_cycle_alignment`: Determines how proration is calculated
+
+#### UI Components
+- `FixedPlanConfiguration.tsx`: Allows setting the base rate and proration options
+- `FixedPlanServicesList.tsx`: Manages services included in the fixed fee plan
+
+### Benefits
+- **Simplified Client Billing**: Clients see a single, predictable charge
+- **Tax Compliance**: Accurate tax calculation based on service-specific tax rules
+- **Flexible Service Mix**: Services can be added or removed without changing the billing structure
+- **Transparent Allocation**: Detailed allocation data available for audit and reporting
+- **Consistent Pricing**: Fixed fee remains stable regardless of service usage
+
+### Best Practices
+- **Set Appropriate Base Rate**: Ensure the fixed fee covers the expected service costs plus margin
+- **Review Service FMV**: Keep default rates in the service catalog updated to ensure proper allocation
+- **Document Tax Allocation**: Maintain records of how fixed fees are allocated for tax purposes
+- **Consider Service Mix**: Include complementary services that make sense as a package
+- **Review Regularly**: Periodically assess if the fixed fee still covers the services provided
+
 ## Tax Calculation and Allocation
 
 The billing system implements a comprehensive tax calculation and allocation strategy that follows common practices in tax jurisdictions. This is handled through a combination of the TaxService class and specific allocation logic in the invoice generation process.

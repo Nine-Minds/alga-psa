@@ -23,7 +23,7 @@ interface PlanBundleDialogProps {
 export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, triggerButton }: PlanBundleDialogProps) {
   const [open, setOpen] = useState(false);
   const [bundleName, setBundleName] = useState(editingBundle?.bundle_name || '');
-  const [description, setDescription] = useState(editingBundle?.description || '');
+  const [bundleDescription, setBundleDescription] = useState(editingBundle?.bundle_description || ''); // Renamed state and field
   const [isActive, setIsActive] = useState<boolean>(editingBundle?.is_active ?? true);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [showValidationSummary, setShowValidationSummary] = useState(false);
@@ -33,7 +33,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
   useEffect(() => {
     if (editingBundle) {
       setBundleName(editingBundle.bundle_name);
-      setDescription(editingBundle.description || '');
+      setBundleDescription(editingBundle.bundle_description || ''); // Use renamed state setter and field
       setIsActive(editingBundle.is_active);
       setOpen(true);
     }
@@ -65,7 +65,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
     try {
       const bundleData = {
         bundle_name: bundleName,
-        description: description || undefined,
+        bundle_description: bundleDescription || undefined, // Use renamed state variable and field key
         is_active: isActive,
         tenant: tenant
       };
@@ -91,7 +91,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
 
   const resetForm = () => {
     setBundleName('');
-    setDescription('');
+    setBundleDescription(''); // Use renamed state setter
     setIsActive(true);
   };
 
@@ -111,7 +111,7 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
           handleClose();
         } else if (editingBundle) {
           setBundleName(editingBundle.bundle_name);
-          setDescription(editingBundle.description || '');
+          setBundleDescription(editingBundle.bundle_description || ''); // Use renamed state setter and field
           setIsActive(editingBundle.is_active);
         }
         setOpen(isOpen);
@@ -159,11 +159,11 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
             </div>
             
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="bundle_description">Description</Label>
               <TextArea
-                id="description"
-                value={description}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+                id="bundle_description" // Update id
+                value={bundleDescription} // Use renamed state variable
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBundleDescription(e.target.value)} // Use renamed state setter
                 placeholder="Enter bundle description"
                 className="min-h-[100px]"
               />

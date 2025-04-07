@@ -92,12 +92,12 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
     try {
       const planToAdd = availablePlans.find(p => p.plan_id === selectedPlanToAdd);
       if (planToAdd) {
-        // Default to 0 if no rate is available
-        const defaultRate = 0;
+        // Pass undefined initially, indicating no custom rate is set
+        const initialCustomRate = undefined;
         await addPlanToBundle(
           bundle.bundle_id,
           selectedPlanToAdd,
-          defaultRate
+          initialCustomRate // Pass undefined
         );
         
         fetchData(); // Refresh data
@@ -124,10 +124,11 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
     setEditingPlan(plan);
   };
 
-  const handlePlanUpdated = async (planId: string, customRate: number) => {
+  const handlePlanUpdated = async (planId: string, customRate: number | undefined) => { // Allow undefined
     if (!bundle.bundle_id) return;
-    
+
     try {
+      // Pass the potentially undefined customRate to the action
       await updatePlanInBundle(bundle.bundle_id, planId, { custom_rate: customRate });
       fetchData(); // Refresh data
       setEditingPlan(null);
@@ -158,7 +159,8 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
     {
       title: 'Custom Rate',
       dataIndex: 'custom_rate',
-      render: (value) => value !== undefined ? `$${parseFloat(value.toString()).toFixed(2)}` : 'Same as default',
+      // Check for both null and undefined before formatting
+      render: (value) => (value !== undefined && value !== null) ? `$${parseFloat(value.toString()).toFixed(2)}` : 'Same as default',
     },
     {
       title: 'Actions',
@@ -260,7 +262,8 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
         <BundlePlanRateDialog
           plan={editingPlan}
           onClose={() => setEditingPlan(null)}
-          onSave={(customRate: number) => handlePlanUpdated(editingPlan.plan_id, customRate)}
+          // Type assertion needed here as onSave now accepts number | undefined
+          onSave={(customRate: number | undefined) => handlePlanUpdated(editingPlan.plan_id, customRate)}
         />
       )}
     </Card>

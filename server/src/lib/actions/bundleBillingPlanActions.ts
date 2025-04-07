@@ -133,9 +133,20 @@ export async function updatePlanInBundle(
       throw new Error("tenant context not found");
     }
 
-    // Remove tenant field if present in updateData to prevent override
-    const { tenant: _, ...safeUpdateData } = updateData as any;
-    const updatedBundlePlan = await BundleBillingPlan.updatePlanInBundle(bundleId, planId, safeUpdateData);
+    // Prepare data specifically for the database update
+    // Use a more generic type to allow assigning null
+    const dbUpdateData: { [key: string]: any } = { ...updateData };
+
+    // Convert undefined custom_rate to null for the database update
+    if (dbUpdateData.custom_rate === undefined) {
+      dbUpdateData.custom_rate = null;
+    }
+
+    // Remove tenant field if present to prevent override
+    delete dbUpdateData.tenant;
+
+    // Pass the prepared data (which might have custom_rate: null) to the model
+    const updatedBundlePlan = await BundleBillingPlan.updatePlanInBundle(bundleId, planId, dbUpdateData);
     return updatedBundlePlan;
   } catch (error) {
     console.error(`Error updating plan ${planId} in bundle ${bundleId}:`, error);

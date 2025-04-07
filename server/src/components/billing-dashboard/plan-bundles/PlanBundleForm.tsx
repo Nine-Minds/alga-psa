@@ -20,7 +20,7 @@ interface PlanBundleFormProps {
 
 const PlanBundleForm: React.FC<PlanBundleFormProps> = ({ bundle, onBundleUpdated }) => {
   const [bundleName, setBundleName] = useState(bundle.bundle_name);
-  const [description, setDescription] = useState(bundle.description || '');
+  const [description, setDescription] = useState(bundle.bundle_description || '');
   const [isActive, setIsActive] = useState<boolean>(bundle.is_active);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,7 +40,7 @@ const PlanBundleForm: React.FC<PlanBundleFormProps> = ({ bundle, onBundleUpdated
     try {
       await updatePlanBundle(bundle.bundle_id, {
         bundle_name: bundleName,
-        description: description || undefined,
+        bundle_description: description || undefined,
         is_active: isActive,
         tenant
       });
