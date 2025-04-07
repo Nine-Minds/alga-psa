@@ -147,6 +147,12 @@ const ServiceTypeSettings: React.FC = () => {
   };
 
   const handleConfirmDelete = async () => {
+    // If there's already an error and the user clicks "Close", just close the dialog
+    if (error && error.includes("in use")) {
+      handleCloseDeleteDialog();
+      return;
+    }
+    
     if (!typeToDelete) return;
     setError(null);
     try {
@@ -155,8 +161,22 @@ const ServiceTypeSettings: React.FC = () => {
       await fetchTypes(); // Refresh list
     } catch (deleteError) {
       console.error("Error deleting service type:", deleteError);
-      setError(deleteError instanceof Error ? deleteError.message : "Failed to delete service type");
-      handleCloseDeleteDialog();
+      
+      // Get the specific error message
+      const errorMessage = deleteError instanceof Error
+        ? deleteError.message
+        : "Failed to delete service type";
+      
+      // Set the error message to be displayed
+      setError(errorMessage);
+      
+      // Keep the delete dialog open if it's a constraint violation
+      // so the user can see which service type couldn't be deleted
+      if (errorMessage.includes("in use")) {
+        // Don't close the dialog so user can see which type has the error
+      } else {
+        handleCloseDeleteDialog();
+      }
     }
   };
 
@@ -185,16 +205,34 @@ const ServiceTypeSettings: React.FC = () => {
       render: (id, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0" id={`servicetype-actions-${id}`}>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`servicetype-actions-${id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
               <span className="sr-only">Open menu</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem id={`edit-servicetype-${id}`} onClick={() => handleOpenEditDialog(record)}>
+            <DropdownMenuItem
+              id={`edit-servicetype-${id}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenEditDialog(record);
+              }}
+            >
               Edit
             </DropdownMenuItem>
-            <DropdownMenuItem id={`delete-servicetype-${id}`} className="text-red-600 focus:text-red-600" onClick={() => handleOpenDeleteDialog(record)}>
+            <DropdownMenuItem
+              id={`delete-servicetype-${id}`}
+              className="text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenDeleteDialog(record);
+              }}
+            >
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -225,7 +263,13 @@ const ServiceTypeSettings: React.FC = () => {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={tenantColumns} data={tenantTypes} pagination={true} />
+          <DataTable
+            columns={tenantColumns}
+            data={tenantTypes}
+            pagination={true}
+            onRowClick={handleOpenEditDialog}
+            id="service-types-table"
+          />
         </CardContent>
       </Card>
 
@@ -288,8 +332,12 @@ const ServiceTypeSettings: React.FC = () => {
         onClose={handleCloseDeleteDialog}
         onConfirm={handleConfirmDelete}
         title="Delete Service Type"
-        message={`Are you sure you want to delete the service type "${typeToDelete?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        message={
+          error && error.includes("in use")
+            ? `Error: ${error}`
+            : `Are you sure you want to delete the service type "${typeToDelete?.name}"? This cannot be undone.`
+        }
+        confirmLabel={error && error.includes("in use") ? "Close" : "Delete"}
         cancelLabel="Cancel"
       />
     </div>

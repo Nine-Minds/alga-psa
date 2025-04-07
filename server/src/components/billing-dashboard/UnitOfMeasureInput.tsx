@@ -19,6 +19,7 @@ interface UnitOfMeasureInputProps {
 // Define unit presets based on service type
 const getUnitPresets = (serviceType?: string) => {
   const commonUnits = [
+    { value: 'Hour', label: 'Hour' },
     { value: 'Unit', label: 'Unit' },
     { value: 'Item', label: 'Item' },
   ];
@@ -53,16 +54,26 @@ const getUnitPresets = (serviceType?: string) => {
       { value: 'Instance', label: 'Instance' },
       { value: 'Installation', label: 'Installation' },
     ],
+    'Hourly': [
+      { value: 'Hour', label: 'Hour' },
+    ],
   };
 
   // Get type-specific units or empty array if type doesn't exist
   const specificUnits = serviceType ? (typeSpecificUnits[serviceType] || []) : [];
   
-  // Combine common units with type-specific units
-  const standardUnits = [...specificUnits, ...commonUnits];
+  // Combine common units with type-specific units, removing duplicates
+  const uniqueUnits = [...specificUnits];
   
-  // Always add custom option at the end
-  return [...standardUnits, { value: 'custom', label: 'Custom...' }];
+  // Add common units only if they don't already exist in specificUnits
+  commonUnits.forEach(unit => {
+    if (!uniqueUnits.some(u => u.value === unit.value)) {
+      uniqueUnits.push(unit);
+    }
+  });
+  
+  // Always add custom option at the end with a unique value
+  return [...uniqueUnits, { value: 'custom', label: 'Custom...' }];
 };
 
 export function UnitOfMeasureInput({
@@ -80,26 +91,58 @@ export function UnitOfMeasureInput({
   const [customUnit, setCustomUnit] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Add a ref to track if we're in custom mode to prevent useEffect from overriding it
+  const isInCustomMode = React.useRef(false);
   
   const standardUnits = getUnitPresets(serviceType);
 
   useEffect(() => {
+    console.log('useEffect triggered with value:', value);
+    
+    // Skip this effect if we're in custom mode and just selected it
+    if (isInCustomMode.current) {
+      console.log('In custom mode, skipping useEffect');
+      return;
+    }
+    
+    // If the current value matches a standard unit, select that unit
     if (standardUnits.some(unit => unit.value === value)) {
+      console.log('Value matches standard unit:', value);
       setSelectedUnit(value);
       setCustomUnit('');
-    } else if (value) {
+    }
+    // If we have a value but it's not in standard units, it's a custom value
+    else if (value) {
+      console.log('Value is custom:', value);
       setSelectedUnit('custom');
       setCustomUnit(value);
-    } else {
+    }
+    // If no value is provided, reset both states
+    else {
+      console.log('No value provided');
       setSelectedUnit('');
       setCustomUnit('');
     }
   }, [value, standardUnits]);
 
   const handleUnitChange = async (newValue: string) => {
-    setSelectedUnit(newValue);
+    console.log('handleUnitChange called with:', newValue);
     
-    if (newValue !== 'custom') {
+    // When "Custom..." is selected
+    if (newValue === 'custom') {
+      // Set the flag to prevent useEffect from changing the selection
+      isInCustomMode.current = true;
+      setSelectedUnit('custom'); // Set the dropdown to show "Custom..."
+      
+      // Don't call onChange yet - we'll wait for the user to input a custom value
+      // Don't reset customUnit if it already has a value (in case user is switching back to custom)
+      if (!customUnit) {
+        setCustomUnit('');
+      }
+    } else {
+      // For standard units
+      isInCustomMode.current = false;
+      setSelectedUnit(newValue);
       onChange(newValue);
       setCustomUnit('');
       
@@ -111,7 +154,14 @@ export function UnitOfMeasureInput({
   };
 
   const handleCustomUnitChange = (newValue: string) => {
+    console.log('handleCustomUnitChange called with:', newValue);
     setCustomUnit(newValue);
+    
+    // Reset the custom mode flag when the user types something
+    isInCustomMode.current = false;
+    
+    // Always call onChange with the new value
+    // This ensures the parent component always has the current value
     onChange(newValue);
   };
 
@@ -153,9 +203,10 @@ export function UnitOfMeasureInput({
         placeholder={placeholder}
         className="w-full"
         disabled={disabled || isSaving}
-        // label="Unit of Measure" // Removed: Label is provided by the parent component
         required={required}
       />
+      
+      {/* Show the custom input field when selectedUnit is 'custom' */}
       {selectedUnit === 'custom' && (
         <Input
           id="custom-unit-input"
@@ -168,6 +219,7 @@ export function UnitOfMeasureInput({
           disabled={disabled || isSaving}
         />
       )}
+      
       {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
       {isSaving && <p className="text-gray-500 text-sm mt-1">Saving...</p>}
     </div>

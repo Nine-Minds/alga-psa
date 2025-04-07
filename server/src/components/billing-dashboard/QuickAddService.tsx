@@ -4,6 +4,7 @@ import * as Dialog from '@radix-ui/react-dialog'
 import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
+import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { createService } from 'server/src/lib/actions/serviceActions'
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
@@ -159,9 +160,9 @@ if (selectedServiceType.is_standard) {
 }
 
 console.log('[QuickAddService] Submitting service data:', submitData);
+console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
 await createService(submitData);
 console.log('[QuickAddService] Service created successfully');
-      console.log('[QuickAddService] Service created successfully')
 
       onServiceAdded()
       setOpen(false)
@@ -217,20 +218,30 @@ console.log('[QuickAddService] Service created successfully');
             {/* Updated to Service Type dropdown using allServiceTypes */}
             <div>
               <label htmlFor="serviceType" className="block text-sm font-medium text-gray-700">Service Type</label>
-              <CustomSelect
-                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
-                value={serviceData.service_type_id} // Bind to ID for UI selection
-                onValueChange={(value) => {
-                  // Find if the selected type is standard or custom
+              <SearchableSelect
+                id="serviceType"
+                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
+                value={serviceData.service_type_id}
+                onChange={(value) => {
+                  // Find the selected service type to get its billing method
                   const selectedType = allServiceTypes.find(t => t.id === value);
                   
-                  // Update service data with the selected type ID and reset the other type ID
+                  // Update service data with the selected type ID and its billing method
                   setServiceData({
                     ...serviceData,
                     service_type_id: value,
+                    // Update billing_method based on the selected service type
+                    billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
+                  
+                  // Reset the service_id when service type changes
+                  setServiceData((prev) => ({
+                    ...prev,
+                    service_id: null,
+                  }));
                 }}
                 placeholder="Select service type..."
+                emptyMessage="No service types found"
                 className="w-full"
               />
             </div>
@@ -274,8 +285,12 @@ console.log('[QuickAddService] Service created successfully');
                 <label htmlFor="unitOfMeasure" className="block text-sm font-medium text-gray-700">Unit of Measure</label>
                 <UnitOfMeasureInput
                   value={serviceData.unit_of_measure}
-                  onChange={(value) => setServiceData({ ...serviceData, unit_of_measure: value })}
+                  onChange={(value) => {
+                    console.log('[QuickAddService] UnitOfMeasureInput onChange called with:', value);
+                    setServiceData({ ...serviceData, unit_of_measure: value });
+                  }}
                   placeholder="Select unit of measure..."
+                  serviceType={allServiceTypes.find(t => t.id === serviceData.service_type_id)?.name}
                 />
               </div>
             )}

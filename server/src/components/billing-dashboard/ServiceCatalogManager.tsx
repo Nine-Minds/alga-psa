@@ -285,7 +285,11 @@ const ServiceCatalogManager: React.FC = () => {
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`delete-service-${record.service_id}`}
-              onClick={() => handleDeleteService(record.service_id!)}
+              className="text-red-600 focus:text-red-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteService(record.service_id!);
+              }}
             >
               Delete
             </DropdownMenuItem>

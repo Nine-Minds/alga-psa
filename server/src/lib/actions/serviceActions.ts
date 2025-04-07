@@ -250,16 +250,46 @@ export async function deleteServiceType(id: string): Promise<void> {
   try {
       // Assuming ServiceTypeModel is imported or available
       const { ServiceTypeModel } = await import('../models/serviceType');
+      
+      // First check if the service type is in use by any services
+      const { knex, tenant } = await createTenantKnex();
+      if (!tenant) {
+          throw new Error('Tenant context is required for this operation.');
+      }
+      
+      // Check if any services are using this service type
+      const servicesUsingType = await knex('service_catalog')
+          .where({ custom_service_type_id: id, tenant })
+          .count('service_id as count')
+          .first();
+      
+      if (servicesUsingType && parseInt(String(servicesUsingType.count)) > 0) {
+          throw new Error(`Cannot delete service type because it is currently in use by ${servicesUsingType.count} service(s).`);
+      }
+      
       // Tenant context is handled within the model method
       const deleted = await ServiceTypeModel.delete(id);
       if (!deleted) {
-          // Optionally handle the case where the type wasn't found
-          console.warn(`Attempted to delete service type ${id}, but it was not found.`);
+          // Handle the case where the type wasn't found
+          throw new Error(`Service type with ID ${id} not found.`);
       }
-      // Optionally revalidate paths
-      // revalidatePath('/path/to/service/type/management');
-  } catch (error) {
+      
+      // Revalidate paths for the service type management page
+      revalidatePath('/msp/settings/billing');
+  } catch (error: any) {
       console.error(`Error deleting service type ${id}:`, error);
+      
+      // Check for PostgreSQL foreign key constraint violation
+      if (error.code === '23503' || (error.message && error.message.includes('foreign key constraint'))) {
+          throw new Error('Cannot delete service type because it is currently in use by one or more services.');
+      }
+      
+      // If we already have a specific error message, use it
+      if (error instanceof Error) {
+          throw error;
+      }
+      
+      // Fallback to generic error
       throw new Error('Failed to delete service type');
   }
 }
