@@ -5,7 +5,11 @@ import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
-import { Tooltip } from '../ui/Tooltip';
+import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
+// Removed direct Radix imports:
+// TooltipContent,
+// TooltipProvider,
+// TooltipTrigger,
 import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
@@ -226,7 +230,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   };
 
   return (
-    <>
+    // Removed TooltipProvider wrapper
+      <>
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
@@ -245,7 +250,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 disabled={selectedPeriods.size === 0 || isGenerating}
                 className={selectedPeriods.size === 0 ? 'opacity-50' : ''}
               >
-                {isGenerating ? 'Finalizing...' : `Finalize Selected Invoices (${selectedPeriods.size})`}
+                {isGenerating ? 'Generating...' : `Generate Invoices for Selected Periods (${selectedPeriods.size})`}
               </Button>
             </div>
           </div>
@@ -333,11 +338,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                     // Centered the content horizontally
                     <div className="flex items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}> {/* Stop row click propagation */}
                       {record.is_early && (
-                         <Tooltip content={`Warning: Current billing cycle hasn't ended yet (ends ${toPlainDate(record.period_end_date).toLocaleString()})`}>
-                           <div className="flex items-center mr-2">
-                             <Info className="h-4 w-4 text-yellow-500" />
-                           </div>
-                         </Tooltip>
+                        <Tooltip
+                          content={
+                            <p>Warning: Current billing cycle hasn't ended yet (ends {toPlainDate(record.period_end_date).toLocaleString()})</p>
+                          }
+                          side="top" // Pass side prop to custom component
+                          className="max-w-xs" // Pass className for content styling
+                        >
+                          {/* The trigger element is now the direct child */}
+                          <div className="flex items-center mr-2 cursor-help">
+                            <Info className="h-4 w-4 text-yellow-500" />
+                          </div>
+                        </Tooltip>
                       )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -619,7 +631,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         // Removed unsupported props: confirmButtonVariant, icon
         id="delete-billing-cycle-confirmation" // Added an ID for consistency
       />
-    </>
+      </>
+    // Removed TooltipProvider closing tag
   );
 };
 

@@ -350,46 +350,69 @@ export class BillingEngine {
         'billing_plans.billing_frequency'
       );
 
-    // Get plans from active bundles
-    const bundlePlans = await this.knex('company_plan_bundles')
-      .join('bundle_billing_plans', function () {
-        this.on('company_plan_bundles.bundle_id', '=', 'bundle_billing_plans.bundle_id')
-          .andOn('bundle_billing_plans.tenant', '=', 'company_plan_bundles.tenant');
+    // Get plans from active bundles, joining to get the service_id
+    const bundlePlans = await this.knex('company_plan_bundles as cpb')
+      .join('bundle_billing_plans as bbp', function () {
+        this.on('cpb.bundle_id', '=', 'bbp.bundle_id')
+          .andOn('bbp.tenant', '=', 'cpb.tenant');
       })
-      .join('billing_plans', function () {
-        this.on('bundle_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-          .andOn('billing_plans.tenant', '=', 'bundle_billing_plans.tenant');
+      .join('billing_plans as bp', function () {
+        this.on('bbp.plan_id', '=', 'bp.plan_id')
+          .andOn('bp.tenant', '=', 'bbp.tenant');
       })
-      .join('plan_bundles', function () {
-        this.on('company_plan_bundles.bundle_id', '=', 'plan_bundles.bundle_id')
-          .andOn('plan_bundles.tenant', '=', 'company_plan_bundles.tenant');
+      .join('plan_bundles as pb', function () {
+        this.on('cpb.bundle_id', '=', 'pb.bundle_id')
+          .andOn('pb.tenant', '=', 'cpb.tenant');
+      })
+      // Join to get the service_id associated with the plan
+      .leftJoin('plan_service_configuration as psc', function() {
+          this.on('bp.plan_id', '=', 'psc.plan_id')
+              .andOn('psc.tenant', '=', 'bp.tenant');
+      })
+      .leftJoin('service_catalog as sc', function() {
+          this.on('psc.service_id', '=', 'sc.service_id')
+              .andOn('sc.tenant', '=', 'psc.tenant');
       })
       .where({
-        'company_plan_bundles.company_id': companyId,
-        'company_plan_bundles.is_active': true,
-        'company_plan_bundles.tenant': this.tenant
+        'cpb.company_id': companyId,
+        'cpb.is_active': true,
+        'cpb.tenant': this.tenant
       })
-      .where('company_plan_bundles.start_date', '<=', billingPeriod.endDate)
+      .where('cpb.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
-        this.where('company_plan_bundles.end_date', '>=', billingPeriod.startDate).orWhereNull('company_plan_bundles.end_date');
+        this.where('cpb.end_date', '>=', billingPeriod.startDate).orWhereNull('cpb.end_date');
       })
       .select(
-        'bundle_billing_plans.plan_id',
-        'billing_plans.plan_name',
-        'billing_plans.billing_frequency',
-        'bundle_billing_plans.custom_rate',
-        'company_plan_bundles.start_date',
-        'company_plan_bundles.end_date',
-        'company_plan_bundles.company_bundle_id',
-        'plan_bundles.bundle_name'
+        'bbp.plan_id',
+        'bp.plan_name',
+        'bp.billing_frequency',
+        'bbp.custom_rate',
+        'cpb.start_date',
+        'cpb.end_date',
+        'cpb.company_bundle_id',
+        'pb.bundle_name',
+        'sc.service_id' // Select the service_id from service_catalog
+      )
+      // Group by necessary fields to handle potential multiple services per plan (though typically 1:1)
+      .groupBy(
+        'bbp.plan_id',
+        'bp.plan_name',
+        'bp.billing_frequency',
+        'bbp.custom_rate',
+        'cpb.start_date',
+        'cpb.end_date',
+        'cpb.company_bundle_id',
+        'pb.bundle_name',
+        'sc.service_id'
       );
 
-    // Convert bundle plans to company billing plan format
+    // Convert bundle plans to company billing plan format, including service_id
     const formattedBundlePlans = bundlePlans.map((plan: any) => {
       return {
         company_billing_plan_id: `bundle-${plan.company_bundle_id}-${plan.plan_id}`, // Generate a virtual ID
         company_id: companyId,
         plan_id: plan.plan_id,
+        service_id: plan.service_id, // Include the fetched service_id
         start_date: plan.start_date,
         end_date: plan.end_date,
         is_active: true,

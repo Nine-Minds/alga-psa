@@ -36,7 +36,7 @@ import { auditLog } from 'server/src/lib/logging/auditLog';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 
-interface ManualInvoiceUpdate {
+export interface ManualInvoiceUpdate { // Add export
   service_id?: string;
   description?: string;
   quantity?: number;
@@ -372,8 +372,8 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         name: '',
         address: ''
       },
-      invoice_date: toPlainDate(toISODate(Temporal.Now.plainDateISO())),
-      due_date: toPlainDate(due_date),
+      invoice_date: toISODate(Temporal.Now.plainDateISO()), // Keep as ISO string
+      due_date: due_date, // Keep as ISO string (already fetched as ISO)
       status: 'draft',
       subtotal: billingResult.totalAmount,
       tax: await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''),
@@ -1565,18 +1565,6 @@ export async function addInvoiceAnnotation(annotation: Omit<IInvoiceAnnotation, 
 export async function getInvoiceAnnotations(_invoiceId: string): Promise<IInvoiceAnnotation[]> {
   // Implementation to fetch annotations for an invoice
   return [];
-}
-
-interface ManualInvoiceUpdate {
-  service_id?: string;
-  description?: string;
-  quantity?: number;
-  rate?: number;
-  item_id: string;
-  is_discount?: boolean;
-  discount_type?: DiscountType;
-  discount_percentage?: number;
-  applies_to_item_id?: string;
 }
 
 interface ManualItemsUpdate {

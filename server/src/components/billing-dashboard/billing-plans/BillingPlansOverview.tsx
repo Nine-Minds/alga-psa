@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
+import { toast } from 'react-hot-toast'; // Import toast
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Plus } from 'lucide-react';
 import {
@@ -58,10 +59,21 @@ const BillingPlansOverview: React.FC = () => {
       await deleteBillingPlan(planId);
       fetchBillingPlans();
     } catch (error) {
+      console.error('Error deleting billing plan:', error); // Keep console log for debugging
       if (error instanceof Error) {
-        alert(error.message);
+        // Check for the specific error message for plans assigned to companies
+        if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
+            toast.error(error.message);
+        // Check for the specific error message for plans with associated services (from pre-check)
+        } else if (error.message.includes('associated services')) {
+          toast.error(error.message); // Use the exact message from the action
+        } else {
+          // Display other specific error messages directly
+          toast.error(error.message);
+        }
       } else {
-        alert('Failed to delete plan');
+        // Fallback for non-Error objects
+        toast.error('An unexpected error occurred while deleting the plan.');
       }
     }
   };

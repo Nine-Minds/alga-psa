@@ -74,7 +74,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                 value={selectedCategory}
                                 onValueChange={setSelectedCategory}
                                 options={[
-                                    { value: 'none', label: 'None' },
+                                    { value: 'none', label: 'All Categories' },
                                     ...serviceCategories.map((category): { value: string; label: string } => ({
                                         value: category.category_id || 'None',
                                         label: category.category_name
@@ -82,6 +82,9 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                 ]}
                                 placeholder="Select category..."
                             />
+                            <p className="mt-1 text-xs text-gray-500">
+                                Selecting 'All Categories' means this plan applies regardless of the service category.
+                            </p>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">

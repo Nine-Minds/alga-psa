@@ -9,7 +9,7 @@ export interface ServiceOption extends SelectOption {
   rate?: number;
 }
 
-interface EditableItem {
+export interface EditableItem { // Add export
   service_id: string;
   quantity: number;
   description: string;

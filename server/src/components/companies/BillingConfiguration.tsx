@@ -593,8 +593,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 isOpen={!!billingPlanToDelete}
                 onClose={() => setBillingPlanToDelete(null)}
                 onConfirm={confirmRemoveBillingPlan}
-                title="Delete Billing Plan"
-                message="Are you sure you want to delete this billing plan?"
+                title="Remove Billing Plan Assignment"
+                message="Are you sure you want to remove this billing plan assignment from the company? The billing plan itself will not be deleted."
             />
 
             <div className="flex justify-end">

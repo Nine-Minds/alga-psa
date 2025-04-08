@@ -9,7 +9,7 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
-interface ManualInvoiceItem {
+export interface ManualInvoiceItem { // Add export
   service_id: string;
   quantity: number;
   description: string;

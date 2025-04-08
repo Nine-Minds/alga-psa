@@ -210,11 +210,14 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                 } catch (error) {
                   if (error instanceof Error) {
                     // Display user-friendly error message using toast
-                    if (error.message.includes('associated services')) {
-                      toast.error('Cannot delete plan that has associated services. Please remove all services from this plan before deleting.');
-                    } else if (error.message.includes('in use')) {
-                      toast.error('Cannot delete plan that is currently in use by companies.');
+                    // Check for the specific error message for plans assigned to companies
+                    if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
+                        toast.error(error.message);
+                    // Check for the specific error message for plans with associated services (from pre-check)
+                    } else if (error.message.includes('associated services')) {
+                      toast.error(error.message); // Use the exact message from the action
                     } else {
+                      // Display other specific error messages directly
                       toast.error(error.message);
                     }
                   } else {

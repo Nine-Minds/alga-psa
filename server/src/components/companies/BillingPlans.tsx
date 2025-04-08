@@ -116,7 +116,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
                                 onDelete(value);
                             }}
                         >
-                            Delete
+                            Remove Plan
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

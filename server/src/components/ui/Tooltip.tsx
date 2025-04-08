@@ -1,46 +1,52 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { cn } from '../../lib/utils';
 import { AutomationProps } from '../../types/ui-reflection/types';
 
-interface TooltipProps {
+interface TooltipProps extends AutomationProps { // Include AutomationProps here
   content: React.ReactNode;
   children: React.ReactNode;
+  className?: string; // Add className prop for TooltipContent styling
+  side?: TooltipPrimitive.TooltipContentProps['side'];
+  align?: TooltipPrimitive.TooltipContentProps['align'];
+  sideOffset?: TooltipPrimitive.TooltipContentProps['sideOffset'];
 }
 
-export const Tooltip: React.FC<TooltipProps & AutomationProps> = ({ content, children }) => {
-  const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    setPosition({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  }, []);
+export const Tooltip: React.FC<TooltipProps> = ({ // Removed AutomationProps from here as it's in the interface
+  content,
+  children,
+  className,
+  side,
+  align,
+  sideOffset = 4, // Default offset like Radix
+  ...props // Pass down automation props if needed, though Radix might handle accessibility
+}) => {
+  // Removed useState, useCallback, useRef, handleMouseMove
 
   return (
-    <div className="relative inline-block" ref={containerRef}>
-      <div
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
-        onMouseMove={handleMouseMove}
-      >
-        {children}
-      </div>
-      {isVisible && (
-        <div 
-          className="absolute z-[9999] w-64 px-4 py-3 text-base text-white bg-gray-800 rounded shadow-sm"
-          style={{
-            left: position.x + 'px',
-            top: position.y + 10 + 'px',
-            transform: 'translateX(-50%)',
-          }}
-        >
-          {content}
-        </div>
-      )}
-    </div>
+    <TooltipPrimitive.Provider>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>
+          {children}
+        </TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            sideOffset={sideOffset}
+            side={side}
+            align={align}
+            className={cn(
+              // Standard Radix styles (adjust if needed based on project theme)
+              "z-[9999] overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+              // Original custom styling
+              "w-64 px-4 py-3 text-base text-white bg-gray-800 rounded shadow-sm",
+              className // Allow overriding/extending styles
+            )}
+            {...props} // Spread any remaining props, potentially for data attributes
+          >
+            {content}
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 };

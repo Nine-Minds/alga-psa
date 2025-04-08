@@ -1,20 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { updateInvoiceManualItems, getInvoiceLineItems } from 'server/src/lib/actions/invoiceActions';
+import type { ManualInvoiceUpdate } from 'server/src/lib/actions/invoiceActions'; // Import the specific type
+import type { ManualInvoiceItem as ManualInvoiceItemForAction } from 'server/src/lib/actions/manualInvoiceActions'; // Import and alias
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
-import { LineItem, ServiceOption } from './LineItem';
+import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { ICompany } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { InvoiceViewModel, DiscountType, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
 import type { JSX } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlusIcon, MinusCircleIcon } from 'lucide-react';
 
 // Use a constant for environment check since process.env is not available
-const IS_DEVELOPMENT = typeof window !== 'undefined' && 
+const IS_DEVELOPMENT = typeof window !== 'undefined' &&
   globalThis.window.location.hostname === 'localhost';
 
 interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
@@ -26,18 +28,6 @@ interface SelectOption {
   label: string;
 }
 
-interface InvoiceItem {
-  service_id: string;
-  quantity: number;
-  description: string;
-  rate: number;
-  item_id?: string;
-  is_discount?: boolean;
-  discount_type?: DiscountType;
-  discount_percentage?: number;
-  applies_to_item_id?: string;
-}
-
 interface ManualInvoicesProps {
   companies: ICompany[];
   services: ServiceWithRate[];
@@ -45,39 +35,50 @@ interface ManualInvoicesProps {
   invoice?: InvoiceViewModel;
 }
 
-interface EditableInvoiceItem extends InvoiceItem {
-  item_id?: string;
+// This is the primary state type for manual items within this component
+interface EditableInvoiceItem extends Omit<IInvoiceItem, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
+  rate: number; // Represents unit_price for editing (in cents)
   isExisting?: boolean;
   isRemoved?: boolean;
-  invoice_number?: string;
 }
 
-const defaultItem: EditableInvoiceItem = {
+// Base structure for a default item, ensuring required fields for EditableInvoiceItem are present
+const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
+  item_id: '', // Will be replaced by uuidv4() when used
   service_id: '',
   quantity: 1,
   description: '',
-  rate: 0,
+  rate: 0, // Represents unit_price in cents
   is_discount: false,
+  is_manual: true,
   isExisting: false,
   isRemoved: false,
-  invoice_number: ''
+  is_taxable: false,
+  discount_type: undefined,
+  discount_percentage: undefined,
+  applies_to_item_id: undefined,
+  applies_to_service_id: undefined,
+  company_bundle_id: undefined,
+  bundle_name: undefined,
+  is_bundle_header: undefined,
+  parent_item_id: undefined,
 };
 
 
 const AutomatedItemsTable: React.FC<{
   items: Array<{
     service_name: string;
-    total: number;
+    total: number; // Should be total_price from IInvoiceItem (in cents)
   }>;
 }> = ({ items }) => {
-  console.log('Rendering automated items table:', {
+  console.log('[Render] Rendering automated items table:', {
     count: items.length,
     items: items.map(item => ({
       service: item.service_name,
       total: item.total
     }))
   });
-  
+
   return (
     <div className="mb-6">
       <h3 className="text-sm font-medium mb-2">Automated Line Items</h3>
@@ -92,6 +93,7 @@ const AutomatedItemsTable: React.FC<{
           {items.map((item, i) => (
             <tr key={i} className="border-t">
               <td className="py-2">{item.service_name}</td>
+              {/* Display total_price */}
               <td className="text-right">${(item.total / 100).toFixed(2)}</td>
             </tr>
           ))}
@@ -122,62 +124,45 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   companies,
   services,
   onGenerateSuccess,
-  invoice,
+  invoice, // This is the initial invoice prop
 }) => {
   const [selectedCompany, setSelectedCompany] = useState<string | null>(
     invoice?.company_id || null
   );
-  const [invoiceNumber, setInvoiceNumber] = useState<string>(invoice?.invoice_number || '');
-
+  // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
+  const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
+  // State specifically for the manual items being edited
   const [items, setItems] = useState<EditableInvoiceItem[]>(() => {
-    if (invoice) {
-      // Get existing manual items
-      const allItems = invoice.invoice_items || [];
-      console.log('Processing invoice items:', {
-        total: allItems.length,
-        manual: allItems.filter(item => item.is_manual).length,
-        automated: allItems.filter(item => !item.is_manual).length
-      });
-      
-      const manualItems = allItems
-        .filter(item => {
-          console.log('Checking item:', {
-            id: item.item_id,
-            isManual: item.is_manual,
-            description: item.description,
-            isDiscount: item.is_discount
-          });
-          return item.is_manual;
-        })
-        .map(item => {
-          const mappedItem: EditableInvoiceItem = {
-            item_id: item.item_id,
-            service_id: item.service_id || '',
-            quantity: item.quantity,
-            description: item.description,
-            rate: item.unit_price,
-            is_discount: !!item.is_discount,
-            discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
-            applies_to_item_id: item.applies_to_item_id,
-            isExisting: true,
-            isRemoved: false
-          };
-          return mappedItem;
-        });
-
-      console.log('Found manual items:', manualItems.length);
-
-      // For new invoices or when no manual items exist, add empty item
-      if (manualItems.length === 0) {
-        return [defaultItem];
-      }
-
-      return manualItems;
-    }
-    
-    // New manual invoice
-    return [defaultItem];
+    const initialManualItems = invoice?.invoice_items?.filter(item => item.is_manual) || [];
+    const mappedItems = initialManualItems.map((item): EditableInvoiceItem => ({
+      item_id: item.item_id,
+      invoice_id: item.invoice_id,
+      service_id: item.service_id || '',
+      quantity: item.quantity,
+      description: item.description,
+      rate: item.unit_price, // Use unit_price for editing rate
+      is_discount: !!item.is_discount,
+      discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+      discount_percentage: item.discount_percentage,
+      applies_to_item_id: item.applies_to_item_id,
+      applies_to_service_id: item.applies_to_service_id,
+      company_bundle_id: item.company_bundle_id,
+      bundle_name: item.bundle_name,
+      is_bundle_header: item.is_bundle_header,
+      parent_item_id: item.parent_item_id,
+      is_manual: true,
+      is_taxable: item.is_taxable ?? false,
+      isExisting: true,
+      isRemoved: false,
+    }));
+    // Ensure the default item gets a unique ID if added
+    return mappedItems.length > 0 ? mappedItems : [{
+      ...baseDefaultItem,
+      item_id: uuidv4(), // Add ID here
+      invoice_id: invoice?.invoice_id || ''
+    }];
   });
+
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,89 +171,107 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [loading, setLoading] = useState(false);
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
-  const [itemsChanged, setItemsChanged] = useState(false);
 
-  // Fetch invoice items when invoice changes
+  // Effect to fetch items when the invoice prop initially changes
   useEffect(() => {
     const fetchItems = async () => {
-      if (invoice) {
+      // Use the invoice prop ID for the initial fetch trigger
+      const invoiceIdToFetch = invoice?.invoice_id;
+      if (invoiceIdToFetch) {
         try {
+          console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
-          const items = await getInvoiceLineItems(invoice.invoice_id);
-          // Update the invoice with fetched items
-          invoice.invoice_items = items;
-          // Re-initialize items state with fetched data
-          setItems(items.filter(item => item.is_manual).map(item => {
-            console.log('Loading item:', {
-              id: item.item_id,
-              isManual: item.is_manual,
-              isDiscount: item.is_discount,
-              description: item.description,
-              rate: item.unit_price
-            });
-            
-            return {
-              item_id: item.item_id,
-              service_id: item.service_id || '',
-              quantity: item.quantity,
-              description: item.description,
-              rate: item.unit_price,
-              is_discount: !!item.is_discount,
-              discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
-              applies_to_item_id: item.applies_to_item_id,
-              isExisting: true,
-              isRemoved: false
-            };
+          const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          console.log('[Effect] Fetched items:', fetchedItems.length);
+
+          // Update local state with fetched items
+          setCurrentInvoiceData(prevData => {
+            const baseData = prevData || invoice;
+            return baseData ? { ...baseData, invoice_items: fetchedItems } : undefined;
+          });
+          console.log('[Effect] Updated currentInvoiceData state with fetched items');
+
+          // Also update the manual items state based on the fetched data
+          const manualItemsFromFetch = fetchedItems.filter(item => item.is_manual);
+          console.log('[Effect] Setting manual items state from fetch:', manualItemsFromFetch.length);
+          const mappedManualItems = manualItemsFromFetch.map((item): EditableInvoiceItem => ({
+            item_id: item.item_id,
+            invoice_id: item.invoice_id,
+            service_id: item.service_id || '',
+            quantity: item.quantity,
+            description: item.description,
+            rate: item.unit_price,
+            is_discount: !!item.is_discount,
+            discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+            discount_percentage: item.discount_percentage,
+            applies_to_item_id: item.applies_to_item_id,
+            applies_to_service_id: item.applies_to_service_id,
+            company_bundle_id: item.company_bundle_id,
+            bundle_name: item.bundle_name,
+            is_bundle_header: item.is_bundle_header,
+            parent_item_id: item.parent_item_id,
+            is_manual: true,
+            is_taxable: item.is_taxable ?? false,
+            isExisting: true,
+            isRemoved: false,
           }));
+          // Ensure the default item gets a unique ID if added after fetch
+          setItems(mappedManualItems.length > 0 ? mappedManualItems : [{
+            ...baseDefaultItem,
+            item_id: uuidv4(), // Add ID here
+            invoice_id: invoiceIdToFetch
+          }]);
+
         } catch (error) {
           console.error('Error loading invoice items:', error);
           setError('Error loading invoice items');
         } finally {
           setLoading(false);
         }
+      } else {
+        // Reset local state if invoice prop becomes null/undefined
+        setCurrentInvoiceData(undefined);
+        // Ensure the default item gets a unique ID when resetting
+        setItems([{
+          ...baseDefaultItem,
+          item_id: uuidv4(), // Add ID here
+          invoice_id: ''
+        }]);
       }
     };
 
     fetchItems();
-  }, [invoice?.invoice_id]);
+    // Run effect only when the invoice prop itself changes
+  }, [invoice]);
 
   const handleAddItem = (isDiscount: boolean = false) => {
     const newItem: EditableInvoiceItem = {
-      ...defaultItem,
+      ...baseDefaultItem,
+      invoice_id: currentInvoiceData?.invoice_id || '',
+      item_id: uuidv4(), // Generate ID for the new item
       is_discount: isDiscount,
       discount_type: isDiscount ? ('fixed' as DiscountType) : undefined,
       rate: 0,
       quantity: 1,
-      description: isDiscount ? 'Discount' : ''
+      description: isDiscount ? 'Discount' : '',
+      isExisting: false, // Mark as new
     };
     const newItems = [...items, newItem];
     setItems(newItems);
-    // Expand only the new item
     setExpandedItems(new Set([newItems.length - 1]));
   };
 
   const handleRemoveItem = (index: number) => {
-    console.log('Removing/restoring item:', {
-      index,
-      item: items[index]
-    });
-
+    console.log('Removing/restoring item:', { index, item: items[index] });
     const newItems = [...items];
     if (newItems[index].isExisting) {
-      // Mark existing items as removed instead of actually removing them
-      newItems[index] = {
-        ...newItems[index],
-        isRemoved: !newItems[index].isRemoved // Toggle removed state
-      };
+      newItems[index] = { ...newItems[index], isRemoved: !newItems[index].isRemoved };
       setItems(newItems);
     } else {
-      // Remove new items completely
       newItems.splice(index, 1);
       setItems(newItems);
-      // Update expanded items set
       const newExpanded = new Set(expandedItems);
       newExpanded.delete(index);
-      // Adjust indices for items after the removed one
       const adjustedExpanded = new Set<number>();
       newExpanded.forEach(i => {
         if (i < index) adjustedExpanded.add(i);
@@ -278,124 +281,58 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     }
   };
 
-  const handleItemChange = (index: number, field: string, value: string | number | boolean) => {
-    console.log('Changing item:', {
-      index,
-      field,
-      value,
-      item: items[index]
-    });
+  // Handles changes from the LineItem component OR the invoice number input
+  const handleItemChange = (index: number, field: keyof LineItemEditableItem | 'invoice_number', value: string | number | boolean | undefined) => {
+    console.log('Changing item/invoice:', { index, field, value });
 
-    const newItems = [...items];
-    const currentItem = { ...newItems[index] };
-
-    switch (field) {
-      case 'service_id': {
-        const service = services.find(s => s.service_id === value);
-        if (!service) {
-          if (IS_DEVELOPMENT) {
-            console.warn(`Service not found for ID: ${value}`);
-          }
-          currentItem.service_id = value as string;
-        } else {
-          // Always update rate when service changes
-          currentItem.service_id = value as string;
-          currentItem.rate = service.rate;
-          currentItem.description = service.service_name; // Optionally pre-fill description
-        }
-        break;
-      }
-      case 'discount_type': {
-        const oldType = currentItem.discount_type;
-        const newType = value as DiscountType;
-        currentItem.discount_type = newType;
-        
-        // Handle conversion between percentage and fixed amount
-        if (oldType !== newType) {
-          if (newType === 'percentage') {
-            // Convert fixed amount to percentage
-            if (currentItem.applies_to_item_id) {
-              // Find the item this discount applies to
-              const appliedToItem = items.find(item => item.item_id === currentItem.applies_to_item_id);
-              if (appliedToItem) {
-                const totalAmount = appliedToItem.rate * appliedToItem.quantity;
-                if (totalAmount > 0) {
-                  // Calculate percentage based on the current fixed amount
-                  const percentage = Math.abs(currentItem.rate) * 100 / totalAmount;
-                  currentItem.discount_percentage = Math.min(percentage, 100);
-                } else {
-                  currentItem.discount_percentage = 0;
-                }
-              }
-            } else {
-              // For invoice-level discounts, use a default percentage
-              currentItem.discount_percentage = 10; // Default to 10%
-            }
-            // Keep the rate at 0 for percentage discounts
-            currentItem.rate = 0;
-          } else {
-            // Convert percentage to fixed amount
-            if (currentItem.discount_percentage) {
-              if (currentItem.applies_to_item_id) {
-                // Find the item this discount applies to
-                const appliedToItem = items.find(item => item.item_id === currentItem.applies_to_item_id);
-                if (appliedToItem) {
-                  const totalAmount = appliedToItem.rate * appliedToItem.quantity;
-                  // Calculate fixed amount based on percentage
-                  currentItem.rate = -Math.abs((currentItem.discount_percentage / 100) * totalAmount);
-                }
-              } else {
-                // For invoice-level discounts, we'll need to calculate based on subtotal
-                // For now, set a nominal value that will be adjusted when saved
-                currentItem.rate = -Math.abs(currentItem.discount_percentage);
-              }
-            } else {
-              // Default to a small fixed amount if no percentage was set
-              currentItem.rate = -1000; // $10.00
-            }
-            // Clear the percentage for fixed discounts
-            currentItem.discount_percentage = undefined;
-          }
-        }
-        break;
-      }
-      case 'quantity':
-        currentItem.quantity = value as number;
-        break;
-      case 'rate':
-        currentItem.rate = value as number;
-        break;
-      case 'description':
-        currentItem.description = value as string;
-        break;
-      case 'is_discount':
-        currentItem.is_discount = value as boolean;
-        break;
-      case 'applies_to_item_id':
-        currentItem.applies_to_item_id = value as string;
-        break;
-      case 'invoice_number':
-        if (invoice) {
-          invoice.invoice_number = value as string;
-        }
-        setInvoiceNumber(value as string);
-        break;
-    }
-
-    newItems[index] = currentItem;
-    setItems(newItems);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-      if (!invoice && selectedCompany === null) {
-      setError('Please select a company');
+    if (field === 'invoice_number') {
+      setCurrentInvoiceData(prevData => prevData ? { ...prevData, invoice_number: value as string } : undefined);
       return;
     }
 
-    const nonRemovedItems = items.filter(item => !item.isRemoved);
-    if (nonRemovedItems.some(item => !item.is_discount && !item.service_id)) {
-      setError('Please fill in all required fields');
+    // Handle changes to items array from LineItem's onChange
+    const newItems = [...items];
+    if (index < 0 || index >= newItems.length) return;
+
+    // Merge the changed fields from LineItemEditableItem into our full EditableInvoiceItem
+    // Ensure the field exists on EditableInvoiceItem before assigning
+    const fieldName = field as keyof EditableInvoiceItem;
+    if (fieldName in newItems[index]) {
+        // Create a new object for the updated item
+        const updatedItem: EditableInvoiceItem = {
+            ...newItems[index],
+            [fieldName]: value,
+        };
+
+        // Add specific logic if needed based on the field changed
+        if (fieldName === 'is_discount') {
+            if (value === false) {
+                updatedItem.discount_type = undefined;
+                updatedItem.discount_percentage = undefined;
+                updatedItem.applies_to_item_id = undefined;
+            } else if (value === true && !updatedItem.discount_type) {
+                updatedItem.discount_type = 'fixed'; // Default to fixed if switching on
+            }
+        } else if (fieldName === 'discount_type') {
+            if (value === 'percentage') {
+                updatedItem.rate = 0; // Rate is not directly used for percentage discounts in editor
+            } else if (value === 'fixed') {
+                updatedItem.discount_percentage = undefined; // Clear percentage if switching to fixed
+            }
+        }
+
+        newItems[index] = updatedItem;
+        setItems(newItems);
+    } else {
+        console.warn(`Attempted to change unhandled field '${String(field)}' on EditableInvoiceItem`);
+    }
+  };
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentInvoiceData && selectedCompany === null) {
+      setError('Please select a company');
       return;
     }
 
@@ -403,177 +340,156 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     setError(null);
 
     try {
-      if (invoice) {
-        console.log('Updating invoice items:', {
-          invoiceId: invoice.invoice_id,
-          new: items.filter(i => !i.isExisting && !i.isRemoved).length,
-          updated: items.filter(i => i.isExisting && !i.isRemoved).length,
-          removed: items.filter(i => i.isRemoved).length
+      // Updating an existing invoice
+      if (currentInvoiceData) {
+        console.log('[Submit] Updating invoice items:', {
+            invoiceId: currentInvoiceData.invoice_id,
+            newCount: items.filter(i => !i.isExisting && !i.isRemoved).length,
+            updatedCount: items.filter(i => i.isExisting && !i.isRemoved).length,
+            removedCount: items.filter(i => i.isRemoved).length
         });
 
-        // Separate items into new, updated, and removed
-        const newItems = items.filter(item => !item.isExisting && !item.isRemoved);
-        const updatedItems = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
+        const newItemsToSave = items.filter(item => !item.isExisting && !item.isRemoved);
+        const updatedItemsToSave = items.filter(item => item.isExisting && !item.isRemoved && item.item_id);
         const removedItemIds = items
           .filter(item => item.isExisting && item.isRemoved && item.item_id)
-          .map(item => item.item_id!);
+          .map(item => item.item_id!); // item_id is guaranteed here by filter
 
-        await updateInvoiceManualItems(invoice.invoice_id, {
-          invoice_number: invoice.invoice_number,
-          newItems: newItems.map(({
-            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => {
-            console.log('Preparing new item for save:', {
-              is_discount,
-              discount_type,
-              discount_percentage,
-              rate
-            });
-            
-            return {
-              service_id,
-              description,
-              quantity,
-              rate,
-              is_discount: is_discount || false,
-              discount_type,
-              applies_to_item_id,
-              discount_percentage,
-              item_id: uuidv4(),
-              invoice_id: invoice.invoice_id,
-              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
-              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
-              tax_amount: 0,
-              is_manual: true,
-              is_taxable: false,
-              net_amount: is_discount && discount_type === 'percentage' ? 0 : quantity * rate
-            };
-          }),
-          updatedItems: updatedItems.map(({
-            item_id, service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => {
-            console.log('Preparing updated item for save:', {
-              item_id,
-              is_discount,
-              discount_type,
-              discount_percentage,
-              rate
-            });
-            
-            return {
-              item_id: item_id!,
-              service_id,
-              description,
-              quantity,
-              rate,
-              is_discount: is_discount || false,
-              discount_type,
-              discount_percentage,
-              applies_to_item_id,
-              invoice_id: invoice.invoice_id,
-              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
-              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
-              tax_amount: 0,
-              is_manual: true,
-              is_taxable: false
-            };
-          }),
-          removedItemIds
-        });
-        
-        // Reset state after successful save
-        setItemsChanged(false);
-        setExpandedItems(new Set());
-        
-        // Refresh items from server to ensure we have the latest state
-        const refreshedItems = await getInvoiceLineItems(invoice.invoice_id);
-        setItems(refreshedItems.filter(item => item.is_manual).map(item => ({
-          item_id: item.item_id,
-          service_id: item.service_id || '',
-          quantity: item.quantity,
+        // Map EditableInvoiceItem to IInvoiceItem for newItems
+        const mapToNewItemSaveFormat = (item: EditableInvoiceItem): IInvoiceItem => ({
+          item_id: item.item_id || uuidv4(), // Ensure ID exists
+          invoice_id: item.invoice_id,
+          tenant: '', // Backend handles tenant
+          service_id: item.service_id || undefined,
           description: item.description,
-          rate: item.unit_price,
-          is_discount: !!item.is_discount,
-          discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+          quantity: item.quantity,
+          unit_price: item.rate,
+          total_price: 0, // Calculated backend
+          tax_amount: 0, // Calculated backend
+          net_amount: 0, // Calculated backend
+          is_manual: true,
+          is_taxable: item.is_taxable,
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          isExisting: true,
-          isRemoved: false
-        })));
-      } else {
-        console.log('Generating new manual invoice:', {
-          companyId: selectedCompany || '',
-          itemCount: items.filter(item => !item.isRemoved).length
+          // Include other potentially relevant fields from IInvoiceItem if needed by backend logic
+          applies_to_service_id: item.applies_to_service_id,
+          company_bundle_id: item.company_bundle_id,
+          bundle_name: item.bundle_name,
+          is_bundle_header: item.is_bundle_header,
+          parent_item_id: item.parent_item_id,
+          rate: item.rate, // Add the missing rate property
+          // Omit audit fields
         });
+
+        // Map EditableInvoiceItem to ManualInvoiceUpdate for updatedItems
+        const mapToUpdateSaveFormat = (item: EditableInvoiceItem): ManualInvoiceUpdate => ({
+          item_id: item.item_id!, // item_id is required
+          service_id: item.service_id || undefined,
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate, // Pass the rate (unit_price in cents)
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
+          discount_percentage: item.discount_percentage,
+          applies_to_item_id: item.applies_to_item_id,
+          is_taxable: item.is_taxable,
+        });
+
+        await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+          invoice_number: currentInvoiceData.invoice_number,
+          newItems: newItemsToSave.map(mapToNewItemSaveFormat),
+          updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
+          removedItemIds
+        });
+
+        setExpandedItems(new Set());
+
+        if (!currentInvoiceData) {
+          console.error('[Submit] Cannot refresh items: currentInvoiceData became undefined after update.');
+          setError('An error occurred while refreshing invoice data.');
+          setIsGenerating(false);
+          return;
+        }
+        // Refresh items from server
+        const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
+        console.log('[Submit] Refreshed items after update:', refreshedItems.length);
+        setCurrentInvoiceData(prevData => prevData ? { ...prevData, invoice_items: refreshedItems } : undefined);
+        console.log('[Submit] Updated currentInvoiceData state after refresh');
+
+        // Update manual items state
+        const manualItemsFromRefresh = refreshedItems.filter(item => item.is_manual);
+        console.log('[Submit] Setting manual items state after refresh:', manualItemsFromRefresh.length);
+        const mappedRefreshedManual = manualItemsFromRefresh.map((item): EditableInvoiceItem => ({
+            item_id: item.item_id,
+            invoice_id: item.invoice_id,
+            service_id: item.service_id || '',
+            quantity: item.quantity,
+            description: item.description,
+            rate: item.unit_price,
+            is_discount: !!item.is_discount,
+            discount_type: item.is_discount ? (item.discount_type || 'fixed' as DiscountType) : undefined,
+            discount_percentage: item.discount_percentage,
+            applies_to_item_id: item.applies_to_item_id,
+            applies_to_service_id: item.applies_to_service_id,
+            company_bundle_id: item.company_bundle_id,
+            bundle_name: item.bundle_name,
+            is_bundle_header: item.is_bundle_header,
+            parent_item_id: item.parent_item_id,
+            is_manual: true,
+            is_taxable: item.is_taxable ?? false,
+            isExisting: true,
+            isRemoved: false,
+        }));
+        setItems(mappedRefreshedManual.length > 0 ? mappedRefreshedManual : [{
+            ...baseDefaultItem,
+            item_id: uuidv4(),
+            invoice_id: currentInvoiceData.invoice_id
+        }]);
+
+      } else {
+        // Generating a NEW manual invoice
+        console.log('[Submit] Generating new manual invoice:', { /* ... */ });
+
+        // Map EditableInvoiceItem to ManualInvoiceItemForAction
+        const itemsToSave = items.filter(item => !item.isRemoved).map((item): ManualInvoiceItemForAction => ({
+          service_id: item.service_id || '', // Ensure string
+          description: item.description,
+          quantity: item.quantity,
+          rate: item.rate, // Pass rate (unit_price in cents)
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
+          applies_to_item_id: item.applies_to_item_id,
+          // applies_to_service_id is not in ManualInvoiceItemForAction
+        }));
+
+        const newInvoiceNumberInput = document.getElementById('new-invoice-number-input') as HTMLInputElement;
+        const newInvoiceNumber = newInvoiceNumberInput?.value || undefined;
 
         await generateManualInvoice({
           companyId: selectedCompany || '',
+          // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
           isPrepayment,
           expirationDate: isPrepayment ? expirationDate : undefined,
-          items: items.filter(item => !item.isRemoved).map(({
-            service_id, description, quantity, rate, is_discount, discount_type, applies_to_item_id, discount_percentage
-          }) => {
-            console.log('Preparing new manual invoice item:', {
-              is_discount,
-              discount_type,
-              discount_percentage,
-              rate
-            });
-            
-            return {
-              service_id,
-              description,
-              quantity,
-              rate,
-              is_discount: is_discount || false,
-              discount_type,
-              applies_to_item_id,
-              discount_percentage,
-              item_id: uuidv4(),
-              // Add missing required properties with default values
-              invoice_id: '', // Will be assigned by the server
-              unit_price: is_discount && discount_type === 'percentage' ? 0 : rate,
-              total_price: is_discount && discount_type === 'percentage' ? 0 : quantity * rate,
-              tax_amount: 0,
-              is_manual: true,
-              is_taxable: false
-            };
-          })
+          items: itemsToSave
         });
-        
-        // Reset state after successful save
-        setItemsChanged(false);
-        onGenerateSuccess();
+
+        onGenerateSuccess(); // Callback to parent
       }
-      
-      // Success - stay on the page
+
     } catch (err: unknown) {
-      if (IS_DEVELOPMENT) {
-        console.error('Error with invoice:', err);
-      }
-      
-      let errorMessage = `Error ${invoice ? 'updating' : 'generating'} invoice`;
-      
-      if (err instanceof Error) {
-        // Extract the specific error message
-        const message = err.message;
-        
-        // Handle specific error types
-        if (message === 'Invoice number must be unique') {
-          errorMessage = 'This invoice number is already in use. Please choose a different number.';
-        } else if (message.includes('No active tax rate found for region')) {
-          errorMessage = `No tax rate is configured for the selected region. Please add a tax rate for this region in the Tax Rates tab.`;
-        } else if (message.includes('Service not found')) {
-          errorMessage = `The selected service could not be found. It may have been deleted or deactivated.`;
-        } else if (message.includes('Cannot modify a paid or cancelled invoice')) {
-          errorMessage = `This invoice cannot be modified because it has already been paid or cancelled.`;
-        } else {
-          // Use the actual error message for other cases
-          errorMessage = message;
-        }
-      }
-      
-      setError(errorMessage);
+       if (IS_DEVELOPMENT) console.error('Error with invoice:', err);
+       let errorMessage = `Error ${currentInvoiceData ? 'updating' : 'generating'} invoice`;
+       if (err instanceof Error) {
+         const message = err.message;
+         if (message === 'Invoice number must be unique') errorMessage = 'This invoice number is already in use.';
+         else if (message.includes('No active tax rate')) errorMessage = `No tax rate configured for the region.`;
+         else if (message.includes('Service not found')) errorMessage = `Selected service not found.`;
+         else if (message.includes('Cannot modify')) errorMessage = `Invoice cannot be modified (paid/cancelled).`;
+         else errorMessage = message;
+       }
+       setError(errorMessage);
     } finally {
       setIsGenerating(false);
     }
@@ -582,56 +498,76 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const serviceOptions: ServiceOption[] = services.map((service): ServiceOption => ({
     value: service.service_id,
     label: service.service_name,
-    rate: service.rate
+    rate: service.rate // Pass rate in cents
   }));
 
-  const calculateTotal = () => {
+  const calculateManualItemsTotal = () => {
     const nonDiscountItems = items.filter(item => !item.isRemoved && !item.is_discount);
     const discountItems = items.filter(item => !item.isRemoved && item.is_discount);
-    
-    // Calculate subtotal from non-discount items
-    const subtotal = nonDiscountItems.reduce((sum, item) => {
-      return sum + (item.quantity * item.rate);
-    }, 0);
-    
-    // Apply discounts to the subtotal
+    const subtotal = nonDiscountItems.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
     let total = subtotal;
     for (const item of discountItems) {
-      if (item.discount_type === 'percentage') {
-        // For percentage discounts, calculate based on applicable amount
+      if (item.discount_type === 'percentage' && item.discount_percentage !== undefined) {
         const applicableAmount = item.applies_to_item_id
-          ? (() => {
-              const targetItem = nonDiscountItems.find(i => i.item_id === item.applies_to_item_id);
-              return targetItem ? targetItem.quantity * targetItem.rate : 0;
-            })()
+          ? (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.quantity || 0) * (nonDiscountItems.find(i => i.item_id === item.applies_to_item_id)?.rate || 0)
           : subtotal;
-        
-        const percentage = item.discount_percentage || Math.abs(item.rate);
-        total -= (applicableAmount * percentage) / 100;
-      } else {
-        // For fixed discounts, use the stored negative amount
-        total += item.quantity * item.rate;
+        total -= (applicableAmount * item.discount_percentage) / 100;
+      } else if (item.discount_type === 'fixed') {
+        total += item.quantity * item.rate; // Rate is already negative and in cents
       }
     }
-    
-    return Math.round(total);
+    return Math.round(total); // Return total in cents
   };
 
   const getButtonText = () => {
     if (isGenerating) return 'Processing...';
-    
-    const changes = [];
-    const newCount = items.filter(i => !i.isExisting && !i.isRemoved).length;
-    const removedCount = items.filter(i => i.isRemoved).length;
-    const updatedCount = items.filter(i => i.isExisting && !i.isRemoved).length;
-    
-    if (newCount > 0) changes.push(`${newCount} new`);
-    if (removedCount > 0) changes.push(`${removedCount} removed`);
-    if (updatedCount > 0) changes.push(`${updatedCount} updated`);
-    
-    const changesText = changes.length > 0 ? ` (${changes.join(', ')})` : '';
-    return `Save Changes${changesText}`;
+    return currentInvoiceData ? 'Save Changes' : 'Generate Invoice';
   };
+
+  const automatedSubtotal = useMemo(() => {
+    console.log('[Memo] Recalculating automatedSubtotal. currentInvoiceData:', currentInvoiceData);
+    if (!currentInvoiceData || !currentInvoiceData.invoice_items) return 0;
+    const calculatedSubtotal = currentInvoiceData.invoice_items
+      .filter(item => !item.is_manual)
+      .reduce((sum, item) => sum + (Number(item.total_price) || 0), 0); // total_price is in cents
+    console.log('[Memo] Calculated automatedSubtotal:', calculatedSubtotal);
+    return calculatedSubtotal;
+  }, [currentInvoiceData?.invoice_items]);
+
+  const manualTotal = calculateManualItemsTotal(); // In cents
+  console.log('[Render] Calculated manualTotal (cents):', manualTotal);
+  const grandTotal = automatedSubtotal + manualTotal; // Both in cents
+  console.log('[Render] Calculated grandTotal (cents):', grandTotal, '=', automatedSubtotal, '+', manualTotal);
+  console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_items?.length);
+
+  // Helper to prepare item prop for LineItem component
+  const mapToLineItemEditable = (item: EditableInvoiceItem): LineItemEditableItem => ({
+      item_id: item.item_id,
+      service_id: item.service_id || '', // Ensure string
+      quantity: item.quantity,
+      description: item.description,
+      rate: item.rate, // Pass rate in cents
+      isExisting: item.isExisting,
+      isRemoved: item.isRemoved,
+      is_discount: item.is_discount,
+      discount_type: item.discount_type,
+      discount_percentage: item.discount_percentage,
+      applies_to_item_id: item.applies_to_item_id,
+  });
+
+  // Adapter for LineItem's onChange prop
+  const handleLineItemChange = (index: number, updatedLineItem: LineItemEditableItem) => {
+      const newItems = [...items];
+      if (index >= 0 && index < newItems.length) {
+          // Merge updated fields back into the full EditableInvoiceItem structure
+          newItems[index] = {
+              ...newItems[index], // Keep existing fields like invoice_id, is_manual etc.
+              ...updatedLineItem, // Overwrite with changes from LineItem
+          };
+          setItems(newItems);
+      }
+  };
+
 
   return (
     <Card>
@@ -644,31 +580,27 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           <>
             <div className="flex items-center gap-4 mb-6">
               <h2 className="text-lg font-semibold">
-                {invoice ? 'Invoice Details' : 'Generate Manual Invoice'}
+                {(currentInvoiceData || invoice) ? 'Invoice Details' : 'Generate Manual Invoice'}
               </h2>
             </div>
 
-            {/* Company Name */}
-            {invoice && (
+            {currentInvoiceData && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Company
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
                 <div className="text-gray-900">
-                  {companies.find(c => c.company_id === invoice.company_id)?.company_name || 'Unknown Company'}
+                  {companies.find(c => c.company_id === currentInvoiceData.company_id)?.company_name || 'Unknown Company'}
                 </div>
               </div>
             )}
 
-            {/* Invoice Number field - moved to top */}
-            {invoice && (
+            {currentInvoiceData && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Invoice Number
-                </label>
+                <label htmlFor="invoice-number-input" className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
                 <input
+                  id="invoice-number-input"
                   type="text"
-                  value={invoice.invoice_number}
+                  value={currentInvoiceData.invoice_number}
+                  // Use index -1 to signify changing the invoice number itself
                   onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
                   className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -682,11 +614,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {!invoice && (
+              {!invoice && !currentInvoiceData && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
                   <CompanyPicker
                     id='company-picker'
                     companies={companies}
@@ -700,37 +630,33 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                 </div>
               )}
 
-              {/* For new invoices, place invoice number field after company selection */}
-              {!invoice && (
+              {!invoice && !currentInvoiceData && (
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Invoice Number
-                  </label>
+                  <label htmlFor="new-invoice-number-input" className="block text-sm font-medium text-gray-700 mb-1">Invoice Number (Optional)</label>
                   <input
+                    id="new-invoice-number-input"
                     type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => handleItemChange(-1, 'invoice_number', e.target.value)}
+                    // Value is not directly controlled here for new invoices; passed to action on submit
+                    // onChange={(e) => { /* No direct state update needed here */ }}
+                    placeholder="Leave blank to auto-generate"
                     className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               )}
 
-              {/* Show automated items for non-manual invoices */}
-              {invoice && !invoice.is_manual && (
+              {currentInvoiceData && !currentInvoiceData.is_manual && currentInvoiceData.invoice_items && (
                 <AutomatedItemsTable
-                  items={invoice.invoice_items
+                  items={currentInvoiceData.invoice_items
                     .filter(item => !item.is_manual)
                     .map(item => ({
-                      service_name: services.find(s => s.service_id === item.service_id)?.service_name || 'Unknown Service',
-                      total: item.quantity * item.unit_price
+                      service_name: services.find(s => s.service_id === item.service_id)?.service_name || item.description || 'Unknown Service',
+                      total: item.total_price // Pass total_price (in cents)
                     }))
                   }
                 />
               )}
 
-
-              {/* Prepayment and Expiration Date fields */}
-              {!invoice && (
+              {!invoice && !currentInvoiceData && (
                 <div className="mb-6 space-y-4">
                   <div className="flex items-center">
                     <input
@@ -740,64 +666,51 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                       onChange={(e) => setIsPrepayment(e.target.checked)}
                       className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                     />
-                    <label htmlFor="is-prepayment" className="ml-2 block text-sm text-gray-700">
-                      This is a prepayment invoice (creates credit)
-                    </label>
+                    <label htmlFor="is-prepayment" className="ml-2 block text-sm text-gray-700">This is a prepayment invoice (creates credit)</label>
                   </div>
-                  
                   {isPrepayment && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Credit Expiration Date
-                      </label>
+                      <label htmlFor="expiration-date-input" className="block text-sm font-medium text-gray-700 mb-1">Credit Expiration Date</label>
                       <div className="flex items-center">
                         <input
+                          id="expiration-date-input"
                           type="date"
                           value={expirationDate}
                           onChange={(e) => setExpirationDate(e.target.value)}
                           className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
                         />
-                        <div className="ml-2 text-sm text-gray-500">
-                          Leave blank for no expiration or to use default expiration period
-                        </div>
+                        <div className="ml-2 text-sm text-gray-500">Leave blank for no expiration or to use default expiration period</div>
                       </div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Manual items section */}
               <div>
                 <h3 className="text-sm font-medium mb-2">
-                  {invoice && !invoice.is_manual ? 'Manual Line Items' : 'Line Items'}
+                  {currentInvoiceData && !currentInvoiceData.is_manual ? 'Manual Line Items' : 'Line Items'}
                 </h3>
                 <div className="space-y-2">
                   {items.map((item, index) => (
                     <LineItem
-                      key={index}
-                      item={item}
+                      key={item.item_id || index}
+                      item={mapToLineItemEditable(item)} // Map to the type LineItem expects
                       index={index}
                       isExpanded={expandedItems.has(index)}
                       serviceOptions={serviceOptions}
                       invoiceItems={items
                         .filter(i => !i.is_discount && !i.isRemoved)
                         .map(i => ({
-                          item_id: i.item_id || uuidv4(),
+                          item_id: i.item_id || '',
                           description: i.description
                         }))}
                       onRemove={() => handleRemoveItem(index)}
-                      onChange={(updatedItem) => {
-                        const newItems = [...items];
-                        newItems[index] = updatedItem;
-                        setItems(newItems);
-                      }}
+                      // Use the adapter function for onChange
+                      onChange={(updatedLineItem) => handleLineItemChange(index, updatedLineItem)}
                       onToggleExpand={() => {
                         const newExpanded = new Set(expandedItems);
-                        if (newExpanded.has(index)) {
-                          newExpanded.delete(index);
-                        } else {
-                          newExpanded.add(index);
-                        }
+                        if (newExpanded.has(index)) newExpanded.delete(index);
+                        else newExpanded.add(index);
                         setExpandedItems(newExpanded);
                       }}
                     />
@@ -807,34 +720,22 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
-                  <Button
-                    id='add-line-item-button'
-                    type="button"
-                    onClick={() => handleAddItem(false)}
-                    variant="secondary"
-                  >
-                    <PlusIcon className="w-4 h-4 mr-2" />
-                    Add Charge
+                  <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary">
+                    <PlusIcon className="w-4 h-4 mr-2" /> Add Charge
                   </Button>
-                  <Button
-                    id='add-discount-button'
-                    type="button"
-                    onClick={() => handleAddItem(true)}
-                    variant="secondary"
-                  >
-                    <MinusCircleIcon className="w-4 h-4 mr-2" />
-                    Add Discount
+                  <Button id='add-discount-button' type="button" onClick={() => handleAddItem(true)} variant="secondary">
+                    <MinusCircleIcon className="w-4 h-4 mr-2" /> Add Discount
                   </Button>
                 </div>
                 <div className="text-lg font-semibold">
-                  Total: ${(calculateTotal() / 100).toFixed(2)}
+                  Total: ${(grandTotal / 100).toFixed(2)}
                 </div>
               </div>
 
               <Button
                 id='save-changes-button'
                 type="submit"
-                disabled={isGenerating || (!invoice && !selectedCompany) || items.some(item => !item.is_discount && !item.service_id)}
+                disabled={isGenerating || (!currentInvoiceData && !selectedCompany)}
                 className="px-4"
               >
                 {getButtonText()}
@@ -849,12 +750,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
 const ManualInvoices: React.FC<ManualInvoicesProps> = (props) => {
   return (
-    <ErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onReset={() => {
-        window.location.reload();
-      }}
-    >
+    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => window.location.reload()}>
       <ManualInvoicesContent {...props} />
     </ErrorBoundary>
   );

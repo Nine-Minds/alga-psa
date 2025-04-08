@@ -3,6 +3,7 @@
 import BillingPlan from 'server/src/lib/models/billingPlan';
 import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex'; // Import Knex type
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
@@ -120,16 +121,18 @@ export async function updateBillingPlan(
 }
 
 export async function deleteBillingPlan(planId: string): Promise<void> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(); // Capture knex instance here
     if (!tenant) {
         throw new Error("tenant context not found");
     }
 
     try {
         // Check if plan is in use by companies before attempting to delete
-        const isInUse = await BillingPlan.isInUse(planId);
+        const isInUse = await BillingPlan.isInUse(planId); // This check might be redundant now, but keep for clarity or remove if desired
         if (isInUse) {
-            throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
+             // This specific error might be superseded by the detailed one below if the FK constraint is hit
+             // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
+            // throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
         }
 
         // Check if plan has associated services before attempting to delete
@@ -142,17 +145,47 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
     } catch (error) {
         console.error('Error deleting billing plan:', error);
         if (error instanceof Error) {
-            if (error.message.includes('in use')) {
-                throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
+            // Check for specific PostgreSQL foreign key violation error code (23503)
+            // This indicates the plan is likely referenced by another table (e.g., company_billing_plans)
+            // We cast to 'any' to access potential driver-specific properties like 'code'
+            if ((error as any).code === '23503') {
+                 // Fetch company IDs associated with the plan
+                 const companyPlanLinks = await knex('company_billing_plans')
+                     .select('company_id')
+                     .where({ plan_id: planId, tenant: tenant });
+
+                 const companyIds = companyPlanLinks.map(link => link.company_id);
+
+                 let companyNames: string[] = [];
+                 if (companyIds.length > 0) {
+                     const companies = await knex('companies')
+                         .select('company_name')
+                         .whereIn('company_id', companyIds)
+                         .andWhere({ tenant: tenant });
+                     companyNames = companies.map(c => c.company_name);
+                 }
+
+                 let errorMessage = "Cannot delete billing plan: It is currently assigned to one or more companies.";
+                 if (companyNames.length > 0) {
+                     // Truncate if too many names
+                     const displayLimit = 5;
+                     const displayNames = companyNames.length > displayLimit
+                         ? companyNames.slice(0, displayLimit).join(', ') + ` and ${companyNames.length - displayLimit} more`
+                         : companyNames.join(', ');
+                     errorMessage = `Cannot delete billing plan: It is assigned to the following companies: ${displayNames}.`;
+                 }
+                 throw new Error(errorMessage);
             }
+
+            // Preserve the user-friendly error from the hasAssociatedServices pre-check
             if (error.message.includes('associated services')) {
-                throw error; // Preserve the user-friendly error message
+                throw error;
             }
-            if (error.message.includes('foreign key constraint')) {
-                throw new Error(`Cannot delete plan that has associated services. Please remove all services from this plan before deleting.`);
-            }
-            throw error; // Preserve other specific error messages
+
+            // Preserve other specific error messages (including the one from the 'isInUse' pre-check)
+            throw error;
         }
+        // Fallback for non-Error objects
         throw new Error(`Failed to delete billing plan in tenant ${tenant}: ${error}`);
     }
 }
