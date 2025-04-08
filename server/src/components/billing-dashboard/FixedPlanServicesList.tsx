@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical } from 'lucide-react'; // Removed Settings icon
+import { Plus, MoreVertical, Loader2 } from 'lucide-react'; // Added Loader2
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,12 +19,14 @@ import {
   getPlanServices,
   addServiceToPlan as addPlanService,
   removeServiceFromPlan as removePlanService,
+  updatePlanService, // Added updatePlanService
   getPlanServicesWithConfigurations
 } from 'server/src/lib/actions/planServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
+import { EditPlanServiceQuantityDialog } from './EditPlanServiceQuantityDialog'; // Added dialog import
 // Removed BillingPlanServiceForm import as 'Configure' is removed
 
 // Define billing method options
@@ -44,6 +46,7 @@ interface SimplePlanService extends IPlanService {
   service_category?: string; // This will now hold the name
   billing_method?: 'fixed' | 'per_unit' | null; // Allow null to match IService
   default_rate?: number;
+  quantity?: number; // Added quantity field
 }
 
 // Define the structure returned by getPlanServicesWithConfigurations
@@ -59,6 +62,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
   const [selectedServicesToAdd, setSelectedServicesToAdd] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<SimplePlanService | null>(null);
+  const [quantityDialogOpen, setQuantityDialogOpen] = useState(false);
   // Removed editingService state
 
   const fetchData = useCallback(async () => {
@@ -85,7 +90,8 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           service_name: configInfo.service.service_name || 'Unknown Service',
           service_category: configInfo.service.service_type_name || 'N/A', // Now using service_type_name from IService
           billing_method: configInfo.service.billing_method,
-          default_rate: configInfo.service.default_rate
+          default_rate: configInfo.service.default_rate,
+          quantity: configInfo.configuration.quantity // Added quantity from configuration
         };
       });
 
@@ -154,6 +160,23 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
   // Removed handleEditService and handleServiceUpdated
 
+  // Add row click handler
+  const handleRowClick = (record: SimplePlanService) => {
+    setSelectedService(record);
+    setQuantityDialogOpen(true);
+  };
+
+  // Add handler for saving quantity
+  const handleSaveQuantity = async (planId: string, serviceId: string, newQuantity: number) => {
+    try {
+      await updatePlanService(planId, serviceId, { quantity: newQuantity });
+      fetchData(); // Refresh the data
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      throw error; // Let the dialog component handle the error
+    }
+  };
+
   const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
     {
       title: 'Service Name',
@@ -168,7 +191,12 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       dataIndex: 'billing_method',
       render: (value) => BILLING_METHOD_OPTIONS.find(opt => opt.value === value)?.label || value || 'N/A',
     },
-    // Removed Quantity, UoM, Custom Rate, Config Type columns
+    {
+      title: 'Quantity',
+      dataIndex: 'quantity',
+      render: (value) => value ?? 1, // Display quantity, default to 1 if null/undefined
+    },
+    // Removed UoM, Custom Rate, Config Type columns
     {
       title: 'Default Rate', // Show default rate for reference
       dataIndex: 'default_rate',
@@ -193,9 +221,22 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           <DropdownMenuContent align="end">
             {/* Removed Configure item */}
             <DropdownMenuItem
+              id={`edit-quantity-fixed-plan-service-${value}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedService(record);
+                setQuantityDialogOpen(true);
+              }}
+            >
+              Edit Quantity
+            </DropdownMenuItem>
+            <DropdownMenuItem
               id={`remove-fixed-plan-service-${value}`}
               className="text-red-600 focus:text-red-600"
-              onClick={() => handleRemoveService(value)}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent row click
+                handleRemoveService(value);
+              }}
             >
               Remove
             </DropdownMenuItem>
@@ -233,6 +274,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
               data={planServices}
               columns={planServiceColumns}
               pagination={false} // Assuming pagination isn't needed for typical plan service lists
+              onRowClick={handleRowClick} // Add row click handler
             />
              {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
           </div>
@@ -292,6 +334,19 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         </>
       )}
       {/* Removed BillingPlanServiceForm modal */}
+
+      {/* Add the dialog component */}
+      {selectedService && (
+        <EditPlanServiceQuantityDialog
+          isOpen={quantityDialogOpen}
+          onOpenChange={setQuantityDialogOpen}
+          planId={planId}
+          serviceId={selectedService.service_id}
+          serviceName={selectedService.service_name || 'Unknown Service'}
+          currentQuantity={selectedService.quantity || 1}
+          onSave={handleSaveQuantity}
+        />
+      )}
     </div>
   );
 };
