@@ -84,6 +84,7 @@ const createColumns = (router: any): ColumnDefinition<ExtendedReconciliationRepo
   {
     title: 'Actions',
     dataIndex: 'report_id',
+    width: '10%',
     render: (value: string, record) => {
       const isResolved = record.status === 'resolved';
       

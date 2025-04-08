@@ -96,7 +96,7 @@ export default function AdminApiKeysSetup() {
     {
       title: 'Actions',
       dataIndex: 'actions',
-      width: '15%',
+      width: '10%',
       render: (_: any, record: AdminApiKey) => (
         record.active ? (
           <Button

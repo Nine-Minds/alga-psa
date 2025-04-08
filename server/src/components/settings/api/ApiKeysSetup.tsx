@@ -110,7 +110,7 @@ export default function ApiKeysSetup() {
     {
       title: 'Actions',
       dataIndex: 'actions',
-      width: '20%',
+      width: '10%',
       render: (_: any, record: ApiKey) => (
         record.active ? (
           <Button

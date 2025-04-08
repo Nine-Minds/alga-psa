@@ -96,6 +96,7 @@ const ServiceCatalog: React.FC<ServiceCatalogProps> = ({
         {
             title: 'Actions',
             dataIndex: 'service_id',
+            width: '10%',
             render: (value, record) => (
                 <div className="flex items-center space-x-2">
                     {editingId === record.service_id ? (

@@ -258,8 +258,9 @@ const ServiceCatalogManager: React.FC = () => {
 
     // Always add actions column at the end
     baseColumns.push({
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'service_id',
+      width: '5%',
       render: (_, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

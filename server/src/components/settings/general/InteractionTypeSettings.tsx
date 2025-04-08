@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, X, Edit2, Lock } from "lucide-react";
+import { Plus, X, Edit2, Lock, MoreVertical } from "lucide-react";
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { 
   getAllInteractionTypes, 
@@ -17,7 +17,12 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 const InteractionTypesSettings: React.FC = () => {
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [systemTypes, setSystemTypes] = useState<ISystemInteractionType[]>([]);
@@ -182,68 +187,75 @@ const InteractionTypesSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'type_id',
+      width: '5%',
       render: (_: any, record: IInteractionType) => (
-        <div className="flex items-center justify-end space-x-2">
-          {editingTypeId === record.type_id ? (
-            <>
-              <Button 
-                id='save-button'
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleUpdateType(record.type_id);
-                }}
-              >
-                Save
-              </Button>
-              <Button
-                id='cancel-button'
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cancelEditing();
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </>
-          ) : (
-            <>
-              {!record.system_type_id && (
-                <Button
-                  id='edit-button'
-                  variant="ghost"
-                  size="sm"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              id={`interaction-type-actions-menu-${record.type_id}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {editingTypeId === record.type_id ? (
+              <>
+                <DropdownMenuItem
+                  id={`save-interaction-type-${record.type_id}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    startEditing(record.type_id, record.type_name);
+                    handleUpdateType(record.type_id);
                   }}
                 >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              )}
-              <Button
-                id='delete-button'
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteDialog({
-                    isOpen: true,
-                    typeId: record.type_id,
-                    typeName: record.type_name
-                  });
-                }}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-        </div>
+                  Save
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  id={`cancel-edit-interaction-type-${record.type_id}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    cancelEditing();
+                  }}
+                >
+                  Cancel
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <>
+                {!record.system_type_id && (
+                  <DropdownMenuItem
+                    id={`edit-interaction-type-${record.type_id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startEditing(record.type_id, record.type_name);
+                    }}
+                  >
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  id={`delete-interaction-type-${record.type_id}`}
+                  className="text-red-600 focus:text-red-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteDialog({
+                      isOpen: true,
+                      typeId: record.type_id,
+                      typeName: record.type_name
+                    });
+                  }}
+                >
+                  Delete
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     },
   ];

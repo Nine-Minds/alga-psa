@@ -92,6 +92,7 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
   {
     title: 'Actions',
     dataIndex: 'credit_id',
+    width: '10%',
     render: (value: string, record) => {
       const isExpired = record.is_expired;
       

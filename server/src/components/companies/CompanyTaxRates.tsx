@@ -60,6 +60,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
         {
             title: 'Actions',
             dataIndex: 'tax_rate_id',
+            width: '10%',
             render: (_, record) => (
                 <Button 
                     id={`remove-tax-rate-${record.tax_rate_id}`}

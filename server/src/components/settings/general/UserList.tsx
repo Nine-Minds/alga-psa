@@ -42,6 +42,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
     {
       title: 'Actions',
       dataIndex: 'user_id',
+      width: '10%',
       render: (_: string, record: IUser) => (
         <div className="flex items-center space-x-2">
           <button

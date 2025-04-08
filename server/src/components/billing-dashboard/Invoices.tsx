@@ -236,8 +236,9 @@ const Invoices: React.FC = () => {
       render: (value) => toPlainDate(value).toLocaleString(),
     },
     {
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'invoice_number',
+      width: '5%',
       render: (_, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

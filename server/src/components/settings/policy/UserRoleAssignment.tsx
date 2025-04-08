@@ -72,6 +72,7 @@ export default function UserRoleAssignment() {
     {
       title: 'Actions',
       dataIndex: 'user_id',
+      width: '10%',
       render: (userId) => (
         <Flex gap="2">
           {userRoles[userId]?.map((role): JSX.Element => (

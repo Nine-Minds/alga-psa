@@ -15,7 +15,7 @@ import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreHorizontal, XCircle, Clock } from 'lucide-react';
+import { MoreVertical, XCircle, Clock } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -188,6 +188,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Actions',
       dataIndex: 'actions',
+      width: '5%',
       render: (value: string, record: ITicketListItem) => (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
@@ -197,7 +198,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               className="h-8 w-8 p-0"
             >
               <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
+              <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenu.Trigger>
 

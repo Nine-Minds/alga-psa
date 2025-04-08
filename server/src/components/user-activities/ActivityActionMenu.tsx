@@ -2,7 +2,7 @@ import React from 'react';
 import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { Button } from "server/src/components/ui/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "server/src/components/ui/DropdownMenu";
-import { MoreHorizontal } from 'lucide-react';
+import { MoreVertical } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActivityDrawer } from "server/src/components/user-activities/ActivityDrawerProvider";
 import {
@@ -138,7 +138,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           className="h-8 w-8 p-0"
         >
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>

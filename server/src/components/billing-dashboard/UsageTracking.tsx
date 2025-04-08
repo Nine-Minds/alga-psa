@@ -265,8 +265,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
       },
     },
     {
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'usage_id',
+      width: '5%',
       render: (_, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

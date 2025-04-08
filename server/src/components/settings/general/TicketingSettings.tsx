@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search } from "lucide-react";
+import { Plus, X, Edit2, ChevronRight, ChevronDown, Network, Search, MoreVertical } from "lucide-react"; 
 import { getAllChannels, createChannel, deleteChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities, createPriority, deletePriority, updatePriority } from 'server/src/lib/actions/priorityActions';
@@ -19,6 +19,12 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from 'server/src/components/ui/DropdownMenu';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -140,64 +146,71 @@ function SettingSection<T extends object>({
   });
 
   const actionColumn: ColumnDefinition<T> = {
-    title: 'Action',
+    title: 'Actions',
     dataIndex: 'action',
-    width: '15%',
+    width: '5%', // Adjusted width
     render: (_, item) => (
-      <div className="flex items-center justify-end space-x-2">
-        {editingItem === item ? (
-          <>
-            <Button 
-              id='save-button'
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                saveEdit();
-              }}
-            >
-              Save
-            </Button>
-            <Button
-              id='cancel-button'
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                cancelEditing();
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button
-              id='edit-button'
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                startEditing(item);
-              }}
-            >
-              <Edit2 className="h-4 w-4" />
-            </Button>
-            <Button
-              id='delete-button'
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteItem(getItemKey(item));
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            {renderExtraActions && renderExtraActions(item)}
-          </>
-        )}
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0"
+            id={`actions-menu-${getItemKey(item)}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="sr-only">Open menu</span>
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {editingItem === item ? (
+            <>
+              <DropdownMenuItem
+                id={`save-item-${getItemKey(item)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  saveEdit();
+                }}
+              >
+                Save
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`cancel-edit-${getItemKey(item)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cancelEditing();
+                }}
+              >
+                Cancel
+              </DropdownMenuItem>
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem
+                id={`edit-item-${getItemKey(item)}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startEditing(item);
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`delete-item-${getItemKey(item)}`}
+                className="text-red-600 focus:text-red-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteItem(getItemKey(item));
+                }}
+              >
+                Delete
+              </DropdownMenuItem>
+              {/* Integrate renderExtraActions if needed, potentially as more DropdownMenuItems */}
+              {/* {renderExtraActions && renderExtraActions(item)} */}
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     )
   };
 
@@ -1001,75 +1014,78 @@ const TicketingSettings = (): JSX.Element => {
             <DataTable
               data={visibleCategories}
               columns={[...categoryColumns, {
-                title: 'Action',
+                title: 'Actions',
                 dataIndex: 'action',
-                width: '15%',
+                width: '5%',
                 render: (_, item) => (
-                  <div className="flex items-center justify-end space-x-2">
-                    {editingCategory === item.category_id ? (
-                      <>
-                        <Button
-                          id='save-button'
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveCategory(item.category_id);
-                          }}
-                        >
-                          Save
-                        </Button>
-                        <Button
-                          id='cancel-button'
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingCategory('');
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          id='edit-button'
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditCategory(item);
-                          }}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          id='add-subcategory-button'
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedParentCategory(item.category_id);
-                          }}
-                          title="Add Subcategory"
-                        >
-                          <Network className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          id='delete-button'
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteCategory(item.category_id);
-                          }}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        id={`category-actions-menu-${item.category_id}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="sr-only">Open menu</span>
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {editingCategory === item.category_id ? (
+                        <>
+                          <DropdownMenuItem
+                            id={`save-category-${item.category_id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveCategory(item.category_id);
+                            }}
+                          >
+                            Save
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            id={`cancel-edit-category-${item.category_id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingCategory('');
+                            }}
+                          >
+                            Cancel
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
+                          <DropdownMenuItem
+                            id={`edit-category-${item.category_id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditCategory(item);
+                            }}
+                          >
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            id={`add-subcategory-${item.category_id}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedParentCategory(item.category_id);
+                            }}
+                          >
+                            Add Subcategory
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            id={`delete-category-${item.category_id}`}
+                            className="text-red-600 focus:text-red-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteCategory(item.category_id);
+                            }}
+                          >
+                            Delete
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ),
               }]}
               pagination={true}

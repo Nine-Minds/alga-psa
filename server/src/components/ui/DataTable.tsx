@@ -68,7 +68,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     
     const containerWidth = tableContainerRef.current.clientWidth;
     const minColumnWidth = 150; // Minimum width for a column in pixels
+    
+    // Check if the last column is 'Actions' or 'Action' with interactive elements
+    const lastColumnIndex = columns.length - 1;
+    const lastColumn = columns[lastColumnIndex];
+    const isActionsColumn = lastColumn && 
+      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+      lastColumn.render !== undefined;
+    
     const prioritizedColumns = [...columns].sort((a, b) => {
+      // Always prioritize Actions column if it's the last column
+      if (isActionsColumn) {
+        if (a === lastColumn) return -1;
+        if (b === lastColumn) return 1;
+      }
+      
       // Keep ID column and any columns with explicit width as highest priority
       const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
       const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
@@ -102,7 +116,21 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       
       const containerWidth = tableContainerRef.current.clientWidth;
       const minColumnWidth = 150; // Minimum width for a column in pixels
+      
+      // Check if the last column is 'Actions' or 'Action' with interactive elements
+      const lastColumnIndex = columns.length - 1;
+      const lastColumn = columns[lastColumnIndex];
+      const isActionsColumn = lastColumn && 
+        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+        lastColumn.render !== undefined;
+      
       const prioritizedColumns = [...columns].sort((a, b) => {
+        // Always prioritize Actions column if it's the last column
+        if (isActionsColumn) {
+          if (a === lastColumn) return -1;
+          if (b === lastColumn) return 1;
+        }
+        
         // Keep ID column and any columns with explicit width as highest priority
         const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
         const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';

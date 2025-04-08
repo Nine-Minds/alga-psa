@@ -193,7 +193,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
           {
             title: 'Actions',
             dataIndex: 'actions',
-            width: '20%',
+            width: '10%',
             render: (_, record) => (
               <div className="flex gap-2">
                 <Button

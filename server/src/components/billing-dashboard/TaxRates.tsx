@@ -122,8 +122,9 @@ const TaxRates: React.FC = () => {
       render: (value) => value ? toPlainDate(value).toLocaleString() : 'N/A'
     },
     {
-      title: 'Action',
+      title: 'Actions',
       dataIndex: 'tax_rate_id',
+      width: '5%',
       render: (_, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

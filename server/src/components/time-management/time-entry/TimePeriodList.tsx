@@ -57,9 +57,9 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             }
           },
           {
-            title: 'Action',
+            title: 'Actions',
             dataIndex: 'action',
-            width: '25%',
+            width: '10%',
             render: (_, record) => (
               <Button
                 id={`view-period-${record.period_id}`}

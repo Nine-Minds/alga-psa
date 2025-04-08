@@ -104,6 +104,7 @@ const InvoiceTemplates: React.FC = () => {
     {
       title: 'Actions',
       dataIndex: 'template_id',
+      width: '10%',
       render: (_, record) => (
         <div className="flex gap-2">
           <Button
