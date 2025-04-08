@@ -548,19 +548,18 @@ async function calculatePreviewTax(
   const taxService = new TaxService();
   let totalTax = 0;
 
-  // Calculate tax only on positive taxable amounts before discounts
+  // Sum the pre-calculated tax_amount from each charge
+  // This respects the detailed allocation done by BillingEngine for fixed fees
+  console.log('[calculatePreviewTax] Summing pre-calculated tax_amount from charges...');
   for (const charge of charges) {
-    if (charge.is_taxable && charge.total > 0) {
-      const taxResult = await taxService.calculateTax(
-        companyId,
-        charge.total,
-        cycleEnd,
-        charge.tax_region || defaultTaxRegion,
-        true
-      );
-      totalTax += taxResult.taxAmount;
+    const chargeTaxAmount = Number(charge.tax_amount) || 0; // Ensure it's a number
+    if (chargeTaxAmount > 0) {
+      console.log(`[calculatePreviewTax] Adding charge tax: ${chargeTaxAmount} for charge '${charge.serviceName}'`);
     }
+    totalTax += chargeTaxAmount;
   }
+  console.log(`[calculatePreviewTax] Final totalTax: ${totalTax}`);
+  // Removed the incorrect recalculation logic that was here previously.
 
   return totalTax;
 }
@@ -871,6 +870,7 @@ async function calculateChargeDetails(
 ): Promise<{ netAmount: number; taxCalculationResult: ITaxCalculationResult }> {
   let netAmount: number;
 
+  // Determine net amount based on charge type
   if ('overageHours' in charge && 'overageRate' in charge) {
     const bucketCharge = charge as IBucketCharge;
     netAmount = bucketCharge.overageHours > 0 ? Math.ceil(bucketCharge.total) : 0;
@@ -878,15 +878,43 @@ async function calculateChargeDetails(
     netAmount = Math.ceil(charge.total);
   }
 
-  // Calculate tax only for taxable items with positive amounts
-  const taxCalculationResult = charge.is_taxable !== false && netAmount > 0
-    ? await taxService.calculateTax(
+  let taxCalculationResult: ITaxCalculationResult;
+  // ADD MORE LOGGING
+  console.log(`[calculateChargeDetails] Processing charge: ${charge.serviceName}, Type: ${charge.type}, ServiceID: ${charge.serviceId}, IsTaxable: ${charge.is_taxable}, PreCalcTax: ${charge.tax_amount}, NetAmount: ${netAmount}`);
+
+  // 1. Prioritize positive pre-calculated tax_amount (from BillingEngine fixed fee allocation)
+  if (charge.tax_amount !== undefined && charge.tax_amount > 0 && charge.is_taxable !== false) {
+    console.log(`[calculateChargeDetails] Branch 1: Using pre-calculated positive tax.`); // ADD LOG
+    const effectiveRate = netAmount > 0 ? charge.tax_amount / netAmount : 0;
+    taxCalculationResult = { taxAmount: Math.ceil(charge.tax_amount), taxRate: effectiveRate };
+
+  // 2. Handle case where BillingEngine calculated $0 tax for a consolidated fixed fee due to missing region data
+  } else if (
+    charge.type === 'fixed' &&
+    charge.serviceId === undefined && // Indicates consolidated fixed charge
+    charge.is_taxable === true &&      // Marked taxable overall
+    charge.tax_amount === 0           // But BillingEngine calculated $0 tax
+  ) {
+    console.log(`[calculateChargeDetails] Branch 2: Using $0 tax for consolidated fixed charge.`); // ADD LOG
+    taxCalculationResult = { taxAmount: 0, taxRate: 0 };
+
+  // 3. Standard tax calculation for other taxable items
+  } else if (charge.is_taxable !== false && netAmount > 0) {
+    console.log(`[calculateChargeDetails] Branch 3: Calculating tax via TaxService.`); // ADD LOG
+    taxCalculationResult = await taxService.calculateTax(
       companyId,
       netAmount,
       endDate,
       charge.tax_region || defaultTaxRegion
-    )
-    : { taxAmount: 0, taxRate: 0 };
+    );
+
+  // 4. Non-taxable or zero amount
+  } else {
+    console.log(`[calculateChargeDetails] Branch 4: Non-taxable or zero amount.`); // ADD LOG
+    taxCalculationResult = { taxAmount: 0, taxRate: 0 };
+  }
+  // ADD MORE LOGGING
+  console.log(`[calculateChargeDetails] Result for ${charge.serviceName}:`, taxCalculationResult);
 
   return { netAmount, taxCalculationResult };
 }
@@ -1869,90 +1897,19 @@ export async function createInvoiceFromBillingResult(
       })
       .orderBy('net_amount', 'desc');
 
-    // Get positive taxable items
-    const positiveTaxableItems = items.filter(item =>
-      item.is_taxable && parseInt(item.net_amount) > 0
-    );
-
-    // Calculate tax for each item based on its region, ignoring discounts
-    if (positiveTaxableItems.length > 0) {
-      // Group items by tax region
-      const regionTotals = new Map<string, number>();
-      for (const item of positiveTaxableItems) {
-        const region = item.tax_region || company.tax_region;
-        const amount = parseInt(item.net_amount);
-        regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
+    // Sum the tax_amount directly from each invoice item fetched earlier (lines 1890-1895)
+    // This uses the tax calculated by calculateChargeDetails (which respects BillingEngine's pre-calculation)
+    console.log('[invoiceActions] Summing tax_amount from individual invoice items...');
+    for (const item of items) {
+      // Ensure tax_amount is treated as a number (it might be stored as string/decimal)
+      const itemTaxAmount = Number(item.tax_amount) || 0;
+      if (itemTaxAmount > 0) {
+         console.log(`[invoiceActions] Adding item tax: ${itemTaxAmount} for item '${item.description}'`);
       }
-
-      // Calculate tax for each region on full amounts (no discount factor)
-      for (const [region, amount] of regionTotals) {
-        const rawTaxResult = await taxService.calculateTax(
-          companyId,
-          amount,
-          cycleEnd,
-          region,
-          true
-        );
-        totalTax += rawTaxResult.taxAmount;
-      }
-
-      // Distribute tax proportionally among items within each region
-
-      // Group items by region
-      const itemsByRegion = new Map<string, typeof positiveTaxableItems>();
-      for (const item of positiveTaxableItems) {
-        const region = item.tax_region || company.tax_region;
-        if (!itemsByRegion.has(region)) {
-          itemsByRegion.set(region, []);
-        }
-        itemsByRegion.get(region)!.push(item);
-      }
-
-      // For each region, distribute the calculated tax among items
-      for (const [region, items] of itemsByRegion) {
-        // Calculate regional total from positive taxable items
-        const regionalTotal = items.reduce((sum, item) => sum + parseInt(item.net_amount), 0);
-
-        // Get tax rate and amount for this region
-        const regionalTaxResult = await taxService.calculateTax(
-          companyId,
-          regionalTotal,  // Use full amount before discounts
-          cycleEnd,
-          region,
-          true
-        );
-
-        // Distribute full tax amount proportionally
-        let remainingRegionalTax = regionalTaxResult.taxAmount;  // Use full tax amount
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          const isLastItem = i === items.length - 1;
-          const itemTax = isLastItem
-            ? remainingRegionalTax
-            : Math.floor((parseInt(item.net_amount) / regionalTotal) * regionalTaxResult.taxAmount);
-
-          remainingRegionalTax -= itemTax;
-
-          await trx('invoice_items')
-            .where({ item_id: item.item_id })
-            .update({
-              tax_amount: itemTax,
-              tax_rate: regionalTaxResult.taxRate,
-              total_price: parseInt(item.net_amount) + itemTax
-            });
-        }
-      }
-
-      // Ensure all other items have zero tax
-      await trx('invoice_items')
-        .where({ invoice_id: newInvoice!.invoice_id, tenant })
-        .whereNotIn('item_id', positiveTaxableItems.map(item => item.item_id))
-        .update({
-          tax_amount: 0,
-          tax_rate: 0,
-          total_price: trx.raw('net_amount')
-        });
+      totalTax += itemTaxAmount;
     }
+    console.log(`[invoiceActions] Final totalTax calculated by summing items: ${totalTax}`);
+    // The incorrect recalculation logic that was here previously has been removed.
 
     // Calculate final amounts
     const totalAmount = subtotal + totalTax;

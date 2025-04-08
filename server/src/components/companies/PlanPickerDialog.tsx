@@ -11,6 +11,13 @@ interface PlanPickerDialogProps {
     onSelect: (plan: IBillingPlan, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
     availablePlans: IBillingPlan[];
     serviceCategories: IServiceCategory[];
+    initialValues?: {
+        planId?: string;
+        categoryId?: string;
+        startDate?: string;
+        endDate?: string | null;
+        ongoing?: boolean;
+    };
 }
 
 const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
@@ -18,15 +25,24 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     onClose,
     onSelect,
     availablePlans,
-    serviceCategories
+    serviceCategories,
+    initialValues
 }) => {
-    const [selectedPlan, setSelectedPlan] = useState<IBillingPlan | null>(null);
-    const [selectedCategory, setSelectedCategory] = useState<string>('');
-    const [startDate, setStartDate] = useState<string>(
-        new Date().toISOString().split('T')[0]
+    const [selectedPlan, setSelectedPlan] = useState<IBillingPlan | null>(
+        initialValues?.planId ? availablePlans.find(p => p.plan_id === initialValues.planId) || null : null
     );
-    const [endDate, setEndDate] = useState<string | null>(null);
-    const [isOngoing, setIsOngoing] = useState(true);
+    const [selectedCategory, setSelectedCategory] = useState<string>(
+        initialValues?.categoryId || ''
+    );
+    const [startDate, setStartDate] = useState<string>(
+        initialValues?.startDate || new Date().toISOString().split('T')[0]
+    );
+    const [endDate, setEndDate] = useState<string | null>(
+        initialValues?.endDate || null
+    );
+    const [isOngoing, setIsOngoing] = useState(
+        initialValues?.ongoing !== undefined ? initialValues.ongoing : true
+    );
 
     const handleSubmit = () => {
         if (selectedPlan) {
@@ -107,7 +123,13 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                                     checked={isOngoing}
                                     onChange={(e) => {
                                         setIsOngoing(e.target.checked);
-                                        setEndDate(e.target.checked ? null : new Date().toISOString().split('T')[0]);
+                                        // If switching to ongoing, set endDate to null
+                                        // If switching from ongoing, set a default end date only if there isn't one already
+                                        if (e.target.checked) {
+                                            setEndDate(null);
+                                        } else if (!endDate) {
+                                            setEndDate(new Date().toISOString().split('T')[0]);
+                                        }
                                     }}
                                 />
                                 <label htmlFor="ongoing">Ongoing</label>
@@ -115,7 +137,14 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                             <Input
                                 type="date"
                                 value={endDate || ''}
-                                onChange={(e) => setEndDate(e.target.value || null)}
+                                onChange={(e) => {
+                                    // Make sure we're setting null if the value is empty
+                                    setEndDate(e.target.value || null);
+                                    // If a date is selected, make sure ongoing is false
+                                    if (e.target.value) {
+                                        setIsOngoing(false);
+                                    }
+                                }}
                                 disabled={isOngoing}
                             />
                         </div>
@@ -136,7 +165,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                         onClick={handleSubmit}
                         disabled={!selectedPlan}
                     >
-                        Add Plan
+                        {initialValues ? 'Update Plan' : 'Add Plan'}
                     </Button>
                 </div>
             </DialogFooter>

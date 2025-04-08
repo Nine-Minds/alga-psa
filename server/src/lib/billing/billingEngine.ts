@@ -239,7 +239,7 @@ export class BillingEngine {
         console.log(`Total fixed charges before proration: $${(totalBeforeProration/100).toFixed(2)} (${totalBeforeProration} cents)`);
 
         // Only prorate fixed price charges
-        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, cycle);
+        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, companyBillingPlan.end_date, cycle);
 
         const totalAfterProration = proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
         console.log(`Total fixed charges after proration: $${(totalAfterProration/100).toFixed(2)} (${totalAfterProration} cents)`);
@@ -622,6 +622,27 @@ export class BillingEngine {
       throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
+    // --- Fetch Company Tax Region ---
+    let fetchedCompanyTaxRegion: string | undefined | null = null;
+    try {
+      const companyTaxSetting = await this.knex('company_tax_settings')
+        .where({ company_id: companyId, tenant: this.tenant })
+        .first();
+
+      if (companyTaxSetting && companyTaxSetting.tax_rate_id) {
+        const taxRate = await this.knex('tax_rates')
+          .where({ tax_rate_id: companyTaxSetting.tax_rate_id, tenant: this.tenant })
+          .first();
+        fetchedCompanyTaxRegion = taxRate?.region;
+        console.log(`[BillingEngine] Fetched company tax region '${fetchedCompanyTaxRegion}' via settings for company ${companyId}`);
+      } else {
+        console.log(`[BillingEngine] No company tax settings or tax_rate_id found for company ${companyId}`);
+      }
+    } catch (dbError) {
+      console.error(`[BillingEngine] Error fetching company tax region for ${companyId}:`, dbError);
+    }
+    // --- End Fetch Company Tax Region ---
+
     const tenant = this.tenant; // Capture tenant value for joins
 // Get the billing plan details to determine if this is a fixed fee plan
 const billingPlanDetails = await this.knex('billing_plans')
@@ -715,15 +736,20 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
 
         if (!company.is_tax_exempt && isTaxable) {
           // Get the tax rate for this region
-          const taxRegion = service.tax_region || company.tax_region || '';
-          if (taxRegion) {
-            taxRate = await getCompanyTaxRate(taxRegion, billingPeriod.endDate);
+          // Use service tax_region, fallback to the explicitly fetched company tax region
+          const effectiveTaxRegion = service.tax_region || fetchedCompanyTaxRegion;
+          if (effectiveTaxRegion) {
+            console.log(`[BillingEngine] Using tax region '${effectiveTaxRegion}' for service ${service.service_id} (Service: ${service.tax_region}, Company: ${fetchedCompanyTaxRegion})`);
+            taxRate = await getCompanyTaxRate(effectiveTaxRegion, billingPeriod.endDate);
           } else {
-            console.warn(`No tax region found for service ${service.service_id}, using zero tax rate`);
+            // Only warn and use zero if BOTH service and company (via settings) lack a tax region
+            console.warn(`[BillingEngine] No tax region found for service ${service.service_id} or company ${companyId} (via settings), using zero tax rate`);
             taxRate = 0;
           }
           // allocatedAmount is already in cents (after multiplication by 100)
-          taxAmount = allocatedAmount * taxRate;
+          // Divide taxRate by 100 as getCompanyTaxRate likely returns percentage, then round
+          const decimalTaxRate = taxRate / 100;
+          taxAmount = Math.round(allocatedAmount * decimalTaxRate);
 
           // Add to the total taxable amount
           totalTaxableAmount += allocatedAmount;
@@ -1369,10 +1395,11 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
   }
 
 
-  private applyProrationToPlan(charges: IBillingCharge[], billingPeriod: IBillingPeriod, planStartDate: ISO8601String, billingCycle: string): IBillingCharge[] {
+  private applyProrationToPlan(charges: IBillingCharge[], billingPeriod: IBillingPeriod, planStartDate: ISO8601String, planEndDate: ISO8601String | null, billingCycle: string): IBillingCharge[] {
     console.log('Billing period start:', billingPeriod.startDate);
     console.log('Billing period end:', billingPeriod.endDate);
     console.log('Plan start date:', planStartDate);
+    console.log('Plan end date:', planEndDate);
 
     // Use our date utilities to handle the conversion
     const planStart = toPlainDate(planStartDate);
@@ -1408,11 +1435,24 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
       }
     }
 
-    // Calculate the actual number of days in the billing period
+    // Determine the effective end date for proration: the earlier of the plan end date and the period end date
     const periodEnd = toPlainDate(billingPeriod.endDate);
-    const actualDays = effectiveStartDate.until(periodEnd, { largestUnit: 'days' }).days;
-    console.log(`Actual days in plan period: ${actualDays}`);
+    const planEnd = planEndDate ? toPlainDate(planEndDate) : null;
+    const effectiveEndDate = planEnd && Temporal.PlainDate.compare(planEnd, periodEnd) < 0 ? planEnd : periodEnd;
+    console.log('Effective end:', toISODate(effectiveEndDate));
+
+    // Calculate the actual number of billable days INCLUSIVE of the end date
+    // Add 1 because .until is exclusive of the end date by default
+    const actualDays = effectiveStartDate.until(effectiveEndDate, { largestUnit: 'days' }).days + 1;
+    console.log(`Actual billable days (inclusive): ${actualDays}`);
     console.log(`Cycle length: ${cycleLength}`);
+
+    // Ensure cycleLength is not zero to avoid division by zero
+    if (cycleLength === 0) {
+      console.error("Error: Cycle length is zero. Cannot calculate proration factor.");
+      // Return charges without proration or handle as appropriate
+      return charges;
+    }
 
     const prorationFactor = actualDays / cycleLength;
     console.log(`Proration factor: ${prorationFactor.toFixed(4)} (${actualDays} / ${cycleLength})`);

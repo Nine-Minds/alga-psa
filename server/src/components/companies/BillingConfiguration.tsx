@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import PlanPickerDialog from './PlanPickerDialog';
 import { ICompany } from '../../interfaces/company.interfaces';
 import { IContact } from '../../interfaces/contact.interfaces';
 import { AlertDialog } from '@radix-ui/themes';
@@ -119,7 +120,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             const billingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = billingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setCompanyBillingPlans(billingPlansWithStringDates);
 
@@ -219,7 +220,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
         } catch (error) {
@@ -234,7 +235,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
         } catch (error) {
@@ -249,7 +250,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
         } catch (error: any) {
@@ -270,7 +271,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,
                 start_date: formatStartDate(plan.start_date),
-                end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                end_date: plan.end_date ? formatStartDate(plan.end_date) : null
             }));
             setCompanyBillingPlans(updatedBillingPlansWithStringDates);
         } catch (error) {
@@ -284,21 +285,28 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         setEditingBillingPlan({ ...billing });
     };
 
-    const handleSaveEditBillingPlan = async () => {
-        if (editingBillingPlan) {
+    const handleSaveEditBillingPlan = async (planToSave: CompanyBillingPlanWithStringDates) => {
+        if (planToSave) {
             try {
+                // Log the data being saved
+                console.log('Saving billing plan with end_date:', planToSave.end_date);
+
                 const updatedBilling: ICompanyBillingPlan = {
-                    ...editingBillingPlan,
-                    start_date: editingBillingPlan.start_date || '',
-                    end_date: editingBillingPlan.end_date || null
+                    ...planToSave,
+                    start_date: planToSave.start_date || '',
+                    // Explicitly set end_date to null if it's falsy to ensure ongoing plans are properly saved
+                    end_date: planToSave.end_date || null
                 };
+
+                // Log the data being sent to the server
+                console.log('Sending to server:', updatedBilling);
                 await editCompanyBillingPlan(updatedBilling.company_billing_plan_id, updatedBilling);
 
                 const updatedBillingPlans = await getCompanyBillingPlan(company.company_id);
                 const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                     ...plan,
                     start_date: formatStartDate(plan.start_date),
-                    end_date: plan.end_date ? (typeof plan.end_date === 'string' ? plan.end_date.split('T')[0] : null) : null
+                    end_date: plan.end_date ? formatStartDate(plan.end_date) : null
                 }));
                 setCompanyBillingPlans(updatedBillingPlansWithStringDates);
                 setEditingBillingPlan(null);
@@ -528,65 +536,33 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
 </Tabs>
 
             {editingBillingPlan && (
-                <AlertDialog.Root open={!!editingBillingPlan}>
-                    <AlertDialog.Content>
-                        <AlertDialog.Title>Edit Billing Plan</AlertDialog.Title>
-                        <div className="space-y-4">
-                            <div>
-                                <label>Start Date</label>
-                                <input
-                                    type="date"
-                                    value={editingBillingPlan.start_date}
-                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
-                                        ...prev,
-                                        start_date: e.target.value
-                                    } : null)}
-                                    className="w-full p-2 border rounded"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    id="ongoing"
-                                    checked={!editingBillingPlan.end_date}
-                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
-                                        ...prev,
-                                        end_date: e.target.checked ? null : new Date().toISOString().split('T')[0]
-                                    } : null)}
-                                />
-                                <label htmlFor="ongoing">Ongoing</label>
-                            </div>
-                            <div>
-                                <label>End Date</label>
-                                <input
-                                    type="date"
-                                    value={editingBillingPlan.end_date || ''}
-                                    onChange={(e) => setEditingBillingPlan(prev => prev ? {
-                                        ...prev,
-                                        end_date: e.target.value || null
-                                    } : null)}
-                                    className="w-full p-2 border rounded"
-                                    disabled={!editingBillingPlan.end_date}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-2 mt-4">
-                            <Button
-                                id="cancel-edit-billing-plan-btn"
-                                variant="secondary"
-                                onClick={() => setEditingBillingPlan(null)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                id="save-billing-plan-changes-btn"
-                                onClick={handleSaveEditBillingPlan}
-                            >
-                                Save Changes
-                            </Button>
-                        </div>
-                    </AlertDialog.Content>
-                </AlertDialog.Root>
+                <PlanPickerDialog
+                    isOpen={!!editingBillingPlan}
+                    onClose={() => setEditingBillingPlan(null)}
+                    onSelect={(plan: IBillingPlan, serviceCategory: string | undefined, startDate: string, endDate: string | null) => {
+                        if (editingBillingPlan) {
+                            const updatedPlan = {
+                                ...editingBillingPlan,
+                                plan_id: plan.plan_id!,
+                                service_category: serviceCategory,
+                                start_date: startDate,
+                                end_date: endDate
+                            };
+                            // Don't update the state here, pass directly to save function
+                            // setEditingBillingPlan(updatedPlan);
+                            handleSaveEditBillingPlan(updatedPlan);
+                        }
+                    }}
+                    availablePlans={billingPlans}
+                    serviceCategories={serviceCategories}
+                    initialValues={{
+                        planId: editingBillingPlan.plan_id,
+                        categoryId: editingBillingPlan.service_category || '',
+                        startDate: editingBillingPlan.start_date,
+                        endDate: editingBillingPlan.end_date,
+                        ongoing: !editingBillingPlan.end_date
+                    }}
+                />
             )}
 
             <ConfirmationDialog

@@ -152,12 +152,23 @@ export async function editCompanyBillingPlan(companyBillingPlanId: string, updat
     const {knex: db, tenant} = await createTenantKnex();
     
     // Convert dates to proper format
-    const updateData: any = {
-      ...updates,
-      // Convert string dates to Date objects if they exist
-      start_date: updates.start_date ? new Date(updates.start_date) : undefined,
-      end_date: updates.end_date ? new Date(updates.end_date) : null
-    };
+    // Use 'any' type here to allow assigning Date objects, knex will handle them.
+    const updateData: any = { ...updates };
+
+    // Convert string dates to Date objects if they exist
+    if (updates.start_date) {
+        updateData.start_date = new Date(updates.start_date);
+    }
+    // Ensure end_date is null if not provided or empty, otherwise convert to Date
+    updateData.end_date = updates.end_date ? new Date(updates.end_date) : null;
+
+    // Ensure service_category is null for the DB if it's undefined or an empty string
+    if (updates.service_category === undefined || updates.service_category === '') {
+        updateData.service_category = null;
+    } else {
+        // Keep the valid UUID string if provided
+        updateData.service_category = updates.service_category;
+    }
 
     const result = await db('company_billing_plans')
       .where({ 
