@@ -1,3 +1,5 @@
+'use client'; // Added directive
+
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { DataTableComponent, AutomationProps } from 'server/src/types/ui-reflection/types';

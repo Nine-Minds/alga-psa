@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
-import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
@@ -170,12 +171,14 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     // Generate invoices that will exceed padding length
     const invoice1 = await generateInvoice(billingCycle1);
     const invoice2 = await generateInvoice(billingCycle2);
+    expect(invoice1).not.toBeNull();
+    expect(invoice2).not.toBeNull();
 
     // Verify the first invoice uses full padding
-    expect(invoice1.invoice_number).toBe('INV-999999');
+    expect(invoice1!.invoice_number).toBe('INV-999999');
 
     // Verify the second invoice continues past padding length
-    expect(invoice2.invoice_number).toBe('INV-1000000');
+    expect(invoice2!.invoice_number).toBe('INV-1000000');
   });
 
   it('should handle maximum padding length (10) correctly', async () => {
@@ -237,10 +240,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
+    expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
-    expect(invoice.invoice_number).toMatch(/^INV-\d{10}$/);
-    expect(invoice.invoice_number).toBe('INV-0000000001');
+    expect(invoice!.invoice_number).toMatch(/^INV-\d{10}$/);
+    expect(invoice!.invoice_number).toBe('INV-0000000001');
   });
 
   it('should handle overlapping last_number with existing invoice numbers', async () => {
@@ -401,15 +405,18 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     // Generate the first two invoices
     const invoice1 = await generateInvoice(billingCycle1);
     const invoice2 = await generateInvoice(billingCycle2);
+    expect(invoice1).not.toBeNull();
+    expect(invoice2).not.toBeNull();
 
     // Assert that the first two invoices are generated correctly
-    expect(invoice1.invoice_number).toBe(`INV-${String(initialNumber).padStart(3, '0')}`);
-    expect(invoice2.invoice_number).toBe(`INV-${String(initialNumber + 1).padStart(3, '0')}`);
+    expect(invoice1!.invoice_number).toBe(`INV-${String(initialNumber).padStart(3, '0')}`);
+    expect(invoice2!.invoice_number).toBe(`INV-${String(initialNumber + 1).padStart(3, '0')}`);
 
     const maxInvoiceNumber = await getHighestInvoiceNumber();
 
     // Generate an invoice that would conflict with the prior lowest invoice number
     const invoice3 = await generateInvoice(billingCycle3);
+    expect(invoice3).not.toBeNull();
 
 
       // Output the invoice numbers of every existing invoice to the console
@@ -417,7 +424,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       console.log('All Invoice Numbers:', allInvoices.map(invoice => invoice.invoice_number));
 
     // Assert that the third invoice is the max invoice number + 1
-    expect(invoice3.invoice_number).toBe(`INV-${String(parseInt(maxInvoiceNumber) + 1).padStart(3, '0')}`);
+    expect(invoice3!.invoice_number).toBe(`INV-${String(parseInt(maxInvoiceNumber) + 1).padStart(3, '0')}`);
 
     // Verify the next_number table is updated correctly
     const nextNumberRecord = await context.db('next_number')
@@ -526,15 +533,18 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     const invoice1 = await generateInvoice(billingCycle1);
     const invoice2 = await generateInvoice(billingCycle2);
     const invoice3 = await generateInvoice(billingCycle3);
+    expect(invoice1).not.toBeNull();
+    expect(invoice2).not.toBeNull();
+    expect(invoice3).not.toBeNull();
 
     // Verify invoice numbers match the configured pattern and sequence
-    expect(invoice1.invoice_number).toMatch(/^INV-\d{6}$/);
-    expect(invoice2.invoice_number).toMatch(/^INV-\d{6}$/);
-    expect(invoice3.invoice_number).toMatch(/^INV-\d{6}$/);
+    expect(invoice1!.invoice_number).toMatch(/^INV-\d{6}$/);
+    expect(invoice2!.invoice_number).toMatch(/^INV-\d{6}$/);
+    expect(invoice3!.invoice_number).toMatch(/^INV-\d{6}$/);
 
-    expect(invoice1.invoice_number).toBe('INV-010000');
-    expect(invoice2.invoice_number).toBe('INV-010001');
-    expect(invoice3.invoice_number).toBe('INV-010002');
+    expect(invoice1!.invoice_number).toBe('INV-010000');
+    expect(invoice2!.invoice_number).toBe('INV-010001');
+    expect(invoice3!.invoice_number).toBe('INV-010002');
 
     // Verify the next_number table is updated correctly
     const nextNumberRecord = await context.db('next_number')
@@ -606,9 +616,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
+    expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
-    expect(invoice.invoice_number).toBe('你好-000001');
+    expect(invoice!.invoice_number).toBe('你好-000001');
   });
 
   it('should validate empty or whitespace-only prefix handling', async () => {
@@ -670,9 +681,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
+    expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
-    expect(invoice.invoice_number).toBe('000001');
+    expect(invoice!.invoice_number).toBe('000001');
   });
 
   it('should test extremely long prefix values', async () => {
@@ -736,9 +748,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
+    expect(invoice).not.toBeNull();
 
     // Verify the invoice number format
-    expect(invoice.invoice_number).toBe(`${longPrefix}000001`);
+    expect(invoice!.invoice_number).toBe(`${longPrefix}000001`);
   });
 
   it('should test changing from one prefix to another', async () => {
@@ -800,9 +813,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
+    expect(invoice1).not.toBeNull();
 
     // Verify the invoice number format with initial prefix
-    expect(invoice1.invoice_number).toBe('INV-000001');
+    expect(invoice1!.invoice_number).toBe('INV-000001');
 
     // Change the prefix to 'BILL-'
     await context.db('next_number')
@@ -829,9 +843,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice with new prefix
     const invoice2 = await generateInvoice(billingCycle2);
+    expect(invoice2).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
-    expect(invoice2.invoice_number).toBe('BILL-000002');
+    expect(invoice2!.invoice_number).toBe('BILL-000002');
   });
 
   it('should test changing prefix length', async () => {
@@ -893,9 +908,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
+    expect(invoice1).not.toBeNull();
 
     // Verify the invoice number format with initial prefix
-    expect(invoice1.invoice_number).toBe('INV-000001');
+    expect(invoice1!.invoice_number).toBe('INV-000001');
 
     // Change the prefix to a shorter one: 'IN-'
     await context.db('next_number')
@@ -922,9 +938,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice with shorter prefix
     const invoice2 = await generateInvoice(billingCycle2);
+    expect(invoice2).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
-    expect(invoice2.invoice_number).toBe('IN-000002');
+    expect(invoice2!.invoice_number).toBe('IN-000002');
 
     // Change the prefix to a longer one: 'INVOICE-'
     await context.db('next_number')
@@ -951,8 +968,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Generate invoice with longer prefix
     const invoice3 = await generateInvoice(billingCycle3);
+    expect(invoice3).not.toBeNull();
 
     // Verify the invoice number format with the new prefix
-    expect(invoice3.invoice_number).toBe('INVOICE-000003');
+    expect(invoice3!.invoice_number).toBe('INVOICE-000003');
   });
 });

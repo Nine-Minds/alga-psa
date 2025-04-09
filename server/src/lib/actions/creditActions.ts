@@ -6,7 +6,7 @@ import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { IInvoice } from 'server/src/interfaces/invoice.interfaces';
 import { ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { generateInvoiceNumber } from './invoiceActions';
+import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
 import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
 

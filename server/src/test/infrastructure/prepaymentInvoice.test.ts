@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';

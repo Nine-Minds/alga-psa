@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -51,7 +51,7 @@ describe('Billing Invoice Tax Calculations', () => {
         company_name: 'Discount Tax Test Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
-        tax_region: 'US-NY',
+        region_code: 'US-NY',
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
@@ -180,7 +180,7 @@ describe('Billing Invoice Tax Calculations', () => {
         company_name: 'Tax Test Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
-        tax_region: 'US-NY', // Default tax region
+        region_code: 'US-NY', // Default tax region
         is_tax_exempt: false,
         phone_no: '',
         credit_balance: 0,
@@ -295,7 +295,7 @@ describe('Billing Invoice Tax Calculations', () => {
         company_name: 'Mixed Tax Test Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
-        tax_region: 'US-NY',
+        region_code: 'US-NY',
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
@@ -597,7 +597,7 @@ describe('Billing Invoice Tax Calculations', () => {
       company_name: 'Tax Exempt Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: true, // Set company as tax exempt
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -693,7 +693,7 @@ describe('Billing Invoice Tax Calculations', () => {
       company_name: 'Basic Tax Test Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -789,7 +789,7 @@ describe('Billing Invoice Tax Calculations', () => {
       company_name: 'Tax Recalculation Test Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY', // Default tax region
+      region_code: 'US-NY', // Default tax region
       is_tax_exempt: false,
       phone_no: '',
       credit_balance: 0,

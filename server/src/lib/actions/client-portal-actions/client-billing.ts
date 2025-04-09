@@ -12,12 +12,11 @@ import {
 } from 'server/src/interfaces/billing.interfaces';
 import {
   fetchInvoicesByCompany,
-  getInvoiceTemplates,
   getInvoiceLineItems,
-  finalizeInvoice,
-  unfinalizeInvoice,
   getInvoiceForRendering
-} from 'server/src/lib/actions/invoiceActions';
+} from 'server/src/lib/actions/invoiceQueries';
+import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
+import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';

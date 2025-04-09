@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { IConditionalRule, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
-import { getConditionalRules, saveConditionalRule } from 'server/src/lib/actions/invoiceActions';
+import { getConditionalRules, saveConditionalRule } from 'server/src/lib/actions/invoiceTemplates';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface ConditionalRuleManagerProps {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
@@ -49,7 +49,7 @@ describe('Billing Invoice Edge Cases', () => {
       company_name: 'Credit Note Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -175,7 +175,7 @@ describe('Billing Invoice Edge Cases', () => {
       company_name: 'Zero Value Invoice Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),

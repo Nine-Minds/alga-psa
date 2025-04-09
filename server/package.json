@@ -21,6 +21,7 @@
     "@blocknote/mantine": "^0.22.0",
     "@blocknote/react": "^0.22.0",
     "@hocuspocus/provider": "^2.15.2",
+    "@hookform/resolvers": "^5.0.1",
     "@huggingface/inference": "^3.3.3",
     "@js-temporal/polyfill": "^0.4.4",
     "@mantine/form": "^7.17.3",

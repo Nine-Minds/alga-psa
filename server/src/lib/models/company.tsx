@@ -121,24 +121,24 @@ const Company = {
     }
   },
 
-  async getByTaxRegion(taxRegion: string): Promise<ICompany[]> {
+  async getByRegionCode(regionCode: string): Promise<ICompany[]> { // Renamed function and parameter
     const {knex: db, tenant} = await createTenantKnex();
     
     if (!tenant) {
-      throw new Error('Tenant context is required for getting companies by tax region');
+      throw new Error('Tenant context is required for getting companies by region code');
     }
 
     try {
       const companies = await db<ICompany>('companies')
         .where({
-          tax_region: taxRegion,
+          region_code: regionCode, // Changed column name
           tenant
         })
         .select('*');
       return companies;
     } catch (error) {
-      console.error(`Error getting companies by tax region ${taxRegion} in tenant ${tenant}:`, error);
-      throw new Error(`Failed to get companies by tax region: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error(`Error getting companies by region code ${regionCode} in tenant ${tenant}:`, error);
+      throw new Error(`Failed to get companies by region code: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   },
 
@@ -157,7 +157,7 @@ const Company = {
         })
         .update({
           tax_id_number: taxSettings.tax_id_number,
-          tax_region: taxSettings.tax_region,
+          region_code: taxSettings.region_code, // Changed column name
           is_tax_exempt: taxSettings.is_tax_exempt,
           tax_exemption_certificate: taxSettings.tax_exemption_certificate,
           updated_at: new Date().toISOString()

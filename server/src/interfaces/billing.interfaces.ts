@@ -146,7 +146,7 @@ export interface IService extends TenantEntity {
   category_id: string | null;
   unit_of_measure: string;
   is_taxable?: boolean;
-  tax_region?: string | null;
+  region_code?: string | null; // Replaced tax_region with region_code FK
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from standard or custom)
   // Note: The CHECK constraint ensures exactly one of standard_service_type_id or custom_service_type_id is non-null.
@@ -334,8 +334,8 @@ export interface ICreditExpirationSettings {
 
 export interface ITaxRate extends TenantEntity {
   tax_rate_id?: string;
-  region?: string;
-  tax_percentage: number;
+  region_code: string; // Replaced region with region_code FK (Now required for a rate)
+  tax_percentage: number; // Reverted back to number
   description?: string;
   start_date: string;
   end_date?: string | null;

@@ -159,7 +159,7 @@ export class AssetModel {
                 preferred_payment_method: company.preferred_payment_method,
                 auto_invoice: company.auto_invoice ?? false,
                 invoice_delivery_method: company.invoice_delivery_method,
-                tax_region: company.tax_region,
+                region_code: company.region_code, // Changed from tax_region
                 tax_exemption_certificate: company.tax_exemption_certificate,
                 credit_balance: 0,
                 tenant
@@ -202,7 +202,7 @@ export class AssetModel {
                 'companies.preferred_payment_method',
                 'companies.auto_invoice',
                 'companies.invoice_delivery_method',
-                'companies.tax_region',
+                'companies.region_code', // Changed from tax_region
                 'companies.tax_exemption_certificate',
                 'companies.notes as company_notes'
             )
@@ -274,7 +274,7 @@ export class AssetModel {
                 'companies.preferred_payment_method',
                 'companies.auto_invoice',
                 'companies.invoice_delivery_method',
-                'companies.tax_region',
+                'companies.region_code', // Changed from tax_region
                 'companies.tax_exemption_certificate',
                 'companies.notes as company_notes'
             )
@@ -365,7 +365,7 @@ export class AssetModel {
                 preferred_payment_method,
                 auto_invoice,
                 invoice_delivery_method,
-                tax_region,
+                region_code, // Changed from tax_region
                 tax_exemption_certificate,
                 company_notes,
                 ...assetData 
@@ -400,7 +400,7 @@ export class AssetModel {
                     preferred_payment_method,
                     auto_invoice: auto_invoice ?? false,
                     invoice_delivery_method,
-                    tax_region,
+                    region_code, // Changed from tax_region
                     tax_exemption_certificate,
                     tenant
                 } : undefined,

@@ -32,7 +32,7 @@ export async function getServices(): Promise<IService[]> {
                 'sc.unit_of_measure',
                 'sc.category_id',
                 'sc.is_taxable',
-                'sc.tax_region',
+                'sc.region_code',
                 'sc.tenant',
                 'sc.description',
                 knex.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name

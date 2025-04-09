@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
-import { generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
@@ -417,7 +417,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       is_tax_exempt: false,
-      tax_region: 'US-NY' // Explicitly set the tax region to match our tax rate
+      region_code: 'US-NY' // Explicitly set the tax region to match our tax rate
     }, 'company_id');
 
     // Create taxable services with rates that would produce fractional amounts when taxed
@@ -516,7 +516,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       company_name: 'Fractional Discount Test Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),

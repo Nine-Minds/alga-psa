@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
@@ -63,14 +64,14 @@ describe('Credit Expiration Integration Tests', () => {
 
   it('should validate that credits from negative invoices receive proper expiration dates', async () => {
     // Import the generateInvoice function
-    const { generateInvoice } = await import('@/lib/actions/invoiceActions');
+    const { generateInvoice } = await import('../../lib/actions/invoiceGeneration');
 
     // Create test company without company-specific billing settings
     const company_id = await context.createEntity<ICompany>('companies', {
       company_name: 'Negative Invoice Expiration Test',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -247,7 +248,7 @@ describe('Credit Expiration Integration Tests', () => {
       company_name: 'Expired Credit Application Test Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),

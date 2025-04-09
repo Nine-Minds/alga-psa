@@ -66,3 +66,9 @@ export interface ITaxCalculationResult {
   appliedThresholds?: ITaxRateThreshold[];
   appliedHolidays?: ITaxHoliday[];
 }
+
+export interface ITaxRegion extends TenantEntity {
+  region_code: string;
+  region_name: string;
+  is_active: boolean;
+}

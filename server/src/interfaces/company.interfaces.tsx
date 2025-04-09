@@ -42,7 +42,7 @@ export interface ICompany extends TenantEntity {
   preferred_payment_method?: string;
   auto_invoice?: boolean;
   invoice_delivery_method?: string;  
-  tax_region?: string;
+  region_code?: string | null; // Replaced tax_region with region_code FK
   is_tax_exempt: boolean;
   tax_exemption_certificate?: string;
   timezone?: string;

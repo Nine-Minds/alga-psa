@@ -1,9 +1,11 @@
 import { Text } from '@radix-ui/themes';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
-import { getInvoiceTemplates, getDefaultTemplate } from 'server/src/lib/actions/invoiceActions';
+import { getInvoiceTemplates, getDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
 import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
@@ -18,6 +20,7 @@ interface BillingConfigFormProps {
         invoice_template_id?: string;
         billing_contact_id?: string;
         billing_email?: string;
+        region_code?: string | null; // Added for tax region
     };
     handleSelectChange: (name: string) => (value: string) => void;
     companyId: string;
@@ -33,10 +36,13 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
     const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
     const [defaultTemplate, setDefaultTemplate] = useState<IInvoiceTemplate | null>(null);
     const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingTemplates, setIsLoadingTemplates] = useState(true); // Renamed
+    const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
+    const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
+    const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadTemplateData = async () => { // Renamed function
             try {
                 const [loadedTemplates, loadedDefault] = await Promise.all([
                     getInvoiceTemplates(),
@@ -48,10 +54,27 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
-                setIsLoading(false);
+                setIsLoadingTemplates(false); // Use renamed state setter
             }
         };
-        loadData();
+
+        const loadTaxRegions = async () => { // Added function
+           try {
+               setIsLoadingTaxRegions(true);
+               const regions = await getActiveTaxRegions();
+               setTaxRegions(regions);
+               setErrorTaxRegions(null);
+           } catch (error) {
+               console.error('Error loading tax regions:', error);
+               setErrorTaxRegions('Failed to load tax regions.');
+               setTaxRegions([]); // Clear regions on error
+           } finally {
+               setIsLoadingTaxRegions(false);
+           }
+        };
+
+        loadTemplateData(); // Call renamed function
+        loadTaxRegions(); // Call new function
     }, []);
 
     const templateOptions = templates.map(template => ({
@@ -98,6 +121,11 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
         { value: 'mail', label: 'Mail' },
         { value: 'both', label: 'Both' }
     ];
+
+    const taxRegionOptions = taxRegions.map(region => ({
+       value: region.region_code,
+       label: region.region_name
+    }));
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -152,7 +180,7 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                         : 'Select a template or use default'}
                     onValueChange={handleSelectChange('invoice_template_id')}
                     options={templateOptions}
-                    disabled={isLoading}
+                    disabled={isLoadingTemplates} // Use renamed state
                 />
             </div>
 
@@ -191,6 +219,21 @@ const BillingConfigForm: React.FC<BillingConfigFormProps> = ({
                     options={deliveryMethodOptions}
                 />
             </div>
+
+           {/* Added Tax Region Dropdown */}
+           <div className="space-y-2">
+               <CustomSelect
+                   id="company-tax-region-select"
+                   label="Default Tax Region"
+                   value={billingConfig.region_code || ''}
+                   placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region (Optional)"}
+                   onValueChange={handleSelectChange('region_code')}
+                   options={taxRegionOptions}
+                   disabled={isLoadingTaxRegions}
+                   allowClear={true} // Allow clearing the selection
+               />
+               {errorTaxRegions && <p className="text-red-500 text-sm mt-1">{errorTaxRegions}</p>}
+           </div>
         </div>
     );
 };

@@ -2,7 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
-import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import type { ICompany } from '../../interfaces/company.interfaces';
@@ -67,7 +68,7 @@ describe('Credit Creation and Dates Tests', () => {
       company_name: 'Company Settings Expiration Test',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -176,7 +177,7 @@ describe('Credit Creation and Dates Tests', () => {
       company_name: 'Default Settings Expiration Test',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),
@@ -272,7 +273,7 @@ describe('Credit Creation and Dates Tests', () => {
       company_name: 'Custom Expiration Date Test Company',
       billing_cycle: 'monthly',
       company_id: uuidv4(),
-      tax_region: 'US-NY',
+      region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
       updated_at: Temporal.Now.plainDateISO().toString(),

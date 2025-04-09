@@ -8,7 +8,7 @@ export class TaxService {
   constructor() {
   }
 
-  async validateTaxRateDateRange(region: string, startDate: ISO8601String, endDate: ISO8601String | null, excludeTaxRateId?: string): Promise<void> {
+  async validateTaxRateDateRange(regionCode: string, startDate: ISO8601String, endDate: ISO8601String | null, excludeTaxRateId?: string): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
@@ -18,7 +18,7 @@ export class TaxService {
     // Check for overlapping date ranges in the same region
     const query = knex('tax_rates')
       .where({
-        region,
+        region_code: regionCode,
         tenant
       })
       .andWhere(function() {
@@ -40,18 +40,18 @@ export class TaxService {
     const overlappingRates = await query;
 
     if (overlappingRates.length > 0) {
-      throw new Error(`Tax rate date range overlaps with existing rate(s) in region ${region}`);
+      throw new Error(`Tax rate date range overlaps with existing rate(s) in region ${regionCode}`);
     }
   }
 
-  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, taxRegion?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
+  async calculateTax(companyId: string, netAmount: number, date: ISO8601String, regionCode?: string, is_taxable: boolean = true): Promise<ITaxCalculationResult> {
     const { knex, tenant } = await createTenantKnex();
     
     if (!tenant) {
       throw new Error('Tenant context is required for tax calculation');
     }
 
-    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, taxRegion ${taxRegion}`);
+    console.log(`Calculating tax for company ${companyId} in tenant ${tenant}, net amount ${netAmount}, date ${date}, regionCode ${regionCode}`);
 
     // Check if company is tax exempt
     const company = await knex('companies')
@@ -71,13 +71,14 @@ export class TaxService {
       return { taxAmount: 0, taxRate: 0 };
     }
 
-    // If taxRegion is provided, use that instead of company tax settings
-    if (taxRegion) {
-      console.log(`Calculating tax for region: ${taxRegion}, amount: ${netAmount}, date: ${date}`);
+    // If regionCode is provided, use that to calculate tax directly, handling composite rates.
+    if (regionCode) {
+      console.log(`Calculating tax directly for regionCode: ${regionCode}, amount: ${netAmount}, date: ${date}`);
       
-      const taxRate = await knex('tax_rates')
+      // Explicitly type the result array
+      const applicableRates: Pick<ITaxRate, 'tax_percentage'>[] = await knex('tax_rates')
         .where({
-          region: taxRegion,
+          region_code: regionCode,
           tenant,
           is_active: true
         })
@@ -86,34 +87,42 @@ export class TaxService {
           this.whereNull('end_date')
             .orWhere('end_date', '>', date);
         })
-        .first();
+        .select('tax_percentage'); // Select only the percentage
 
-      if (!taxRate) {
-        console.error(`No active tax rate found for region ${taxRegion}`);
-
-        // print all tax rates
-        const allTaxRates = await knex('tax_rates')
-          .where({
-            tenant
-          })
-          .select('*');
-        console.log('All tax rates:', allTaxRates);
-
-        throw new Error(`No active tax rate found for region ${taxRegion}`);
+      if (!applicableRates || applicableRates.length === 0) {
+        console.error(`No active tax rate(s) found for regionCode ${regionCode} on date ${date}`);
+        // Optional: Log all rates for debugging
+        // const allTaxRates = await knex('tax_rates').where({ tenant }).select('*');
+        // console.log('All tax rates:', allTaxRates);
+        throw new Error(`No active tax rate(s) found for region ${regionCode} on date ${date}`);
       }
 
-      console.log(`Found tax rate: ${taxRate.tax_percentage}% for region ${taxRegion}`);
+      console.log('Applicable rates:', applicableRates);
+      console.log(`Found ${applicableRates.length} applicable rate(s) for regionCode ${regionCode}`);
+
+      // Sum percentages for composite tax
+      // Handle potential string values from DB while satisfying TS type (number)
+      const combinedTaxRate = applicableRates.reduce((sum, rate) => {
+        const percentage = typeof rate.tax_percentage === 'string'
+          ? parseFloat(rate.tax_percentage)
+          : rate.tax_percentage;
+        return sum + (isNaN(percentage) ? 0 : percentage); // Add parsed/original number, default to 0 if NaN
+      }, 0);
+
+      console.log(`Found ${applicableRates.length} applicable rate(s) for regionCode ${regionCode}. Combined rate: ${combinedTaxRate}%`);
       
-      const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
-      console.log(`Calculated tax amount: ${taxAmount} for net amount: ${netAmount}`);
+      // Calculate tax based on the combined rate
+      // Ensure tax is not applied if netAmount is zero or negative
+      const taxAmount = netAmount > 0 ? Math.ceil((netAmount * combinedTaxRate) / 100) : 0;
+      console.log(`Calculated tax amount: ${taxAmount} for net amount: ${netAmount} using combined rate ${combinedTaxRate}%`);
       
-      return { 
+      return {
         taxAmount,
-        taxRate: taxRate.tax_percentage
+        taxRate: combinedTaxRate // Return the combined rate
       };
     }
 
-    // Fall back to company tax settings if no taxRegion provided
+    // Fall back to company tax settings if no regionCode provided
     const taxSettings = await this.getCompanyTaxSettings(companyId);
     console.log(`Tax settings retrieved for company ${companyId}:`, taxSettings);
 

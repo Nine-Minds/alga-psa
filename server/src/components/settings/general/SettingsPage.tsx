@@ -17,6 +17,7 @@ import TimePeriodSettings from '../billing/TimePeriodSettings';
 import ServiceTypeSettings from '../billing/ServiceTypeSettings'; // Import the new component
 import NumberingSettings from './NumberingSettings';
 import NotificationsTab from './NotificationsTab';
+import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 
@@ -35,7 +36,8 @@ const SettingsPage = (): JSX.Element =>  {
     'interaction-types': 'Interaction Types',
     'notifications': 'Notifications',
     'time-entry': 'Time Entry',
-    'billing': 'Billing'
+    'billing': 'Billing',
+    'tax': 'Tax'
   };
 
   // Determine initial active tab based on URL parameter
@@ -126,6 +128,20 @@ const SettingsPage = (): JSX.Element =>  {
                 <ServiceTypeSettings /> {/* Add the new component here */}
               </div>
             </div>
+          </CardContent>
+        </Card>
+      ),
+    },
+    {
+      label: "Tax",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Tax Settings</CardTitle>
+            <CardDescription>Manage tax regions and related settings</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TaxRegionsManager />
           </CardContent>
         </Card>
       ),

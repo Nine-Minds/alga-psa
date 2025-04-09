@@ -67,7 +67,7 @@ export async function createCompany(
     preferred_payment_method: options.preferred_payment_method,
     auto_invoice: options.auto_invoice,
     invoice_delivery_method: options.invoice_delivery_method,
-    tax_region: options.tax_region,
+    region_code: options.region_code,
     tax_exemption_certificate: options.tax_exemption_certificate,
     timezone: options.timezone,
     invoice_template_id: options.invoice_template_id,

@@ -30,6 +30,8 @@ interface CustomSelectProps {
   id?: string;
   /** Whether the select is required */
   required?: boolean;
+  /** Whether to allow clearing the selection */
+  allowClear?: boolean;
 }
 
 const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
@@ -44,6 +46,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   id,
   "data-automation-type": dataAutomationType = 'select',
   required = false,
+  allowClear = false, // Added default value
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
   // Memoize the mapped options to prevent recreating on every render
@@ -90,7 +93,14 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
       )}
       <RadixSelect.Root 
         value={safeValue}
-        onValueChange={onValueChange} 
+        // Use internal handler to intercept clear action
+        onValueChange={(newValue) => {
+          if (allowClear && newValue === '__CLEAR__') {
+            onValueChange(''); // Call external handler with empty string
+          } else if (newValue !== 'placeholder') { // Prevent placeholder from being selected
+            onValueChange(newValue);
+          }
+        }}
         disabled={disabled}
         required={required}
       >
@@ -150,6 +160,22 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
                   `}
                 >
                   <RadixSelect.ItemText>{placeholder}</RadixSelect.ItemText>
+                </RadixSelect.Item>
+              )}
+              {/* Add Clear Selection option if allowClear is true */}
+              {allowClear && value && ( // Only show clear if a value is selected
+                <RadixSelect.Item
+                  key="__CLEAR__"
+                  value="__CLEAR__"
+                  className={`
+                    relative flex items-center px-3 py-2 text-sm rounded text-red-600 italic
+                    cursor-pointer hover:bg-red-50 focus:bg-red-50
+                    focus:outline-none select-none whitespace-nowrap
+                    data-[highlighted]:bg-red-50
+                    ${customStyles?.item || ''}
+                  `}
+                >
+                  <RadixSelect.ItemText>Clear Selection</RadixSelect.ItemText>
                 </RadixSelect.Item>
               )}
               {options.map((option): JSX.Element => (

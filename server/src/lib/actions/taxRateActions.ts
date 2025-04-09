@@ -21,13 +21,13 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
     const { knex, tenant } = await createTenantKnex();
     const taxService = new TaxService();
     
-    if (!taxRateData.region) {
+    if (!taxRateData.region_code) {
       throw new Error('Region is required');
     }
 
     // Validate date range before insertion
     await taxService.validateTaxRateDateRange(
-      taxRateData.region,
+      taxRateData.region_code,
       taxRateData.start_date,
       taxRateData.end_date || null
     );
@@ -64,12 +64,12 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
         throw new Error('Tax rate not found');
       }
 
-      if (!taxRateData.region) {
+      if (!taxRateData.region_code) {
         throw new Error('Region is required');
       }
 
       await taxService.validateTaxRateDateRange(
-        taxRateData.region,
+        taxRateData.region_code,
         taxRateData.start_date,
         taxRateData.end_date || null,
         taxRateData.tax_rate_id

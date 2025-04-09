@@ -7,56 +7,67 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { updateService } from 'server/src/lib/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Changed ITaxRate to ITaxRegion
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
 
 interface ServiceTaxSettingsProps {
   service: IService;
-  taxRates?: ITaxRate[];
+  // Removed taxRates prop, will fetch regions internally
   onUpdate?: () => void;
 }
 
-export function ServiceTaxSettings({ service, taxRates = [], onUpdate }: ServiceTaxSettingsProps) {
-  const [isTaxable, setIsTaxable] = useState(service.is_taxable || false);
-  const [taxRegion, setTaxRegion] = useState<string | null>(service.tax_region || null);
+export function ServiceTaxSettings({ service, onUpdate }: ServiceTaxSettingsProps) { // Removed taxRates from props
+  const [isTaxable, setIsTaxable] = useState(service.is_taxable ?? true); // Default to true if undefined
+  const [regionCode, setRegionCode] = useState<string | null>(service.region_code || null); // Changed taxRegion to regionCode
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [effectiveTaxRate, setEffectiveTaxRate] = useState<number | null>(null);
+  // Removed effectiveTaxRate state
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
+  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
+  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
 
-  // Convert tax rates to options for the select component
-  const taxRegionOptions = taxRates.map(rate => ({
-    value: rate.tax_rate_id,
-    label: `${rate.name} (${rate.country_code}) - ${rate.tax_percentage}%`
+  // Fetch tax regions
+  useEffect(() => {
+      const fetchTaxRegions = async () => {
+          try {
+              setIsLoadingTaxRegions(true);
+              const regions = await getActiveTaxRegions();
+              setTaxRegions(regions);
+              setErrorTaxRegions(null);
+          } catch (error) {
+              console.error('Error loading tax regions:', error);
+              setErrorTaxRegions('Failed to load tax regions.');
+              setTaxRegions([]);
+          } finally {
+              setIsLoadingTaxRegions(false);
+          }
+      };
+      fetchTaxRegions();
+  }, []);
+
+  // Generate options from fetched tax regions
+  const taxRegionOptions = taxRegions.map(region => ({
+    value: region.region_code,
+    label: region.region_name
   }));
 
-  // Add a "None" option
+  // Add an option to represent the company default (clearing the selection)
   const selectOptions = [
-    { value: '', label: 'None' },
+    { value: '', label: 'Use Company Default' },
     ...taxRegionOptions
   ];
 
-  // Update effective tax rate when tax region changes
-  useEffect(() => {
-    if (isTaxable && taxRegion) {
-      const selectedRate = taxRates.find(rate => rate.tax_rate_id === taxRegion);
-      if (selectedRate) {
-        setEffectiveTaxRate(selectedRate.tax_percentage);
-      } else {
-        setEffectiveTaxRate(null);
-      }
-    } else {
-      setEffectiveTaxRate(null);
-    }
-  }, [isTaxable, taxRegion, taxRates]);
+  // Removed useEffect for effectiveTaxRate
 
   const handleTaxableChange = (checked: boolean) => {
     setIsTaxable(checked);
     if (!checked) {
-      setTaxRegion(null);
+      setRegionCode(null); // Use regionCode setter
     }
   };
 
-  const handleTaxRegionChange = (value: string) => {
-    setTaxRegion(value || null);
+  const handleRegionCodeChange = (value: string) => { // Renamed function
+    setRegionCode(value || null); // Use regionCode setter
   };
 
   const handleSave = async () => {
@@ -66,7 +77,7 @@ export function ServiceTaxSettings({ service, taxRates = [], onUpdate }: Service
 
       await updateService(service.service_id, {
         is_taxable: isTaxable,
-        tax_region: taxRegion
+        region_code: regionCode // Changed tax_region to region_code
       } as Partial<IService>);
 
       if (onUpdate) {
@@ -99,22 +110,19 @@ export function ServiceTaxSettings({ service, taxRates = [], onUpdate }: Service
         {isTaxable && (
           <div className="mt-4">
             <CustomSelect
-              id="tax-region-select"
-              label="Tax Region"
-              options={selectOptions}
-              value={taxRegion || ''}
-              onValueChange={handleTaxRegionChange}
-              placeholder="Select tax region"
-              disabled={isSaving}
+                id="tax-region-select"
+                label="Tax Region (Optional)"
+                options={selectOptions}
+                value={regionCode || ''} // Use regionCode state
+                onValueChange={handleRegionCodeChange} // Use renamed handler
+                placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
+                disabled={isSaving || isLoadingTaxRegions} // Disable while saving or loading
+                allowClear={true} // Use allowClear built into CustomSelect
             />
           </div>
         )}
 
-        {isTaxable && effectiveTaxRate !== null && (
-          <div className="mt-2 p-3 bg-gray-50 rounded-md">
-            <p className="text-sm font-medium">Effective Tax Rate: {effectiveTaxRate}%</p>
-          </div>
-        )}
+        {/* Removed display of effectiveTaxRate */}
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
       </CardContent>

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import '../../../test-utils/nextApiMock';
-import { finalizeInvoice, generateInvoice } from 'server/src/lib/actions/invoiceActions';
+import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder } from 'util';
@@ -151,7 +152,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       const invoiceItems = await context.db('invoice_items')
-        .where('invoice_id', result.invoice_id)
+        .where('invoice_id', result!.invoice_id) // Use non-null assertion
         .select('*');
 
       expect(invoiceItems).toHaveLength(2);
@@ -303,6 +304,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
 
       // Act
       const result = await generateInvoice(billingCycleId);
+      expect(result).not.toBeNull(); // Add null check
 
       // Assert
       expect(result).toMatchObject({
@@ -311,7 +313,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       const invoiceItems = await context.db('invoice_items')
-        .where('invoice_id', result.invoice_id)
+        .where('invoice_id', result!.invoice_id) // Use non-null assertion
         .select('*');
 
       expect(invoiceItems).toHaveLength(1);

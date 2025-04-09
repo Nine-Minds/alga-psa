@@ -13,12 +13,11 @@ import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
-import { generateInvoice } from '../../lib/actions/invoiceActions';
+import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGeneration';
 // Updated import for billing cycle actions
 import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
-import { previewInvoice } from '../../lib/actions/invoiceActions';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,

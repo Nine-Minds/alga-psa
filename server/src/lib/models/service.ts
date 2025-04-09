@@ -33,7 +33,7 @@ const baseServiceSchema = z.object({
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
   is_taxable: z.boolean().optional().default(false), // Optional in interface, default false
-  tax_region: z.string().nullable(), // Matches DB (nullable) - IService allows string | null
+  region_code: z.string().nullable(), // New field replacing tax_region, matches DB (nullable)
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
 });
@@ -57,7 +57,7 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
     ...inputData,
     // Keep null for fields that are string | null in IService
     category_id: inputData.category_id,
-    tax_region: inputData.tax_region,
+    region_code: inputData.region_code, // Keep null if present
     description: inputData.description,
     // Map null to undefined for fields that are optional (T | undefined) in IService
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
@@ -87,7 +87,7 @@ export const createServiceSchema = refinedCreateServiceSchema.transform((data) =
   return {
     ...inputData,
     category_id: inputData.category_id,
-    tax_region: inputData.tax_region,
+    region_code: inputData.region_code, // Keep null if present
     description: inputData.description,
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
     custom_service_type_id: inputData.custom_service_type_id ?? undefined,
@@ -129,7 +129,7 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.is_taxable',
-          'sc.tax_region',
+          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -184,7 +184,7 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.is_taxable',
-          'sc.tax_region',
+          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -258,7 +258,7 @@ const Service = {
       unit_of_measure: validatedData.unit_of_measure,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
       is_taxable: validatedData.is_taxable ?? false, // Use ?? false for boolean
-      tax_region: validatedData.tax_region ?? null,
+      region_code: validatedData.region_code ?? null,
       description: validatedData.description ?? '', // Add description field with default empty string
     };
 
@@ -293,7 +293,7 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.is_taxable',
-          'sc.tax_region',
+          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -381,7 +381,7 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.is_taxable',
-          'sc.tax_region',
+          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -460,7 +460,7 @@ const Service = {
           'sc.unit_of_measure',
           'sc.category_id',
           'sc.is_taxable',
-          'sc.tax_region',
+          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type

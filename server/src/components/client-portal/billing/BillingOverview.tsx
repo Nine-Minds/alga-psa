@@ -21,7 +21,7 @@ import {
   IBucketUsage,
   IService
 } from 'server/src/interfaces/billing.interfaces';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceActions';
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import dynamic from 'next/dynamic';
 

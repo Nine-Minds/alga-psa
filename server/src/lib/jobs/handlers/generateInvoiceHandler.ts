@@ -1,4 +1,4 @@
-import { generateInvoice } from '../../actions/invoiceActions';
+import { generateInvoice } from '../../actions/invoiceGeneration';
 
 export interface GenerateInvoiceData extends Record<string, unknown> {
   tenantId: string;

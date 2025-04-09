@@ -8,7 +8,7 @@ import { TextArea } from 'server/src/components/ui/TextArea';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
-import { saveInvoiceTemplate } from 'server/src/lib/actions/invoiceActions';
+import { saveInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates';
 
 interface InvoiceTemplateManagerProps {
   templates: IInvoiceTemplate[];

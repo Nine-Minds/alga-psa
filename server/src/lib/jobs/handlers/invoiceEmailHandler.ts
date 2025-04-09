@@ -9,7 +9,7 @@ import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
 import { JobStatus } from 'server/src/types/job.d';
-import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceActions';
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 
 export interface InvoiceEmailJobData extends Record<string, unknown> {
   jobServiceId: string;

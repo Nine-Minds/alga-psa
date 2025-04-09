@@ -1,5 +1,4 @@
 // server/src/lib/models/invoice.ts
-
 import { createTenantKnex } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 import { Temporal } from '@js-temporal/polyfill';

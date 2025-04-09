@@ -19,7 +19,7 @@ import { getTaxRates } from '../../lib/actions/taxRateActions';
 import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate } from '../../lib/actions/companyTaxRateActions';
 import { ITaxRate, ICompanyTaxRate } from '../../interfaces/billing.interfaces';
 import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
-import { setCompanyTemplate } from '../../lib/actions/invoiceActions';
+import { setCompanyTemplate } from '../../lib/actions/invoiceTemplates';
 import BillingConfigForm from './BillingConfigForm';
 import CompanyTaxRates from './CompanyTaxRates';
 import BillingPlans from './BillingPlans';
@@ -54,6 +54,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         invoice_template_id: company.invoice_template_id || '',
         billing_contact_id: company.billing_contact_id || '',
         billing_email: company.billing_email || '',
+        region_code: company.region_code || null, // Added region_code from company data
     });
 
     const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
@@ -190,6 +191,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 billing_email,
                 billing_cycle,
                 invoice_template_id,
+                region_code, // Added region_code
                 ...rest
             } = billingConfig;
             
@@ -200,7 +202,8 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 auto_invoice,
                 invoice_delivery_method,
                 billing_contact_id,  // Pass through as-is, updateCompany will handle empty strings
-                billing_email
+                billing_email,
+                region_code // Pass region_code to onSave
             });
             
             // Save template selection separately using the dedicated function
@@ -475,7 +478,7 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
                 </TabsList>
     <TabsContent value="general">
         <BillingConfigForm
-            billingConfig={billingConfig}
+            billingConfig={billingConfig} // Pass the whole config including region_code
             handleSelectChange={handleSelectChange}
             contacts={contacts}
             companyId={company.company_id}

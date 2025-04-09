@@ -7,8 +7,10 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { createService } from 'server/src/lib/actions/serviceActions'
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
-import { getServiceCategories } from 'server/src/lib/actions/categoryActions' 
+import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
 import { UnitOfMeasureInput } from './UnitOfMeasureInput'
 import { useTenant } from '../TenantProvider'
@@ -26,6 +28,7 @@ interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'cate
   standard_service_type_id?: string;
   custom_service_type_id?: string;
   description?: string | null;
+  region_code?: string | null; // Added region_code
   // Fields to remove from final submission
   sku?: string;
   inventory_count?: number;
@@ -62,6 +65,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
+  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
+  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
   const tenant = useTenant()
 
   // Initialize service state with service_type_id for UI selection
@@ -74,7 +80,7 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
     default_rate: 0,
     unit_of_measure: '',
     is_taxable: true,
-    tax_region: '',
+    region_code: null, // Changed tax_region to region_code
     description: '',
     sku: '',
     inventory_count: 0,
@@ -94,7 +100,23 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
       }
     }
 
+    const fetchTaxRegions = async () => { // Added function
+       try {
+           setIsLoadingTaxRegions(true);
+           const regions = await getActiveTaxRegions();
+           setTaxRegions(regions);
+           setErrorTaxRegions(null);
+       } catch (error) {
+           console.error('Error loading tax regions:', error);
+           setErrorTaxRegions('Failed to load tax regions.');
+           setTaxRegions([]); // Clear regions on error
+       } finally {
+           setIsLoadingTaxRegions(false);
+       }
+    };
+
     fetchCategories()
+    fetchTaxRegions(); // Call new function
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -140,7 +162,7 @@ const baseData = {
   default_rate: serviceData.default_rate,
   unit_of_measure: serviceData.unit_of_measure,
   is_taxable: serviceData.is_taxable,
-  tax_region: serviceData.tax_region || '',
+  region_code: serviceData.region_code || null, // Changed tax_region to region_code
   category_id: null, // Explicitly set optional category_id to null
   description: serviceData.description || '', // Include description field
 };
@@ -177,7 +199,7 @@ console.log('[QuickAddService] Service created successfully');
         unit_of_measure: '',
         is_taxable: true,
         description: '',
-        tax_region: '',
+        region_code: null, // Changed tax_region to region_code
         // Reset optional fields too
         sku: '',
         inventory_count: 0,
@@ -203,6 +225,7 @@ console.log('[QuickAddService] Service created successfully');
         <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-96">
           <Dialog.Title className="text-lg font-bold mb-4">Add New Service</Dialog.Title>
           {error && <div className="text-red-500 mb-4">{error}</div>}
+          {errorTaxRegions && <div className="text-red-500 mb-4">{errorTaxRegions}</div>} {/* Show tax region error */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700">Service Name</label>
@@ -306,13 +329,17 @@ console.log('[QuickAddService] Service created successfully');
               <label className="text-sm font-medium text-gray-700">Is Taxable</label>
             </div>
 
+            {/* Replaced Input with CustomSelect for Tax Region */}
             <div>
-              <label htmlFor="taxRegion" className="block text-sm font-medium text-gray-700">Tax Region</label>
-              <Input
-                id="taxRegion"
-                value={serviceData.tax_region || ''}
-                onChange={(e) => setServiceData({ ...serviceData, tax_region: e.target.value })}
-                placeholder="Tax Region"
+              <label htmlFor="taxRegion" className="block text-sm font-medium text-gray-700">Tax Region (Optional)</label>
+              <CustomSelect
+                  id="quick-add-service-tax-region-select"
+                  value={serviceData.region_code || ''}
+                  placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
+                  onValueChange={(value) => setServiceData({ ...serviceData, region_code: value || null })} // Set null if cleared
+                  options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
+                  disabled={isLoadingTaxRegions}
+                  allowClear={true}
               />
             </div>
 

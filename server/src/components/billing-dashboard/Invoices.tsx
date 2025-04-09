@@ -12,12 +12,10 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import CreditExpirationInfo from './CreditExpirationInfo';
 import {
-  fetchAllInvoices,
-  getInvoiceTemplates,
-  getInvoiceLineItems,
-  finalizeInvoice,
-  unfinalizeInvoice
-} from 'server/src/lib/actions/invoiceActions';
+} from 'server/src/lib/actions/invoiceActions'; // This import will be removed or become empty
+import { fetchAllInvoices, getInvoiceLineItems } from 'server/src/lib/actions/invoiceQueries';
+import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
+import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { getAllCompanies } from 'server/src/lib/actions/companyActions';

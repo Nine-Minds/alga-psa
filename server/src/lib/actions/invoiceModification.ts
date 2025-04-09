@@ -1,0 +1,743 @@
+'use server'
+
+import { Knex } from 'knex';
+import { Session } from 'next-auth';
+import { Temporal } from '@js-temporal/polyfill';
+import { getServerSession } from "next-auth/next";
+import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { createTenantKnex } from 'server/src/lib/db';
+import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { auditLog } from 'server/src/lib/logging/auditLog';
+import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
+import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { BillingEngine } from 'server/src/lib/billing/billingEngine';
+import { persistInvoiceItems } from 'server/src/lib/services/invoiceService';
+import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
+import { v4 as uuidv4 } from 'uuid';
+
+// Interface definitions specific to manual updates (might move to interfaces file later)
+export interface ManualInvoiceUpdate {
+  service_id?: string;
+  description?: string;
+  quantity?: number;
+  rate?: number;
+  item_id: string;
+  is_discount?: boolean;
+  discount_type?: DiscountType;
+  discount_percentage?: number;
+  applies_to_item_id?: string;
+  is_taxable?: boolean;
+  tax_region?: string;
+}
+
+interface ManualItemsUpdate {
+  newItems: IInvoiceItem[];
+  updatedItems: ManualInvoiceUpdate[]; // This uses the interface above, but it's not used in the functions moved here? Recheck original file.
+  removedItemIds: string[];
+  invoice_number?: string; // Added based on usage in updateManualInvoiceItems
+}
+
+
+export async function finalizeInvoice(invoiceId: string): Promise<void> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  await finalizeInvoiceWithKnex(invoiceId, knex, tenant, session.user.id);
+}
+
+export async function finalizeInvoiceWithKnex(
+  invoiceId: string,
+  knex: Knex,
+  tenant: string,
+  userId: string
+): Promise<void> {
+  let invoice: any;
+
+  // First transaction to update invoice status
+  await knex.transaction(async (trx) => {
+    // Check if invoice exists and is not already finalized
+    invoice = await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (invoice.finalized_at) {
+      throw new Error('Invoice is already finalized');
+    }
+
+    await trx('invoices')
+      .where({ invoice_id: invoiceId, tenant: tenant })
+      .update({
+        status: 'sent',
+        finalized_at: toISODate(Temporal.Now.plainDateISO()),
+        updated_at: toISODate(Temporal.Now.plainDateISO())
+      });
+
+    // Record audit log
+    await auditLog(
+      trx,
+      {
+        userId: userId,
+        operation: 'invoice_finalized',
+        tableName: 'invoices',
+        recordId: invoiceId,
+        changedData: { finalized_at: toISODate(Temporal.Now.plainDateISO()) },
+        details: {
+          action: 'Invoice finalized',
+          invoiceNumber: invoice.invoice_number
+        }
+      }
+    );
+  });
+
+  // Check if this is a prepayment invoice (no billing_cycle_id)
+  if (invoice && !invoice.billing_cycle_id) {
+    // For prepayment invoices, update the company's credit balance
+    await CompanyBillingPlan.updateCompanyCredit(invoice.company_id, invoice.subtotal);
+
+    // Log the credit update
+    console.log(`Updated credit balance for company ${invoice.company_id} by ${invoice.subtotal} from prepayment invoice ${invoiceId}`);
+  }
+  // Handle regular invoices with negative totals
+  else if (invoice && invoice.total_amount < 0) {
+    // Get absolute value of negative total
+    const creditAmount = Math.abs(invoice.total_amount);
+
+    // Update company credit balance and record transaction in a single transaction
+    // We handle this directly without using CompanyBillingPlan.updateCompanyCredit to avoid validation issues
+    await knex.transaction(async (trx) => {
+      // Get current credit balance
+      const company = await trx('companies')
+        .where({ company_id: invoice.company_id, tenant })
+        .select('credit_balance')
+        .first();
+
+      if (!company) {
+        throw new Error(`Company ${invoice.company_id} not found`);
+      }
+
+      // Get company's credit expiration settings or default settings
+      const companySettings = await trx('company_billing_settings')
+        .where({
+          company_id: invoice.company_id,
+          tenant
+        })
+        .first();
+
+      const defaultSettings = await trx('default_billing_settings')
+        .where({ tenant })
+        .first();
+
+      // Determine expiration days - use company setting if available, otherwise use default
+      let expirationDays: number | undefined;
+      if (companySettings?.credit_expiration_days !== undefined) {
+        expirationDays = companySettings.credit_expiration_days;
+      } else if (defaultSettings?.credit_expiration_days !== undefined) {
+        expirationDays = defaultSettings.credit_expiration_days;
+      }
+
+      // Calculate expiration date if applicable
+      let expirationDate: string | undefined;
+      if (expirationDays && expirationDays > 0) {
+        const today = new Date();
+        const expDate = new Date(today);
+        expDate.setDate(today.getDate() + expirationDays);
+        expirationDate = expDate.toISOString();
+      }
+
+      // Calculate new balance
+      const newBalance = (company.credit_balance || 0) + creditAmount;
+
+      // Update company credit balance within the transaction
+      await trx('companies')
+        .where({ company_id: invoice.company_id, tenant })
+        .update({
+          credit_balance: newBalance,
+          updated_at: new Date().toISOString()
+        });
+
+      // Record transaction with the correct balance and expiration date
+      // Skip validation for negative invoices since we're creating credit
+      const transactionId = uuidv4();
+      await trx('transactions').insert({
+        transaction_id: transactionId,
+        company_id: invoice.company_id,
+        invoice_id: invoiceId,
+        amount: creditAmount,
+        type: 'credit_issuance_from_negative_invoice',
+        status: 'completed',
+        description: `Credit issued from negative invoice ${invoice.invoice_number}`,
+        created_at: new Date().toISOString(),
+        balance_after: newBalance,
+        tenant,
+        expiration_date: expirationDate
+      });
+
+      // Create credit tracking entry
+      await trx('credit_tracking').insert({
+        credit_id: uuidv4(),
+        tenant,
+        company_id: invoice.company_id,
+        transaction_id: transactionId,
+        amount: creditAmount,
+        remaining_amount: creditAmount, // Initially, remaining amount equals the full amount
+        created_at: new Date().toISOString(),
+        expiration_date: expirationDate,
+        is_expired: false,
+        updated_at: new Date().toISOString()
+      });
+
+      // Log audit
+      await auditLog(
+        trx,
+        {
+          userId: userId,
+          operation: 'credit_issuance_from_negative_invoice',
+          tableName: 'companies',
+          recordId: invoice.company_id,
+          changedData: {
+            credit_balance: newBalance,
+            expiration_date: expirationDate
+          },
+          details: {
+            action: 'Credit issued from negative invoice',
+            invoiceId: invoiceId,
+            amount: creditAmount,
+            expiration_date: expirationDate
+          }
+        }
+      );
+    });
+
+    // Log the credit update
+    console.log(`Created credit of ${creditAmount} from negative invoice ${invoiceId} (${invoice.invoice_number})`);
+  }
+  // For regular invoices, check if there's available credit to apply
+  else if (invoice && invoice.company_id) {
+    const availableCredit = await CompanyBillingPlan.getCompanyCredit(invoice.company_id);
+
+    if (availableCredit > 0) {
+      // Get the current invoice with updated totals
+      const updatedInvoice = await knex('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+
+      if (updatedInvoice && updatedInvoice.total_amount > 0) {
+        // Calculate how much credit to apply
+        const creditToApply = Math.min(availableCredit, updatedInvoice.total_amount);
+
+        if (creditToApply > 0) {
+          // Apply credit to the invoice
+          await applyCreditToInvoice(invoice.company_id, invoiceId, creditToApply);
+        }
+      }
+    }
+  }
+}
+
+export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
+  const { knex, tenant } = await createTenantKnex();
+  const session = await getServerSession(options);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  await knex.transaction(async (trx) => {
+    // Check if invoice exists and is finalized
+    const invoice = await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+
+    if (!invoice) {
+      throw new Error('Invoice not found');
+    }
+
+    if (!invoice.finalized_at) {
+      throw new Error('Invoice is not finalized');
+    }
+
+    await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .update({
+        finalized_at: null,
+        updated_at: toISODate(Temporal.Now.plainDateISO())
+      });
+
+    // Record audit log
+    await auditLog(
+      trx,
+      {
+        userId: session.user.id,
+        operation: 'invoice_unfinalized',
+        tableName: 'invoices',
+        recordId: invoiceId,
+        changedData: { finalized_at: null },
+        details: {
+          action: 'Invoice unfinalized',
+          invoiceNumber: invoice.invoice_number
+        }
+      }
+    );
+  });
+}
+
+export async function updateInvoiceManualItems(
+  invoiceId: string,
+  changes: ManualItemsUpdate
+): Promise<InvoiceViewModel> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+
+  const session = await getServerSession(options);
+  const billingEngine = new BillingEngine();
+
+  console.log('[updateInvoiceManualItems] session:', session);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Load and validate invoice
+  const invoice = await knex('invoices')
+    .where({ invoice_id: invoiceId })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({ company_id: invoice.company_id })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  const currentDate = Temporal.Now.plainDateISO().toString();
+
+  await updateManualInvoiceItemsInternal(invoiceId, changes, session, tenant); // Renamed internal call
+  return await Invoice.getFullInvoiceById(invoiceId);
+}
+
+// Internal helper function to avoid recursive export/import loop
+async function updateManualInvoiceItemsInternal(
+  invoiceId: string,
+  changes: ManualItemsUpdate,
+  session: Session,
+  tenant: string
+): Promise<void> {
+  const { knex } = await createTenantKnex();
+  const billingEngine = new BillingEngine();
+  const currentDate = Temporal.Now.plainDateISO().toString();
+
+  const invoice = await knex('invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({ company_id: invoice.company_id, tenant })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  await knex.transaction(async (trx) => {
+    // Remove existing manual items first (if this is the intended logic)
+    // Or handle updates/removals based on changes.updatedItems and changes.removedItemIds
+    // The original code deleted *all* manual items and re-added new ones.
+    // Let's stick to that for now, but it might need refinement.
+    await trx('invoice_items')
+      .where({
+        invoice_id: invoiceId,
+        is_manual: true,
+        tenant
+      })
+      .delete();
+
+    // Add new items
+    if (changes.newItems && changes.newItems.length > 0) {
+      await persistInvoiceItems(
+        trx,
+        invoiceId,
+        changes.newItems.map(item => ({
+          ...item,
+          service_id: item.service_id || '',
+          is_taxable: item.is_taxable !== false, // Default to taxable unless explicitly false
+          tax_region: item.tax_region || company.tax_region // Use company tax region as fallback
+        })),
+        company,
+        session,
+        tenant,
+        true // Mark as manual
+      );
+    }
+
+    // Update invoice number if provided
+    if (changes.invoice_number && changes.invoice_number !== invoice.invoice_number) {
+      try {
+        await trx('invoices')
+          .where({ invoice_id: invoiceId, tenant })
+          .update({
+            invoice_number: changes.invoice_number,
+            updated_at: currentDate
+          });
+      } catch (error: unknown) {
+        if (error instanceof Error &&
+          'code' in error &&
+          error.code === '23505' &&
+          'constraint' in error &&
+          error.constraint === 'unique_invoice_number_per_tenant') {
+          throw new Error('Invoice number must be unique');
+        }
+        throw error;
+      }
+    } else {
+       // Touch updated_at even if only items changed
+       await trx('invoices')
+          .where({ invoice_id: invoiceId, tenant })
+          .update({ updated_at: currentDate });
+    }
+  });
+
+  // Recalculate totals after modifications
+  await billingEngine.recalculateInvoice(invoiceId);
+}
+
+
+export async function addManualItemsToInvoice(
+  invoiceId: string,
+  items: IInvoiceItem[]
+): Promise<InvoiceViewModel> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('No tenant found');
+  }
+  const session = await getServerSession(options);
+
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Load and validate invoice
+  const invoice = await knex('invoices')
+    .where({
+      invoice_id: invoiceId,
+      tenant
+    })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({
+      company_id: invoice.company_id,
+      tenant
+    })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  await addManualInvoiceItemsInternal(invoiceId, items, session, tenant); // Renamed internal call
+  return await Invoice.getFullInvoiceById(invoiceId);
+}
+
+// Internal helper function
+async function addManualInvoiceItemsInternal(
+  invoiceId: string,
+  items: IInvoiceItem[],
+  session: Session,
+  tenant: string
+): Promise<void> {
+  const { knex } = await createTenantKnex();
+
+  const invoice = await knex('invoices')
+    .where({ invoice_id: invoiceId, tenant })
+    .first();
+
+  if (!invoice) {
+    throw new Error('Invoice not found');
+  }
+
+  if (['paid', 'cancelled'].includes(invoice.status)) {
+    throw new Error('Cannot modify a paid or cancelled invoice');
+  }
+
+  const company = await knex('companies')
+    .where({ company_id: invoice.company_id, tenant })
+    .first();
+
+  if (!company) {
+    throw new Error('Company not found');
+  }
+
+  await knex.transaction(async (trx) => {
+    // Persist manual items with proper tax handling
+    await persistInvoiceItems(
+      trx,
+      invoiceId,
+      items.map(item => ({
+        ...item,
+        service_id: item.service_id || '',
+        is_taxable: item.is_taxable !== false,  // Default to taxable unless explicitly false
+        tax_region: item.tax_region || company.tax_region  // Use company tax region as fallback
+      })),
+      company,
+      session,
+      tenant,
+      true // Mark as manual
+    );
+     // Touch updated_at when items are added
+     await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .update({ updated_at: Temporal.Now.plainDateISO().toString() });
+  });
+
+  const billingEngine = new BillingEngine();
+  await billingEngine.recalculateInvoice(invoiceId);
+}
+
+
+export async function hardDeleteInvoice(invoiceId: string) {
+  const { knex, tenant } = await createTenantKnex();
+
+  await knex.transaction(async (trx) => {
+    // 1. Get invoice details
+    const invoice = await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .first();
+
+    if (!invoice) {
+        console.warn(`Invoice ${invoiceId} not found for deletion.`);
+        return; // Exit if invoice doesn't exist
+    }
+
+    // 2. Handle payments
+    const payments = await trx('transactions')
+      .where({
+        invoice_id: invoiceId,
+        type: 'payment',
+        tenant
+      });
+
+    if (payments.length > 0) {
+      // Insert reversal transactions
+      await trx('transactions').insert(
+        payments.map((p): any => ({ // Use 'any' for flexibility, ensure required fields are present
+          transaction_id: uuidv4(),
+          company_id: p.company_id, // Ensure company_id is included
+          invoice_id: p.invoice_id,
+          amount: -p.amount,
+          type: 'payment_reversal',
+          status: 'completed', // Assuming reversal is completed
+          description: `Reversal of payment ${p.transaction_id}`,
+          created_at: new Date().toISOString(), // Use current time for reversal
+          balance_after: null, // Balance needs recalculation or specific handling
+          tenant: p.tenant,
+          // Copy other relevant fields if necessary
+        }))
+      );
+       // TODO: Recalculate company balance after reversals
+    }
+
+    // 3. Handle credit applied to this invoice
+    if (invoice.credit_applied > 0) {
+        // Find the credit application transaction
+        const creditAppTransaction = await trx('transactions')
+            .where({
+                invoice_id: invoiceId,
+                type: 'credit_application',
+                tenant: tenant
+            })
+            .first();
+
+        // Find related credit tracking entries that were used
+        const creditTrackingUsed = await trx('credit_tracking_usage')
+            .where({ transaction_id: creditAppTransaction?.transaction_id })
+            .select('credit_id', 'amount_used');
+
+        // Restore the used amounts back to the original credit_tracking entries
+        for (const usage of creditTrackingUsed) {
+            await trx('credit_tracking')
+                .where({ credit_id: usage.credit_id })
+                .increment('remaining_amount', usage.amount_used)
+                .update({ updated_at: new Date().toISOString() }); // Update timestamp
+        }
+
+        // Delete the credit tracking usage records
+        await trx('credit_tracking_usage')
+            .where({ transaction_id: creditAppTransaction?.transaction_id })
+            .delete();
+
+        // Delete the credit application transaction itself
+        await trx('transactions')
+            .where({ transaction_id: creditAppTransaction?.transaction_id })
+            .delete();
+
+        // Update the company's credit balance
+        await CompanyBillingPlan.updateCompanyCredit(
+            invoice.company_id,
+            invoice.credit_applied // Add the credit back
+        );
+    }
+
+    // Handle credit issued *from* this invoice (if it was negative)
+    const creditIssuanceTransaction = await trx('transactions')
+        .where({
+            invoice_id: invoiceId,
+            type: 'credit_issuance_from_negative_invoice',
+            tenant: tenant
+        })
+        .first();
+
+    if (creditIssuanceTransaction) {
+        // Find the corresponding credit_tracking entry
+        const creditTrackingEntry = await trx('credit_tracking')
+            .where({ transaction_id: creditIssuanceTransaction.transaction_id })
+            .first();
+
+        if (creditTrackingEntry) {
+            // Check if any of this credit was used
+            const usageAmount = creditTrackingEntry.amount - creditTrackingEntry.remaining_amount;
+            if (usageAmount > 0) {
+                // This scenario is complex: credit issued by the invoice being deleted was already used.
+                // Option 1: Throw error - prevent deletion if issued credit was used.
+                // Option 2: Allow deletion but log a warning/create adjustment.
+                // Option 3: Attempt to reverse the usage (very complex).
+                throw new Error(`Cannot delete invoice ${invoiceId}: Credit issued by this invoice has already been used.`);
+            } else {
+                // Credit was issued but not used, safe to delete tracking and transaction
+                await trx('credit_tracking')
+                    .where({ credit_id: creditTrackingEntry.credit_id })
+                    .delete();
+                // Also update company balance back
+                 await CompanyBillingPlan.updateCompanyCredit(
+                    invoice.company_id,
+                    -creditTrackingEntry.amount // Subtract the credit that was issued
+                );
+            }
+        }
+        // Delete the credit issuance transaction
+        await trx('transactions')
+            .where({ transaction_id: creditIssuanceTransaction.transaction_id })
+            .delete();
+    }
+
+
+    // 4. Unmark time entries
+    await trx('time_entries')
+      .whereIn('entry_id',
+        trx('invoice_time_entries')
+          .select('entry_id')
+          .where({
+            invoice_id: invoiceId,
+            tenant
+          })
+      )
+      .update({ invoiced: false });
+
+    // 5. Unmark usage records
+    await trx('usage_tracking')
+      .whereIn('usage_id',
+        trx('invoice_usage_records')
+          .select('usage_id')
+          .where({
+            invoice_id: invoiceId,
+            tenant
+          })
+      )
+      .update({ invoiced: false });
+
+    // 6. Delete other transactions related to the invoice (e.g., invoice_generated, price_adjustment)
+    await trx('transactions')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      // Exclude types already handled (payment, payment_reversal, credit_application, credit_issuance...)
+      .whereNotIn('type', ['payment', 'payment_reversal', 'credit_application', 'credit_issuance_from_negative_invoice'])
+      .delete();
+
+    // 7. Delete join records
+    await trx('invoice_time_entries')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
+    await trx('invoice_usage_records')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
+    // 8. Delete invoice items
+    await trx('invoice_items')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
+    // 9. Delete invoice record
+    await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .delete();
+
+     // TODO: Recalculate company balance after all deletions/reversals
+  });
+}

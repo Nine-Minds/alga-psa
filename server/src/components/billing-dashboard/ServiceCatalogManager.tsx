@@ -10,7 +10,9 @@ import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 // Import new action and type
 import { getServices, updateService, deleteService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Switch } from '../ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -69,6 +71,9 @@ const ServiceCatalogManager: React.FC = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
+  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
+  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
 
   const filteredServices = services.filter(service => {
     // Get the effective service type ID (either standard or custom)
@@ -84,6 +89,7 @@ const ServiceCatalogManager: React.FC = () => {
     fetchServices();
     fetchCategories();
     fetchAllServiceTypes(); // Fetch service types
+    fetchTaxRegions(); // Added
   }, []);
 
   // Function to fetch all service types
@@ -99,6 +105,22 @@ const ServiceCatalogManager: React.FC = () => {
         setError('An unknown error occurred while fetching service types');
       }
     }
+  };
+
+  // Added function to fetch tax regions
+  const fetchTaxRegions = async () => {
+   try {
+       setIsLoadingTaxRegions(true);
+       const regions = await getActiveTaxRegions();
+       setTaxRegions(regions);
+       setErrorTaxRegions(null);
+   } catch (error) {
+       console.error('Error loading tax regions:', error);
+       setErrorTaxRegions('Failed to load tax regions.');
+       setTaxRegions([]); // Clear regions on error
+   } finally {
+       setIsLoadingTaxRegions(false);
+   }
   };
 
   const fetchServices = async () => {
@@ -206,8 +228,8 @@ const ServiceCatalogManager: React.FC = () => {
       },
       {
         title: 'Tax Region',
-        dataIndex: 'tax_region',
-        render: (value) => value || 'N/A',
+        dataIndex: 'region_code', // Changed from tax_region
+        render: (value) => value || 'Default', // Display code for now, or 'Default' if null
       }
     ];
 
@@ -312,6 +334,7 @@ const ServiceCatalogManager: React.FC = () => {
         </CardHeader>
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
+          {errorTaxRegions && <div className="text-red-500 mb-4">{errorTaxRegions}</div>} {/* Show tax region error */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex space-x-2">
@@ -429,10 +452,16 @@ const ServiceCatalogManager: React.FC = () => {
               />
               <label>Is Taxable</label>
             </div>
-            <Input
-              placeholder="Tax Region"
-              value={editingService?.tax_region || ''}
-              onChange={(e) => setEditingService({ ...editingService!, tax_region: e.target.value })}
+            {/* Replaced Input with CustomSelect for Tax Region */}
+            <CustomSelect
+                id="edit-service-tax-region-select"
+                label="Tax Region (Optional)"
+                value={editingService?.region_code || ''}
+                placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
+                onValueChange={(value) => setEditingService({ ...editingService!, region_code: value || null })} // Set null if cleared
+                options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
+                disabled={isLoadingTaxRegions}
+                allowClear={true}
             />
 
             {/* Removed conditional rendering based on old service_type */}

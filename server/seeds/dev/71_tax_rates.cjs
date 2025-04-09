@@ -6,7 +6,7 @@ exports.seed = function (knex) {
                 {
                     tax_rate_id: knex.raw('gen_random_uuid()'),
                     tenant: tenant.tenant,
-                    region: 'US-FL',
+                    region_code: 'US-FL',
                     tax_percentage: 6,
                     description: 'Florida Sales Tax',
                     start_date: knex.raw('CURRENT_DATE')

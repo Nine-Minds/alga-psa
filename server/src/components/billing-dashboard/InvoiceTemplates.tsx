@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceActions';
+import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 import InvoiceTemplateManager from './InvoiceTemplateManager';
 import { FileTextIcon } from 'lucide-react';

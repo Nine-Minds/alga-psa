@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { updateInvoiceManualItems, getInvoiceLineItems } from 'server/src/lib/actions/invoiceActions';
+import { updateInvoiceManualItems } from 'server/src/lib/actions/invoiceModification';
+import { getInvoiceLineItems } from 'server/src/lib/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from 'server/src/lib/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from 'server/src/lib/actions/manualInvoiceActions'; // Import and alias
 import { Button } from '../ui/Button';

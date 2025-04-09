@@ -141,7 +141,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'per_unit', // Add required billing_method
             default_rate: 10000,
             unit_of_measure: 'Hour',
-            tax_region: 'US-NY',
+            region_code: 'US-NY',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first()
         },
         {
@@ -152,7 +152,7 @@ exports.seed = async function (knex) { // Changed to async function
             billing_method: 'per_unit', // Add required billing_method
             default_rate: 15000,
             unit_of_measure: 'Hour',
-            tax_region: 'US-NY',
+            region_code: 'US-NY',
             category_id: knex('service_categories').where({ tenant: tenantId, category_name: 'Support Services' }).select('category_id').first() // Corrected tenant reference in subquery
         }
     ]);

@@ -14,7 +14,7 @@ export async function getCompanyTaxRates(companyId: string): Promise<ICompanyTax
       'company_tax_rates.company_id': companyId,
       'company_tax_rates.tenant': tenant 
     })
-    .select('company_tax_rates.*', 'tax_rates.region', 'tax_rates.tax_percentage', 'tax_rates.description');
+    .select('company_tax_rates.*', 'tax_rates.region_code', 'tax_rates.tax_percentage', 'tax_rates.description');
 }
 
 export async function addCompanyTaxRate(companyTaxRate: Omit<ICompanyTaxRate, 'tenant'>): Promise<ICompanyTaxRate> {

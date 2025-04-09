@@ -29,7 +29,7 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getCompanyTaxRate, getNextBillingDate } from 'server/src/lib/actions/invoiceActions';
+import { getCompanyTaxRate, getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Keep getCompanyTaxRate if used elsewhere (e.g., bucket plans, non-fixed-fee plans)
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import { getCompanyById } from 'server/src/lib/actions/companyActions';
 import { ICompany } from 'server/src/interfaces';
@@ -716,6 +716,9 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
       let totalNonTaxableAmount = 0;
 
       // For detailed tax calculation and audit purposes
+
+      // Instantiate TaxService
+      const taxServiceInstance = new TaxService(); // Corrected instantiation
       const serviceAllocations = await Promise.all(planServices.map(async (service) => {
         // Calculate the FMV for this service
         const serviceFMV = service.default_rate * (service.quantity || 1);
@@ -734,26 +737,27 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         let taxAmount = 0;
         let taxRate = 0;
 
+        // ***** START OF CORRECTED BLOCK *****
         if (!company.is_tax_exempt && isTaxable) {
-          // Get the tax rate for this region
-          // Use service tax_region, fallback to the explicitly fetched company tax region
-          const effectiveTaxRegion = service.tax_region || fetchedCompanyTaxRegion;
-          if (effectiveTaxRegion) {
-            console.log(`[BillingEngine] Using tax region '${effectiveTaxRegion}' for service ${service.service_id} (Service: ${service.tax_region}, Company: ${fetchedCompanyTaxRegion})`);
-            taxRate = await getCompanyTaxRate(effectiveTaxRegion, billingPeriod.endDate);
+          const taxRegion = service.region_code || company.region_code || ''; // Prioritize service region_code
+          if (taxRegion) {
+            // Use TaxService to calculate tax
+            // allocatedAmount is already in cents
+            // Corrected parameter order: companyId, amount, date, regionCode
+            const taxResult = await taxServiceInstance.calculateTax(company.company_id, allocatedAmount, billingPeriod.endDate, taxRegion);
+            taxRate = taxResult.taxRate;
+            taxAmount = taxResult.taxAmount;
           } else {
             // Only warn and use zero if BOTH service and company (via settings) lack a tax region
             console.warn(`[BillingEngine] No tax region found for service ${service.service_id} or company ${companyId} (via settings), using zero tax rate`);
             taxRate = 0;
+            taxAmount = 0;
           }
-          // allocatedAmount is already in cents (after multiplication by 100)
-          // Divide taxRate by 100 as getCompanyTaxRate likely returns percentage, then round
-          const decimalTaxRate = taxRate / 100;
-          taxAmount = Math.round(allocatedAmount * decimalTaxRate);
-
-          // Add to the total taxable amount
+          // Add the pre-tax allocated amount to the total taxable amount
           totalTaxableAmount += allocatedAmount;
-        } else {
+        }
+        // ***** END OF CORRECTED BLOCK *****
+         else {
           // Add to the total non-taxable amount
           totalNonTaxableAmount += allocatedAmount;
         }
@@ -794,7 +798,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         type: 'fixed',
         tax_amount: totalTaxAmount,
         tax_rate: totalTaxAmount / (baseRate * 100), // Effective tax rate based on cents
-        tax_region: company.tax_region,
+        tax_region: undefined, // Cannot assign a single region to a consolidated charge with mixed-region taxes
         is_taxable: totalTaxableAmount > 0, // Consider the plan taxable if any portion is taxable
         // Store the plan ID for reference
         planId: companyBillingPlan.plan_id,
@@ -823,17 +827,19 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
           type: 'fixed',
           tax_amount: 0,
           tax_rate: 0,
-          tax_region: service.tax_region || company.tax_region,
+          tax_region: service.tax_region || company.region_code,
           is_taxable: service.is_taxable !== false,
           enable_proration: service.enable_proration,
           billing_cycle_alignment: service.billing_cycle_alignment
         };
         if (!company.is_tax_exempt && service.is_taxable !== false) {
           // Ensure tax_region is not undefined
-          const taxRegion = charge.tax_region || company.tax_region || '';
-          
+          const taxRegion = charge.tax_region || company.region_code || '';
+
           // Only calculate tax if we have a valid tax region
           if (taxRegion) {
+            // NOTE: This part still uses getCompanyTaxRate. If TaxService should be used everywhere, this needs changing too.
+            // For now, leaving as is, as the primary goal was the fixed-fee allocation logic.
             charge.tax_rate = await getCompanyTaxRate(taxRegion, billingPeriod.endDate);
             charge.tax_amount = charge.total * charge.tax_rate;
           } else {
@@ -1226,7 +1232,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         total: (service.custom_rate || service.default_rate) * service.quantity,
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: service.tax_region || company.tax_region,
+        tax_region: service.tax_region || company.region_code,
         is_taxable: service.is_taxable !== false
       };
 
@@ -1275,7 +1281,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         total: (service.custom_rate || service.default_rate) * service.quantity,
         tax_amount: 0,
         tax_rate: 0,
-        tax_region: service.tax_region || company.tax_region,
+        tax_region: service.tax_region || company.region_code,
         period_start: billingPeriod.startDate,
         period_end: billingPeriod.endDate,
         is_taxable: service.is_taxable !== false
@@ -1328,7 +1334,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         'plan_service_bucket_config.*',
         'service_catalog.service_name',
         'service_catalog.is_taxable',
-        'service_catalog.tax_region'
+        'service_catalog.region_code'
       );
 
     if (!bucketConfigs || bucketConfigs.length === 0) {
@@ -1364,8 +1370,8 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
       const overageHours = Math.max(0, hoursUsed - totalHours);
 
       if (overageHours > 0) {
-        const taxRegion = bucketConfig.tax_region || company.tax_region;
-        const taxRate = await getCompanyTaxRate(taxRegion, period.endDate);
+        const taxRegion = bucketConfig.region_code || company.region_code;
+        const taxRate = await getCompanyTaxRate(taxRegion, period.endDate); // Still uses getCompanyTaxRate here
 
         const overageRate = Math.ceil(bucketConfig.overage_rate);
         const total = Math.ceil(overageHours * overageRate);
@@ -1718,7 +1724,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
         id: company.company_id,
         name: company.company_name,
         isTaxExempt: company.is_tax_exempt,
-        taxRegion: company.tax_region
+        regionCode: company.region_code // Updated field name
       }
     });
 
@@ -1747,19 +1753,26 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
           unitPrice: item.unit_price,
           netAmount,
           isTaxable: service ? service.is_taxable !== false : true,
-          taxRegion: service?.tax_region || company.tax_region
+          serviceRegionCode: service?.region_code, // Updated field name
+          companyRegionCode: company.region_code // Updated field name
         });
 
         // Only calculate tax for taxable items and non-exempt companies
-        if (!company.is_tax_exempt && item.is_taxable !== false) {
+        // Determine the region code to use: prioritize service, then company
+        const regionCodeToUse = service?.region_code || company.region_code;
+
+        if (!company.is_tax_exempt && item.is_taxable !== false && regionCodeToUse) {
+          console.log(`Calculating tax using regionCode: ${regionCodeToUse}`);
           const taxCalculationResult = await taxService.calculateTax(
             company.company_id,
             netAmount,
-            toISODate(Temporal.Now.plainDateISO()),
-            service?.tax_region || item.tax_region
+            toISODate(Temporal.Now.plainDateISO()), // Use current date for recalculation context
+            regionCodeToUse // Pass the determined region code
           );
-          taxAmount = Math.round(taxCalculationResult.taxAmount);
-          taxRate = taxCalculationResult.taxRate;
+          taxAmount = Math.round(taxCalculationResult.taxAmount); // Already combined amount
+          taxRate = taxCalculationResult.taxRate; // Already combined rate
+        } else {
+           console.log(`Tax not calculated: Company exempt: ${company.is_tax_exempt}, Item taxable: ${item.is_taxable !== false}, Region code found: ${!!regionCodeToUse}`);
         }
 
         const totalPrice = netAmount + taxAmount;
@@ -1770,7 +1783,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
           .update({
             tax_amount: taxAmount,
             tax_rate: taxRate,
-            tax_region: service?.tax_region || company.tax_region,
+            // tax_region: service?.tax_region || company.tax_region, // Removed - invoice_items not migrated, calculation uses region_code
             total_price: totalPrice
           });
 

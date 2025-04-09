@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth/next';
 import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
-import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceActions';
+import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { Knex } from 'knex';

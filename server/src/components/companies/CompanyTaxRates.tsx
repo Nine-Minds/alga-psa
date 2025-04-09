@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react'; // Added useState, useEffect
 import { Button } from 'server/src/components/ui/Button';
 import { ITaxRate, ICompanyTaxRate } from 'server/src/interfaces/billing.interfaces';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -18,8 +20,8 @@ interface CompanyTaxRatesProps {
 interface TaxRateTableData {
     company_tax_rate_id: string;
     tax_rate_id: string;
-    region: string;
-    tax_percentage: number;
+    region_name: string; // Changed from region
+    tax_percentage: number; // Reverted back to number
     description: string;
 }
 
@@ -31,13 +33,36 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
     onAdd,
     onRemove
 }) => {
+   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
+   const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true);
+   const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null);
+
+   useEffect(() => {
+       const fetchTaxRegions = async () => {
+           try {
+               setIsLoadingTaxRegions(true);
+               const regions = await getActiveTaxRegions();
+               setTaxRegions(regions);
+               setErrorTaxRegions(null);
+           } catch (error) {
+               console.error('Error loading tax regions:', error);
+               setErrorTaxRegions('Failed to load tax regions.');
+               setTaxRegions([]);
+           } finally {
+               setIsLoadingTaxRegions(false);
+           }
+       };
+       fetchTaxRegions();
+   }, []);
+
     const tableData: TaxRateTableData[] = companyTaxRates
         .map((companyTaxRate): TaxRateTableData => {
             const taxRate = taxRates.find(tr => tr.tax_rate_id === companyTaxRate.tax_rate_id);
+            const taxRegion = taxRegions.find(reg => reg.region_code === taxRate?.region_code); // Find region name
             return {
                 company_tax_rate_id: companyTaxRate.company_tax_rate_id!,
                 tax_rate_id: companyTaxRate.tax_rate_id,
-                region: taxRate?.region || '',
+                region_name: taxRegion?.region_name || taxRate?.region_code || 'N/A', // Display name, fallback to code
                 tax_percentage: taxRate?.tax_percentage || 0,
                 description: taxRate?.description || ''
             };
@@ -46,7 +71,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
     const columns: ColumnDefinition<TaxRateTableData>[] = [
         {
             title: 'Region',
-            dataIndex: 'region'
+            dataIndex: 'region_name' // Changed from region
         },
         {
             title: 'Tax Percentage',
@@ -74,10 +99,15 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
         }
     ];
 
-    const taxRateOptions = taxRates.map((taxRate): { value: string; label: string } => ({
-        value: taxRate.tax_rate_id!,
-        label: `${taxRate.region} - ${taxRate.tax_percentage}%`
-    }));
+    // Generate options only when taxRegions are loaded
+    const taxRateOptions = isLoadingTaxRegions ? [] : taxRates.map((taxRate): { value: string; label: string } => {
+       const taxRegion = taxRegions.find(reg => reg.region_code === taxRate.region_code);
+       const regionLabel = taxRegion?.region_name || taxRate.region_code || 'Unknown Region';
+       return {
+           value: taxRate.tax_rate_id!,
+           label: `${regionLabel} - ${taxRate.tax_percentage}% (${taxRate.description || 'No Description'})` // Include description
+       };
+    });
 
     return (
         <Card className="p-4">
@@ -97,7 +127,8 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                         value={selectedTaxRate}
                         onValueChange={onSelectTaxRate}
                         options={taxRateOptions}
-                        placeholder="Select Tax Rate"
+                        placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Rate"}
+                        disabled={isLoadingTaxRegions} // Disable while loading regions
                     />
                 </div>
                 <Button 

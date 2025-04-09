@@ -4,7 +4,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
-
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added import
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
     const { knex } = await createTenantKnex();
@@ -126,6 +126,162 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
       throw new Error(`Failed to fetch tax rates: ${error.message}`);
     } else {
       throw new Error('Failed to fetch tax rates due to an unexpected error.');
+    }
+  }
+}
+
+/**
+ * Fetches all active tax regions for the current tenant.
+ * @returns A promise that resolves to an array of active tax regions.
+ */
+export async function getActiveTaxRegions(): Promise<Pick<ITaxRegion, 'region_code' | 'region_name'>[]> {
+  try {
+    const { knex } = await createTenantKnex();
+    const activeRegions = await knex<ITaxRegion>('tax_regions')
+      .select('region_code', 'region_name')
+      .where('is_active', true)
+      .orderBy('region_name', 'asc');
+
+    return activeRegions;
+  } catch (error) {
+    console.error('Error fetching active tax regions:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch active tax regions: ${error.message}`);
+    } else {
+      throw new Error('Failed to fetch active tax regions due to an unexpected error.');
+    }
+  }
+}
+
+/**
+ * Fetches all tax regions (active and inactive) for the current tenant.
+ * @returns A promise that resolves to an array of all tax regions.
+ */
+export async function getTaxRegions(): Promise<ITaxRegion[]> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    const regions = await knex<ITaxRegion>('tax_regions')
+      .select('*')
+      .where('tenant', tenant)
+      .orderBy('region_name', 'asc');
+
+    return regions;
+  } catch (error) {
+    console.error('Error fetching all tax regions:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch tax regions: ${error.message}`);
+    } else {
+      throw new Error('Failed to fetch tax regions due to an unexpected error.');
+    }
+  }
+}
+
+/**
+ * Creates a new tax region for the current tenant.
+ * Ensures region_code uniqueness within the tenant.
+ * @param data - The data for the new tax region.
+ * @returns A promise that resolves to the newly created tax region.
+ */
+export async function createTaxRegion(data: {
+  region_code: string;
+  region_name: string;
+  is_active?: boolean;
+}): Promise<ITaxRegion> {
+  const { knex, tenant } = await createTenantKnex();
+  const { region_code, region_name, is_active = true } = data; // Default is_active to true
+
+  try {
+    // Check for existing region_code within the tenant
+    const existingRegion = await knex<ITaxRegion>('tax_regions')
+      .where('tenant', tenant)
+      .andWhere('region_code', region_code)
+      .first();
+
+    if (existingRegion) {
+      throw new Error(`Tax region with code "${region_code}" already exists.`);
+    }
+
+    const [createdRegion] = await knex<ITaxRegion>('tax_regions')
+      .insert({
+        region_code,
+        region_name,
+        is_active,
+        tenant: tenant!,
+      })
+      .returning('*');
+
+    return createdRegion;
+  } catch (error) {
+    console.error('Error creating tax region:', error);
+    if (error instanceof Error) {
+      // Re-throw specific errors or a generic one
+      if (error.message.includes('already exists')) {
+        throw error; // Re-throw the specific uniqueness error
+      }
+      throw new Error(`Failed to create tax region: ${error.message}`);
+    } else {
+      throw new Error('Failed to create tax region due to an unexpected error.');
+    }
+  }
+}
+
+/**
+ * Updates an existing tax region for the current tenant.
+ * Can update region_name and is_active status.
+ * @param region_code - The code of the tax region to update.
+ * @param data - The data to update.
+ * @returns A promise that resolves to the updated tax region.
+ */
+export async function updateTaxRegion(
+  region_code: string,
+  data: { region_name?: string; is_active?: boolean }
+): Promise<ITaxRegion> {
+  const { knex, tenant } = await createTenantKnex();
+  const updateData: Partial<Pick<ITaxRegion, 'region_name' | 'is_active'>> = {};
+
+  if (data.region_name !== undefined) {
+    updateData.region_name = data.region_name;
+  }
+  if (data.is_active !== undefined) {
+    updateData.is_active = data.is_active;
+  }
+
+  // Ensure there's something to update
+  if (Object.keys(updateData).length === 0) {
+    // Optionally, fetch and return the existing region or throw an error
+     const existingRegion = await knex<ITaxRegion>('tax_regions')
+      .where('tenant', tenant)
+      .andWhere('region_code', region_code)
+      .first();
+    if (!existingRegion) {
+       throw new Error(`Tax region with code "${region_code}" not found.`);
+    }
+    return existingRegion;
+    // Or: throw new Error('No update data provided.');
+  }
+
+
+  try {
+    const [updatedRegion] = await knex<ITaxRegion>('tax_regions')
+      .where('tenant', tenant)
+      .andWhere('region_code', region_code)
+      .update(updateData)
+      .returning('*');
+
+    if (!updatedRegion) {
+      throw new Error(`Tax region with code "${region_code}" not found.`);
+    }
+
+    return updatedRegion;
+  } catch (error) {
+    console.error('Error updating tax region:', error);
+     if (error instanceof Error) {
+       if (error.message.includes('not found')) {
+         throw error; // Re-throw the specific not found error
+       }
+      throw new Error(`Failed to update tax region: ${error.message}`);
+    } else {
+      throw new Error('Failed to update tax region due to an unexpected error.');
     }
   }
 }

@@ -73,7 +73,8 @@ export async function updateCompany(companyId: string, updateData: Partial<IComp
       
       // Handle all other fields
       Object.entries(updateData).forEach(([key, value]) => {
-        if (key !== 'properties' && key !== 'url') {
+        // Exclude properties, url, and the old tax_region if present
+        if (key !== 'properties' && key !== 'url' && key !== 'tax_region') {
           // Always include the field in the update, setting null for undefined/empty values
           updateObject[key] = (value === undefined || value === '') ? null : value;
         }
@@ -425,7 +426,7 @@ export async function exportCompaniesToCSV(companies: ICompany[]): Promise<strin
     'preferred_payment_method',
     'auto_invoice',
     'invoice_delivery_method',
-    'tax_region',
+    'region_code', // Changed from tax_region
     'notes' 
   ];
 
@@ -541,7 +542,7 @@ export async function importCompaniesFromCSV(
             preferred_payment_method: companyData.preferred_payment_method || '',
             auto_invoice: companyData.auto_invoice || false,
             invoice_delivery_method: companyData.invoice_delivery_method || '',
-            tax_region: companyData.tax_region || '',
+            region_code: companyData.region_code || null, // Changed tax_region to region_code
             tax_id_number: companyData.tax_id_number || '',
             tax_exemption_certificate: companyData.tax_exemption_certificate || '',
             notes: companyData.notes || '',

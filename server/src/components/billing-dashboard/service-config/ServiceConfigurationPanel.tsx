@@ -5,9 +5,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from 'serve
 import { UnitOfMeasureInput } from 'server/src/components/billing-dashboard/UnitOfMeasureInput';
 import { ServiceTaxSettings } from './ServiceTaxSettings';
 import { ServiceRateTiers } from './ServiceRateTiers';
-import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRate } from 'server/src/interfaces/tax.interfaces';
 import { getServiceById } from 'server/src/lib/actions/serviceActions';
 
 interface ServiceConfigurationPanelProps {
@@ -17,7 +15,6 @@ interface ServiceConfigurationPanelProps {
 
 export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfigurationPanelProps) {
   const [service, setService] = useState<IService | null>(null);
-  const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,16 +30,6 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
           setService(serviceData);
         } else {
           setError('Service not found');
-        }
-        
-        // Fetch tax rates
-        try {
-          const taxRatesData = await getTaxRates();
-          setTaxRates(taxRatesData);
-        } catch (taxErr) {
-          console.error('Error fetching tax rates:', taxErr);
-          // Don't fail the whole component if tax rates can't be loaded
-          setTaxRates([]);
         }
       } catch (err) {
         console.error('Error fetching service:', err);
@@ -137,7 +124,6 @@ export function ServiceConfigurationPanel({ serviceId, onUpdate }: ServiceConfig
 
       <ServiceTaxSettings 
         service={service} 
-        taxRates={taxRates}
         onUpdate={handleServiceUpdate}
       />
 

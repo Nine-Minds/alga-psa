@@ -4,8 +4,11 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from 'server/src/components/ui/Dialog';
 import { Label } from 'server/src/components/ui/Label';
+import CustomSelect from 'server/src/components/ui/CustomSelect'; // Added import
 import { getTaxRates, addTaxRate, updateTaxRate, deleteTaxRate } from 'server/src/lib/actions/taxRateActions';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
 import { ITaxRate } from 'server/src/interfaces/billing.interfaces';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
 import { v4 as uuidv4 } from 'uuid';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -22,12 +25,16 @@ import {
 const TaxRates: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentTaxRate, setCurrentTaxRate] = useState<Partial<ITaxRate>>({});
+  const [currentTaxRate, setCurrentTaxRate] = useState<Partial<ITaxRate>>({}); // Reverted state type
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
+  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
+  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
+ 
   useEffect(() => {
     fetchTaxRates();
+    fetchTaxRegions(); // Added
   }, []);
 
   const fetchTaxRates = async () => {
@@ -41,12 +48,29 @@ const TaxRates: React.FC = () => {
     }
   };
 
+  // Added function to fetch tax regions
+  const fetchTaxRegions = async () => {
+   try {
+       setIsLoadingTaxRegions(true);
+       const regions = await getActiveTaxRegions();
+       setTaxRegions(regions);
+       setErrorTaxRegions(null);
+   } catch (error) {
+       console.error('Error loading tax regions:', error);
+       setErrorTaxRegions('Failed to load tax regions.');
+       setTaxRegions([]); // Clear regions on error
+   } finally {
+       setIsLoadingTaxRegions(false);
+   }
+  };
+
   const handleAddOrUpdateTaxRate = async () => {
-    // Basic validation
-    if (!currentTaxRate.region) {
-      setError('Region is required');
+    // Basic validation - Changed region to region_code
+    if (!currentTaxRate.region_code) {
+      setError('Tax Region is required');
       return;
     }
+
     if (!currentTaxRate.tax_percentage) {
       setError('Tax percentage is required');
       return;
@@ -67,7 +91,7 @@ const TaxRates: React.FC = () => {
         await addTaxRate(newTaxRateWithId);
       }
       setIsDialogOpen(false);
-      setCurrentTaxRate({});
+      setCurrentTaxRate({}); // Reverted: Clear state
       setIsEditing(false);
       fetchTaxRates();
       setError(null);
@@ -85,6 +109,7 @@ const TaxRates: React.FC = () => {
   };
 
   const handleEditTaxRate = (taxRate: ITaxRate) => {
+    // Reverted: No need for tax_percentage_str
     setCurrentTaxRate({
       ...taxRate,
       start_date: formatDateForInput(taxRate.start_date),
@@ -108,7 +133,11 @@ const TaxRates: React.FC = () => {
   };
 
   const columns: ColumnDefinition<ITaxRate>[] = [
-    { title: 'Region', dataIndex: 'region' },
+    {
+      title: 'Region',
+      dataIndex: 'region_code', // Changed from region
+      render: (value) => taxRegions.find(r => r.region_code === value)?.region_name || value || 'N/A' // Display name or code
+    },
     { title: 'Tax Percentage', dataIndex: 'tax_percentage', render: (value) => `${value}%` },
     { title: 'Description', dataIndex: 'description' },
     {
@@ -172,7 +201,7 @@ const TaxRates: React.FC = () => {
         <CardContent>
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-              <span className="block sm:inline">{error}</span>
+              <span className="block sm:inline">{error || errorTaxRegions}</span> {/* Show either error */}
             </div>
           )}
           <div className="flex justify-end mb-4">
@@ -181,7 +210,7 @@ const TaxRates: React.FC = () => {
               onClick={() => {
                 setIsDialogOpen(true);
                 setIsEditing(false);
-                setCurrentTaxRate({});
+                setCurrentTaxRate({}); // Reverted: Clear state
                 setError(null);
               }}
             >
@@ -203,15 +232,20 @@ const TaxRates: React.FC = () => {
             <DialogDescription>Enter the details for the tax rate.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Replaced Input with CustomSelect for Region */}
             <div>
-              <Label htmlFor="tax-rate-region-field">Region</Label>
-              <Input
+              <Label htmlFor="tax-rate-region-field">Tax Region</Label>
+              <CustomSelect
                 id="tax-rate-region-field"
-                value={currentTaxRate.region || ''}
-                onChange={(e) => {
-                  setCurrentTaxRate({ ...currentTaxRate, region: e.target.value });
+                value={currentTaxRate.region_code || ''}
+                onValueChange={(value) => {
+                  setCurrentTaxRate({ ...currentTaxRate, region_code: value });
                   setError(null);
                 }}
+                options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
+                placeholder={isLoadingTaxRegions ? "Loading regions..." : "Select Tax Region"}
+                disabled={isLoadingTaxRegions}
+                required={true} // Make region selection required
               />
             </div>
             <div>
@@ -219,9 +253,10 @@ const TaxRates: React.FC = () => {
               <Input
                 id="tax-rate-percentage-field"
                 type="number"
-                step="0.01"
+                // Keep step removed, but revert onChange logic
                 value={currentTaxRate.tax_percentage || ''}
                 onChange={(e) => {
+                  // Reverted: Parse float directly into state
                   setCurrentTaxRate({ ...currentTaxRate, tax_percentage: parseFloat(e.target.value) });
                   setError(null);
                 }}
