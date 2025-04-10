@@ -12,16 +12,9 @@ export async function getCompanyTaxSettings(companyId: string): Promise<ICompany
       .where({ company_id: companyId })
       .first();
 
-    if (taxSettings) {
-      taxSettings.tax_components = await knex<ITaxComponent>('tax_components')
-        .where('tax_rate_id', taxSettings.tax_rate_id);
-
-      taxSettings.tax_rate_thresholds = await knex<ITaxRateThreshold>('tax_rate_thresholds')
-        .where('tax_rate_id', taxSettings.tax_rate_id);
-
-      taxSettings.tax_holidays = await knex<ITaxHoliday>('tax_holidays')
-        .where('tax_rate_id', taxSettings.tax_rate_id);
-    }
+    // Removed fetching of components, thresholds, holidays based on tax_rate_id (Phase 1.2)
+    // These are now associated directly with tax rates/components, not the settings record.
+    // Advanced rule handling might be revisited in later phases if needed here.
 
     return taxSettings || null;
   } catch (error) {
@@ -42,52 +35,19 @@ export async function updateCompanyTaxSettings(
   const trx = await knex.transaction();
 
   try {
+    // Update only the fields remaining on company_tax_settings
     await trx<ICompanyTaxSettings>('company_tax_settings')
-      .where({ company_id: companyId })
+      .where('company_id', companyId) // Separate where clauses
+      .andWhere('tenant', tenant!)     // Use non-null assertion for tenant
       .update({
-        tax_rate_id: taxSettings.tax_rate_id,
+        // tax_rate_id: taxSettings.tax_rate_id, // Removed field
         is_reverse_charge_applicable: taxSettings.is_reverse_charge_applicable,
-      })
-      .returning('*');
+        // Note: tax_components, tax_rate_thresholds, tax_holidays are no longer managed
+        // directly through this settings update based on tax_rate_id.
+        // Their management is tied to specific tax rates/components now.
+      });
+      // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
 
-      if (taxSettings.tax_components) {
-        await trx('tax_components')
-          .where('tax_rate_id', taxSettings.tax_rate_id)
-          .del();
-  
-        await trx('tax_components').insert(
-          taxSettings.tax_components.map((component): Omit<ITaxComponent, 'tenant'> => ({
-            ...component,
-            tax_rate_id: taxSettings.tax_rate_id
-          }))
-        );
-      }
-  
-      if (taxSettings.tax_rate_thresholds) {
-        await trx('tax_rate_thresholds')
-          .where('tax_rate_id', taxSettings.tax_rate_id)
-          .del();
-  
-        await trx('tax_rate_thresholds').insert(
-          taxSettings.tax_rate_thresholds.map((threshold): Omit<ITaxRateThreshold, 'tenant'> => ({
-            ...threshold,
-            tax_rate_id: taxSettings.tax_rate_id
-          }))
-        );
-      }
-  
-      if (taxSettings.tax_holidays) {
-        await trx('tax_holidays')
-          .where('tax_rate_id', taxSettings.tax_rate_id)
-          .del();
-  
-        await trx('tax_holidays').insert(
-          taxSettings.tax_holidays.map((holiday): Omit<ITaxHoliday, 'tenant'> => ({
-            ...holiday,
-          }))
-        );
-      }
-  
       await trx.commit();
   
       return await getCompanyTaxSettings(companyId);

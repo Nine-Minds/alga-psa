@@ -16,7 +16,7 @@ import { ICompanyBillingPlan, IBillingPlan, IServiceCategory, BillingCycleType }
 import { getServices, createService, updateService, deleteService } from '../../lib/actions/serviceActions';
 import { IService } from '../../interfaces/billing.interfaces';
 import { getTaxRates } from '../../lib/actions/taxRateActions';
-import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate } from '../../lib/actions/companyTaxRateActions';
+import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate, updateDefaultCompanyTaxRate } from '../../lib/actions/companyTaxRateActions'; // Added updateDefaultCompanyTaxRate
 import { ITaxRate, ICompanyTaxRate } from '../../interfaces/billing.interfaces';
 import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
 import { setCompanyTemplate } from '../../lib/actions/invoiceTemplates';
@@ -28,6 +28,7 @@ import CompanyCreditExpirationSettings from './CompanyCreditExpirationSettings';
 import CompanyServiceOverlapMatrix from './CompanyServiceOverlapMatrix';
 import CompanyPlanDisambiguationGuide from './CompanyPlanDisambiguationGuide';
 import CompanyBundleAssignment from './CompanyBundleAssignment'; // Added import
+import { ICompanyTaxRateAssociation } from 'server/src/interfaces/tax.interfaces';
 
 interface BillingConfigurationProps {
     company: ICompany;
@@ -75,9 +76,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         billing_method: 'fixed',
         description: '', // Add description field
     });
-    const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
-    const [companyTaxRates, setCompanyTaxRates] = useState<ICompanyTaxRate[]>([]);
-    const [selectedTaxRate, setSelectedTaxRate] = useState<string>('');
+   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+   const [companyTaxRates, setCompanyTaxRates] = useState<ICompanyTaxRate[]>([]);
+   // Removed selectedTaxRate state as it's no longer needed for the simplified CompanyTaxRates component
 
     // Formats a Date object or string into 'YYYY-MM-DD' string, handling potential UTC interpretation
     const formatStartDate = (date: Date | string | null): string => {
@@ -390,33 +391,49 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         } catch (error) {
             setErrorMessage('Failed to delete service. Please try again.');
         }
-    };
+   };
 
-    const handleAddCompanyTaxRate = async () => {
-        if (!selectedTaxRate) return;
-        try {
-            const newCompanyTaxRate: Omit<ICompanyTaxRate, 'company_tax_rate_id' | 'tenant'> = {
-                company_id: company.company_id,
-                tax_rate_id: selectedTaxRate
-            };
-            await addCompanyTaxRate(newCompanyTaxRate);
-            const updatedCompanyTaxRates = await getCompanyTaxRates(company.company_id);
-            setCompanyTaxRates(updatedCompanyTaxRates);
-            setSelectedTaxRate('');
-        } catch (error) {
-            setErrorMessage('Failed to add tax rate to company. Please try again.');
-        }
-    };
+   // Handler for assigning the initial default tax rate
+   const handleAssignDefaultTaxRate = async (taxRateId: string) => {
+       if (!taxRateId) return;
+       try {
+           const newCompanyTaxRateData: Pick<ICompanyTaxRateAssociation, 'company_id' | 'tax_rate_id'> = {
+               company_id: company.company_id,
+               tax_rate_id: taxRateId
+           };
+           // Call the action which now enforces single default
+           await addCompanyTaxRate(newCompanyTaxRateData);
+           // Refetch company tax rates to update the UI
+           const updatedCompanyTaxRates = await getCompanyTaxRates(company.company_id);
+           setCompanyTaxRates(updatedCompanyTaxRates);
+           setErrorMessage(null); // Clear any previous errors
+       } catch (error: any) {
+           console.error('Failed to assign default tax rate:', error);
+           // Set specific error message from the action if available
+           setErrorMessage(error.message || 'Failed to assign default tax rate. Please try again.');
+           // Re-throw or handle as needed if parent component needs to know
+           throw error;
+      }
+  };
 
-    const handleRemoveCompanyTaxRate = async (taxRateId: string) => {
-        try {
-            await removeCompanyTaxRate(company.company_id, taxRateId);
-            const updatedCompanyTaxRates = await getCompanyTaxRates(company.company_id);
-            setCompanyTaxRates(updatedCompanyTaxRates);
-        } catch (error) {
-            setErrorMessage('Failed to remove tax rate from company. Please try again.');
-        }
-    };
+  // Handler for changing the default tax rate
+  const handleChangeDefaultTaxRate = async (newTaxRateId: string) => {
+      if (!newTaxRateId) return;
+      try {
+          // Use the imported updateDefaultCompanyTaxRate action
+          await updateDefaultCompanyTaxRate(company.company_id, newTaxRateId);
+          // Refetch company tax rates to update the UI
+          const updatedCompanyTaxRates = await getCompanyTaxRates(company.company_id);
+          setCompanyTaxRates(updatedCompanyTaxRates);
+          setErrorMessage(null); // Clear any previous errors
+      } catch (error: any) {
+          console.error('Failed to change default tax rate:', error);
+          setErrorMessage(error.message || 'Failed to change default tax rate. Please try again.');
+          throw error; // Re-throw so the child component knows it failed
+      }
+   };
+
+   // Removed handleAddCompanyTaxRate and handleRemoveCompanyTaxRate as CompanyTaxRates now only displays the default rate
 
     // Displays a 'YYYY-MM-DD' string in a user-friendly format, treating it as UTC
     const formatDateForDisplay = (dateString: string | null): string => {
@@ -513,14 +530,14 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
     </TabsContent>
     
     <TabsContent value="taxRates">
-        <CompanyTaxRates
-            companyTaxRates={companyTaxRates}
-            taxRates={taxRates}
-            selectedTaxRate={selectedTaxRate}
-            onSelectTaxRate={setSelectedTaxRate}
-            onAdd={handleAddCompanyTaxRate}
-            onRemove={handleRemoveCompanyTaxRate}
-        />
+       {/* Updated props for CompanyTaxRates to pass only the single default rate */}
+      <CompanyTaxRates
+          companyId={company.company_id}
+          companyTaxRate={companyTaxRates.find(ctr => ctr.is_default) || null} // Pass only the default rate or null
+          taxRates={taxRates} // Pass all available rates for the dropdown
+         onAssignDefault={handleAssignDefaultTaxRate} // Pass the assign handler
+         onChangeDefault={handleChangeDefaultTaxRate} // Pass the change handler
+      />
     </TabsContent>
     
     <TabsContent value="overlaps">

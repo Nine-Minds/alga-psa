@@ -7,6 +7,7 @@ import { TaxRegion } from 'server/src/types/types.d';
 import { fetchCompanyTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
 import { getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
 
 interface Service {
   id: string;
@@ -20,6 +21,8 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isDirty?: boolean;
   tempId?: string;
   company_id?: string; // Added for billing plan selection
+  tax_rate_id?: string | null; // ID of the applied tax rate
+  tax_percentage?: number | null; // Percentage of the applied tax rate
 }
 
 interface TimeEntryState {
@@ -141,16 +144,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Load all required data in parallel
-  const [services, taxRegions, defaultTaxRegionFromCompany, companyId] = await Promise.all([
-    fetchServicesForTimeEntry(workItem.type),
-    fetchTaxRegions(),
-    (workItem.type === 'ticket' || workItem.type === 'project_task')
-      ? fetchCompanyTaxRateForWorkItem(workItem.work_item_id, workItem.type)
-      : Promise.resolve(undefined),
-    (workItem.type === 'ticket' || workItem.type === 'project_task')
-      ? getCompanyIdForWorkItem(workItem.work_item_id, workItem.type)
-      : Promise.resolve(null)
-  ]);
+      const companyId = (workItem.type === 'ticket' || workItem.type === 'project_task')
+        ? await getCompanyIdForWorkItem(workItem.work_item_id, workItem.type)
+        : null;
+
+      const [services, taxRegions, company] = await Promise.all([
+        fetchServicesForTimeEntry(workItem.type),
+        fetchTaxRegions(),
+        companyId ? getCompanyById(companyId) : Promise.resolve(null)
+      ]);
 
       dispatch({
         type: 'SET_INITIAL_DATA',
@@ -167,7 +169,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         end_time: formatISO(parseISO(rest.end_time)),
         created_at: formatISO(parseISO(rest.created_at)),
         updated_at: formatISO(parseISO(rest.updated_at)),
-        tax_region: rest.tax_region || defaultTaxRegion || defaultTaxRegionFromCompany || '',
+        tax_region: rest.tax_region || defaultTaxRegion || company?.region_code || '',
         isNew: false,
         isDirty: false,
         company_id: companyId || undefined,
@@ -187,7 +189,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         updated_at: formatISO(new Date()),
         approval_status: 'DRAFT',
         service_id: '',
-        tax_region: defaultTaxRegion || defaultTaxRegionFromCompany || '',
+        tax_region: defaultTaxRegion || company?.region_code || '',
         isNew: true,
         tempId: crypto.randomUUID(),
         company_id: companyId || undefined,

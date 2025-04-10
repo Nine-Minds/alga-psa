@@ -345,6 +345,8 @@ export interface ICompanyTaxRate extends TenantEntity {
   company_tax_rate_id?: string;
   company_id: string;
   tax_rate_id: string;
+  is_default: boolean; // Added based on Phase 1.1 schema changes
+  location_id?: string | null; // Added based on Phase 1.1 schema changes
 }
 
 export interface IDefaultBillingSettings extends TenantEntity {

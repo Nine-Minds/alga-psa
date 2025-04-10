@@ -2,7 +2,8 @@
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleBillingPlansForUI, getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
-import { getCompanyById } from 'server/src/lib/actions/companyActions'; // Added import
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { fetchDefaultCompanyTaxRateInfoForWorkItem } from 'server/src/lib/actions/timeEntryActions'; // Import the new action
 import { formatISO, parseISO, addMinutes } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces'; // Added IService import
 import { Input } from 'server/src/components/ui/Input';
@@ -75,7 +76,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       value: service.id,
       label: service.name
     }))
-  },[]);
+  }, []);
 
   const taxRegionOptions = useMemo(() =>
     taxRegions.map((region): { value: string; label: string } => ({
@@ -179,6 +180,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       let companyDetails = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
       let targetTaxRegion: string | null = null;
+      let defaultRateInfo: { tax_rate_id: string; tax_percentage: number; region_code: string | null } | null = null; // Revert to region_code
 
       // 1. Fetch Company Details (if companyId exists)
       if (companyId) {
@@ -193,21 +195,41 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('No company ID available, cannot fetch company details.');
       }
 
-      // 2. Determine Target Tax Region based on hierarchy
-      // Cast selectedService to IService to access region_code
-      const serviceWithRegion = selectedService as IService | undefined;
-      if (serviceWithRegion?.region_code) {
-        targetTaxRegion = serviceWithRegion.region_code;
-        console.log(`Tax Region: Using Service default (${targetTaxRegion})`);
-      } else if (companyDetails?.region_code) {
-        targetTaxRegion = companyDetails.region_code;
-        console.log(`Tax Region: Using Company default (${targetTaxRegion})`);
+      // 2. Fetch Default Company Tax Rate Info (if service is taxable)
+      if (selectedService?.is_taxable && entry?.work_item_id && entry?.work_item_type) {
+        try {
+          defaultRateInfo = await fetchDefaultCompanyTaxRateInfoForWorkItem(entry.work_item_id, entry.work_item_type);
+          console.log('Fetched default company tax rate info:', defaultRateInfo);
+        } catch (error) {
+          console.error('Error fetching default company tax rate info:', error);
+          defaultRateInfo = null;
+        }
       } else {
-        targetTaxRegion = null; // Explicitly set to null if neither has a region
-        console.log('Tax Region: No default found for Service or Company.');
+        console.log('Service not taxable or work item info missing, skipping default tax rate fetch.');
+        defaultRateInfo = null; // Ensure it's null if not taxable
       }
 
-      // 3. Initialize manual flag based on loaded data (only on first run)
+      // 3. Determine Target Tax Region based on the applied rate or hierarchy
+      if (selectedService?.is_taxable && defaultRateInfo?.region_code) { // Revert to region_code
+        // If service is taxable and we found a default rate with a region, use that rate's region
+        targetTaxRegion = defaultRateInfo.region_code; // Revert to region_code
+        console.log(`Tax Region: Using Default Rate's region (${targetTaxRegion})`);
+      } else {
+        // Otherwise, fall back to the service/company region hierarchy
+        const serviceWithRegion = selectedService as IService | undefined;
+        if (serviceWithRegion?.region_code) {
+          targetTaxRegion = serviceWithRegion.region_code;
+          console.log(`Tax Region: Using Service default (${targetTaxRegion})`);
+        } else if (companyDetails?.region_code) {
+          targetTaxRegion = companyDetails.region_code;
+          console.log(`Tax Region: Using Company default (${targetTaxRegion})`);
+        } else {
+          targetTaxRegion = null; // Explicitly set to null if no region found
+          console.log('Tax Region: No default found for Rate, Service, or Company.');
+        }
+      }
+
+      // 4. Initialize manual flag based on loaded data (only on first run)
       // Use the local variable determined after the service change check
       let currentManualFlagSet = localTaxRegionManuallySet;
 
@@ -219,29 +241,47 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           setTaxRegionManuallySet(true);
           currentManualFlagSet = true; // Update local variable for subsequent check
         } else {
-           console.log(`Initial load: Loaded region "${loadedTaxRegion}" matches default "${defaultRegion}" or is empty. Manual flag remains false.`);
+          console.log(`Initial load: Loaded region "${loadedTaxRegion}" matches default "${defaultRegion}" or is empty. Manual flag remains false.`);
         }
       }
+      // 5. Prepare updated fields for Tax Region and Tax Rate
+      const updatedTaxFields: Partial<typeof entry> = {};
 
-      // 4. Update Tax Region based on default ONLY if not manually set
-      if (!currentManualFlagSet) {
-        // Apply default logic only if the flag is still false after initial load check
-        const currentTaxRegionValue = entry?.tax_region || '';
-        const targetRegionValue = targetTaxRegion || '';
+      // Determine final tax region
+      const finalTaxRegion = currentManualFlagSet ? (entry?.tax_region || '') : (targetTaxRegion || '');
+      if (entry?.tax_region !== finalTaxRegion) {
+        updatedTaxFields.tax_region = finalTaxRegion;
+        console.log(`Updating tax region to: "${finalTaxRegion}" (Manual: ${currentManualFlagSet})`);
+      }
 
-        if (currentTaxRegionValue !== targetRegionValue) {
-          console.log(`Applying default tax region logic. Current: "${currentTaxRegionValue}", Target: "${targetRegionValue}". Manual flag: ${currentManualFlagSet}`);
-          const entryWithUpdatedTaxRegion = { ...entry, tax_region: targetRegionValue };
-          onUpdateEntry(index, entryWithUpdatedTaxRegion);
-        } else {
-           console.log(`Default tax region logic: Current "${currentTaxRegionValue}" already matches target "${targetRegionValue}". No update needed.`);
+      // Determine final tax rate ID and percentage
+      if (selectedService?.is_taxable) {
+        // Apply fetched default rate if service is taxable
+        const finalTaxRateId = defaultRateInfo?.tax_rate_id || null;
+        const finalTaxPercentage = defaultRateInfo?.tax_percentage || null;
+        if (entry?.tax_rate_id !== finalTaxRateId || entry?.tax_percentage !== finalTaxPercentage) {
+          updatedTaxFields.tax_rate_id = finalTaxRateId;
+          updatedTaxFields.tax_percentage = finalTaxPercentage;
+          console.log(`Updating tax rate to: ID=${finalTaxRateId}, %=${finalTaxPercentage}`);
         }
       } else {
-        // Manual flag is true (either from initial load or user interaction), preserve current value.
-        console.log(`Skipping default tax region logic because manual flag is set. Current value: "${entry?.tax_region}"`);
+        // Service is not taxable, ensure rate is null
+        if (entry?.tax_rate_id !== null || entry?.tax_percentage !== null) {
+          updatedTaxFields.tax_rate_id = null;
+          updatedTaxFields.tax_percentage = null;
+          console.log('Updating tax rate to null (service not taxable)');
+        }
       }
 
+      // Apply tax updates if any fields changed
+      if (Object.keys(updatedTaxFields).length > 0) {
+        const entryWithUpdatedTax = { ...entry, ...updatedTaxFields };
+        onUpdateEntry(index, entryWithUpdatedTax);
+        // Update the 'entry' variable in this scope for subsequent logic
+        entry = entryWithUpdatedTax;
+      }
 
+      // 6. Load Eligible Billing Plans (dependent on service and company)
       // 5. Load Eligible Billing Plans (dependent on service and company)
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
@@ -265,32 +305,37 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           currentEligiblePlans = filteredPlans;
           setEligibleBillingPlans(currentEligiblePlans);
           console.log('Eligible billing plans loaded:', currentEligiblePlans);
-
+          // 7. Set Default Billing Plan (only if plans were loaded)
           // 6. Set Default Billing Plan (only if plans were loaded)
           // Check against the potentially updated entry's billing_plan_id
           const currentBillingPlanId = entry?.billing_plan_id; // Use entry from closure
           if (!currentBillingPlanId && currentEligiblePlans.length > 0) {
-             let defaultPlanId: string | null = null;
-             if (currentEligiblePlans.length === 1) {
-               defaultPlanId = currentEligiblePlans[0].company_billing_plan_id;
-               console.log('Setting default billing plan (only one eligible):', defaultPlanId);
-             } else {
-               const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
-               if (bucketPlans.length === 1) {
-                 defaultPlanId = bucketPlans[0].company_billing_plan_id;
-                 console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
-               } else {
-                 console.log('Multiple eligible plans, no single default determined.');
-               }
-             }
+            let defaultPlanId: string | null = null;
+            if (currentEligiblePlans.length === 1) {
+              defaultPlanId = currentEligiblePlans[0].company_billing_plan_id;
+              console.log('Setting default billing plan (only one eligible):', defaultPlanId);
+            } else {
+              const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
+              if (bucketPlans.length === 1) {
+                defaultPlanId = bucketPlans[0].company_billing_plan_id;
+                console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
+              } else {
+                console.log('Multiple eligible plans, no single default determined.');
+              }
+            }
 
-             if (defaultPlanId) {
-               // Use the potentially updated tax region from above
-               const entryWithUpdatedPlan = { ...entry, tax_region: targetTaxRegion || '', billing_plan_id: defaultPlanId };
-               onUpdateEntry(index, entryWithUpdatedPlan);
-             }
+            if (defaultPlanId) {
+              // Use the potentially updated tax fields from above
+              const entryWithUpdatedPlan = {
+                ...entry, // Includes tax updates already applied
+                billing_plan_id: defaultPlanId
+              };
+              onUpdateEntry(index, entryWithUpdatedPlan);
+              // Update the 'entry' variable in this scope
+              entry = entryWithUpdatedPlan;
+            }
           } else {
-             console.log('Billing plan already set or no eligible plans found, skipping default selection.');
+            console.log('Billing plan already set or no eligible plans found, skipping default selection.');
           }
 
         } catch (error) {
@@ -302,14 +347,14 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
     // Only run if entry exists
     if (entry) {
-       loadDataAndSetDefaults();
+      loadDataAndSetDefaults();
     }
 
-  // Dependencies: service_id, companyId trigger the effect.
-  // entry.start_time is needed for plan filtering.
-  // entry.billing_plan_id and entry.tax_region are needed for comparison/default logic.
-  // selectedService provides service region_code.
-  // index and onUpdateEntry are needed to update the state.
+    // Dependencies: service_id, companyId trigger the effect.
+    // entry.start_time is needed for plan filtering.
+    // entry.billing_plan_id and entry.tax_region are needed for comparison/default logic.
+    // selectedService provides service region_code.
+    // index and onUpdateEntry are needed to update the state.
   }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, entry?.tax_region, selectedService, index, onUpdateEntry]);
 
   const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {

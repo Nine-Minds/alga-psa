@@ -176,6 +176,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       service_id,
       tax_region,
       billing_plan_id,
+      tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
     const cleanedEntry = {
@@ -190,6 +191,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       service_id,
       tax_region,
       billing_plan_id,
+      tax_rate_id, // Add tax_rate_id to the object being saved
       user_id: session.user.id, // Always use session user_id
       tenant: tenant as string,
       updated_at: new Date().toISOString()

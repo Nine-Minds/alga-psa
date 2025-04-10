@@ -25,7 +25,8 @@ import {
   fetchTaxRegions,
   fetchCompanyTaxRateForWorkItem,
   fetchServicesForTimeEntry,
-  fetchScheduleEntryForWorkItem
+  fetchScheduleEntryForWorkItem,
+  fetchDefaultCompanyTaxRateInfoForWorkItem // Added export
 } from './timeEntryServices';
 
 export {
@@ -45,7 +46,8 @@ export {
   fetchTaxRegions,
   fetchCompanyTaxRateForWorkItem,
   fetchServicesForTimeEntry,
-  fetchScheduleEntryForWorkItem
+  fetchScheduleEntryForWorkItem,
+  fetchDefaultCompanyTaxRateInfoForWorkItem // Added export
 };
 
 // Note: Types and schemas previously re-exported from here must now be imported

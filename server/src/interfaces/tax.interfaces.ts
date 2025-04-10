@@ -4,7 +4,7 @@ import { ISO8601String } from '../types/types.d';
 
 export interface ICompanyTaxSettings extends TenantEntity {
   company_id: string;
-  tax_rate_id: string;
+  // tax_rate_id: string; // Removed in Phase 1.2
   is_reverse_charge_applicable: boolean;
   tax_components?: ITaxComponent[];
   tax_rate_thresholds?: ITaxRateThreshold[];
@@ -22,7 +22,7 @@ export interface ITaxRate extends TenantEntity {
   end_date?: ISO8601String;
   is_active: boolean;
   conditions?: Record<string, any>;
-  name: string;
+ // name: string; // Removed as this column does not exist in the tax_rates table
 }
 
 export interface ITaxComponent extends TenantEntity {
@@ -71,4 +71,15 @@ export interface ITaxRegion extends TenantEntity {
   region_code: string;
   region_name: string;
   is_active: boolean;
+}
+
+// Represents an entry in the company_tax_rates table
+export interface ICompanyTaxRateAssociation extends TenantEntity {
+ company_tax_rates_id: string; // Corrected column name (plural rates)
+  company_id: string;
+  tax_rate_id: string;
+  is_default: boolean;
+  location_id: string | null;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }

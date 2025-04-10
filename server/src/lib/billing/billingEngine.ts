@@ -29,7 +29,7 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getCompanyTaxRate, getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Keep getCompanyTaxRate if used elsewhere (e.g., bucket plans, non-fixed-fee plans)
+import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getCompanyTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 import { getCompanyById } from 'server/src/lib/actions/companyActions';
 import { ICompany } from 'server/src/interfaces';
@@ -55,6 +55,31 @@ export class BillingEngine {
       this.knex = knex;
       this.tenant = tenant;
     }
+  }
+
+  private async getDefaultTaxRatePercentage(companyId: string): Promise<number> {
+    // Ensure knex is initialized
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("Tenant context not found for getDefaultTaxRatePercentage");
+    }
+
+    const defaultRateRecord = await this.knex('company_tax_rates as ctr')
+      .join('tax_rates as tr', function() {
+        this.on('ctr.tax_rate_id', '=', 'tr.tax_rate_id')
+            .andOn('ctr.tenant', '=', 'tr.tenant');
+      })
+      .where({
+        'ctr.company_id': companyId,
+        'ctr.tenant': this.tenant,
+        'ctr.is_default': true,
+      })
+      .whereNull('ctr.location_id') // Explicitly check for NULL location_id
+      .select('tr.tax_percentage')
+      .first();
+
+    // Return percentage value (e.g., 5 for 5%) or 0 if not found
+    return defaultRateRecord ? defaultRateRecord.tax_percentage : 0;
   }
 
   private async hasExistingInvoiceForCycle(companyId: string, billingCycleId: string): Promise<boolean> {
@@ -622,26 +647,7 @@ export class BillingEngine {
       throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
     }
 
-    // --- Fetch Company Tax Region ---
-    let fetchedCompanyTaxRegion: string | undefined | null = null;
-    try {
-      const companyTaxSetting = await this.knex('company_tax_settings')
-        .where({ company_id: companyId, tenant: this.tenant })
-        .first();
-
-      if (companyTaxSetting && companyTaxSetting.tax_rate_id) {
-        const taxRate = await this.knex('tax_rates')
-          .where({ tax_rate_id: companyTaxSetting.tax_rate_id, tenant: this.tenant })
-          .first();
-        fetchedCompanyTaxRegion = taxRate?.region;
-        console.log(`[BillingEngine] Fetched company tax region '${fetchedCompanyTaxRegion}' via settings for company ${companyId}`);
-      } else {
-        console.log(`[BillingEngine] No company tax settings or tax_rate_id found for company ${companyId}`);
-      }
-    } catch (dbError) {
-      console.error(`[BillingEngine] Error fetching company tax region for ${companyId}:`, dbError);
-    }
-    // --- End Fetch Company Tax Region ---
+    // Removed old logic fetching tax region via company_tax_settings (Phase 1.2)
 
     const tenant = this.tenant; // Capture tenant value for joins
 // Get the billing plan details to determine if this is a fixed fee plan
@@ -748,10 +754,18 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
           } else {
-            // Only warn and use zero if BOTH service and company (via settings) lack a tax region
-            console.warn(`[BillingEngine] No tax region found for service ${service.service_id} or company ${companyId} (via settings), using zero tax rate`);
-            taxRate = 0;
-            taxAmount = 0;
+            // Fallback: No specific region found, attempt to use the company's default tax rate
+            const defaultTaxPercentage = await this.getDefaultTaxRatePercentage(company.company_id);
+            if (defaultTaxPercentage > 0) {
+              console.log(`[BillingEngine] No specific tax region for service ${service.service_id} or company ${companyId}. Using default company tax rate: ${defaultTaxPercentage}%`);
+              taxRate = defaultTaxPercentage / 100; // Convert percentage to rate (e.g., 5 -> 0.05)
+              taxAmount = Math.round(allocatedAmount * taxRate); // Calculate tax in cents based on allocated amount
+            } else {
+              // Only warn and use zero if NO default rate is found either
+              console.warn(`[BillingEngine] No tax region found for service ${service.service_id} or company ${companyId} (via settings), AND no default company tax rate found. Using zero tax rate.`);
+              taxRate = 0;
+              taxAmount = 0;
+            }
           }
           // Add the pre-tax allocated amount to the total taxable amount
           totalTaxableAmount += allocatedAmount;
@@ -838,10 +852,10 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
 
           // Only calculate tax if we have a valid tax region
           if (taxRegion) {
-            // NOTE: This part still uses getCompanyTaxRate. If TaxService should be used everywhere, this needs changing too.
-            // For now, leaving as is, as the primary goal was the fixed-fee allocation logic.
-            charge.tax_rate = await getCompanyTaxRate(taxRegion, billingPeriod.endDate);
-            charge.tax_amount = charge.total * charge.tax_rate;
+            // Fetch the default tax rate percentage for the company
+            const defaultTaxPercentage = await this.getDefaultTaxRatePercentage(company.company_id);
+            charge.tax_rate = defaultTaxPercentage / 100; // Convert percentage to rate (e.g., 5 -> 0.05)
+            charge.tax_amount = Math.round(charge.total * charge.tax_rate); // Calculate tax in cents
           } else {
             console.warn(`No tax region found for service ${service.service_id}, using zero tax rate`);
             charge.tax_rate = 0;
@@ -1370,12 +1384,14 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
       const overageHours = Math.max(0, hoursUsed - totalHours);
 
       if (overageHours > 0) {
-        const taxRegion = bucketConfig.region_code || company.region_code;
-        const taxRate = await getCompanyTaxRate(taxRegion, period.endDate); // Still uses getCompanyTaxRate here
+        // Fetch the default tax rate percentage for the company
+        const defaultTaxPercentage = await this.getDefaultTaxRatePercentage(company.company_id);
+        const taxRate = defaultTaxPercentage / 100; // Convert percentage to rate (e.g., 5 -> 0.05)
+        const taxRegion = bucketConfig.region_code || company.region_code; // Keep region for reference, though rate is default
 
         const overageRate = Math.ceil(bucketConfig.overage_rate);
         const total = Math.ceil(overageHours * overageRate);
-        const taxAmount = Math.ceil((taxRate) * total);
+        const taxAmount = Math.round(total * taxRate); // Calculate tax in cents
 
         const charge: IBucketCharge = {
           type: 'bucket',

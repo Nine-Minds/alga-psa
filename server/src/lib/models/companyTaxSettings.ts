@@ -18,11 +18,9 @@ const CompanyTaxSettings = {
         })
         .first();
 
-      if (taxSettings) {
-        taxSettings.tax_components = await this.getCompositeTaxComponents(taxSettings.tax_rate_id);
-        taxSettings.tax_rate_thresholds = []; //await this.getTaxRateThresholds(taxSettings.tax_rate_id);
-        taxSettings.tax_holidays = []; //await this.getTaxHolidays(taxSettings.tax_rate_id);
-      }
+      // Removed fetching of components, thresholds, holidays (lines 22-24)
+      // These details are linked to specific tax_rates, not the general company_tax_settings record.
+      // The ICompanyTaxSettings interface no longer includes these properties.
 
       return taxSettings || null;
     } catch (error) {

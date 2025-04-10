@@ -3,6 +3,11 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
 import { TaxRegion } from 'server/src/types/types.d';
+interface DefaultTaxRateInfo {
+  tax_rate_id: string;
+  tax_percentage: number;
+  region_code: string | null; // Expect region_code
+}
 
 export async function fetchTaxRegions(): Promise<TaxRegion[]> {
   const {knex: db, tenant} = await createTenantKnex();
@@ -13,8 +18,9 @@ export async function fetchTaxRegions(): Promise<TaxRegion[]> {
   return regions;
 }
 
-export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<string | undefined> {
-  console.log(`Fetching tax rate for work item ${workItemId} of type ${workItemType}`);
+// Phase 1.2: Fetch the default tax rate percentage for the company associated with the work item.
+export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<number | undefined> {
+  console.log(`Fetching default tax rate percentage for work item ${workItemId} of type ${workItemType}`);
 
   const {knex: db, tenant} = await createTenantKnex();
 
@@ -56,29 +62,113 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
 
     query = query
       .join('company_tax_rates', function() {
-        this.on('companies.company_id', '=', 'company_tax_rates.company_id')
-            .andOn('companies.tenant', '=', 'company_tax_rates.tenant');
+        this.on('companies.company_id', '=', 'company_tax_rates.company_id');
+        this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
       })
       .join('tax_rates', function() {
         this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
             .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
       })
-      .select('tax_rates.region_code'); // Corrected column name
+      // Phase 1.2: Filter for the default rate AFTER the join
+      .where('company_tax_rates.is_default', true)
+      .whereNull('company_tax_rates.location_id')
+      .select('tax_rates.tax_percentage'); // Select the percentage
 
     console.log('Executing query:', query.toString());
 
     const result = await query.first();
 
     if (result) {
-      console.log(`Found tax region code: ${result.region_code}`);
-      return result.region_code; // Use the corrected field name
+      console.log(`Found default tax percentage: ${result.tax_percentage}`);
+      return result.tax_percentage; // Return the percentage
     } else {
-      console.log('No tax region found');
-      return undefined;
+      console.log('No default tax rate found for the company associated with this work item.');
+      return undefined; // Return undefined if no default rate is found
     }
   } catch (error) {
     console.error('Error fetching tax rate:', error);
     return undefined;
+  }
+}
+
+// Fetch the default tax rate ID and percentage for the company associated with the work item.
+export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: string, workItemType: string): Promise<DefaultTaxRateInfo | null> {
+  console.log(`Fetching default tax rate info for work item ${workItemId} of type ${workItemType}`);
+
+  const {knex: db, tenant} = await createTenantKnex();
+
+  try {
+    let query;
+
+    if (workItemType === 'ticket') {
+      query = db('tickets')
+        .where({
+          'tickets.ticket_id': workItemId,
+          'tickets.tenant': tenant
+        })
+        .join('companies', function() {
+          this.on('tickets.company_id', '=', 'companies.company_id')
+              .andOn('tickets.tenant', '=', 'companies.tenant');
+        });
+    } else if (workItemType === 'project_task') {
+      query = db('project_tasks')
+        .where({
+          'project_tasks.task_id': workItemId,
+          'project_tasks.tenant': tenant
+        })
+        .join('project_phases', function() {
+          this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
+        })
+        .join('projects', function() {
+          this.on('project_phases.project_id', '=', 'projects.project_id')
+              .andOn('project_phases.tenant', '=', 'projects.tenant');
+        })
+        .join('companies', function() {
+          this.on('projects.company_id', '=', 'companies.company_id')
+              .andOn('projects.tenant', '=', 'companies.tenant');
+        });
+    } else {
+      console.log(`Unsupported work item type: ${workItemType}`);
+      return null;
+    }
+
+    query = query
+      .join('company_tax_rates', function() {
+        this.on('companies.company_id', '=', 'company_tax_rates.company_id');
+        this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
+      })
+      .join('tax_rates', function() {
+        this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
+      })
+      // Filter for the default rate AFTER the join
+      .where('company_tax_rates.is_default', true)
+      .whereNull('company_tax_rates.location_id')
+      .select(
+        'tax_rates.tax_rate_id', // Select the ID
+        'tax_rates.tax_percentage', // Select the percentage
+        'tax_rates.region_code' // Select the correct 'region_code' column
+      );
+
+    console.log('Executing query for default tax info:', query.toString());
+
+    const result = await query.first();
+
+    if (result) {
+      console.log(`Found default tax info: ID=${result.tax_rate_id}, Percentage=${result.tax_percentage}`);
+      return {
+        tax_rate_id: result.tax_rate_id,
+        tax_percentage: result.tax_percentage,
+        region_code: result.region_code // Use the correct column name
+      };
+    } else {
+      console.log('No default tax rate info found for the company associated with this work item.');
+      return null; // Return null if no default rate is found
+    }
+  } catch (error) {
+    console.error('Error fetching default tax rate info:', error);
+    return null;
   }
 }
 

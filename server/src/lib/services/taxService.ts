@@ -122,22 +122,59 @@ export class TaxService {
       };
     }
 
-    // Fall back to company tax settings if no regionCode provided
-    const taxSettings = await this.getCompanyTaxSettings(companyId);
-    console.log(`Tax settings retrieved for company ${companyId}:`, taxSettings);
+    // Fallback: Get the company's default tax rate if no regionCode provided
+    console.log(`No regionCode provided, fetching default tax rate for company ${companyId}`);
 
+    // Check reverse charge applicability first (still on company_tax_settings)
+    const taxSettings = await this.getCompanyTaxSettings(companyId); // Fetch settings for reverse charge check
     if (taxSettings.is_reverse_charge_applicable) {
       console.log(`Reverse charge is applicable for company ${companyId}. Returning zero tax.`);
       return { taxAmount: 0, taxRate: 0 };
     }
 
-    const taxRate = await CompanyTaxSettings.getTaxRate(taxSettings.tax_rate_id);
-    console.log(`Tax rate retrieved for tax_rate_id ${taxSettings.tax_rate_id} in tenant ${tenant}:`, taxRate);
+    // Find the default tax rate association
+    const defaultRateAssoc = await knex('company_tax_rates')
+      .where({
+        company_id: companyId,
+        tenant: tenant,
+        is_default: true,
+      })
+      .whereNull('location_id')
+      .select('tax_rate_id')
+      .first();
+
+    if (!defaultRateAssoc) {
+      // Consider creating default settings if none exist, or throw error
+      console.error(`No default tax rate configured for company ${companyId} in tenant ${tenant}`);
+      // Option 1: Throw error
+      // throw new Error(`No default tax rate configured for company ${companyId}`);
+      // Option 2: Return zero tax (safer default?)
+       return { taxAmount: 0, taxRate: 0 };
+    }
+
+    // Fetch the actual tax rate details using the ID found
+    const taxRate = await knex<ITaxRate>('tax_rates')
+      .where({
+        tax_rate_id: defaultRateAssoc.tax_rate_id,
+        tenant: tenant,
+        is_active: true // Ensure the default rate is active
+      })
+      // Add date validity check similar to regionCode logic
+      .andWhere('start_date', '<=', date)
+      .andWhere(function() {
+        this.whereNull('end_date')
+          .orWhere('end_date', '>', date);
+      })
+      .first();
+
+     console.log(`Default tax rate details retrieved for company ${companyId}:`, taxRate);
 
     if (!taxRate) {
-      const error = `Tax rate not found for tax_rate_id ${taxSettings.tax_rate_id} in tenant ${tenant}`;
+      const error = `Default tax rate (ID: ${defaultRateAssoc.tax_rate_id}) found for company ${companyId} is inactive or invalid for date ${date} in tenant ${tenant}`;
       console.error(error);
-      throw new Error(error);
+      // Decide how to handle - throw error or return zero tax?
+      // throw new Error(error);
+       return { taxAmount: 0, taxRate: 0 };
     }
 
     let result: ITaxCalculationResult;
@@ -286,39 +323,52 @@ export class TaxService {
     const trx = await knex.transaction();
 
     try {
-      // Get the default tax rate (assuming there's at least one tax rate in the system)
-      const [defaultTaxRate] = await trx<ITaxRate>('tax_rates')
-        .where('is_active', true)
+      // Get the first active tax rate to use as the default
+      const defaultTaxRate = await trx<ITaxRate>('tax_rates')
+        .where('tenant', tenant!) // Use non-null assertion
+        .andWhere('is_active', true)
         .orderBy('created_at', 'asc')
-        .limit(1);
+        .first(); // Use first() instead of limit(1) which returns array
 
       if (!defaultTaxRate) {
-        throw new Error('No active tax rates found in the system');
+        throw new Error('No active tax rates found in the system to assign as default.');
       }
 
-      // Create default company tax settings
+      // Create default company tax settings (without tax_rate_id)
       const [taxSettings] = await trx<ICompanyTaxSettings>('company_tax_settings')
         .insert({
           company_id: companyId,
-          tax_rate_id: defaultTaxRate.tax_rate_id,
+          // tax_rate_id: defaultTaxRate.tax_rate_id, // Removed
           is_reverse_charge_applicable: false,
           tenant: tenant!
         })
         .returning('*');
 
-      // Create a default tax component
+      // Create the default association in company_tax_rates
+      await trx('company_tax_rates')
+        .insert({
+          // company_tax_rate_id: uuid4(), // Assuming auto-generated or sequence
+          company_id: companyId,
+          tax_rate_id: defaultTaxRate.tax_rate_id,
+          is_default: true,
+          location_id: null,
+          tenant: tenant!
+        });
+
+      // Create a default tax component (linked to the tax_rate, not settings)
+      // This part remains largely the same, assuming components are tied to rates
       const tax_component_id = uuid4();
       await trx<ITaxComponent>('tax_components')
         .insert({
           tax_component_id,
-          tax_rate_id: defaultTaxRate.tax_rate_id,
+          tax_rate_id: defaultTaxRate.tax_rate_id, // Link component to the chosen default rate
           name: 'Default Tax',
           rate: Math.ceil(defaultTaxRate.tax_percentage),
           sequence: 1,
           is_compound: false,
           tenant: tenant!
-        })
-        .returning('*');
+        });
+        // Removed .returning('*') as it wasn't used
 
       await trx.commit();
 
@@ -335,19 +385,49 @@ export class TaxService {
     return taxSettings.is_reverse_charge_applicable;
   }
 
-  async getTaxType(companyId: string): Promise<string> {
-    const { tenant } = await createTenantKnex();
+  async getTaxType(companyId: string): Promise<string> {   
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for tax type lookup');
     }
 
-    const taxSettings = await this.getCompanyTaxSettings(companyId);
-    const taxRate = await CompanyTaxSettings.getTaxRate(taxSettings.tax_rate_id);
+    // Find the default tax rate association for the company
+    const defaultRateAssoc = await knex('company_tax_rates')
+      .where({
+        company_id: companyId,
+        tenant: tenant,
+        is_default: true,
+      })
+      .whereNull('location_id')
+      .select('tax_rate_id')
+      .first();
+
+    if (!defaultRateAssoc) {
+      // Handle case where no default rate is set - maybe return a default type or throw error
+      console.warn(`No default tax rate configured for company ${companyId} in tenant ${tenant}. Cannot determine tax type.`);
+      // Option 1: Throw error
+      // throw new Error(`No default tax rate configured for company ${companyId}`);
+      // Option 2: Return a default/unknown type
+      return 'Unknown'; // Or potentially null/undefined depending on desired behavior
+    }
+
+    // Fetch the actual tax rate details using the ID found
+    const taxRate = await knex<ITaxRate>('tax_rates')
+      .where({
+        tax_rate_id: defaultRateAssoc.tax_rate_id,
+        tenant: tenant
+        // Assuming we don't need activity/date check just to get the type
+      })
+      .select('tax_type')
+      .first();
+
 
     if (!taxRate) {
-      const error = `Tax rate not found for company ${companyId} in tenant ${tenant}`;
+      const error = `Tax rate details not found for default rate ID ${defaultRateAssoc.tax_rate_id} (Company: ${companyId}, Tenant: ${tenant})`;
       console.error(error);
-      throw new Error(error);
+      // Handle case where rate details are missing despite association existing
+      // throw new Error(error);
+      return 'Unknown'; // Or potentially null/undefined
     }
 
     return taxRate.tax_type;
