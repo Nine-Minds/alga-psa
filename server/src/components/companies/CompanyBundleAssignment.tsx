@@ -32,6 +32,7 @@ import {
   deactivateCompanyBundle,
   applyBundleToCompany
 } from 'server/src/lib/actions/companyPlanBundleActions';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -54,6 +55,7 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
   const [selectedBundleToAdd, setSelectedBundleToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
   const [editingBundle, setEditingBundle] = useState<DetailedCompanyBundle | null>(null); // Keep state for editing dialog
   // Remove state for separate details dialog
 
@@ -66,8 +68,12 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
   const fetchData = async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
+      // Fetch company name
+      const company = await getCompanyById(companyId);
+      setCompanyName(company?.company_name || '');
+
       // Get all bundles and company bundles
       const [bundles, companyBundlesData] = await Promise.all([
         getPlanBundles(),
@@ -132,9 +138,22 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
       }
       
       fetchData(); // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding bundle to company:', error);
-      setError('Failed to add bundle to company');
+      // Try to extract backend error message
+      let errorMsg = 'Failed to add bundle to company';
+      if (error?.message) {
+        errorMsg = error.message;
+      } else if (typeof error === 'string') {
+        errorMsg = error;
+      } else if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      // Replace companyId with companyName in error message if present
+      if (companyName && errorMsg.includes(companyId)) {
+        errorMsg = errorMsg.replaceAll(companyId, companyName);
+      }
+      setError(errorMsg);
     }
   };
 
@@ -142,9 +161,20 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
     try {
       await deactivateCompanyBundle(companyBundleId);
       fetchData(); // Refresh data
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deactivating company bundle:', error);
-      setError('Failed to deactivate bundle');
+      let errorMsg = 'Failed to deactivate bundle';
+      if (error?.message) {
+        errorMsg = error.message;
+      } else if (typeof error === 'string') {
+        errorMsg = error;
+      } else if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      if (companyName && errorMsg.includes(companyId)) {
+        errorMsg = errorMsg.replaceAll(companyId, companyName);
+      }
+      setError(errorMsg);
     }
   };
 
@@ -160,9 +190,20 @@ const CompanyBundleAssignment: React.FC<CompanyBundleAssignmentProps> = ({ compa
       });
       fetchData(); // Refresh data
       setEditingBundle(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating company bundle:', error);
-      setError('Failed to update bundle');
+      let errorMsg = 'Failed to update bundle';
+      if (error?.message) {
+        errorMsg = error.message;
+      } else if (typeof error === 'string') {
+        errorMsg = error;
+      } else if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      }
+      if (companyName && errorMsg.includes(companyId)) {
+        errorMsg = errorMsg.replaceAll(companyId, companyName);
+      }
+      setError(errorMsg);
     }
   };
 

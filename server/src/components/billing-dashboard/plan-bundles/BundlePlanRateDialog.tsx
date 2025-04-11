@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -59,19 +59,16 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
             )}
             
             <div className="flex items-center space-x-2 mb-4">
-              <Checkbox
-                id="use-default-rate"
+              <SwitchWithLabel
+                label={`Use default rate${plan.default_rate !== undefined ? ` ($${plan.default_rate.toFixed(2)})` : ''}`}
                 checked={useDefaultRate}
-                onChange={(checked) => {
-                  setUseDefaultRate(!!checked);
+                onCheckedChange={(checked) => {
+                  setUseDefaultRate(checked);
                   if (checked) {
                     setCustomRate(plan.default_rate || 0);
                   }
                 }}
               />
-              <Label htmlFor="use-default-rate" className="cursor-pointer">
-                Use default rate {plan.default_rate !== undefined ? `($${plan.default_rate.toFixed(2)})` : ''}
-              </Label>
             </div>
             
             <div>
