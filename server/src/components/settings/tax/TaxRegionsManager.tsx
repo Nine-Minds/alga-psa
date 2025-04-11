@@ -247,7 +247,8 @@ export function TaxRegionsManager() {
           <DataTable
             columns={columns}
             data={regions}
-        />
+            onRowClick={(row) => handleOpenDialog(row)}
+          />
         )}
       </CardContent>
 

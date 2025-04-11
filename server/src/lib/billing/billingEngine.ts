@@ -1619,6 +1619,7 @@ const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
       .leftJoin('tickets', function (this: Knex.JoinClause) {
         this.on('time_entries.work_item_id', '=', 'tickets.ticket_id')
           .andOn('time_entries.work_item_type', '=', knex.raw('?', ['ticket']))
+          .andOn('tickets.tenant', '=', 'time_entries.tenant')
       })
       .leftJoin('project_tasks', function (this: Knex.JoinClause) {
         this.on('time_entries.work_item_id', '=', 'project_tasks.task_id')

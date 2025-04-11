@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
 import { ISO8601String } from 'server/src/types/types.d';
+import { BillingCycleCreationResult } from "../billing/createBillingCycles";
 
 export async function getBillingCycle(companyId: string): Promise<BillingCycleType> {
   const session = await getServerSession(options);
@@ -106,10 +107,7 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
 export async function createNextBillingCycle(
   companyId: string,
   effectiveDate?: string
-): Promise<{
-  success: boolean;
-  suggestedDate?: string;
-}> {
+): Promise<BillingCycleCreationResult> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

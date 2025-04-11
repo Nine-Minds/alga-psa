@@ -110,12 +110,17 @@ const BillingCycles: React.FC = () => {
         companyId,
         selectedDate?.toISOString()
       );
-      if (!result.success && result.suggestedDate) {
-        setDateConflict({
-          companyId,
-          suggestedDate: new Date(result.suggestedDate),
-          show: true
-        });
+      if (!result.success && result.error === 'duplicate') {
+        // Show user-friendly error message from backend
+        setError(result.message || 'A billing period for this date already exists. Please select a different date.');
+        // Optionally, also show the date conflict dialog if a suggestion is present
+        if (result.suggestedDate) {
+          setDateConflict({
+            companyId,
+            suggestedDate: new Date(result.suggestedDate),
+            show: true
+          });
+        }
         return;
       }
 

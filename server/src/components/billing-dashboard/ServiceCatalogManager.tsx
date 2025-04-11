@@ -424,8 +424,29 @@ const ServiceCatalogManager: React.FC = () => {
             <Input
               type="number"
               placeholder="Default Rate"
-              value={editingService?.default_rate || ''}
-              onChange={(e) => setEditingService({ ...editingService!, default_rate: parseFloat(e.target.value) })}
+              // Display dollars, allow user to type decimals freely.
+              // The browser's number input might still show trailing zeros based on step, but typing isn't blocked.
+              value={(editingService?.default_rate ?? 0) / 100}
+              step="0.01" // Hint to the browser about expected precision
+              onChange={(e) => {
+                const rawValue = e.target.value;
+                // Allow empty string -> 0 cents
+                if (rawValue === '') {
+                  // Ensure editingService is not null before updating
+                  if (editingService) {
+                    setEditingService({ ...editingService, default_rate: 0 });
+                  }
+                  return;
+                }
+                // Try parsing, update cents only if valid number
+                const dollarValue = parseFloat(rawValue);
+                if (!isNaN(dollarValue) && editingService) {
+                  const centsValue = Math.round(dollarValue * 100);
+                  setEditingService({ ...editingService, default_rate: centsValue });
+                }
+                // If input is invalid (e.g., "abc", "1..2"), do nothing to the cents state.
+                // The input field itself might show the invalid input temporarily depending on browser behavior.
+              }}
             />
             <CustomSelect
               options={categories.map((cat): { value: string; label: string } => ({
