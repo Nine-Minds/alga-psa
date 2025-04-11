@@ -18,6 +18,7 @@ import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGenera
 import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
+import { formatCurrency } from '../../lib/utils/formatters';
 // Added imports for DropdownMenu
 import {
   DropdownMenu,
@@ -578,23 +579,23 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                       <tr key={item.item_id} className="border-b">
                         <td className="py-2">{item.description}</td>
                         <td className="text-right py-2">{item.quantity}</td>
-                        <td className="text-right py-2">${(item.unit_price / 100).toFixed(2)}</td>
-                        <td className="text-right py-2">${(item.total_price / 100).toFixed(2)}</td>
+                        <td className="text-right py-2">{formatCurrency(item.unit_price / 100)}</td>
+                        <td className="text-right py-2">{formatCurrency(item.total_price / 100)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
-                      <td className="text-right py-2">${(previewData.subtotal / 100).toFixed(2)}</td>
+                      <td className="text-right py-2">{formatCurrency(previewData.subtotal / 100)}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
-                      <td className="text-right py-2">${(previewData.tax / 100).toFixed(2)}</td>
+                      <td className="text-right py-2">{formatCurrency(previewData.tax / 100)}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
-                      <td className="text-right py-2">${(previewData.total / 100).toFixed(2)}</td>
+                      <td className="text-right py-2">{formatCurrency(previewData.total / 100)}</td>
                     </tr>
                   </tfoot>
                 </table>

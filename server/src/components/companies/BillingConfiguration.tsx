@@ -232,9 +232,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ company, on
         }
     };
 
-    const handleServiceCategoryChange = async (companyBillingPlanId: string, categoryId: string) => {
+    const handleServiceCategoryChange = async (companyBillingPlanId: string, categoryId: string | null) => {
         try {
-            await updateCompanyBillingPlan(companyBillingPlanId, { service_category: categoryId });
+            await updateCompanyBillingPlan(companyBillingPlanId, { service_category: categoryId === null ? undefined : categoryId });
             const updatedBillingPlans = await getCompanyBillingPlan(company.company_id);
             const updatedBillingPlansWithStringDates: CompanyBillingPlanWithStringDates[] = updatedBillingPlans.map((plan: ICompanyBillingPlan): CompanyBillingPlanWithStringDates => ({
                 ...plan,

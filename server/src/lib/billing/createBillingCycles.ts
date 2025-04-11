@@ -15,11 +15,20 @@ import {
   formatISO
 } from 'date-fns';
 import { ISO8601String } from 'server/src/types/types.d';
+/**
+ * Result type for billing cycle creation.
+ */
+export type BillingCycleCreationResult = {
+  success: boolean;
+  error?: 'duplicate' | 'invalid_date' | 'db_error';
+  message?: string;
+  suggestedDate?: ISO8601String;
+};
 
 function getNextCycleDate(currentDate: ISO8601String, billingCycle: string): {
-  effectiveDate: ISO8601String;
-  periodStart: ISO8601String;
-  periodEnd: ISO8601String;
+  effectiveDate: string;
+  periodStart: string;
+  periodEnd: string;
 } {
   // Validate input type
   if (typeof currentDate !== 'string') {
@@ -99,9 +108,9 @@ function getNextCycleDate(currentDate: ISO8601String, billingCycle: string): {
 }
 
 function getStartOfCurrentCycle(date: ISO8601String, billingCycle: string): {
-  effectiveDate: ISO8601String;
-  periodStart: ISO8601String;
-  periodEnd: ISO8601String;
+  effectiveDate: string;
+  periodStart: string;
+  periodEnd: string;
 } {
   // Validate that input date is UTC midnight
   const parsedDate = parseISO(date);
@@ -121,53 +130,56 @@ function getStartOfCurrentCycle(date: ISO8601String, billingCycle: string): {
   
   let cycleStart: ISO8601String;
 
+  // Always ensure parsedDate is a Date object before using date-fns utilities
+  let dateObj: Date = parsedDate instanceof Date ? parsedDate : parseISO(String(parsedDate));
   switch (billingCycle) {
     case 'weekly': {
-      const startOfWeek = startOfDay(parsedDate);
+      const startOfWeek = startOfDay(dateObj);
       cycleStart = startOfWeek.toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'bi-weekly': {
-      const startOfWeek = startOfDay(parsedDate);
+      const startOfWeek = startOfDay(dateObj);
       const weekOfMonth = Math.ceil(getDate(startOfWeek) / 7);
       const weeksToSubtract = weekOfMonth % 2 === 0 ? 1 : 0;
-      cycleStart = subWeeks(startOfWeek, weeksToSubtract).toISOString().split('T')[0] + 'T00:00:00Z';
+      const biWeekStart = subWeeks(startOfWeek, weeksToSubtract);
+      cycleStart = biWeekStart.toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'monthly':
-      cycleStart = startOfMonth(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
+      cycleStart = startOfMonth(dateObj).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     case 'quarterly': {
-      const currentQuarter = Math.floor(getMonth(parsedDate) / 3);
-      cycleStart = startOfMonth(setMonth(parsedDate, currentQuarter * 3)).toISOString().split('T')[0] + 'T00:00:00Z';
+      const currentQuarter = Math.floor(getMonth(dateObj) / 3);
+      const quarterStart = setMonth(dateObj, currentQuarter * 3);
+      cycleStart = startOfMonth(quarterStart).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'semi-annually': {
-      const isSecondHalf = getMonth(parsedDate) >= 6;
-      cycleStart = startOfMonth(setMonth(parsedDate, isSecondHalf ? 6 : 0)).toISOString().split('T')[0] + 'T00:00:00Z';
+      const isSecondHalf = getMonth(dateObj) >= 6;
+      const semiStart = setMonth(dateObj, isSecondHalf ? 6 : 0);
+      cycleStart = startOfMonth(semiStart).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     }
     case 'annually':
-      cycleStart = startOfYear(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
+      cycleStart = startOfYear(dateObj).toISOString().split('T')[0] + 'T00:00:00Z';
       break;
     default:
-      cycleStart = startOfMonth(parsedDate).toISOString().split('T')[0] + 'T00:00:00Z';
+      cycleStart = startOfMonth(dateObj).toISOString().split('T')[0] + 'T00:00:00Z';
   }
 
   const nextCycle = getNextCycleDate(cycleStart, billingCycle);
   return {
-    effectiveDate: cycleStart,
-    periodStart: cycleStart,
+    effectiveDate: String(cycleStart),
+    periodStart: String(cycleStart),
     periodEnd: nextCycle.periodEnd
   };
 }
 
-async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycle> & { 
-  effective_date: ISO8601String 
-}): Promise<{
-  success: boolean;
-  suggestedDate?: ISO8601String;
-}> {
+async function createBillingCycle(
+  knex: Knex,
+  cycle: Partial<ICompanyBillingCycle> & { effective_date: ISO8601String }
+): Promise<BillingCycleCreationResult> {
   // Validate that input date is UTC midnight
   const dateObj = parseISO(cycle.effective_date);
   if (
@@ -185,7 +197,7 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
   }
 
   const cycleDates = getNextCycleDate(cycle.effective_date, cycle.billing_cycle!);
-  
+
   const fullCycle: Partial<ICompanyBillingCycle> = {
     ...cycle,
     period_start_date: cycleDates.periodStart,
@@ -203,9 +215,14 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
     .select('period_end_date');
 
   if (existingCycle) {
-    // Find next available date starting from period_end_date + 1 day
-    let nextDate = parseISO(existingCycle.period_end_date);
+    // Duplicate detected: return user-friendly error and suggest next available date
+    // Ensure period_end_date is a string before parsing
+    const endDateString = isDateObject(existingCycle.period_end_date)
+      ? existingCycle.period_end_date.toISOString()
+      : String(existingCycle.period_end_date);
+    let nextDate = parseISO(endDateString);
     nextDate.setDate(nextDate.getDate() + 1); // Start from day after period ends
+    console.log('[createBillingCycle] Incremented nextDate:', nextDate, 'type:', typeof nextDate, 'instanceof Date:', nextDate instanceof Date);
     let found = false;
     const maxAttempts = 30; // Limit search to 30 days to prevent infinite loop
     let attempts = 0;
@@ -228,24 +245,25 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
         .first();
       
       if (!conflictingCycle) {
-        // Found an available date - break out of loop
         found = true;
         break;
       }
       
       // Move to next day
       nextDate.setDate(nextDate.getDate() + 1);
+      nextDate.setDate(nextDate.getDate() + 1);
       attempts++;
     }
 
+    const userMessage = 'A billing period for this date already exists. Please select a different date.';
+
     if (found) {
-      // Use existing creation logic with the found date
-      return await createBillingCycle(knex, {
-        company_id: cycle.company_id,
-        billing_cycle: cycle.billing_cycle,
-        effective_date: nextDateStr,
-        tenant: cycle.tenant
-      });
+      return {
+        success: false,
+        error: 'duplicate',
+        message: userMessage,
+        suggestedDate: nextDateStr
+      };
     }
 
     // If we couldn't find a date within maxAttempts, suggest the next day after maxAttempts
@@ -253,6 +271,8 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
     suggestedDate.setDate(suggestedDate.getDate() + maxAttempts + 1);
     return {
       success: false,
+      error: 'duplicate',
+      message: userMessage,
       suggestedDate: suggestedDate.toISOString().split('T')[0] + 'T00:00:00Z'
     };
   }
@@ -268,6 +288,8 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
       nextDate.setDate(nextDate.getDate() + 1);
       return {
         success: false,
+        error: 'duplicate',
+        message: 'A billing period for this date already exists. Please select a different date.',
         suggestedDate: nextDate.toISOString().split('T')[0] + 'T00:00:00Z'
       };
     }
@@ -276,11 +298,18 @@ async function createBillingCycle(knex: Knex, cycle: Partial<ICompanyBillingCycl
   }
 }
 
+/**
+ * Type guard to check if a value is a Date object.
+ */
+function isDateObject(val: unknown): val is Date {
+  return Object.prototype.toString.call(val) === '[object Date]';
+}
+
 export async function createCompanyBillingCycles(
   knex: Knex,
   company: ICompany,
   options: { manual?: boolean; effectiveDate?: string } = {}
-) {
+): Promise<BillingCycleCreationResult> {
   console.log('Starting billing cycle creation for company:', {
     company_id: company.company_id,
     billing_cycle: company.billing_cycle
@@ -360,8 +389,19 @@ export async function createCompanyBillingCycles(
     return { success: true };
   }
 
-  const effectiveDate = lastCycle.effective_date;
-  let currentCycle = getNextCycleDate(effectiveDate, company.billing_cycle);
+  const effectiveDate: unknown = lastCycle.effective_date;
+  // Ensure effectiveDate is a string (normalize if Date object)
+  let normalizedEffectiveDate: string;
+  if (typeof effectiveDate === 'string') {
+    normalizedEffectiveDate = effectiveDate;
+  } else if (isDateObject(effectiveDate)) {
+    normalizedEffectiveDate = effectiveDate.toISOString();
+  } else if (effectiveDate !== undefined && effectiveDate !== null) {
+    normalizedEffectiveDate = String(effectiveDate);
+  } else {
+    throw new Error('Invalid effectiveDate: value is undefined or null');
+  }
+  let currentCycle = getNextCycleDate(normalizedEffectiveDate, company.billing_cycle);
   
   if (options.manual) {
     // In manual mode, use the same logic as automatic mode

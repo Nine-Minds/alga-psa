@@ -61,24 +61,30 @@ export function PlanTypeSelector({
             const isSelected = value === planType;
             const planLabel = PLAN_TYPE_OPTIONS.find(opt => opt.value === planType)?.label || planType;
 
+            const isCardDisabled = disabled || planType !== 'Fixed'; // Check if this specific card should be disabled
+
             return (
               <div
                 key={planType}
                 id={`plan-type-card-${planType.toLowerCase()}`} // Add ID for consistency
                 className={`
-                  border rounded-lg p-4 cursor-pointer transition-all duration-150 ease-in-out
+                  border rounded-lg p-4 transition-all duration-150 ease-in-out
                   flex flex-col items-center text-center space-y-2  /* Centered layout */
                   ${isSelected
                     ? 'border-primary-500 bg-primary-50 ring-2 ring-primary-200' // Preferred selected style
-                    : 'border-border-300 hover:border-primary-300 hover:bg-gray-50' // Preferred hover style
+                    : 'border-border-300'
                   }
-                  ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
+                  ${isCardDisabled
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100' // Disabled style
+                    : 'cursor-pointer hover:border-primary-300 hover:bg-gray-50' // Enabled style
+                  }
                 `}
-                onClick={() => !disabled && onChange(planType)}
+                onClick={() => !isCardDisabled && onChange(planType)} // Use isCardDisabled
                 role="radio"
                 aria-checked={isSelected}
-                tabIndex={disabled ? -1 : 0} // Make focusable only if not disabled
-                onKeyDown={(e) => { if (!disabled && (e.key === 'Enter' || e.key === ' ')) onChange(planType); }} // Allow selection with keyboard
+                aria-disabled={isCardDisabled} // Set aria-disabled based on the card's state
+                tabIndex={isCardDisabled ? -1 : 0} // Make focusable only if not disabled
+                onKeyDown={(e) => { if (!isCardDisabled && (e.key === 'Enter' || e.key === ' ')) onChange(planType); }} // Use isCardDisabled
               >
                 <IconComponent className={`h-8 w-8 mb-1 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} /> {/* Larger icon, dynamic color */}
                 <span className={`font-medium ${isSelected ? 'text-primary-700' : 'text-gray-800'}`}>
@@ -106,7 +112,8 @@ export function PlanTypeSelector({
         options={PLAN_TYPE_OPTIONS.map(option => ({
           ...option,
           description: showDescriptions ? PLAN_TYPE_DESCRIPTIONS[option.value as PlanType] : undefined,
-          icon: PLAN_TYPE_ICONS[option.value as PlanType]
+          icon: PLAN_TYPE_ICONS[option.value as PlanType],
+          disabled: option.value !== 'Fixed' // Add disabled property for non-Fixed options
         }))}
         onValueChange={handlePlanTypeChange}
         value={value}

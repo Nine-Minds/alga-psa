@@ -230,6 +230,8 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
                   data={bundlePlans}
                   columns={bundlePlanColumns}
                   pagination={false}
+                  onRowClick={handleEditPlan}
+                  rowClassName={() => 'cursor-pointer'}
                 />
               )}
             </div>

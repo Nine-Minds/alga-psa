@@ -42,35 +42,21 @@ const BillingPlans: React.FC<BillingPlansProps> = ({
         {
             title: 'Plan',
             dataIndex: 'plan_id',
-            render: (value, record) => (
-                <CustomSelect
-                    value={value}
-                    onValueChange={(newValue) => onCompanyPlanChange(record.company_billing_plan_id, newValue)}
-                    options={billingPlans.map((plan): { value: string; label: string } => ({
-                        value: plan.plan_id || '',
-                        label: plan.plan_name
-                    }))}
-                    placeholder="Select plan..."
-                />
-            )
+            render: (value) => {
+                const plan = billingPlans.find(p => p.plan_id === value);
+                return plan ? plan.plan_name : 'Unknown Plan';
+            }
         },
         {
             title: 'Category',
             dataIndex: 'service_category',
-            render: (value, record) => (
-                <CustomSelect
-                    value={value || 'unassigned'}
-                    onValueChange={(newValue) => onCompanyPlanChange(record.company_billing_plan_id, newValue)}
-                    options={[
-                        { value: 'unassigned', label: 'Select category' },
-                        ...serviceCategories.map((category): { value: string; label: string } => ({
-                            value: category.category_id || 'None',
-                            label: category.category_name
-                        }))
-                    ]}
-                    placeholder="Select category..."
-                />
-            )
+            render: (value) => {
+                if (value === null || value === undefined) {
+                    return 'All categories';
+                }
+                const category = serviceCategories.find(c => c.category_id === value);
+                return category ? category.category_name : 'Unknown Category';
+            }
         },
         {
             title: 'Start Date',
