@@ -323,14 +323,8 @@ export class BillingEngine {
       return finalCharges;
     } catch (err) {
       console.error('Error in calculateBilling:', err);
-      return {
-        charges: [],
-        totalAmount: 0,
-        discounts: [],
-        adjustments: [],
-        finalAmount: 0,
-        error: err instanceof Error ? err.message : 'An error occurred while calculating billing'
-      };
+      // Re-throw the error to be handled by the caller (e.g., previewInvoice)
+      throw err;
     }
   }
 
