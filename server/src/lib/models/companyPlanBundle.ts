@@ -155,24 +155,22 @@ const CompanyPlanBundle = {
             tenant,
             is_active: true 
           })
-          .where(function() {
+          .where(function() { // Overall overlap condition: (new_start < existing_end OR existing_end IS NULL) AND (new_end > existing_start OR new_end IS NULL)
+            // Part 1: new.startDate < existing.end_date (or existing is ongoing)
             this.where(function() {
-              // New start date falls within existing bundle's date range
-              this.where('start_date', '<=', startDate)
-                .where(function() {
-                  this.whereNull('end_date')
-                    .orWhere('end_date', '>=', startDate);
-                });
-            })
-            .orWhere(function() {
-              // New end date falls within existing bundle's date range
-              if (endDate) {
-                this.where('start_date', '<=', endDate)
-                  .where(function() {
-                    this.whereNull('end_date')
-                      .orWhere('end_date', '>=', endDate);
-                  });
-              }
+                this.where('end_date', '>', startDate) // Use > for strict inequality
+                    .orWhereNull('end_date');
+            });
+
+            // Part 2: new.endDate > existing.start_date (or new is ongoing)
+            this.where(function() {
+                if (endDate) {
+                    this.where('start_date', '<', endDate); // Use < for strict inequality
+                } else {
+                    // If new interval is ongoing, it overlaps if Part 1 is met.
+                    // No specific check needed against existing.start_date as it's inherently covered by the interval being ongoing.
+                    this.whereRaw('1 = 1'); // Keep the AND structure valid
+                }
             });
           })
           .first();
@@ -255,24 +253,22 @@ const CompanyPlanBundle = {
             is_active: true 
           })
           .whereNot('company_bundle_id', companyBundleId)
-          .where(function() {
+          .where(function() { // Overall overlap condition: (new_start < existing_end OR existing_end IS NULL) AND (new_end > existing_start OR new_end IS NULL)
+            // Part 1: new.startDate < existing.end_date (or existing is ongoing)
             this.where(function() {
-              // New start date falls within existing bundle's date range
-              this.where('start_date', '<=', startDate)
-                .where(function() {
-                  this.whereNull('end_date')
-                    .orWhere('end_date', '>=', startDate);
-                });
-            })
-            .orWhere(function() {
-              // New end date falls within existing bundle's date range
-              if (endDate) {
-                this.where('start_date', '<=', endDate)
-                  .where(function() {
-                    this.whereNull('end_date')
-                      .orWhere('end_date', '>=', endDate);
-                  });
-              }
+                this.where('end_date', '>', startDate) // Use > for strict inequality
+                    .orWhereNull('end_date');
+            });
+
+            // Part 2: new.endDate > existing.start_date (or new is ongoing)
+            this.where(function() {
+                if (endDate) {
+                    this.where('start_date', '<', endDate); // Use < for strict inequality
+                } else {
+                    // If new interval is ongoing, it overlaps if Part 1 is met.
+                    // No specific check needed against existing.start_date as it's inherently covered by the interval being ongoing.
+                    this.whereRaw('1 = 1'); // Keep the AND structure valid
+                }
             });
           })
           .first();

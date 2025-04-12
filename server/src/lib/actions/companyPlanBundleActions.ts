@@ -6,6 +6,8 @@ import { ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces'
 import { createTenantKnex } from 'server/src/lib/db';
 import { getServerSession } from "next-auth/next";
 import { options } from "../../app/api/auth/[...nextauth]/options";
+import { Temporal } from '@js-temporal/polyfill'; // Import Temporal for date comparison
+import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils'; // Import date utility
 
 /**
  * Get all active bundles for a company
@@ -134,10 +136,61 @@ export async function updateCompanyBundle(
   }
 
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex(); // Get knex instance
     if (!tenant) {
       throw new Error("tenant context not found");
     }
+
+    // --- Start Validation ---
+    if (updateData.start_date || updateData.end_date !== undefined) { // Check if dates are being updated (end_date can be null)
+      // 1. Get current company bundle details
+      const currentBundle = await CompanyPlanBundle.getById(companyBundleId);
+      if (!currentBundle) {
+        throw new Error(`Company bundle ${companyBundleId} not found.`);
+      }
+      const companyId = currentBundle.company_id;
+
+      // 2. Determine proposed new dates
+      const proposedStartDateStr = updateData.start_date ?? currentBundle.start_date;
+      // Handle null explicitly for end_date
+      const proposedEndDateStr = updateData.end_date !== undefined ? updateData.end_date : currentBundle.end_date;
+
+      const proposedStartDate = toPlainDate(proposedStartDateStr);
+      const proposedEndDate = proposedEndDateStr ? toPlainDate(proposedEndDateStr) : null;
+
+
+      // 3. Fetch invoiced billing cycles for this company
+      const invoicedCycles = await db('company_billing_cycles as cbc')
+        .join('invoices as i', function() {
+          this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+              .andOn('i.tenant', '=', 'cbc.tenant');
+        })
+        .where('cbc.company_id', companyId)
+        .andWhere('cbc.tenant', tenant)
+        // Add a check for invoice status if applicable, e.g., .andWhere('i.status', 'finalized')
+        // Assuming any linked invoice means it's "invoiced" for now
+        .select(
+          'cbc.period_start_date',
+          'cbc.period_end_date'
+        );
+
+      // 4. Check for overlaps
+      for (const cycle of invoicedCycles) {
+        const cycleStartDate = toPlainDate(cycle.period_start_date);
+        const cycleEndDate = toPlainDate(cycle.period_end_date); // Invoiced cycles should always have an end date
+
+        // Overlap check: (StartA <= EndB) and (EndA >= StartB)
+        const startsBeforeCycleEnds = Temporal.PlainDate.compare(proposedStartDate, cycleEndDate) <= 0;
+        // If proposed end date is null (open-ended), it overlaps if it starts before the cycle ends.
+        // Otherwise, check if the proposed end date is after or on the cycle start date.
+        const endsAfterCycleStarts = proposedEndDate === null || Temporal.PlainDate.compare(proposedEndDate, cycleStartDate) >= 0;
+
+        if (startsBeforeCycleEnds && endsAfterCycleStarts) {
+          throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");
+        }
+      }
+    }
+    // --- End Validation ---
 
     // Remove tenant field if present in updateData to prevent override
     const { tenant: _, ...safeUpdateData } = updateData as any;
@@ -146,9 +199,15 @@ export async function updateCompanyBundle(
   } catch (error) {
     console.error(`Error updating company bundle ${companyBundleId}:`, error);
     if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+      // Re-throw specific known errors or validation errors
+      if (error.message === "Cannot change assignment dates as they overlap with an already invoiced period.") {
+          throw error;
+      }
+      // Preserve other specific error messages if needed
+      // throw error;
     }
-    throw new Error(`Failed to update company bundle: ${error}`);
+    // Throw a generic error for unexpected issues
+    throw new Error(`Failed to update company bundle: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -255,8 +314,7 @@ export async function applyBundleToCompany(companyBundleId: string): Promise<voi
                 tenant 
               })
               .update({ 
-                company_bundle_id: companyBundleId,
-                updated_at: new Date().toISOString()
+                company_bundle_id: companyBundleId
               });
           }
         } else {

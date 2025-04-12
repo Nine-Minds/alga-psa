@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel'; // Import SwitchWithLabel
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
@@ -29,37 +29,49 @@ export function CompanyBundleDialog({
   planNames // Destructure the new prop
 }: CompanyBundleDialogProps) {
   const [open, setOpen] = useState(isOpen);
-  const [startDate, setStartDate] = useState<string>(
-    initialStartDate || new Date().toISOString().split('T')[0]
-  );
+  // Safely initialize startDate: check if initialStartDate is a non-empty string
+  const [startDate, setStartDate] = useState<string>(() => {
+    const dateStr = typeof initialStartDate === 'string' && initialStartDate ? initialStartDate.split('T')[0] : null;
+    return dateStr || new Date().toISOString().split('T')[0];
+  });
   const [endDate, setEndDate] = useState<string | null>(initialEndDate || null);
-  const [isOngoing, setIsOngoing] = useState<boolean>(!initialEndDate);
+  // Safely initialize isOngoing: check if initialEndDate is a non-empty string
+  const [isOngoing, setIsOngoing] = useState<boolean>(!(typeof initialEndDate === 'string' && initialEndDate));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setOpen(isOpen);
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => { // Make async
     e.preventDefault();
-    
+    setError(null); // Clear previous errors
+
     if (!startDate) {
       setError('Start date is required');
       return;
     }
-    
+
     if (!isOngoing && !endDate) {
       setError('End date is required when not ongoing');
       return;
     }
-    
+
     if (!isOngoing && endDate && new Date(endDate) <= new Date(startDate)) {
       setError('End date must be after start date');
       return;
     }
-    
-    onBundleAssigned(startDate, isOngoing ? null : endDate);
-    handleClose();
+
+    try { // Add try block
+      await onBundleAssigned(startDate, isOngoing ? null : endDate); // Await the backend call
+      handleClose(); // Close only on success
+    } catch (err) { // Add catch block
+      if (err instanceof Error) {
+        setError(err.message); // Set error state with backend message
+      } else {
+        setError('An unexpected error occurred.'); // Generic fallback
+      }
+    }
   };
 
   const handleClose = () => {
@@ -120,19 +132,16 @@ export function CompanyBundleDialog({
               />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is-ongoing"
-                checked={isOngoing}
-                onChange={(checked) => {
-                  setIsOngoing(!!checked);
-                  if (checked) {
-                    setEndDate(null);
-                  }
-                }}
-              />
-              <Label htmlFor="is-ongoing" className="cursor-pointer">Ongoing (no end date)</Label>
-            </div>
+            <SwitchWithLabel
+              label="Ongoing (no end date)"
+              checked={isOngoing}
+              onCheckedChange={(checked) => {
+                setIsOngoing(checked);
+                if (checked) {
+                  setEndDate(null); // Clear end date if ongoing
+                }
+              }}
+            />
             
             {!isOngoing && (
               <div>
