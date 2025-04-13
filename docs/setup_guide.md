@@ -132,7 +132,7 @@ The entrypoint scripts will automatically:
 
 You can monitor the initialization process through Docker logs:
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs -f
 ```
 
 ## Initial Login Credentials
@@ -140,7 +140,7 @@ docker compose logs -f
 After successful initialization, the server logs will display a sample username and password that can be used for initial access:
 
 ```bash
-docker compose logs -f
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs -f
 ```
 
 ## Verification
@@ -156,7 +156,7 @@ docker compose ps
 
 3. Verify logs for any errors:
 ```bash
-docker compose logs [service-name]
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs [service-name]
 ```
 
 ## Common Issues & Solutions
