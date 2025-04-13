@@ -62,15 +62,14 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     // Insert invoice
     await trx('invoices').insert(invoice);
 
-    // Persist invoice items using shared service
-    const subtotal = await invoiceService.persistInvoiceItems(
+    // Persist manual invoice items using the dedicated service function
+    const subtotal = await invoiceService.persistManualInvoiceItems(
       trx,
       invoiceId,
-      items,
+      items, // Assuming items match ManualInvoiceItemInput structure
       company,
       session,
-      tenant,
-      true // isManual
+      tenant
     );
 
     // Calculate and distribute tax
@@ -79,17 +78,14 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       trx,
       invoiceId,
       company,
-      subtotal,
-      taxService
+      taxService // Removed subtotal argument
     );
 
-    // Update invoice totals and record transaction
+    // Update invoice totals and record transaction (subtotal/tax recalculated internally)
     await invoiceService.updateInvoiceTotalsAndRecordTransaction(
       trx,
       invoiceId,
       company,
-      subtotal,
-      computedTotalTax,
       tenant,
       invoiceNumber,
       isPrepayment ? expirationDate : undefined
@@ -182,15 +178,14 @@ export async function updateManualInvoice(
       })
       .delete();
 
-    // Insert new items using shared service
-    await invoiceService.persistInvoiceItems(
+    // Insert new items using the dedicated manual service function
+    await invoiceService.persistManualInvoiceItems(
       trx,
       invoiceId,
-      items,
+      items, // Assuming items match ManualInvoiceItemInput structure
       company,
       session,
-      tenant,
-      true // isManual
+      tenant
     );
 
     // Update invoice updated_at timestamp

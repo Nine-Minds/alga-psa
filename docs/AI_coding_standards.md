@@ -226,6 +226,15 @@ Every query should filter on the tenant column (including joins) to ensure compa
       .andWhere('some_column', 'value');
     ```
 
+5. **GUID Handling in CitusDB**
+    - Use UUIDs for GUIDs
+    - Use `gen_random_uuid()` function for generating new UUIDs
+    Example:
+    ```sql
+      INSERT INTO my_table (id, tenant, ...)
+      VALUES (gen_random_uuid(), 'tenant_value', ...);   
+    ```
+
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.
 Most tables require the tenant to be specified in the `tenant` column when inserting.

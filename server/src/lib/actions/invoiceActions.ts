@@ -46,8 +46,7 @@ export interface ManualInvoiceUpdate { // Add export
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
-  is_taxable?: boolean;
-  tax_region?: string;
+  is_taxable?: boolean; // Keep for purely manual items without service
 }
 
 interface ManualItemsUpdate {

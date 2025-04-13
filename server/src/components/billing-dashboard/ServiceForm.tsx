@@ -5,9 +5,10 @@ import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { createService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions'
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
-import { UnitOfMeasureInput } from './UnitOfMeasureInput'
+import { getActiveTaxRegions, getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Added getTaxRates
+import { ITaxRate, ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { UnitOfMeasureInput } from './UnitOfMeasureInput';
+import { toast } from 'react-hot-toast';
 
 export const ServiceForm: React.FC = () => {
   const [serviceName, setServiceName] = useState('')
@@ -18,11 +19,13 @@ export const ServiceForm: React.FC = () => {
   const [description, setDescription] = useState('')
   const [serviceTypes, setServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [regionCode, setRegionCode] = useState<string | null>(null); // Added state for region code
-  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
-  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
-  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
-  // Fetch service types on component mount
+  // Removed regionCode state and related hooks
+  // Assuming tax_rate_id is handled by a dedicated component or passed in props now
+  const [taxRateId, setTaxRateId] = useState<string | null>(null); // Placeholder for tax_rate_id state
+  const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
+  const [isLoadingTaxData, setIsLoadingTaxData] = useState(true); // Combined loading state
+  const [errorTaxData, setErrorTaxData] = useState<string | null>(null); // Combined error state
   useEffect(() => {
     const fetchServiceTypes = async () => {
       try {
@@ -33,42 +36,48 @@ export const ServiceForm: React.FC = () => {
         setError('Failed to fetch service types')
       }
     }
-    const fetchTaxRegions = async () => { // Added function
-       try {
-           setIsLoadingTaxRegions(true);
-           const regions = await getActiveTaxRegions();
-           setTaxRegions(regions);
-           setErrorTaxRegions(null);
-       } catch (error) {
-           console.error('Error loading tax regions:', error);
-           setErrorTaxRegions('Failed to load tax regions.');
-           setTaxRegions([]); // Clear regions on error
-       } finally {
-           setIsLoadingTaxRegions(false);
-       }
+    const fetchTaxData = async () => {
+      setIsLoadingTaxData(true);
+      setErrorTaxData(null);
+      try {
+        // Fetch both rates and regions concurrently
+        const [rates, regions] = await Promise.all([
+          getTaxRates(), // Use the imported function
+          getActiveTaxRegions() // Use the imported function
+        ]);
+        setTaxRates(rates);
+        setTaxRegions(regions);
+      } catch (err) {
+        console.error("Failed to fetch tax data:", err);
+        const errorMessage = err instanceof Error ? err.message : "Failed to load tax data.";
+        setErrorTaxData(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        setIsLoadingTaxData(false);
+      }
     };
 
-    fetchServiceTypes()
-    fetchTaxRegions(); // Call new function
-  }, [])
+    fetchServiceTypes();
+    fetchTaxData();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!serviceTypeId) {
       setError('Please select a service type')
       return
     }
-    
+
     try {
       // Find the selected service type to determine if it's standard or custom
       const selectedServiceType = serviceTypes.find(t => t.id === serviceTypeId)
-      
+
       if (!selectedServiceType) {
         setError('Selected service type not found')
         return
       }
-      
+
       // Create base data
       const baseData = {
         service_name: serviceName,
@@ -77,9 +86,9 @@ export const ServiceForm: React.FC = () => {
         category_id: null,
         billing_method: billingMethod,
         description: description,
-        region_code: regionCode // Added region_code
+        tax_rate_id: taxRateId // Use tax_rate_id instead
       }
-      
+
       // Create the final data with the correct service type ID based on is_standard flag
       let submitData
       if (selectedServiceType.is_standard) {
@@ -93,7 +102,7 @@ export const ServiceForm: React.FC = () => {
           custom_service_type_id: serviceTypeId,
         }
       }
-      
+
       await createService(submitData)
       setError(null)
       // Clear form fields after successful submission
@@ -103,22 +112,31 @@ export const ServiceForm: React.FC = () => {
       setUnitOfMeasure('')
       setBillingMethod('fixed')
       setDescription('')
-      setRegionCode(null); // Clear region code
+      setTaxRateId(null); // Clear tax rate ID
     } catch (error) {
       console.error('Error creating service:', error)
       setError(error instanceof Error ? error.message : 'Failed to create service'); // Show specific error
     }
   }
 
-  const taxRegionOptions = taxRegions.map(region => ({
-     value: region.region_code,
-     label: region.region_name
-  }));
+  // Create a map for quick region lookup
+  const regionMap = new Map(taxRegions.map(r => [r.region_code, r.region_name]));
 
+  // Define tax rate options based on fetched taxRates and taxRegions state
+  const taxRateOptions = taxRates.map(rate => {
+    const regionName = regionMap.get(rate.country_code);
+    // Use region name if found, otherwise fallback to tax_type or country_code
+    const descriptionPart = regionName || rate.tax_type || rate.country_code || 'N/A';
+    const percentagePart = rate.tax_percentage.toFixed(2); // tax_percentage is number
+    return {
+      value: rate.tax_rate_id,
+      label: `${descriptionPart} - ${percentagePart}%`
+    };
+  });
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && <div className="text-red-500 mb-4">{error}</div>}
-      {errorTaxRegions && <div className="text-red-500 mb-4">{errorTaxRegions}</div>} {/* Show tax region loading error */}
+      {errorTaxData && <div className="text-red-500 mb-4">{errorTaxData}</div>} {/* Show combined tax data loading error */}
       <Input
         value={serviceName}
         onChange={(e) => setServiceName(e.target.value)}
@@ -139,7 +157,7 @@ export const ServiceForm: React.FC = () => {
         }}
         placeholder="Select Service Type"
       />
-      
+
       <CustomSelect
         options={[
           { value: 'fixed', label: 'Fixed Price' },
@@ -178,16 +196,16 @@ export const ServiceForm: React.FC = () => {
 
       {/* Added Tax Region Dropdown */}
       <div className="space-y-2">
-          <CustomSelect
-              id="service-tax-region-select"
-              label="Tax Region (Optional)"
-              value={regionCode || ''}
-              placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
-              onValueChange={(value) => setRegionCode(value || null)} // Set to null if cleared
-              options={taxRegionOptions}
-              disabled={isLoadingTaxRegions}
-              allowClear={true} // Allow clearing the selection
-          />
+        {/* Replace region select with tax rate select */}
+        <CustomSelect
+          label="Tax Rate"
+          id="service-tax-rate-field"
+          value={taxRateId || ''}
+          onValueChange={(value) => setTaxRateId(value || null)}
+          options={taxRateOptions} // Use tax rate options
+          placeholder={isLoadingTaxData ? "Loading tax data..." : "Select Tax Rate (Optional)"}
+          disabled={isLoadingTaxData}
+        />
       </div>
 
       <Button id='add-service-button' type="submit">Add Service</Button>

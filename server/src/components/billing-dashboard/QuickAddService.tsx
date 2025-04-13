@@ -7,8 +7,9 @@ import CustomSelect from 'server/src/components/ui/CustomSelect'
 import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { createService } from 'server/src/lib/actions/serviceActions'
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
+// Import getTaxRates and ITaxRate instead
+import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
+import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
 import { getServiceCategories } from 'server/src/lib/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces' // Added IServiceType
@@ -21,15 +22,16 @@ interface QuickAddServiceProps {
 }
 
 // Updated interface to use standard_service_type_id or custom_service_type_id
-interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> {
+// and tax_rate_id instead of old tax fields
+interface ServiceFormData extends Omit<IService, 'service_id' | 'tenant' | 'category_id'> { // Removed is_taxable, region_code from Omit
   // Temporary field for UI selection - not sent to API
   service_type_id: string;
   // Fields that will be sent to API
   standard_service_type_id?: string;
   custom_service_type_id?: string;
+  tax_rate_id?: string | null; // Added tax_rate_id
   description?: string | null;
-  region_code?: string | null; // Added region_code
-  // Fields to remove from final submission
+  // Fields to remove from final submission (or add to IService if needed)
   sku?: string;
   inventory_count?: number;
   seat_limit?: number;
@@ -65,9 +67,11 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [categories, setCategories] = useState<IServiceCategory[]>([]) // Keep for now, might be replaced
-  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
-  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
-  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
+  // State for tax rates instead of regions
+  const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  // Renamed states back to focus only on tax rates
+  const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
+  const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
   const tenant = useTenant()
 
   // Initialize service state with service_type_id for UI selection
@@ -79,8 +83,8 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
     billing_method: 'fixed',
     default_rate: 0,
     unit_of_measure: '',
-    is_taxable: true,
-    region_code: null, // Changed tax_region to region_code
+    // is_taxable and region_code removed
+    tax_rate_id: null, // Added
     description: '',
     sku: '',
     inventory_count: 0,
@@ -100,24 +104,29 @@ export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddSer
       }
     }
 
-    const fetchTaxRegions = async () => { // Added function
+    // Fetch tax rates instead of regions
+    // Fetch only tax rates (as they contain description/region_code)
+    const fetchTaxRates = async () => {
+       setIsLoadingTaxRates(true);
+       setErrorTaxRates(null);
        try {
-           setIsLoadingTaxRegions(true);
-           const regions = await getActiveTaxRegions();
-           setTaxRegions(regions);
-           setErrorTaxRegions(null);
+           const rates = await getTaxRates();
+           // Log fetched rates to confirm structure (optional, can be removed later)
+           console.log('[QuickAddService] Fetched Tax Rates:', rates);
+           setTaxRates(rates);
        } catch (error) {
-           console.error('Error loading tax regions:', error);
-           setErrorTaxRegions('Failed to load tax regions.');
-           setTaxRegions([]); // Clear regions on error
+           console.error('Error loading tax rates:', error);
+           const errorMessage = error instanceof Error ? error.message : 'Failed to load tax rates.';
+           setErrorTaxRates(errorMessage);
+           setTaxRates([]); // Clear rates on error
        } finally {
-           setIsLoadingTaxRegions(false);
+           setIsLoadingTaxRates(false);
        }
     };
 
-    fetchCategories()
-    fetchTaxRegions(); // Call new function
-  }, [])
+    fetchCategories(); // Keep fetching categories for now
+    fetchTaxRates(); // Call fetchTaxRates
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -161,8 +170,8 @@ const baseData = {
   billing_method: serviceData.billing_method,
   default_rate: serviceData.default_rate,
   unit_of_measure: serviceData.unit_of_measure,
-  is_taxable: serviceData.is_taxable,
-  region_code: serviceData.region_code || null, // Changed tax_region to region_code
+  // is_taxable and region_code removed
+  tax_rate_id: serviceData.tax_rate_id || null, // Added tax_rate_id
   category_id: null, // Explicitly set optional category_id to null
   description: serviceData.description || '', // Include description field
 };
@@ -197,9 +206,9 @@ console.log('[QuickAddService] Service created successfully');
         billing_method: 'fixed',
         default_rate: 0,
         unit_of_measure: '',
-        is_taxable: true,
         description: '',
-        region_code: null, // Changed tax_region to region_code
+        // is_taxable and region_code removed
+        tax_rate_id: null, // Added
         // Reset optional fields too
         sku: '',
         inventory_count: 0,
@@ -215,6 +224,8 @@ console.log('[QuickAddService] Service created successfully');
 
   // Removed unused categoryOptions derived from fetched categories
 
+  // Removed regionMap creation
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
@@ -225,7 +236,7 @@ console.log('[QuickAddService] Service created successfully');
         <Dialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-lg w-96">
           <Dialog.Title className="text-lg font-bold mb-4">Add New Service</Dialog.Title>
           {error && <div className="text-red-500 mb-4">{error}</div>}
-          {errorTaxRegions && <div className="text-red-500 mb-4">{errorTaxRegions}</div>} {/* Show tax region error */}
+          {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="serviceName" className="block text-sm font-medium text-gray-700">Service Name</label>
@@ -321,25 +332,33 @@ console.log('[QuickAddService] Service created successfully');
             {/* Removed separate Category dropdown (category_id) */}
 
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={serviceData.is_taxable}
-                onCheckedChange={(checked) => setServiceData({ ...serviceData, is_taxable: checked })}
-              />
-              <label className="text-sm font-medium text-gray-700">Is Taxable</label>
-            </div>
-
-            {/* Replaced Input with CustomSelect for Tax Region */}
+            {/* Replaced Is Taxable Switch and Tax Region Select with Tax Rate Select */}
             <div>
-              <label htmlFor="taxRegion" className="block text-sm font-medium text-gray-700">Tax Region (Optional)</label>
+              <label htmlFor="taxRate" className="block text-sm font-medium text-gray-700">Tax Rate (Optional)</label>
               <CustomSelect
-                  id="quick-add-service-tax-region-select"
-                  value={serviceData.region_code || ''}
-                  placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
-                  onValueChange={(value) => setServiceData({ ...serviceData, region_code: value || null })} // Set null if cleared
-                  options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
-                  disabled={isLoadingTaxRegions}
-                  allowClear={true}
+                  id="quick-add-service-tax-rate-select"
+                  value={serviceData.tax_rate_id || ''} // Bind to tax_rate_id
+                  placeholder={isLoadingTaxRates ? "Loading tax rates..." : "Select Tax Rate (or leave blank for Non-Taxable)"}
+                  onValueChange={(value) => setServiceData({ ...serviceData, tax_rate_id: value || null })} // Set null if cleared
+                  // Populate with fetched tax rates, construct label using regionMap
+                  // Use description or region_code directly from the rate object
+                  options={taxRates.map(r => { // r is now correctly typed as ITaxRate
+                    // Construct label using fields directly from ITaxRate
+                    const descriptionPart = r.description || r.region_code || 'N/A'; // Use description or region_code
+
+                    // Ensure tax_percentage is treated as a number before calling toFixed
+                    const percentageValue = typeof r.tax_percentage === 'string'
+                      ? parseFloat(r.tax_percentage)
+                      : Number(r.tax_percentage);
+                    const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
+
+                    return {
+                      value: r.tax_rate_id,
+                      label: `${descriptionPart} - ${percentagePart}%`
+                    };
+                  })}
+                  disabled={isLoadingTaxRates}
+                  allowClear={true} // Allow clearing
               />
             </div>
 

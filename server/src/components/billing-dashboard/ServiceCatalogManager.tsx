@@ -10,9 +10,11 @@ import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 // Import new action and type
 import { getServices, updateService, deleteService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
+// Import action to get tax rates
+import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
 import { IService, IServiceCategory, IServiceType } from 'server/src/interfaces/billing.interfaces'; // Added IServiceType
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
+// Import ITaxRate interface
+import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Corrected import path if needed
 import { Card, CardContent, CardHeader } from '../ui/Card';
 import { Switch } from '../ui/Switch';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -58,9 +60,9 @@ const ServiceCatalogManager: React.FC = () => {
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
-  // Extend IService with the fields we need for UI but aren't in the database
+  // Use IService directly, extended with optional UI fields
   const [editingService, setEditingService] = useState<(IService & {
-    sku?: string;
+    sku?: string; // These might need to be added to IService if they are persisted
     inventory_count?: number;
     seat_limit?: number;
     license_term?: string;
@@ -71,9 +73,10 @@ const ServiceCatalogManager: React.FC = () => {
   const [serviceToDelete, setServiceToDelete] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBillingMethod, setSelectedBillingMethod] = useState<string>('all');
-  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
-  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
-  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
+  // State for tax rates - Use full ITaxRate
+  const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
+  const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
 
   const filteredServices = services.filter(service => {
     // Get the effective service type ID (either standard or custom)
@@ -89,7 +92,7 @@ const ServiceCatalogManager: React.FC = () => {
     fetchServices();
     fetchCategories();
     fetchAllServiceTypes(); // Fetch service types
-    fetchTaxRegions(); // Added
+    fetchTaxRates(); // Fetch tax rates instead of regions
   }, []);
 
   // Function to fetch all service types
@@ -107,19 +110,20 @@ const ServiceCatalogManager: React.FC = () => {
     }
   };
 
-  // Added function to fetch tax regions
-  const fetchTaxRegions = async () => {
+  // Fetch tax rates instead of regions
+  const fetchTaxRates = async () => {
    try {
-       setIsLoadingTaxRegions(true);
-       const regions = await getActiveTaxRegions();
-       setTaxRegions(regions);
-       setErrorTaxRegions(null);
+       setIsLoadingTaxRates(true);
+       // Use getTaxRates which returns ITaxRate[]
+       const rates = await getTaxRates(); // Fetches active rates by default
+       setTaxRates(rates);
+       setErrorTaxRates(null);
    } catch (error) {
-       console.error('Error loading tax regions:', error);
-       setErrorTaxRegions('Failed to load tax regions.');
-       setTaxRegions([]); // Clear regions on error
+       console.error('Error loading tax rates:', error);
+       setErrorTaxRates('Failed to load tax rates.');
+       setTaxRates([]); // Clear rates on error
    } finally {
-       setIsLoadingTaxRegions(false);
+       setIsLoadingTaxRates(false);
    }
   };
 
@@ -153,7 +157,13 @@ const ServiceCatalogManager: React.FC = () => {
       return;
     }
     try {
-      await updateService(editingService.service_id!, editingService);
+      // Ensure editingService is not null and has an ID
+      if (!editingService?.service_id) {
+        setError('Cannot update service without an ID.');
+        return;
+      }
+      // Prepare payload - IService now has tax_rate_id and lacks old fields
+      await updateService(editingService.service_id, editingService);
       setEditingService(null);
       await fetchServices();
       setError(null);
@@ -221,16 +231,22 @@ const ServiceCatalogManager: React.FC = () => {
         dataIndex: 'unit_of_measure',
         render: (value, record) => record.billing_method === 'per_unit' ? value || 'N/A' : 'N/A',
       },
+      // Updated Tax Column
       {
-        title: 'Is Taxable',
-        dataIndex: 'is_taxable',
-        render: (value) => value ? 'Yes' : 'No',
+        title: 'Tax Rate',
+        dataIndex: 'tax_rate_id', // Use the new field from the DB
+        render: (tax_rate_id) => {
+          if (!tax_rate_id) return 'Non-Taxable';
+          const rate = taxRates.find(r => r.tax_rate_id === tax_rate_id);
+          // Construct label using description/region_code from ITaxRate
+          const descriptionPart = rate?.description || rate?.region_code || 'N/A';
+          const percentageValue = typeof rate?.tax_percentage === 'string'
+              ? parseFloat(rate.tax_percentage)
+              : Number(rate?.tax_percentage);
+          const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
+          return rate ? `${descriptionPart} - ${percentagePart}%` : tax_rate_id; // Fallback to ID
+        },
       },
-      {
-        title: 'Tax Region',
-        dataIndex: 'region_code', // Changed from tax_region
-        render: (value) => value || 'Default', // Display code for now, or 'Default' if null
-      }
     ];
 
     // Removed conditional columns based on old service_type
@@ -334,7 +350,7 @@ const ServiceCatalogManager: React.FC = () => {
         </CardHeader>
         <CardContent>
           {error && <div className="text-red-500 mb-4">{error}</div>}
-          {errorTaxRegions && <div className="text-red-500 mb-4">{errorTaxRegions}</div>} {/* Show tax region error */}
+          {errorTaxRates && <div className="text-red-500 mb-4">{errorTaxRates}</div>} {/* Show tax rate error */}
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div className="flex space-x-2">
@@ -359,8 +375,12 @@ const ServiceCatalogManager: React.FC = () => {
               data={filteredServices}
               columns={columns}
               pagination={true}
-              onRowClick={(record) => {
-                setEditingService(record);
+              onRowClick={(record: IService) => { // Use updated IService
+                // Add optional UI fields if needed when setting state
+                setEditingService({
+                  ...record,
+                  // sku: record.sku || '', // Example if sku was fetched
+                });
                 setIsEditDialogOpen(true);
               }}
             />
@@ -466,23 +486,29 @@ const ServiceCatalogManager: React.FC = () => {
                 className="w-full"
               />
             )}
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={editingService?.is_taxable ?? true}
-                onCheckedChange={(checked) => setEditingService({ ...editingService!, is_taxable: checked })}
-              />
-              <label>Is Taxable</label>
-            </div>
-            {/* Replaced Input with CustomSelect for Tax Region */}
+            {/* Replaced Tax Region/Is Taxable with Tax Rate Selector */}
             <CustomSelect
-                id="edit-service-tax-region-select"
-                label="Tax Region (Optional)"
-                value={editingService?.region_code || ''}
-                placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
-                onValueChange={(value) => setEditingService({ ...editingService!, region_code: value || null })} // Set null if cleared
-                options={taxRegions.map(r => ({ value: r.region_code, label: r.region_name }))}
-                disabled={isLoadingTaxRegions}
-                allowClear={true}
+                id="edit-service-tax-rate-select"
+                label="Tax Rate (Optional)"
+                value={editingService?.tax_rate_id || ''} // Bind to tax_rate_id from IService
+                placeholder={isLoadingTaxRates ? "Loading rates..." : "Select Tax Rate (or leave blank for Non-Taxable)"}
+                onValueChange={(value) => {
+                  if (editingService) { // Ensure editingService is not null
+                    setEditingService({ ...editingService, tax_rate_id: value || null }); // Set null if cleared
+                  }
+                }}
+                // Populate with fetched tax rates, construct label using available fields
+                options={taxRates.map(r => { // r is ITaxRate
+                   const descriptionPart = r.description || r.region_code || 'N/A';
+                   const percentageValue = typeof r.tax_percentage === 'string' ? parseFloat(r.tax_percentage) : Number(r.tax_percentage);
+                   const percentagePart = !isNaN(percentageValue) ? percentageValue.toFixed(2) : '0.00';
+                   return {
+                     value: r.tax_rate_id,
+                     label: `${descriptionPart} - ${percentagePart}%`
+                   };
+                })}
+                disabled={isLoadingTaxRates}
+                allowClear={true} // Allow clearing the selection
             />
 
             {/* Removed conditional rendering based on old service_type */}

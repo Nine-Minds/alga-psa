@@ -37,8 +37,11 @@ interface ManualInvoicesProps {
 }
 
 // This is the primary state type for manual items within this component
+// Reverted: Keep is_taxable, remove tax_rate_id
 interface EditableInvoiceItem extends Omit<IInvoiceItem, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
   rate: number; // Represents unit_price for editing (in cents)
+  // tax_rate_id?: string | null; // Removed
+  // is_taxable removed; derived from service tax_rate_id
   isExisting?: boolean;
   isRemoved?: boolean;
 }
@@ -54,7 +57,8 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   is_manual: true,
   isExisting: false,
   isRemoved: false,
-  is_taxable: false,
+  // is_taxable removed
+  // tax_rate_id: null, // Removed
   discount_type: undefined,
   discount_percentage: undefined,
   applies_to_item_id: undefined,
@@ -152,7 +156,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       is_bundle_header: item.is_bundle_header,
       parent_item_id: item.parent_item_id,
       is_manual: true,
-      is_taxable: item.is_taxable ?? false,
+      // is_taxable removed
+      // tax_rate_id: item.tax_rate_id || null, // Removed
       isExisting: true,
       isRemoved: false,
     }));
@@ -212,7 +217,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
             is_manual: true,
-            is_taxable: item.is_taxable ?? false,
+            // is_taxable removed
+            // tax_rate_id: item.tax_rate_id || null, // Removed
             isExisting: true,
             isRemoved: false,
           }));
@@ -369,7 +375,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           tax_amount: 0, // Calculated backend
           net_amount: 0, // Calculated backend
           is_manual: true,
-          is_taxable: item.is_taxable,
+          // is_taxable removed
+          // tax_rate_id: item.tax_rate_id, // Removed
           is_discount: item.is_discount,
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
@@ -395,7 +402,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          is_taxable: item.is_taxable,
+          // is_taxable removed
+          // tax_rate_id: item.tax_rate_id, // Removed
         });
 
         await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
@@ -439,7 +447,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
             is_manual: true,
-            is_taxable: item.is_taxable ?? false,
+            // is_taxable removed
+            // tax_rate_id: item.tax_rate_id || null, // Removed
             isExisting: true,
             isRemoved: false,
         }));
@@ -548,6 +557,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       quantity: item.quantity,
       description: item.description,
       rate: item.rate, // Pass rate in cents
+      // tax_rate_id: item.tax_rate_id, // Removed
+      // is_taxable removed
       isExisting: item.isExisting,
       isRemoved: item.isRemoved,
       is_discount: item.is_discount,

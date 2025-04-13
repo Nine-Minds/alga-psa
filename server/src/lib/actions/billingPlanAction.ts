@@ -1,11 +1,12 @@
 // server/src/lib/actions/billingPlanActions.ts
 'use server'
 import BillingPlan from 'server/src/lib/models/billingPlan';
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IBillingPlan, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces'; // Added IBillingPlanFixedConfig
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex'; // Import Knex type
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
+import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {
@@ -191,149 +192,205 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
 }
 
 /**
- * Gets the fixed plan configuration for a specific plan and service
+ * Gets the combined fixed plan configuration (plan-level and service-level)
+ * Fetches proration/alignment from billing_plan_fixed_config and base_rate from plan_service_fixed_config.
  */
-export async function getFixedPlanConfiguration(
+export async function getCombinedFixedPlanConfiguration(
     planId: string,
     serviceId: string
 ): Promise<{
     base_rate?: number | null;
     enable_proration: boolean;
     billing_cycle_alignment: 'start' | 'end' | 'prorated';
-    config_id?: string;
+    config_id?: string; // Service-specific config ID
 } | null> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(); // Get knex instance
     if (!tenant) {
         throw new Error("tenant context not found");
     }
 
     try {
-        // Create configuration service
-        const configService = new PlanServiceConfigurationService();
-        
-        // Get configuration for this plan and service
-        const baseConfig = await configService.getConfigurationForService(planId, serviceId);
-        
-        if (!baseConfig) {
-            return null;
-        }
-        
-        // Get the detailed configuration
-        const configDetails = await configService.getConfigurationWithDetails(baseConfig.config_id);
-        
-        if (!configDetails.typeConfig || baseConfig.configuration_type !== 'Fixed') {
-            return null;
-        }
-        
-        // Cast to the correct type
-        const fixedConfig = configDetails.typeConfig as IPlanServiceFixedConfig;
-        
+        // --- Fetch Plan-Level Config (Base Rate, Proration, Alignment) ---
+        // Use the existing getBillingPlanFixedConfig action which should now return base_rate
+        const planConfig = await getBillingPlanFixedConfig(planId);
+
+        // Default values if plan-level config doesn't exist
+        const plan_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
+        const enable_proration = planConfig?.enable_proration ?? false;
+        const billing_cycle_alignment = planConfig?.billing_cycle_alignment ?? 'start';
+
+        // --- Fetch Service-Level Config ID (Optional, if needed elsewhere) ---
+        // We no longer need service-level config to get the base rate for the combined view.
+        // We might still need the config_id if the caller uses it.
+        const configService = new PlanServiceConfigurationService(knex, tenant);
+        const serviceBaseConfig = await configService.getConfigurationForService(planId, serviceId);
+        const config_id: string | undefined = serviceBaseConfig?.config_id;
+
+        // Base rate now comes from planConfig fetched above
+        const base_rate = plan_base_rate;
+
+        // --- Combine Results ---
+        // Return null only if BOTH plan and service config are missing? Or just if service config is missing?
+        // Current logic: returns combined data even if service config (base_rate) is missing.
+        // If serviceBaseConfig is required, uncomment the check below:
+        // if (!serviceBaseConfig) {
+        //     return null;
+        // }
+
         return {
-            base_rate: fixedConfig.base_rate,
-            enable_proration: fixedConfig.enable_proration,
-            billing_cycle_alignment: fixedConfig.billing_cycle_alignment,
-            config_id: fixedConfig.config_id
+            base_rate: base_rate,
+            enable_proration: enable_proration,
+            billing_cycle_alignment: billing_cycle_alignment,
+            config_id: config_id
         };
+
     } catch (error) {
-        console.error('Error fetching fixed plan configuration:', error);
+        console.error('Error fetching combined fixed plan configuration:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to fetch fixed plan configuration for plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to fetch combined fixed plan configuration for plan ${planId}, service ${serviceId} in tenant ${tenant}: ${error}`);
     }
 }
 
 /**
- * Updates a fixed plan configuration with the provided data
- * This function handles the special fields like base_rate and enable_proration
- * that are stored in the plan_service_fixed_config table
- *
- * The fixed fee rate is stored independently of any service from the service catalog.
- * All services associated with this plan will use the same base_rate.
+ * Gets only the plan-level fixed configuration (proration, alignment)
  */
-export async function updateFixedPlanConfiguration(
-    planId: string,
-    serviceId: string,
-    configData: {
-        base_rate?: number | null;
-        enable_proration?: boolean;
-        billing_cycle_alignment?: 'start' | 'end' | 'prorated';
+export async function getBillingPlanFixedConfig(planId: string): Promise<IBillingPlanFixedConfig | null> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error("tenant context not found");
     }
+    try {
+        const model = new BillingPlanFixedConfig(knex, tenant);
+        const config = await model.getByPlanId(planId);
+        return config;
+    } catch (error) {
+        console.error(`Error fetching billing_plan_fixed_config for plan ${planId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to fetch billing_plan_fixed_config for plan ${planId} in tenant ${tenant}: ${error}`);
+    }
+}
+
+/**
+ * Updates the plan-level fixed configuration (proration, alignment) in billing_plan_fixed_config.
+ * Uses upsert logic: creates if not exists, updates if exists.
+ */
+export async function updateBillingPlanFixedConfig(
+    planId: string,
+    configData: Partial<Omit<IBillingPlanFixedConfig, 'plan_id' | 'tenant' | 'created_at' | 'updated_at'>>
 ): Promise<boolean> {
-    const { tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
         throw new Error("tenant context not found");
     }
 
     try {
         // Fetch the existing plan to check its type
-        const existingPlan = await BillingPlan.findById(planId);
+        const existingPlan = await BillingPlan.findById(planId); // Use BillingPlan model directly
         if (!existingPlan) {
             throw new Error(`Billing plan with ID ${planId} not found.`);
         }
-
-        // Verify this is a Fixed plan
         if (existingPlan.plan_type !== 'Fixed') {
             throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.plan_type}`);
         }
 
+        const model = new BillingPlanFixedConfig(knex, tenant);
+        
+        // Prepare data for upsert, ensuring plan_id and tenant are included
+        // Prepare data for upsert, ensuring plan_id, tenant, and base_rate are included
+        const upsertData: Omit<IBillingPlanFixedConfig, 'created_at' | 'updated_at'> & { base_rate?: number | null } = {
+            plan_id: planId,
+            base_rate: configData.base_rate, // Include base_rate from input
+            enable_proration: configData.enable_proration ?? false, // Provide default if undefined
+            billing_cycle_alignment: configData.billing_cycle_alignment ?? 'start', // Provide default if undefined
+            tenant: tenant,
+        };
+
+        return await model.upsert(upsertData);
+
+    } catch (error) {
+        console.error(`Error upserting billing_plan_fixed_config for plan ${planId}:`, error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error(`Failed to upsert billing_plan_fixed_config for plan ${planId} in tenant ${tenant}: ${error}`);
+    }
+}
+
+
+/**
+ * Updates only the base_rate for a specific service within a fixed plan.
+ * Interacts with plan_service_fixed_config.
+ * Renamed from updateFixedPlanConfiguration.
+ */
+export async function updatePlanServiceFixedConfigRate(
+    planId: string,
+    serviceId: string,
+    baseRate: number | null // Only accept base_rate
+): Promise<boolean> {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+        throw new Error("tenant context not found");
+    }
+
+    try {
+        // Fetch the existing plan to check its type
+        const existingPlan = await BillingPlan.findById(planId); // Use BillingPlan model directly
+        if (!existingPlan) {
+            throw new Error(`Billing plan with ID ${planId} not found.`);
+        }
+        if (existingPlan.plan_type !== 'Fixed') {
+            throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.plan_type}`);
+        }
+
         // Create configuration service
-        const configService = new PlanServiceConfigurationService();
+        const configService = new PlanServiceConfigurationService(knex, tenant);
         
         // Get existing configuration for this plan and service
         let config = await configService.getConfigurationForService(planId, serviceId);
         
         if (!config) {
-            // If no configuration exists, create a new one
-            console.log(`Creating new fixed plan configuration for plan ${planId} and service ${serviceId}`);
+            // If no configuration exists, create a new one with the provided base_rate
+            console.log(`Creating new fixed plan service configuration for plan ${planId}, service ${serviceId}`);
             
-            // Create base configuration
             const configId = await configService.createConfiguration(
-                {
+                { // Base config data
                     plan_id: planId,
                     service_id: serviceId,
                     configuration_type: 'Fixed',
                     tenant
                 },
-                {
-                    base_rate: configData.base_rate,
-                    enable_proration: configData.enable_proration ?? false,
-                    billing_cycle_alignment: configData.billing_cycle_alignment ?? 'start'
+                { // Type config data (only base_rate now)
+                    base_rate: baseRate
                 }
+                // No proration/alignment data passed here anymore
             );
             
             return !!configId;
         } else {
-            // Update existing configuration
-            console.log(`Updating fixed plan configuration for plan ${planId} and service ${serviceId}`);
+            // Update existing configuration's base_rate
+            console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
             
-            // Prepare fixed config update data
-            const fixedConfigData: Partial<IPlanServiceFixedConfig> = {};
+            // Prepare fixed config update data (only base_rate)
+            const fixedConfigData: Partial<IPlanServiceFixedConfig> = {
+                 base_rate: baseRate
+            };
             
-            if (configData.base_rate !== undefined) {
-                fixedConfigData.base_rate = configData.base_rate;
-            }
-            
-            if (configData.enable_proration !== undefined) {
-                fixedConfigData.enable_proration = configData.enable_proration;
-            }
-            
-            if (configData.billing_cycle_alignment !== undefined) {
-                fixedConfigData.billing_cycle_alignment = configData.billing_cycle_alignment;
-            }
-            
-            // Update the configuration
+            // Update the configuration using the service
             return await configService.updateConfiguration(
                 config.config_id,
-                undefined, // No base config updates
-                fixedConfigData
+                undefined, // No base config updates needed
+                fixedConfigData // Only contains base_rate
             );
         }
     } catch (error) {
-        console.error('Error updating fixed plan configuration:', error);
+        console.error('Error updating fixed plan service config rate:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to update fixed plan configuration for plan ${planId} in tenant ${tenant}: ${error}`);
+        throw new Error(`Failed to update fixed plan service config rate for plan ${planId}, service ${serviceId} in tenant ${tenant}: ${error}`);
     }
 }

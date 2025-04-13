@@ -23,8 +23,8 @@ export interface IPlanServiceConfiguration extends TenantEntity {
 export interface IPlanServiceFixedConfig extends TenantEntity {
   config_id: string;
   base_rate?: number | null; // Added base_rate field
-  enable_proration: boolean;
-  billing_cycle_alignment: 'start' | 'end' | 'prorated';
+  // enable_proration: boolean; // Removed: Moved to billing_plan_fixed_config
+  // billing_cycle_alignment: 'start' | 'end' | 'prorated'; // Removed: Moved to billing_plan_fixed_config
   tenant: string;
   created_at: Date;
   updated_at: Date;

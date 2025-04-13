@@ -20,7 +20,7 @@ exports.down = async function (knex) {
   await knex.schema.alterTable('company_tax_settings', (table) => {
     // Add tax_rate_id column back (assuming it was NOT NULL before)
     // Based on previous schema check, it was NOT NULL.
-    table.uuid('tax_rate_id').notNullable();
+    table.uuid('tax_rate_id').nullable(); // Changed to nullable to allow rollback
 
     // Add foreign key constraint back
     table

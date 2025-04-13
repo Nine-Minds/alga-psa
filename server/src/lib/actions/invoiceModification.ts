@@ -12,7 +12,7 @@ import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions'; // Assuming this stays or moves appropriately
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import { persistInvoiceItems } from 'server/src/lib/services/invoiceService';
+import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/services/invoiceService'; // Import persistManualInvoiceItems
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,8 +27,7 @@ export interface ManualInvoiceUpdate {
   discount_type?: DiscountType;
   discount_percentage?: number;
   applies_to_item_id?: string;
-  is_taxable?: boolean;
-  tax_region?: string;
+  is_taxable?: boolean; // Keep for purely manual items without service
 }
 
 interface ManualItemsUpdate {
@@ -395,19 +394,28 @@ async function updateManualInvoiceItemsInternal(
 
     // Add new items
     if (changes.newItems && changes.newItems.length > 0) {
-      await persistInvoiceItems(
+      // Use persistManualInvoiceItems for adding new manual items during update
+      await persistManualInvoiceItems(
         trx,
         invoiceId,
-        changes.newItems.map(item => ({
-          ...item,
-          service_id: item.service_id || '',
-          is_taxable: item.is_taxable !== false, // Default to taxable unless explicitly false
-          tax_region: item.tax_region || company.tax_region // Use company tax region as fallback
+        changes.newItems.map(item => ({ // Ensure mapping matches ManualInvoiceItemInput
+          item_id: item.item_id,
+          rate: item.rate,
+          quantity: item.quantity,
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
+          applies_to_item_id: item.applies_to_item_id,
+          service_id: item.service_id || undefined,
+          description: item.description,
+          tax_region: item.tax_region || company.tax_region,
+          is_taxable: item.is_taxable !== false,
+          applies_to_service_id: item.applies_to_service_id,
+          discount_percentage: item.discount_percentage,
         })),
         company,
         session,
-        tenant,
-        true // Mark as manual
+        tenant
+        // No 'isManual' boolean needed for persistManualInvoiceItems
       );
     }
 
@@ -518,20 +526,28 @@ async function addManualInvoiceItemsInternal(
   }
 
   await knex.transaction(async (trx) => {
-    // Persist manual items with proper tax handling
-    await persistInvoiceItems(
+    // Use persistManualInvoiceItems for adding manual items
+    await persistManualInvoiceItems(
       trx,
       invoiceId,
-      items.map(item => ({
-        ...item,
-        service_id: item.service_id || '',
-        is_taxable: item.is_taxable !== false,  // Default to taxable unless explicitly false
-        tax_region: item.tax_region || company.tax_region  // Use company tax region as fallback
+      items.map(item => ({ // Ensure mapping matches ManualInvoiceItemInput
+          item_id: item.item_id,
+          rate: item.rate,
+          quantity: item.quantity,
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
+          applies_to_item_id: item.applies_to_item_id,
+          service_id: item.service_id || undefined,
+          description: item.description,
+          tax_region: item.tax_region || company.tax_region,
+          is_taxable: item.is_taxable !== false,
+          applies_to_service_id: item.applies_to_service_id,
+          discount_percentage: item.discount_percentage,
       })),
       company,
       session,
-      tenant,
-      true // Mark as manual
+      tenant
+      // No 'isManual' boolean needed for persistManualInvoiceItems
     );
      // Touch updated_at when items are added
      await trx('invoices')

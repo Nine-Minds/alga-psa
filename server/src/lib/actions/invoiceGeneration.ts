@@ -29,6 +29,7 @@ import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
+import { getCompanyDefaultTaxRegionCode } from './companyTaxRateActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
@@ -481,10 +482,18 @@ export async function createInvoiceFromBillingResult(
   }
 
   const company = await getCompanyDetails(knex, tenant, companyId);
+  let region_code = await getCompanyDefaultTaxRegionCode(companyId);
+  
+  // --- Add Check for Company Default Tax Region ---
+  if (!region_code) {
+    console.error(`[createInvoiceFromBillingResult] Cannot create invoice for company ${companyId} (${company.company_name}) because it lacks a default tax region (region_code).`);
+    throw new Error(`Company '${company.company_name}' does not have a default tax region configured. Please set one before generating invoices.`);
+  }
+  // --- End Check ---
   const currentDate = Temporal.Now.plainDateISO().toString();
   const due_date = await getDueDate(companyId, cycleEnd); // Uses temporary import
   const taxService = new TaxService();
-  let subtotal = 0;
+  // let subtotal = 0; // Subtotal will be calculated by persistInvoiceItems
 
   // Create base invoice object
   const invoiceData = {
@@ -534,112 +543,26 @@ export async function createInvoiceFromBillingResult(
   }
 
   await knex.transaction(async (trx) => {
-    // Group charges by bundle if they have bundle information
-    const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
-    const nonBundleCharges: IBillingCharge[] = [];
-
-    for (const charge of billingResult.charges) {
-      if (charge.company_bundle_id && charge.bundle_name) {
-        const bundleKey = `${charge.company_bundle_id}-${charge.bundle_name}`;
-        if (!chargesByBundle[bundleKey]) {
-          chargesByBundle[bundleKey] = [];
-        }
-        chargesByBundle[bundleKey].push(charge);
-      } else {
-        nonBundleCharges.push(charge);
-      }
+    // Get session within transaction context if needed by persistInvoiceItems
+    const session = await getServerSession(options);
+    if (!session?.user?.id) {
+      throw new Error('Unauthorized within transaction');
     }
 
-    // Process non-bundle charges
-    for (const charge of nonBundleCharges) {
-      const { netAmount, taxCalculationResult } = await calculateChargeDetails( // Uses local helper
-        charge,
-        companyId,
-        cycleEnd,
-        taxService,
-        company.tax_region
-      );
+    // Persist all items (including fixed details) using the dedicated service function
+    const calculatedSubtotal = await persistInvoiceItems(
+      trx,
+      newInvoice!.invoice_id,
+      billingResult.charges,
+      company,
+      session, // Pass session
+      tenant
+    );
 
-      const invoiceItem: any = { // Use 'any' temporarily to allow conditional property
-        item_id: uuidv4(),
-        invoice_id: newInvoice!.invoice_id,
-        service_id: charge.serviceId,
-        description: charge.serviceName,
-        quantity: getChargeQuantity(charge), // Uses local helper
-        unit_price: getChargeUnitPrice(charge), // Uses local helper
-        net_amount: netAmount,
-        tax_amount: taxCalculationResult.taxAmount,
-        tax_region: charge.tax_region || company.tax_region,
-        tax_rate: taxCalculationResult.taxRate,
-        total_price: netAmount + taxCalculationResult.taxAmount,
-        is_manual: false,
-        is_taxable: charge.is_taxable !== false,
-        tenant,
-        created_by: userId,
-      };
-      // Add company_billing_plan_id if it exists on the charge
-      if (charge.company_billing_plan_id) {
-        invoiceItem.company_billing_plan_id = charge.company_billing_plan_id;
-      }
-
-      await trx('invoice_items').insert(invoiceItem);
-      subtotal += netAmount;
-    }
-
-    // Process bundle charges
-    for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
-      // Extract bundle information from the first charge
-      const bundleInfo = bundleKey.split('-');
-      const companyBundleId = bundleInfo[0];
-      const bundleName = bundleInfo.slice(1).join('-');
-
-      // REMOVED: Bundle header insertion - these columns don't exist
-      // The grouping logic should happen during invoice rendering/retrieval
-      // based on the company_billing_plan_id relationship.
-
-      // Add each charge in the bundle as a child item
-      for (const charge of charges) {
-        const { netAmount, taxCalculationResult } = await calculateChargeDetails( // Uses local helper
-          charge,
-          companyId,
-          cycleEnd,
-          taxService,
-          company.tax_region
-        );
-
-        const invoiceItem: any = { // Use 'any' temporarily to allow conditional property
-          item_id: uuidv4(),
-          invoice_id: newInvoice!.invoice_id,
-          service_id: charge.serviceId,
-          description: charge.serviceName,
-          quantity: getChargeQuantity(charge), // Uses local helper
-          unit_price: getChargeUnitPrice(charge), // Uses local helper
-          net_amount: netAmount,
-          tax_amount: taxCalculationResult.taxAmount,
-          tax_region: charge.tax_region || company.tax_region,
-          tax_rate: taxCalculationResult.taxRate,
-          total_price: netAmount + taxCalculationResult.taxAmount,
-          is_manual: false,
-          is_taxable: charge.is_taxable !== false,
-          // REMOVED: company_bundle_id: companyBundleId, // Column does not exist
-          // REMOVED: bundle_name: bundleName, // Column does not exist
-          // REMOVED: parent_item_id: bundleHeaderId, // Header row removed
-          tenant,
-          created_by: userId,
-        };
-        // Add company_billing_plan_id if it exists on the charge
-        if (charge.company_billing_plan_id) {
-          invoiceItem.company_billing_plan_id = charge.company_billing_plan_id;
-        }
-
-        await trx('invoice_items').insert(invoiceItem);
-        subtotal += netAmount;
-      }
-    }
-
-    // Process discounts
+    // Process discounts (if any) - This might need adjustment if persistInvoiceItems handles them
+    // For now, assume discounts are separate and need processing here.
+    let discountSubtotalAdjustment = 0;
     for (const discount of billingResult.discounts) {
-      // Discounts are always non-taxable
       const netAmount = Math.round(-(discount.amount || 0));
       const discountItem = {
         item_id: uuidv4(),
@@ -651,16 +574,18 @@ export async function createInvoiceFromBillingResult(
         tax_amount: 0,
         tax_rate: 0,
         total_price: netAmount,
-        is_taxable: false,  // Discounts are not taxable
-        is_discount: true,  // Flag as a discount item
+        is_taxable: false,
+        is_discount: true,
         is_manual: false,
         tenant,
         created_by: userId
       };
-
       await trx('invoice_items').insert(discountItem);
-      subtotal += netAmount;
+      discountSubtotalAdjustment += netAmount; // Add negative amount
     }
+
+    // Use the subtotal returned by persistInvoiceItems + discount adjustment
+    const subtotal = calculatedSubtotal + discountSubtotalAdjustment;
 
     // Calculate tax, respecting pre-calculated fixed fee tax
     let totalTax = 0;
@@ -795,6 +720,7 @@ export async function createInvoiceFromBillingResult(
     totalTax = precalculatedFixedFeeTax + recalculatedTaxForOtherItems;
     console.log(`[createInvoiceFromBillingResult] Final total tax: ${totalTax} (Precalculated: ${precalculatedFixedFeeTax}, Recalculated: ${recalculatedTaxForOtherItems})`);
 
+    // Use the subtotal calculated above
     const totalAmount = subtotal + totalTax;
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
@@ -813,14 +739,14 @@ export async function createInvoiceFromBillingResult(
         credit_applied: 0
       });
 
+    // Corrected call signature: removed finalSubtotal and finalTax as they are recalculated internally
     await updateInvoiceTotalsAndRecordTransaction(
       trx,
       newInvoice!.invoice_id,
       company,
-      finalSubtotal,
-      finalTax,
       tenant,
       invoiceData.invoice_number
+      // expirationDate is optional and not needed here
     );
   });
 

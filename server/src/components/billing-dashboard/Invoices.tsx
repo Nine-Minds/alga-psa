@@ -33,8 +33,9 @@ import { ICompany } from 'server/src/interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import BackNav from '../ui/BackNav';
 
-interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
-  rate: number;
+// Include tax_rate_id for ManualInvoices
+interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name' | 'tax_rate_id'> {
+  rate: number; // Represents default_rate
 }
 
 const Invoices: React.FC = () => {
@@ -101,7 +102,8 @@ const Invoices: React.FC = () => {
       setServices(fetchedServices.map((service): ServiceWithRate => ({
         service_id: service.service_id,
         service_name: service.service_name,
-        rate: service.default_rate
+        rate: service.default_rate,
+        tax_rate_id: service.tax_rate_id // Include tax_rate_id
       })));
     } catch (error) {
       console.error('Error fetching data:', error);

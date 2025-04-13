@@ -6,14 +6,17 @@ import { DiscountType } from 'server/src/interfaces/invoice.interfaces';
 
 // Extend SelectOption to include rate
 export interface ServiceOption extends SelectOption {
-  rate?: number;
+  rate?: number; // default_rate in cents
+  tax_rate_id?: string | null; // Add tax_rate_id
 }
 
 export interface EditableItem { // Add export
   service_id: string;
   quantity: number;
   description: string;
-  rate: number;
+  rate: number; // unit_price in cents
+  // tax_rate_id?: string | null; // Removed from item state
+  is_taxable?: boolean; // Keep is_taxable for item state
   item_id?: string;
   isExisting?: boolean;
   isRemoved?: boolean;
@@ -54,7 +57,8 @@ export const LineItem: React.FC<LineItemProps> = ({
     ...item,
     // For discounts, ensure we have valid initial state
     discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
-    discount_percentage: item.discount_percentage
+    discount_percentage: item.discount_percentage,
+    is_taxable: item.is_taxable // Initialize is_taxable
   }));
 
   // Reset edit state when item changes
@@ -62,7 +66,8 @@ export const LineItem: React.FC<LineItemProps> = ({
     setEditState({
       ...item,
       discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
-      discount_percentage: item.discount_percentage
+      discount_percentage: item.discount_percentage,
+      is_taxable: item.is_taxable // Reset is_taxable too
     });
   }, [item]);
 
@@ -117,9 +122,11 @@ export const LineItem: React.FC<LineItemProps> = ({
         case 'service_id': {
           newState.service_id = value as string;
           const service = serviceOptions.find(s => s.value === value) as ServiceOption;
-          if (service?.rate !== undefined) {
-            newState.rate = service.rate;
+          if (service) {
+            newState.rate = service.rate ?? 0; // Use service rate, default 0
             newState.description = service.label.toString();
+            // Set is_taxable based on the presence of tax_rate_id on the selected service
+            newState.is_taxable = !!service.tax_rate_id;
           }
         }
           break;
@@ -143,12 +150,17 @@ export const LineItem: React.FC<LineItemProps> = ({
           if (value) {
             newState.discount_type = 'fixed';
             newState.rate = 0;
+            newState.is_taxable = false; // Discounts are not taxable
           } else {
             newState.discount_type = undefined;
             newState.discount_percentage = undefined;
             newState.rate = Math.abs(newState.rate);
+            // Restore is_taxable based on selected service
+            const currentService = serviceOptions.find(s => s.value === newState.service_id);
+            newState.is_taxable = !!currentService?.tax_rate_id;
           }
           break;
+        // Removed manual is_taxable case; derived from service tax_rate_id
       }
 
       return newState;
@@ -191,6 +203,10 @@ export const LineItem: React.FC<LineItemProps> = ({
           ) : (
             <>
               <span className="font-medium">{selectedService?.label || 'Select Service'}</span>
+              {/* Display based on is_taxable flag */}
+              <span className="text-xs text-gray-500 ml-1">
+                {editState.is_taxable ? '(Taxable)' : '(Non-Taxable)'}
+              </span>
               <span className="mx-2 text-gray-400">|</span>
               <span className="text-gray-600">{editState.description}</span>
             </>
@@ -313,9 +329,9 @@ export const LineItem: React.FC<LineItemProps> = ({
                 min="0"
                 step={editState.discount_type === 'percentage' ? '1' : '0.01'}
                 max={editState.discount_type === 'percentage' ? '100' : undefined}
-                value={editState.discount_type === 'percentage' 
+                value={editState.discount_type === 'percentage'
                   ? editState.discount_percentage || 0
-                  : rateInDollars}
+                  : Math.abs(rateInDollars)} // Display positive value for fixed amount
                 onChange={(e) => {
                   const value = e.target.value;
                   if (editState.discount_type === 'percentage') {

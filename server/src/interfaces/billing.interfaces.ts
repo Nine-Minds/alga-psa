@@ -13,10 +13,15 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   rate: number;
   total: number;
   type: 'fixed';
-  planId?: string;
   enable_proration?: boolean;
   billing_cycle_alignment?: string;
-  taxAllocationDetails?: any[]; // For audit purposes
+  // New fields for detailed allocation tracking (V1)
+  config_id?: string; // UUID from plan_service_configuration
+  base_rate?: number; // The plan's base rate (NUMERIC)
+  fmv?: number; // Calculated FMV for allocation (INTEGER cents)
+  proportion?: number; // Calculated proportion (NUMERIC)
+  allocated_amount?: number; // Calculated allocated amount (INTEGER cents)
+  // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
@@ -145,8 +150,7 @@ export interface IService extends TenantEntity {
   default_rate: number;
   category_id: string | null;
   unit_of_measure: string;
-  is_taxable?: boolean;
-  region_code?: string | null; // Replaced tax_region with region_code FK
+  tax_rate_id?: string | null; // Added: FK to tax_rates table
   description?: string | null; // Added: Description field from the database
   service_type_name?: string; // Added: Name of the service type (from standard or custom)
   // Note: The CHECK constraint ensures exactly one of standard_service_type_id or custom_service_type_id is non-null.
@@ -193,6 +197,19 @@ export interface IBillingPlan extends TenantEntity {
   // user_type_rates might be handled differently (e.g., separate table/JSON)
   // If it's a JSONB column in billing_plans, it could be:
   // user_type_rates?: Record<string, number> | null;
+}
+
+/**
+ * Interface for the new billing_plan_fixed_config table
+ */
+export interface IBillingPlanFixedConfig extends TenantEntity {
+  plan_id: string;
+  base_rate?: number | null; // Add base_rate (optional, numeric)
+  enable_proration: boolean;
+  billing_cycle_alignment: 'start' | 'end' | 'prorated';
+  tenant: string;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface IPlanService extends TenantEntity {

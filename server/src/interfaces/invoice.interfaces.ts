@@ -31,6 +31,7 @@ export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
   service_id?: string;
+  plan_id?: string; // Added for consolidated fixed items
   description: string;
   quantity: number;
   unit_price: number;
@@ -67,9 +68,6 @@ export type DiscountType = 'percentage' | 'fixed';
 //   item_id: string;
 //   rate: number;
 //   service_id?: string;
-//   tax_region?: string;
-//   is_taxable?: boolean;
-//   is_discount?: boolean;
 //   discount_type?: DiscountType;
 //   discount_percentage?: number;
 //   applies_to_item_id?: string;

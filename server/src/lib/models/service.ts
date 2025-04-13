@@ -32,8 +32,7 @@ const baseServiceSchema = z.object({
   ),
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
-  is_taxable: z.boolean().optional().default(false), // Optional in interface, default false
-  region_code: z.string().nullable(), // New field replacing tax_region, matches DB (nullable)
+  tax_rate_id: z.string().uuid().nullish(), // Changed to nullish to allow undefined during validation
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
 });
@@ -57,8 +56,8 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
     ...inputData,
     // Keep null for fields that are string | null in IService
     category_id: inputData.category_id,
-    region_code: inputData.region_code, // Keep null if present
     description: inputData.description,
+    tax_rate_id: inputData.tax_rate_id, // Keep null for string | null
     // Map null to undefined for fields that are optional (T | undefined) in IService
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
     custom_service_type_id: inputData.custom_service_type_id ?? undefined,
@@ -87,8 +86,8 @@ export const createServiceSchema = refinedCreateServiceSchema.transform((data) =
   return {
     ...inputData,
     category_id: inputData.category_id,
-    region_code: inputData.region_code, // Keep null if present
     description: inputData.description,
+    tax_rate_id: inputData.tax_rate_id, // Keep null for string | null
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
     custom_service_type_id: inputData.custom_service_type_id ?? undefined,
   };
@@ -128,8 +127,6 @@ const Service = {
           db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
-          'sc.is_taxable',
-          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -183,8 +180,6 @@ const Service = {
           db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
-          'sc.is_taxable',
-          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -257,8 +252,7 @@ const Service = {
       default_rate: validatedData.default_rate,
       unit_of_measure: validatedData.unit_of_measure,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
-      is_taxable: validatedData.is_taxable ?? false, // Use ?? false for boolean
-      region_code: validatedData.region_code ?? null,
+      tax_rate_id: validatedData.tax_rate_id ?? null, // Add tax_rate_id
       description: validatedData.description ?? '', // Add description field with default empty string
     };
 
@@ -292,8 +286,6 @@ const Service = {
           db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
-          'sc.is_taxable',
-          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -380,8 +372,6 @@ const Service = {
           db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
-          'sc.is_taxable',
-          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type
@@ -459,8 +449,6 @@ const Service = {
           db.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
           'sc.unit_of_measure',
           'sc.category_id',
-          'sc.is_taxable',
-          'sc.region_code',
           'sc.description',
           'sc.tenant',
           // Select the service type name from either standard or custom type

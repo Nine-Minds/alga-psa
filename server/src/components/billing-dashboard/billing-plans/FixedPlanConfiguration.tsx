@@ -13,8 +13,10 @@ import { Button } from 'server/src/components/ui/Button';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
   getBillingPlanById,
-  updateFixedPlanConfiguration,
-  getFixedPlanConfiguration
+  getCombinedFixedPlanConfiguration, // Correct name for fetching base_rate
+  updatePlanServiceFixedConfigRate, // Correct name for updating base_rate
+  getBillingPlanFixedConfig,
+  updateBillingPlanFixedConfig
 } from 'server/src/lib/actions/billingPlanAction';
 import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
 import { IService, IBillingPlan, IPlanService } from 'server/src/interfaces/billing.interfaces';
@@ -53,31 +55,16 @@ export function FixedPlanConfiguration({
       if (fetchedPlan && fetchedPlan.plan_type === 'Fixed') {
         setPlan(fetchedPlan);
         
-        // Fetch associated services
-        const associatedServices: IPlanService[] = await getPlanServices(planId);
-        
-        // If we have associated services, get the fixed plan configuration
-        if (associatedServices.length > 0) {
-          const serviceId = associatedServices[0].service_id;
-          
-          // Fetch the fixed plan configuration for this service
-          const fixedConfig = await getFixedPlanConfiguration(planId, serviceId);
-          
-          if (fixedConfig) {
-            // Set the configuration values
-            setBaseRate(fixedConfig.base_rate ?? undefined);
-            setEnableProration(fixedConfig.enable_proration);
-            setBillingCycleAlignment(fixedConfig.billing_cycle_alignment);
-          } else {
-            // No configuration exists yet, use defaults
-            setBaseRate(undefined);
-            setEnableProration(false);
-            setBillingCycleAlignment('start');
-          }
+        // Fetch plan-level fixed configuration (base_rate, proration, alignment)
+        const planFixedConfig = await getBillingPlanFixedConfig(planId);
+        if (planFixedConfig) {
+          // Assuming base_rate is now part of the return type of getBillingPlanFixedConfig
+          setBaseRate(planFixedConfig.base_rate ?? undefined);
+          setEnableProration(planFixedConfig.enable_proration);
+          setBillingCycleAlignment(planFixedConfig.billing_cycle_alignment);
         } else {
-          // Having no services initially is a valid state, not an error
-          // Set defaults for a new plan
-          setBaseRate(undefined);
+          // Defaults if no plan-level config exists yet
+          setBaseRate(undefined); // Default base rate if no config
           setEnableProration(false);
           setBillingCycleAlignment('start');
         }
@@ -137,27 +124,16 @@ export function FixedPlanConfiguration({
     setSaving(true);
     setSaveError(null);
     try {
-        // Get all associated services
-        const associatedServices: IPlanService[] = await getPlanServices(planId);
-        
-        if (associatedServices.length === 0) {
-            setSaveError("Please add at least one service to the plan first. You can do this in the 'Associated Services' section below.");
-            setSaving(false);
-            return;
-        }
+        // 1. Update Plan-Level Configuration (Proration, Alignment)
+        // Update Plan-Level Configuration including base_rate
+        await updateBillingPlanFixedConfig(planId, {
+          base_rate: baseRate ?? null, // Pass the baseRate state
+          enable_proration: enableProration,
+          // Ensure alignment is only sent if proration is enabled, default to 'start' otherwise
+          billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' : 'start',
+        });
 
-        // Update the fixed plan configuration for each service
-        for (const service of associatedServices) {
-            await updateFixedPlanConfiguration(
-                planId,
-                service.service_id,
-                {
-                    base_rate: baseRate,
-                    enable_proration: enableProration,
-                    billing_cycle_alignment: enableProration ? billingCycleAlignment as 'start' | 'end' | 'prorated' : 'start',
-                }
-            );
-        }
+        // Remove the loop updating individual service rates
 
         // Optionally re-fetch data to confirm changes
         await fetchPlanData();

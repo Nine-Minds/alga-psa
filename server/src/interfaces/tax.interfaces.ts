@@ -22,8 +22,12 @@ export interface ITaxRate extends TenantEntity {
   end_date?: ISO8601String;
   is_active: boolean;
   conditions?: Record<string, any>;
+  description: string | null; // Added description field from tax_rates table
+  region_code: string; // Added region_code field from tax_rates table
  // name: string; // Removed as this column does not exist in the tax_rates table
 }
+
+// Removed ITaxRateWithDetails as fields are now in ITaxRate
 
 export interface ITaxComponent extends TenantEntity {
   tax_component_id: string;

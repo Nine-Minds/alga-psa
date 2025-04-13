@@ -22,28 +22,33 @@ exports.up = async function (knex) {
   // This is omitted here for simplicity, focusing on the schema structure change.
 
   // Step 2: Drop old PK, Add new PK and Unique Constraint
+  // Step 2: Drop old PK, Add new PK and Unique Constraint (using raw SQL for robustness)
+
+  // Drop the unique constraint first IF EXISTS
+  await knex.raw(`
+    ALTER TABLE public.company_tax_rates
+    DROP CONSTRAINT IF EXISTS company_tax_rates_company_id_tax_rate_id_tenant_unique;
+  `);
+
+  // Drop the old primary key IF EXISTS
+  await knex.raw(`
+    ALTER TABLE public.company_tax_rates
+    DROP CONSTRAINT IF EXISTS company_tax_rates_pkey;
+  `);
+
+  // Add the new primary key using Knex alterTable
   await knex.schema.alterTable('company_tax_rates', (table) => {
-    // Drop the existing composite primary key constraint.
-    // IMPORTANT: The name 'company_tax_rates_pkey' is a common default but *must* be verified
-    // against your actual database schema. Use \d company_tax_rates in psql to check.
-    table.dropPrimary('company_tax_rates_pkey');
-
     // Add the new compound primary key constraint on 'company_tax_rates_id' and 'tenant'.
-    // This is required for CitusDB compatibility.
-    // Knex/PostgreSQL will likely name this constraint 'company_tax_rates_pkey' by default.
+    // Knex will likely name this 'company_tax_rates_pkey' by default.
     table.primary(['company_tax_rates_id', 'tenant']);
-
-    // Add the new unique constraint covering company_id, tax_rate_id, and tenant.
-    // This enforces the business rule that a specific tax rate can only be associated
-    // with a company once within a tenant.
-    table.unique(
-      ['company_id', 'tax_rate_id', 'tenant'],
-      {
-        indexName: 'company_tax_rates_comp_id_tax_rate_id_tenant_key', // Explicit index name
-        constraintName: 'company_tax_rates_company_id_tax_rate_id_tenant_unique', // Explicit constraint name
-      }
-    );
   });
+
+  // Add the unique constraint using raw SQL *after* the alterTable
+  // Note: We dropped it above, so this should succeed.
+  await knex.raw(`
+    ALTER TABLE public.company_tax_rates
+    ADD CONSTRAINT company_tax_rates_company_id_tax_rate_id_tenant_unique UNIQUE (company_id, tax_rate_id, tenant);
+  `);
 };
 
 /**
@@ -53,13 +58,13 @@ exports.up = async function (knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function (knex) {
-  await knex.schema.alterTable('company_tax_rates', (table) => {
-    // Drop the unique constraint added in the 'up' migration.
-    table.dropUnique(
-      ['company_id', 'tax_rate_id', 'tenant'],
-      'company_tax_rates_company_id_tax_rate_id_tenant_unique'
-    );
+  // Use raw SQL to drop the unique constraint IF EXISTS, making the rollback more robust
+  await knex.raw(`
+    ALTER TABLE public.company_tax_rates
+    DROP CONSTRAINT IF EXISTS company_tax_rates_company_id_tax_rate_id_tenant_unique;
+  `);
 
+  await knex.schema.alterTable('company_tax_rates', (table) => {
     // Drop the primary key constraint from 'company_tax_rates_id'.
     // IMPORTANT: Verify the constraint name ('company_tax_rates_pkey' is assumed).
     table.dropPrimary('company_tax_rates_pkey');

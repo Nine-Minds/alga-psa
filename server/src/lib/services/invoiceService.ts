@@ -6,10 +6,24 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import { InvoiceViewModel, IInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces';
+import { InvoiceViewModel, IInvoiceItem as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
+import { IBillingCharge, IFixedPriceCharge, IService } from 'server/src/interfaces/billing.interfaces'; // Added import
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
+import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/companyTaxRateActions'; // Import the new lookup function
+
+// Helper interface for tax calculation
+interface ITaxableEntity {
+  id: string; // item_id or item_detail_id
+  type: 'item' | 'fixed_detail';
+  amount: number; // net_amount or allocated_amount (in cents)
+  taxRegion: string;
+  isTaxable: boolean;
+  parentId?: string; // item_id for fixed_detail
+  calculatedTax?: number; // Calculated tax share (in cents)
+  taxRate?: number; // Tax rate applied
+}
 
 interface InvoiceContext {
   session: Session;
@@ -31,9 +45,9 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
 
 export async function getCompanyDetails(knex: Knex, tenant: string, companyId: string) {
   const company = await knex('companies')
-    .where({ 
-      company_id: companyId, 
-      tenant 
+    .where({
+      company_id: companyId,
+      tenant
     })
     .first();
   if (!company) {
@@ -42,6 +56,14 @@ export async function getCompanyDetails(knex: Knex, tenant: string, companyId: s
   return company;
 }
 
+// Renamed interface for clarity within manual context
+interface ManualInvoiceItemInput extends NetAmountItem {
+  service_id?: string; // Optional for manual items
+  description: string;
+  is_taxable?: boolean; // Still needed for purely manual items without a service
+  applies_to_service_id?: string;
+  discount_percentage?: number;
+}
 
 
 export function calculateNetAmount(
@@ -51,31 +73,15 @@ export function calculateNetAmount(
 ): number {
   if (requestItem.is_discount) {
     if (requestItem.discount_type === 'percentage') {
-      // For percentage discounts, if an applicable item is referenced, use its net amount
-      // otherwise, use current subtotal
       const applicableAmount = requestItem.applies_to_item_id
         ? (applicableItemAmount || 0)
         : currentSubtotal;
-      
-      // Use discount_percentage if available, otherwise fall back to rate
       const percentage = requestItem.discount_percentage !== undefined
         ? requestItem.discount_percentage
-        : Math.abs(requestItem.rate);
-      
-      console.log('Calculating percentage discount:', {
-        applicableAmount,
-        percentage,
-        result: -Math.round((applicableAmount * percentage) / 100)
-      });
-        
+        : Math.abs(requestItem.rate); // Fallback for older manual discounts? Review this.
       return -Math.round((applicableAmount * percentage) / 100);
     } else {
       // Fixed amount discount - ensure it's always negative
-      console.log('Calculating fixed discount:', {
-        rate: requestItem.rate,
-        result: -Math.abs(Math.round(requestItem.rate))
-      });
-      
       return -Math.abs(Math.round(requestItem.rate));
     }
   } else {
@@ -84,347 +90,847 @@ export function calculateNetAmount(
   }
 }
 
-interface InvoiceItem extends NetAmountItem {
-  service_id: string;
-  description: string;
-  tax_region?: string;
-  is_taxable?: boolean;
-  applies_to_service_id?: string; // Add the new field
-  discount_percentage?: number;
-}
-
-export async function persistInvoiceItems(
+/**
+ * Persists manual invoice items to the database.
+ * Handles both regular manual items and manual discount items.
+ * Resolves service ID references for discounts.
+ * @returns The subtotal of the persisted manual items.
+ */
+export async function persistManualInvoiceItems(
   tx: Knex.Transaction,
   invoiceId: string,
-  items: InvoiceItem[],
+  manualItems: ManualInvoiceItemInput[],
   company: any,
   session: Session,
-  tenant: string,
-  isManual: boolean
+  tenant: string
 ): Promise<number> {
   let subtotal = 0;
-  
-  // Create a map to store service_id -> item_id mappings
-  const serviceToItemMap = new Map<string, string>();
-  
-  // First pass: Process all non-discount items
-  const nonDiscountItems = items.filter(item => !item.is_discount);
-  
+  const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
+  const now = Temporal.Now.instant().toString();
+
+  // --- First Pass: Process non-discount manual items ---
+  const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
-    // Get service details for tax info if service_id is provided
     let service;
     if (requestItem.service_id) {
-      try {
-        service = await tx('service_catalog')
-          .where({
-            service_id: requestItem.service_id,
-            tenant
-          })
-          .first();
-      } catch (error) {
-        throw new Error(`Invalid service ID: ${requestItem.service_id}`);
+      service = await tx('service_catalog')
+        .where({ service_id: requestItem.service_id, tenant })
+        .select('*', 'tax_rate_id') // Fetch tax_rate_id
+        .first();
+      if (!service) {
+        console.warn(`Service ID ${requestItem.service_id} provided for manual item but not found.`);
+        // Decide if this should throw an error or just proceed without service context
       }
     }
+    // --- Determine Tax Info based on Service's Tax Rate ID ---
+    let serviceTaxRegion: string | null = null;
+    let serviceIsTaxable = true; // Default for purely manual items if no service
+    if (service) {
+      if (service.tax_rate_id) {
+        const taxRateInfo = await tx('tax_rates')
+          .where({ tax_rate_id: service.tax_rate_id, tenant })
+          // Add validity checks if needed (e.g., is_active, date range)
+          // For now, just fetch the region code associated with the ID
+          .select('region_code')
+          .first();
+        if (taxRateInfo) {
+          serviceTaxRegion = taxRateInfo.region_code;
+          serviceIsTaxable = true; // Service with a valid tax_rate_id is taxable
+        } else {
+          // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
+          console.warn(`Service ${service.service_id} has tax_rate_id ${service.tax_rate_id} but no matching tax_rate found.`);
+          serviceIsTaxable = false;
+          serviceTaxRegion = null;
+        }
+      } else {
+        // Service exists but tax_rate_id is NULL, so it's non-taxable
+        serviceIsTaxable = false;
+        serviceTaxRegion = null;
+      }
+    } else {
+      // No service linked, use fallback logic below for purely manual items
+      serviceIsTaxable = requestItem.is_taxable ?? true; // Existing fallback
+      // serviceTaxRegion is derived from tax_rate_id now, or company default if no service/rate
+      // No direct tax_region on requestItem anymore
+      serviceTaxRegion = company.region_code ?? null; // Fallback to company default region if no service linked
+    }
+    // --- End Determine Tax Info ---
 
-    // For non-discount items, we don't need to look up applicable amounts
-    const netAmount = calculateNetAmount(requestItem, subtotal);
+    const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
 
-    // Detect manual discounts (negative rate and no service_id)
-    const isDiscount = !requestItem.service_id && requestItem.rate < 0;
-    
+    // Detect manual credits (negative rate, not explicitly marked as discount)
+    const isCredit = !requestItem.is_discount && requestItem.rate < 0;
+
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
-      service_id: requestItem.service_id ? requestItem.service_id : null,
+      service_id: requestItem.service_id || null,
       description: requestItem.description,
       quantity: requestItem.quantity,
-      unit_price: isDiscount ? -Math.abs(Math.round(requestItem.rate)) : Math.round(requestItem.rate),
+      unit_price: Math.round(requestItem.rate), // Store the actual rate
       net_amount: netAmount,
-      tax_amount: 0, // Will be updated after calculating total tax
-      tax_region: service?.tax_region || company.tax_region,
-      tax_rate: 0, // Will be updated after calculating total tax
-      total_price: netAmount, // Will be updated after calculating total tax
-      is_manual: isManual,
-      is_discount: isDiscount || requestItem.is_discount || false,
-      is_taxable: (isDiscount || requestItem.is_discount) ? false : (service ? service.is_taxable !== false : true),
-      discount_type: isDiscount ? 'fixed' : requestItem.discount_type,
-      applies_to_item_id: requestItem.applies_to_item_id,
-      applies_to_service_id: requestItem.applies_to_service_id,
+      tax_amount: 0, // Placeholder
+      tax_region: service ? serviceTaxRegion : (company.region_code ?? null), // Fallback to company region if no service
+      tax_rate: 0, // Placeholder
+      total_price: netAmount, // Placeholder
+      is_manual: true,
+      is_discount: isCredit, // Mark manual credits as discounts for tax base calculation logic
+      is_taxable: isCredit ? false : serviceIsTaxable, // Use derived taxable status
+      discount_type: isCredit ? 'fixed' : undefined, // Credits are like fixed discounts
+      applies_to_item_id: null, // Manual non-discounts don't apply to others
+      applies_to_service_id: null,
       created_by: session.user.id,
-      created_at: Temporal.Now.plainDateISO().toString(),
+      created_at: now,
       tenant
     };
 
-    // Verify service exists if service_id is provided
+    await tx('invoice_items').insert(invoiceItem);
     if (requestItem.service_id) {
-      const exists = await tx('service_catalog')
-        .where({
-          service_id: requestItem.service_id,
-          tenant
-        })
-        .first();
-
-      if (!exists) {
-        throw new Error(`Service not found: ${requestItem.service_id}`);
-      }
-      
-      // Store the mapping of service_id to item_id for later use
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
-
-    try {
-      await tx('invoice_items').insert(invoiceItem);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
-      throw new Error(`Failed to create invoice item: ${message}`);
-    }
-
     subtotal += netAmount;
   }
-  
-  // Second pass: Process discount items and resolve service references
-  const discountItems = items.filter(item => item.is_discount);
-  
+
+  // --- Second Pass: Process manual discount items ---
+  const discountItems = manualItems.filter(item => item.is_discount);
   for (const requestItem of discountItems) {
-    // Resolve applies_to_service_id to applies_to_item_id if provided
     let applicableItemId = requestItem.applies_to_item_id;
-    
+    let applicableAmount;
+
+    // Resolve service ID reference if needed
     if (requestItem.applies_to_service_id && !applicableItemId) {
       applicableItemId = serviceToItemMap.get(requestItem.applies_to_service_id);
-      
       if (!applicableItemId) {
-        throw new Error(`Could not find invoice item for service: ${requestItem.applies_to_service_id}`);
+        throw new Error(`Could not find invoice item for service: ${requestItem.applies_to_service_id} to apply discount.`);
       }
     }
-    
+
     // Get applicable item amount for percentage discounts
-    let applicableAmount;
     if (applicableItemId) {
       const applicableItem = await tx('invoice_items')
-        .where({
-          item_id: applicableItemId,
-          tenant
-        })
+        .where({ item_id: applicableItemId, tenant })
         .first();
       applicableAmount = applicableItem?.net_amount;
     }
-    
-    // Calculate net amount with the resolved applicable item ID
+
     const netAmount = calculateNetAmount(
       { ...requestItem, applies_to_item_id: applicableItemId },
-      subtotal,
+      subtotal, // Pass current subtotal for percentage discounts not tied to an item
       applicableAmount
     );
-    
-    // Get service details for tax info if service_id is provided
-    let service;
+
+    let service; // Discounts might optionally reference a service
     if (requestItem.service_id) {
-      try {
         service = await tx('service_catalog')
-          .where({
-            service_id: requestItem.service_id,
-            tenant
-          })
-          .first();
-      } catch (error) {
-        throw new Error(`Invalid service ID: ${requestItem.service_id}`);
-      }
+            .where({ service_id: requestItem.service_id, tenant })
+            .select('*', 'tax_rate_id') // Fetch tax_rate_id
+            .first();
     }
-    
-    // Log the discount details before creating the invoice item
-    console.log('Creating discount invoice item:', {
-      discount_type: requestItem.discount_type,
-      discount_percentage: requestItem.discount_percentage,
-      rate: requestItem.rate,
-      netAmount,
-      applies_to_item_id: applicableItemId
-    });
-    
+    // --- Determine Tax Region for Discount (less critical as not taxed, but for consistency) ---
+    let discountTaxRegion: string | null = null;
+    if (service) {
+        if (service.tax_rate_id) {
+            const taxRateInfo = await tx('tax_rates')
+                .where({ tax_rate_id: service.tax_rate_id, tenant })
+                .select('region_code')
+                .first();
+            discountTaxRegion = taxRateInfo?.region_code ?? null;
+        }
+        // If service exists but no tax_rate_id, region remains null
+    } else {
+        // No service linked, use fallback
+        discountTaxRegion = company.region_code ?? null; // Fallback to company region if no service
+    }
+    // --- End Determine Tax Region ---
+
     const invoiceItem = {
       item_id: uuidv4(),
       invoice_id: invoiceId,
-      service_id: requestItem.service_id ? requestItem.service_id : null,
+      service_id: requestItem.service_id || null,
       description: requestItem.description,
       quantity: requestItem.quantity,
+      // Unit price for percentage discount is tricky, maybe store percentage? Or keep 0?
       unit_price: requestItem.discount_type === 'percentage' ? 0 : -Math.abs(Math.round(requestItem.rate)),
       net_amount: netAmount,
-      tax_amount: 0, // Discounts don't get tax
-      tax_region: service?.tax_region || company.tax_region,
+      tax_amount: 0, // Discounts are not taxed
+      tax_region: discountTaxRegion, // Use derived/fallback region
       tax_rate: 0,
       total_price: netAmount,
-      is_manual: isManual,
+      is_manual: true,
       is_discount: true,
-      is_taxable: false, // Discounts are not taxable
+      is_taxable: false, // Discounts are never taxable
       discount_type: requestItem.discount_type || 'fixed',
       discount_percentage: requestItem.discount_type === 'percentage' ? requestItem.discount_percentage : undefined,
       applies_to_item_id: applicableItemId,
-      applies_to_service_id: requestItem.applies_to_service_id,
+      applies_to_service_id: requestItem.applies_to_service_id, // Store original reference
       created_by: session.user.id,
-      created_at: Temporal.Now.plainDateISO().toString(),
+      created_at: now,
       tenant
     };
-    
-    console.log('Final invoice item to be inserted:', {
-      item_id: invoiceItem.item_id,
-      discount_type: invoiceItem.discount_type,
-      discount_percentage: invoiceItem.discount_percentage,
-      unit_price: invoiceItem.unit_price,
-      net_amount: invoiceItem.net_amount
-    });
-    
-    try {
-      await tx('invoice_items').insert(invoiceItem);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
-      throw new Error(`Failed to create discount item: ${message}`);
-    }
-    
+
+    await tx('invoice_items').insert(invoiceItem);
     subtotal += netAmount;
   }
 
   return subtotal;
 }
 
+/**
+ * Persists fixed-price invoice items generated by the billing engine.
+ * Handles detailed fixed-price charges (V1) and bundled fixed-price charges.
+ * Creates consolidated invoice_items and detail records as needed.
+ * @returns The subtotal of the persisted fixed-price items.
+ */
+async function persistFixedInvoiceItems(
+  tx: Knex.Transaction,
+  invoiceId: string,
+  fixedCharges: IFixedPriceCharge[],
+  company: any,
+  session: Session,
+  tenant: string
+): Promise<number> {
+  let fixedSubtotal = 0;
+  const now = Temporal.Now.instant().toString();
+  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
+
+  for (const charge of fixedCharges) {
+    // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
+    // --- DEBUG LOGGING ---
+    console.log('[persistFixedInvoiceItems] Checking charge:', JSON.stringify(charge, null, 2));
+    console.log('[persistFixedInvoiceItems] charge.config_id:', charge.config_id, 'Type:', typeof charge.config_id);
+    // --- END DEBUG LOGGING ---
+    // Rely on config_id being present and truthy, as 'in' check might be unreliable depending on object creation
+    if (charge.config_id) {
+      // Use company_billing_plan_id from the base IBillingCharge interface if needed for grouping
+      const companyBillingPlanId = charge.company_billing_plan_id;
+      if (!companyBillingPlanId) {
+        // This shouldn't happen if billingEngine adds it correctly, but good to check.
+        console.error("Detailed fixed price charge is missing company_billing_plan_id:", charge);
+        throw new Error("Internal error: Detailed fixed price charge must have a company_billing_plan_id.");
+      }
+
+      // Group by companyBillingPlanId instead of planId
+      if (!fixedPlanDetailsMap.has(companyBillingPlanId)) {
+          if (charge.base_rate === undefined || charge.base_rate === null) {
+              console.error("Detailed fixed price charge is missing base_rate:", charge);
+              throw new Error("Internal error: Detailed fixed price charge must have a base_rate.");
+          }
+
+          // --- Determine Consolidated Item Tax Region & Taxability (Derived from Charges) ---
+          // Get all charges associated with this companyBillingPlanId to determine consolidated properties
+          const chargesForThisPlan = fixedCharges.filter(c => c.company_billing_plan_id === companyBillingPlanId);
+
+          // Determine if *any* charge in this group is taxable
+          const isAnyChargeTaxable = chargesForThisPlan.some(c => c.is_taxable);
+
+          // Determine the consolidated region
+          const distinctChargeRegions = [...new Set(chargesForThisPlan.map(c => c.tax_region).filter((r): r is string => r !== null && r !== undefined))];
+          let consolidatedRegion: string | null = null;
+          if (distinctChargeRegions.length === 1) {
+            consolidatedRegion = distinctChargeRegions[0];
+            console.log(`[persistFixedInvoiceItems] Using consistent charge region '${consolidatedRegion}' for consolidated item of plan assignment ${companyBillingPlanId}`);
+          } else {
+            // Fallback to company default if regions are inconsistent or all null/undefined
+            consolidatedRegion = await getCompanyDefaultTaxRegionCode(company.company_id);
+            if (distinctChargeRegions.length > 1) {
+              console.warn(`[persistFixedInvoiceItems] Multiple distinct tax regions found among charges for plan assignment ${companyBillingPlanId}. Using company default region '${consolidatedRegion}'.`);
+            } else {
+              console.log(`[persistFixedInvoiceItems] No single charge region found for plan assignment ${companyBillingPlanId}. Using company default region '${consolidatedRegion}'.`);
+            }
+          }
+          // --- End Determine Consolidated Item Tax Region & Taxability ---
+
+          fixedPlanDetailsMap.set(companyBillingPlanId, {
+              consolidatedItem: {
+                  invoice_id: invoiceId,
+                  service_id: null,
+                  description: `Fixed Plan: ${charge.serviceName}`,
+                  quantity: 1,
+                  unit_price: Math.round(charge.base_rate * 100),
+                  net_amount: 0,
+                  tax_amount: 0,
+                  tax_region: consolidatedRegion, // Use the determined region
+                  tax_rate: 0,
+                  total_price: 0,
+                  is_manual: false,
+                  is_discount: false,
+                  is_taxable: isAnyChargeTaxable, // Set based on whether *any* detail charge is taxable
+                  discount_type: undefined,
+                  discount_percentage: undefined,
+                  applies_to_item_id: null,
+                  applies_to_service_id: null,
+                  created_by: session.user.id,
+                  created_at: now,
+                  tenant
+              },
+              details: []
+          });
+      }
+
+      const planEntry = fixedPlanDetailsMap.get(companyBillingPlanId)!;
+      planEntry.details.push(charge);
+      // Update taxability based on *all* details encountered so far for this plan
+      planEntry.consolidatedItem.is_taxable = planEntry.details.some(d => d.is_taxable);
+      // Ensure allocated_amount and tax_amount are numbers before adding
+      planEntry.consolidatedItem.net_amount += Number(charge.allocated_amount || 0);
+      planEntry.consolidatedItem.tax_amount += Number(charge.tax_amount || 0); // Sum tax from details
+      // Update taxability if any detail is taxable?
+      if (charge.is_taxable) {
+        planEntry.consolidatedItem.is_taxable = true;
+      }
+      // Update tax region if details have different ones? Needs clarification from tax logic.
+      // For now, assume company default or first item's region.
+
+    } else {
+      // --- Handle Bundled Fixed Price Charges (V1 - Old Behavior) ---
+      // These are treated like simple manual items for persistence
+      const netAmount = charge.total; // Bundled rate is already calculated
+      const invoiceItem = {
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        service_id: charge.serviceId || null, // Bundled might not have a single service ID
+        // plan_id: charge.planId ?? null, // Removed - planId not part of IFixedPriceCharge
+        // company_billing_plan_id could be added here if needed for the DB schema, but invoice_items doesn't have it.
+        description: charge.serviceName, // Use the name from the charge
+        quantity: charge.quantity,
+        unit_price: charge.rate, // The custom rate
+        net_amount: netAmount,
+        tax_amount: charge.tax_amount || 0, // Use tax from charge if available
+        tax_region: company.tax_region, // Use company default
+        tax_rate: charge.tax_rate || 0, // Use rate from charge if available
+        total_price: netAmount + (charge.tax_amount || 0),
+        is_manual: false,
+        is_discount: false,
+        is_taxable: charge.is_taxable,
+        discount_type: undefined,
+        discount_percentage: undefined,
+        applies_to_item_id: null,
+        applies_to_service_id: null,
+        created_by: session.user.id,
+        created_at: now,
+        tenant
+      };
+      await tx('invoice_items').insert(invoiceItem);
+      fixedSubtotal += netAmount;
+    }
+  }
+
+  // --- Process Consolidated Fixed Plan Items and Details ---
+
+  // Fetch plan details (name and fixed config base rate) for all consolidated items first
+  const companyPlanIds = Array.from(fixedPlanDetailsMap.keys());
+  // Map: companyBillingPlanId -> { plan_name: string, plan_base_rate: number | null }
+  const planInfoMap = new Map<string, { plan_name: string; plan_base_rate: number | null }>();
+
+  if (companyPlanIds.length > 0) {
+    const planDetails = await tx('company_billing_plans as cbp')
+      .join('billing_plans as bp', function() {
+        this.on('cbp.plan_id', '=', 'bp.plan_id')
+            .andOn('cbp.tenant', '=', 'bp.tenant');
+      })
+      // Join with the new fixed config table to get the plan-level base rate
+      .leftJoin('billing_plan_fixed_config as bpfc', function() {
+        this.on('bp.plan_id', '=', 'bpfc.plan_id')
+            .andOn('bp.tenant', '=', 'bpfc.tenant');
+      })
+      .whereIn('cbp.company_billing_plan_id', companyPlanIds)
+      .andWhere('cbp.tenant', tenant) // Ensure tenant match on cbp
+      .select(
+        'cbp.company_billing_plan_id',
+        'bp.plan_name',
+        'bpfc.base_rate as plan_base_rate' // Select base_rate from the fixed config table
+       );
+
+    for (const detail of planDetails) {
+      planInfoMap.set(detail.company_billing_plan_id, {
+        plan_name: detail.plan_name,
+        // Parse the base_rate fetched from billing_plan_fixed_config
+        plan_base_rate: detail.plan_base_rate ? parseFloat(detail.plan_base_rate) : null
+      });
+    }
+  }
+
+
+  // Iterate using companyBillingPlanId as the key
+  for (const [companyBillingPlanId, planEntry] of fixedPlanDetailsMap.entries()) {
+    const planInfo = planInfoMap.get(companyBillingPlanId);
+    if (!planInfo) {
+        console.error(`Could not find plan info for companyBillingPlanId: ${companyBillingPlanId}`);
+        // Decide how to handle missing plan info (skip? throw error?)
+        continue;
+    }
+
+    // Update the consolidated item's description and unit_price before insertion
+    planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.plan_name}`;
+    // Use the plan-level base_rate fetched from billing_plan_fixed_config if available.
+    // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
+    planEntry.consolidatedItem.unit_price = planInfo.plan_base_rate !== null
+        ? Math.round(planInfo.plan_base_rate * 100) // Use plan base rate in cents
+        : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
+
+    const consolidatedItemId = uuidv4();
+    planEntry.consolidatedItem.item_id = consolidatedItemId;
+    // Ensure amounts are numbers before calculating total_price
+    const consolidatedNet = Number(planEntry.consolidatedItem.net_amount || 0);
+    const consolidatedTax = Number(planEntry.consolidatedItem.tax_amount || 0);
+    planEntry.consolidatedItem.total_price = consolidatedNet + consolidatedTax; // Final total for consolidated item
+
+    // Insert the consolidated invoice item (now with corrected description and unit_price)
+    await tx('invoice_items').insert(planEntry.consolidatedItem);
+    fixedSubtotal += consolidatedNet; // Add net amount to overall subtotal
+
+    // Insert details for each allocation (unchanged)
+    for (const detail of planEntry.details) {
+      const detailId = uuidv4();
+      const allocatedAmountCents = Number(detail.allocated_amount || 0);
+      const taxAmountCents = Number(detail.tax_amount || 0);
+
+      // Insert into invoice_item_details (parent)
+      await tx('invoice_item_details').insert({
+        item_detail_id: detailId,
+        item_id: consolidatedItemId, // Link to the consolidated invoice item
+        service_id: detail.serviceId,
+        config_id: detail.config_id,
+        quantity: detail.quantity,
+        rate: allocatedAmountCents, // The allocated rate for this specific detail
+        created_at: now,
+        updated_at: now,
+        tenant: tenant
+      });
+
+      // Insert into invoice_item_fixed_details (specific)
+      await tx('invoice_item_fixed_details').insert({
+        item_detail_id: detailId, // PK, FK
+        base_rate: detail.base_rate, // Service's base rate from config (NUMERIC)
+        enable_proration: detail.enable_proration, // Use flag from charge object
+        fmv: Number(detail.fmv || 0), // INTEGER cents
+        proportion: detail.proportion, // NUMERIC
+        allocated_amount: allocatedAmountCents, // INTEGER cents
+        tax_amount: taxAmountCents, // INTEGER cents (per-allocation tax) - Will be recalculated later
+        tax_rate: detail.tax_rate, // NUMERIC (per-allocation rate) - Will be recalculated later
+        tenant: tenant // Explicitly add tenant ID
+      });
+    }
+  }
+
+  return fixedSubtotal;
+}
+
+
+/**
+ * Persists invoice items generated by the billing engine.
+ * Delegates fixed-price items to persistFixedInvoiceItems.
+ * Handles other billing charge types (usage, hourly, etc.).
+ * @returns The total subtotal of all persisted billing items.
+ */
+export async function persistInvoiceItems(
+  tx: Knex.Transaction,
+  invoiceId: string,
+  billingCharges: IBillingCharge[],
+  company: any,
+  session: Session,
+  tenant: string
+): Promise<number> {
+  let otherSubtotal = 0;
+  const now = Temporal.Now.instant().toString();
+
+  // Separate fixed charges from others
+  const fixedCharges: IFixedPriceCharge[] = [];
+  const otherCharges: IBillingCharge[] = [];
+
+  for (const charge of billingCharges) {
+    if (charge.type === 'fixed') {
+      // This assumes the billing engine correctly types fixed charges
+      // and includes all necessary fields from IFixedPriceCharge
+      fixedCharges.push(charge as IFixedPriceCharge);
+    } else {
+      otherCharges.push(charge);
+    }
+  }
+
+  // Persist fixed charges (detailed and bundled) using the dedicated function
+  const fixedSubtotal = await persistFixedInvoiceItems(
+    tx,
+    invoiceId,
+    fixedCharges,
+    company,
+    session,
+    tenant
+  );
+
+  // --- Handle Other Billing Charge Types (Usage, Hourly, Product, License etc.) ---
+  for (const charge of otherCharges) {
+    // Add specific handling for each type if needed, otherwise use generic approach
+    const netAmount = charge.total; // Assuming 'total' is the net amount
+    const invoiceItem = {
+      item_id: uuidv4(),
+      invoice_id: invoiceId,
+      service_id: charge.serviceId,
+      // Check if planId exists on the specific charge type if needed
+      // For non-fixed types, planId might not be relevant or available
+      // plan_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
+      // Use company_billing_plan_id if the schema requires it
+      company_billing_plan_id: charge.company_billing_plan_id ?? null,
+      description: charge.serviceName,
+      quantity: charge.quantity,
+      unit_price: charge.rate,
+      net_amount: netAmount,
+      tax_amount: charge.tax_amount || 0,
+      tax_region: charge.tax_region || company.tax_region, // Use charge region or default
+      tax_rate: charge.tax_rate || 0,
+      total_price: netAmount + (charge.tax_amount || 0), // Will be updated by tax calculation
+      is_manual: false,
+      is_discount: false,
+      is_taxable: charge.is_taxable,
+      discount_type: undefined,
+      discount_percentage: undefined,
+      applies_to_item_id: null,
+      applies_to_service_id: null,
+      created_by: session.user.id,
+      created_at: now,
+      tenant
+    };
+    await tx('invoice_items').insert(invoiceItem);
+    otherSubtotal += netAmount;
+  }
+
+  return fixedSubtotal + otherSubtotal; // Return total subtotal
+}
+
+
 export async function calculateAndDistributeTax(
   tx: Knex.Transaction,
   invoiceId: string,
   company: any,
-  subtotal: number,
   taxService: TaxService
 ): Promise<number> {
-  // Get invoice items
-  const invoiceItems = await tx('invoice_items')
+  // 1. Fetch all relevant data
+  console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
+  const invoiceItems: ManualInvoiceItem[] = await tx('invoice_items') // Use ManualInvoiceItem type for base structure
     .where({ invoice_id: invoiceId })
-    .orderBy('created_at', 'asc');
+    .select('*');
+  console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
-  // Get items that should be taxed (positive amounts and taxable)
-  // Note: Discounts (is_discount=true) are already marked as non-taxable (is_taxable=false)
-  const taxableItems = invoiceItems.filter(item =>
-    Number(item.net_amount) > 0 &&
-    item.is_taxable === true
-  );
+  // Correctly identify consolidated items by checking for existence in invoice_item_details
+  // Fetch item_id and invoice_id from invoice_item_details to link back correctly
+  const detailParentIdsResult = await tx('invoice_item_details')
+    .join('invoice_items', 'invoice_items.item_id', 'invoice_item_details.item_id')
+    .where('invoice_items.invoice_id', invoiceId) // Filter by the main invoice ID
+    .distinct('invoice_item_details.item_id');
+  const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));
 
-  // Get credit items (negative amounts that are NOT discounts)
-  // These should reduce the taxable base
-  const creditItems = invoiceItems.filter(item =>
-    Number(item.net_amount) < 0 &&
-    item.is_discount !== true
-  );
+  const consolidatedItemIds = invoiceItems
+    .filter(item => detailParentIds.has(item.item_id)) // Item is consolidated if it's a parent in details table
+    .map(item => item.item_id);
 
-  // Set tax to zero for all other items
-  const nonTaxableItems = invoiceItems.filter(item =>
-    !taxableItems.find(t => t.item_id === item.item_id)
-  );
+  console.log(`[calculateAndDistributeTax] Identified consolidatedItemIds: ${consolidatedItemIds.join(', ')}`);
 
-  for (const item of nonTaxableItems) {
-    await tx('invoice_items')
-      .where({ item_id: item.item_id })
-      .update({
-        tax_amount: 0,
-        tax_rate: 0,
-        total_price: Number(item.net_amount)
-      });
+  let fixedDetails: any[] = [];
+  if (consolidatedItemIds.length > 0) {
+    // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
+    // derived during item creation based on service's tax_rate_id.
+    fixedDetails = await tx('invoice_item_fixed_details as iifd')
+        .join('invoice_item_details as iid', function() {
+            this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
+                .andOn('iifd.tenant', '=', 'iid.tenant'); // Ensure tenant match
+        })
+        .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
+        .andWhere('iifd.tenant', '=', company.tenant) // Add tenant filter for safety
+        .select(
+            'iifd.item_detail_id',
+            'iifd.allocated_amount',
+            'iid.item_id as parent_item_id',
+            'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
+        );
+    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
+  } else {
+      console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
   }
 
-  let computedTotalTax = 0;
+  // 2. Create unified list of taxable entities and credits
+  const taxableEntities: ITaxableEntity[] = [];
+  const creditItems = invoiceItems.filter(item => Number(item.net_amount) < 0 && item.is_discount !== true);
 
-  if (taxableItems.length > 0) {
-    // Group taxable items by tax region
-    const groups = taxableItems.reduce<Record<string, IInvoiceItem[]>>((acc, item) => {
-      const region = item.tax_region || company.tax_region;
-      if (!acc[region]) {
-        acc[region] = [];
-      }
-      acc[region].push(item);
-      return acc;
-    }, {});
-
-    // Group credit items by tax region
-    const creditGroups = creditItems.reduce<Record<string, IInvoiceItem[]>>((acc, item) => {
-      const region = item.tax_region || company.tax_region;
-      if (!acc[region]) {
-        acc[region] = [];
-      }
-      acc[region].push(item);
-      return acc;
-    }, {});
-
-    // Process each tax region separately
-    for (const [region, itemsInGroup] of Object.entries(groups)) {
-      // Calculate total taxable amount for this region
-      const groupTaxableAmount = itemsInGroup.reduce((sum, item) =>
-        sum + Number(item.net_amount), 0
-      );
-
-      // Calculate total credit amount for this region
-      const regionCreditItems = creditGroups[region] || [];
-      const creditAmount = regionCreditItems.reduce((sum, item) =>
-        sum + Math.abs(Number(item.net_amount)), 0
-      );
-
-      // Adjust taxable amount by subtracting credits
-      const adjustedTaxableAmount = Math.max(0, groupTaxableAmount - creditAmount);
-
-      // Calculate tax for the adjusted group amount
-      const groupTaxResult = await taxService.calculateTax(
-        company.company_id,
-        adjustedTaxableAmount,
-        Temporal.Now.plainDateISO().toString(),
-        region
-      );
-
-      // Sort items by amount for consistent distribution
-      const sortedItems = [...itemsInGroup].sort((a, b) =>
-        Number(b.net_amount) - Number(a.net_amount)
-      );
-
-      // Distribute tax proportionally
-      let remainingTax = groupTaxResult.taxAmount;
-      for (let i = 0; i < sortedItems.length; i++) {
-        const item = sortedItems[i];
-        const netAmt = Number(item.net_amount);
-        const isLastItem = i === sortedItems.length - 1;
-
-        // Calculate this item's share of tax
-        const itemTax = isLastItem
-          ? remainingTax  // Last item gets remaining tax
-          : Math.floor((netAmt / groupTaxableAmount) * groupTaxResult.taxAmount);
-
-        remainingTax -= itemTax;
-        computedTotalTax += itemTax;
-
-        // Update item with tax details
-        await tx('invoice_items')
-          .where({ item_id: item.item_id })
-          .update({
-            tax_amount: itemTax,
-            tax_rate: groupTaxResult.taxRate,
-            total_price: netAmt + itemTax
-          });
-      }
+  // Process fixed details into taxable entities
+  for (const detail of fixedDetails) {
+    const parentItem = invoiceItems.find(item => item.item_id === detail.parent_item_id);
+    if (!parentItem) {
+        console.error(`[calculateAndDistributeTax] Could not find parent item ${detail.parent_item_id} for detail ${detail.item_detail_id}`);
+        continue; // Skip this detail if parent is missing
+    }
+    const isTaxable = parentItem.is_taxable === true; // Get taxability from parent
+    const allocatedAmount = Number(detail.allocated_amount || 0);
+    if (allocatedAmount > 0 && isTaxable) {
+      taxableEntities.push({
+        id: detail.item_detail_id,
+        type: 'fixed_detail',
+        amount: allocatedAmount,
+        // Use service region first, then lookup company default. Provide empty string if null.
+        taxRegion: parentItem.tax_region || await getCompanyDefaultTaxRegionCode(company.company_id) || '', // Get region from parent
+        isTaxable: true,
+        parentId: detail.parent_item_id,
+      });
     }
   }
 
-  return computedTotalTax;
+  // Process other invoice items (non-consolidated fixed, usage, manual, etc.)
+  for (const item of invoiceItems) {
+    // Skip consolidated items (handled via details), credits, and discounts
+    if (consolidatedItemIds.includes(item.item_id) || Number(item.net_amount) <= 0 || item.is_discount) {
+      continue;
+    }
+    // Only include items marked as taxable
+    if (item.is_taxable === true) {
+      taxableEntities.push({
+        id: item.item_id,
+        type: 'item',
+        amount: Number(item.net_amount),
+        // Use item region first, then lookup company default. Provide empty string if null.
+        taxRegion: item.tax_region || await getCompanyDefaultTaxRegionCode(company.company_id) || '',
+        isTaxable: true,
+      });
+    }
+  }  
+  console.log(`[calculateAndDistributeTax] Created ${taxableEntities.length} taxable entities:`, JSON.stringify(taxableEntities, null, 2));
+  console.log(`[calculateAndDistributeTax] Identified ${creditItems.length} credit items (negative net, not discount).`);
+  const explicitDiscountItemsLog = invoiceItems.filter(item => item.is_discount === true);
+  console.log(`[calculateAndDistributeTax] Identified ${explicitDiscountItemsLog.length} explicit discount items.`);
+
+  // 3. Group by tax region (including discounts)
+  const regionGroups: Record<string, { taxable: ITaxableEntity[], credits: ManualInvoiceItem[], discounts: ManualInvoiceItem[] }> = {};
+
+  // Initialize groups for all items to ensure all regions are captured
+  for (const item of invoiceItems) {
+      const region = item.tax_region || company.tax_region;
+      if (!regionGroups[region]) {
+          regionGroups[region] = { taxable: [], credits: [], discounts: [] };
+      }
+  }
+
+  // Group taxable entities
+  for (const entity of taxableEntities) {
+    const region = entity.taxRegion;
+    // Ensure group exists (should already from above, but safe check)
+    if (!regionGroups[region]) regionGroups[region] = { taxable: [], credits: [], discounts: [] };
+    regionGroups[region].taxable.push(entity);
+  }
+
+  // Group credit items (negative net_amount, NOT explicitly discount)
+  for (const credit of creditItems) { // creditItems already filtered for net_amount < 0 and is_discount !== true
+    const region = credit.tax_region || company.tax_region;
+    if (!regionGroups[region]) regionGroups[region] = { taxable: [], credits: [], discounts: [] }; // Safety check
+    regionGroups[region].credits.push(credit);
+  }
+
+  // Group explicit discount items (is_discount === true)
+  const explicitDiscountItems = invoiceItems.filter(item => item.is_discount === true);
+  for (const discount of explicitDiscountItems) {
+      const region = discount.tax_region || company.tax_region;
+      if (!regionGroups[region]) regionGroups[region] = { taxable: [], credits: [], discounts: [] }; // Safety check
+      regionGroups[region].discounts.push(discount);
+  }
+  console.log(`[calculateAndDistributeTax] Region groups created:`, JSON.stringify(Object.keys(regionGroups)));
+
+  // 4. Calculate Regional Base & Tax and 5. Distribute Tax
+  let computedTotalInvoiceTax = 0;
+  const detailUpdates: { item_detail_id: string, tax_amount: number, tax_rate: number }[] = [];
+  const itemTaxUpdates: { item_id: string, tax_amount: number, tax_rate: number }[] = []; // Renamed for clarity
+
+  for (const [region, group] of Object.entries(regionGroups)) {
+    const positiveSum = group.taxable.reduce((sum, entity) => sum + entity.amount, 0);
+    // Calculate base ONLY from positive taxable entities. Ignore credits/discounts for tax base calculation.
+    const regionalTaxableBase = positiveSum;
+    console.log(`[calculateAndDistributeTax] Region: ${region}, Positive Sum: ${positiveSum}, Taxable Base: ${regionalTaxableBase}`);
+
+    let regionalTotalTax = 0;
+    let taxRate = 0;
+
+    if (regionalTaxableBase > 0) {
+      try {
+        const regionalTaxResult = await taxService.calculateTax(
+          company.company_id,
+          regionalTaxableBase,
+          Temporal.Now.plainDateISO().toString(), // Consider using invoice date if available
+          region
+        );
+        regionalTotalTax = regionalTaxResult.taxAmount;
+        taxRate = regionalTaxResult.taxRate;
+        computedTotalInvoiceTax += regionalTotalTax;
+        console.log(`[calculateAndDistributeTax] Region: ${region}, Calculated Tax: ${regionalTotalTax}, Rate: ${taxRate}`);
+      } catch (error) {
+        console.error(`Error calculating tax for region ${region}:`, error);
+        // Decide how to handle tax calculation errors (e.g., skip region, throw error?)
+        // For now, we'll skip tax calculation for this region if an error occurs.
+        regionalTotalTax = 0;
+        taxRate = 0;
+      }
+    } else {
+      console.log(`[calculateAndDistributeTax] Region: ${region}, Taxable Base is 0 or less, skipping tax calculation.`);
+    }
+
+    // Distribute tax proportionally among taxable entities in the region
+    let remainingTax = regionalTotalTax;
+    // Sort entities by amount descending for consistent remainder allocation
+    const sortedTaxableEntities = [...group.taxable].sort((a, b) => b.amount - a.amount);
+
+    for (let i = 0; i < sortedTaxableEntities.length; i++) {
+      const entity = sortedTaxableEntities[i];
+      const isLastEntity = i === sortedTaxableEntities.length - 1;
+      let entityTax = 0;
+
+      // Calculate proportion only if there's a positive sum and tax to distribute
+      if (positiveSum > 0 && regionalTotalTax > 0) {
+        entityTax = isLastEntity
+          ? remainingTax // Assign remainder to the last item
+          : Math.floor((entity.amount / positiveSum) * regionalTotalTax);
+      }
+
+      remainingTax -= entityTax;
+      entity.calculatedTax = entityTax; // Store calculated tax
+      entity.taxRate = taxRate; // Store applied rate
+
+      // Prepare updates based on entity type
+      if (entity.type === 'fixed_detail') {
+        detailUpdates.push({ item_detail_id: entity.id, tax_amount: entityTax, tax_rate: taxRate });
+      } else { // type === 'item'
+        itemTaxUpdates.push({ item_id: entity.id, tax_amount: entityTax, tax_rate: taxRate });
+      }
+    }
+     console.log(`[calculateAndDistributeTax] Region: ${region}, Distributed tax. Detail Updates: ${group.taxable.filter(e => e.type === 'fixed_detail').length}, Item Updates: ${group.taxable.filter(e => e.type === 'item').length}`);
+    // Sanity check for remainder after distribution
+    if (remainingTax !== 0 && Math.abs(remainingTax) > 1) { // Allow ~1 cent rounding difference
+      console.warn(`Tax distribution remainder issue in region ${region}. Remainder: ${remainingTax} cents.`);
+      // Optional: Adjust the last item's tax slightly if needed, though floor/remainder should handle it.
+    }
+  }
+
+  // 6. Update Detail and Item Tables (Tax Amounts)
+  const updatePromises = [];
+
+  // Update fixed details tax amounts
+  if (detailUpdates.length > 0) {
+    for (const update of detailUpdates) {
+      updatePromises.push(
+        tx('invoice_item_fixed_details')
+          .where({ item_detail_id: update.item_detail_id })
+          .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
+      );
+    }
+  }
+
+  // Update regular items tax amounts (those that received tax)
+  if (itemTaxUpdates.length > 0) {
+    for (const update of itemTaxUpdates) {
+      updatePromises.push(
+        tx('invoice_items')
+          .where({ item_id: update.item_id })
+          .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
+      );
+      // This log was misplaced inside the loop, moving it after the loop in step 7
+    }
+  }
+
+  // Execute tax amount updates before proceeding to consolidated item updates
+  await Promise.all(updatePromises);
+
+  // 7. Update Consolidated Items' Tax Amount by summing updated details
+  const consolidatedUpdatePromises = [];
+  if (consolidatedItemIds.length > 0) {
+      // Fetch the *updated* tax amounts from details
+      const updatedDetailsTaxSum = await tx('invoice_item_fixed_details as iifd')
+          .join('invoice_item_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id')
+          .whereIn('iid.item_id', consolidatedItemIds)
+          .groupBy('iid.item_id')
+          .select(
+              'iid.item_id',
+              tx.raw('SUM(iifd.tax_amount) as total_detail_tax')
+          );
+      console.log(`[calculateAndDistributeTax] Fetched updated tax sums for consolidated items:`, JSON.stringify(updatedDetailsTaxSum, null, 2)); // Log moved here
+
+      for (const consolidated of updatedDetailsTaxSum) {
+          consolidatedUpdatePromises.push(
+              tx('invoice_items')
+                  .where({ item_id: consolidated.item_id })
+                  .update({ tax_amount: Number(consolidated.total_detail_tax || 0) }) // Update parent with sum
+          );
+      }
+      // Execute consolidated item updates
+      await Promise.all(consolidatedUpdatePromises);
+      console.log(`[calculateAndDistributeTax] Updated tax_amount for ${consolidatedUpdatePromises.length} consolidated items.`);
+  }
+
+  // 8 & 9. Final Pass: Update total_price and apply final tax zeroing if needed
+  const finalItemUpdatePromises = [];
+  // Fetch all items again to get potentially updated tax amounts (especially the consolidated ones from step 7)
+  const allFinalItems = await tx('invoice_items').where({ invoice_id: invoiceId }).select('*');
+
+  for (const item of allFinalItems) {
+      const netAmount = Number(item.net_amount || 0); // Net amount already reflects discounts
+      let finalTax = Number(item.tax_amount || 0); // Tax amount reflects pre-discount calculation from steps 6/7
+      let finalRate = Number(item.tax_rate || 0);
+
+      // Zero out tax ONLY if item is explicitly marked non-taxable.
+      // Discounts should already have 0 tax from distribution as they weren't in the taxable base.
+      if (item.is_taxable === false) {
+          finalTax = 0;
+          finalRate = 0;
+      }
+
+      // Calculate final total price: (Net Amount including discount) + (Pre-discount Tax)
+      const finalTotalPrice = netAmount + finalTax;
+
+      // Prepare final update for this item
+      finalItemUpdatePromises.push(
+          tx('invoice_items')
+              .where({ item_id: item.item_id })
+              .update({
+                  tax_amount: finalTax, // Persist the final tax amount (pre-discount, or 0 if non-taxable)
+                  tax_rate: finalRate,   // Persist the final tax rate
+                  total_price: finalTotalPrice // Persist the final total price
+              })
+      );
+  }
+  // Execute final updates for all items
+  await Promise.all(finalItemUpdatePromises);
+  console.log(`[calculateAndDistributeTax] Completed final pass updates for ${finalItemUpdatePromises.length} items.`);
+
+  // 10. Return total calculated tax for the invoice
+  // Recalculate from the final state of invoice_items for definitive total
+  const finalTaxSumResult = await tx('invoice_items')
+    .where({ invoice_id: invoiceId })
+    .sum('tax_amount as totalTax')
+    .first();
+
+  const finalTotalTax = Number(finalTaxSumResult?.totalTax || 0);
+  console.log(`[calculateAndDistributeTax] Finished. Final calculated total tax for invoice ${invoiceId}: ${finalTotalTax}`);
+  return finalTotalTax;
 }
+
 
 export async function updateInvoiceTotalsAndRecordTransaction(
   tx: Knex.Transaction,
   invoiceId: string,
   company: any,
-  subtotal: number,
-  computedTotalTax: number,
+  // subtotal and computedTotalTax are now calculated implicitly by summing items
   tenant: string,
   invoiceNumber: string,
   expirationDate?: string
 ): Promise<void> {
-  // Update invoice with totals
+
+  // Recalculate totals directly from the updated invoice items
+  const finalItems = await tx('invoice_items').where({ invoice_id: invoiceId });
+  const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
+  const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
+  const finalTotalAmount = finalSubtotal + finalTotalTax;
+
+
+  // Update invoice with final totals
   await tx('invoices')
     .where({ invoice_id: invoiceId })
     .update({
-      subtotal: Math.ceil(subtotal),
-      tax: Math.ceil(computedTotalTax),
-      total_amount: Math.ceil(subtotal + computedTotalTax)
+      subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
+      tax: Math.round(finalTotalTax),
+      total_amount: Math.round(finalTotalAmount)
     });
 
   // Get current balance
@@ -442,13 +948,13 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     transaction_id: uuidv4(),
     company_id: company.company_id,
     invoice_id: invoiceId,
-    amount: Math.ceil(subtotal + computedTotalTax),
+    amount: Math.round(finalTotalAmount), // Use rounded final amount
     type: 'invoice_generated',
     status: 'completed',
     description: `Generated invoice ${invoiceNumber}`,
-    created_at: Temporal.Now.plainDateISO().toString(),
+    created_at: Temporal.Now.instant().toString(),
     tenant,
-    balance_after: currentBalance + Math.ceil(subtotal + computedTotalTax),
+    balance_after: currentBalance + Math.round(finalTotalAmount), // Use rounded final amount
     expiration_date: expirationDate
   });
 }

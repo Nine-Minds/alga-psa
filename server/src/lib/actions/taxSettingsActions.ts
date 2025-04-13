@@ -1,9 +1,11 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
+// Import ITaxRate and other necessary types
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
+// Removed duplicate import of ITaxRegion
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added import
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
@@ -72,12 +74,15 @@ export async function updateCompanyTaxSettings(
     }
 }
 
+// Return the base ITaxRate type, which now includes description and region_code
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
-    const { knex } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(); // Get tenant for filtering
+    // Select all fields directly from tax_rates
     const taxRates = await knex<ITaxRate>('tax_rates')
-      .select('*')
-      .where('is_active', true);
+      .select('*') // Select all columns from tax_rates
+      .where('is_active', true) // Filter for active tax rates
+      .andWhere('tenant', tenant); // Filter tax rates by tenant
 
     return taxRates;
   } catch (error) {

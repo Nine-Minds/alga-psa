@@ -31,10 +31,9 @@ export async function getServices(): Promise<IService[]> {
                 knex.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
                 'sc.unit_of_measure',
                 'sc.category_id',
-                'sc.is_taxable',
-                'sc.region_code',
                 'sc.tenant',
                 'sc.description',
+                'sc.tax_rate_id', // Add tax_rate_id to the select statement
                 knex.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
             );
 

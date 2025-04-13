@@ -157,8 +157,8 @@ export class PlanServiceConfigurationService {
           await fixedConfigModel.create({
             config_id: configId,
             base_rate: (typeConfig as IPlanServiceFixedConfig)?.base_rate ?? null,
-            enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false,
-            billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start',
+            // enable_proration: (typeConfig as IPlanServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in billing_plan_fixed_config
+            // billing_cycle_alignment: (typeConfig as IPlanServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in billing_plan_fixed_config
             tenant: this.tenant
           });
           break;
@@ -265,7 +265,15 @@ export class PlanServiceConfigurationService {
       if (typeConfig) {
         switch (currentConfig.configuration_type) {
           case 'Fixed':
-            await fixedConfigModel.update(configId, typeConfig as Partial<IPlanServiceFixedConfig>);
+            // Proration and alignment fields are no longer part of IPlanServiceFixedConfig
+            // The typeConfig passed in should already only contain allowed fields (like base_rate)
+            const fixedUpdateData = { ...typeConfig } as Partial<IPlanServiceFixedConfig>;
+            // delete fixedUpdateData.enable_proration; // Removed as property no longer exists
+            // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
+            // Only update if there are other fields left (e.g., base_rate)
+            if (Object.keys(fixedUpdateData).length > 0) {
+              await fixedConfigModel.update(configId, fixedUpdateData);
+            }
             break;
             
           case 'Hourly':

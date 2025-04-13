@@ -172,7 +172,7 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
   }
 }
 
-export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; is_taxable: boolean; region_code: string | null }[]> {
+export async function fetchServicesForTimeEntry(workItemType?: string): Promise<{ id: string; name: string; type: string; tax_rate_id: string | null }[]> { // Return tax_rate_id instead
   const {knex: db, tenant} = await createTenantKnex();
 
   let query = db('service_catalog as sc')
@@ -186,8 +186,7 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
       'sc.service_id as id',
       'sc.service_name as name',
       'sc.billing_method as type', // Use billing_method as type
-      'sc.is_taxable',
-      'sc.region_code' // Added region_code selection
+      'sc.tax_rate_id' // Select tax_rate_id instead
     );
 
   // For ad_hoc entries, only show Time-based services

@@ -7,8 +7,8 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { updateService } from 'server/src/lib/actions/serviceActions';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Changed ITaxRate to ITaxRegion
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
+import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Use ITaxRate
+import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Use getTaxRates
 
 interface ServiceTaxSettingsProps {
   service: IService;
@@ -16,69 +16,70 @@ interface ServiceTaxSettingsProps {
   onUpdate?: () => void;
 }
 
-export function ServiceTaxSettings({ service, onUpdate }: ServiceTaxSettingsProps) { // Removed taxRates from props
-  const [isTaxable, setIsTaxable] = useState(service.is_taxable ?? true); // Default to true if undefined
-  const [regionCode, setRegionCode] = useState<string | null>(service.region_code || null); // Changed taxRegion to regionCode
+export function ServiceTaxSettings({ service, onUpdate }: ServiceTaxSettingsProps) {
+  // State for tax_rate_id instead of is_taxable and region_code
+  const [taxRateId, setTaxRateId] = useState<string | null>(service.tax_rate_id || null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Removed effectiveTaxRate state
-  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]); // Added
-  const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true); // Added
-  const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null); // Added
+  // State for fetching tax rates
+  const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
+  const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
+  const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
 
   // Fetch tax regions
   useEffect(() => {
-      const fetchTaxRegions = async () => {
+      const fetchTaxRates = async () => {
           try {
-              setIsLoadingTaxRegions(true);
-              const regions = await getActiveTaxRegions();
-              setTaxRegions(regions);
-              setErrorTaxRegions(null);
-          } catch (error) {
-              console.error('Error loading tax regions:', error);
-              setErrorTaxRegions('Failed to load tax regions.');
-              setTaxRegions([]);
+              setIsLoadingTaxRates(true);
+              const rates = await getTaxRates(); // Fetch rates
+              setTaxRates(rates);
+              setErrorTaxRates(null);
+          } catch (fetchError) { // Use different variable name
+              console.error('Error loading tax rates:', fetchError);
+              setErrorTaxRates('Failed to load tax rates.');
+              setTaxRates([]);
           } finally {
-              setIsLoadingTaxRegions(false);
+              setIsLoadingTaxRates(false);
           }
       };
-      fetchTaxRegions();
+      fetchTaxRates();
   }, []);
 
-  // Generate options from fetched tax regions
-  const taxRegionOptions = taxRegions.map(region => ({
-    value: region.region_code,
-    label: region.region_name
+  // Generate options from fetched tax rates
+  const taxRateOptions = taxRates.map(rate => ({
+    value: rate.tax_rate_id,
+    // Construct a meaningful label
+    label: `${rate.tax_type} (${rate.country_code}) - ${rate.tax_percentage}%`
   }));
 
-  // Add an option to represent the company default (clearing the selection)
+  // Add an option for non-taxable (clearing the selection)
   const selectOptions = [
-    { value: '', label: 'Use Company Default' },
-    ...taxRegionOptions
+    { value: '', label: 'Non-Taxable' }, // Represents null tax_rate_id
+    ...taxRateOptions
   ];
 
-  // Removed useEffect for effectiveTaxRate
 
-  const handleTaxableChange = (checked: boolean) => {
-    setIsTaxable(checked);
-    if (!checked) {
-      setRegionCode(null); // Use regionCode setter
-    }
+  // Handle changes to the tax rate select
+  const handleTaxRateChange = (value: string) => {
+    setTaxRateId(value || null); // Set to null if '' (Non-Taxable) is selected
   };
 
-  const handleRegionCodeChange = (value: string) => { // Renamed function
-    setRegionCode(value || null); // Use regionCode setter
-  };
+  // Removed handleTaxableChange and handleRegionCodeChange
+
+
+
+
+
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       setError(null);
 
+      // Send only tax_rate_id
       await updateService(service.service_id, {
-        is_taxable: isTaxable,
-        region_code: regionCode // Changed tax_region to region_code
-      } as Partial<IService>);
+        tax_rate_id: taxRateId
+      } as Pick<IService, 'tax_rate_id'>); // Use Pick for type safety
 
       if (onUpdate) {
         onUpdate();
@@ -97,34 +98,35 @@ export function ServiceTaxSettings({ service, onUpdate }: ServiceTaxSettingsProp
         <CardTitle>Tax Settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Switch 
-            id="service-taxable-switch"
-            label="Taxable Service" 
-            checked={isTaxable} 
-            onCheckedChange={handleTaxableChange}
-            disabled={isSaving}
+        {/* Replace Switch and Region Select with Tax Rate Select */}
+        <div>
+          <CustomSelect
+              id="service-tax-rate-select"
+              label="Tax Rate"
+              options={selectOptions} // Use combined options
+              value={taxRateId || ''} // Bind to taxRateId state
+              onValueChange={handleTaxRateChange} // Use new handler
+              placeholder={isLoadingTaxRates ? "Loading rates..." : "Select Tax Rate"}
+              disabled={isSaving || isLoadingTaxRates} // Disable while saving or loading
+              allowClear={false} // Don't allow clearing, use 'Non-Taxable' option instead
           />
+          <p className="text-xs text-gray-500 mt-1">Select 'Non-Taxable' if this service should not be taxed.</p>
         </div>
 
-        {isTaxable && (
-          <div className="mt-4">
-            <CustomSelect
-                id="tax-region-select"
-                label="Tax Region (Optional)"
-                options={selectOptions}
-                value={regionCode || ''} // Use regionCode state
-                onValueChange={handleRegionCodeChange} // Use renamed handler
-                placeholder={isLoadingTaxRegions ? "Loading regions..." : "Use Company Default"}
-                disabled={isSaving || isLoadingTaxRegions} // Disable while saving or loading
-                allowClear={true} // Use allowClear built into CustomSelect
-            />
-          </div>
-        )}
+
+
+
+
+
+
+
+
+
 
         {/* Removed display of effectiveTaxRate */}
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
+        {errorTaxRates && <p className="text-red-500 text-sm">{errorTaxRates}</p>} {/* Show tax rate loading error */}
       </CardContent>
       <CardFooter className="flex justify-end">
         <Button 
