@@ -16,7 +16,7 @@ export interface EditableItem { // Add export
   description: string;
   rate: number; // unit_price in cents
   // tax_rate_id?: string | null; // Removed from item state
-  is_taxable?: boolean; // Keep is_taxable for item state
+  // is_taxable removed; derived directly from selectedService.tax_rate_id
   item_id?: string;
   isExisting?: boolean;
   isRemoved?: boolean;
@@ -57,18 +57,30 @@ export const LineItem: React.FC<LineItemProps> = ({
     ...item,
     // For discounts, ensure we have valid initial state
     discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
-    discount_percentage: item.discount_percentage,
-    is_taxable: item.is_taxable // Initialize is_taxable
+    discount_percentage: item.discount_percentage
+    // is_taxable removed; derived from selectedService.tax_rate_id
   }));
+  
+  // Track raw discount amount input for display purposes
+  const [discountAmountInput, setDiscountAmountInput] = useState<string>(
+    item.is_discount && item.discount_type === 'fixed'
+      ? (Math.abs(item.rate) / 100).toFixed(2)
+      : "0.00"
+  );
 
   // Reset edit state when item changes
   useEffect(() => {
     setEditState({
       ...item,
       discount_type: item.is_discount ? (item.discount_type || 'fixed') : undefined,
-      discount_percentage: item.discount_percentage,
-      is_taxable: item.is_taxable // Reset is_taxable too
+      discount_percentage: item.discount_percentage
+      // is_taxable removed; derived from selectedService.tax_rate_id
     });
+    
+    // Reset discount amount input
+    if (item.is_discount && item.discount_type === 'fixed') {
+      setDiscountAmountInput((Math.abs(item.rate) / 100).toFixed(2));
+    }
   }, [item]);
 
   const selectedService = serviceOptions.find(s => s.value === editState.service_id) as ServiceOption | undefined;
@@ -112,8 +124,11 @@ export const LineItem: React.FC<LineItemProps> = ({
               // For item-specific discounts, this will be handled by parent component
               // For invoice-level discounts, use a nominal value
               newState.rate = -Math.abs(prev.discount_percentage * 100); // Convert percentage to cents
+              // Update display value
+              setDiscountAmountInput((Math.abs(prev.discount_percentage)).toFixed(2));
             } else {
               newState.rate = -1000; // Default to $10.00
+              setDiscountAmountInput("10.00");
             }
             // Clear the percentage for fixed discounts
             newState.discount_percentage = undefined;
@@ -125,8 +140,7 @@ export const LineItem: React.FC<LineItemProps> = ({
           if (service) {
             newState.rate = service.rate ?? 0; // Use service rate, default 0
             newState.description = service.label.toString();
-            // Set is_taxable based on the presence of tax_rate_id on the selected service
-            newState.is_taxable = !!service.tax_rate_id;
+            // is_taxable removed; derived from selectedService.tax_rate_id
           }
         }
           break;
@@ -150,14 +164,12 @@ export const LineItem: React.FC<LineItemProps> = ({
           if (value) {
             newState.discount_type = 'fixed';
             newState.rate = 0;
-            newState.is_taxable = false; // Discounts are not taxable
+            // is_taxable removed; derived from selectedService.tax_rate_id
           } else {
             newState.discount_type = undefined;
             newState.discount_percentage = undefined;
             newState.rate = Math.abs(newState.rate);
-            // Restore is_taxable based on selected service
-            const currentService = serviceOptions.find(s => s.value === newState.service_id);
-            newState.is_taxable = !!currentService?.tax_rate_id;
+            // is_taxable removed; derived from selectedService.tax_rate_id
           }
           break;
         // Removed manual is_taxable case; derived from service tax_rate_id
@@ -189,8 +201,8 @@ export const LineItem: React.FC<LineItemProps> = ({
               </span>
               <span className="mx-2 text-gray-400">|</span>
               <span className="text-gray-600">
-                {editState.discount_type === 'percentage' 
-                  ? `${editState.discount_percentage}%` 
+                {editState.discount_type === 'percentage'
+                  ? `${editState.discount_percentage}%`
                   : `$${(Math.abs(editState.rate) / 100).toFixed(2)}`}
                 {editState.applies_to_item_id && (
                   <>
@@ -203,9 +215,9 @@ export const LineItem: React.FC<LineItemProps> = ({
           ) : (
             <>
               <span className="font-medium">{selectedService?.label || 'Select Service'}</span>
-              {/* Display based on is_taxable flag */}
+              {/* Derive taxable status directly from tax_rate_id */}
               <span className="text-xs text-gray-500 ml-1">
-                {editState.is_taxable ? '(Taxable)' : '(Non-Taxable)'}
+                {!!selectedService?.tax_rate_id ? '(Taxable)' : '(Non-Taxable)'}
               </span>
               <span className="mx-2 text-gray-400">|</span>
               <span className="text-gray-600">{editState.description}</span>
@@ -325,25 +337,47 @@ export const LineItem: React.FC<LineItemProps> = ({
               </label>
               <Input
                 id='discount-value-input'
-                type="number"
-                min="0"
-                step={editState.discount_type === 'percentage' ? '1' : '0.01'}
-                max={editState.discount_type === 'percentage' ? '100' : undefined}
+                type={editState.discount_type === 'percentage' ? 'number' : 'text'} // Change to text for fixed amount
+                inputMode={editState.discount_type === 'percentage' ? undefined : 'decimal'} // Hint for mobile keyboards
+                min={editState.discount_type === 'percentage' ? "0" : undefined} // Keep min for percentage
+                step={editState.discount_type === 'percentage' ? '1' : undefined} // Remove step for text input
+                max={editState.discount_type === 'percentage' ? '100' : undefined} // Keep max for percentage
                 value={editState.discount_type === 'percentage'
                   ? editState.discount_percentage || 0
-                  : Math.abs(rateInDollars)} // Display positive value for fixed amount
+                  : discountAmountInput} // Use raw input value for display
                 onChange={(e) => {
-                  const value = e.target.value;
+                  const rawValue = e.target.value;
                   if (editState.discount_type === 'percentage') {
-                    const percentage = parseFloat(value) || 0;
+                    // Keep existing percentage logic
+                    const percentage = parseFloat(rawValue) || 0;
                     handleLocalChange('discount_percentage', Math.min(Math.max(percentage, 0), 100));
-                    // Set rate to 0 since we're using discount_percentage for calculations
-                    handleLocalChange('rate', 0);
+                    handleLocalChange('rate', 0); // Rate is 0 for percentage
                   } else {
-                    const rateInCents = value.includes('.')
-                      ? Math.round(parseFloat(value) * 100)
-                      : parseInt(value, 10) * 100;
-                    handleLocalChange('rate', -Math.abs(rateInCents || 0));
+                    // Handle fixed amount as text input
+                    // Allow only numbers and a single decimal point
+                    const sanitizedValue = rawValue.replace(/[^0-9.]/g, '');
+                    
+                    // Handle multiple decimal points by keeping only the first one
+                    const parts = sanitizedValue.split('.');
+                    let validValue = sanitizedValue;
+                    if (parts.length > 2) {
+                      validValue = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    
+                    // Store the sanitized value for display
+                    setDiscountAmountInput(validValue);
+                    
+                    // Update the rate value (stored as negative cents)
+                    if (validValue === '' || validValue === '.') {
+                      handleLocalChange('rate', 0);
+                    } else {
+                      const dollarValue = parseFloat(validValue);
+                      if (!isNaN(dollarValue)) {
+                        const rateInCents = Math.round(dollarValue * 100);
+                        handleLocalChange('rate', -Math.abs(rateInCents));
+                      }
+                    }
+                    
                     // Clear discount_percentage when using fixed amount
                     handleLocalChange('discount_percentage', undefined);
                   }

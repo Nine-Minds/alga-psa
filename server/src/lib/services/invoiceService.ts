@@ -422,7 +422,19 @@ async function persistFixedInvoiceItems(
   // Map: companyBillingPlanId -> { plan_name: string, plan_base_rate: number | null }
   const planInfoMap = new Map<string, { plan_name: string; plan_base_rate: number | null }>();
 
-  if (companyPlanIds.length > 0) {
+  // Filter out virtual bundle IDs that start with "bundle-" as they're not real UUIDs in the database
+  const validDbPlanIds = companyPlanIds.filter(id => !id.startsWith('bundle-'));
+  const bundlePlanIds = companyPlanIds.filter(id => id.startsWith('bundle-'));
+  
+  // Add default info for bundle plans that won't be found in the database
+  for (const bundlePlanId of bundlePlanIds) {
+    planInfoMap.set(bundlePlanId, {
+      plan_name: 'Bundle Plan',
+      plan_base_rate: null
+    });
+  }
+
+  if (validDbPlanIds.length > 0) {
     const planDetails = await tx('company_billing_plans as cbp')
       .join('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
@@ -433,7 +445,7 @@ async function persistFixedInvoiceItems(
         this.on('bp.plan_id', '=', 'bpfc.plan_id')
             .andOn('bp.tenant', '=', 'bpfc.tenant');
       })
-      .whereIn('cbp.company_billing_plan_id', companyPlanIds)
+      .whereIn('cbp.company_billing_plan_id', validDbPlanIds)
       .andWhere('cbp.tenant', tenant) // Ensure tenant match on cbp
       .select(
         'cbp.company_billing_plan_id',

@@ -13,6 +13,21 @@ import Invoice from 'server/src/lib/models/invoice';
 
 // Helper function to create basic invoice view model
 async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promise<InvoiceViewModel> {
+  // Debug the invoice data, especially for the problematic invoice
+  if (invoice.invoice_id === '758752dd-9aa4-43cb-945e-7232903f6615') {
+    console.log('Processing problematic invoice:', {
+      invoice_id: invoice.invoice_id,
+      invoice_number: invoice.invoice_number,
+      total_amount: invoice.total_amount,
+      total_amount_type: typeof invoice.total_amount,
+      subtotal: invoice.subtotal,
+      tax: invoice.tax
+    });
+  }
+  
+  // Ensure total_amount is properly converted to a number
+  const totalAmount = Number(invoice.total_amount);
+  
   return {
     invoice_id: invoice.invoice_id,
     invoice_number: invoice.invoice_number,
@@ -29,11 +44,11 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
     invoice_date: typeof invoice.invoice_date === 'string' ? toPlainDate(invoice.invoice_date) : invoice.invoice_date,
     due_date: typeof invoice.due_date === 'string' ? toPlainDate(invoice.due_date) : invoice.due_date,
     status: invoice.status,
-    subtotal: invoice.subtotal,
-    tax: invoice.tax,
-    total: invoice.total_amount,
-    total_amount: invoice.total_amount,
-    credit_applied: (invoice.credit_applied || 0),
+    subtotal: Number(invoice.subtotal),
+    tax: Number(invoice.tax),
+    total: totalAmount, // Ensure it's a number
+    total_amount: totalAmount, // Ensure it's a number
+    credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
     invoice_items: [] // Empty array initially
@@ -62,10 +77,10 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
         'invoices.is_manual',
         'invoices.finalized_at',
         'invoices.billing_cycle_id',
-        knex.raw('CAST(invoices.subtotal AS INTEGER) as subtotal'),
-        knex.raw('CAST(invoices.tax AS INTEGER) as tax'),
-        knex.raw('CAST(invoices.total_amount AS INTEGER) as total_amount'),
-        knex.raw('CAST(invoices.credit_applied AS INTEGER) as credit_applied'),
+        knex.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
+        knex.raw('CAST(invoices.tax AS BIGINT) as tax'),
+        knex.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
+        knex.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
         'companies.company_name',
         'companies.address',
         'companies.properties'
@@ -118,10 +133,10 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
         'invoices.is_manual',
         'invoices.finalized_at',
         'invoices.billing_cycle_id',
-        knex.raw('CAST(invoices.subtotal AS INTEGER) as subtotal'),
-        knex.raw('CAST(invoices.tax AS INTEGER) as tax'),
-        knex.raw('CAST(invoices.total_amount AS INTEGER) as total_amount'),
-        knex.raw('CAST(invoices.credit_applied AS INTEGER) as credit_applied'),
+        knex.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
+        knex.raw('CAST(invoices.tax AS BIGINT) as tax'),
+        knex.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
+        knex.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
         'companies.company_name',
         'companies.address',
         'companies.properties'

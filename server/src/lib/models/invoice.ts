@@ -147,10 +147,10 @@ export default class Invoice {
           'description',
           'is_discount',
           knex.raw('CAST(quantity AS INTEGER) as quantity'),
-          knex.raw('CAST(unit_price AS INTEGER) as unit_price'),
-          knex.raw('CAST(total_price AS INTEGER) as total_price'),
-          knex.raw('CAST(tax_amount AS INTEGER) as tax_amount'),
-          knex.raw('CAST(net_amount AS INTEGER) as net_amount'),
+          knex.raw('CAST(unit_price AS BIGINT) as unit_price'),
+          knex.raw('CAST(total_price AS BIGINT) as total_price'),
+          knex.raw('CAST(tax_amount AS BIGINT) as tax_amount'),
+          knex.raw('CAST(net_amount AS BIGINT) as net_amount'),
           'is_manual')
         .where({
           invoice_id: invoiceId,
@@ -357,10 +357,10 @@ export default class Invoice {
     const invoice = await knex('invoices')
       .select(
         '*',
-        knex.raw('CAST(subtotal AS INTEGER) as subtotal'),
-        knex.raw('CAST(tax AS INTEGER) as tax'),
-        knex.raw('CAST(total_amount AS INTEGER) as total_amount'),
-        knex.raw('CAST(credit_applied AS INTEGER) as credit_applied')
+        knex.raw('CAST(subtotal AS BIGINT) as subtotal'),
+        knex.raw('CAST(tax AS BIGINT) as tax'),
+        knex.raw('CAST(total_amount AS BIGINT) as total_amount'),
+        knex.raw('CAST(credit_applied AS BIGINT) as credit_applied')
       )
       .where({
         invoice_id: invoiceId,

@@ -43,7 +43,12 @@ export function ServiceSelectionDialog({
         setLoading(true);
         setError(null);
         
-        const servicesData = await getServices();
+        const servicesResponse = await getServices();
+        
+        // Extract the services array from the paginated response
+        const servicesData = Array.isArray(servicesResponse)
+          ? servicesResponse
+          : (servicesResponse.services || []);
         
         // Filter out services that are already in the plan
         const availableServices = servicesData.filter(

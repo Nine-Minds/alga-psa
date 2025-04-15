@@ -32,7 +32,7 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
         initialValues?.planId ? availablePlans.find(p => p.plan_id === initialValues.planId) || null : null
     );
     const [selectedCategory, setSelectedCategory] = useState<string>(
-        initialValues?.categoryId || ''
+        !initialValues?.categoryId ? 'none' : initialValues.categoryId
     );
     const [startDate, setStartDate] = useState<string>(
         initialValues?.startDate || new Date().toISOString().split('T')[0]

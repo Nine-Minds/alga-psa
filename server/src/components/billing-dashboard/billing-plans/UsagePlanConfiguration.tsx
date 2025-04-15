@@ -13,14 +13,14 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Get list of services
 import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
-import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService } from 'server/src/interfaces';
+import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService, IBillingPlan } from 'server/src/interfaces'; // Added IBillingPlan
+import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Added action to get base plan details
 import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericPlanServicesList';
-
 interface UsagePlanConfigurationProps {
   planId: string;
   className?: string;
@@ -55,6 +55,8 @@ export function UsagePlanConfiguration({
   planId,
   className = '',
 }: UsagePlanConfigurationProps) {
+  // State for the base plan details
+  const [plan, setPlan] = useState<IBillingPlan | null>(null);
   // State for the list of services associated with the plan
   const [planServices, setPlanServices] = useState<PlanServiceWithConfig[]>([]);
   // State to hold configuration for each service, keyed by serviceId (current state)
@@ -74,18 +76,26 @@ export function UsagePlanConfiguration({
   const fetchPlanData = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPlan(null); // Reset plan on fetch
     setServiceConfigs({}); // Reset current configs on fetch
     setInitialServiceConfigs({}); // Reset initial configs on fetch
     setPlanServices([]); // Reset services on fetch
-
     try {
+      // 0. Fetch base plan details first
+      const fetchedPlan = await getBillingPlanById(planId);
+      if (!fetchedPlan || fetchedPlan.plan_type !== 'Usage') {
+        setError('Invalid plan type or plan not found.');
+        setLoading(false);
+        return;
+      }
+      setPlan(fetchedPlan); // Store base plan details
+
       // 1. Fetch the list of services associated with the plan
       const servicesList = await getPlanServicesWithConfigurations(planId);
       setPlanServices(servicesList);
 
       if (servicesList.length === 0) {
-        setLoading(false);
-        return; // No services to configure
+        // Don't return early, we still want to show the empty state with the correct title
       }
 
       // 2. Fetch configuration for each service concurrently
@@ -393,7 +403,7 @@ export function UsagePlanConfiguration({
           <div className={`space-y-6 ${className}`}>
               <Card>
                   <CardHeader>
-                      <CardTitle>Usage-Based Plan Configuration</CardTitle>
+                      <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage)</CardTitle>
                   </CardHeader>
                   <CardContent>
                       <p className="text-muted-foreground mb-4">No services are currently associated with this usage plan. Add services below to configure their pricing.</p>
@@ -409,7 +419,7 @@ export function UsagePlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader>
-          <CardTitle>Usage-Based Service Pricing</CardTitle>
+          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage) - Service Pricing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (

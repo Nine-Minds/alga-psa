@@ -3,17 +3,36 @@
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from 'server/src/lib/models/service'; // Import both schemas
 import { IService, IServiceType, IStandardServiceType } from '../../interfaces/billing.interfaces';
+
+// Interface for paginated service response
+export interface PaginatedServicesResponse {
+  services: IService[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
 import { validateArray } from 'server/src/lib/utils/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { createTenantKnex } from '../db'; // Import createTenantKnex for direct DB access if needed
 
-export async function getServices(): Promise<IService[]> {
+export async function getServices(page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> {
     try {
         const { knex, tenant } = await createTenantKnex();
         if (!tenant) {
             throw new Error('Tenant context is required for fetching services');
         }
 
+        // Calculate pagination offset
+        const offset = (page - 1) * pageSize;
+        
+        // Get total count for pagination
+        const countResult = await knex('service_catalog as sc')
+            .where({ 'sc.tenant': tenant })
+            .count('sc.service_id as count')
+            .first();
+            
+        const totalCount = parseInt(countResult?.count as string) || 0;
+        
         // Fetch services with service type names by joining with both standard and custom service type tables
         const servicesData = await knex('service_catalog as sc')
             .where({ 'sc.tenant': tenant })
@@ -35,14 +54,22 @@ export async function getServices(): Promise<IService[]> {
                 'sc.description',
                 'sc.tax_rate_id', // Add tax_rate_id to the select statement
                 knex.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
-            );
+            )
+            .limit(pageSize)
+            .offset(offset);
 
         // Validate and transform the data
         const validatedServices = servicesData.map(service => {
             return serviceSchema.parse(service);
         });
 
-        return validatedServices;
+        // Return paginated response
+        return {
+            services: validatedServices,
+            totalCount,
+            page,
+            pageSize
+        };
     } catch (error) {
         console.error('Error fetching services:', error)
         throw new Error('Failed to fetch services')

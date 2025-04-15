@@ -12,7 +12,9 @@ import {
   IUserTypeRate, // Added comma
   IPlanServiceRateTierInput
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
+import { getBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
 
 /**
  * Get a plan service configuration with its type-specific configuration
@@ -20,6 +22,7 @@ import { PlanServiceConfigurationService } from 'server/src/lib/services/planSer
 export async function getConfigurationWithDetails(configId: string): Promise<{
   baseConfig: IPlanServiceConfiguration;
   typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
+  planFixedConfig?: Partial<IBillingPlanFixedConfig>;
   rateTiers?: IPlanServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
 }> {
@@ -29,7 +32,31 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
   }
   const configService = new PlanServiceConfigurationService(knex, tenant);
   
-  return await configService.getConfigurationWithDetails(configId);
+  // Get the configuration details
+  const configDetails = await configService.getConfigurationWithDetails(configId);
+  
+  // If this is a Fixed configuration, also fetch the plan fixed config
+  let planFixedConfig: Partial<IBillingPlanFixedConfig> | undefined;
+  if (configDetails.baseConfig.configuration_type === 'Fixed') {
+    try {
+      planFixedConfig = await getBillingPlanFixedConfig(configDetails.baseConfig.plan_id) || {
+        enable_proration: false,
+        billing_cycle_alignment: 'start'
+      };
+    } catch (error) {
+      console.error(`Error fetching plan fixed config for plan ${configDetails.baseConfig.plan_id}:`, error);
+      // Provide default values if the plan fixed config couldn't be fetched
+      planFixedConfig = {
+        enable_proration: false,
+        billing_cycle_alignment: 'start'
+      };
+    }
+  }
+  
+  return {
+    ...configDetails,
+    planFixedConfig
+  };
 }
 
 /**

@@ -1,38 +1,40 @@
-import React, { useState, useEffect } from 'react'; // Added useState, useEffect
+import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { ITaxRate, ICompanyTaxRate } from 'server/src/interfaces/billing.interfaces';
-import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
-import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions'; // Added
-import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card'; // Updated Card import
-import CustomSelect from 'server/src/components/ui/CustomSelect'; // Re-added for assigning default
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import Drawer from 'server/src/components/ui/Drawer'; // Correct: Use default import
+import TaxRateCreateForm from './TaxRateCreateForm';
+import { toast } from 'react-hot-toast';
 
-// Updated Props: Expecting only the single default rate, removing selection/add/remove handlers for now.
-// Change/Update functionality might be added later if needed.
 interface CompanyTaxRatesProps {
-    companyId: string; // Needed for assigning
-    companyTaxRate: ICompanyTaxRate | null | undefined; // Expecting the single default rate or null/undefined
-    taxRates: ITaxRate[]; // Full list of available rates
-    onAssignDefault: (taxRateId: string) => Promise<void>; // Handler for initial assignment
-    onChangeDefault: (newTaxRateId: string) => Promise<void>; // Handler for changing the default
+    companyId: string;
+    companyTaxRate: ICompanyTaxRate | null | undefined;
+    taxRates: ITaxRate[];
+    onAssignDefault: (taxRateId: string) => Promise<void>;
+    onChangeDefault: (newTaxRateId: string) => Promise<void>;
+    onTaxRateCreated: () => Promise<void>;
 }
-
-// Removed TaxRateTableData interface as DataTable is removed
 
 const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
     companyId,
     companyTaxRate,
     taxRates,
     onAssignDefault,
-    onChangeDefault // Added new handler prop
+    onChangeDefault,
+    onTaxRateCreated
 }) => {
     const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
     const [isLoadingTaxRegions, setIsLoadingTaxRegions] = useState(true);
     const [errorTaxRegions, setErrorTaxRegions] = useState<string | null>(null);
-    const [selectedRateToAdd, setSelectedRateToAdd] = useState<string>(''); // State for the dropdown
-    const [isAssigning, setIsAssigning] = useState(false); // State for assigning button loading
-    const [isEditing, setIsEditing] = useState(false); // State to toggle edit mode
-    const [selectedRateToChange, setSelectedRateToChange] = useState<string>(''); // State for edit dropdown
-    const [isSavingChange, setIsSavingChange] = useState(false); // State for save button loading
+    const [selectedRateToAdd, setSelectedRateToAdd] = useState<string>('');
+    const [isAssigning, setIsAssigning] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [selectedRateToChange, setSelectedRateToChange] = useState<string>('');
+    const [isSavingChange, setIsSavingChange] = useState(false);
+    const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
 
     useEffect(() => {
         const fetchTaxRegions = async () => {
@@ -52,7 +54,6 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
         fetchTaxRegions();
     }, []);
 
-    // Find the details for the single default tax rate
     const defaultTaxRateDetails = companyTaxRate
         ? taxRates.find(tr => tr.tax_rate_id === companyTaxRate.tax_rate_id)
         : null;
@@ -65,13 +66,11 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
     const taxPercentage = defaultTaxRateDetails?.tax_percentage;
     const description = defaultTaxRateDetails?.description;
 
-    // Generate options for the assignment dropdown
     const taxRateOptions = isLoadingTaxRegions ? [] : taxRates.map((taxRate): { value: string; label: string } => {
         const taxRegion = taxRegions.find(reg => reg.region_code === taxRate.region_code);
         const regionLabel = taxRegion?.region_name || taxRate.region_code || 'Unknown Region';
         return {
             value: taxRate.tax_rate_id!,
-            // Combine relevant info for the label
             label: `${regionLabel} - ${taxRate.tax_percentage}% (${taxRate.description || 'No Description'})`
         };
     });
@@ -81,9 +80,8 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
         setIsAssigning(true);
         try {
             await onAssignDefault(selectedRateToAdd);
-            setSelectedRateToAdd(''); // Clear selection on success
+            setSelectedRateToAdd('');
         } catch (error) {
-            // Error handling might be done in the parent, or display here
             console.error("Failed to assign default tax rate:", error);
         } finally {
             setIsAssigning(false);
@@ -95,13 +93,23 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
         setIsSavingChange(true);
         try {
             await onChangeDefault(selectedRateToChange);
-            setIsEditing(false); // Close edit mode on success
+            setIsEditing(false);
         } catch (error) {
             console.error("Failed to change default tax rate:", error);
-            // Error handled in parent, potentially show local error if needed
         } finally {
             setIsSavingChange(false);
         }
+    };
+
+    const handleCreateSuccess = async () => {
+        setIsCreateDrawerOpen(false);
+        toast.success('Tax rate created successfully.');
+        await onTaxRateCreated();
+    };
+
+    const handleCreateError = (error: Error) => {
+        console.error("Failed to create tax rate:", error);
+        toast.error(`Failed to create tax rate: ${error.message}`);
     };
 
     return (
@@ -109,7 +117,6 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
             <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                     <span>Default Company Tax Rate</span>
-                    {/* Show Change button only if a rate is assigned and not currently editing */}
                     {defaultTaxRateDetails && !isEditing && (
                         <Button id="change-default-tax-rate-button" variant="outline" size="sm" onClick={() => { setSelectedRateToChange(companyTaxRate?.tax_rate_id || ''); setIsEditing(true); }}>
                             Change
@@ -124,7 +131,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                     <p className="text-red-600">{errorTaxRegions}</p>
                 ) : defaultTaxRateDetails ? (
                     isEditing ? (
-                        // Editing Mode: Show dropdown and Save/Cancel
+                        // Editing Mode
                         <div className="space-y-4">
                             <CustomSelect
                                 value={selectedRateToChange}
@@ -134,13 +141,17 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                                 disabled={isSavingChange}
                             />
                             <div className="flex justify-end gap-2">
+                                {/* Removed DrawerTrigger wrapper */}
+                                <Button id="create-new-tax-rate-button-editing" variant="outline" size="sm" onClick={() => setIsCreateDrawerOpen(true)}>
+                                    Create New Rate
+                                </Button>
                                 <Button id="cancel-change-tax-rate-button" variant="ghost" size="sm" onClick={() => setIsEditing(false)} disabled={isSavingChange}>
                                     Cancel
                                 </Button>
                                 <Button
                                     id="save-change-tax-rate-button"
                                     size="sm"
-                                    onClick={handleSaveChangesClick} // Ensure this function is defined correctly above
+                                    onClick={handleSaveChangesClick}
                                     disabled={!selectedRateToChange || selectedRateToChange === companyTaxRate?.tax_rate_id || isSavingChange}
                                 >
                                     {isSavingChange ? 'Saving...' : 'Save Change'}
@@ -148,7 +159,7 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                             </div>
                         </div>
                     ) : (
-                        // Display Mode: Show rate details
+                        // Display Mode
                         <div className="space-y-2">
                             <div>
                                 <span className="font-semibold text-sm text-gray-600 dark:text-gray-400">Region:</span>
@@ -165,7 +176,8 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                         </div>
                     )
                 ) : (
-                    <div>
+                    // Assigning Mode
+                    <div className="space-y-4">
                         <p className="mb-4">No default tax rate assigned.</p>
                         <div className="flex items-center gap-4">
                             <div className="flex-1">
@@ -186,9 +198,25 @@ const CompanyTaxRates: React.FC<CompanyTaxRatesProps> = ({
                                 {isAssigning ? 'Assigning...' : 'Assign Default Rate'}
                             </Button>
                         </div>
+                        <div className="flex justify-start">
+                             {/* Removed DrawerTrigger wrapper */}
+                            <Button id="create-new-tax-rate-button-assigning" variant="outline" size="sm" onClick={() => setIsCreateDrawerOpen(true)}>
+                                Create New Rate
+                            </Button>
+                        </div>
                     </div>
                 )}
             </CardContent>
+
+            {/* Drawer for Creating New Tax Rate */}
+            <Drawer isOpen={isCreateDrawerOpen} onClose={() => setIsCreateDrawerOpen(false)} id="create-tax-rate-drawer">
+                 {/* Use standard elements for header */}
+                 <div className="p-4 border-b"> {/* Added padding and border */}
+                    <h2 className="text-lg font-semibold">Create New Tax Rate</h2>
+                    <p className="text-sm text-muted-foreground">Enter the details for the new tax rate.</p>
+                 </div>
+                <TaxRateCreateForm onSuccess={handleCreateSuccess} onError={handleCreateError} />
+            </Drawer>
         </Card>
     );
 };

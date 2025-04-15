@@ -57,11 +57,16 @@ const GenerateInvoices: React.FC = () => {
       setPeriods(periodsData);
       setCompanies(companiesData);
       // Transform IService to Service, using default_rate as rate
-      setServices(servicesData.map((service): Service => ({
-        service_id: service.service_id,
-        service_name: service.service_name,
-        rate: service.default_rate || 0
-      })));
+      if (servicesData && Array.isArray(servicesData.services)) {
+        setServices(servicesData.services.map((service): Service => ({
+          service_id: service.service_id,
+          service_name: service.service_name,
+          rate: service.default_rate || 0
+        })));
+      } else {
+        console.warn('Services data is not in the expected format:', servicesData);
+        setServices([]);
+      }
     } catch (err) {
       setError('Failed to load data');
       console.error('Error loading data:', err);

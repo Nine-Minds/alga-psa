@@ -551,7 +551,7 @@ export function HourlyPlanConfiguration({
             {/* Service Specific Settings */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Service Specific Hourly Rates & Settings</CardTitle>
+                    <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
                 </CardHeader>
                 <CardContent>
                     {serviceConfigs.length > 0 ? (

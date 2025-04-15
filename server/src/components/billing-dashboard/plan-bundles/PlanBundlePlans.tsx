@@ -116,7 +116,11 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
       fetchData(); // Refresh data
     } catch (error) {
       console.error('Error removing plan from bundle:', error);
-      setError('Failed to remove plan from bundle');
+      if (error instanceof Error) {
+        setError(error.message); // Preserve specific error message
+      } else {
+        setError('Failed to remove plan from bundle');
+      }
     }
   };
 
@@ -189,7 +193,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
             <DropdownMenuItem
               id="remove-bundle-plan-menu-item"
               className="text-red-600 focus:text-red-600"
-              onClick={() => handleRemovePlan(value)}
+              onClick={(e) => { e.stopPropagation(); handleRemovePlan(value); }}
             >
               Remove from Bundle
             </DropdownMenuItem>

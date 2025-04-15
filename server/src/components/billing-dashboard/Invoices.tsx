@@ -93,13 +93,13 @@ const Invoices: React.FC = () => {
         fetchAllInvoices(),
         getInvoiceTemplates(),
         getAllCompanies(false), // false to get only active companies
-        getServices()
+        getServices(1, 1000) // Get all services with a large page size
       ]);
 
       setAllInvoices(fetchedInvoices);
       setTemplates(fetchedTemplates);
       setCompanies(fetchedCompanies);
-      setServices(fetchedServices.map((service): ServiceWithRate => ({
+      setServices(fetchedServices.services.map((service): ServiceWithRate => ({
         service_id: service.service_id,
         service_name: service.service_name,
         rate: service.default_rate,
@@ -209,10 +209,20 @@ const Invoices: React.FC = () => {
     },
     {
       title: 'Amount',
-      dataIndex: 'total',
-      render: (value) => {
+      dataIndex: 'total_amount', // Use total_amount instead of total
+      render: (value, record) => {
         // Convert cents to dollars and handle potential null/undefined
-        const amount = typeof value === 'number' ? value / 100 : 0;
+        // Add more detailed debugging
+        console.log(`Rendering amount for invoice ${record.invoice_number} (${record.invoice_id}):`, {
+          value_passed_to_render: value,
+          value_type: typeof value,
+          total_amount: record.total_amount,
+          total: record.total,
+          calculated_display: typeof value === 'number' ? `$${(value / 100).toFixed(2)}` : '$0.00'
+        });
+        
+        // Force the value to be a number and use toFixed for consistent formatting
+        const amount = Number(value) / 100;
         return `$${amount.toFixed(2)}`;
       },
     },

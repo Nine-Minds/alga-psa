@@ -640,6 +640,46 @@ The billing system uses service configurations to determine billing logic. Key t
 - **`time_entries`** and **`usage_tracking`** link to **`companies`** and **`service_catalog`**.
 - **`invoices`** contain **`invoice_items`**.
 - **`invoice_items`** link to **`invoice_item_details`** (V1), which link to type-specific detail tables like **`invoice_item_fixed_details`**.
+- **Fixed Fee Invoices** follow a special path: `invoices → invoice_items → invoice_item_details → plan_service_configuration → billing_plans`.
+
+## Validation Paths for Invoiced Plans
+
+When validating if a company billing plan has been invoiced (to prevent removal or modification), the system must check multiple paths:
+
+### Traditional Path
+For most invoice items, the system looks for invoices with items linked to the plan through:
+```
+invoices → invoice_items → plan_services → billing_plans
+```
+
+### Fixed Fee Path
+For fixed fee invoices, the system must look for invoices with items linked to the plan through:
+```
+invoices → invoice_items → invoice_item_details → plan_service_configuration → billing_plans
+```
+
+This is necessary because fixed fee invoices have a special structure:
+
+1. The `invoice_items` table contains a consolidated item with:
+   - `service_id` = null
+   - A description like "Fixed Plan: [Plan Name]"
+   - The total amount for all services in the plan
+
+2. The `invoice_item_details` table contains detailed records for each service included in the fixed fee:
+   - Each record links to the consolidated item via `item_id`
+   - Each record specifies a `service_id` and `config_id`
+   - The `config_id` links to `plan_service_configuration`, which contains the `plan_id`
+
+Both paths must be checked to ensure proper validation, as fixed fee invoices don't have a direct link from invoice_items to the plan.
+
+### Handling Null Billing Period Dates
+
+Some invoices may have null `billing_period_start` and `billing_period_end` dates. In these cases, the `invoice_date` should be used as a fallback for validation purposes. This ensures that even invoices without explicit billing periods are properly considered when validating plan modifications.
+
+The validation logic in `getLatestInvoicedEndDate` (in `companyBillingPlanActions.ts`) implements this approach by:
+1. Checking both traditional and fixed fee paths
+2. Using `invoice_date` as a fallback when `billing_period_end` is null
+3. Comparing dates to find the most recent invoice across both paths
 - **`transactions`** record financial activities related to **`invoices`** and **`companies`**.
 - **`bucket_usage`** tracks usage against **`plan_service_bucket_config`**.
 - **`tax_rates`** are linked via `tax_rate_id` on **`service_catalog`** and **`company_tax_rates`**.

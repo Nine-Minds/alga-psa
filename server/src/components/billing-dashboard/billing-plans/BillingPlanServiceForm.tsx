@@ -5,7 +5,8 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { IPlanService, IService } from 'server/src/interfaces/billing.interfaces';
+import { IPlanService, IService, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { updateBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
 import {
   IPlanServiceConfiguration,
   IPlanServiceFixedConfig,
@@ -74,6 +75,10 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
   });
 
   const [typeConfig, setTypeConfig] = useState<Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null>(null);
+  const [planFixedConfig, setPlanFixedConfig] = useState<Partial<IBillingPlanFixedConfig>>({
+    enable_proration: false,
+    billing_cycle_alignment: 'start'
+  });
   const [rateTiers, setRateTiers] = useState<IPlanServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
 
@@ -98,6 +103,11 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
           });
 
           setTypeConfig(configDetails.typeConfig);
+
+          // Set plan fixed config if available
+          if (configDetails.planFixedConfig) {
+            setPlanFixedConfig(configDetails.planFixedConfig);
+          }
 
           if (configDetails.rateTiers) {
             setRateTiers(configDetails.rateTiers);
@@ -164,6 +174,10 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
     setTypeConfig(config);
   };
 
+  const handlePlanFixedConfigChange = (updates: Partial<IBillingPlanFixedConfig>) => {
+    setPlanFixedConfig(prev => ({ ...prev, ...updates }));
+  };
+
   const handleRateTiersChange = (tiers: IPlanServiceRateTier[]) => {
     setRateTiers(tiers);
   };
@@ -194,6 +208,14 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
         rateTiers // Pass the rateTiers state here
       );
 
+      // If this is a Fixed configuration, also update the plan fixed config
+      if (baseConfig.configuration_type === 'Fixed') {
+        await updateBillingPlanFixedConfig(
+          planService.plan_id,
+          planFixedConfig
+        );
+      }
+
       onServiceUpdated();
     } catch (error) {
       console.error('Error updating service:', error);
@@ -222,10 +244,12 @@ const BillingPlanServiceForm: React.FC<BillingPlanServiceFormProps> = ({
               }}
               service={service}
               typeConfig={typeConfig}
+              planFixedConfig={planFixedConfig}
               rateTiers={rateTiers}
               userTypeRates={userTypeRates}
               onConfigurationChange={handleConfigurationChange}
               onTypeConfigChange={handleTypeConfigChange}
+              onPlanFixedConfigChange={handlePlanFixedConfigChange}
               onRateTiersChange={handleRateTiersChange}
               onUserTypeRatesChange={handleUserTypeRatesChange}
               onSave={handleSubmit}

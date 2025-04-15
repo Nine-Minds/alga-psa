@@ -2,19 +2,31 @@
 
 import { Knex as KnexType } from 'knex';
 import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
-import { getConnection } from './db';
+import { getConnection } from './db'; // Use the tenant-scoped connection function
 import { getKnexConfig } from './knexfile';
 import { headers } from 'next/headers';
 import { AsyncLocalStorage } from 'async_hooks';
 
 const tenantContext = new AsyncLocalStorage<string>();
 
-interface TenantConnection {
+// Interface simplified as tenant identification is separate now
+interface DbConnection {
     knex: KnexType;
-    tenant?: string | null;
 }
 
-export async function createTenantKnex(): Promise<TenantConnection> {
+/**
+ * Retrieves the shared Knex instance.
+ * Tenant context must be managed separately, typically using runWithTenant.
+ * @deprecated Prefer using runWithTenant which handles context and provides the Knex instance. Direct use might bypass context setting.
+ */
+// Remove getKnexInstance as it's no longer relevant with tenant-scoped pools
+// export async function getKnexInstance(): Promise<DbConnection> { ... }
+
+/**
+ * Utility function to get the current tenant ID based on context, session, or headers.
+ * This can be used by callers before using runWithTenant if needed.
+ */
+export async function getCurrentTenantId(): Promise<string | null> {
     let tenant: string | null = null;
 
     // Try to get tenant from context first
@@ -25,7 +37,7 @@ export async function createTenantKnex(): Promise<TenantConnection> {
         try {
             tenant = await getTenantForCurrentRequest();
         } catch (e) {
-            console.warn('Failed to get tenant from session:', e);
+            // console.warn('Failed to get tenant from session:', e); // Reduce noise
         }
     }
 
@@ -35,18 +47,29 @@ export async function createTenantKnex(): Promise<TenantConnection> {
             const headersList = headers();
             tenant = getTenantFromHeaders(headersList);
         } catch (e) {
-            console.warn('Failed to get tenant from headers:', e);
+            // console.warn('Failed to get tenant from headers:', e); // Reduce noise
         }
     }
+    return tenant;
+}
 
-    // Get database connection
+/**
+ * @deprecated Use runWithTenant for proper tenant context management with the shared pool.
+ * This function provides backward compatibility for code still expecting the old { knex, tenant } structure.
+ * It retrieves the shared Knex instance and identifies the current tenant.
+ */
+export async function createTenantKnex(): Promise<{ knex: KnexType; tenant: string | null }> {
     try {
-        console.log(`Creating tenant connection for tenant: ${tenant || 'default'}`);
+        // Get the tenant-specific Knex instance
+        const tenant = await getCurrentTenantId();
         const knex = await getConnection(tenant);
+        // Tenant ID is already fetched above
+        // Add a warning to encourage migration
         return { knex, tenant };
+        // Remove the temporary fix attempt from the previous step as it's handled by afterCreate now
     } catch (error) {
-        console.error('Failed to create database connection:', error);
-        throw new Error(`Failed to create database connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('Failed in compatibility createTenantKnex:', error);
+        throw new Error(`Failed in compatibility createTenantKnex: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

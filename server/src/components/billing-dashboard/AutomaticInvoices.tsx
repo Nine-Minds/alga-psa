@@ -64,8 +64,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     company: string;
     period: string;
   } | null>(null);
-  const [previewData, setPreviewData] = useState<InvoiceViewModel | null>(null);
+  // State to hold both preview data and the associated billing cycle ID
+  const [previewState, setPreviewState] = useState<{
+    data: InvoiceViewModel | null;
+    billingCycleId: string | null;
+  }>({ data: null, billingCycleId: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   // State for delete confirmation
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -77,7 +82,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   } | null>(null);
   const itemsPerPage = 10;
 
-  const filteredPeriods = periods.filter(period => 
+  const filteredPeriods = periods.filter(period =>
     period.company_name.toLowerCase().includes(companyFilter.toLowerCase())
   );
 
@@ -103,6 +108,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     loadInvoicedPeriods();
   }, []);
 
+  // Debug effect to log preview data
+  useEffect(() => {
+    if (previewState.data) {
+      console.log("Preview data items:", previewState.data.invoice_items);
+      console.log("Bundle headers:", previewState.data.invoice_items.filter(item => item.is_bundle_header));
+    }
+  }, [previewState.data]);
+
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const validIds = filteredPeriods
@@ -117,7 +130,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
   const handleSelectPeriod = (billingCycleId: string | undefined, event: React.ChangeEvent<HTMLInputElement>) => {
     if (!billingCycleId) return;
-    
+
     const newSelected = new Set(selectedPeriods);
     if (event.target.checked) {
       newSelected.add(billingCycleId);
@@ -129,15 +142,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
   const handlePreviewInvoice = async (billingCycleId: string) => {
     setIsPreviewLoading(true);
+    setErrors({}); // Clear previous errors
     const response = await previewInvoice(billingCycleId);
     if (response.success) {
-      setPreviewData(response.data);
+      setPreviewState({ data: response.data, billingCycleId: billingCycleId });
       setShowPreviewDialog(true);
-      setErrors({});
     } else {
+      setPreviewState({ data: null, billingCycleId: null }); // Clear preview state on error
       setErrors({
         preview: response.error
       });
+      // Optionally open the dialog even on error to show the message
+      setShowPreviewDialog(true);
     }
     setIsPreviewLoading(false);
   };
@@ -146,7 +162,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setIsGenerating(true);
     setErrors({});
     const newErrors: {[key: string]: string} = {};
-    
+
     for (const billingCycleId of selectedPeriods) {
       try {
         await generateInvoice(billingCycleId);
@@ -154,12 +170,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         // Get company name for the failed billing cycle
         const period = periods.find(p => p.billing_cycle_id === billingCycleId);
         const companyName = period?.company_name || billingCycleId;
-        
+
         // Store error message for this company
         newErrors[companyName] = err instanceof Error ? err.message : 'Unknown error occurred';
       }
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
     } else {
@@ -173,7 +189,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       })));
       onGenerateSuccess();
     }
-    
+
     setIsGenerating(false);
   };
 
@@ -227,6 +243,29 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
       setShowDeleteDialog(false);
     }
     setIsDeleting(false);
+  };
+
+  const handleGenerateFromPreview = async () => {
+    if (!previewState.billingCycleId) return;
+
+    setIsGeneratingFromPreview(true);
+    setErrors({}); // Clear previous errors
+
+    try {
+      await generateInvoice(previewState.billingCycleId);
+      setShowPreviewDialog(false); // Close dialog on success
+      setPreviewState({ data: null, billingCycleId: null }); // Reset preview state
+      // TODO: Add success toast notification here if available
+      onGenerateSuccess(); // Refresh data lists
+    } catch (err) {
+      // TODO: Add error toast notification here if available
+      // Display error within the dialog for now, or could use main error display
+      setErrors({
+        preview: err instanceof Error ? err.message : 'Failed to generate invoice from preview'
+      });
+    } finally {
+      setIsGeneratingFromPreview(false);
+    }
   };
 
   return (
@@ -521,7 +560,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
 
       <Dialog
         isOpen={showPreviewDialog}
-        onClose={() => setShowPreviewDialog(false)}
+        // Reset preview state when dialog is closed
+        onClose={() => {
+          setShowPreviewDialog(false);
+          setPreviewState({ data: null, billingCycleId: null });
+          setErrors({}); // Clear preview-specific errors on close
+        }}
       >
         <DialogHeader>
           <DialogTitle>
@@ -535,14 +579,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         <DialogContent>
           {errors.preview ? (
             <div className="text-center py-8">
-              <p className="text-gray-600">{errors.preview}</p>
+              {/* Display error message if present */}
+              <p className="text-red-600">{errors.preview}</p>
             </div>
-          ) : previewData && (
+          ) : previewState.data && ( // Check previewState.data instead of previewData
             <div className="space-y-4">
               <div className="border-b pb-4">
                 <h3 className="font-semibold">Company Details</h3>
-                <p>{previewData.company.name}</p>
-                <p>{previewData.company.address}</p>
+                <p>{previewState.data.company.name}</p>
+                <p>{previewState.data.company.address}</p>
               </div>
 
               <div className="border-b pb-4">
@@ -550,15 +595,15 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Invoice Number</p>
-                    <p>{previewData.invoice_number}</p>
+                    <p>{previewState.data.invoice_number}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date</p>
-                    <p>{previewData.invoice_date.toLocaleString()}</p>
+                    <p>{previewState.data.invoice_date.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Due Date</p>
-                    <p>{previewData.due_date.toLocaleString()}</p>
+                    <p>{previewState.data.due_date.toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -575,27 +620,55 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                     </tr>
                   </thead>
                   <tbody>
-                    {previewData.invoice_items.map((item) => (
-                      <tr key={item.item_id} className="border-b">
-                        <td className="py-2">{item.description}</td>
-                        <td className="text-right py-2">{item.quantity}</td>
-                        <td className="text-right py-2">{formatCurrency(item.unit_price / 100)}</td>
-                        <td className="text-right py-2">{formatCurrency(item.total_price / 100)}</td>
-                      </tr>
-                    ))}
+                    {/* Map over previewState.data.invoice_items */}
+                    {previewState.data.invoice_items.map((item) => {
+                      if (item.is_bundle_header) {
+                        // Render bundle header style (Option A)
+                        return (
+                          <tr key={item.item_id} className="border-b bg-muted/50 font-semibold">
+                            {/* Use colSpan=4 to span all columns - Description, Qty, Rate, Amount */}
+                            <td className="py-2 px-2" colSpan={4}>{item.description}</td>
+                          </tr>
+                        );
+                      } else {
+                        // Check if it's a detail line (fixed-fee allocation or bundle component) by checking parent_item_id
+                        if (item.parent_item_id) {
+                          // Render detail line (blank Qty/Rate)
+                          return (
+                            <tr key={item.item_id} className="border-b">
+                              <td className="py-2 px-2">{item.description}</td>
+                              <td className="text-right py-2 px-2"></td> {/* Blank Quantity */}
+                              <td className="text-right py-2 px-2"></td> {/* Blank Rate */}
+                              <td className="text-right py-2 px-2">{formatCurrency(item.total_price / 100)}</td>
+                            </tr>
+                          );
+                        } else {
+                          // Render regular standalone item
+                          return (
+                            <tr key={item.item_id} className="border-b">
+                              <td className="py-2 px-2">{item.description}</td>
+                              <td className="text-right py-2 px-2">{item.quantity}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.unit_price / 100)}</td>
+                              <td className="text-right py-2 px-2">{formatCurrency(item.total_price / 100)}</td>
+                            </tr>
+                          );
+                        }
+                      }
+                    })}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
-                      <td className="text-right py-2">{formatCurrency(previewData.subtotal / 100)}</td>
+                      {/* Use previewState.data for totals */}
+                      <td className="text-right py-2">{formatCurrency(previewState.data.subtotal / 100)}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Tax</td>
-                      <td className="text-right py-2">{formatCurrency(previewData.tax / 100)}</td>
+                      <td className="text-right py-2">{formatCurrency(previewState.data.tax / 100)}</td>
                     </tr>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Total</td>
-                      <td className="text-right py-2">{formatCurrency(previewData.total / 100)}</td>
+                      <td className="text-right py-2">{formatCurrency(previewState.data.total / 100)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -607,9 +680,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         <DialogFooter>
           <Button
             id="close-preview-dialog-button"
-            onClick={() => setShowPreviewDialog(false)}
+            variant="outline" // Use outline for secondary action
+            onClick={() => {
+              setShowPreviewDialog(false);
+              setPreviewState({ data: null, billingCycleId: null }); // Reset state on close
+              setErrors({}); // Clear errors on close
+            }}
+            disabled={isGeneratingFromPreview} // Disable while generating
           >
             Close Preview
+          </Button>
+          {/* Add Generate Invoice button */}
+          <Button
+            id="generate-invoice-from-preview-button"
+            onClick={handleGenerateFromPreview}
+            // Disable if there's an error, no data, or generation is in progress
+            disabled={!!errors.preview || !previewState.data || isGeneratingFromPreview || isPreviewLoading}
+          >
+            {isGeneratingFromPreview ? 'Generating...' : 'Generate Invoice'}
           </Button>
         </DialogFooter>
       </Dialog>

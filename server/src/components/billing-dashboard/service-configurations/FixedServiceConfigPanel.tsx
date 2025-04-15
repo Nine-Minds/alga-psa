@@ -5,40 +5,45 @@ import { Card } from 'server/src/components/ui/Card';
 import { Label } from 'server/src/components/ui/Label';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IBillingPlanFixedConfig } from 'server/src/interfaces';
+import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces';
+import { IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
 
 interface FixedServiceConfigPanelProps {
-  configuration: Partial<IBillingPlanFixedConfig>;
-  onConfigurationChange: (updates: Partial<IBillingPlanFixedConfig>) => void;
+  configuration: Partial<IPlanServiceFixedConfig>;
+  planFixedConfig: Partial<IBillingPlanFixedConfig>;
+  onConfigurationChange: (updates: Partial<IPlanServiceFixedConfig>) => void;
+  onPlanFixedConfigChange: (updates: Partial<IBillingPlanFixedConfig>) => void;
   className?: string;
   disabled?: boolean;
 }
 
 export function FixedServiceConfigPanel({
   configuration,
+  planFixedConfig,
   onConfigurationChange,
+  onPlanFixedConfigChange,
   className = '',
   disabled = false
 }: FixedServiceConfigPanelProps) {
-  const [enableProration, setEnableProration] = useState(configuration.enable_proration || false);
+  const [enableProration, setEnableProration] = useState(planFixedConfig.enable_proration || false);
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>(
-    configuration.billing_cycle_alignment || 'start'
+    planFixedConfig.billing_cycle_alignment || 'start'
   );
 
   // Update local state when props change
   useEffect(() => {
-    setEnableProration(configuration.enable_proration || false);
-    setBillingCycleAlignment(configuration.billing_cycle_alignment || 'start');
-  }, [configuration]);
+    setEnableProration(planFixedConfig.enable_proration || false);
+    setBillingCycleAlignment(planFixedConfig.billing_cycle_alignment || 'start');
+  }, [planFixedConfig]);
 
   const handleEnableProrateChange = (checked: boolean) => {
     setEnableProration(checked);
-    onConfigurationChange({ enable_proration: checked });
+    onPlanFixedConfigChange({ enable_proration: checked });
   };
 
   const handleBillingCycleAlignmentChange = (value: string) => {
     setBillingCycleAlignment(value);
-    onConfigurationChange({ billing_cycle_alignment: value as 'start' | 'end' | 'prorated' });
+    onPlanFixedConfigChange({ billing_cycle_alignment: value as 'start' | 'end' | 'prorated' });
   };
 
   const alignmentOptions = [

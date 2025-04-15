@@ -83,8 +83,9 @@ export function FixedPlanConfiguration({
     // Fetch services for the service list component
     setLoading(true); // Consider separate loading state for services
     try {
-        const fetchedServices = await getServices();
-        setServices(fetchedServices);
+        const response = await getServices();
+        // Extract the services array from the paginated response
+        setServices(Array.isArray(response) ? response : (response.services || []));
     } catch (err) {
         console.error('Error fetching services:', err);
         setError(prev => prev ? `${prev}\nFailed to load services.` : 'Failed to load services.');
@@ -165,10 +166,11 @@ export function FixedPlanConfiguration({
   };
 
   // Service options might only be needed if the service is selectable/changeable here.
-  const serviceOptions = services.map(service => ({
+  // Add a check to ensure services is an array before mapping
+  const serviceOptions = Array.isArray(services) ? services.map(service => ({
     value: service.service_id,
     label: service.service_name
-  }));
+  })) : [];
 
   if (loading && !plan) {
     return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
@@ -191,7 +193,7 @@ export function FixedPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader>
-          <CardTitle>Fixed Plan Configuration</CardTitle>
+          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Fixed)</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {saveError && (

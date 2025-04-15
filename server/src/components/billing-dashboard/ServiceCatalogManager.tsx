@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { UnitOfMeasureInput } from './UnitOfMeasureInput';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-// Import new action and type
-import { getServices, updateService, deleteService, getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
+// Import new action and types
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
@@ -77,7 +77,9 @@ const ServiceCatalogManager: React.FC = () => {
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
   const [errorTaxRates, setErrorTaxRates] = useState<string | null>(null);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10); // Default page size
+  const [totalCount, setTotalCount] = useState(0);
   const filteredServices = services.filter(service => {
     // Get the effective service type ID (either standard or custom)
     const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
@@ -88,8 +90,30 @@ const ServiceCatalogManager: React.FC = () => {
     return categoryMatch && billingMethodMatch;
   });
 
+  // Track when page changes are from user interaction vs. programmatic updates
+  const [userChangedPage, setUserChangedPage] = useState(false);
+  
+  // Add effect to refetch data when page changes from user interaction
   useEffect(() => {
-    fetchServices();
+    if (userChangedPage) {
+      console.log(`Current page changed to: ${currentPage}, fetching data...`);
+      fetchServices(true);
+      setUserChangedPage(false);
+    }
+  }, [currentPage, userChangedPage]);
+
+  // Add effect to refetch when filters change
+  useEffect(() => {
+    // Only run this effect after initial load
+    if (services.length > 0) {
+      console.log("Filters changed, resetting to page 1 and fetching data");
+      setCurrentPage(1); // Reset to page 1 when filters change
+      fetchServices(false);
+    }
+  }, [selectedCategory, selectedBillingMethod]);
+
+  useEffect(() => {
+    fetchServices(false); // Initial fetch starts at page 1
     fetchCategories();
     fetchAllServiceTypes(); // Fetch service types
     fetchTaxRates(); // Fetch tax rates instead of regions
@@ -127,10 +151,48 @@ const ServiceCatalogManager: React.FC = () => {
    }
   };
 
-  const fetchServices = async () => {
+  // Keep track of whether we're in the middle of an update operation
+  const [isUpdatingService, setIsUpdatingService] = useState(false);
+  
+  const fetchServices = async (preservePage = false) => {
     try {
-      const fetchedServices = await getServices();
-      setServices(fetchedServices);
+      const pageToFetch = preservePage ? currentPage : 1;
+      console.log(`Fetching services for page: ${pageToFetch}, preserve page: ${preservePage}, filters: category=${selectedCategory}, billingMethod=${selectedBillingMethod}`);
+      
+      // If we're filtering, we need to fetch all services and filter client-side
+      // Otherwise, we can use server-side pagination
+      let response;
+      
+      if (selectedCategory !== 'all' || selectedBillingMethod !== 'all') {
+        // When filtering, fetch all services (with a large page size)
+        console.log("Using client-side filtering - fetching all services");
+        response = await getServices(1, 1000);
+        
+        // Update total count based on filtered results
+        const filteredCount = response.services.filter(service => {
+          const effectiveServiceTypeId = service.standard_service_type_id || service.custom_service_type_id;
+          const categoryMatch = selectedCategory === 'all' || effectiveServiceTypeId === selectedCategory;
+          const billingMethodMatch = selectedBillingMethod === 'all' || service.billing_method === selectedBillingMethod;
+          return categoryMatch && billingMethodMatch;
+        }).length;
+        
+        setTotalCount(filteredCount);
+      } else {
+        // No filtering, use server-side pagination
+        console.log("Using server-side pagination");
+        response = await getServices(pageToFetch, pageSize);
+        setTotalCount(response.totalCount);
+      }
+      
+      // Update state with the paginated response
+      setServices(response.services);
+      
+      // If we're preserving the page and response came back with a different page
+      // (which could happen if the current page no longer exists after an update)
+      if (preservePage && response.page !== currentPage) {
+        setCurrentPage(response.page);
+      }
+      
       setError(null);
     } catch (error) {
       console.error('Error fetching services:', error);
@@ -149,6 +211,18 @@ const ServiceCatalogManager: React.FC = () => {
     }
   };
 
+  // Add effect to monitor services changes and maintain pagination
+  useEffect(() => {
+    if (isUpdatingService) {
+      console.log(`Service update detected, preserving page at: ${currentPage}`);
+      // Wait for next render cycle to ensure page is preserved
+      const timer = setTimeout(() => {
+        setIsUpdatingService(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [services, isUpdatingService, currentPage]);
+
   const handleUpdateService = async () => {
     if (!editingService) return;
     // Check for either standard_service_type_id or custom_service_type_id
@@ -156,18 +230,35 @@ const ServiceCatalogManager: React.FC = () => {
       setError('Service Type is required');
       return;
     }
+    
+    // Store the current page before updating service and fetching new data
+    const pageBeforeUpdate = currentPage;
+    console.log(`Saving service changes from page: ${pageBeforeUpdate}`);
+    
     try {
       // Ensure editingService is not null and has an ID
       if (!editingService?.service_id) {
         setError('Cannot update service without an ID.');
         return;
       }
-      // Prepare payload - IService now has tax_rate_id and lacks old fields
-      await updateService(editingService.service_id, editingService);
-      setEditingService(null);
-      await fetchServices();
-      setError(null);
+      
+      // First close the dialog to avoid UI jumps
       setIsEditDialogOpen(false);
+      setEditingService(null);
+      
+      // Then update the service
+      await updateService(editingService.service_id, editingService);
+      
+      // Fetch updated services with flag to preserve page
+      await fetchServices(true);
+      
+      // Force the page to stay at the previous value
+      console.log(`Forcing page back to: ${pageBeforeUpdate}`);
+      setTimeout(() => {
+        setCurrentPage(pageBeforeUpdate);
+      }, 50);
+      
+      setError(null);
     } catch (error) {
       console.error('Error updating service:', error);
       setError('Failed to update service');
@@ -175,25 +266,61 @@ const ServiceCatalogManager: React.FC = () => {
   };
 
   const handleDeleteService = async (serviceId: string) => {
+    // Store the current page before opening the dialog
+    const currentPageBeforeDialog = currentPage;
+    
     setServiceToDelete(serviceId);
     setIsDeleteDialogOpen(true);
+    
+    // Ensure the current page is preserved
+    setCurrentPage(currentPageBeforeDialog);
   };
 
   const confirmDeleteService = async () => {
     if (!serviceToDelete) return;
+    
+    // Store current page
+    const pageBeforeDelete = currentPage;
+    console.log(`Deleting service from page: ${pageBeforeDelete}`);
 
     try {
+      // First close the dialog to avoid UI jumps
+      setIsDeleteDialogOpen(false);
+      setServiceToDelete(null);
+      
+      // Then delete the service
       await deleteService(serviceToDelete);
-      await fetchServices();
+      
+      // Fetch services with page preservation
+      await fetchServices(true);
+      
+      // Force the page to stay at the previous value
+      console.log(`Forcing page back to: ${pageBeforeDelete}`);
+      setTimeout(() => {
+        setCurrentPage(pageBeforeDelete);
+      }, 50);
+      
       setError(null);
     } catch (error) {
       console.error('Error deleting service:', error);
       setError('Failed to delete service');
-    } finally {
       setIsDeleteDialogOpen(false);
       setServiceToDelete(null);
     }
   };
+ 
+  // Handler for DataTable page changes
+  // The useCallback ensures stable reference but we need to prevent circular updates
+  const handlePageChange = useCallback((newPage: number) => {
+    console.log(`Page changed to: ${newPage}`);
+    
+    // Only update if the page is actually changing to prevent circular updates
+    if (newPage !== currentPage) {
+      // Mark that this page change was from user interaction
+      setUserChangedPage(true);
+      setCurrentPage(newPage);
+    }
+  }, [currentPage]); // Include currentPage in dependencies
 
   const getColumns = (): ColumnDefinition<IService>[] => {
     const baseColumns: ColumnDefinition<IService>[] = [
@@ -372,17 +499,29 @@ const ServiceCatalogManager: React.FC = () => {
               <QuickAddService onServiceAdded={fetchServices} allServiceTypes={allServiceTypes} /> {/* Pass prop */}
             </div>
             <DataTable
-              data={filteredServices}
+              // Memoize filteredServices to prevent unnecessary rerenders
+              data={useMemo(() => filteredServices, [JSON.stringify(filteredServices)])}
               columns={columns}
-              pagination={true}
+              pagination={true} // Keep this to enable pagination UI
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={totalCount} // Pass total count for server-side pagination
+              onPageChange={handlePageChange}
               onRowClick={(record: IService) => { // Use updated IService
+                // Store the current page before opening the dialog
+                const currentPageBeforeDialog = currentPage;
+                
                 // Add optional UI fields if needed when setting state
                 setEditingService({
                   ...record,
                   // sku: record.sku || '', // Example if sku was fetched
                 });
                 setIsEditDialogOpen(true);
+                
+                // Ensure the current page is preserved
+                setCurrentPage(currentPageBeforeDialog);
               }}
+              key={`service-catalog-table-${currentPage}`} // Include currentPage in the key to force proper re-rendering
             />
           </div>
         </CardContent>
@@ -581,8 +720,10 @@ const ServiceCatalogManager: React.FC = () => {
               setEditingService(null);
             }}>Cancel</Button>
             <Button id='save-button' onClick={() => {
+              // Just call handleUpdateService - it will close the dialog
               handleUpdateService();
-              setIsEditDialogOpen(false);
+              // Don't call setIsEditDialogOpen(false) here as it's already done in handleUpdateService
+              // and might cause race conditions with the pagination state
             }}>Save Changes</Button>
           </DialogFooter>
         </DialogContent>

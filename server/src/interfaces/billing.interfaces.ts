@@ -350,7 +350,7 @@ export interface ICreditExpirationSettings {
 }
 
 export interface ITaxRate extends TenantEntity {
-  tax_rate_id?: string;
+  tax_rate_id: string; // Changed from optional to required to match database schema
   region_code: string; // Replaced region with region_code FK (Now required for a rate)
   tax_percentage: number; // Reverted back to number
   description?: string;

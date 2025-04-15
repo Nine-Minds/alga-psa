@@ -5,7 +5,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { Checkbox } from 'server/src/components/ui/Checkbox';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
@@ -169,14 +169,11 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="is-active"
-                checked={isActive}
-                onChange={(checked) => setIsActive(!!checked)}
-              />
-              <Label htmlFor="is-active" className="cursor-pointer">Active</Label>
-            </div>
+            <SwitchWithLabel
+              label="Active"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+            />
             
             <div className="flex justify-end gap-2 pt-4">
               <Button

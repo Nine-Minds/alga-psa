@@ -168,6 +168,12 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   try {
     const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 
+    // Add this check first: If the billing engine returned a specific error, return it.
+    if (billingResult.error) {
+      return { success: false, error: billingResult.error };
+    }
+
+    // Then, check if there are no charges (and no specific error).
     if (billingResult.charges.length === 0) {
       return {
         success: false,
@@ -190,7 +196,8 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     for (const charge of billingResult.charges) {
       if (charge.company_bundle_id && charge.bundle_name) {
-        const bundleKey = `${charge.company_bundle_id}-${charge.bundle_name}`;
+        // Use only the bundle_name as the key to avoid including the ID in the description
+        const bundleKey = charge.bundle_name;
         if (!chargesByBundle[bundleKey]) {
           chargesByBundle[bundleKey] = [];
         }
@@ -224,17 +231,16 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     // Add bundle charges
     for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
-      // Extract bundle information from the first charge
-      const bundleInfo = bundleKey.split('-');
-      const companyBundleId = bundleInfo[0];
-      const bundleName = bundleInfo.slice(1).join('-');
+      // Get the bundle name and company_bundle_id from the first charge
+      const bundleName = bundleKey; // Now bundleKey is just the bundle_name
+      const companyBundleId = charges[0].company_bundle_id; // Get company_bundle_id from the first charge
 
       // Create a group header for the bundle
       const bundleHeaderId = 'preview-' + uuidv4();
       invoiceItems.push({
         item_id: bundleHeaderId,
         invoice_id: 'preview-' + billing_cycle_id,
-        description: `Bundle: ${bundleName}`,
+        description: `Bundle: ${bundleName}`, // Use only the bundle name, not the ID
         quantity: 1,
         unit_price: 0, // This is just a header, not a charged item
         total_price: 0,
@@ -508,7 +514,10 @@ export async function createInvoiceFromBillingResult(
     credit_applied: 0,
     billing_cycle_id,
     tenant,
-    is_manual: false
+    is_manual: false,
+    // Add billing period dates to ensure validation works correctly
+    billing_period_start: toPlainDate(cycleStart),
+    billing_period_end: toPlainDate(cycleEnd)
   };
 
   let newInvoice: IInvoice | null = null;
@@ -542,7 +551,7 @@ export async function createInvoiceFromBillingResult(
     throw new Error('Failed to create invoice');
   }
 
-  await knex.transaction(async (trx) => {
+  await knex.transaction(async (trx: Knex.Transaction) => {
     // Get session within transaction context if needed by persistInvoiceItems
     const session = await getServerSession(options);
     if (!session?.user?.id) {
@@ -600,10 +609,10 @@ export async function createInvoiceFromBillingResult(
       .orderBy('net_amount', 'desc');
 
     // Separate the consolidated fixed fee item (no service_id) if it exists and has tax
-    const consolidatedFixedFeeItem = items.find(item =>
+    const consolidatedFixedFeeItem = items.find((item: IInvoiceItem) =>
       item.service_id === null && // Consolidated fixed fee charges have null service_id
       item.is_taxable &&
-      parseInt(item.tax_amount) > 0 // Check if it has pre-calculated tax
+      item.tax_amount > 0 // Check if it has pre-calculated tax
     );
 
     if (consolidatedFixedFeeItem) {
@@ -612,10 +621,10 @@ export async function createInvoiceFromBillingResult(
     }
 
     // Get other positive taxable items (excluding the consolidated fixed fee one)
-    const otherPositiveTaxableItems = items.filter(item =>
+    const otherPositiveTaxableItems = items.filter((item: IInvoiceItem) =>
       item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude the fixed fee item
       item.is_taxable &&
-      parseInt(item.net_amount) > 0
+      item.net_amount > 0
     );
 
     // Calculate tax for each item based on its region, ignoring discounts
@@ -660,7 +669,7 @@ export async function createInvoiceFromBillingResult(
       for (const [region, items] of itemsByRegion) {
         // Calculate regional total from positive taxable items
         // Calculate regional total from OTHER positive taxable items
-        const regionalTotal = items.reduce((sum, item) => sum + parseInt(item.net_amount), 0);
+        const regionalTotal = items.reduce((sum: number, item: IInvoiceItem) => sum + item.net_amount, 0);
 
         // Get tax rate and amount for this region
         const regionalTaxResult = await taxService.calculateTax(
@@ -694,10 +703,10 @@ export async function createInvoiceFromBillingResult(
 
       // Ensure all other items have zero tax
       // Ensure all other items (non-taxable or discounts), EXCLUDING the fixed fee item, have zero tax
-      const itemsToZeroOut = items.filter(item =>
+      const itemsToZeroOut = items.filter((item: IInvoiceItem) =>
         item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude fixed fee
-        !otherPositiveTaxableItems.find(taxable => taxable.item_id === item.item_id) // Exclude already processed taxable items
-      ).map(item => item.item_id);
+        !otherPositiveTaxableItems.find((taxable: IInvoiceItem) => taxable.item_id === item.item_id) // Exclude already processed taxable items
+      ).map((item: IInvoiceItem) => item.item_id);
 
       if (itemsToZeroOut.length > 0) {
         await trx('invoice_items')

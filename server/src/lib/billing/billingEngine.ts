@@ -924,6 +924,10 @@ export class BillingEngine {
           tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined, // Use derived region, fallback to company default lookup
           // planId: companyBillingPlan.plan_id, // Removed - planId not part of IFixedPriceCharge
           company_billing_plan_id: companyBillingPlan.company_billing_plan_id, // Link back to the plan assignment
+          
+          // Add bundle information for all fixed charges when the plan is part of a bundle
+          company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+          bundle_name: companyBillingPlan.bundle_name || undefined,
 
           // IFixedPriceCharge specific fields (newly added)
           config_id: planService.config_id, // From the modified query
@@ -1225,7 +1229,10 @@ export class BillingEngine {
         tax_rate: taxRate,     // Set initial tax rate
         tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
         entryId: entry.entry_id,
-        is_taxable: isTaxable // Use derived value
+        is_taxable: isTaxable, // Use derived value
+        // Add bundle information when the plan is part of a bundle
+        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+        bundle_name: companyBillingPlan.bundle_name || undefined
       };
     });
 
@@ -1386,7 +1393,10 @@ export class BillingEngine {
         tax_amount: taxAmount, // Set initial tax amount
         tax_rate: taxRate,     // Set initial tax rate
         usageId: record.usage_id,
-        is_taxable: isTaxable // Use derived value
+        is_taxable: isTaxable, // Use derived value
+        // Add bundle information when the plan is part of a bundle
+        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+        bundle_name: companyBillingPlan.bundle_name || undefined
       };
     });
 
@@ -1457,7 +1467,10 @@ export class BillingEngine {
         tax_amount: taxAmount,
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
-        is_taxable: isTaxable
+        is_taxable: isTaxable,
+        // Add bundle information when the plan is part of a bundle
+        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+        bundle_name: companyBillingPlan.bundle_name || undefined
       };
       return charge;
     });
@@ -1528,7 +1541,10 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
         period_start: billingPeriod.startDate,
         period_end: billingPeriod.endDate,
-        is_taxable: isTaxable
+        is_taxable: isTaxable,
+        // Add bundle information when the plan is part of a bundle
+        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+        bundle_name: companyBillingPlan.bundle_name || undefined
       };
       return charge;
     });
@@ -1644,7 +1660,10 @@ export class BillingEngine {
           tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
           serviceId: bucketConfig.service_id, // Common field
           tax_amount: taxAmount,
-          is_taxable: isTaxable
+          is_taxable: isTaxable,
+          // Add bundle information when the plan is part of a bundle
+          company_bundle_id: billingPlan.company_bundle_id || undefined,
+          bundle_name: billingPlan.bundle_name || undefined
         };
         return charge;
       }

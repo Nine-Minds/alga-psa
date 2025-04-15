@@ -3,15 +3,16 @@
 import { IContact, MappableField, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { createTenantKnex } from 'server/src/lib/db';
+import { createTenantKnex } from 'server/src/lib/db'; // Revert to original import
+import { Knex } from 'knex'; // Import Knex type for explicit typing
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
+  // Revert to using createTenantKnex for now
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
-
   try {
     // Validate input
     if (!contactNameId) {
@@ -24,7 +25,7 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function () {
+      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
         this.on('contacts.company_id', 'companies.company_id')
           .andOn('companies.tenant', 'contacts.tenant')
       })
@@ -60,6 +61,7 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
     // For unexpected errors, throw a generic system error
     throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving contact information');
   }
+  // Remove closing bracket for runWithTenant
 }
 
 export async function deleteContact(contactId: string) {
@@ -148,7 +150,7 @@ export async function deleteContact(contactId: string) {
     }
 
     // If no dependencies, proceed with deletion
-    const result = await db.transaction(async (trx) => {
+    const result = await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
       try {
         // Delete associated tags first
         await trx('tags')
@@ -229,13 +231,13 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function () {
+      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
         this.on('contacts.company_id', 'companies.company_id')
           .andOn('companies.tenant', 'contacts.tenant')
       })
       .where('contacts.company_id', companyId)
       .andWhere('contacts.tenant', tenant)
-      .modify(function (queryBuilder) {
+      .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
         if (status !== 'all') {
           queryBuilder.where('contacts.is_inactive', status === 'inactive');
         }
@@ -329,12 +331,12 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
         'contacts.*',
         'companies.company_name'
       )
-      .leftJoin('companies', function () {
+      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
         this.on('contacts.company_id', 'companies.company_id')
           .andOn('companies.tenant', 'contacts.tenant')
       })
       .where('contacts.tenant', tenant)
-      .modify(function (queryBuilder) {
+      .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
         if (status !== 'all') {
           queryBuilder.where('contacts.is_inactive', status === 'inactive');
         }
@@ -687,7 +689,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     }, {});
 
     // Perform the update within a transaction
-    await db.transaction(async (trx) => {
+    await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
       const updated = await trx('contacts')
         .where({ company_id: companyId, tenant })
         .update({
@@ -779,7 +781,7 @@ export async function importContactsFromCSV(
     const results: ImportContactResult[] = [];
 
     // Start a transaction to ensure all operations succeed or fail together
-    await db.transaction(async (trx) => {
+    await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
       for (const contactData of contactsData) {
         try {
           // Validate required fields

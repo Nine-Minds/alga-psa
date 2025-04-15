@@ -8,7 +8,8 @@ import { AlertCircle, Loader2, ChevronDown } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
 import GenericPlanServicesList from './GenericPlanServicesList';
-import { IService } from 'server/src/interfaces/billing.interfaces';
+import { IService, IBillingPlan } from 'server/src/interfaces/billing.interfaces'; // Added IBillingPlan
+import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Added action to get base plan details
 import {
   IPlanServiceConfiguration,
   IPlanServiceBucketConfig,
@@ -18,7 +19,6 @@ import * as RadixAccordion from '@radix-ui/react-accordion';
 import { ServiceBucketConfigForm } from './ServiceBucketConfigForm';
 import { getConfigurationWithDetails, upsertPlanServiceBucketConfigurationAction } from 'server/src/lib/actions/planServiceConfigurationActions'; // Use upsertPlanServiceBucketConfigurationAction
 import { toast } from 'react-hot-toast'; // Use react-hot-toast
-
 // Type for the state holding configurations for all services
 type ServiceConfigsState = {
   [serviceId: string]: Partial<IPlanServiceBucketConfig>;
@@ -54,6 +54,7 @@ export function BucketPlanConfiguration({
   planId,
   className = '',
 }: BucketPlanConfigurationProps) {
+  const [plan, setPlan] = useState<IBillingPlan | null>(null); // State for base plan details
   const [planServices, setPlanServices] = useState<PlanServiceWithDetails[]>([]);
   const [serviceConfigs, setServiceConfigs] = useState<ServiceConfigsState>({});
   const [initialServiceConfigs, setInitialServiceConfigs] = useState<ServiceConfigsState>({});
@@ -66,9 +67,19 @@ export function BucketPlanConfiguration({
   const fetchAndInitializeConfigs = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setPlan(null); // Reset plan on fetch
     try {
+      // 0. Fetch base plan details first
+      const fetchedPlan = await getBillingPlanById(planId);
+      if (!fetchedPlan || fetchedPlan.plan_type !== 'Bucket') {
+        setError('Invalid plan type or plan not found.');
+        setLoading(false);
+        return;
+      }
+      setPlan(fetchedPlan); // Store base plan details
+
+      // 1. Fetch services associated with the plan
       const fetchedPlanServices = await getPlanServicesWithConfigurations(planId);
-      // NO filtering - We want to show ALL services associated with this Bucket Plan
       setPlanServices(fetchedPlanServices); // Use all fetched services
 
       const initialConfigs: ServiceConfigsState = {};
@@ -279,7 +290,7 @@ export function BucketPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader>
-          <CardTitle>Bucket Service Configurations</CardTitle>
+          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Bucket) - Service Configurations</CardTitle>
         </CardHeader>
         <CardContent>
           {planServices.length === 0 ? (

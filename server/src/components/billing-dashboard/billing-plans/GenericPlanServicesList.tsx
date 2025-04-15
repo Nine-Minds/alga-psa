@@ -75,11 +75,16 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
 
     try {
       // Fetch plan details, services, and configurations
-      const [planDetails, allAvailableServices, servicesWithConfigurations] = await Promise.all([
+      const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
         getBillingPlanById(planId), // Fetch the plan details
         getServices(),
         getPlanServicesWithConfigurations(planId),
       ]);
+      
+      // Extract the services array from the paginated response
+      const allAvailableServices = Array.isArray(servicesResponse)
+        ? servicesResponse
+        : (servicesResponse.services || []);
 
       if (!planDetails) {
         throw new Error(`Billing plan with ID ${planId} not found.`);

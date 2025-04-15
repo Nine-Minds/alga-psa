@@ -4,13 +4,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, Loader2 } from 'lucide-react'; // Added Loader2
+import { Plus, MoreVertical, Loader2, HelpCircle } from 'lucide-react'; // Added Loader2, HelpCircle
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from 'server/src/components/ui/DropdownMenu';
+import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip import
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { IBillingPlan, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
@@ -75,7 +76,11 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     try {
       // Fetch services with configurations to get service_type_name directly
       const servicesWithConfigs = await getPlanServicesWithConfigurations(planId);
-      const allAvailableServices = await getServices();
+      const servicesResponse = await getServices();
+      // Extract the services array from the paginated response
+      const allAvailableServices = Array.isArray(servicesResponse)
+        ? servicesResponse
+        : (servicesResponse.services || []);
       
       // No need to fetch categories separately as we get service_type_name directly
       
@@ -198,7 +203,17 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
     },
     // Removed UoM, Custom Rate, Config Type columns
     {
-      title: 'Default Rate', // Show default rate for reference
+      title: ( // Use title prop for the header content
+        <Tooltip content={ // Pass tooltip content to the 'content' prop
+          <p>Service's standard rate, used for internal value allocation and reporting within the fixed plan total. Not directly editable here.</p>
+        }>
+          {/* Children are the trigger */}
+          <span className="flex items-center cursor-help">
+            Default Rate
+            <HelpCircle className="h-4 w-4 ml-1 text-muted-foreground" />
+          </span>
+        </Tooltip>
+      ),
       dataIndex: 'default_rate',
       render: (value) => value !== undefined ? `$${Number(value).toFixed(2)}` : 'N/A', // Display rate directly as dollars
     },
@@ -257,6 +272,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
 
   return (
     // Using div instead of Card directly to avoid nested Card issues if used within another Card
+    // Removed TooltipProvider wrapper
     <div>
       {error && (
         <Alert variant="destructive" className="mb-4">
@@ -348,6 +364,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
         />
       )}
     </div>
+    // Removed TooltipProvider wrapper
   );
 };
 

@@ -380,17 +380,94 @@ async function updateManualInvoiceItemsInternal(
   }
 
   await knex.transaction(async (trx) => {
-    // Remove existing manual items first (if this is the intended logic)
-    // Or handle updates/removals based on changes.updatedItems and changes.removedItemIds
-    // The original code deleted *all* manual items and re-added new ones.
-    // Let's stick to that for now, but it might need refinement.
-    await trx('invoice_items')
-      .where({
-        invoice_id: invoiceId,
-        is_manual: true,
-        tenant
-      })
-      .delete();
+    // Process removals
+    if (changes.removedItemIds && changes.removedItemIds.length > 0) {
+      await trx('invoice_items')
+        .whereIn('item_id', changes.removedItemIds)
+        .andWhere({ tenant: tenant, is_manual: true }) // Ensure we only delete manual items intended for removal
+        .delete();
+    }
+
+    // Process updates
+    if (changes.updatedItems && changes.updatedItems.length > 0) {
+      // First pass: Update all items with their new values
+      for (const item of changes.updatedItems) {
+        const updateData = {
+          service_id: item.service_id,
+          description: item.description,
+          quantity: item.quantity,
+          // Rate is already in cents from the frontend, no need to multiply by 100
+          unit_price: item.rate !== undefined ? Math.round(item.rate) : undefined,
+          is_discount: item.is_discount,
+          discount_type: item.discount_type,
+          discount_percentage: item.discount_percentage,
+          applies_to_item_id: item.applies_to_item_id,
+          is_taxable: item.is_taxable,
+          updated_at: currentDate // Use the existing currentDate variable
+        };
+        // Filter out undefined values to avoid overwriting columns with null unnecessarily
+        const filteredUpdateData = Object.fromEntries(Object.entries(updateData).filter(([_, v]) => v !== undefined));
+
+        if (Object.keys(filteredUpdateData).length > 0) {
+           await trx('invoice_items')
+            .where({ item_id: item.item_id, tenant: tenant, is_manual: true }) // Ensure we only update manual items
+            .update(filteredUpdateData);
+        }
+      }
+      
+      // Second pass: Recalculate net_amount for discount items
+      for (const item of changes.updatedItems) {
+        if (item.is_discount) {
+          // Get the updated item from the database
+          const updatedItem = await trx('invoice_items')
+            .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+            .first();
+          
+          if (updatedItem) {
+            let applicableAmount;
+            let subtotal = 0;
+            
+            // Calculate current subtotal of non-discount items for percentage discounts
+            if (updatedItem.discount_type === 'percentage') {
+              const nonDiscountItems = await trx('invoice_items')
+                .where({ invoice_id: invoiceId, tenant: tenant })
+                .whereNot('is_discount', true)
+                .select('*');
+              
+              subtotal = nonDiscountItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
+              
+              // If discount applies to a specific item, get that item's amount
+              if (updatedItem.applies_to_item_id) {
+                const applicableItem = await trx('invoice_items')
+                  .where({ item_id: updatedItem.applies_to_item_id, tenant: tenant })
+                  .first();
+                applicableAmount = applicableItem?.net_amount;
+              }
+            }
+            
+            // Calculate new net_amount based on discount type
+            let newNetAmount;
+            if (updatedItem.discount_type === 'percentage' && updatedItem.discount_percentage !== null) {
+              const baseAmount = updatedItem.applies_to_item_id
+                ? (applicableAmount || 0)
+                : subtotal;
+              newNetAmount = -Math.round((baseAmount * updatedItem.discount_percentage) / 100);
+            } else {
+              // Fixed discount - use the unit_price
+              newNetAmount = -Math.abs(Math.round(updatedItem.unit_price));
+            }
+            
+            // Update the net_amount
+            await trx('invoice_items')
+              .where({ item_id: item.item_id, tenant: tenant, is_manual: true })
+              .update({
+                net_amount: newNetAmount,
+                total_price: newNetAmount // Also update total_price since discounts have no tax
+              });
+          }
+        }
+      }
+    }
 
     // Add new items
     if (changes.newItems && changes.newItems.length > 0) {

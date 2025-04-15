@@ -3,6 +3,7 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
+import { v4 as uuid4 } from 'uuid';
 
 export type DeleteTaxRateResult = {
   deleted: boolean;
@@ -37,8 +38,11 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
       taxRateData.end_date || null
     );
 
+    // Generate a UUID for the tax_rate_id
+    const tax_rate_id = uuid4();
+
     const [newTaxRate] = await knex('tax_rates')
-      .insert({ ...taxRateData, tenant: tenant! })
+      .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
       .returning('*');
     return newTaxRate;
   } catch (error: any) {

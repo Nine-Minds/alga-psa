@@ -22,6 +22,7 @@ const IS_DEVELOPMENT = typeof window !== 'undefined' &&
 
 interface ServiceWithRate extends Pick<IService, 'service_id' | 'service_name'> {
   rate: number;  // Maps to default_rate from IService
+  tax_rate_id?: string | null;  // Add tax_rate_id to determine taxability
 }
 
 interface SelectOption {
@@ -41,7 +42,7 @@ interface ManualInvoicesProps {
 interface EditableInvoiceItem extends Omit<IInvoiceItem, 'tenant' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by' | 'tax_region' | 'tax_rate' | 'tax_amount' | 'net_amount' | 'total_price' | 'unit_price'> {
   rate: number; // Represents unit_price for editing (in cents)
   // tax_rate_id?: string | null; // Removed
-  // is_taxable removed; derived from service tax_rate_id
+  is_taxable?: boolean; // Add is_taxable back to the interface
   isExisting?: boolean;
   isRemoved?: boolean;
 }
@@ -57,7 +58,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   is_manual: true,
   isExisting: false,
   isRemoved: false,
-  // is_taxable removed
+  is_taxable: false, // Default to non-taxable until a service with tax_rate_id is selected
   // tax_rate_id: null, // Removed
   discount_type: undefined,
   discount_percentage: undefined,
@@ -156,7 +157,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       is_bundle_header: item.is_bundle_header,
       parent_item_id: item.parent_item_id,
       is_manual: true,
-      // is_taxable removed
+      is_taxable: item.is_taxable, // Include is_taxable from the item
       // tax_rate_id: item.tax_rate_id || null, // Removed
       isExisting: true,
       isRemoved: false,
@@ -217,7 +218,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
             is_manual: true,
-            // is_taxable removed
+            is_taxable: item.is_taxable, // Include is_taxable from the item
             // tax_rate_id: item.tax_rate_id || null, // Removed
             isExisting: true,
             isRemoved: false,
@@ -375,7 +376,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           tax_amount: 0, // Calculated backend
           net_amount: 0, // Calculated backend
           is_manual: true,
-          // is_taxable removed
+          is_taxable: item.is_taxable, // Include is_taxable property
           // tax_rate_id: item.tax_rate_id, // Removed
           is_discount: item.is_discount,
           discount_type: item.discount_type,
@@ -402,7 +403,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           discount_type: item.discount_type,
           discount_percentage: item.discount_percentage,
           applies_to_item_id: item.applies_to_item_id,
-          // is_taxable removed
+          is_taxable: item.is_taxable, // Include is_taxable property
           // tax_rate_id: item.tax_rate_id, // Removed
         });
 
@@ -424,13 +425,22 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         // Refresh items from server
         const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
-        setCurrentInvoiceData(prevData => prevData ? { ...prevData, invoice_items: refreshedItems } : undefined);
-        console.log('[Submit] Updated currentInvoiceData state after refresh');
+        
+        // Fetch the updated invoice data from the server
+        // We need to create a new object with updated values since we don't have a direct way to get the full invoice
+        const updatedInvoiceData = {
+          ...currentInvoiceData,
+          invoice_items: refreshedItems
+        };
+        
+        // Update the state with the refreshed data
+        setCurrentInvoiceData(updatedInvoiceData);
+        console.log('[Submit] Updated currentInvoiceData state with refreshed items');
 
-        // Update manual items state
-        const manualItemsFromRefresh = refreshedItems.filter(item => item.is_manual);
-        console.log('[Submit] Setting manual items state after refresh:', manualItemsFromRefresh.length);
-        const mappedRefreshedManual = manualItemsFromRefresh.map((item): EditableInvoiceItem => ({
+        // Update manual items state from the refreshed items
+        const manualItemsFromRefresh = refreshedItems.filter((item: IInvoiceItem) => item.is_manual);
+        console.log('[Submit] Setting manual items state from refreshed items:', manualItemsFromRefresh.length);
+        const mappedUpdatedManual = manualItemsFromRefresh.map((item: IInvoiceItem): EditableInvoiceItem => ({
             item_id: item.item_id,
             invoice_id: item.invoice_id,
             service_id: item.service_id || '',
@@ -447,16 +457,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
             is_manual: true,
-            // is_taxable removed
-            // tax_rate_id: item.tax_rate_id || null, // Removed
+            is_taxable: item.is_taxable, // Include is_taxable from the item
             isExisting: true,
             isRemoved: false,
         }));
-        setItems(mappedRefreshedManual.length > 0 ? mappedRefreshedManual : [{
+        setItems(mappedUpdatedManual.length > 0 ? mappedUpdatedManual : [{
             ...baseDefaultItem,
             item_id: uuidv4(),
             invoice_id: currentInvoiceData.invoice_id
         }]);
+        onGenerateSuccess(); // Notify parent about successful update
 
       } else {
         // Generating a NEW manual invoice
@@ -508,7 +518,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const serviceOptions: ServiceOption[] = services.map((service): ServiceOption => ({
     value: service.service_id,
     label: service.service_name,
-    rate: service.rate // Pass rate in cents
+    rate: service.rate, // Pass rate in cents
+    tax_rate_id: service.tax_rate_id // Pass tax_rate_id to determine taxability
   }));
 
   const calculateManualItemsTotal = () => {
@@ -544,10 +555,19 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
     return calculatedSubtotal;
   }, [currentInvoiceData?.invoice_items]);
 
+  // Calculate the total based on the items
   const manualTotal = calculateManualItemsTotal(); // In cents
-  console.log('[Render] Calculated manualTotal (cents):', manualTotal);
-  const grandTotal = automatedSubtotal + manualTotal; // Both in cents
-  console.log('[Render] Calculated grandTotal (cents):', grandTotal, '=', automatedSubtotal, '+', manualTotal);
+  console.log('[Render] Calculated manualTotal from items (cents):', manualTotal);
+  const calculatedGrandTotal = automatedSubtotal + manualTotal; // Both in cents
+  console.log('[Render] Calculated grandTotal from items (cents):', calculatedGrandTotal, '=', automatedSubtotal, '+', manualTotal);
+  
+  // Log the current invoice data total for comparison
+  if (currentInvoiceData) {
+    console.log('[Render] Current invoice data total (cents):', currentInvoiceData.total_amount);
+    // The difference might help identify discrepancies
+    console.log('[Render] Difference between calculated and stored total (cents):', calculatedGrandTotal - currentInvoiceData.total_amount);
+  }
+  
   console.log('[Render] Rendering ManualInvoicesContent. currentInvoiceData items:', currentInvoiceData?.invoice_items?.length);
 
   // Helper to prepare item prop for LineItem component
@@ -558,7 +578,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       description: item.description,
       rate: item.rate, // Pass rate in cents
       // tax_rate_id: item.tax_rate_id, // Removed
-      // is_taxable removed
+      // is_taxable removed; derived from selectedService.tax_rate_id
       isExisting: item.isExisting,
       isRemoved: item.isRemoved,
       is_discount: item.is_discount,
@@ -732,15 +752,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
               <div className="flex justify-between items-center">
                 <div className="flex gap-2">
-                  <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary">
+                  <Button id='add-line-item-button' type="button" onClick={() => handleAddItem(false)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
                     <PlusIcon className="w-4 h-4 mr-2" /> Add Charge
                   </Button>
-                  <Button id='add-discount-button' type="button" onClick={() => handleAddItem(true)} variant="secondary">
+                  <Button id='add-discount-button' type="button" onClick={() => handleAddItem(true)} variant="secondary" disabled={isGenerating || expandedItems.size > 0}>
                     <MinusCircleIcon className="w-4 h-4 mr-2" /> Add Discount
                   </Button>
                 </div>
                 <div className="text-lg font-semibold">
-                  Total: ${(grandTotal / 100).toFixed(2)}
+                  {/* Always use the calculated total for consistency */}
+                  <>Total: ${(calculatedGrandTotal / 100).toFixed(2)}</>
                 </div>
               </div>
 

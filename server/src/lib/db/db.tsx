@@ -6,9 +6,6 @@ interface PoolConfig extends KnexType.PoolConfig {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
 }
 
-// Use AsyncLocalStorage for tenant context
-const asyncLocalStorage = new AsyncLocalStorage<string>();
-
 
 function isValidTenantId(tenantId: string | null | undefined): boolean {
   if (!tenantId) return true; // null/undefined is allowed
@@ -34,77 +31,104 @@ async function setTenantContext(conn: any, tenantId?: string | null): Promise<vo
     });
   }
 }
+// --- Refactored Code for Tenant-Scoped Pooling ---
+
+// Cache for tenant-specific Knex instances
+const tenantKnexInstances = new Map<string, KnexType>();
+
+/**
+ * Gets or creates a Knex instance specifically for the given tenant ID.
+ * Each instance manages its own connection pool.
+ */
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
-  console.log('Getting connection for tenant', tenantId || 'default');
+  const effectiveTenantId = tenantId || 'default'; // Use 'default' for null/undefined tenant
+
+  // Check cache first
+  if (tenantKnexInstances.has(effectiveTenantId)) {
+    // console.log(`Returning cached Knex instance for tenant: ${effectiveTenantId}`);
+    return tenantKnexInstances.get(effectiveTenantId)!;
+  }
+
+  // If not cached, create a new instance for this tenant
+  console.log(`Creating new Knex instance and pool for tenant: ${effectiveTenantId}`);
   const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
-  const config = await getKnexConfig(environment);
-  const poolConfig: PoolConfig = config.pool as PoolConfig || {};
+  const baseConfig = await getKnexConfig(environment); // Get base config
 
-  const finalConfig = {
-    ...config,
+  const tenantConfig: KnexType.Config = {
+    ...baseConfig,
     pool: {
-      ...config.pool,
+      ...baseConfig.pool,
+      // afterCreate hook specific to this tenant's pool
       afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
-        const originalAfterCreate = poolConfig.afterCreate;
-        
-        const setupConnection = async () => {
-          try {
-            await setTenantContext(conn, tenantId);
-            done(null, conn);
-          } catch (err) {
-            done(err as Error, conn);
-          }
-        };
-
-        if (originalAfterCreate) {
-          originalAfterCreate(conn, (err: Error | null) => {
-            if (err) {
-              done(err, conn);
-            } else {
-              setupConnection();
-            }
+        console.log(`Connection created in pool for tenant: ${effectiveTenantId}`);
+        // Set tenant context for every connection created in THIS pool
+        setTenantContext(conn, effectiveTenantId === 'default' ? null : effectiveTenantId)
+          .then(() => {
+             console.log(`Tenant context set to '${effectiveTenantId}' for new connection.`);
+             conn.on('error', (err: Error) => {
+               console.error(`DB Connection Error (Tenant: ${effectiveTenantId}):`, err);
+               // Optional: Attempt to remove the connection? Knex might handle this.
+             });
+             done(null, conn);
+          })
+          .catch((err) => {
+            console.error(`Failed to set tenant context for ${effectiveTenantId}:`, err);
+            done(err, conn); // Pass error to pool creation
           });
-        } else {
-          setupConnection();
-        }
       }
-    },
+    }
   };
 
-  return Knex(finalConfig);
+  const newKnexInstance = Knex(tenantConfig);
+  tenantKnexInstances.set(effectiveTenantId, newKnexInstance);
+  console.log(`Knex instance created and cached for tenant: ${effectiveTenantId}`);
+  return newKnexInstance;
 }
+
+// --- End Refactored Code ---
+
+// Keep setTenantContext for explicit use when needed outside runWithTenant
+// (though runWithTenant should be preferred)
+export { setTenantContext };
+
+// --- End Refactored Code ---
+
+// Original getConnection function is replaced by getSharedKnex
+// export async function getConnection(tenantId?: string | null): Promise<KnexType> { ... }
 
 export async function withTransaction<T>(
   tenantId: string,
   callback: (trx: KnexType.Transaction) => Promise<T>
 ): Promise<T> {
+  // Get the tenant-specific Knex instance
   const knex = await getConnection(tenantId);
+  // The afterCreate hook for this instance's pool already sets the context,
+  // so we don't need to set it explicitly within the transaction block itself.
   return knex.transaction(callback);
 }
 
-// This function is no longer needed as we're not caching connections
-export async function destroyConnection(tenantId?: string): Promise<void> {
-  console.log('destroyConnection is deprecated and has no effect');
+// --- Refactored Code ---
+// Remove deprecated functions and process handlers, Knex manages the shared pool lifecycle.
+
+// --- Refactored Code ---
+// Graceful shutdown handler for ALL tenant pools
+async function destroyAllPools() {
+  console.log('Destroying all tenant Knex pools...');
+  const destroyPromises = Array.from(tenantKnexInstances.values()).map(instance => instance.destroy());
+  await Promise.allSettled(destroyPromises);
+  console.log('All tenant Knex pools destroyed.');
+  tenantKnexInstances.clear();
 }
 
-export async function cleanupConnections(): Promise<void> {
-  console.log('cleanupConnections is deprecated and has no effect');
-}
-
-// Cleanup connections on process exit
-process.on('exit', async () => {
-  await cleanupConnections();
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM signal received.');
+  await destroyAllPools();
+  process.exit(0);
 });
 
-// Cleanup connections on unhandled rejections and exceptions
-process.on('unhandledRejection', async (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  await cleanupConnections();
-  process.exit(1);
+process.on('SIGINT', async () => {
+  console.log('SIGINT signal received.');
+  await destroyAllPools();
+  process.exit(0);
 });
-
-process.on('uncaughtException', async (error) => {
-  console.error('Uncaught Exception:', error);
-  await cleanupConnections();
-  process.exit(1);
-});
+// --- End Refactored Code ---
