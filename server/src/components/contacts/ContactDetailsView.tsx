@@ -21,6 +21,8 @@ import { IDocument } from '../../interfaces/document.interface';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
+import ContactAvatarUpload from '../client-portal/contacts/ContactAvatarUpload';
+import { getContactAvatarUrl } from '../../lib/utils/avatarUtils';
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -71,6 +73,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { openDrawer, goBack } = useDrawer();
 
   useEffect(() => {
@@ -84,6 +87,12 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         
         setTags(fetchedTags);
         setAllTagTexts(allTags);
+        
+        // Fetch contact avatar URL
+        if (userId && contact.tenant) {
+          const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
+          setAvatarUrl(contactAvatarUrl);
+        }
       } catch (err) {
         console.error('Error fetching tags:', err);
         if (err instanceof Error) {
@@ -98,7 +107,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
       }
     };
     fetchData();
-  }, [contact.contact_name_id]);
+  }, [contact.contact_name_id, contact.tenant, userId]);
 
   // Update documents when initialDocuments changes
   useEffect(() => {
@@ -208,30 +217,45 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <p className="text-red-800">{error}</p>
           </div>
         )}
-        <div className="flex justify-between items-center mb-6">
-          <Heading size="6">{contact.full_name}</Heading>
-          <div className="flex items-center space-x-2">
-            <Button
-              id={`${id}-back-button`}
-              onClick={goBack}
-              variant="ghost"
-              size="sm"
-              className="flex items-center"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <Button
-              id={`${id}-edit-button`}
-              variant="soft"
-              size="sm"
-              onClick={handleEditContact}
-              className="flex items-center"
-            >
-              <Pen className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
+        <div className="mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <Heading size="6">{contact.full_name}</Heading>
+            <div className="flex items-center space-x-2">
+              <Button
+                id={`${id}-back-button`}
+                onClick={goBack}
+                variant="ghost"
+                size="sm"
+                className="flex items-center"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                id={`${id}-edit-button`}
+                variant="soft"
+                size="sm"
+                onClick={handleEditContact}
+                className="flex items-center"
+              >
+                <Pen className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+            </div>
           </div>
+          
+          {/* Contact Avatar Upload */}
+          {userId && (
+            <div className="mb-4">
+              <ContactAvatarUpload
+                contactId={contact.contact_name_id}
+                contactName={contact.full_name}
+                avatarUrl={avatarUrl}
+                userType="internal"
+                onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+              />
+            </div>
+          )}
         </div>
         <table className="min-w-full">
           <tbody>

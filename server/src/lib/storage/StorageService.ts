@@ -1,3 +1,5 @@
+import sharp from 'sharp';
+import { fileTypeFromBuffer } from 'file-type';
 import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { StorageProviderFactory, generateStoragePath } from './StorageProviderFactory';
@@ -15,6 +17,15 @@ import {
 import { LocalProviderConfig, S3ProviderConfig } from '../../types/storage';
 import { createTenantKnex } from '../db';
 
+async function streamToBuffer(stream: Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk) => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+}
+ 
 export class StorageService {
   async getFileReadStream(fileId: string): Promise<Readable> {
     const file = await FileStoreModel.findById(fileId);
@@ -40,57 +51,133 @@ export class StorageService {
     }
 
     static async uploadFile(
-        tenant: string,
-        file: Buffer | Readable,
-        originalName: string,
-        options: {
-            mime_type?: string;
-            uploaded_by_id: string;
-            metadata?: Record<string, any>;
-        }
-    ) {
-        try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) {
-                throw new Error('User not found');
-            }
-
-            // Validate file constraints
-            if (file instanceof Buffer) {
-                validateFileConfig(options.mime_type || '', file.length);
-            }
-
-            // Get storage provider
-            const provider = await StorageProviderFactory.createProvider();
-
-            // Generate storage path based on tenant
-            const storagePath = generateStoragePath(tenant, '', originalName);
-
-            // Upload file to storage provider
-            const uploadResult = await provider.upload(file, storagePath, {
-                mime_type: options.mime_type,
-            });
-
-            // Create file record in database
-            const fileRecord = await FileStoreModel.create({
-                fileId: uuidv4(),
-                file_name: storagePath.split('/').pop()!,
-                original_name: originalName,
-                mime_type: uploadResult.mime_type,
-                file_size: uploadResult.size,
-                storage_path: uploadResult.path,
-                uploaded_by_id: currentUser.user_id,
-                metadata: options.metadata
-            });
-
-            return fileRecord;
-        } catch (error) {
-            if (error instanceof StorageError) {
-                throw error;
-            }
-            throw new Error('Failed to upload file: ' + (error as Error).message);
-        }
+    tenant: string,
+    fileInput: Buffer | Readable,
+    originalName: string,
+    options: {
+      mime_type?: string;
+      uploaded_by_id: string;
+      metadata?: Record<string, any>;
+      isImageAvatar?: boolean;
     }
+  ) {
+    try {
+      const currentUser = await getCurrentUser();
+      if (!currentUser) {
+        throw new Error('User not found');
+      }
+
+      let fileBuffer: Buffer;
+      let fileSize: number;
+
+      if (fileInput instanceof Buffer) {
+        fileBuffer = fileInput;
+        fileSize = fileBuffer.length;
+      } else if (fileInput instanceof Readable) {
+        fileBuffer = await streamToBuffer(fileInput);
+        fileSize = fileBuffer.length;
+      } else {
+        throw new Error('Invalid file input type. Must be Buffer or Readable stream.');
+      }
+
+      const originalMimeType = options.mime_type || 'application/octet-stream';
+      validateFileConfig(originalMimeType, fileSize);
+
+      let processedBuffer = fileBuffer;
+      let processedMimeType = originalMimeType;
+      let processedOriginalName = originalName;
+      let processedFileSize = fileSize;
+
+      // --- Image Processing Logic ---
+      if (options.isImageAvatar) {
+        // 1. Actual File Format Validation
+        const detectedType = await fileTypeFromBuffer(fileBuffer);
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+        if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
+          throw new StorageError(
+            `Invalid file format for avatar. Detected: ${detectedType?.mime || 'unknown'}. Allowed: ${allowedMimeTypes.join(', ')}`,
+            'INVALID_FILE_FORMAT',
+            'StorageService',
+            'upload',
+            false
+          );
+        }
+
+        // Ensure detected type matches provided mime type if available
+        if (options.mime_type && detectedType.mime !== options.mime_type) {
+            console.warn(`Provided MIME type (${options.mime_type}) differs from detected type (${detectedType.mime}). Using detected type.`);
+            // Optionally, you could throw an error here if strict matching is required.
+        }
+        processedMimeType = detectedType.mime; // Use detected type going forward
+
+        // 2. Resize/Compress, 3. Metadata Strip, Convert to WebP
+        const sharpInstance = sharp(fileBuffer)
+          .resize(256, 256, {
+            fit: 'cover', // Or 'inside' if you prefer containment
+            withoutEnlargement: true, // Don't enlarge small images
+          })
+          .webp({ quality: 80 }) // Convert to WebP
+          .withMetadata();
+
+        processedBuffer = await sharpInstance.toBuffer();
+        processedMimeType = 'image/webp'; // Update MIME type
+        processedFileSize = processedBuffer.length; // Update size
+
+        // 4. Update File Details (Name)
+        const nameParts = originalName.split('.');
+        if (nameParts.length > 1) {
+          nameParts.pop(); // Remove original extension
+        }
+        processedOriginalName = `${nameParts.join('.')}.webp`; // Add .webp extension
+      }
+      // --- End Image Processing Logic ---
+
+
+      // Get storage provider
+      const provider = await StorageProviderFactory.createProvider();
+
+      // Generate storage path based on tenant and potentially processed name
+      // Using processedOriginalName ensures the stored file reflects the .webp extension if processed
+      const storagePath = generateStoragePath(tenant, '', processedOriginalName);
+
+      // Upload processed file to storage provider
+      const uploadResult = await provider.upload(processedBuffer, storagePath, {
+        mime_type: processedMimeType, // Use processed MIME type
+      });
+
+      // Create file record in database using processed details
+      const fileRecord = await FileStoreModel.create({
+        fileId: uuidv4(),
+        file_name: storagePath.split('/').pop()!,
+        original_name: processedOriginalName,
+        mime_type: processedMimeType,
+        file_size: processedFileSize,
+        storage_path: uploadResult.path,
+        uploaded_by_id: options.uploaded_by_id || currentUser.user_id,
+        metadata: options.metadata
+      });
+
+      return fileRecord;
+    } catch (error) {
+      console.error("Error in uploadFile:", error);
+      if (error instanceof StorageError) {
+        throw error; // Re-throw specific storage errors
+      }
+      // Add specific error handling for sharp errors if needed
+      if (error instanceof Error && error.message.includes('Input buffer contains unsupported image format')) {
+          throw new StorageError(
+            'Unsupported image format provided.',
+            'UNSUPPORTED_IMAGE_FORMAT',
+            'StorageService',
+            'upload',
+            false,
+            error
+          );
+      }
+      throw new Error('Failed to upload file: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
 
     static async downloadFile(file_id: string): Promise<{
       buffer: Buffer;

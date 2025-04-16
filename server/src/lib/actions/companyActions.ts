@@ -7,7 +7,8 @@ import { createDefaultTaxSettings } from './taxSettingsActions';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getImageUrl, getDocumentTypeId, deleteDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentTypeId, deleteDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import Document from 'server/src/lib/models/document';
 import DocumentAssociation from 'server/src/lib/models/document-association';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -18,39 +19,21 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-  // Fetch company data and associated logo document ID
-  const companyData = await knex('companies as c')
-    .select('c.*', 'da.document_id') // Select document_id from association
-    .leftJoin('document_associations as da', function() {
-      this.on('da.entity_id', '=', 'c.company_id')
-          .andOn('da.tenant', '=', 'c.tenant')
-          .andOnVal('da.entity_type', '=', 'company');
-    })
-    .where({ 'c.company_id': companyId, 'c.tenant': tenant })
+  
+  // Fetch company data
+  const companyData = await knex('companies')
+    .where({ company_id: companyId, tenant })
     .first();
 
   if (!companyData) {
     return null;
   }
 
-  let logoUrl: string | null = null;
-  // Use the document_id from the association to get the file_id from the documents table
-  if (companyData.document_id) {
-      const documentRecord = await knex('documents')
-        .select('file_id')
-        .where({ document_id: companyData.document_id, tenant })
-        .first();
-
-      if (documentRecord?.file_id) {
-        logoUrl = await getImageUrl(documentRecord.file_id);
-      }
-  }
-
-  // Remove the temporary document_id before returning
-  const { document_id, ...company } = companyData;
+  // Get the company logo URL using the utility function
+  const logoUrl = await getCompanyLogoUrl(companyId, tenant);
 
   return {
-    ...company,
+    ...companyData,
     logoUrl,
   } as ICompany;
 }
@@ -250,12 +233,8 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
 
     // Process companies to add logoUrl
     const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
-      let logoUrl: string | null = null;
-      const fileId = companyData.document_id ? fileIdMap[companyData.document_id] : null;
-
-      if (fileId) {
-        logoUrl = await getImageUrl(fileId);
-      }
+      const logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
+      
       // Remove the temporary document_id before returning
       const { document_id, ...company } = companyData;
       return {
@@ -810,7 +789,7 @@ export async function uploadCompanyLogo(
     revalidatePath(`/companies/${companyId}`); // Example path
 
     // Generate the URL for the newly uploaded logo
-    const newLogoUrl = await getImageUrl(externalFileRecord.file_id);
+    const newLogoUrl = await getCompanyLogoUrl(companyId, tenant);
     console.log(`[uploadCompanyLogo] Generated new logo URL: ${newLogoUrl}`);
 
     console.log(`[uploadCompanyLogo] Upload process finished successfully for company ${companyId}. Returning URL: ${newLogoUrl}`);
