@@ -76,18 +76,43 @@ const CompanyAvatar: React.FC<CompanyAvatarProps> = ({
     className // Custom classes passed via props
   );
 
-  // Handle image load error
   const [imgError, setImgError] = React.useState(false);
-  const handleImgError = () => setImgError(true);
+  const [isLoading, setIsLoading] = React.useState(!!logoUrl);
+  const [imgKey, setImgKey] = React.useState(Date.now());
+  
+  // Reset error state when logoUrl changes
+  React.useEffect(() => {
+    if (logoUrl) {
+      console.log("CompanyAvatar: Logo URL changed:", logoUrl);
+      setImgError(false);
+      setIsLoading(true);
+      setImgKey(Date.now());
+    } else {
+      setIsLoading(false);
+    }
+  }, [logoUrl]);
+  
+  const handleImgError = () => {
+    console.error(`Failed to load company logo: ${logoUrl}`);
+    setImgError(true);
+    setIsLoading(false);
+  };
+  
+  const handleImgLoad = () => {
+    console.log("CompanyAvatar: Image loaded successfully");
+    setIsLoading(false);
+  };
 
   return (
     <div className={combinedClassName} style={sizeStyle}>
       {logoUrl && !imgError ? (
         <img
+          key={imgKey}
           src={logoUrl}
           alt={`${companyName} logo`}
           className="h-full w-full object-cover" // Ensure image covers the area
           onError={handleImgError}
+          onLoad={handleImgLoad}
         />
       ) : (
         <div

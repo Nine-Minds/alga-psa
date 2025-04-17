@@ -110,12 +110,19 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
             const timestamp = Date.now();
             const timestampedUrl = `${serverImageUrl}${serverImageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
             
-            console.log(`Setting image URL to: ${timestampedUrl}`);
-            setCurrentImageUrl(timestampedUrl);
+            console.log(`EntityImageUpload: Setting image URL to: ${timestampedUrl}`);
             
             if (onImageChange) {
-              onImageChange(serverImageUrl);
+              onImageChange(null);
             }
+            
+            setTimeout(() => {
+              setCurrentImageUrl(timestampedUrl);
+              
+              if (onImageChange) {
+                onImageChange(timestampedUrl);
+              }
+            }, 50);
           } else {
             console.warn('Upload succeeded but no image URL was returned');
           }

@@ -97,54 +97,6 @@ export function CompanyDetailsSettings() {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !companyDetails?.company_id) return;
-
-    const companyId = companyDetails.company_id;
-    const formData = new FormData();
-    formData.append('logo', file);
-
-    startUploadTransition(async () => {
-      try {
-        const result = await uploadCompanyLogo(companyId, formData);
-        if (result.success) {
-          setCompanyDetails(prev => prev ? { ...prev, logoUrl: result.logoUrl ?? null } : null);
-          setIsEditingLogo(false);
-          toast.success(result.message || 'Company logo uploaded successfully.');
-        } else {
-          throw new Error(result.message || 'Failed to upload logo.');
-        }
-      } catch (err: any) {
-        console.error('Failed to upload logo:', err);
-        toast.error(err.message || 'Failed to upload logo.');
-        // Optionally reset the file input if needed
-        e.target.value = '';
-      }
-    });
-  };
-
-  const handleDeleteLogo = () => {
-    if (!companyDetails?.company_id) return;
-    const companyId = companyDetails.company_id;
-
-    startDeleteTransition(async () => {
-      try {
-        const result = await deleteCompanyLogo(companyId);
-        if (result.success) {
-           setCompanyDetails(prev => prev ? { ...prev, logoUrl: null } : null);
-           setIsEditingLogo(false);
-          toast.success(result.message || 'Company logo deleted successfully.');
-        } else {
-          throw new Error(result.message || 'Failed to delete logo.');
-        }
-      } catch (err: any) {
-        console.error('Failed to delete logo:', err);
-        toast.error(err.message || 'Failed to delete logo.');
-      }
-    });
-  };
-
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-md p-4">
@@ -180,7 +132,7 @@ export function CompanyDetailsSettings() {
                 onImageChange={(newLogoUrl) => {
                   setCompanyDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
                 }}
-                size="lg"
+                size="xl"
               />
             )}
           </div>

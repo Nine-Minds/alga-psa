@@ -135,24 +135,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     try {
       const latestCompanyData = await getCompanyById(company.company_id);
       if (latestCompanyData) {
-        const currentLogoUrl = editedCompany.logoUrl ?? null;
-        const latestLogoUrl = latestCompanyData.logoUrl ?? null;
-
-        if (currentLogoUrl !== latestLogoUrl) {
-          console.log(`Logo URL changed. Old: ${currentLogoUrl}, New: ${latestLogoUrl}`);
-          setEditedCompany(prev => ({ ...prev, logoUrl: latestLogoUrl }));
-          // Optionally update other fields if needed, but focus is on logoUrl for now
-          // setEditedCompany(latestCompanyData); // Uncomment to refresh all data
-        } else {
-           console.log('Logo URL unchanged.');
-        }
+        setEditedCompany(latestCompanyData);
+        console.log('Company data refreshed successfully');
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
-      // Optionally show a toast notification for the error
-      // toast({ title: "Refresh Failed", description: "Could not fetch latest company data.", variant: "destructive" });
+      toast({
+        title: "Refresh Failed",
+        description: "Could not fetch latest company data.",
+        variant: "destructive"
+      });
     }
-  }, [company?.company_id, editedCompany.logoUrl]); // Dependencies for useCallback
+  }, [company?.company_id, toast]);
 
   // 2. Implement Initial Load Logic
   useEffect(() => {
@@ -161,53 +155,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     // Reset unsaved changes flag when company prop changes
     setHasUnsavedChanges(false);
   }, [company]); // Dependency on the company prop
-
+  
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (company?.company_id) {
-        console.log(`Fetching initial data for company ID: ${company.company_id}`);
-        try {
-          const latestCompanyData = await getCompanyById(company.company_id);
-          if (latestCompanyData) {
-            console.log('Setting initial fetched data:', latestCompanyData);
-            setEditedCompany(latestCompanyData);
-            setHasUnsavedChanges(false);
-          }
-        } catch (error) {
-          console.error('Error fetching initial company data:', error);
-        }
-      }
-    };
-
-    fetchInitialData();
-  }, [company?.company_id]);
-
-
-  // 3. Implement Refresh on Focus/Visibility Change (Kept for updates while page is open)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Document became visible, refreshing data...');
-        refreshCompanyData();
-      }
-    };
-
-    const handleFocus = () => {
-      console.log('Window gained focus, refreshing data...');
-      refreshCompanyData();
-    };
-
-    console.log('Adding visibility and focus listeners');
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    // Cleanup function
-    return () => {
-      console.log('Removing visibility and focus listeners');
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [refreshCompanyData]); // Dependency on refreshCompanyData
+    if (editedCompany?.logoUrl !== company?.logoUrl) {
+      console.log("Logo URL updated in state:", editedCompany?.logoUrl);
+    }
+  }, [editedCompany?.logoUrl, company?.logoUrl]);
 
   // Existing useEffect for fetching user and users
   useEffect(() => {
@@ -404,109 +357,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     }
   };
   
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const fileInput = event.target; // Store the input element
-
-    if (!file) {
-      toast({
-        title: "No file selected",
-        description: "Please select an image file to upload.",
-        variant: "destructive",
-      });
-      // Reset file input if no file is selected or selection is cancelled
-      if (fileInput) fileInput.value = '';
-      return;
-    }
-
-    // Client-side validation
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select an image file (e.g., JPG, PNG, GIF).",
-        variant: "destructive",
-      });
-      if (fileInput) fileInput.value = ''; // Reset input
-      return;
-    }
-
-    const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
-    if (file.size > maxSizeInBytes) {
-      toast({
-        title: "File Too Large",
-        description: "Please select an image file smaller than 2MB.",
-        variant: "destructive",
-      });
-      if (fileInput) fileInput.value = ''; // Reset input
-      return;
-    }
-
-    setIsUploadingLogo(true);
-    const formData = new FormData();
-    formData.append('logo', file);
-
-    try {
-      const result = await uploadCompanyLogo(editedCompany.company_id, formData);
-      if (result.success && result.logoUrl !== undefined) {
-        setEditedCompany(prev => ({ ...prev, logoUrl: result.logoUrl ?? null }));
-        toast({
-          title: "Logo Uploaded",
-          description: "Company logo updated successfully.",
-        });
-      } else {
-        throw new Error(result.message || 'Failed to upload logo');
-      }
-    } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "An error occurred while uploading the logo.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploadingLogo(false);
-      // Reset file input value so the same file can be selected again if needed
-      // Reset file input value using the stored reference
-      if (fileInput) {
-         fileInput.value = '';
-      }
-    }
-  };
-
-  const handleDeleteLogo = async () => {
-    if (!editedCompany.logoUrl) {
-        toast({ title: "No Logo Found", description: "There is no logo associated with this company to delete.", variant: "destructive" });
-        return;
-    }
-
-    // Confirmation dialog
-    if (!window.confirm("Are you sure you want to delete the company logo? This action cannot be undone.")) {
-      return;
-    }
-
-    setIsDeletingLogo(true);
-    try {
-      const result = await deleteCompanyLogo(editedCompany.company_id);
-      if (result.success) {
-        setEditedCompany(prev => ({ ...prev, logoUrl: null }));
-        toast({
-          title: "Logo Deleted",
-          description: "Company logo deleted successfully.",
-        });
-      } else {
-        throw new Error(result.message || 'Failed to delete logo');
-      }
-    } catch (error: any) {
-      console.error('Error deleting logo:', error);
-      toast({
-        title: "Deleting Failed",
-        description: error.message || "An error occurred while deleting the logo.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingLogo(false);
-    }
-  };
 
   const handleTabChange = async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -807,7 +657,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
             onImageChange={(newLogoUrl) => {
-              setEditedCompany(prev => ({ ...prev, logoUrl: newLogoUrl }));
+              console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
+              setEditedCompany(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  logoUrl: newLogoUrl
+                };
+              });
             }}
             size="md"
           />
