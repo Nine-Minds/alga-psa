@@ -22,7 +22,6 @@ import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { ArrowLeft, Globe, Upload, Trash2, Loader2, Pen } from 'lucide-react';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -37,8 +36,8 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { useToast } from 'server/src/hooks/use-toast';
+import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 
 
 const SwitchDetailItem: React.FC<{
@@ -800,87 +799,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
-          <div className="relative">
-            {/* Avatar Display */}
-            <CompanyAvatar
-              companyId={editedCompany.company_id}
-              companyName={editedCompany.company_name}
-              logoUrl={editedCompany.logoUrl ?? null}
-              size="md"
-            />
-            {/* Loading Spinner Overlay */}
-            {(isUploadingLogo || isDeletingLogo) && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              </div>
-            )}
-            {/* Edit Icon Button (only when not editing) */}
-            {!isEditingLogo && !isUploadingLogo && !isDeletingLogo && (
-              <button
-                type="button"
-                onClick={() => setIsEditingLogo(true)}
-                className="absolute bottom-0 right-0 mb-[-2px] mr-[-6px] bg-white text-gray-600 p-1 rounded-full shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500 transition-colors"
-                aria-label="Edit company logo"
-              >
-                <Pen className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          {/* Edit Controls (only when editing) */}
-          {isEditingLogo && (
-            <div className="flex flex-col space-y-1">
-              <div className="flex flex-row space-x-2 items-center">
-                <Button
-                  id="upload-logo-button-details"
-                  type="button"
-                  variant="soft"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingLogo || isDeletingLogo}
-                  className="w-fit"
-                >
-                  {isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  Upload New Logo
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoUpload}
-                  accept="image/*"
-                  className="hidden"
-                  disabled={isUploadingLogo || isDeletingLogo}
-                />
-                {editedCompany.logoUrl && (
-                  <Button
-                    id="delete-company-logo-details"
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteLogo}
-                    disabled={isDeletingLogo || isUploadingLogo}
-                    className="w-fit"
-                  >
-                    {isDeletingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                    Delete Logo
-                  </Button>
-                )}
-                <Button
-                  id="cancel-edit-logo-details"
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingLogo(false)}
-                  disabled={isUploadingLogo || isDeletingLogo}
-                  className="w-fit"
-                >
-                  Cancel
-                </Button>
-              </div>
-              {/* Text moved below buttons */}
-              <p className="text-xs text-gray-500 pl-1">Max 2MB (PNG, JPG, GIF)</p>
-            </div>
-          )}
+          <EntityImageUpload
+            entityType="company"
+            entityId={editedCompany.company_id}
+            entityName={editedCompany.company_name}
+            imageUrl={editedCompany.logoUrl ?? null}
+            uploadAction={uploadCompanyLogo}
+            deleteAction={deleteCompanyLogo}
+            onImageChange={(newLogoUrl) => {
+              setEditedCompany(prev => ({ ...prev, logoUrl: newLogoUrl }));
+            }}
+            size="md"
+          />
         </div>
 
         <Heading size="6">{editedCompany.company_name}</Heading>

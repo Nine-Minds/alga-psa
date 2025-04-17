@@ -189,7 +189,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-2">
           {/* User Avatar Upload */}
           <UserAvatarUpload
             userId={user.user_id}
@@ -197,9 +197,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
             avatarUrl={avatarUrl}
             onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
             className="mb-4"
+            size="xl"
           />
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input

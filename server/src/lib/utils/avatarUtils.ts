@@ -1,3 +1,5 @@
+'use server';
+
 import { createTenantKnex } from 'server/src/lib/db';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 
@@ -33,6 +35,7 @@ export async function getEntityImageUrl(
     
     // If no association found, return null
     if (!association?.document_id) {
+      console.log(`No document association found for ${entityType} ${entityId}`);
       return null;
     }
     
@@ -47,11 +50,22 @@ export async function getEntityImageUrl(
     
     // If no document record or no file_id, return null
     if (!documentRecord?.file_id) {
+      console.log(`No file_id found for document ${association.document_id}`);
       return null;
     }
     
     // Use the existing getImageUrl function to get the URL
-    return await getImageUrl(documentRecord.file_id);
+    const imageUrl = await getImageUrl(documentRecord.file_id);
+    
+    if (imageUrl) {
+      const timestamp = Date.now();
+      const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
+      console.log(`Generated image URL for ${entityType} ${entityId}: ${urlWithTimestamp}`);
+      return urlWithTimestamp;
+    }
+    
+    console.log(`No image URL generated for ${entityType} ${entityId}`);
+    return null;
   } catch (error) {
     console.error(`Error retrieving image URL for ${entityType} ${entityId}:`, error);
     return null;

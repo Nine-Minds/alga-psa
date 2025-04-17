@@ -6,7 +6,7 @@ interface CompanyAvatarProps {
   companyId: string | number;
   companyName: string;
   logoUrl: string | null;
-  size?: 'sm' | 'md' | 'lg' | number; // Example sizes, can be adjusted
+  size?: 'sm' | 'md' | 'lg' | 'xl' | number;
   className?: string;
 }
 
@@ -24,7 +24,7 @@ const getInitials = (name: string): string => {
 
 
 // Helper function to map size prop to Tailwind classes or style object
-const getSizeStyle = (size?: 'sm' | 'md' | 'lg' | number): { className: string; style: React.CSSProperties } => {
+const getSizeStyle = (size?: 'sm' | 'md' | 'lg' | 'xl' | number): { className: string; style: React.CSSProperties } => {
   const style: React.CSSProperties = {};
   let className = '';
 
@@ -38,14 +38,17 @@ const getSizeStyle = (size?: 'sm' | 'md' | 'lg' | number): { className: string; 
     // Using classes for predefined sizes
     switch (size) {
       case 'sm':
-        className = 'h-8 w-8 text-xs'; // Example small size
+        className = 'h-8 w-8 text-xs';
         break;
       case 'lg':
-        className = 'h-16 w-16 text-xl'; // Example large size
+        className = 'h-12 w-12 text-base';
+        break;
+      case 'xl':
+        className = 'h-16 w-16 text-xl';
         break;
       case 'md':
       default:
-        className = 'h-10 w-10 text-sm'; // Default/medium size
+        className = 'h-10 w-10 text-sm';
         break;
     }
   }
@@ -73,13 +76,18 @@ const CompanyAvatar: React.FC<CompanyAvatarProps> = ({
     className // Custom classes passed via props
   );
 
+  // Handle image load error
+  const [imgError, setImgError] = React.useState(false);
+  const handleImgError = () => setImgError(true);
+
   return (
     <div className={combinedClassName} style={sizeStyle}>
-      {logoUrl ? (
+      {logoUrl && !imgError ? (
         <img
           src={logoUrl}
           alt={`${companyName} logo`}
           className="h-full w-full object-cover" // Ensure image covers the area
+          onError={handleImgError}
         />
       ) : (
         <div

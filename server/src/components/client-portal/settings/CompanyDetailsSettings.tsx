@@ -3,7 +3,6 @@
 import { useEffect, useState, useTransition, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Pen, Loader2, Trash2, Upload } from 'lucide-react';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
@@ -11,7 +10,7 @@ import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 's
 import { getCompanyById, updateCompany, uploadCompanyLogo, deleteCompanyLogo } from 'server/src/lib/actions/companyActions';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IPermission } from 'server/src/interfaces/auth.interfaces';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 
 export function CompanyDetailsSettings() {
   const router = useRouter();
@@ -170,89 +169,20 @@ export function CompanyDetailsSettings() {
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-4">Company Logo</h3>
           <div className="flex items-center space-x-4">
-            {/* Container for Avatar and Edit Icon */}
-            <div className="relative w-24 h-24">
-              <div className="w-full h-full flex items-center justify-center overflow-hidden">
-                <CompanyAvatar
-                  companyId={companyDetails.company_id}
-                  companyName={companyDetails.company_name}
-                  logoUrl={companyDetails.logoUrl ?? null}
-                  size="lg"
-                  className="w-full h-full"
-                />
-              </div>
-              {!isEditingLogo && (
-                <button
-                  type="button"
-                  onClick={() => setIsEditingLogo(true)}
-                  disabled={isPendingUpload || isPendingDelete}
-                  className="absolute bottom-0 right-0 mb-[-4px] mr-[-4px] text-gray-700 p-1 rounded-full hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-100 transition-colors"
-                  aria-label="Edit company logo"
-                >
-                  <Pen className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <div className="flex flex-col space-y-1">
-              {/* Edit Controls - shown only when editing */}
-              {isEditingLogo && (
-                <>
-                  <div className="flex flex-row space-x-2 items-center">
-                    {/* Upload Button */}
-                    <Button
-                      id="upload-logo-button-settings"
-                      type="button"
-                      variant="soft"
-                      size="sm"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isPendingUpload || isPendingDelete}
-                      className="w-fit"
-                    >
-                      {isPendingUpload ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                      Upload New Logo
-                    </Button>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      disabled={isPendingUpload || isPendingDelete}
-                      className="hidden"
-                      ref={fileInputRef}
-                    />
-                    {companyDetails.logoUrl && (
-                      <Button
-                        id="delete-company-logo"
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDeleteLogo}
-                        disabled={isPendingDelete || isPendingUpload}
-                        className="w-fit"
-                      >
-                        {isPendingDelete ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                        Delete Logo
-                      </Button>
-                    )}
-                    <Button
-                      id="cancel-edit-logo"
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsEditingLogo(false)}
-                      disabled={isPendingUpload || isPendingDelete}
-                      className="w-fit"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500 pl-1">
-                    Max 2MB (PNG, JPG, GIF)
-                  </p>
-                  {isPendingUpload && <p className="text-sm text-blue-600">Uploading...</p>}
-                  {isPendingDelete && <p className="text-sm text-red-600">Deleting...</p>}
-                </>
-              )}
-            </div>
+            {companyDetails && (
+              <EntityImageUpload
+                entityType="company"
+                entityId={companyDetails.company_id}
+                entityName={companyDetails.company_name}
+                imageUrl={companyDetails.logoUrl ?? null}
+                uploadAction={uploadCompanyLogo}
+                deleteAction={deleteCompanyLogo}
+                onImageChange={(newLogoUrl) => {
+                  setCompanyDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
+                }}
+                size="lg"
+              />
+            )}
           </div>
         </div>
 

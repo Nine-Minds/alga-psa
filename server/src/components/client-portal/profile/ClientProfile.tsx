@@ -17,9 +17,8 @@ import type { NotificationCategory, NotificationSubtype, UserNotificationPrefere
 import type { IUserWithRoles } from 'server/src/types';
 import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
 import { toast } from 'react-hot-toast';
-import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import { getUserAvatarUrl, getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 export function ClientProfile() {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -27,7 +26,6 @@ export function ClientProfile() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
 
   // Form fields
@@ -52,11 +50,7 @@ export function ClientProfile() {
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-        
-        // Get user avatar URL
-        const avatarUrl = await getUserAvatarUrl(currentUser.user_id, currentUser.tenant);
-        setUserAvatarUrl(avatarUrl);
-        
+              
         // If this is a client user with a linked contact, get the contact avatar URL
         if (currentUser.user_type === 'client' && currentUser.contact_id) {
           const contactAvatar = await getContactAvatarUrl(currentUser.contact_id, currentUser.tenant);
@@ -198,19 +192,8 @@ export function ClientProfile() {
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* User Avatar Upload */}
-          <div className="flex flex-col space-y-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Your User Avatar</h3>
-              <UserAvatarUpload
-                userId={user.user_id}
-                userName={`${user.first_name} ${user.last_name}`}
-                avatarUrl={userAvatarUrl}
-                onAvatarChange={(newAvatarUrl) => setUserAvatarUrl(newAvatarUrl)}
-              />
-            </div>
-            
+        <CardContent className="space-y-2">
+
             {/* Contact Avatar Upload - only shown for client users with a linked contact */}
             {user.user_type === 'client' && user.contact_id && (
               <div>
@@ -225,12 +208,12 @@ export function ClientProfile() {
                   onAvatarChange={(newAvatarUrl) => setContactAvatarUrl(newAvatarUrl)}
                   userType="client"
                   userContactId={user.contact_id}
+                  size="xl"
                 />
               </div>
             )}
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input
