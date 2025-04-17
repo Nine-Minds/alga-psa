@@ -4,7 +4,7 @@ export interface IDocumentAssociation extends TenantEntity {
     association_id: string;
     document_id: string;
     entity_id: string;
-    entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
+    entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
     entered_at?: Date;
     updated_at?: Date;
     notes?: string;
@@ -14,7 +14,7 @@ export interface IDocumentAssociation extends TenantEntity {
 export interface IDocumentAssociationInput {
     document_id: string;
     entity_id: string;
-    entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
+    entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
     tenant: string;
     notes?: string;
 }

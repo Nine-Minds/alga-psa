@@ -76,13 +76,13 @@ const ContactAvatarUpload: React.FC<ContactAvatarUploadProps> = ({
       try {
         const result = await uploadContactAvatar(contactId, formData);
         if (result.success) {
-          setCurrentAvatarUrl(result.logoUrl || null);
+          setCurrentAvatarUrl(result.imageUrl || null);
           setIsEditing(false);
           toast.success('Avatar uploaded successfully.');
           
           // Notify parent component if callback provided
           if (onAvatarChange) {
-            onAvatarChange(result.logoUrl || null);
+            onAvatarChange(result.imageUrl || null);
           }
         } else {
           throw new Error(result.message || 'Failed to upload avatar.');

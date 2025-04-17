@@ -25,6 +25,14 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
     stream.on('end', () => resolve(Buffer.concat(chunks)));
   });
 }
+
+function changeFileExtension(filename: string, newExtension: string): string {
+  const nameParts = filename.split('.');
+  if (nameParts.length > 1) {
+    nameParts.pop();
+  }
+  return `${nameParts.join('.')}.${newExtension}`;
+}
  
 export class StorageService {
   async getFileReadStream(fileId: string): Promise<Readable> {
@@ -89,64 +97,46 @@ export class StorageService {
       let processedFileSize = fileSize;
 
       // --- Image Processing Logic ---
-      if (options.isImageAvatar) {
-        // 1. Actual File Format Validation
+      const isEntityImage = options.isImageAvatar ||
+        (options.metadata?.context &&
+         ['user_avatar', 'contact_avatar', 'company_logo'].includes(options.metadata.context));
+
+      if (isEntityImage) {
         const detectedType = await fileTypeFromBuffer(fileBuffer);
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
         if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
-          throw new StorageError(
-            `Invalid file format for avatar. Detected: ${detectedType?.mime || 'unknown'}. Allowed: ${allowedMimeTypes.join(', ')}`,
-            'INVALID_FILE_FORMAT',
-            'StorageService',
-            'upload',
-            false
-          );
+          throw new Error('Invalid file format. Only JPEG, PNG, GIF, WebP are allowed for avatars/logos.');
         }
 
-        // Ensure detected type matches provided mime type if available
         if (options.mime_type && detectedType.mime !== options.mime_type) {
             console.warn(`Provided MIME type (${options.mime_type}) differs from detected type (${detectedType.mime}). Using detected type.`);
-            // Optionally, you could throw an error here if strict matching is required.
         }
-        processedMimeType = detectedType.mime; // Use detected type going forward
 
-        // 2. Resize/Compress, 3. Metadata Strip, Convert to WebP
-        const sharpInstance = sharp(fileBuffer)
+        processedBuffer = await sharp(fileBuffer)
           .resize(256, 256, {
-            fit: 'cover', // Or 'inside' if you prefer containment
-            withoutEnlargement: true, // Don't enlarge small images
+            fit: 'cover',
+            withoutEnlargement: true,
           })
-          .webp({ quality: 80 }) // Convert to WebP
-          .withMetadata();
+          .webp({ quality: 85 })
+          .toBuffer();
 
-        processedBuffer = await sharpInstance.toBuffer();
-        processedMimeType = 'image/webp'; // Update MIME type
-        processedFileSize = processedBuffer.length; // Update size
+        processedMimeType = 'image/webp';
+        processedFileSize = processedBuffer.length;
 
-        // 4. Update File Details (Name)
-        const nameParts = originalName.split('.');
-        if (nameParts.length > 1) {
-          nameParts.pop(); // Remove original extension
-        }
-        processedOriginalName = `${nameParts.join('.')}.webp`; // Add .webp extension
+        processedOriginalName = changeFileExtension(originalName, 'webp');
       }
       // --- End Image Processing Logic ---
 
 
-      // Get storage provider
       const provider = await StorageProviderFactory.createProvider();
 
-      // Generate storage path based on tenant and potentially processed name
-      // Using processedOriginalName ensures the stored file reflects the .webp extension if processed
       const storagePath = generateStoragePath(tenant, '', processedOriginalName);
 
-      // Upload processed file to storage provider
       const uploadResult = await provider.upload(processedBuffer, storagePath, {
-        mime_type: processedMimeType, // Use processed MIME type
+        mime_type: processedMimeType,
       });
 
-      // Create file record in database using processed details
       const fileRecord = await FileStoreModel.create({
         fileId: uuidv4(),
         file_name: storagePath.split('/').pop()!,
