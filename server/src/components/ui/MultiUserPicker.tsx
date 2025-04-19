@@ -1,10 +1,11 @@
 // server/src/components/ui/MultiUserPicker.tsx
-import React from 'react';
-import AvatarIcon from './AvatarIcon';
+import React, { useState, useEffect, useRef } from 'react';
+import UserAvatar from 'server/src/components/settings/general/UserAvatar';
 import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, X } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface MultiUserPickerProps {
   label?: string;
@@ -25,10 +26,64 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
   loading = false,
   error = null
 }) => {
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const fetchedUserIdsRef = useRef<Set<string>>(new Set());
+  
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
   const selectedUsers = internalUsers.filter(user => values.includes(user.user_id));
+  
+  useEffect(() => {
+    // Skip if no users or no tenant available
+    if (!users.length) return;
+    
+    const tenant = users[0]?.tenant;
+    if (!tenant) return;
+    
+    const fetchAvatarUrls = async () => {
+      // Get user IDs that need avatar URLs
+      const userIds = new Set<string>();
+      
+      // Add selected users
+      selectedUsers.forEach(user => userIds.add(user.user_id));
+      
+      // Filter out already fetched user IDs
+      const userIdsToFetch = Array.from(userIds).filter(
+        userId => !fetchedUserIdsRef.current.has(userId) && avatarUrls[userId] === undefined
+      );
+      
+      if (userIdsToFetch.length === 0) return;
+      
+      // Fetch avatar URLs for all needed users
+      const urlPromises = userIdsToFetch.map(async (userId) => {
+        try {
+          fetchedUserIdsRef.current.add(userId);
+          const url = await getUserAvatarUrl(userId, tenant);
+          return { userId, url };
+        } catch (error) {
+          console.error(`Error fetching avatar URL for user ${userId}:`, error);
+          return { userId, url: null };
+        }
+      });
+      
+      const results = await Promise.all(urlPromises);
+      
+      if (results.length > 0) {
+        setAvatarUrls(prev => {
+          const newUrls = { ...prev };
+          results.forEach(result => {
+            if (result && result.userId) {
+              newUrls[result.userId] = result.url;
+            }
+          });
+          return newUrls;
+        });
+      }
+    };
+    
+    fetchAvatarUrls();
+  }, [selectedUsers, users]);
 
   const handleValueChange = (userId: string) => {
     if (values.includes(userId)) {
@@ -58,10 +113,10 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
                 key={user.user_id}
                 className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
               >
-                <AvatarIcon
+                <UserAvatar
                   userId={user.user_id}
-                  firstName={user.first_name || ''}
-                  lastName={user.last_name || ''}
+                  userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                  avatarUrl={avatarUrls[user.user_id] || null}
                   size={size === 'sm' ? 'sm' : 'md'}
                 />
                 <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
@@ -107,10 +162,10 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
         >
           <div className="flex items-center gap-2">
             {user && (
-              <AvatarIcon
+              <UserAvatar
                 userId={user.user_id}
-                firstName={user.first_name || ''}
-                lastName={user.last_name || ''}
+                userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                avatarUrl={avatarUrls[user.user_id] || null}
                 size={size === 'sm' ? 'sm' : 'md'}
               />
             )}
@@ -142,10 +197,10 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
                   key={user.user_id}
                   className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
                 >
-                  <AvatarIcon
+                  <UserAvatar
                     userId={user.user_id}
-                    firstName={user.first_name || ''}
-                    lastName={user.last_name || ''}
+                    userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                    avatarUrl={avatarUrls[user.user_id] || null}
                     size={size === 'sm' ? 'sm' : 'md'}
                   />
                   <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>

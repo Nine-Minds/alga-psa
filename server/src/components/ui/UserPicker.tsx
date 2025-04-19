@@ -1,9 +1,10 @@
 // server/src/components/ui/UserPicker.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/settings/general/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface UserPickerProps {
   label?: string;
@@ -33,6 +34,8 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const fetchedUserIdsRef = useRef<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -42,11 +45,69 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   
   const currentUser = internalUsers.find(user => user.user_id === value);
   
-  // Filter users based on search query
   const filteredUsers = internalUsers.filter(user => {
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
+  
+  // Fetch avatar URLs for visible users
+  useEffect(() => {
+    // Skip if no users or no tenant available
+    if (!users.length) return;
+    
+    const tenant = currentUser?.tenant || users[0]?.tenant;
+    if (!tenant) return;
+    
+    const fetchAvatarUrls = async () => {
+      const userIds = new Set<string>();
+      
+      // Add current user if selected
+      if (currentUser?.user_id) {
+        userIds.add(currentUser.user_id);
+      }
+      
+      // Add filtered users when dropdown is open
+      if (isOpen) {
+        // Limit to first 20 users to prevent performance issues with large lists
+        const limitedUsers = filteredUsers.slice(0, 20);
+        limitedUsers.forEach(user => userIds.add(user.user_id));
+      }
+      
+      const userIdsToFetch = Array.from(userIds).filter(
+        userId => !fetchedUserIdsRef.current.has(userId) && avatarUrls[userId] === undefined
+      );
+      
+      if (userIdsToFetch.length === 0) return;
+      
+      // Fetch avatar URLs for all needed users
+      const urlPromises = userIdsToFetch.map(async (userId) => {
+        try {
+          fetchedUserIdsRef.current.add(userId);
+          const url = await getUserAvatarUrl(userId, tenant);
+          return { userId, url };
+        } catch (error) {
+          console.error(`Error fetching avatar URL for user ${userId}:`, error);
+          return { userId, url: null };
+        }
+      });
+      
+      const results = await Promise.all(urlPromises);
+      
+      if (results.length > 0) {
+        setAvatarUrls(prev => {
+          const newUrls = { ...prev };
+          results.forEach(result => {
+            if (result && result.userId) {
+              newUrls[result.userId] = result.url;
+            }
+          });
+          return newUrls;
+        });
+      }
+    };
+    
+    fetchAvatarUrls();
+  }, [currentUser, isOpen, filteredUsers, users]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -163,10 +224,10 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       >
         <div className="flex items-center gap-2 flex-1">
           {currentUser && (
-            <AvatarIcon
+            <UserAvatar
               userId={currentUser.user_id}
-              firstName={currentUser.first_name || ''}
-              lastName={currentUser.last_name || ''}
+              userName={`${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim()}
+              avatarUrl={avatarUrls[currentUser.user_id] || null}
               size={size === 'sm' ? 'sm' : 'md'}
             />
           )}
@@ -229,10 +290,10 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
                   onClick={(e) => handleSelectUser(user.user_id, e)}
                 >
                   <div className="flex items-center gap-2">
-                    <AvatarIcon
+                    <UserAvatar
                       userId={user.user_id}
-                      firstName={user.first_name || ''}
-                      lastName={user.last_name || ''}
+                      userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                      avatarUrl={avatarUrls[user.user_id] || null}
                       size={size === 'sm' ? 'sm' : 'md'}
                     />
                     <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>

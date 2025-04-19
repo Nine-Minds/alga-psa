@@ -4,6 +4,8 @@ import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUs
 import { getAllUsers, getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
+import UserAvatar from './UserAvatar';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -18,11 +20,70 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
   const [selectedUserId, setSelectedUserId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
     fetchTeamDetails();
     fetchAllUsers();
   }, [teamId]);
+
+  // Fetch avatar URLs for users
+  useEffect(() => {
+    // Skip if we don't have the necessary data yet
+    if (loading || !team || allUsers.length === 0) {
+      return;
+    }
+
+    const fetchAvatarUrls = async () => {
+      // Collect all user IDs (manager + members)
+      const userIds = new Set<string>();
+      
+      if (team.manager_id) {
+        userIds.add(team.manager_id);
+      }
+      
+      team.members.forEach(member => {
+        userIds.add(member.user_id);
+      });
+
+      const usersToFetch = Array.from(userIds).filter(
+        userId => userAvatars[userId] === undefined
+      );
+      
+      if (usersToFetch.length === 0) {
+        return;
+      }
+
+      const avatarPromises = usersToFetch.map(async (userId) => {
+        try {
+          const user = allUsers.find(u => u.user_id === userId) ||
+                      team.members.find(m => m.user_id === userId);
+          if (!user) return { userId, avatarUrl: null };
+          
+          if (!user.tenant) {
+            return { userId, avatarUrl: null };
+          }
+          
+          const avatarUrl = await getUserAvatarUrl(userId, user.tenant);
+          return { userId, avatarUrl };
+        } catch (error) {
+          console.error(`Error fetching avatar for user ${userId}:`, error);
+          return { userId, avatarUrl: null };
+        }
+      });
+
+      const avatarResults = await Promise.all(avatarPromises);
+      const newAvatars = avatarResults.reduce((acc, { userId, avatarUrl }) => {
+        acc[userId] = avatarUrl;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      // Update state with new avatars only
+      setUserAvatars(prev => ({...prev, ...newAvatars}));
+    };
+
+    fetchAvatarUrls();
+  }, [team?.team_id, loading]); // Only re-run when team ID changes or loading state changes
 
   const fetchTeamDetails = async (): Promise<void> => {
     try {
@@ -45,6 +106,9 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
   const fetchAllUsers = async (): Promise<void> => {
     try {
       const users = await getAllUsers();
+      
+      // No need to check for tenant information now that we know it works
+      
       setAllUsers(users);
     } catch (err) {
       console.error('Error fetching users:', err);
@@ -158,10 +222,22 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
 
       <div>
         <label className="block text-sm font-medium text-text-700 mb-1">Team Manager</label>
-        <div className="text-text-600 mb-2">
-          {team.manager_id 
-            ? `${allUsers.find(u => u.user_id === team.manager_id)?.first_name} ${allUsers.find(u => u.user_id === team.manager_id)?.last_name}` 
-            : 'No manager assigned'}
+        <div className="flex items-center space-x-2 text-text-600 mb-2">
+          {team.manager_id ? (
+            <>
+              <UserAvatar
+                userId={team.manager_id}
+                userName={`${allUsers.find(u => u.user_id === team.manager_id)?.first_name || ''} ${allUsers.find(u => u.user_id === team.manager_id)?.last_name || ''}`}
+                avatarUrl={userAvatars[team.manager_id] || null}
+                size="sm"
+              />
+              <span>
+                {allUsers.find(u => u.user_id === team.manager_id)?.first_name} {allUsers.find(u => u.user_id === team.manager_id)?.last_name}
+              </span>
+            </>
+          ) : (
+            'No manager assigned'
+          )}
         </div>
         <div className="flex gap-2">
           <UserPicker
@@ -212,12 +288,20 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
         <ul className="space-y-2">
           {team.members.map((member): JSX.Element => (
             <li key={member.user_id} className="flex items-center justify-between p-3 rounded border border-border-200 hover:border-primary-200 transition-colors">
-              <div>
-                <div className="font-medium text-text-800">
-                  {member.first_name} {member.last_name}
-                </div>
-                <div className="text-sm text-text-600">
-                  {member.roles.map((role): string => role.role_name).join(', ')}
+              <div className="flex items-center space-x-3">
+                <UserAvatar
+                  userId={member.user_id}
+                  userName={`${member.first_name || ''} ${member.last_name || ''}`}
+                  avatarUrl={userAvatars[member.user_id] || null}
+                  size="sm"
+                />
+                <div>
+                  <div className="font-medium text-text-800">
+                    {member.first_name} {member.last_name}
+                  </div>
+                  <div className="text-sm text-text-600">
+                    {member.roles.map((role): string => role.role_name).join(', ')}
+                  </div>
                 </div>
               </div>
               <button

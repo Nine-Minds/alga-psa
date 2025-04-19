@@ -1,9 +1,11 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import UserDetails from './UserDetails';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
+import UserAvatar from './UserAvatar';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface UserListProps {
   users: IUser[];
@@ -13,7 +15,45 @@ interface UserListProps {
 
 const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
+  const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
   const { openDrawer } = useDrawer();
+
+  useEffect(() => {
+    // Fetch avatar URLs for all users
+    const fetchAvatarUrls = async () => {
+      // Only fetch avatars for users we don't already have
+      const usersToFetch = users.filter(
+        user => userAvatars[user.user_id] === undefined
+      );
+      
+      if (usersToFetch.length === 0) {
+        return;
+      }
+      
+      const avatarPromises = usersToFetch.map(async (user) => {
+        try {
+          const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+          return { userId: user.user_id, avatarUrl };
+        } catch (error) {
+          console.error(`Error fetching avatar for user ${user.user_id}:`, error);
+          return { userId: user.user_id, avatarUrl: null };
+        }
+      });
+
+      const avatarResults = await Promise.all(avatarPromises);
+      const newAvatars = avatarResults.reduce((acc, { userId, avatarUrl }) => {
+        acc[userId] = avatarUrl;
+        return acc;
+      }, {} as Record<string, string | null>);
+
+      // Update state with new avatars only
+      setUserAvatars(prev => ({...prev, ...newAvatars}));
+    };
+
+    if (users.length > 0) {
+      fetchAvatarUrls();
+    }
+  }, [users.length]); // Only re-run when the number of users changes
 
   const handleDeleteClick = async (user: IUser): Promise<void> => {
     setUserToDelete(user);
@@ -34,6 +74,17 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
     {
       title: 'First Name',
       dataIndex: 'first_name',
+      render: (firstName: string, record: IUser) => (
+        <div className="flex items-center space-x-3">
+          <UserAvatar
+            userId={record.user_id}
+            userName={`${record.first_name || ''} ${record.last_name || ''}`}
+            avatarUrl={userAvatars[record.user_id] || null}
+            size="sm"
+          />
+          <span>{firstName}</span>
+        </div>
+      ),
     },
     {
       title: 'Last Name',
