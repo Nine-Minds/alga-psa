@@ -51,12 +51,24 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(imageUrl);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update local state when prop changes
   React.useEffect(() => {
     setCurrentImageUrl(imageUrl);
+    // Clear any preview when the actual image changes
+    setPreviewUrl(null);
   }, [imageUrl]);
+
+  // Clean up object URLs when component unmounts or preview changes
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   // Determine if the current user has permission to modify this entity's image
   const canModifyImage = React.useMemo(() => {
@@ -94,15 +106,15 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
 
     // Create a local object URL for immediate display
     const localImageUrl = URL.createObjectURL(file);
-    setCurrentImageUrl(localImageUrl);
+    // Set the preview URL for immediate feedback
+    setPreviewUrl(localImageUrl);
 
     startUploadTransition(async () => {
       try {
         const result = await uploadAction(entityId, formData);
         
         if (result.success) {
-          // Revoke the temporary object URL to free up memory
-          URL.revokeObjectURL(localImageUrl);
+          // Preview URL will be cleaned up in the useEffect
           
           const serverImageUrl = result.imageUrl || null;
           
@@ -112,10 +124,14 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
             
             console.log(`EntityImageUpload: Setting image URL to: ${timestampedUrl}`);
             
+            // Clear the preview first
+            setPreviewUrl(null);
+            
             if (onImageChange) {
               onImageChange(null);
             }
             
+            // Small delay to allow for transition effects
             setTimeout(() => {
               setCurrentImageUrl(timestampedUrl);
               
@@ -130,12 +146,21 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
           setIsEditing(false);
           toast.success(result.message || `${entityType} image uploaded successfully.`);
         } else {
-          URL.revokeObjectURL(localImageUrl);
+          // Clear the preview on error
+          setPreviewUrl(null);
           setCurrentImageUrl(imageUrl);
           throw new Error(result.error || `Failed to upload ${entityType} image.`);
         }
       } catch (err: any) {
-        console.error(`Failed to upload ${entityType} image:`, err);
+        console.error(`[EntityImageUpload] Failed to upload ${entityType} image:`, {
+          operation: 'handleImageUpload',
+          entityType,
+          entityId,
+          entityName,
+          errorMessage: err.message || 'Unknown error',
+          errorStack: err.stack,
+          errorName: err.name
+        });
         toast.error(err.message || `Failed to upload ${entityType} image.`);
         URL.revokeObjectURL(localImageUrl);
         setCurrentImageUrl(imageUrl);
@@ -164,19 +189,30 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
           throw new Error(result.error || `Failed to delete ${entityType} image.`);
         }
       } catch (err: any) {
-        console.error(`Failed to delete ${entityType} image:`, err);
+        console.error(`[EntityImageUpload] Failed to delete ${entityType} image:`, {
+          operation: 'handleDeleteImage',
+          entityType,
+          entityId,
+          entityName,
+          errorMessage: err.message || 'Unknown error',
+          errorStack: err.stack,
+          errorName: err.name
+        });
         toast.error(err.message || `Failed to delete ${entityType} image.`);
       }
     });
   };
 
   const renderAvatar = () => {
+    // Use the preview URL if available, otherwise use the current image URL
+    const displayUrl = previewUrl || currentImageUrl;
+    
     if (entityType === 'company') {
       return (
         <CompanyAvatar
           companyId={entityId}
           companyName={entityName}
-          logoUrl={currentImageUrl}
+          logoUrl={displayUrl}
           size={size}
         />
       );
@@ -185,7 +221,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         <UserAvatar
           userId={entityId}
           userName={entityName}
-          avatarUrl={currentImageUrl}
+          avatarUrl={displayUrl}
           size={size}
         />
       );

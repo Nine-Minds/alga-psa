@@ -77,7 +77,16 @@ export async function uploadEntityImage(
       try {
         await StorageService.deleteFile(externalFileRecord.file_id, userId);
       } catch (deleteError) {
-        console.error(`Failed to clean up file after document creation failure:`, deleteError);
+        console.error(`[EntityImageService] Failed to clean up file after document creation failure:`, {
+          operation: 'cleanupAfterFailure',
+          fileId: externalFileRecord.file_id,
+          entityType,
+          entityId,
+          tenant,
+          errorMessage: deleteError instanceof Error ? deleteError.message : 'Unknown error',
+          errorStack: deleteError instanceof Error ? deleteError.stack : undefined,
+          errorName: deleteError instanceof Error ? deleteError.name : undefined
+        });
       }
       throw new Error('Failed to create document record');
     }
@@ -124,7 +133,18 @@ export async function uploadEntityImage(
       try {
         await deleteDocument(oldDocumentIdToDelete, userId);
       } catch (deleteError) {
-        console.error(`Error deleting old document:`, deleteError);
+        console.error(`[EntityImageService] Failed to delete old document during image replacement:`, {
+          operation: 'deleteOldDocument',
+          oldDocumentId: oldDocumentIdToDelete,
+          newDocumentId: createdDocument.document_id,
+          entityType,
+          entityId,
+          tenant,
+          userId,
+          errorMessage: deleteError instanceof Error ? deleteError.message : 'Unknown error',
+          errorStack: deleteError instanceof Error ? deleteError.stack : undefined,
+          errorName: deleteError instanceof Error ? deleteError.name : undefined
+        });
         // Continue since the main operation succeeded
       }
     }
@@ -134,7 +154,17 @@ export async function uploadEntityImage(
     
     return { success: true, imageUrl };
   } catch (error) {
-    console.error(`Error uploading ${entityType} image:`, error);
+    console.error(`[EntityImageService] Failed to upload image for ${entityType} (ID: ${entityId}):`, {
+      operation: 'uploadEntityImage',
+      entityType,
+      entityId,
+      tenant,
+      fileName: file.name,
+      fileSize: file.size,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined
+    });
     const message = error instanceof Error ? error.message : `Failed to upload ${entityType} image`;
     return { success: false, message };
   }
@@ -179,7 +209,16 @@ export async function deleteEntityImage(
 
     return { success: true, message: `${entityType} image deleted successfully.` };
   } catch (error) {
-    console.error(`Error deleting ${entityType} image:`, error);
+    console.error(`[EntityImageService] Failed to delete image for ${entityType} (ID: ${entityId}):`, {
+      operation: 'deleteEntityImage',
+      entityType,
+      entityId,
+      tenant,
+      userId,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined
+    });
     const message = error instanceof Error ? error.message : `Failed to delete ${entityType} image`;
     return { success: false, message };
   }

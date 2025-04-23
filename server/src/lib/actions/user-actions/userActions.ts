@@ -647,7 +647,13 @@ export async function uploadUserAvatar(
     };
 
   } catch (error: any) {
-    console.error('Error uploading user avatar:', error);
+    console.error('[UserActions] Failed to upload user avatar:', {
+      operation: 'uploadUserAvatar',
+      userId,
+      errorMessage: error.message || 'Unknown error',
+      errorStack: error.stack,
+      errorName: error.name
+    });
     return { success: false, error: error.message || 'An unexpected error occurred while uploading the avatar.' };
   }
 }
@@ -710,7 +716,13 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
     return { success: true, message: deleteResult.message || 'Avatar deleted successfully.' };
 
   } catch (error: any) {
-    console.error(`Error deleting user avatar for user ${userId}:`, error);
+    console.error(`[UserActions] Failed to delete user avatar:`, {
+      operation: 'deleteUserAvatar',
+      userId,
+      errorMessage: error.message || 'Unknown error',
+      errorStack: error.stack,
+      errorName: error.name
+    });
     return { success: false, error: error.message || 'An unexpected error occurred while deleting the avatar.' };
   }
 }

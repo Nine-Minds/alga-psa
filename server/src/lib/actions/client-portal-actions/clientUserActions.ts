@@ -278,7 +278,15 @@ export async function uploadContactAvatar(
     // Generate the URL for the newly uploaded avatar
     return { success: true, imageUrl: uploadResult.imageUrl };
   } catch (error) {
-    console.error('[uploadContactAvatar] Error during upload process:', error);
+    console.error('[ClientUserActions] Failed to upload contact avatar:', {
+      operation: 'uploadContactAvatar',
+      contactId,
+      userId: currentUser.user_id,
+      tenant,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined
+    });
     const message = error instanceof Error ? error.message : 'Failed to upload contact avatar';
     return { success: false, message };
   }
@@ -388,9 +396,16 @@ export async function deleteContactAvatar(
 
     return { success: true };
   } catch (error) {
-    console.error('Error deleting contact avatar:', error);
+    console.error('[ClientUserActions] Failed to delete contact avatar:', {
+      operation: 'deleteContactAvatar',
+      contactId,
+      userId: currentUser.user_id,
+      tenant,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined
+    });
     const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
     return { success: false, message };
   }
 }
-

@@ -67,7 +67,15 @@ export async function getEntityImageUrl(
     console.log(`No image URL generated for ${entityType} ${entityId}`);
     return null;
   } catch (error) {
-    console.error(`Error retrieving image URL for ${entityType} ${entityId}:`, error);
+    console.error(`[AvatarUtils] Failed to retrieve image URL for ${entityType} (ID: ${entityId}):`, {
+      operation: 'getEntityImageUrl',
+      entityType,
+      entityId,
+      tenant,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      errorName: error instanceof Error ? error.name : undefined
+    });
     return null;
   }
 }
