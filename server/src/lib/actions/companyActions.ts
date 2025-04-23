@@ -4,53 +4,32 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { createDefaultTaxSettings } from './taxSettingsActions';
-import { StorageService } from 'server/src/lib/storage/StorageService';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getImageUrl, getDocumentTypeId, deleteDocument } from 'server/src/lib/actions/document-actions/documentActions';
-import Document from 'server/src/lib/models/document';
-import DocumentAssociation from 'server/src/lib/models/document-association';
-import { IDocument } from 'server/src/interfaces/document.interface';
-import { v4 as uuidv4 } from 'uuid'; 
+import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
-  // Fetch company data and associated logo document ID
-  const companyData = await knex('companies as c')
-    .select('c.*', 'da.document_id') // Select document_id from association
-    .leftJoin('document_associations as da', function() {
-      this.on('da.entity_id', '=', 'c.company_id')
-          .andOn('da.tenant', '=', 'c.tenant')
-          .andOnVal('da.entity_type', '=', 'company');
-    })
-    .where({ 'c.company_id': companyId, 'c.tenant': tenant })
+  
+  // Fetch company data
+  const companyData = await knex('companies')
+    .where({ company_id: companyId, tenant })
     .first();
 
   if (!companyData) {
     return null;
   }
 
-  let logoUrl: string | null = null;
-  // Use the document_id from the association to get the file_id from the documents table
-  if (companyData.document_id) {
-      const documentRecord = await knex('documents')
-        .select('file_id')
-        .where({ document_id: companyData.document_id, tenant })
-        .first();
-
-      if (documentRecord?.file_id) {
-        logoUrl = await getImageUrl(documentRecord.file_id);
-      }
-  }
-
-  // Remove the temporary document_id before returning
-  const { document_id, ...company } = companyData;
+  // Get the company logo URL using the utility function
+  const logoUrl = await getCompanyLogoUrl(companyId, tenant);
 
   return {
-    ...company,
+    ...companyData,
     logoUrl,
   } as ICompany;
 }
@@ -250,12 +229,8 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
 
     // Process companies to add logoUrl
     const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
-      let logoUrl: string | null = null;
-      const fileId = companyData.document_id ? fileIdMap[companyData.document_id] : null;
-
-      if (fileId) {
-        logoUrl = await getImageUrl(fileId);
-      }
+      const logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
+      
       // Remove the temporary document_id before returning
       const { document_id, ...company } = companyData;
       return {
@@ -695,126 +670,25 @@ export async function uploadCompanyLogo(
   // TODO: Add permission check here if needed, verifying user can modify this companyId
 
   try {
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-    // 1. Upload file using StorageService (creates external_files record)
-    const externalFileRecord = await StorageService.uploadFile(
-      tenant,
-      fileBuffer,
-      file.name,
-      {
-        mime_type: file.type,
-        uploaded_by_id: currentUser.user_id,
-        metadata: { context: 'company_logo', companyId: companyId }
-      }
+    const result = await uploadEntityImage(
+      'company',
+      companyId,
+      file,
+      currentUser.user_id,
+      tenant
     );
 
-    if (!externalFileRecord?.file_id) {
-      console.error('StorageService.uploadFile failed to return a valid external_files record:', externalFileRecord);
-      throw new Error('File storage failed.');
+    if (!result.success) {
+      return { success: false, message: result.message };
     }
 
-    // 2. Create a corresponding 'documents' record
-    const { typeId, isShared } = await getDocumentTypeId(file.type); // Get appropriate type ID
-    const newDocumentId = uuidv4();
+    // Invalidate cache for relevant paths
+    revalidatePath(`/client-portal/settings`);
+    revalidatePath(`/companies/${companyId}`);
+    revalidatePath(`/settings/general`); // Also invalidate general settings where company logo might appear
 
-    const documentData: Omit<IDocument, 'document_id' | 'created_by_full_name' | 'type_name' | 'type_icon' | 'entered_at' | 'updated_at' | 'edited_by'> = {
-      document_name: file.name,
-      type_id: isShared ? null : typeId,
-      shared_type_id: isShared ? typeId : undefined,
-      user_id: currentUser.user_id, // Use current user ID
-      order_number: 0,
-      created_by: currentUser.user_id,
-      tenant,
-      file_id: externalFileRecord.file_id, // Link to the external file
-      storage_path: externalFileRecord.storage_path,
-      mime_type: file.type,
-      file_size: file.size,
-    };
-
-    const createdDocument = await Document.insert({
-        ...documentData,
-        document_id: newDocumentId // Provide the generated UUID
-    });
-
-    if (!createdDocument?.document_id) {
-        console.error('Failed to create document record in documents table:', createdDocument);
-        // Consider deleting the uploaded external file if document creation fails
-        try {
-            await StorageService.deleteFile(externalFileRecord.file_id, currentUser.user_id);
-        } catch (deleteError) {
-            console.error(`Failed to clean up external file ${externalFileRecord.file_id} after document creation failure:`, deleteError);
-        }
-        throw new Error('Failed to create document record.');
-    }
-
-    const finalDocumentId = createdDocument.document_id; // Use the ID from the created document record
-
-    // 3. Update document association in the database using the new document_id
-    let oldDocumentIdToDelete: string | null = null;
-    console.log(`[uploadCompanyLogo] Starting association update for new document: ${finalDocumentId}`);
-    await knex.transaction(async (trx) => {
-      // Find existing logo association
-      const existingAssociation = await trx('document_associations')
-        .select('association_id', 'document_id')
-        .where({
-          entity_id: companyId,
-          entity_type: 'company',
-          tenant: tenant,
-        })
-        .first();
-
-      if (existingAssociation?.document_id) {
-          oldDocumentIdToDelete = existingAssociation.document_id;
-          console.log(`Removing previous logo association within transaction: ${oldDocumentIdToDelete}`);
-
-          // Delete only the association within the transaction
-          await trx('document_associations')
-            .where({
-                entity_id: companyId,
-                entity_type: 'company',
-                tenant: tenant,
-                document_id: oldDocumentIdToDelete
-            })
-            .delete();
-      }
-
-      // Create new logo association using the document_id from the 'documents' table
-      // Use trx object for DocumentAssociation.create if it supports transactions
-      // Assuming DocumentAssociation.create uses the default knex instance if trx is not passed
-      await DocumentAssociation.create({
-        document_id: finalDocumentId,
-        entity_id: companyId,
-        entity_type: 'company',
-        tenant: tenant,
-      });
-    });
-    console.log(`[uploadCompanyLogo] Transaction committed for new association: ${finalDocumentId}`);
-
-    // 4. Delete the old document *after* the transaction has successfully committed
-    if (oldDocumentIdToDelete) {
-      console.log(`[uploadCompanyLogo] Attempting to delete old document AFTER transaction: ${oldDocumentIdToDelete}`);
-        console.log(`Attempting to delete old document after transaction: ${oldDocumentIdToDelete}`);
-        try {
-            // Call deleteDocument outside the transaction
-            await deleteDocument(oldDocumentIdToDelete, currentUser.user_id);
-            console.log(`[uploadCompanyLogo] Successfully deleted old document: ${oldDocumentIdToDelete}`);
-        } catch (deleteError) {
-            console.error(`[uploadCompanyLogo] Exception during deleteDocument for old document ${oldDocumentIdToDelete}:`, deleteError);
-            // Log the error but continue, as the main goal (uploading new logo) succeeded
-        }
-    }
-
-    // Invalidate cache for relevant paths if necessary
-    revalidatePath(`/client-portal/settings`); // Example path
-    revalidatePath(`/companies/${companyId}`); // Example path
-
-    // Generate the URL for the newly uploaded logo
-    const newLogoUrl = await getImageUrl(externalFileRecord.file_id);
-    console.log(`[uploadCompanyLogo] Generated new logo URL: ${newLogoUrl}`);
-
-    console.log(`[uploadCompanyLogo] Upload process finished successfully for company ${companyId}. Returning URL: ${newLogoUrl}`);
-    return { success: true, logoUrl: newLogoUrl };
+    console.log(`[uploadCompanyLogo] Upload process finished successfully for company ${companyId}. Returning URL: ${result.imageUrl}`);
+    return { success: true, logoUrl: result.imageUrl };
   } catch (error) {
     console.error('[uploadCompanyLogo] Error during upload process:', error);
     const message = error instanceof Error ? error.message : 'Failed to upload company logo';
@@ -838,39 +712,23 @@ export async function deleteCompanyLogo(
   // TODO: Add permission check here if needed
 
   try {
-    // Find the association to get the document_id
-    const association = await knex('document_associations')
-      .select('association_id', 'document_id')
-      .where({
-        entity_id: companyId,
-        entity_type: 'company',
-        tenant: tenant,
-      })
-      .first();
+    const result = await deleteEntityImage(
+      'company',
+      companyId,
+      currentUser.user_id,
+      tenant
+    );
 
-    if (association?.document_id) {
-      const documentIdToDelete = association.document_id;
-      console.log(`Attempting to delete document ${documentIdToDelete} associated with company logo for company ${companyId}`);
-      
-      // Use the existing deleteDocument action which handles deleting the document record,
-      // its associations, and the underlying file via deleteFile action.
-      const deleteResult = await deleteDocument(documentIdToDelete, currentUser.user_id);
-      
-      if (!deleteResult.success) {
-        // If deleteDocument failed, return its error message
-        throw new Error(`Failed to delete associated document: ${documentIdToDelete}`);
-      }
-
-    } else {
-      console.log(`No company logo association found for company ${companyId} to delete.`);
-      // If no association, consider it a success as there's nothing to remove
-      return { success: true };
+    if (!result.success) {
+      return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths if necessary
-    revalidatePath(`/client-portal/settings`); // Example path
-    revalidatePath(`/companies/${companyId}`); // Example path
+    // Invalidate cache for relevant paths
+    revalidatePath(`/client-portal/settings`);
+    revalidatePath(`/companies/${companyId}`);
+    revalidatePath(`/settings/general`); // Also invalidate general settings
 
+    console.log(`[deleteCompanyLogo] Deletion process finished successfully for company ${companyId}.`);
     return { success: true };
   } catch (error) {
     console.error('Error deleting company logo:', error);

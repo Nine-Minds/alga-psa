@@ -8,6 +8,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button } from 'server/src/components/ui/Button';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { DialogComponent, ButtonComponent, FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
@@ -88,10 +89,12 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
       dataIndex: 'full_name',
       render: (value, record) => (
         <div className="flex items-center">
-          <img 
-            className="h-8 w-8 rounded-full mr-2" 
-            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(record.full_name)}&background=random`} 
-            alt="" 
+          <ContactAvatar
+            contactId={record.contact_name_id}
+            contactName={record.full_name}
+            avatarUrl={record.avatarUrl || null}
+            size="sm"
+            className="mr-2"
           />
           <span>{value}</span>
         </div>

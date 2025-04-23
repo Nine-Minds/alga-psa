@@ -10,13 +10,15 @@ import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
-import { 
-  getCategoriesAction, 
+import {
+  getCategoriesAction,
   getCategoryWithSubtypesAction,
-  updateUserPreferenceAction 
+  updateUserPreferenceAction
 } from 'server/src/lib/actions/notification-actions/notificationActions';
 import PasswordChangeForm from './PasswordChangeForm';
 import ApiKeysSetup from '../api/ApiKeysSetup';
+import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -28,6 +30,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -51,6 +54,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+        
+        // Get user avatar URL
+        const userAvatarUrl = await getUserAvatarUrl(currentUser.user_id, currentUser.tenant);
+        setAvatarUrl(userAvatarUrl);
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -182,8 +189,18 @@ export default function UserProfile({ userId }: UserProfileProps) {
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="space-y-2">
+          {/* User Avatar Upload */}
+          <UserAvatarUpload
+            userId={user.user_id}
+            userName={`${user.first_name} ${user.last_name}`}
+            avatarUrl={avatarUrl}
+            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+            className="mb-4"
+            size="xl"
+          />
+          
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input

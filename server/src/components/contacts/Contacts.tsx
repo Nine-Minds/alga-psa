@@ -26,6 +26,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 
 interface ContactsProps {
   initialContacts: IContact[];
@@ -278,11 +279,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       width: '25%',
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
-          <img
-            className="h-8 w-8 rounded-full mr-2"
-            src={getAvatarUrl(record.full_name, record.contact_name_id, 32)}
-            alt={`${record.full_name} avatar`}
-            loading="lazy"
+          <ContactAvatar
+            contactId={record.contact_name_id}
+            contactName={record.full_name}
+            avatarUrl={record.avatarUrl || null}
+            size="sm"
+            className="mr-2"
           />
           <div
             role="button"

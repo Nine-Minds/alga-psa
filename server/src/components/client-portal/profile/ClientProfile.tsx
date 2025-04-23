@@ -8,16 +8,17 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import { getCurrentUser, updateUser } from 'server/src/lib/actions/user-actions/userActions';
-import { 
+import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
 } from 'server/src/lib/actions/notification-actions/notificationActions';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from 'server/src/lib/models/notification';
 import type { IUserWithRoles } from 'server/src/types';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
 import PasswordChangeForm from 'server/src/components/settings/general/PasswordChangeForm';
 import { toast } from 'react-hot-toast';
+import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 export function ClientProfile() {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -25,6 +26,7 @@ export function ClientProfile() {
   const [error, setError] = useState<string | null>(null);
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
+  const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -48,6 +50,12 @@ export function ClientProfile() {
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+              
+        // If this is a client user with a linked contact, get the contact avatar URL
+        if (currentUser.user_type === 'client' && currentUser.contact_id) {
+          const contactAvatar = await getContactAvatarUrl(currentUser.contact_id, currentUser.tenant);
+          setContactAvatarUrl(contactAvatar);
+        }
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -184,23 +192,28 @@ export function ClientProfile() {
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-4 mb-6">
-            <AvatarIcon 
-              userId={user?.user_id || ''}
-              firstName={user?.first_name || ''}
-              lastName={user?.last_name || ''}
-              size="lg"
-            />
-            <div>
-              <h3 className="text-lg font-medium text-[rgb(var(--color-text-900))]">
-                {user?.first_name} {user?.last_name}
-              </h3>
-              <p className="text-sm text-[rgb(var(--color-text-600))]">{user?.email}</p>
-            </div>
-          </div>
+        <CardContent className="space-y-2">
 
-          <div className="grid grid-cols-2 gap-4">
+            {/* Contact Avatar Upload - only shown for client users with a linked contact */}
+            {user.user_type === 'client' && user.contact_id && (
+              <div>
+                <h3 className="text-lg font-medium mb-2">Your Contact Avatar</h3>
+                <p className="text-sm text-gray-500 mb-2">
+                  This avatar is shown to MSP staff when they view your contact information.
+                </p>
+                <ContactAvatarUpload
+                  contactId={user.contact_id}
+                  contactName={`${user.first_name} ${user.last_name}`}
+                  avatarUrl={contactAvatarUrl}
+                  onAvatarChange={(newAvatarUrl) => setContactAvatarUrl(newAvatarUrl)}
+                  userType="client"
+                  userContactId={user.contact_id}
+                  size="xl"
+                />
+              </div>
+            )}
+
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <Label htmlFor="firstName">First Name</Label>
               <Input

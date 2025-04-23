@@ -6,7 +6,7 @@ import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/con
 import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { getAvatarUrl } from 'server/src/utils/colorUtils';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from './ContactDetailsView';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -93,11 +93,12 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
       width: '40%',
       render: (value, record): React.ReactNode => (
         <div className="flex items-center">
-          <img
-            className="h-8 w-8 rounded-full mr-2"
-            src={getAvatarUrl(record.full_name, record.contact_name_id, 32)}
-            alt={`${record.full_name} avatar`}
-            loading="lazy"
+          <ContactAvatar
+            contactId={record.contact_name_id}
+            contactName={record.full_name}
+            avatarUrl={record.avatarUrl || null}
+            size="sm"
+            className="mr-2"
           />
           <div
             role="button"

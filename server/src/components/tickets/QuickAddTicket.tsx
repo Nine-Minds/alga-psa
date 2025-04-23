@@ -15,7 +15,7 @@ import { TicketFormData } from 'server/src/lib/actions/ticket-actions/ticketForm
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
-import { ContactPicker } from 'server/src/components/contacts/ContactPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { Input } from 'server/src/components/ui/Input';

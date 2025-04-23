@@ -6,10 +6,11 @@ import Image from 'next/image';
 import { signOut } from "next-auth/react";
 import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ interface ClientPortalLayoutProps {
 export default function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [hasCompanySettingsAccess, setHasCompanySettingsAccess] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
 
   const handleSignOut = () => {
@@ -44,6 +46,16 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
           if (foundAccess) break;
         }
         setHasCompanySettingsAccess(foundAccess);
+        
+        if (user.contact_id) {
+          try {
+            // For client users, use the contact avatar
+            const contactAvatarUrl = await getContactAvatarUrl(user.contact_id, user.tenant);
+            setAvatarUrl(contactAvatarUrl);
+          } catch (error) {
+            console.error('Error fetching contact avatar:', error);
+          }
+        }
       }
     };
 
@@ -124,10 +136,10 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 <DropdownMenu.Root>
                   <DropdownMenu.Trigger asChild>
                     <button className="relative" aria-label="User menu">
-                      <AvatarIcon 
-                        userId={userData?.user_id || ''}
-                        firstName={userData?.first_name || ''}
-                        lastName={userData?.last_name || ''}
+                      <ContactAvatar
+                        contactId={userData?.contact_id || ''}
+                        contactName={`${userData?.first_name || ''} ${userData?.last_name || ''}`}
+                        avatarUrl={avatarUrl}
                         size="sm"
                       />
                       <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>

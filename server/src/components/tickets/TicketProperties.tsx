@@ -2,22 +2,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule } from '../../interfaces';
-import { IUserWithRoles, ITeam } from '../../interfaces/auth.interfaces';
-import { ITicketResource } from '../../interfaces/ticketResource.interfaces';
-import { Button } from '../ui/Button';
-import { Label } from '../ui/Label';
-import { Input } from '../ui/Input';
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule } from 'server/src/interfaces';
+import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
+import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
+import { Button } from 'server/src/components/ui/Button';
+import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle } from 'lucide-react';
 import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
-import UserPicker from '../ui/UserPicker';
-import AvatarIcon from '../ui/AvatarIcon';
-import { CompanyPicker } from '../companies/CompanyPicker';
-import { ContactPicker } from '../contacts/ContactPicker';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
-import { IntervalManagement } from '../time-management/interval-tracking/IntervalManagement';
+import { IntervalManagement } from 'server/src/components/time-management/interval-tracking/IntervalManagement';
+import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { getUserAvatarUrl, getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -99,6 +103,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
+  const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
+  const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
 
   // Fetch scheduled hours from schedule entries
   useEffect(() => {
@@ -116,6 +123,55 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     
     fetchScheduledHours();
   }, [ticket.ticket_id, userId]);
+
+  // Fetch avatar URLs for primary agent, additional agents, and contact
+  useEffect(() => {
+    const fetchAvatarUrls = async () => {
+      if (!tenant) return;
+
+      // Fetch primary agent avatar URL
+      if (ticket.assigned_to) {
+        try {
+          const avatarUrl = await getUserAvatarUrl(ticket.assigned_to, tenant);
+          setPrimaryAgentAvatarUrl(avatarUrl);
+        } catch (error) {
+          console.error('Error fetching primary agent avatar URL:', error);
+        }
+      }
+
+      // Fetch additional agents avatar URLs
+      const avatarUrls: Record<string, string | null> = {};
+      for (const agent of additionalAgents) {
+        if (agent.additional_user_id) {
+          try {
+            const avatarUrl = await getUserAvatarUrl(agent.additional_user_id, tenant);
+            avatarUrls[agent.additional_user_id] = avatarUrl;
+          } catch (error) {
+            console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
+          }
+        }
+      }
+      setAdditionalAgentAvatarUrls(avatarUrls);
+    };
+
+    fetchAvatarUrls();
+  }, [ticket.assigned_to, additionalAgents, tenant]);
+
+  // Fetch contact avatar URL
+  useEffect(() => {
+    const fetchContactAvatarUrl = async () => {
+      if (!tenant || !contactInfo?.contact_name_id) return;
+
+      try {
+        const avatarUrl = await getContactAvatarUrl(contactInfo.contact_name_id, tenant);
+        setContactAvatarUrl(avatarUrl);
+      } catch (error) {
+        console.error('Error fetching contact avatar URL:', error);
+      }
+    };
+
+    fetchContactAvatarUrl();
+  }, [contactInfo?.contact_name_id, tenant]);
 
   // Helper function to get scheduled hours for a specific agent
   const getAgentScheduledHours = (agentId: string): number => {
@@ -208,6 +264,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
+                  {contactInfo && (
+                    <ContactAvatar
+                      contactId={contactInfo.contact_name_id || ''}
+                      contactName={contactInfo.full_name || ''}
+                      avatarUrl={contactAvatarUrl}
+                      size="sm"
+                    />
+                  )}
                   <p
                     {...withDataAutomationId({ id: `${id}-contact-name` })}
                     className="text-sm text-blue-500 cursor-pointer hover:underline"
@@ -287,14 +351,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold">Client</h5>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
+                {company && (
+                  <CompanyAvatar
+                    companyId={company.company_id}
+                    companyName={company.company_name}
+                    logoUrl={company.logoUrl}
+                    size="sm"
+                  />
+                )}
                 <p
                   className="text-sm text-blue-500 cursor-pointer hover:underline"
                   onClick={onCompanyClick}
                 >
                   {company?.company_name || 'N/A'}
-                </p>                  
+                </p>
                 <Button
-                  {...withDataAutomationId({ id: `${id}-show-company-picker-btn` })}  
+                  {...withDataAutomationId({ id: `${id}-show-company-picker-btn` })}
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowCompanyPicker(!showCompanyPicker)}
@@ -376,11 +448,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
                 onClick={() => onAgentClick(ticket.assigned_to!)}
               >
-                <AvatarIcon
+                <UserAvatar
                   {...withDataAutomationId({ id: `${id}-primary-agent-avatar` })}
                   userId={ticket.assigned_to}
-                  firstName={availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || ''}
-                  lastName={availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || ''}
+                  userName={`${availableAgents.find(a => a.user_id === ticket.assigned_to)?.first_name || ''} ${availableAgents.find(a => a.user_id === ticket.assigned_to)?.last_name || ''}`}
+                  avatarUrl={primaryAgentAvatarUrl}
                   size="sm"
                 />
                 <div className="flex flex-col">
@@ -458,10 +530,10 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
                       onClick={() => agent.additional_user_id && onAgentClick(agent.additional_user_id)}
                     >
-                      <AvatarIcon
+                      <UserAvatar
                         userId={agent.additional_user_id!}
-                        firstName={agentUser?.first_name || ''}
-                        lastName={agentUser?.last_name || ''}
+                        userName={`${agentUser?.first_name || ''} ${agentUser?.last_name || ''}`}
+                        avatarUrl={additionalAgentAvatarUrls[agent.additional_user_id!] || null}
                         size="sm"
                       />
                       <div className="flex flex-col">

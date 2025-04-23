@@ -11,6 +11,14 @@ import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
+import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService'; // Added import
+
+interface ActionResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
 
 export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
   try {
@@ -80,25 +88,27 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
     console.log('Getting current user from session');
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       console.log('No user email found in session');
       return null;
     }
-    
+
     console.log(`Looking up user by email: ${session.user.email}`);
     const user = await User.findUserByEmail(session.user.email);
-    
+
     if (!user) {
       console.log(`User not found for email: ${session.user.email}`);
       return null;
     }
-    
+
     console.log(`Fetching roles for user ID: ${user.user_id}`);
     const roles = await User.getUserRoles(user.user_id);
-    
+
+    const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+
     console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-    return { ...user, roles };
+    return { ...user, roles, avatarUrl };
   } catch (error) {
     console.error('Failed to get current user:', error);
     throw new Error('Failed to get current user');
@@ -366,7 +376,7 @@ export async function registerClientUser(
     console.log('Creating new user record...');
     const hashedPassword = await hashPassword(password);
     console.log('Password hashed successfully');
-    
+
     const [user] = await db('users')
       .insert({
         email,
@@ -453,14 +463,14 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const user = await User.get(userId); // Use User.get which includes tenant context
     if (!user) return null;
 
     // First try to get company ID from contact if user is contact-based
     if (user.contact_id) {
       const contact = await db('contacts')
-        .where({ 
+        .where({
           contact_name_id: user.contact_id,
           tenant: tenant
         })
@@ -477,7 +487,7 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     if (!emailDomain) return null;
 
     const emailSetting = await db('company_email_settings')
-      .where({ 
+      .where({
         email_suffix: emailDomain,
         tenant: tenant
       })
@@ -488,6 +498,33 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
   } catch (error) {
     console.error('Error getting user company ID:', error);
     throw new Error('Failed to get user company ID');
+  }
+}
+
+/**
+ * Gets the contact_id for a user, which is needed for fetching contact avatars
+ * @param userId The user ID to get the contact_id for
+ * @returns The contact_id if found, null otherwise
+ */
+export async function getUserContactId(userId: string): Promise<string | null> {
+  try {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const user = await db('users')
+      .where({
+        user_id: userId,
+        tenant: tenant
+      })
+      .select('contact_id')
+      .first();
+
+    return user?.contact_id || null;
+  } catch (error) {
+    console.error('Error getting user contact ID:', error);
+    throw new Error('Failed to get user contact ID');
   }
 }
 
@@ -514,7 +551,7 @@ export async function adminChangeUserPassword(
 
     const currentUserRoles = await getUserRoles(currentUser.user_id);
     const isAdmin = currentUserRoles.some(role => role.role_name.toLowerCase() === 'admin');
-    
+
     if (!isAdmin) {
       return { success: false, error: 'Unauthorized: Admin privileges required' };
     }
@@ -526,6 +563,167 @@ export async function adminChangeUserPassword(
   } catch (error) {
     console.error('Error changing user password:', error);
     return { success: false, error: 'Failed to change user password' };
+  }
+}
+
+/**
+ * Uploads or replaces a user's avatar.
+ *
+ * @param userId - The ID of the user whose avatar is being uploaded.
+ * @param formData - The FormData containing the avatar file under the key 'avatar'.
+ * @returns ActionResult indicating success or failure, with optional avatar URL.
+ */
+export async function uploadUserAvatar(
+  userId: string,
+  formData: FormData
+): Promise<ActionResult & { avatarUrl?: string | null }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.user_id) {
+      return { success: false, error: 'Authentication required.' };
+    }
+
+    const { tenant } = await createTenantKnex(); // Still need tenant
+    if (!tenant) {
+        return { success: false, error: 'Tenant context is missing.' };
+    }
+
+    const targetUser = await User.get(userId); // Use existing User model
+
+    if (!targetUser) {
+      return { success: false, error: 'Target user not found.' };
+    }
+
+    // Ensure users are in the same tenant
+    if (targetUser.tenant !== currentUser.tenant) {
+        return { success: false, error: 'Permission denied: Cannot modify user in different tenant.' };
+    }
+
+    // Permission Check: User can update their own avatar OR an admin can update any avatar
+    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
+    const canUpdate = currentUser.user_id === userId || isAdmin;
+
+    if (!canUpdate) {
+        return { success: false, error: 'Permission denied.' };
+    }
+
+    const file = formData.get('avatar') as File | null;
+
+    if (!file) {
+      return { success: false, error: 'No avatar file provided.' };
+    }
+
+    if (file.size === 0) {
+        return { success: false, error: 'Avatar file cannot be empty.' };
+    }
+
+    // Call the generic service function
+    const uploadResult = await uploadEntityImage(
+      'user',
+      userId,
+      file,
+      currentUser.user_id,
+      tenant,
+      'user_avatar' // Optional context name
+    );
+
+    if (!uploadResult.success) {
+      return { success: false, error: uploadResult.message || 'Failed to upload avatar.' };
+    }
+
+    // Invalidate cache
+    revalidatePath(`/users/${userId}`);
+    revalidatePath(`/profile/${userId}`);
+    revalidatePath('/settings/users'); // Adjust path as needed
+
+    // Use the imageUrl returned by the service
+    const avatarUrl = uploadResult.imageUrl;
+    console.log(`[uploadUserAvatar] New avatar URL: ${avatarUrl}`);
+
+    return {
+      success: true,
+      message: 'Avatar uploaded successfully.',
+      avatarUrl
+    };
+
+  } catch (error: any) {
+    console.error('[UserActions] Failed to upload user avatar:', {
+      operation: 'uploadUserAvatar',
+      userId,
+      errorMessage: error.message || 'Unknown error',
+      errorStack: error.stack,
+      errorName: error.name
+    });
+    return { success: false, error: error.message || 'An unexpected error occurred while uploading the avatar.' };
+  }
+}
+
+
+/**
+ * Deletes a user's avatar.
+ *
+ * @param userId - The ID of the user whose avatar is being deleted.
+ * @returns ActionResult indicating success or failure.
+ */
+export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.user_id) {
+      return { success: false, error: 'Authentication required.' };
+    }
+
+    const { tenant } = await createTenantKnex(); // Still need tenant
+    if (!tenant) {
+        return { success: false, error: 'Tenant context is missing.' };
+    }
+
+    const targetUser = await User.get(userId);
+
+    if (!targetUser) {
+      return { success: false, error: 'Target user not found.' };
+    }
+
+    // Ensure users are in the same tenant
+    if (targetUser.tenant !== currentUser.tenant) {
+        return { success: false, error: 'Permission denied: Cannot modify user in different tenant.' };
+    }
+
+    // Permission Check: User can delete their own avatar OR an admin can delete any avatar
+    const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
+    const canDelete = currentUser.user_id === userId || isAdmin;
+
+    if (!canDelete) {
+        return { success: false, error: 'Permission denied.' };
+    }
+
+    // Call the generic service function
+    const deleteResult = await deleteEntityImage(
+      'user',
+      userId,
+      currentUser.user_id,
+      tenant
+    );
+
+    if (!deleteResult.success) {
+      return { success: false, error: deleteResult.message || 'Failed to delete avatar.' };
+    }
+
+    // Invalidate cache
+    revalidatePath(`/users/${userId}`);
+    revalidatePath(`/profile/${userId}`);
+    revalidatePath('/settings/users'); // Adjust path as needed
+
+    return { success: true, message: deleteResult.message || 'Avatar deleted successfully.' };
+
+  } catch (error: any) {
+    console.error(`[UserActions] Failed to delete user avatar:`, {
+      operation: 'deleteUserAvatar',
+      userId,
+      errorMessage: error.message || 'Unknown error',
+      errorStack: error.stack,
+      errorName: error.name
+    });
+    return { success: false, error: error.message || 'An unexpected error occurred while deleting the avatar.' };
   }
 }
 

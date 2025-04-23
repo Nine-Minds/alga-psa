@@ -1,4 +1,3 @@
-import Company from 'server/src/lib/models/company';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IContact } from "server/src/interfaces/contact.interfaces";
@@ -14,7 +13,7 @@ const CompanyPage = async ({ params }: { params: { id: string } }) => {
   try {
     // Fetch all data in parallel
     const [company, documents, contacts] = await Promise.all([
-      Company.getById(id),
+      getCompanyById(id),
       getDocumentByCompanyId(id),
       getContactsByCompany(id, 'all')
     ]);

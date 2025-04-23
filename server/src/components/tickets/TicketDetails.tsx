@@ -69,7 +69,7 @@ interface TicketDetailsProps {
     initialChannel?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
-    initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>;
+    initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string }[];
     agentOptions?: { value: string; label: string }[];
     channelOptions?: { value: string; label: string }[];
@@ -132,7 +132,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
 
     // Use pre-fetched options directly
-    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>>(initialUserMap);
+    const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);

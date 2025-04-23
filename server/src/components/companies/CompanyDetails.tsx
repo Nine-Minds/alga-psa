@@ -22,7 +22,6 @@ import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { ArrowLeft, Globe, Upload, Trash2, Loader2, Pen } from 'lucide-react';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -37,8 +36,8 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { useToast } from 'server/src/hooks/use-toast';
+import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 
 
 const SwitchDetailItem: React.FC<{
@@ -136,24 +135,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     try {
       const latestCompanyData = await getCompanyById(company.company_id);
       if (latestCompanyData) {
-        const currentLogoUrl = editedCompany.logoUrl ?? null;
-        const latestLogoUrl = latestCompanyData.logoUrl ?? null;
-
-        if (currentLogoUrl !== latestLogoUrl) {
-          console.log(`Logo URL changed. Old: ${currentLogoUrl}, New: ${latestLogoUrl}`);
-          setEditedCompany(prev => ({ ...prev, logoUrl: latestLogoUrl }));
-          // Optionally update other fields if needed, but focus is on logoUrl for now
-          // setEditedCompany(latestCompanyData); // Uncomment to refresh all data
-        } else {
-           console.log('Logo URL unchanged.');
-        }
+        setEditedCompany(latestCompanyData);
+        console.log('Company data refreshed successfully');
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
-      // Optionally show a toast notification for the error
-      // toast({ title: "Refresh Failed", description: "Could not fetch latest company data.", variant: "destructive" });
+      toast({
+        title: "Refresh Failed",
+        description: "Could not fetch latest company data.",
+        variant: "destructive"
+      });
     }
-  }, [company?.company_id, editedCompany.logoUrl]); // Dependencies for useCallback
+  }, [company?.company_id, toast]);
 
   // 2. Implement Initial Load Logic
   useEffect(() => {
@@ -162,53 +155,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     // Reset unsaved changes flag when company prop changes
     setHasUnsavedChanges(false);
   }, [company]); // Dependency on the company prop
-
+  
   useEffect(() => {
-    const fetchInitialData = async () => {
-      if (company?.company_id) {
-        console.log(`Fetching initial data for company ID: ${company.company_id}`);
-        try {
-          const latestCompanyData = await getCompanyById(company.company_id);
-          if (latestCompanyData) {
-            console.log('Setting initial fetched data:', latestCompanyData);
-            setEditedCompany(latestCompanyData);
-            setHasUnsavedChanges(false);
-          }
-        } catch (error) {
-          console.error('Error fetching initial company data:', error);
-        }
-      }
-    };
-
-    fetchInitialData();
-  }, [company?.company_id]);
-
-
-  // 3. Implement Refresh on Focus/Visibility Change (Kept for updates while page is open)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        console.log('Document became visible, refreshing data...');
-        refreshCompanyData();
-      }
-    };
-
-    const handleFocus = () => {
-      console.log('Window gained focus, refreshing data...');
-      refreshCompanyData();
-    };
-
-    console.log('Adding visibility and focus listeners');
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    // Cleanup function
-    return () => {
-      console.log('Removing visibility and focus listeners');
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [refreshCompanyData]); // Dependency on refreshCompanyData
+    if (editedCompany?.logoUrl !== company?.logoUrl) {
+      console.log("Logo URL updated in state:", editedCompany?.logoUrl);
+    }
+  }, [editedCompany?.logoUrl, company?.logoUrl]);
 
   // Existing useEffect for fetching user and users
   useEffect(() => {
@@ -405,109 +357,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     }
   };
   
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    const fileInput = event.target; // Store the input element
-
-    if (!file) {
-      toast({
-        title: "No file selected",
-        description: "Please select an image file to upload.",
-        variant: "destructive",
-      });
-      // Reset file input if no file is selected or selection is cancelled
-      if (fileInput) fileInput.value = '';
-      return;
-    }
-
-    // Client-side validation
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File Type",
-        description: "Please select an image file (e.g., JPG, PNG, GIF).",
-        variant: "destructive",
-      });
-      if (fileInput) fileInput.value = ''; // Reset input
-      return;
-    }
-
-    const maxSizeInBytes = 2 * 1024 * 1024; // 2MB
-    if (file.size > maxSizeInBytes) {
-      toast({
-        title: "File Too Large",
-        description: "Please select an image file smaller than 2MB.",
-        variant: "destructive",
-      });
-      if (fileInput) fileInput.value = ''; // Reset input
-      return;
-    }
-
-    setIsUploadingLogo(true);
-    const formData = new FormData();
-    formData.append('logo', file);
-
-    try {
-      const result = await uploadCompanyLogo(editedCompany.company_id, formData);
-      if (result.success && result.logoUrl !== undefined) {
-        setEditedCompany(prev => ({ ...prev, logoUrl: result.logoUrl ?? null }));
-        toast({
-          title: "Logo Uploaded",
-          description: "Company logo updated successfully.",
-        });
-      } else {
-        throw new Error(result.message || 'Failed to upload logo');
-      }
-    } catch (error: any) {
-      console.error('Error uploading logo:', error);
-      toast({
-        title: "Upload Failed",
-        description: error.message || "An error occurred while uploading the logo.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploadingLogo(false);
-      // Reset file input value so the same file can be selected again if needed
-      // Reset file input value using the stored reference
-      if (fileInput) {
-         fileInput.value = '';
-      }
-    }
-  };
-
-  const handleDeleteLogo = async () => {
-    if (!editedCompany.logoUrl) {
-        toast({ title: "No Logo Found", description: "There is no logo associated with this company to delete.", variant: "destructive" });
-        return;
-    }
-
-    // Confirmation dialog
-    if (!window.confirm("Are you sure you want to delete the company logo? This action cannot be undone.")) {
-      return;
-    }
-
-    setIsDeletingLogo(true);
-    try {
-      const result = await deleteCompanyLogo(editedCompany.company_id);
-      if (result.success) {
-        setEditedCompany(prev => ({ ...prev, logoUrl: null }));
-        toast({
-          title: "Logo Deleted",
-          description: "Company logo deleted successfully.",
-        });
-      } else {
-        throw new Error(result.message || 'Failed to delete logo');
-      }
-    } catch (error: any) {
-      console.error('Error deleting logo:', error);
-      toast({
-        title: "Deleting Failed",
-        description: error.message || "An error occurred while deleting the logo.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeletingLogo(false);
-    }
-  };
 
   const handleTabChange = async (tabValue: string) => {
     const params = new URLSearchParams(searchParams?.toString() || '');
@@ -800,87 +649,25 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         
         {/* Logo Display and Edit Container */}
         <div className="flex items-center space-x-3">
-          <div className="relative">
-            {/* Avatar Display */}
-            <CompanyAvatar
-              companyId={editedCompany.company_id}
-              companyName={editedCompany.company_name}
-              logoUrl={editedCompany.logoUrl ?? null}
-              size="md"
-            />
-            {/* Loading Spinner Overlay */}
-            {(isUploadingLogo || isDeletingLogo) && (
-              <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center rounded-full">
-                <Loader2 className="h-5 w-5 text-white animate-spin" />
-              </div>
-            )}
-            {/* Edit Icon Button (only when not editing) */}
-            {!isEditingLogo && !isUploadingLogo && !isDeletingLogo && (
-              <button
-                type="button"
-                onClick={() => setIsEditingLogo(true)}
-                className="absolute bottom-0 right-0 mb-[-2px] mr-[-6px] bg-white text-gray-600 p-1 rounded-full shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-primary-500 transition-colors"
-                aria-label="Edit company logo"
-              >
-                <Pen className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
-          {/* Edit Controls (only when editing) */}
-          {isEditingLogo && (
-            <div className="flex flex-col space-y-1">
-              <div className="flex flex-row space-x-2 items-center">
-                <Button
-                  id="upload-logo-button-details"
-                  type="button"
-                  variant="soft"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploadingLogo || isDeletingLogo}
-                  className="w-fit"
-                >
-                  {isUploadingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  Upload New Logo
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoUpload}
-                  accept="image/*"
-                  className="hidden"
-                  disabled={isUploadingLogo || isDeletingLogo}
-                />
-                {editedCompany.logoUrl && (
-                  <Button
-                    id="delete-company-logo-details"
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleDeleteLogo}
-                    disabled={isDeletingLogo || isUploadingLogo}
-                    className="w-fit"
-                  >
-                    {isDeletingLogo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                    Delete Logo
-                  </Button>
-                )}
-                <Button
-                  id="cancel-edit-logo-details"
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditingLogo(false)}
-                  disabled={isUploadingLogo || isDeletingLogo}
-                  className="w-fit"
-                >
-                  Cancel
-                </Button>
-              </div>
-              {/* Text moved below buttons */}
-              <p className="text-xs text-gray-500 pl-1">Max 2MB (PNG, JPG, GIF)</p>
-            </div>
-          )}
+          <EntityImageUpload
+            entityType="company"
+            entityId={editedCompany.company_id}
+            entityName={editedCompany.company_name}
+            imageUrl={editedCompany.logoUrl ?? null}
+            uploadAction={uploadCompanyLogo}
+            deleteAction={deleteCompanyLogo}
+            onImageChange={(newLogoUrl) => {
+              console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
+              setEditedCompany(prev => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  logoUrl: newLogoUrl
+                };
+              });
+            }}
+            size="md"
+          />
         </div>
 
         <Heading size="6">{editedCompany.company_name}</Heading>

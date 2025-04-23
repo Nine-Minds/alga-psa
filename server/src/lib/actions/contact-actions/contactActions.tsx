@@ -6,6 +6,7 @@ import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { createTenantKnex } from 'server/src/lib/db'; // Revert to original import
 import { Knex } from 'knex'; // Import Knex type for explicit typing
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
@@ -244,8 +245,17 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
       })
       .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
 
-    // Return empty array if no contacts found (don't throw error)
-    return contacts;
+    // Fetch avatar URLs for each contact
+    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
+      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      return {
+        ...contact,
+        avatarUrl: avatarUrl || null,
+      };
+    }));
+
+    // Return contacts with avatar URLs
+    return contactsWithAvatars;
   } catch (err) {
     // Log the error for debugging
     console.error('Error fetching contacts for company:', err);
@@ -343,8 +353,16 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
       })
       .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
 
-    // Return empty array if no contacts found (don't throw error)
-    return contacts;
+    // Fetch avatar URLs for each contact
+    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
+      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      return {
+        ...contact,
+        avatarUrl: avatarUrl || null,
+      };
+    }));
+
+    return contactsWithAvatars;
   } catch (err) {
     // Log the error for debugging
     console.error('Error fetching all contacts:', err);

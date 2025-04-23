@@ -32,53 +32,89 @@ export async function GET(
     let hasPermission = false;
     let associatedCompanyId: string | null = null;
     let userCompanyId: string | null = null;
+    let associatedContactId: string | null = null;
+    let associatedUserId: string | null = null;
 
-    // 1. Check if user is internal
-    if (user.user_type === 'internal') { 
-        hasPermission = true; // Internal users can view all company logos
+    // 1. Check if user is internal - they have full access
+    if (user.user_type === 'internal') {
+        hasPermission = true;
+        console.log(`Internal user ${user.user_id} granted access to file ${fileId}`);
     } else {
-        // 2. If not internal, check if it's associated with the user's company
-        // Find the document record linked to this file_id
+        // 2. Find the document record linked to this file_id
         const documentRecord = await knex('documents')
           .select('document_id')
           .where({ file_id: fileId, tenant })
           .first();
 
         if (documentRecord) {
-          // Find the company association for this document
-          const association = await knex('document_associations')
-            .select('entity_id')
+          // Find all associations for this document
+          const associations = await knex('document_associations')
+            .select('entity_id', 'entity_type')
             .where({
               document_id: documentRecord.document_id,
-              entity_type: 'company',
               tenant: tenant
-            })
-            .first();
-          
-          associatedCompanyId = association?.entity_id ?? null;
-        }
+            });
 
-        if (associatedCompanyId && user.contact_id) {
-           // Fetch the user's company_id via their contact record
-           const contactRecord = await knex('contacts')
+          // Check each association
+          for (const assoc of associations) {
+            if (assoc.entity_type === 'company') {
+              associatedCompanyId = assoc.entity_id;
+            } else if (assoc.entity_type === 'contact') {
+              associatedContactId = assoc.entity_id;
+            } else if (assoc.entity_type === 'user') {
+              associatedUserId = assoc.entity_id;
+            }
+          }
+
+          // Check if this is the user's own avatar
+          if (associatedUserId === user.user_id) {
+            hasPermission = true;
+            console.log(`User ${user.user_id} accessing their own avatar (file ${fileId})`);
+          }
+          // Check if this is the user's own contact avatar
+          else if (associatedContactId === user.contact_id) {
+            hasPermission = true;
+            console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
+          }
+          // Check company association
+          else if (associatedCompanyId && user.contact_id) {
+            // Fetch the user's company_id via their contact record
+            const contactRecord = await knex('contacts')
               .select('company_id')
               .where({ contact_name_id: user.contact_id, tenant })
               .first();
-           
-           userCompanyId = contactRecord?.company_id ?? null;
 
-           // Allow access ONLY if the user's company matches the document's associated company
-           if (userCompanyId === associatedCompanyId) {
+            userCompanyId = contactRecord?.company_id ?? null;
+
+            // Allow access if the user's company matches the document's associated company
+            if (userCompanyId === associatedCompanyId) {
               hasPermission = true;
-           }
+              console.log(`User ${user.user_id} granted access to company ${associatedCompanyId} file ${fileId}`);
+            }
+          }
+
+          // New permission check: Allow any user within the same tenant to view user avatars
+          if (!hasPermission && associatedUserId) {
+              const associatedUser = await knex('users')
+                  .select('tenant')
+                  .where({ user_id: associatedUserId })
+                  .first();
+
+              if (associatedUser && associatedUser.tenant === user.tenant) {
+                  hasPermission = true;
+                  console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
+              }
+          }
         }
     }
 
     if (!hasPermission) {
-       console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}. AssociatedCompany: ${associatedCompanyId}, UserCompany: ${userCompanyId}`);
-       return new NextResponse('Forbidden', { status: 403 });
+      console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
+      console.warn(`AssociatedCompany: ${associatedCompanyId}, UserCompany: ${userCompanyId}`);
+      console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
+      console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
+      return new NextResponse('Forbidden', { status: 403 });
     }
-    console.log(`User ${user.user_id} has permission to view file ${fileId}`);
 
     // Ensure it's an image type (or allow other types if needed)
     if (!fileRecord.mime_type?.startsWith('image/')) {

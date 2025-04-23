@@ -16,9 +16,10 @@ import { z } from 'zod';
 import { validateData } from 'server/src/lib/utils/validation';
 import { getEventBus } from '../../../lib/eventBus';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
-import { 
-  ticketFormSchema, 
-  ticketSchema, 
+import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import {
+  ticketFormSchema,
+  ticketSchema,
   ticketUpdateSchema, 
   ticketAttributesQuerySchema,
   ticketListItemSchema,
@@ -116,12 +117,19 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           'd.tenant': tenant
         }),
       
-      // Companies
-      db('companies')
-        .where({ tenant })
-        .orderBy('company_name', 'asc'),
-      
-      // Ticket resources (additional agents)
+      db('companies as c')
+        .select(
+          'c.*',
+          'da.document_id'
+        )
+        .leftJoin('document_associations as da', function() {
+          this.on('da.entity_id', '=', 'c.company_id')
+              .andOn('da.tenant', '=', 'c.tenant')
+              .andOnVal('da.entity_type', '=', 'company');
+        })
+        .where({ 'c.tenant': tenant })
+        .orderBy('c.company_name', 'asc'),
+
       db('ticket_resources')
         .where({
           ticket_id: ticketId,
@@ -129,9 +137,22 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         }),
       
       // Users
-      db('users')
-        .where({ tenant })
-        .orderBy('first_name', 'asc'),
+      db('users as u')
+        .select(
+          'u.*',
+          'd.file_id as avatar_file_id'
+        )
+        .leftJoin('document_associations as da', function() {
+          this.on('da.entity_id', '=', 'u.user_id')
+              .andOn('da.tenant', '=', 'u.tenant')
+              .andOnVal('da.entity_type', '=', 'user');
+        })
+        .leftJoin('documents as d', function() {
+           this.on('d.document_id', '=', 'da.document_id')
+              .andOn('d.tenant', '=', 'u.tenant');
+        })
+        .where({ 'u.tenant': tenant })
+        .orderBy('u.first_name', 'asc'),
       
       // Statuses
       db('statuses')
@@ -157,20 +178,76 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('category_name', 'asc')
     ]);
 
-    // Fetch company and contact data if available
+    // --- Add Logo URL Processing for the fetched 'companies' list ---
+    const companiesData = companies as (ICompany & { document_id?: string })[];
+    const documentIds = companiesData
+      .map((c: any) => c.document_id)
+      .filter((id: any): id is string => !!id);
+
+    let fileIdMap: Record<string, string> = {};
+    if (documentIds.length > 0) {
+      const fileRecords = await db('documents')
+        .select('document_id', 'file_id')
+        .whereIn('document_id', documentIds)
+        .andWhere({ tenant });
+
+      fileIdMap = fileRecords.reduce((acc, record) => {
+        if (record.file_id) {
+          acc[record.document_id] = record.file_id;
+        }
+        return acc;
+      }, {} as Record<string, string>);
+    }
+
+    // Process the full companies list to add logoUrl
+    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData: any) => {
+      let logoUrl: string | null = null;
+      const fileId = companyData.document_id ? fileIdMap[companyData.document_id] : null;
+
+      if (fileId) {
+        try {
+          logoUrl = await getImageUrl(fileId);
+        } catch (imgError) {
+          console.error(`Error fetching image URL for fileId ${fileId}:`, imgError);
+          logoUrl = null;
+        }
+      }
+      const { document_id, ...companyResult } = companyData;
+      return {
+        ...companyResult,
+        logoUrl,
+      };
+    }));
+    // --- End Logo URL Processing for 'companies' list ---
+
+
+    // Fetch specific company and contact data if available
     let company = null;
     let contacts: IContact[] = [];
     let contactInfo = null;
     
     if (ticket.company_id) {
       [company, contacts] = await Promise.all([
-        db('companies')
+        db('companies as c')
+          .select(
+            'c.*',
+            'd.file_id'
+          )
+          .leftJoin('document_associations as da', function() {
+            this.on('da.entity_id', '=', 'c.company_id')
+                .andOn('da.tenant', '=', 'c.tenant')
+                .andOnVal('da.entity_type', '=', 'company');
+          })
+          .leftJoin('documents as d', function() {
+             this.on('d.document_id', '=', 'da.document_id')
+                .andOn('d.tenant', '=', 'c.tenant');
+          })
           .where({
-            company_id: ticket.company_id,
-            tenant: tenant
+            'c.company_id': ticket.company_id,
+            'c.tenant': tenant
           })
           .first(),
-        
+
         db('contacts')
           .where({
             company_id: ticket.company_id,
@@ -178,8 +255,20 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           })
           .orderBy('full_name', 'asc')
       ]);
+      
+      if (company && company.file_id) {
+        try {
+          company.logoUrl = await getImageUrl(company.file_id);
+        } catch (imgError) {
+          console.error(`Error fetching image URL for company ${company.company_id} fileId ${company.file_id}:`, imgError);
+          company.logoUrl = null;
+        }
+        delete company.file_id;
+      } else if (company) {
+        company.logoUrl = null;
+      }
     }
-    
+
     if (ticket.contact_name_id) {
       contactInfo = await db('contacts')
         .where({
@@ -208,16 +297,36 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .first() : null;
 
     // Process user data for userMap
-    const userMap = users.reduce((acc, user) => {
+    // Process user data for userMap, including avatar URLs
+    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
+      let avatarUrl: string | null = null;
+      if (user.avatar_file_id) {
+        try {
+          avatarUrl = await getImageUrl(user.avatar_file_id);
+        } catch (imgError) {
+          console.error(`Error fetching avatar URL for user ${user.user_id} fileId ${user.avatar_file_id}:`, imgError);
+          avatarUrl = null; // Ensure fallback if URL generation fails
+        }
+      }
+      // Remove the temporary avatar_file_id before returning
+      const { avatar_file_id, ...userData } = user;
+      return {
+        ...userData,
+        avatarUrl,
+      };
+    }));
+
+    const userMap = usersWithAvatars.reduce((acc, user) => {
       acc[user.user_id] = {
         user_id: user.user_id,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email,
-        user_type: user.user_type
+        user_type: user.user_type,
+        avatarUrl: user.avatarUrl // Include avatarUrl
       };
       return acc;
-    }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>);
+    }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
     // Format options for dropdowns
     const statusOptions = statuses.map((status) => ({
@@ -308,7 +417,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         priority: priorityOptions
       },
       categories,
-      companies,
+      companies: companiesWithLogos,
       agentSchedules: agentSchedulesList
     };
   } catch (error) {
