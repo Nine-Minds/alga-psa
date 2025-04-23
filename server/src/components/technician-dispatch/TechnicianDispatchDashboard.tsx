@@ -129,7 +129,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const users = await getAllUsers();
+        const users = await getAllUsers(true, 'internal');
         setTechnicians(users);
 
         const start = new Date(selectedDate);
@@ -591,7 +591,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               </button>
             </div>
           </div>
-          <div className="technician-schedule-grid h-[calc(100vh-160px)]">
+          <div className="technician-schedule-grid h-[calc(100vh-160px)] overflow-hidden">
             <TechnicianScheduleGrid
               technicians={technicians}
               events={events}

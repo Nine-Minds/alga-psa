@@ -48,7 +48,7 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
 }) => {
   return (
     <div
-      className="technician-row mb-4 relative h-16 border border-[rgb(var(--color-border-200))] min-w-[2880px]"
+      className="technician-row relative h-16 border border-[rgb(var(--color-border-200))] min-w-[2880px] mb-4"
       data-tech-id={tech.user_id}
     >
       <div className="grid grid-cols-96 h-full" style={{ width: '2880px' }}>
