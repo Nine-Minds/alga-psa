@@ -137,9 +137,22 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         }),
       
       // Users
-      db('users')
-        .where({ tenant })
-        .orderBy('first_name', 'asc'),
+      db('users as u')
+        .select(
+          'u.*',
+          'd.file_id as avatar_file_id'
+        )
+        .leftJoin('document_associations as da', function() {
+          this.on('da.entity_id', '=', 'u.user_id')
+              .andOn('da.tenant', '=', 'u.tenant')
+              .andOnVal('da.entity_type', '=', 'user');
+        })
+        .leftJoin('documents as d', function() {
+           this.on('d.document_id', '=', 'da.document_id')
+              .andOn('d.tenant', '=', 'u.tenant');
+        })
+        .where({ 'u.tenant': tenant })
+        .orderBy('u.first_name', 'asc'),
       
       // Statuses
       db('statuses')
@@ -284,16 +297,36 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .first() : null;
 
     // Process user data for userMap
-    const userMap = users.reduce((acc, user) => {
+    // Process user data for userMap, including avatar URLs
+    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
+      let avatarUrl: string | null = null;
+      if (user.avatar_file_id) {
+        try {
+          avatarUrl = await getImageUrl(user.avatar_file_id);
+        } catch (imgError) {
+          console.error(`Error fetching avatar URL for user ${user.user_id} fileId ${user.avatar_file_id}:`, imgError);
+          avatarUrl = null; // Ensure fallback if URL generation fails
+        }
+      }
+      // Remove the temporary avatar_file_id before returning
+      const { avatar_file_id, ...userData } = user;
+      return {
+        ...userData,
+        avatarUrl,
+      };
+    }));
+
+    const userMap = usersWithAvatars.reduce((acc, user) => {
       acc[user.user_id] = {
         user_id: user.user_id,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
         email: user.email,
-        user_type: user.user_type
+        user_type: user.user_type,
+        avatarUrl: user.avatarUrl // Include avatarUrl
       };
       return acc;
-    }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>);
+    }, {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
     // Format options for dropdowns
     const statusOptions = statuses.map((status) => ({

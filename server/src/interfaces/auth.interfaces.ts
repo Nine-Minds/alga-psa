@@ -23,6 +23,7 @@ export interface IUser {
 
 export interface IUserWithRoles extends IUser {
     roles: IRole[];
+    avatarUrl?: string | null;
 }
 
 export interface ITeam extends TenantEntity {

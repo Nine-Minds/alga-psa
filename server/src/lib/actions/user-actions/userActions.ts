@@ -105,8 +105,10 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     console.log(`Fetching roles for user ID: ${user.user_id}`);
     const roles = await User.getUserRoles(user.user_id);
 
+    const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+
     console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-    return { ...user, roles };
+    return { ...user, roles, avatarUrl };
   } catch (error) {
     console.error('Failed to get current user:', error);
     throw new Error('Failed to get current user');
@@ -496,6 +498,33 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
   } catch (error) {
     console.error('Error getting user company ID:', error);
     throw new Error('Failed to get user company ID');
+  }
+}
+
+/**
+ * Gets the contact_id for a user, which is needed for fetching contact avatars
+ * @param userId The user ID to get the contact_id for
+ * @returns The contact_id if found, null otherwise
+ */
+export async function getUserContactId(userId: string): Promise<string | null> {
+  try {
+    const { knex: db, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const user = await db('users')
+      .where({
+        user_id: userId,
+        tenant: tenant
+      })
+      .select('contact_id')
+      .first();
+
+    return user?.contact_id || null;
+  } catch (error) {
+    console.error('Error getting user contact ID:', error);
+    throw new Error('Failed to get user contact ID');
   }
 }
 

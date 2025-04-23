@@ -214,15 +214,25 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
           'd.tenant': tenant
         }),
       
-      // Get all users involved in the ticket
+      // Get all users involved in the ticket, including avatar file_id
       db('users as u')
         .select(
           'u.user_id',
           'u.first_name',
           'u.last_name',
           'u.email',
-          'u.user_type'
+          'u.user_type',
+          'd.file_id as avatar_file_id'
         )
+        .leftJoin('document_associations as da', function() {
+          this.on('da.entity_id', '=', 'u.user_id')
+              .andOn('da.tenant', '=', 'u.tenant')
+              .andOnVal('da.entity_type', '=', 'user');
+        })
+        .leftJoin('documents as d', function() {
+           this.on('d.document_id', '=', 'da.document_id')
+              .andOn('d.tenant', '=', 'u.tenant');
+        })
         .join('comments as c', function() {
           this.on('u.user_id', '=', 'c.user_id')
               .andOn('u.tenant', '=', 'c.tenant');
@@ -232,24 +242,43 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
           'c.tenant': tenant,
           'u.tenant': tenant
         })
-        .distinct()
+        .distinct('u.user_id', 'u.first_name', 'u.last_name', 'u.email', 'u.user_type', 'd.file_id')
     ]);
 
     if (!ticket) {
       throw new Error('Ticket not found');
     }
 
-    // Create user map
-    const userMap = users.reduce((acc, user) => ({
+    // Create user map, including avatar URLs
+    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
+      let avatarUrl: string | null = null;
+      if (user.avatar_file_id) {
+        try {
+          const { getImageUrl } = await import('server/src/lib/actions/document-actions/documentActions');
+          avatarUrl = await getImageUrl(user.avatar_file_id);
+        } catch (imgError) {
+          console.error(`Error fetching avatar URL for user ${user.user_id} fileId ${user.avatar_file_id}:`, imgError);
+          avatarUrl = null;
+        }
+      }
+      const { avatar_file_id, ...userData } = user;
+      return {
+        ...userData,
+        avatarUrl,
+      };
+    }));
+
+    const userMap = usersWithAvatars.reduce((acc, user) => ({
       ...acc,
       [user.user_id]: {
         first_name: user.first_name,
         last_name: user.last_name,
         user_id: user.user_id,
         email: user.email,
-        user_type: user.user_type
+        user_type: user.user_type,
+        avatarUrl: user.avatarUrl
       }
-    }), {});
+    }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
     return {
       ...ticket,

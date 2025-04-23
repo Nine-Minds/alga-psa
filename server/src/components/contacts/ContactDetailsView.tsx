@@ -21,7 +21,7 @@ import { IDocument } from '../../interfaces/document.interface';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
-import ContactAvatarUpload from '../client-portal/contacts/ContactAvatarUpload';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrl } from '../../lib/utils/avatarUtils';
 
 interface ContactDetailsViewProps {
@@ -219,7 +219,20 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         )}
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
-            <Heading size="6">{contact.full_name}</Heading>
+            <div className="flex items-center">
+              {/* Contact Avatar */}
+              {userId && (
+                <div className="mr-4">
+                  <ContactAvatar
+                    contactId={contact.contact_name_id}
+                    contactName={contact.full_name}
+                    avatarUrl={avatarUrl}
+                    size="lg"
+                  />
+                </div>
+              )}
+              <Heading size="6">{contact.full_name}</Heading>
+            </div>
             <div className="flex items-center space-x-2">
               <Button
                 id={`${id}-back-button`}
@@ -243,19 +256,6 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               </Button>
             </div>
           </div>
-          
-          {/* Contact Avatar Upload */}
-          {userId && (
-            <div className="mb-4">
-              <ContactAvatarUpload
-                contactId={contact.contact_name_id}
-                contactName={contact.full_name}
-                avatarUrl={avatarUrl}
-                userType="internal"
-                onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
-              />
-            </div>
-          )}
         </div>
         <table className="min-w-full">
           <tbody>

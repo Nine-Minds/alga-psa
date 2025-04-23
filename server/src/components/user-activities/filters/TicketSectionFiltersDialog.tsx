@@ -21,7 +21,7 @@ import { IContact } from "server/src/interfaces/contact.interfaces";
 import { DateRange } from 'react-day-picker';
 import { ISO8601String } from '@shared/types/temporal';
 import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
-import { ContactPicker } from "server/src/components/contacts/ContactPicker";
+import { ContactPicker } from "server/src/components/ui/ContactPicker";
 import CustomSelect from "server/src/components/ui/CustomSelect";
 
 interface TicketSectionFiltersDialogProps {

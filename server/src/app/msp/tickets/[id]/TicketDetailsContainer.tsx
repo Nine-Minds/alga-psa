@@ -22,7 +22,7 @@ interface TicketDetailsContainerProps {
     channel: any;
     additionalAgents: any[];
     availableAgents: any[];
-    userMap: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string }>;
+    userMap: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     options: {
       status: { value: string; label: string }[];
       agent: { value: string; label: string }[];

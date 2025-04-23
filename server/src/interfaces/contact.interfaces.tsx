@@ -12,6 +12,7 @@ export interface IContact extends TenantEntity, ITaggable {
   updated_at: string;
   is_inactive: boolean;
   notes?: string;
+  avatarUrl?: string | null;
 }
 
 export interface ICSVColumnMapping {

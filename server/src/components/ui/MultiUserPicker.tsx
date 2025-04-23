@@ -1,6 +1,6 @@
 // server/src/components/ui/MultiUserPicker.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import UserAvatar from 'server/src/components/settings/general/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from '../../interfaces/auth.interfaces';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, X } from 'lucide-react';

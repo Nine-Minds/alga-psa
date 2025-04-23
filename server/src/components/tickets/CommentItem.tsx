@@ -5,7 +5,8 @@ import { PartialBlock } from '@blocknote/core';
 import TextEditor from '../editor/TextEditor';
 import RichTextViewer from '../editor/RichTextViewer';
 import { Pencil, Trash, Lock, CheckCircle } from 'lucide-react';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -25,7 +26,7 @@ interface CommentItemProps {
   isEditing: boolean;
   currentComment: IComment | null;
   ticketId: string;
-  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
+  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
   onContentChange: (content: PartialBlock[]) => void;
   onSave: (updates: Partial<IComment>) => void;
   onClose: () => void;
@@ -161,13 +162,34 @@ const CommentItem: React.FC<CommentItemProps> = ({
     <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 hover:border-gray-300 bg-white">
       <div className="flex items-start mb-1">
         <div className="mr-2">
-          <AvatarIcon 
-            {...withDataAutomationId({ id: `${commentId}-avatar` })}
-            userId={conversation.user_id || ''}
-            firstName={authorFirstName}
-            lastName={authorLastName}
-            size="md"
-          />
+          {/* Conditionally render UserAvatar or ContactAvatar */}
+          {conversation.user_id && userMap[conversation.user_id] ? (
+            userMap[conversation.user_id].user_type === 'internal' ? (
+              <UserAvatar
+                {...withDataAutomationId({ id: `${commentId}-avatar` })}
+                userId={conversation.user_id || ''}
+                userName={`${authorFirstName} ${authorLastName}`}
+                avatarUrl={userMap[conversation.user_id]?.avatarUrl || null}
+                size="md"
+              />
+            ) : (
+              <ContactAvatar
+                {...withDataAutomationId({ id: `${commentId}-avatar` })}
+                contactId={conversation.user_id || ''}
+                contactName={`${authorFirstName} ${authorLastName}`}
+                avatarUrl={userMap[conversation.user_id]?.avatarUrl || null}
+                size="md"
+              />
+            )
+          ) : (
+            <UserAvatar
+              {...withDataAutomationId({ id: `${commentId}-avatar` })}
+              userId=""
+              userName="Unknown User"
+              avatarUrl={null}
+              size="md"
+            />
+          )}
         </div>
         <div className="flex-grow">
           <div className="flex justify-between items-start">
@@ -238,27 +260,27 @@ const CommentItem: React.FC<CommentItemProps> = ({
             editorContent
           ) : (
               <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-1">
-              <RichTextViewer content={(() => {
-                try {
-                  return JSON.parse(conversation.note || '[]');
-                } catch (e) {
-                  // If parsing fails, return a simple paragraph with the text
-                  return [{
-                    type: "paragraph",
-                    props: {
-                      textAlignment: "left",
-                      backgroundColor: "default",
-                      textColor: "default"
-                    },
-                    content: [{
-                      type: "text",
-                      text: conversation.note || '',
-                      styles: {}
-                    }]
-                  }];
-                }
-              })()} />
-            </div>
+                <RichTextViewer content={(() => {
+                  try {
+                    return JSON.parse(conversation.note || '[]');
+                  } catch (e) {
+                    // If parsing fails, return a simple paragraph with the text
+                    return [{
+                      type: "paragraph",
+                      props: {
+                        textAlignment: "left",
+                        backgroundColor: "default",
+                        textColor: "default"
+                      },
+                      content: [{
+                        type: "text",
+                        text: conversation.note || '',
+                        styles: {}
+                      }]
+                    }];
+                  }
+                })()} />
+              </div>
           )}
         </div>
       </div>

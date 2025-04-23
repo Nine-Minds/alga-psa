@@ -12,14 +12,16 @@ import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, AlertCircle } from 
 import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUtils';
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import UserAvatar from 'server/src/components/settings/general/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
-import { ContactPicker } from 'server/src/components/contacts/ContactPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { IntervalManagement } from 'server/src/components/time-management/interval-tracking/IntervalManagement';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
-import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { getUserAvatarUrl, getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -103,6 +105,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
+  const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
 
   // Fetch scheduled hours from schedule entries
   useEffect(() => {
@@ -121,7 +124,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     fetchScheduledHours();
   }, [ticket.ticket_id, userId]);
 
-  // Fetch avatar URLs for primary agent and additional agents
+  // Fetch avatar URLs for primary agent, additional agents, and contact
   useEffect(() => {
     const fetchAvatarUrls = async () => {
       if (!tenant) return;
@@ -153,6 +156,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
     fetchAvatarUrls();
   }, [ticket.assigned_to, additionalAgents, tenant]);
+
+  // Fetch contact avatar URL
+  useEffect(() => {
+    const fetchContactAvatarUrl = async () => {
+      if (!tenant || !contactInfo?.contact_name_id) return;
+
+      try {
+        const avatarUrl = await getContactAvatarUrl(contactInfo.contact_name_id, tenant);
+        setContactAvatarUrl(avatarUrl);
+      } catch (error) {
+        console.error('Error fetching contact avatar URL:', error);
+      }
+    };
+
+    fetchContactAvatarUrl();
+  }, [contactInfo?.contact_name_id, tenant]);
 
   // Helper function to get scheduled hours for a specific agent
   const getAgentScheduledHours = (agentId: string): number => {
@@ -245,6 +264,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
+                  {contactInfo && (
+                    <ContactAvatar
+                      contactId={contactInfo.contact_name_id || ''}
+                      contactName={contactInfo.full_name || ''}
+                      avatarUrl={contactAvatarUrl}
+                      size="sm"
+                    />
+                  )}
                   <p
                     {...withDataAutomationId({ id: `${id}-contact-name` })}
                     className="text-sm text-blue-500 cursor-pointer hover:underline"

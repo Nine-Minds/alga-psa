@@ -5,7 +5,8 @@ import { signOut } from "next-auth/react";
 import Link from 'next/link';
 import { QuestionMarkCircledIcon, SunIcon, MoonIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import UserAvatar from 'server/src/components/settings/general/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { usePathname } from 'next/navigation';
 import { menuItems, bottomMenuItems, MenuItem } from 'server/src/config/menuConfig';
@@ -164,12 +165,21 @@ const Header: React.FC<HeaderProps> = ({
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button className="relative" aria-label="User menu">
-              <UserAvatar
-                userId={userData?.user_id || ''}
-                userName={`${userData?.first_name || ''} ${userData?.last_name || ''}`}
-                avatarUrl={avatarUrl}
-                size="sm"
-              />
+              {userData?.user_type === 'client' ? (
+                <ContactAvatar
+                  contactId={userData?.contact_id || ''}
+                  contactName={`${userData?.first_name || ''} ${userData?.last_name || ''}`}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
+              ) : (
+                <UserAvatar
+                  userId={userData?.user_id || ''}
+                  userName={`${userData?.first_name || ''} ${userData?.last_name || ''}`}
+                  avatarUrl={avatarUrl}
+                  size="sm"
+                />
+              )}
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
             </button>
           </DropdownMenu.Trigger>
@@ -182,7 +192,7 @@ const Header: React.FC<HeaderProps> = ({
             >
               <DropdownMenu.Item
                 className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
-                onSelect={() => router.push('/msp/profile')}
+                onSelect={() => router.push(userData?.user_type === 'client' ? '/client/profile' : '/msp/profile')}
               >
                 <PersonIcon className="mr-2 h-3.5 w-3.5" />
                 <span>Profile</span>

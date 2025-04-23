@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import { ArrowUpDown } from 'lucide-react';
@@ -13,17 +13,20 @@ import CustomTabs from '../ui/CustomTabs';
 import Documents from '../documents/Documents';
 import styles from './TicketDetails.module.css';
 import { Button } from 'server/src/components/ui/Button';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
+import { createTenantKnex } from 'server/src/lib/db';
 
 interface TicketConversationProps {
   id?: string;
   ticket: ITicket;
   conversations: IComment[];
   documents: IDocument[];
-  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
-  currentUser: { id: string; name?: string | null; email?: string | null; } | null | undefined;
+  userMap: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
+  currentUser: { id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null | undefined;
   activeTab: string;
   isEditing: boolean;
   currentComment: IComment | null;
@@ -66,6 +69,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
 
   const handleAddCommentClick = () => {
     setShowEditor(true);
@@ -115,8 +119,52 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   };
 
+  // Fetch contact avatar URLs for client users
+  useEffect(() => {
+    const fetchContactAvatarUrls = async () => {
+      if (!ticket.tenant) return;
+      
+      const newContactAvatarUrls: Record<string, string | null> = {};
+      const updatedUserMap = { ...userMap };
+      
+      // Find all client users in the conversations
+      for (const conversation of conversations) {
+        if (conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
+          try {
+            const contactId = await getUserContactId(conversation.user_id);
+            
+            if (contactId) {
+              const avatarUrl = await getContactAvatarUrl(contactId, ticket.tenant);
+              if (avatarUrl) {
+                newContactAvatarUrls[conversation.user_id] = avatarUrl;
+                
+                updatedUserMap[conversation.user_id] = {
+                  ...userMap[conversation.user_id],
+                  avatarUrl: avatarUrl
+                };
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching avatar URL for contact ${conversation.user_id}:`, error);
+          }
+        }
+      }
+      
+      setContactAvatarUrls(newContactAvatarUrls);
+      
+      Object.keys(updatedUserMap).forEach(key => {
+        if (updatedUserMap[key].avatarUrl !== userMap[key].avatarUrl) {
+          userMap[key] = updatedUserMap[key];
+        }
+      });
+    };
+    
+    fetchContactAvatarUrls();
+  }, [conversations, ticket.tenant, userMap]);
+
   const getAuthorInfo = (conversation: IComment) => {
     if (conversation.user_id) {
+      // The userMap should already have the updated avatar URLs from the useEffect above
       return userMap[conversation.user_id] || null;
     }
     return null;
@@ -226,11 +274,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           {showEditor && (
             <div className='flex items-start'>
               <div className="mr-2">
-                <AvatarIcon
+                {/* Use UserAvatar component for current user */}
+                <UserAvatar
                   {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
                   userId={currentUser?.id || ''}
-                  firstName={currentUser?.name?.split(' ')[0] || ''}
-                  lastName={currentUser?.name?.split(' ')[1] || ''}
+                  userName={currentUser?.name || ''}
+                  avatarUrl={currentUser?.avatarUrl || null}
                   size="md"
                 />
               </div>

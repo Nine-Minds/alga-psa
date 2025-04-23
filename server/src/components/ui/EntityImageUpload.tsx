@@ -5,7 +5,7 @@ import { useState, useRef, useTransition } from 'react';
 import { toast } from 'react-hot-toast';
 import { Pen, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
-import UserAvatar from 'server/src/components/settings/general/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
 

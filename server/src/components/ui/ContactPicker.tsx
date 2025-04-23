@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Input } from '../ui/Input';
+import { Input } from './Input';
 import { ChevronDown, Search } from 'lucide-react';
-import AvatarIcon from 'server/src/components/ui/AvatarIcon'; // Added import
+import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { IContact } from '../../interfaces/contact.interfaces';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -46,14 +46,6 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to get name parts for AvatarIcon
-  const getContactNameParts = (fullName: string | undefined | null): { firstName: string; lastName: string } => {
-    if (!fullName) return { firstName: '', lastName: '' };
-    const parts = fullName.trim().split(' ');
-    const firstName = parts[0] || '';
-    const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
-    return { firstName, lastName };
-  };
 
   const selectedContact = useMemo(() =>
     contacts.find((c) => c.contact_name_id === value),
@@ -246,12 +238,11 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
           >
             <div className="flex items-center gap-2 flex-1">
               {selectedContact && (
-                <AvatarIcon
-                  // Use contact_name_id as a unique identifier, similar to userId
-                  userId={selectedContact.contact_name_id}
-                  firstName={getContactNameParts(selectedContact.full_name).firstName}
-                  lastName={getContactNameParts(selectedContact.full_name).lastName}
-                  size="sm" // Match UserPicker default or adjust as needed
+                <ContactAvatar
+                  contactId={selectedContact.contact_name_id}
+                  contactName={selectedContact.full_name}
+                  avatarUrl={selectedContact.avatarUrl || null}
+                  size="sm"
                 />
               )}
               <span>{selectedContact ? selectedContact.full_name : placeholder}</span>
@@ -335,10 +326,10 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                       onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { onValueChange(contact.contact_name_id); setIsOpen(false); } }} // Handle keyboard selection
                     >
                       <div className="flex items-center gap-2 flex-1">
-                         <AvatarIcon
-                           userId={contact.contact_name_id}
-                           firstName={getContactNameParts(contact.full_name).firstName}
-                           lastName={getContactNameParts(contact.full_name).lastName}
+                         <ContactAvatar
+                           contactId={contact.contact_name_id}
+                           contactName={contact.full_name}
+                           avatarUrl={contact.avatarUrl || null}
                            size="sm"
                          />
                          <div className="flex-1">

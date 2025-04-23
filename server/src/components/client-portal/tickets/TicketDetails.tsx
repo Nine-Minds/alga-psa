@@ -39,14 +39,14 @@ interface TicketWithDetails extends ITicket {
   priority_name?: string;
   conversations?: IComment[];
   documents?: IDocument[];
-  userMap?: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; }>;
+  userMap?: Record<string, { first_name: string; last_name: string; user_id: string; email?: string; user_type: string; avatarUrl: string | null }>;
 }
 
 export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
   const [ticket, setTicket] = useState<TicketWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
   const [activeTab, setActiveTab] = useState('Comments');
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
@@ -85,7 +85,8 @@ export function TicketDetails({ ticketId, open, onClose }: TicketDetailsProps) {
           setCurrentUser({
             id: user.user_id,
             name: `${user.first_name} ${user.last_name}`,
-            email: user.email
+            email: user.email,
+            avatarUrl: user.avatarUrl // Include avatarUrl from the fetched user object
           });
         }
       } catch (err) {

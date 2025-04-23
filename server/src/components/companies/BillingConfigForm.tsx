@@ -9,7 +9,7 @@ import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added
 import { FileTextIcon } from 'lucide-react';
 import { GearIcon } from '@radix-ui/react-icons';
 import { useEffect, useState } from 'react';
-import { ContactPicker } from '../contacts/ContactPicker';
+import { ContactPicker } from '../ui/ContactPicker';
 
 interface BillingConfigFormProps {
     billingConfig: {

@@ -4,7 +4,7 @@ import { getTeamById, updateTeam, removeUserFromTeam, assignManagerToTeam, addUs
 import { getAllUsers, getMultipleUsersWithRoles } from 'server/src/lib/actions/user-actions/userActions';
 import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import UserAvatar from './UserAvatar';
+import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface TeamDetailsProps {

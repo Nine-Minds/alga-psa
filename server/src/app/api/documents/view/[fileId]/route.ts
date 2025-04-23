@@ -35,8 +35,8 @@ export async function GET(
     let associatedContactId: string | null = null;
     let associatedUserId: string | null = null;
 
-    // 1. Check if user is internal
-    if (user.user_type === 'internal') { 
+    // 1. Check if user is internal - they have full access
+    if (user.user_type === 'internal') {
         hasPermission = true;
         console.log(`Internal user ${user.user_id} granted access to file ${fileId}`);
     } else {
@@ -54,7 +54,7 @@ export async function GET(
               document_id: documentRecord.document_id,
               tenant: tenant
             });
-          
+
           // Check each association
           for (const assoc of associations) {
             if (assoc.entity_type === 'company') {
@@ -65,19 +65,17 @@ export async function GET(
               associatedUserId = assoc.entity_id;
             }
           }
-          
+
           // Check if this is the user's own avatar
           if (associatedUserId === user.user_id) {
             hasPermission = true;
             console.log(`User ${user.user_id} accessing their own avatar (file ${fileId})`);
           }
-          
           // Check if this is the user's own contact avatar
           else if (associatedContactId === user.contact_id) {
             hasPermission = true;
             console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
           }
-          
           // Check company association
           else if (associatedCompanyId && user.contact_id) {
             // Fetch the user's company_id via their contact record
@@ -85,7 +83,7 @@ export async function GET(
               .select('company_id')
               .where({ contact_name_id: user.contact_id, tenant })
               .first();
-            
+
             userCompanyId = contactRecord?.company_id ?? null;
 
             // Allow access if the user's company matches the document's associated company
@@ -93,6 +91,19 @@ export async function GET(
               hasPermission = true;
               console.log(`User ${user.user_id} granted access to company ${associatedCompanyId} file ${fileId}`);
             }
+          }
+
+          // New permission check: Allow any user within the same tenant to view user avatars
+          if (!hasPermission && associatedUserId) {
+              const associatedUser = await knex('users')
+                  .select('tenant')
+                  .where({ user_id: associatedUserId })
+                  .first();
+
+              if (associatedUser && associatedUser.tenant === user.tenant) {
+                  hasPermission = true;
+                  console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
+              }
           }
         }
     }

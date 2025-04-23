@@ -1,6 +1,6 @@
 // server/src/components/ui/UserPicker.tsx
 import React, { useState, useRef, useEffect } from 'react';
-import UserAvatar from 'server/src/components/settings/general/UserAvatar';
+import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';

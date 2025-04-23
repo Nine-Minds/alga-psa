@@ -18,6 +18,8 @@ import CustomSelect from '../ui/CustomSelect';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -42,19 +44,29 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [error, setError] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [fetchedTags, allTags] = await Promise.all([
-        findTagsByEntityIds([contact.contact_name_id], 'contact'),
-        findAllTagsByType('contact')
-      ]);
-      
-      setTags(fetchedTags);
-      setAllTagTexts(allTags);
+      try {
+        const [fetchedTags, allTags] = await Promise.all([
+          findTagsByEntityIds([contact.contact_name_id], 'contact'),
+          findAllTagsByType('contact')
+        ]);
+        
+        setTags(fetchedTags);
+        setAllTagTexts(allTags);
+        
+        if (contact.tenant) {
+          const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
+          setAvatarUrl(contactAvatarUrl);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+      }
     };
     fetchData();
-  }, [contact.contact_name_id]);
+  }, [contact.contact_name_id, contact.tenant]);
 
   const handleInputChange = (field: keyof IContact, value: string | boolean) => {
     setContact(prev => ({ ...prev, [field]: value }));
@@ -104,6 +116,17 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         )}
         <div className="flex justify-between items-center mb-4">
           <Heading size="6">Edit Contact: {contact.full_name}</Heading>
+        </div>
+        
+        {/* Contact Avatar Upload */}
+        <div className="mb-6">
+          <ContactAvatarUpload
+            contactId={contact.contact_name_id}
+            contactName={contact.full_name}
+            avatarUrl={avatarUrl}
+            userType="internal"
+            onAvatarChange={(newAvatarUrl) => setAvatarUrl(newAvatarUrl)}
+          />
         </div>
         <table className="min-w-full">
           <tbody>

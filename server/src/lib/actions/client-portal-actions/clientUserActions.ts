@@ -202,27 +202,40 @@ export async function uploadContactAvatar(
   // Permission check
   let canModify = false;
   if (currentUser.user_type === 'client') {
-    // Client users can only modify their own linked contact's avatar
+    // For client users, we need to check if they're trying to modify their own contact's avatar
+    // This can happen in two ways:
+    // 1. The contactId matches their contact_id (direct match)
+    // 2. They're trying to modify a contact that's associated with their user account
     if (currentUser.contact_id === contactId) {
       canModify = true;
-    }
-  } else if (currentUser.user_type === 'msp') {
-    // MSP users need appropriate permission
-    try {
-      // Get user roles with permissions
-      const rolesWithPermissions = await getUserRolesWithPermissions(currentUser.user_id);
+    } else {
+      // Check if this contact is associated with the current user
+      const userContact = await knex('contacts')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .first();
       
-      // Check if user has MANAGE_CONTACTS permission
-      canModify = rolesWithPermissions.some(role =>
-        role.permissions.some(permission =>
-          `${permission.resource}.${permission.action}` === 'contacts.manage' ||
-          `${permission.resource}.${permission.action}` === 'contacts.update'
-        )
-      );
-    } catch (error) {
-      console.error('Error checking permissions:', error);
-      return { success: false, message: 'Permission check failed' };
+      if (userContact) {
+        // Check if there's a user with this contact_id
+        const contactUser = await knex('users')
+          .where({
+            contact_id: contactId,
+            user_id: currentUser.user_id,
+            tenant
+          })
+          .first();
+        
+        if (contactUser) {
+          canModify = true;
+        }
+      }
     }
+  } else if (currentUser.user_type === 'internal') {
+    // Internal users can modify any contact's avatar by default
+    console.log(`[uploadContactAvatar] Internal user ${currentUser.user_id} granted permission to modify contact avatar`);
+    canModify = true;
   }
 
   if (!canModify) {
@@ -294,25 +307,40 @@ export async function deleteContactAvatar(
   // Permission check
   let canDelete = false;
   if (currentUser.user_type === 'client') {
+    // For client users, we need to check if they're trying to delete their own contact's avatar
+    // This can happen in two ways:
+    // 1. The contactId matches their contact_id (direct match)
+    // 2. They're trying to delete a contact that's associated with their user account
     if (currentUser.contact_id === contactId) {
       canDelete = true;
-    }
-  } else if (currentUser.user_type === 'msp') {
-    try {
-      // Get user roles with permissions
-      const rolesWithPermissions = await getUserRolesWithPermissions(currentUser.user_id);
+    } else {
+      // Check if this contact is associated with the current user
+      const userContact = await knex('contacts')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .first();
       
-      // Check if user has MANAGE_CONTACTS permission
-      canDelete = rolesWithPermissions.some(role =>
-        role.permissions.some(permission =>
-          `${permission.resource}.${permission.action}` === 'contacts.manage' ||
-          `${permission.resource}.${permission.action}` === 'contacts.update'
-        )
-      );
-    } catch (error) {
-      console.error('Error checking permissions:', error);
-      return { success: false, message: 'Permission check failed' };
+      if (userContact) {
+        // Check if there's a user with this contact_id
+        const contactUser = await knex('users')
+          .where({
+            contact_id: contactId,
+            user_id: currentUser.user_id,
+            tenant
+          })
+          .first();
+        
+        if (contactUser) {
+          canDelete = true;
+        }
+      }
     }
+  } else if (currentUser.user_type === 'internal') {
+    // Internal users can delete any contact's avatar by default
+    console.log(`[deleteContactAvatar] Internal user ${currentUser.user_id} granted permission to delete contact avatar`);
+    canDelete = true;
   }
 
   if (!canDelete) {

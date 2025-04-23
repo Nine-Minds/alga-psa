@@ -13,7 +13,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import InteractionDetails from './InteractionDetails';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { ContactPicker } from 'server/src/components/contacts/ContactPicker';
+import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';

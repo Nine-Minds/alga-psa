@@ -11,7 +11,7 @@ import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/s
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { ContactPicker } from 'server/src/components/contacts/ContactPicker'; // Import ContactPicker
+import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
 import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
