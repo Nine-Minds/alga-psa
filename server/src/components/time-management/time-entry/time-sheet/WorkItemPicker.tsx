@@ -170,7 +170,8 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
           start: startDate,
           end: endDate
         } : undefined,
-        availableWorkItemIds: availableWorkItems.map(item => item.work_item_id)
+        availableWorkItemIds: availableWorkItems.map(item => item.work_item_id),
+        context: 'picker'
       });
       
       const itemsWithStatus = result.items.map((item): WorkItemWithStatus => ({

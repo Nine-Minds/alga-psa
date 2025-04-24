@@ -40,7 +40,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [isDragging, setIsDragging] = useState(false);
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [highlightedSlots, setHighlightedSlots] = useState<Set<HighlightedSlot> | null>(null);
-  const [selectedType, setSelectedType] = useState<WorkItemType | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all_open');
@@ -49,21 +48,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
-  const typeOptions = [
-    { value: 'all', label: 'All Types' },
-    { value: 'ticket', label: 'Tickets' },
-    { value: 'project_task', label: 'Project Tasks' },
-    { value: 'non_billable_category', label: 'Non-Billable' }
-  ];
-
-  // Removed old statusOptions
-
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef<DragState | null>(null);
   // Updated ref to use new state variables
   const searchParamsRef = useRef({
-    selectedType,
     selectedStatusFilter,
     filterUnscheduled,
     sortOrder,
@@ -75,17 +64,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   // Updated useEffect dependencies
   useEffect(() => {
     searchParamsRef.current = {
-      selectedType,
       selectedStatusFilter,
       filterUnscheduled,
       sortOrder,
       currentPage,
     };
-  }, [selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage]);
+  }, [selectedStatusFilter, filterUnscheduled, sortOrder, currentPage]);
 
   const performSearch = useCallback(async (query: string) => {
     try {
-      const { selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage } = searchParamsRef.current;
+      const { selectedStatusFilter, filterUnscheduled, sortOrder, currentPage } = searchParamsRef.current;
       // Get start and end of selected date
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
@@ -94,7 +82,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
       const result = await searchWorkItems({
         searchTerm: query,
-        type: filterWorkItemType || selectedType,
         statusFilter: selectedStatusFilter,
         filterUnscheduled: filterUnscheduled,
         sortBy: 'name',
@@ -105,9 +92,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           start,
           end
         },
-        workItemId: filterWorkItemId 
+        workItemId: filterWorkItemId,
+        context: 'dispatch'
       });
-
       setWorkItems(result.items);
       setTotalItems(result.total);
     } catch (err) {
@@ -120,7 +107,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   useEffect(() => {
     const fetchStatusOptions = async () => {
       try {
-        const options = await getWorkItemStatusOptions(['ticket', 'project_task']);
+        const options = await getWorkItemStatusOptions(['ticket']);
         setStatusFilterOptions(options);
       } catch (err) {
         console.error("Failed to fetch status options:", err);
@@ -204,7 +191,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   // Updated useEffect dependencies
   useEffect(() => {
     debouncedSearch(searchQuery);
-  }, [searchQuery, selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch]);
+  }, [searchQuery, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch]);
 
   const debouncedSaveSchedule = useCallback(async (
     eventId: string,
@@ -444,17 +431,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               </Button>
             </div>
 
-            <div className="flex gap-2">
-              <CustomSelect
-                value={selectedType}
-                onValueChange={(value: string) => {
-                  setSelectedType(value as WorkItemType | 'all');
-                  setCurrentPage(1);
-                }}
-                options={typeOptions}
-                className="flex-1"
-              />
-
+            <div className="flex gap-2 justify-between items-center">
               <CustomSelect
                 value={selectedStatusFilter}
                 onValueChange={(value: string) => {
@@ -462,7 +439,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                   setCurrentPage(1);
                 }}
                 options={statusFilterOptions}
-                className="flex-1"
                 placeholder="Filter by status..."
               />
 
