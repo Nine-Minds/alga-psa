@@ -1,7 +1,8 @@
-import React from 'react';
-import { Trash } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trash, ExternalLink } from 'lucide-react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { getEventColors } from './utils';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -14,6 +15,7 @@ interface ScheduleEventProps {
   onMouseLeave: () => void;
   onDelete: (e: React.MouseEvent) => void;
   onResizeStart: (e: React.MouseEvent, direction: 'left' | 'right') => void;
+  onClick: () => void;
 }
 
 const ScheduleEvent: React.FC<ScheduleEventProps> = ({
@@ -27,12 +29,25 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   onDelete,
   onResizeStart,
   isResizing,
+  onClick,
 }) => {
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const colors = getEventColors(event.work_item_type);
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsConfirmDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    onDelete(undefined as any);
+    setIsConfirmDeleteDialogOpen(false);
+  };
+
   return (
-    <div
-      className={`text-xs ${colors.bg} ${colors.text} p-1 shadow-md rounded absolute 
+    <>
+      <div
+        className={`text-xs ${colors.bg} ${colors.text} p-1 shadow-md rounded absolute 
         ${!isResizing ? colors.hover : ''}
         ${isDragging ? 'opacity-70 shadow-lg' : ''}
         ${isResizing ? 'cursor-ew-resize pointer-events-none' : 'cursor-move'}`}
@@ -47,19 +62,42 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
       onMouseDown={onMouseDown}
       onMouseEnter={() => !isResizing && onMouseEnter()}
       onMouseLeave={() => !isResizing && onMouseLeave()}
+      onClick={(e) => {
+        if (event.work_item_type !== 'ad_hoc' && !isDragging && !isResizing && !(e.target as HTMLElement).closest('.resize-handle') && !(e.target as HTMLElement).closest('.delete-button') && !(e.target as HTMLElement).closest('.details-button')) {
+          onClick();
+        }
+      }}
     >
       <div className="font-bold relative left-4">{event.title.split(':')[0]}</div>
       <div className="relative left-4">{event.title.split(':')[1]}</div>
+
+      {event.work_item_type === 'ad_hoc' && (
+        <button
+          className="absolute top-1 left-1 w-4 h-4 text-[rgb(var(--color-text-300))]
+            hover:text-[rgb(var(--color-text-600))] transition-colors details-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          title="View Details"
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ zIndex: 1000 }}
+        >
+          <ExternalLink className="w-4 h-4 pointer-events-none" />
+        </button>
+      )}
+
       <button
-        className="absolute top-1 right-2 w-4 h-4 text-[rgb(var(--color-text-300))] 
+        className="absolute top-1 right-2 w-4 h-4 text-[rgb(var(--color-text-300))]
           hover:text-[rgb(var(--color-text-600))] transition-colors delete-button"
-        onClick={onDelete}
+        onClick={handleDeleteClick}
         title="Delete schedule entry"
         onMouseDown={(e) => e.stopPropagation()}
         style={{ zIndex: 1000 }}
       >
         <Trash className="w-4 h-4 pointer-events-none" />
       </button>
+
       <div
         className="absolute top-0 bottom-0 left-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
         onMouseDown={(e) => {
@@ -74,7 +112,18 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
           onResizeStart(e, 'right');
         }}
       ></div>
-    </div>
+      </div>
+
+      <ConfirmationDialog
+        id={`delete-schedule-${event.entry_id}`}
+        isOpen={isConfirmDeleteDialogOpen}
+        onClose={() => setIsConfirmDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this entry? This action cannot be undone."
+        confirmLabel="Delete"
+      />
+    </>
   );
 };
 

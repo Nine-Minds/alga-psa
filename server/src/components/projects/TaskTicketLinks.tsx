@@ -8,7 +8,8 @@ import {
   deleteTaskTicketLinkAction,
   getTaskTicketLinksAction
 } from 'server/src/lib/actions/project-actions/projectTaskActions';
-import { getTicketsForList, getTicketById } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getTicketsForList } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TicketDetails from 'server/src/components/tickets/TicketDetails';
@@ -375,13 +376,33 @@ export default function TaskTicketLinks({
         return;
       }
       
-      const ticket = await getTicketById(ticketId, user);
-      if (!ticket) {
+      const ticketData = await getConsolidatedTicketData(ticketId, user);
+      if (!ticketData) {
         toast.error('Failed to load ticket');
         return;
       }
 
-      openDrawer(<TicketDetails initialTicket={ticket} isInDrawer={true} />);
+      openDrawer(
+        <TicketDetails 
+          isInDrawer={true} 
+          initialTicket={ticketData.ticket}
+          initialComments={ticketData.comments}
+          initialChannel={ticketData.channel}
+          initialCompany={ticketData.company}
+          initialContactInfo={ticketData.contactInfo}
+          initialCreatedByUser={ticketData.createdByUser}
+          initialAdditionalAgents={ticketData.additionalAgents}
+          statusOptions={ticketData.options.status}
+          agentOptions={ticketData.options.agent}
+          channelOptions={ticketData.options.channel}
+          priorityOptions={ticketData.options.priority}
+          initialCategories={ticketData.categories}
+          initialCompanies={ticketData.companies}
+          initialAgentSchedules={ticketData.agentSchedules}
+          initialUserMap={ticketData.userMap}
+          initialAvailableAgents={ticketData.availableAgents}
+        />
+      );
     } catch (error) {
       console.error('Error loading ticket:', error);
       toast.error('Failed to load ticket');

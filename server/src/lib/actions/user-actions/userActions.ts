@@ -125,7 +125,7 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
   }
 }
 
-export async function getAllUsers(includeInactive: boolean = true): Promise<IUserWithRoles[]> {
+export async function getAllUsers(includeInactive: boolean = true, userType?: string): Promise<IUserWithRoles[]> {
   try {
     const currentUser = await getCurrentUser();
     const tenant = currentUser?.tenant;
@@ -140,7 +140,11 @@ export async function getAllUsers(includeInactive: boolean = true): Promise<IUse
       return { ...user, roles };
     }));
 
-    return usersWithRoles.filter(user => user.tenant === tenant);
+    // Filter by tenant and optionally by user_type
+    return usersWithRoles.filter(user => 
+      user.tenant === tenant && 
+      (userType ? user.user_type === userType : true)
+    );
   } catch (error) {
     console.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');

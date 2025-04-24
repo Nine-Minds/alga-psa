@@ -245,6 +245,82 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
   }
 }
 
+export interface StatusOption {
+  value: string;
+  label: string;
+  isStandard?: boolean;
+}
+
+export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[]): Promise<StatusOption[]> {
+  try {
+    const { knex: db, tenant } = await createTenantKnex();
+
+    const itemTypesToFetch = itemType 
+      ? (Array.isArray(itemType) ? itemType : [itemType]) 
+      : ['ticket', 'project_task'];
+
+    const customStatusesQuery = db('statuses')
+      .where({ tenant: tenant })
+      .select('status_id', 'name')
+      .orderBy('name', 'asc');
+
+    if (itemTypesToFetch.length > 0) {
+      customStatusesQuery.whereIn('status_type', itemTypesToFetch);
+    }
+    const customStatuses = await customStatusesQuery;
+
+
+    const standardStatusesQuery = db('standard_statuses')
+      .where({ tenant: tenant })
+      .select('standard_status_id', 'name')
+      .orderBy('name', 'asc');
+      
+    if (itemTypesToFetch.length > 0) {
+      standardStatusesQuery.whereIn('item_type', itemTypesToFetch);
+    }
+    const standardStatuses = await standardStatusesQuery;
+
+    const options: StatusOption[] = [
+      { value: 'all_open', label: 'All Open' },
+      { value: 'all_closed', label: 'All Closed' },
+      ...customStatuses.map(s => ({
+        value: s.status_id,
+        label: s.name,
+        isStandard: false,
+      })),
+      ...standardStatuses.map(s => ({
+        value: s.standard_status_id,
+        label: s.name,
+        isStandard: true,
+      })),
+    ];
+
+    const uniqueOptions = options.reduce((acc, current) => {
+      const existing = acc.find(item => item.label === current.label);
+      if (!existing) {
+        acc.push(current);
+      } else if (existing.isStandard === true && current.isStandard === false) {
+        acc = acc.filter(item => item.label !== current.label);
+        acc.push(current);
+      }
+      return acc;
+    }, [] as StatusOption[]);
+
+     const finalOptions = [
+        ...uniqueOptions.filter(o => o.value === 'all_open'),
+        ...uniqueOptions.filter(o => o.value === 'all_closed'),
+        ...uniqueOptions.filter(o => o.value !== 'all_open' && o.value !== 'all_closed').sort((a, b) => a.label.localeCompare(b.label))
+     ];
+
+
+    return finalOptions;
+
+  } catch (error) {
+    console.error('Error fetching work item status options:', error);
+    throw new Error('Failed to fetch work item status options');
+  }
+}
+
 export async function deleteStatus(statusId: string) {
   const user = await getCurrentUser();
   if (!user) {

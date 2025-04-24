@@ -26,6 +26,7 @@ interface TechnicianRowProps {
   onEventMouseDown: (e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>) => void;
   onEventDelete: (e: React.MouseEvent, eventId: string) => void;
   onEventResizeStart: (e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>, direction: 'left' | 'right') => void;
+  onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
 }
 
 const TechnicianRow: React.FC<TechnicianRowProps> = ({
@@ -45,10 +46,11 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
   onEventDelete,
   onEventResizeStart,
   isResizing,
+  onEventClick, // Destructure new prop
 }) => {
   return (
     <div
-      className="technician-row mb-4 relative h-16 border border-[rgb(var(--color-border-200))] min-w-[2880px]"
+      className="technician-row relative h-16 border border-[rgb(var(--color-border-200))] min-w-[2880px] mb-4"
       data-tech-id={tech.user_id}
     >
       <div className="grid grid-cols-96 h-full" style={{ width: '2880px' }}>
@@ -104,7 +106,8 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
               onMouseLeave={() => {}}  // This will be handled by parent component
               onDelete={(e) => onEventDelete(e, event.entry_id)}
               onResizeStart={(e, direction) => onEventResizeStart(e, event, direction)}
-              isResizing={false}
+              isResizing={false} 
+              onClick={() => onEventClick(event)}
             />
           );
         })}

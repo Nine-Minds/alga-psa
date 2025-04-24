@@ -46,6 +46,7 @@ interface TechnicianScheduleGridProps {
   onDrop: (dropEvent: DropEvent) => void;
   onResize: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
   onDeleteEvent: (eventId: string) => void;
+  onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
 }
 
 const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
@@ -54,10 +55,13 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
   selectedDate,
   onDrop,
   onResize,
-  onDeleteEvent
+  onDeleteEvent,
+  onEventClick
 }) => {
   const scheduleGridRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const namesColumnRef = useRef<HTMLDivElement>(null);
   const [totalWidth, setTotalWidth] = useState<number>(0);
   const resizeTimeoutRef = useRef<NodeJS.Timeout>();
   const isDraggingRef = useRef(false);
@@ -123,6 +127,8 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
       scrollToBusinessHours();
     }
   }, [events, hasScrolled]); // Only run when events load and haven't scrolled yet
+
+  const isSyncingScroll = useRef(false);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -437,89 +443,156 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
 
   const timeSlots = useMemo(() => generate15MinuteSlots(), [generate15MinuteSlots]);
 
+  // Combined scroll handler for the main grid
+  const handleGridScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncingScroll.current) return;
+
+    const target = e.currentTarget;
+    isSyncingScroll.current = true;
+
+    // Sync horizontal scroll with time header
+    if (headerRef.current) {
+      headerRef.current.scrollLeft = target.scrollLeft;
+    }
+    // Sync vertical scroll with names column
+    if (namesColumnRef.current) {
+      namesColumnRef.current.scrollTop = target.scrollTop;
+    }
+
+    requestAnimationFrame(() => {
+      isSyncingScroll.current = false;
+    });
+  }, []);
+
+  // Scroll handler for the names column (if scrolled directly)
+  const handleNamesScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncingScroll.current) return;
+
+    const target = e.currentTarget;
+    isSyncingScroll.current = true;
+
+    // Sync vertical scroll with main grid
+    if (gridRef.current) {
+      gridRef.current.scrollTop = target.scrollTop;
+    }
+
+    requestAnimationFrame(() => {
+      isSyncingScroll.current = false;
+    });
+  }, []);
+
+  // Scroll handler for the header (if scrolled directly - less likely)
+  const handleHeaderScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncingScroll.current) return;
+
+    const target = e.currentTarget;
+    isSyncingScroll.current = true;
+
+    // Sync horizontal scroll with main grid
+    if (gridRef.current) {
+      gridRef.current.scrollLeft = target.scrollLeft;
+    }
+
+    requestAnimationFrame(() => {
+      isSyncingScroll.current = false;
+    });
+  }, []);
+
+
   return (
-    <div
-      className="grid grid-cols-[auto,1fr] gap-4 h-full"
-      onClick={() => setIsGridFocused(true)}
-      tabIndex={0}
-      ref={scheduleGridRef}
-    >
-      <div className="space-y-4">
-        <div className="h-8"></div>
-        {technicians.map((tech): JSX.Element => (
-          <div key={tech.user_id} className="h-16 flex items-center text-[rgb(var(--color-text-700))]">
-            {tech.first_name} {tech.last_name}
-          </div>
-        ))}
-      </div>
-      <div className="relative" style={{overflow: "hidden"}}>
-        <div className="overflow-auto" ref={gridRef} style={{ scrollBehavior: 'smooth' }}>
+    <div className="h-full flex flex-col overflow-hidden" onClick={() => setIsGridFocused(true)} tabIndex={0} ref={scheduleGridRef}>
+      {/* Header row */}
+      <div className="flex flex-shrink-0">
+        {/* Empty corner cell */}
+        <div className="w-48 flex-shrink-0 h-8 bg-white z-20"></div>
+        {/* Time header - scrolls horizontally */}
+        <div className="overflow-x-auto overflow-y-hidden flex-1 scrollbar-hide" ref={headerRef} onScroll={handleHeaderScroll}>
           <div style={{ minWidth: '2880px' }}>
             <TimeHeader timeSlots={timeSlots} />
-            <div>
-          {technicians.map((tech): JSX.Element => (
-            <TechnicianRow
+          </div>
+        </div>
+      </div>
+
+      {/* Body content */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Technician names column - scrolls vertically */}
+        <div className="w-48 flex-shrink-0 bg-white z-10 overflow-y-auto overflow-x-hidden scrollbar-hide" ref={namesColumnRef} onScroll={handleNamesScroll}>
+          {technicians.map((tech) => (
+            <div
               key={tech.user_id}
-              tech={tech}
-              timeSlots={timeSlots}
-              events={localEvents}
-              selectedDate={selectedDate}
-              highlightedSlots={highlightedSlots}
-              isDragging={isDragging}
-              dragState={dragState}
-              hoveredEventId={!isDragging && !resizingRef.current?.eventId ? hoveredEventId : null}
-              isResizing={!!resizingRef.current}
-              getEventPosition={getEventPosition}
-              onTimeSlotMouseOver={handleTimeSlotMouseOver}
-              onTimeSlotDragOver={(e, timeSlot, techId) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const workItemId = e.dataTransfer.types.includes('text/plain');
-                if (workItemId) {
-                  isDraggingRef.current = true;
-                  dragStateRef.current = {
-                    sourceId: e.dataTransfer.getData('text/plain'),
-                    sourceType: 'workItem',
-                    originalStart: new Date(),
-                    originalEnd: new Date(),
-                    currentStart: new Date(),
-                    currentEnd: new Date(),
-                    currentTechId: techId,
-                    clickOffset15MinIntervals: 0
-                  };
-                  setIsDragging(true);
-                  setDragState(dragStateRef.current);
-                  handleTimeSlotMouseOver(e, timeSlot, techId);
-                }
-              }}
-              onDrop={(e, timeSlot, techId) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const workItemId = e.dataTransfer.getData('text/plain');
-                if (workItemId) {
-                  const [hours, minutes] = timeSlot.split(':').map(Number);
-                  const dropTime = new Date(selectedDate);
-                  dropTime.setHours(hours, minutes, 0, 0);
-                  onDrop({
-                    type: 'workItem',
-                    workItemId,
-                    techId,
-                    startTime: dropTime
-                  });
-                } else {
-                  handleMouseUp(e);
-                }
-              }}
-              onEventMouseDown={handleMouseDown}
-              onEventDelete={handleDelete}
-              onEventResizeStart={handleResizeStart}
-            />
+              className="h-16 mb-4 flex items-center text-[rgb(var(--color-text-700))] pl-2"
+            >
+              {tech.first_name} {tech.last_name}
+            </div>
           ))}
+        </div>
+
+        {/* Grid content - scrolls both horizontally and vertically */}
+        <div className="flex-1 overflow-auto" ref={gridRef} onScroll={handleGridScroll}>
+          <div style={{ minWidth: '2880px' }}>
+            {technicians.map((tech) => (
+              <TechnicianRow
+                  key={tech.user_id}
+                  tech={tech}
+                  timeSlots={timeSlots}
+                  events={localEvents}
+                  selectedDate={selectedDate}
+                  highlightedSlots={highlightedSlots}
+                  isDragging={isDragging}
+                  dragState={dragState}
+                  hoveredEventId={!isDragging && !resizingRef.current?.eventId ? hoveredEventId : null}
+                  isResizing={!!resizingRef.current}
+                  getEventPosition={getEventPosition}
+                  onTimeSlotMouseOver={handleTimeSlotMouseOver}
+                  onTimeSlotDragOver={(e, timeSlot, techId) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const workItemId = e.dataTransfer.types.includes('text/plain');
+                    if (workItemId) {
+                      isDraggingRef.current = true;
+                      dragStateRef.current = {
+                        sourceId: e.dataTransfer.getData('text/plain'),
+                        sourceType: 'workItem',
+                        originalStart: new Date(),
+                        originalEnd: new Date(),
+                        currentStart: new Date(),
+                        currentEnd: new Date(),
+                        currentTechId: techId,
+                        clickOffset15MinIntervals: 0
+                      };
+                      setIsDragging(true);
+                      setDragState(dragStateRef.current);
+                      handleTimeSlotMouseOver(e, timeSlot, techId);
+                    }
+                  }}
+                  onDrop={(e, timeSlot, techId) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const workItemId = e.dataTransfer.getData('text/plain');
+                    if (workItemId) {
+                      const [hours, minutes] = timeSlot.split(':').map(Number);
+                      const dropTime = new Date(selectedDate);
+                      dropTime.setHours(hours, minutes, 0, 0);
+                      onDrop({
+                        type: 'workItem',
+                        workItemId,
+                        techId,
+                        startTime: dropTime
+                      });
+                    } else {
+                      handleMouseUp(e);
+                    }
+                  }}
+                  onEventMouseDown={handleMouseDown}
+                  onEventDelete={handleDelete}
+                  onEventResizeStart={handleResizeStart}
+                  onEventClick={onEventClick} // Pass prop down to TechnicianRow
+                />
+              ))}
             </div>
           </div>
         </div>
       </div>
-    </div>
   );
 };
 

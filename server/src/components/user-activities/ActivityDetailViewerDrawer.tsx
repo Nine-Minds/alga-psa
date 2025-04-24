@@ -80,6 +80,7 @@ export function ActivityDetailViewerDrawer({
                 initialCompanies={ticketData.companies}
                 initialAgentSchedules={ticketData.agentSchedules}
                 initialUserMap={ticketData.userMap}
+                initialAvailableAgents={ticketData.availableAgents}
                 onClose={onClose}
               />
             </div>

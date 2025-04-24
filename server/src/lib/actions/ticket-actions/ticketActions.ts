@@ -2,6 +2,7 @@
 
 import { ITicket, ITicketListItem, ITicketListFilters, IAgentSchedule } from 'server/src/interfaces/ticket.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import Ticket from 'server/src/lib/models/ticket';
 import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
@@ -838,7 +839,22 @@ export async function getScheduledHoursForTicket(ticketId: string, user: IUser):
   }
 }
 
-export async function getTicketById(id: string, user: IUser): Promise<ITicket & { tenant: string; status_name: string; is_closed: boolean }> {
+export type DetailedTicket = ITicket & { 
+  tenant: string; 
+  status_name: string; 
+  is_closed: boolean;
+  channel_name?: string;
+  assigned_to_first_name?: string;
+  assigned_to_last_name?: string;
+  assigned_to_name?: string;
+  contact_name?: string;
+  company_name?: string;
+
+  additionalAgents?: ITicketResource[];
+  availableAgents?: IUser[];
+};
+
+export async function getTicketById(id: string, user: IUser): Promise<DetailedTicket> {
   if (!await hasPermission(user, 'ticket', 'read')) {
     throw new Error('Permission denied: Cannot view ticket');
   }
@@ -849,15 +865,46 @@ export async function getTicketById(id: string, user: IUser): Promise<ITicket & 
       throw new Error('Tenant not found');
     }
 
-    const ticket = await db('tickets as t')
+    type TicketQueryResult = ITicket & {
+      status_name: string;
+      is_closed: boolean;
+      channel_name?: string;
+      assigned_to_first_name?: string;
+      assigned_to_last_name?: string;
+      contact_name?: string;
+      company_name?: string;
+    };
+
+    const ticket: TicketQueryResult | undefined = await db('tickets as t')
       .select(
         't.*',
         's.name as status_name',
-        's.is_closed'
+        's.is_closed',
+        'ch.channel_name as channel_name',
+        'u_assignee.first_name as assigned_to_first_name',
+        'u_assignee.last_name as assigned_to_last_name',
+        'ct.full_name as contact_name',
+        'co.company_name'
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
-           .andOn('t.tenant', 's.tenant')
+           .andOn('t.tenant', 's.tenant');
+      })
+      .leftJoin('channels as ch', function() {
+        this.on('t.channel_id', 'ch.channel_id')
+           .andOn('t.tenant', 'ch.tenant');
+      })
+      .leftJoin('users as u_assignee', function() {
+        this.on('t.assigned_to', 'u_assignee.user_id')
+           .andOn('t.tenant', 'u_assignee.tenant');
+      })
+      .leftJoin('contacts as ct', function() {
+        this.on('t.contact_name_id', 'ct.contact_name_id')
+           .andOn('t.tenant', 'ct.tenant');
+      })
+      .leftJoin('companies as co', function() {
+        this.on('t.company_id', 'co.company_id')
+           .andOn('t.tenant', 'co.tenant');
       })
       .where({
         't.ticket_id': id,
@@ -869,15 +916,41 @@ export async function getTicketById(id: string, user: IUser): Promise<ITicket & 
       throw new Error('Ticket not found');
     }
 
-    // Add tenant and status info to the ticket
-    const ticketWithTenant = {
+    // Fetch additional resources and available agents in parallel
+    const [additionalAgents, availableAgents] = await Promise.all([
+      db('ticket_resources')
+        .where({
+          ticket_id: id,
+          tenant: tenant
+        }),
+      db('users')
+        .where({ tenant: tenant })
+        .orderBy('first_name', 'asc')
+    ]);
+
+
+    const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
+      ? `${ticket.assigned_to_first_name || ''} ${ticket.assigned_to_last_name || ''}`.trim()
+      : undefined;
+
+    const detailedTicket: DetailedTicket = {
       ...ticket,
       tenant: tenant,
       status_name: ticket.status_name || 'Unknown',
-      is_closed: ticket.is_closed || false
+      is_closed: ticket.is_closed || false,
+      channel_name: ticket.channel_name || undefined,
+      assigned_to_name: assigned_to_name,
+      contact_name: ticket.contact_name || undefined,
+      company_name: ticket.company_name || undefined,
+      additionalAgents: additionalAgents,
+      availableAgents: availableAgents,
     };
 
-    return convertDates(ticketWithTenant);
+    delete (detailedTicket as any).assigned_to_first_name;
+    delete (detailedTicket as any).assigned_to_last_name;
+
+
+    return convertDates(detailedTicket);
   } catch (error) {
     console.error('Failed to fetch ticket:', error);
     throw new Error('Failed to fetch ticket');
