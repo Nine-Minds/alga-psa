@@ -265,7 +265,7 @@ export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[])
       .orderBy('name', 'asc');
 
     if (itemTypesToFetch.length > 0) {
-      customStatusesQuery.whereIn('item_type', itemTypesToFetch);
+      customStatusesQuery.whereIn('status_type', itemTypesToFetch);
     }
     const customStatuses = await customStatusesQuery;
 
