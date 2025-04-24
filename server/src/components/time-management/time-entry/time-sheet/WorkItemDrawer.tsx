@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getTicketById } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getTaskWithDetails } from 'server/src/lib/actions/project-actions/projectTaskActions';
 import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
@@ -89,13 +89,28 @@ export function WorkItemDrawer({
 
             switch(workItem.type) {
                 case 'ticket': {
-                    const ticketData = await getTicketById(workItem.work_item_id, currentUser);
+                    const ticketData = await getConsolidatedTicketData(workItem.work_item_id, currentUser);
                     return (
                         <div className="min-w-auto h-full bg-white">
                             <TicketDetails
                                 isInDrawer={true}
-                                initialTicket={ticketData}
-                                onClose={onClose} // Pass onClose prop
+                                initialTicket={ticketData.ticket}
+                                initialComments={ticketData.comments}
+                                initialChannel={ticketData.channel}
+                                initialCompany={ticketData.company}
+                                initialContactInfo={ticketData.contactInfo}
+                                initialCreatedByUser={ticketData.createdByUser}
+                                initialAdditionalAgents={ticketData.additionalAgents}
+                                statusOptions={ticketData.options.status}
+                                agentOptions={ticketData.options.agent}
+                                channelOptions={ticketData.options.channel}
+                                priorityOptions={ticketData.options.priority}
+                                initialCategories={ticketData.categories}
+                                initialCompanies={ticketData.companies}
+                                initialAgentSchedules={ticketData.agentSchedules}
+                                initialUserMap={ticketData.userMap}
+                                initialAvailableAgents={ticketData.availableAgents}
+                                onClose={onClose}
                             />
                         </div>
                     );

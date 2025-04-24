@@ -9,10 +9,13 @@ import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { searchWorkItems } from 'server/src/lib/actions/workItemActions';
+import { searchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
+import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
@@ -38,8 +41,10 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [highlightedSlots, setHighlightedSlots] = useState<Set<HighlightedSlot> | null>(null);
   const [selectedType, setSelectedType] = useState<WorkItemType | 'all'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<'name' | 'type'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all_open');
+  const [filterUnassignedOnly, setFilterUnassignedOnly] = useState<boolean>(false);
+  const [statusFilterOptions, setStatusFilterOptions] = useState<StatusOption[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
 
@@ -47,39 +52,39 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     { value: 'all', label: 'All Types' },
     { value: 'ticket', label: 'Tickets' },
     { value: 'project_task', label: 'Project Tasks' },
-    { value: 'ad_hoc', label: 'Ad Hoc Entries'},
     { value: 'non_billable_category', label: 'Non-Billable' }
   ];
 
-  const sortOptions = [
-    { value: 'name', label: 'Sort by Name' },
-    { value: 'type', label: 'Sort by Type' }
-  ];
+  // Removed old statusOptions
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const isDraggingRef = useRef(false);
   const dragStateRef = useRef<DragState | null>(null);
+  // Updated ref to use new state variables
   const searchParamsRef = useRef({
     selectedType,
-    sortBy,
+    selectedStatusFilter,
+    filterUnassignedOnly,
     sortOrder,
     currentPage,
   });
 
   const saveTimeoutRef = useRef<number>();
 
+  // Updated useEffect dependencies
   useEffect(() => {
     searchParamsRef.current = {
       selectedType,
-      sortBy,
+      selectedStatusFilter,
+      filterUnassignedOnly,
       sortOrder,
       currentPage,
     };
-  }, [selectedType, sortBy, sortOrder, currentPage]);
+  }, [selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage]);
 
   const performSearch = useCallback(async (query: string) => {
     try {
-      const { selectedType, sortBy, sortOrder, currentPage } = searchParamsRef.current;
+      const { selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage } = searchParamsRef.current;
       // Get start and end of selected date
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
@@ -89,7 +94,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       const result = await searchWorkItems({
         searchTerm: query,
         type: filterWorkItemType || selectedType,
-        sortBy,
+        statusFilter: selectedStatusFilter,
+        unassignedOnly: !filterUnassignedOnly,
+        sortBy: 'name',
         sortOrder,
         page: currentPage,
         pageSize: ITEMS_PER_PAGE,
@@ -97,7 +104,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           start,
           end
         },
-        workItemId: filterWorkItemId // Add the filter parameter
+        workItemId: filterWorkItemId 
       });
 
       setWorkItems(result.items);
@@ -106,7 +113,48 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       console.error('Error searching work items:', err);
       setError('Failed to search work items');
     }
+  }, [selectedDate, filterWorkItemType, filterWorkItemId]);
+
+  // Fetch status options on mount
+  useEffect(() => {
+    const fetchStatusOptions = async () => {
+      try {
+        const options = await getWorkItemStatusOptions(['ticket', 'project_task']);
+        setStatusFilterOptions(options);
+      } catch (err) {
+        console.error("Failed to fetch status options:", err);
+        toast.error("Failed to load status filter options.");
+        // Set default basic options as fallback
+        setStatusFilterOptions([
+          { value: 'all_open', label: 'All Open' },
+          { value: 'all_closed', label: 'All Closed' },
+        ]);
+      }
+    };
+    fetchStatusOptions();
   }, []);
+
+
+  const refreshAllData = useCallback(async () => {
+    try {
+      await performSearch(searchQuery);
+      const start = new Date(selectedDate);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(selectedDate);
+      end.setHours(23, 59, 59, 999);
+      const scheduleResult = await getScheduleEntries(start, end);
+      if (scheduleResult.success && scheduleResult.entries) {
+        setEvents(scheduleResult.entries);
+      } else {
+         setError('Failed to refresh schedule entries');
+         toast.error('Failed to refresh schedule entries');
+      }
+    } catch (err) {
+      console.error('Error refreshing data:', err);
+      toast.error('Failed to refresh data');
+    }
+  }, [performSearch, searchQuery, selectedDate]);
+
 
   const debouncedSearch = useCallback((query: string) => {
     if (searchTimeoutRef.current) {
@@ -152,9 +200,10 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     fetchInitialData();
   }, [selectedDate]);
 
+  // Updated useEffect dependencies
   useEffect(() => {
     debouncedSearch(searchQuery);
-  }, [searchQuery, selectedType, sortBy, sortOrder, currentPage, debouncedSearch]);
+  }, [searchQuery, selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage, debouncedSearch]);
 
   const debouncedSaveSchedule = useCallback(async (
     eventId: string,
@@ -366,7 +415,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       )}
       <div className="flex flex-1 overflow-hidden">
         <div className="w-1/4 p-2 bg-[rgb(var(--color-border-50))] overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Unassigned Work Items</h2>
+          <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Work Items</h2>
 
           <div className="space-y-3 mb-4">
             <input
@@ -391,15 +440,31 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                 className="flex-1"
               />
 
+              {/* New Status Filter Dropdown */}
               <CustomSelect
-                value={sortBy}
+                value={selectedStatusFilter}
                 onValueChange={(value: string) => {
-                  setSortBy(value as 'name' | 'type');
+                  setSelectedStatusFilter(value);
                   setCurrentPage(1);
                 }}
-                options={sortOptions}
+                options={statusFilterOptions} // Use fetched options
                 className="flex-1"
+                placeholder="Filter by status..." // Add placeholder
               />
+
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-700">
+                  {filterUnassignedOnly ? 'Assigned' : 'Unassigned'}
+                </span>
+                <Switch
+                  id="assignment-filter"
+                  checked={filterUnassignedOnly}
+                  onCheckedChange={(checked) => {
+                    setFilterUnassignedOnly(checked);
+                    setCurrentPage(1);
+                  }}
+                />
+              </div>
 
               <button
                 onClick={() => {
@@ -410,6 +475,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
               </button>
+
             </div>
           </div>
 
@@ -430,35 +496,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                   isBillable={item.is_billable}
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation(); // Prevent drag event from firing
-                    const refreshData = async () => {
-                      try {
-                        // Refresh the work items list
-                        await performSearch(searchQuery);
-                        // Refresh schedule entries
-                        const start = new Date(selectedDate);
-                        start.setHours(0, 0, 0, 0);
-                        const end = new Date(selectedDate);
-                        end.setHours(23, 59, 59, 999);
-                        const scheduleResult = await getScheduleEntries(start, end);
-                        if (scheduleResult.success && scheduleResult.entries) {
-                          setEvents(scheduleResult.entries);
-                        }
-                      } catch (err) {
-                        console.error('Error refreshing data:', err);
-                        toast.error('Failed to refresh data');
-                      }
-                    };
-
                     openDrawer(
                       <WorkItemDetailsDrawer
                         workItem={item as IExtendedWorkItem}
                         onClose={async () => {
-                          await refreshData();
+                          await refreshAllData();
                           closeDrawer();
                         }}
                         onTaskUpdate={async (updatedTask) => {
                           try {
-                            await refreshData();
+                            await refreshAllData();
                             toast.success('Task updated successfully');
                             closeDrawer();
                           } catch (err) {
@@ -494,7 +541,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                                 setError('Failed to update schedule entry');
                                 toast.error('Failed to update schedule entry');
                               }
-                            } else {
+                            } else if (item.type !== 'ad_hoc') {
                               // Create new entry
                               const createResult = await addScheduleEntry(
                                 {
@@ -599,17 +646,102 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
               onDrop={handleDrop}
               onResize={onResize}
               onDeleteEvent={handleDeleteEvent}
+              onEventClick={async (event: Omit<IScheduleEntry, 'tenant'>) => {
+                try {
+                  const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
+
+                  if (!workItemDetails) {
+                    toast.error('Could not load work item details.');
+                    return;
+                  }
+
+                  openDrawer(
+                    <WorkItemDetailsDrawer
+                      workItem={workItemDetails}
+                      onClose={async () => {
+                        await refreshAllData();
+                        closeDrawer();
+                      }}
+                      onTaskUpdate={async (updatedTask) => {
+                        try {
+                          await refreshAllData();
+                          toast.success('Task updated successfully');
+                          closeDrawer();
+                        } catch (err) {
+                          console.error('Error updating task:', err);
+                          toast.error('Failed to update task');
+                        }
+                      }}
+                      onScheduleUpdate={async (entryData) => {
+                        try {
+                           const updateResult = await updateScheduleEntry(event.entry_id, {
+                              ...entryData,
+                              work_item_id: workItemDetails.work_item_id,
+                              work_item_type: workItemDetails.type,
+                              title: entryData.title || workItemDetails.name
+                            });
+
+                            if (updateResult.success && updateResult.entry) {
+                              const updatedEntry = updateResult.entry as Omit<IScheduleEntry, 'tenant'>;
+                              setEvents(prevEvents => prevEvents.map(e =>
+                                e.entry_id === event.entry_id ? updatedEntry : e
+                              ));
+                              toast.success('Schedule entry updated successfully');
+                            } else {
+                              setError('Failed to update schedule entry');
+                              toast.error('Failed to update schedule entry');
+                            }
+                        } catch (err) {
+                          console.error('Error saving schedule entry:', err);
+                          setError('Failed to save schedule entry');
+                          toast.error('Failed to save schedule entry');
+                        }
+                        closeDrawer();
+                      }}
+                    /> 
+                  );
+                } catch (err) {
+                  console.error('Error opening work item details:', err);
+                  toast.error('Failed to open work item details.');
+                }
+              }}
             />
           </div>
         </div>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2">
+          <button
+            onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+            disabled={currentPage === 1}
+            className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
+          >
+            Previous
+          </button>
+          <span className="text-[rgb(var(--color-text-700))]">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+            disabled={currentPage === totalPages}
+            className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 text-center">
+        Showing {workItems.length} of {totalItems} items
       </div>
       {dragOverlay && dragOverlay.visible && (
         <div
           style={{
             position: 'fixed',
-            left: dragOverlay.x,
-            top: dragOverlay.y,
-            transform: 'translate(-50%, -50%)',
+            left: dragOverlay.x ?? 0, 
+            top: dragOverlay.y ?? 0,
+            transform: 'translate(-50%, -50%)', 
             pointerEvents: 'none',
             zIndex: 9999,
             opacity: 0.6,

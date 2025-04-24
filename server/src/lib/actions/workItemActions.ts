@@ -20,7 +20,9 @@ interface SearchOptions {
     end?: Date;
   };
   availableWorkItemIds?: string[];
-  workItemId?: string; // Add this new parameter to filter by specific work item ID
+  workItemId?: string;
+  statusFilter?: string;
+  unassignedOnly?: boolean;
 }
 
 interface SearchResult {
@@ -32,6 +34,8 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
+    const statusFilter = options.statusFilter || 'all_open';
+    const unassignedOnly = options.unassignedOnly || false;
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
@@ -43,6 +47,10 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
       .innerJoin('companies as c', function() {
         this.on('t.company_id', '=', 'c.company_id')
             .andOn('t.tenant', '=', 'c.tenant');
+      })
+      .leftJoin('statuses as s', function() {
+        this.on('t.status_id', '=', 's.status_id')
+            .andOn('t.tenant', '=', 's.tenant');
       })
       .leftJoin(
         db('ticket_resources')
@@ -56,10 +64,29 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
               .andOn('t.tenant', '=', db.raw('?', [tenant]));
         }
       )
-      .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
-      .distinctOn('t.ticket_id')
-      .select(
-        't.ticket_id as work_item_id',
+       .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
+       .distinctOn('t.ticket_id')
+       .modify((queryBuilder) => {
+         if (statusFilter === 'all_open') {
+           queryBuilder.where('s.is_closed', false);
+         } else if (statusFilter === 'all_closed') {
+           queryBuilder.where('s.is_closed', true);
+         } else if (statusFilter && statusFilter !== 'all_open' && statusFilter !== 'all_closed') {
+           queryBuilder.where('t.status_id', statusFilter);
+         }
+
+         if (unassignedOnly) {
+            queryBuilder.where(function() {
+             this.whereNull('t.assigned_to')
+                 .andWhere(function() {
+                   this.whereNull('tr.additional_user_ids')
+                       .orWhereRaw('array_length(tr.additional_user_ids, 1) IS NULL');
+                 });
+           });
+         }
+       })
+       .select(
+         't.ticket_id as work_item_id',
         't.title as name',
         't.url as description',
         db.raw("'ticket' as type"),
@@ -92,6 +119,20 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
         this.on('p.company_id', '=', 'c.company_id')
             .andOn('p.tenant', '=', 'c.tenant');
       })
+      .leftJoin('project_status_mappings as psm', function() {
+        this.on('pt.project_status_mapping_id', '=', 'psm.project_status_mapping_id')
+            .andOn('pt.tenant', '=', 'psm.tenant');
+      })
+      .leftJoin('statuses as s_custom', function() {
+        this.on('psm.status_id', '=', 's_custom.status_id')
+            .andOn('psm.tenant', '=', 's_custom.tenant')
+            .andOn('psm.is_standard', '=', db.raw('false'));
+      })
+      .leftJoin('standard_statuses as s_standard', function() {
+        this.on('psm.standard_status_id', '=', 's_standard.standard_status_id')
+            .andOn('psm.tenant', '=', 's_standard.tenant')
+            .andOn('psm.is_standard', '=', db.raw('true'));
+      })
       .leftJoin(
         db('task_resources')
           .where('tenant', tenant)
@@ -104,10 +145,46 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
               .andOn('pt.tenant', '=', db.raw('?', [tenant]));
         }
       )
-      .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
-      .distinctOn('pt.task_id')
-      .modify((queryBuilder) => {
-        if (!options.includeInactive) {
+       .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
+       .distinctOn('pt.task_id')
+       .modify((queryBuilder) => {
+         if (statusFilter === 'all_open') {
+            queryBuilder.where(function() {
+             this.where(function() {
+               this.where('psm.is_standard', false).andWhere('s_custom.is_closed', false);
+             }).orWhere(function() {
+               this.where('psm.is_standard', true).andWhere('s_standard.is_closed', false);
+             });
+           });
+         } else if (statusFilter === 'all_closed') {
+            queryBuilder.where(function() {
+             this.where(function() {
+               this.where('psm.is_standard', false).andWhere('s_custom.is_closed', true);
+             }).orWhere(function() {
+               this.where('psm.is_standard', true).andWhere('s_standard.is_closed', true);
+             });
+           });
+         } else if (statusFilter && statusFilter !== 'all_open' && statusFilter !== 'all_closed') {
+            queryBuilder.where(function() {
+                this.where(function() {
+                    this.where('psm.is_standard', false).andWhere('psm.status_id', statusFilter);
+                }).orWhere(function() {
+                    this.where('psm.is_standard', true).andWhere('psm.standard_status_id', statusFilter);
+                });
+            });
+         }
+
+         if (unassignedOnly) {
+            queryBuilder.where(function() {
+             this.whereNull('pt.assigned_to')
+                 .andWhere(function() {
+                   this.whereNull('tr.additional_user_ids')
+                       .orWhereRaw('array_length(tr.additional_user_ids, 1) IS NULL');
+                 });
+           });
+         }
+
+         if (!options.includeInactive) {
           queryBuilder.where('p.is_inactive', false);
         }
       })
@@ -130,54 +207,13 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
         'tr.additional_user_ids as additional_user_ids'
       );
 
-      let adHocQuery = db('schedule_entries as se')
-      .whereNotIn('se.entry_id', options.availableWorkItemIds || [])
-      .where('se.tenant', tenant)
-      .where('work_item_type', 'ad_hoc')
-      .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
-      .leftJoin(
-        db('schedule_entry_assignees')
-          .where('tenant', tenant)
-          .select('entry_id')
-          .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
-          .groupBy('entry_id', 'tenant')
-          .as('sea'),
-        function() {
-          this.on('se.entry_id', '=', 'sea.entry_id')
-              .andOn('se.tenant', '=', db.raw('?', [tenant]));
-        }
-      )
-      .distinctOn('se.entry_id')
-      .select(
-        'se.entry_id as work_item_id',
-        'se.title as name',
-        'se.notes as description',
-        db.raw("'ad_hoc' as type"),
-        db.raw('NULL::text as ticket_number'),
-        'se.title',
-        db.raw('NULL::text as project_name'),
-        db.raw('NULL::text as phase_name'),
-        db.raw('NULL::text as task_name'),
-        db.raw('NULL::uuid as company_id'),
-        db.raw('NULL::text as company_name'),
-        'se.scheduled_start',
-        'se.scheduled_end',
-        db.raw('NULL::timestamp with time zone as due_date'),
-        'sea.assigned_user_ids as assigned_user_ids',
-        db.raw('NULL::uuid[] as additional_user_ids')
-      );
 
     // Apply filters
     if (options.type && options.type !== 'all') {
       if (options.type === 'ticket') {
         projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
-        adHocQuery = adHocQuery.whereRaw('1 = 0');
       } else if (options.type === 'project_task') {
         ticketsQuery = ticketsQuery.whereRaw('1 = 0');
-        adHocQuery = adHocQuery.whereRaw('1 = 0');
-      } else if (options.type === 'ad_hoc') {
-        ticketsQuery = ticketsQuery.whereRaw('1 = 0');
-        projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
       }
     }
 
@@ -192,7 +228,6 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
         this.where('pt.assigned_to', options.assignedTo)
             .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
       });
-      adHocQuery = adHocQuery.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
     } else if (options.assignedTo) {
       // Regular "Assigned to" filter
       ticketsQuery = ticketsQuery.where(function() {
@@ -203,15 +238,12 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
         this.where('pt.assigned_to', options.assignedTo)
             .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
       });
-      adHocQuery = adHocQuery.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
     }
 
     // Filter by company
     if (options.companyId) {
       ticketsQuery = ticketsQuery.where('t.company_id', options.companyId);
       projectTasksQuery = projectTasksQuery.where('p.company_id', options.companyId);
-      // Exclude ad hoc entries when filtering by company
-      adHocQuery = adHocQuery.whereRaw('1 = 0');
     }
 
     // Apply date filtering if dateRange is provided
@@ -231,8 +263,6 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
             .orWhere('pt.due_date', '>=', db.raw('?', [startDate]));
       });
       
-      // For ad-hoc entries, filter on scheduled_start
-      adHocQuery = adHocQuery.where('se.scheduled_start', '>=', db.raw('?', [startDate]));
     }
     
     if (endDate) {
@@ -248,8 +278,6 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
             .orWhere('pt.due_date', '<=', db.raw('?', [endDate]));
       });
       
-      // For ad-hoc entries, filter on scheduled_end
-      adHocQuery = adHocQuery.where('se.scheduled_end', '<=', db.raw('?', [endDate]));
     }
 
     // Filter by specific work item ID if provided
@@ -257,11 +285,10 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
       ticketsQuery = ticketsQuery.where('t.ticket_id', options.workItemId);
       // Exclude other types when filtering by specific ticket ID
       projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
-      adHocQuery = adHocQuery.whereRaw('1 = 0');
     }
 
     // Combine queries
-    let query = db.union([ticketsQuery, projectTasksQuery, adHocQuery]);
+    let query = db.union([ticketsQuery, projectTasksQuery]);
 
     // Get total count before applying pagination
     const countResult = await db.from(query.as('combined')).count('* as count').first();
@@ -375,6 +402,26 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           't.ticket_id': workItemId,
           't.tenant': tenant
         })
+        .leftJoin('statuses as s', function() {
+          this.on('t.status_id', '=', 's.status_id')
+              .andOn('t.tenant', '=', 's.tenant');
+        })
+        .leftJoin('channels as ch', function() {
+          this.on('t.channel_id', '=', 'ch.channel_id')
+              .andOn('t.tenant', '=', 'ch.tenant');
+        })
+        .leftJoin('users as u_assignee', function() {
+          this.on('t.assigned_to', '=', 'u_assignee.user_id')
+              .andOn('t.tenant', '=', 'u_assignee.tenant');
+        })
+        .leftJoin('contacts as ct', function() {
+          this.on('t.contact_name_id', '=', 'ct.contact_id')
+              .andOn('t.tenant', '=', 'ct.tenant');
+        })
+        .leftJoin('companies as co', function() {
+          this.on('t.company_id', '=', 'co.company_id')
+              .andOn('t.tenant', '=', 'co.tenant');
+        })
         .leftJoin(
           db('ticket_resources')
             .where('tenant', tenant)
@@ -387,7 +434,6 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
                 .andOn('t.tenant', '=', db.raw('?', [tenant]));
           }
         )
-        .groupBy('t.ticket_id', 't.title', 't.url', 't.ticket_number', 't.assigned_to', 't.tenant', 'tr.additional_user_ids')
         .select(
           't.ticket_id as work_item_id',
           't.title as name',
@@ -395,6 +441,12 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           db.raw("'ticket' as type"),
           't.ticket_number',
           't.title',
+          't.company_id',
+          'co.company_name',
+          's.name as status_name',
+          'ch.name as channel_name',
+          'u_assignee.full_name as assigned_to_name',
+          'ct.full_name as contact_name',
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
           db.raw('NULL::text as task_name'),
@@ -428,7 +480,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
                 .andOn('pt.tenant', '=', db.raw('?', [tenant]));
           }
         )
-        .groupBy('pt.task_id', 'pt.task_name', 'pt.description', 'p.project_name', 'pp.phase_name', 'pt.assigned_to', 'pt.tenant')
+        // Removed groupBy for project tasks as well
         .select(
           'pt.task_id as work_item_id',
           'pt.task_name as name',
@@ -492,6 +544,12 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         project_name: workItem.project_name,
         phase_name: workItem.phase_name,
         task_name: workItem.task_name,
+        company_id: workItem.company_id,
+        company_name: workItem.company_name,
+        status_name: workItem.status_name,
+        channel_name: workItem.channel_name,
+        assigned_to_name: workItem.assigned_to_name,
+        contact_name: workItem.contact_name,
         additional_user_ids: workItem.additional_user_ids || [],
         assigned_user_ids: workItem.assigned_user_ids || []
       };

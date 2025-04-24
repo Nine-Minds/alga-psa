@@ -14,6 +14,7 @@ interface ScheduleEventProps {
   onMouseLeave: () => void;
   onDelete: (e: React.MouseEvent) => void;
   onResizeStart: (e: React.MouseEvent, direction: 'left' | 'right') => void;
+  onClick: () => void;
 }
 
 const ScheduleEvent: React.FC<ScheduleEventProps> = ({
@@ -27,6 +28,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   onDelete,
   onResizeStart,
   isResizing,
+  onClick,
 }) => {
   const colors = getEventColors(event.work_item_type);
 
@@ -47,6 +49,11 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
       onMouseDown={onMouseDown}
       onMouseEnter={() => !isResizing && onMouseEnter()}
       onMouseLeave={() => !isResizing && onMouseLeave()}
+      onClick={(e) => {
+        if (!isDragging && !isResizing && !(e.target as HTMLElement).closest('.resize-handle') && !(e.target as HTMLElement).closest('.delete-button')) {
+          onClick();
+        }
+      }}
     >
       <div className="font-bold relative left-4">{event.title.split(':')[0]}</div>
       <div className="relative left-4">{event.title.split(':')[1]}</div>
