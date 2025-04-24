@@ -23,6 +23,7 @@ interface SearchOptions {
   workItemId?: string;
   statusFilter?: string;
   filterUnscheduled?: boolean;
+  context?: 'dispatch' | 'picker';
 }
 
 interface SearchResult {
@@ -89,7 +90,7 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
        .select(
          't.ticket_id as work_item_id',
         't.title as name',
-        't.url as description',
+        db.raw("t.attributes ->> 'description' as description"),
         db.raw("'ticket' as type"),
         't.ticket_number',
         't.title',
@@ -289,8 +290,19 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
       projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
     }
 
-    // Combine queries
-    let query = db.union([ticketsQuery, projectTasksQuery]);
+    // Combine queries based on context
+    let combinedQueries;
+    if (options.context === 'dispatch') {
+      // Dispatch only needs tickets
+      combinedQueries = [ticketsQuery];
+      // Ensure projectTasksQuery doesn't interfere if filters were applied
+      projectTasksQuery = projectTasksQuery.whereRaw('1 = 0'); 
+    } else {
+      // Picker needs both
+      combinedQueries = [ticketsQuery, projectTasksQuery];
+    }
+
+    let query = db.union(combinedQueries, true);
 
     // Get total count before applying pagination
     const countResult = await db.from(query.as('combined')).count('* as count').first();
