@@ -22,7 +22,7 @@ interface SearchOptions {
   availableWorkItemIds?: string[];
   workItemId?: string;
   statusFilter?: string;
-  unassignedOnly?: boolean;
+  filterUnscheduled?: boolean;
 }
 
 interface SearchResult {
@@ -35,7 +35,7 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
     const {knex: db, tenant} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
-    const unassignedOnly = options.unassignedOnly || false;
+    const filterUnscheduled = options.filterUnscheduled ?? false;
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
@@ -64,6 +64,11 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
               .andOn('t.tenant', '=', db.raw('?', [tenant]));
         }
       )
+       .leftJoin('schedule_entries as se_ticket', function() {
+         this.on('t.ticket_id', '=', 'se_ticket.work_item_id')
+             .andOn('t.tenant', '=', 'se_ticket.tenant')
+             .andOn('se_ticket.work_item_type', '=', db.raw("'ticket'"));
+       })
        .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('t.ticket_id')
        .modify((queryBuilder) => {
@@ -75,14 +80,10 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
            queryBuilder.where('t.status_id', statusFilter);
          }
 
-         if (unassignedOnly) {
-            queryBuilder.where(function() {
-             this.whereNull('t.assigned_to')
-                 .andWhere(function() {
-                   this.whereNull('tr.additional_user_ids')
-                       .orWhereRaw('array_length(tr.additional_user_ids, 1) IS NULL');
-                 });
-           });
+         if (filterUnscheduled) {
+           queryBuilder.whereNull('se_ticket.entry_id');
+         } else {
+           queryBuilder.whereNotNull('se_ticket.entry_id');
          }
        })
        .select(
@@ -145,6 +146,11 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
               .andOn('pt.tenant', '=', db.raw('?', [tenant]));
         }
       )
+       .leftJoin('schedule_entries as se_task', function() {
+         this.on('pt.task_id', '=', 'se_task.work_item_id')
+             .andOn('pt.tenant', '=', 'se_task.tenant')
+             .andOn('se_task.work_item_type', '=', db.raw("'project_task'"));
+       })
        .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('pt.task_id')
        .modify((queryBuilder) => {
@@ -174,14 +180,10 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
             });
          }
 
-         if (unassignedOnly) {
-            queryBuilder.where(function() {
-             this.whereNull('pt.assigned_to')
-                 .andWhere(function() {
-                   this.whereNull('tr.additional_user_ids')
-                       .orWhereRaw('array_length(tr.additional_user_ids, 1) IS NULL');
-                 });
-           });
+         if (filterUnscheduled) {
+           queryBuilder.whereNull('se_task.entry_id');
+         } else {
+           queryBuilder.whereNotNull('se_task.entry_id');
          }
 
          if (!options.includeInactive) {

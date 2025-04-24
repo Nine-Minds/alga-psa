@@ -26,7 +26,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
 }) => {
   return (
     <div 
-      className="bg-white p-2 rounded cursor-pointer hover:bg-gray-50 transition-colors"
+      className="bg-white p-1 rounded cursor-pointer hover:bg-gray-50 transition-colors"
       onClick={onClick}
     >
       {title ? (
@@ -42,7 +42,6 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
                   : 'bg-[rgb(var(--color-border-200))] text-[rgb(var(--color-border-900))]'
             }`}>
               {type === 'ticket' ? 'Ticket' : 
-               type === 'ad_hoc' ? 'Ad Hoc' :
                type === 'project_task' ? 'Project Task' :
                type === 'non_billable_category' ? 'Non-Billable' : 
                'Unknown Type'}

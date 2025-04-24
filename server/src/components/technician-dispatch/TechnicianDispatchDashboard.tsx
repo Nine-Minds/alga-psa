@@ -15,7 +15,8 @@ import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/s
 import { toast } from 'react-hot-toast';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
-import { Label } from 'server/src/components/ui/Label';
+import { Input } from 'server/src/components/ui/Input';
+import { Button } from 'server/src/components/ui/Button';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
@@ -43,7 +44,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all_open');
-  const [filterUnassignedOnly, setFilterUnassignedOnly] = useState<boolean>(false);
+  const [filterUnscheduled, setFilterUnscheduled] = useState<boolean>(true);
   const [statusFilterOptions, setStatusFilterOptions] = useState<StatusOption[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
@@ -64,7 +65,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const searchParamsRef = useRef({
     selectedType,
     selectedStatusFilter,
-    filterUnassignedOnly,
+    filterUnscheduled,
     sortOrder,
     currentPage,
   });
@@ -76,15 +77,15 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     searchParamsRef.current = {
       selectedType,
       selectedStatusFilter,
-      filterUnassignedOnly,
+      filterUnscheduled,
       sortOrder,
       currentPage,
     };
-  }, [selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage]);
+  }, [selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage]);
 
   const performSearch = useCallback(async (query: string) => {
     try {
-      const { selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage } = searchParamsRef.current;
+      const { selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage } = searchParamsRef.current;
       // Get start and end of selected date
       const start = new Date(selectedDate);
       start.setHours(0, 0, 0, 0);
@@ -95,7 +96,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         searchTerm: query,
         type: filterWorkItemType || selectedType,
         statusFilter: selectedStatusFilter,
-        unassignedOnly: !filterUnassignedOnly,
+        filterUnscheduled: filterUnscheduled,
         sortBy: 'name',
         sortOrder,
         page: currentPage,
@@ -203,7 +204,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   // Updated useEffect dependencies
   useEffect(() => {
     debouncedSearch(searchQuery);
-  }, [searchQuery, selectedType, selectedStatusFilter, filterUnassignedOnly, sortOrder, currentPage, debouncedSearch]);
+  }, [searchQuery, selectedType, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch]);
 
   const debouncedSaveSchedule = useCallback(async (
     eventId: string,
@@ -418,16 +419,30 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Work Items</h2>
 
           <div className="space-y-3 mb-4">
-            <input
-              type="text"
-              placeholder="Search work items..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] placeholder-[rgb(var(--color-text-400))] focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-            />
+            <div className="flex gap-2 justify-between">
+              <Input
+                id="work-item-search"
+                type="text"
+                placeholder="Search work items..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="flex-grow mb-0"
+              />
+              <Button
+                id="sort-work-items"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSortOrder(order => order === 'asc' ? 'desc' : 'asc');
+                  setCurrentPage(1);
+                }}
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
 
             <div className="flex gap-2">
               <CustomSelect
@@ -440,42 +455,30 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                 className="flex-1"
               />
 
-              {/* New Status Filter Dropdown */}
               <CustomSelect
                 value={selectedStatusFilter}
                 onValueChange={(value: string) => {
                   setSelectedStatusFilter(value);
                   setCurrentPage(1);
                 }}
-                options={statusFilterOptions} // Use fetched options
+                options={statusFilterOptions}
                 className="flex-1"
-                placeholder="Filter by status..." // Add placeholder
+                placeholder="Filter by status..."
               />
 
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">
-                  {filterUnassignedOnly ? 'Assigned' : 'Unassigned'}
+                <span className={`text-sm`}>
+                  {filterUnscheduled ? 'Unscheduled' : 'Scheduled'}
                 </span>
                 <Switch
-                  id="assignment-filter"
-                  checked={filterUnassignedOnly}
-                  onCheckedChange={(checked) => {
-                    setFilterUnassignedOnly(checked);
+                  id="schedule-filter"
+                  checked={!filterUnscheduled}
+                  onCheckedChange={(checked: boolean) => {
+                    setFilterUnscheduled(!checked);
                     setCurrentPage(1);
                   }}
                 />
               </div>
-
-              <button
-                onClick={() => {
-                  setSortOrder(order => order === 'asc' ? 'desc' : 'asc');
-                  setCurrentPage(1);
-                }}
-                className="p-1 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </button>
-
             </div>
           </div>
 
@@ -515,8 +518,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                         }}
                         onScheduleUpdate={async (entryData) => {
                           try {
-                            // For ad hoc entries, update the existing entry instead of creating a new one
-                            // For ad hoc entries, find the existing entry by work_item_id
                             const existingEvent = events.find(e => e.work_item_id === item.work_item_id);
 
                             console.log('Existing event found:', existingEvent);

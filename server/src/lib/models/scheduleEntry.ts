@@ -342,13 +342,6 @@ class ScheduleEntry {
                       assigned_to: userId,
                       updated_at: new Date().toISOString()
                     });
-
-                  await trx('ticket_resources').insert({
-                    ticket_id: entry.work_item_id,
-                    assigned_to: userId,
-                    assigned_at: new Date(),
-                    tenant
-                  });
                 }
               }
             }
