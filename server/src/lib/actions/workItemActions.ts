@@ -4,7 +4,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import ScheduleEntry from 'server/src/lib/models/scheduleEntry';
 
-interface SearchOptions {
+interface BaseSearchOptions {
   searchTerm?: string;
   type?: WorkItemType | 'all';
   sortBy?: 'name' | 'type';
@@ -22,8 +22,13 @@ interface SearchOptions {
   availableWorkItemIds?: string[];
   workItemId?: string;
   statusFilter?: string;
+}
+
+interface DispatchSearchOptions extends BaseSearchOptions {
   filterUnscheduled?: boolean;
-  context?: 'dispatch' | 'picker';
+}
+
+interface PickerSearchOptions extends BaseSearchOptions {
 }
 
 interface SearchResult {
@@ -31,17 +36,19 @@ interface SearchResult {
   total: number;
 }
 
-export async function searchWorkItems(options: SearchOptions): Promise<SearchResult> {
+// ==================================
+// Function for Technician Dispatch
+// ==================================
+export async function searchDispatchWorkItems(options: DispatchSearchOptions): Promise<SearchResult> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     const searchTerm = options.searchTerm || '';
     const statusFilter = options.statusFilter || 'all_open';
-    const filterUnscheduled = options.filterUnscheduled ?? false;
+    const filterUnscheduledOption = options.filterUnscheduled;
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
 
-    // Build base queries using proper parameter binding
     let ticketsQuery = db('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
       .where('t.tenant', tenant)
@@ -81,30 +88,209 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
            queryBuilder.where('t.status_id', statusFilter);
          }
 
-         if (filterUnscheduled) {
+         if (filterUnscheduledOption === true) {
            queryBuilder.whereNull('se_ticket.entry_id');
-         } else {
+         } else if (filterUnscheduledOption === false) {
            queryBuilder.whereNotNull('se_ticket.entry_id');
+         }
+
+         if (options.assignedToMe && options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('t.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         } else if (options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('t.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         }
+
+         if (options.companyId) {
+           queryBuilder.where('t.company_id', options.companyId);
+         }
+
+         const startDate = options.dateRange?.start;
+         const endDate = options.dateRange?.end;
+         if (startDate) {
+           queryBuilder.where(function() {
+             this.whereNull('t.closed_at')
+                 .orWhere('t.closed_at', '>=', db.raw('?', [startDate]));
+           });
+         }
+         if (endDate) {
+           queryBuilder.where(function() {
+             this.whereNull('t.closed_at')
+                 .orWhere('t.closed_at', '<=', db.raw('?', [endDate]));
+           });
+         }
+
+         if (options.workItemId) {
+           queryBuilder.where('t.ticket_id', options.workItemId);
          }
        })
        .select(
          't.ticket_id as work_item_id',
-        't.title as name',
-        db.raw("t.attributes ->> 'description' as description"),
-        db.raw("'ticket' as type"),
-        't.ticket_number',
-        't.title',
-        db.raw('NULL::text as project_name'),
-        db.raw('NULL::text as phase_name'),
-        db.raw('NULL::text as task_name'),
-        't.company_id',
-        'c.company_name as company_name',
-        db.raw('NULL::timestamp with time zone as scheduled_start'),
-        db.raw('NULL::timestamp with time zone as scheduled_end'),
-        db.raw('t.closed_at::timestamp with time zone as due_date'),
-        db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
-        'tr.additional_user_ids as additional_user_ids'
-      );
+         't.title as name',
+         db.raw("t.attributes ->> 'description' as description"),
+         db.raw("'ticket' as type"),
+         't.ticket_number',
+         't.title',
+         db.raw('NULL::text as project_name'),
+         db.raw('NULL::text as phase_name'),
+         db.raw('NULL::text as task_name'),
+         't.company_id',
+         'c.company_name as company_name',
+         db.raw('NULL::timestamp with time zone as scheduled_start'),
+         db.raw('NULL::timestamp with time zone as scheduled_end'),
+         db.raw('t.closed_at::timestamp with time zone as due_date'),
+         db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
+         'tr.additional_user_ids as additional_user_ids'
+       );
+
+    const countQuery = ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first();
+    const countResult = await countQuery;
+    const total = parseInt(countResult?.count as string || '0');
+    if (options.sortBy === 'name') {
+      ticketsQuery = ticketsQuery.orderBy([
+        { column: 't.ticket_id', order: options.sortOrder || 'asc' },
+        { column: 'name', order: options.sortOrder || 'asc' }
+      ]);
+    } else {
+       ticketsQuery = ticketsQuery.orderBy('t.ticket_id', options.sortOrder || 'asc');
+    }
+ 
+    ticketsQuery = ticketsQuery.limit(pageSize).offset(offset);
+
+    const results = await ticketsQuery;
+
+    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => ({
+        work_item_id: item.work_item_id,
+        type: item.type,
+        name: item.name,
+        description: item.description,
+        is_billable: true,
+        ticket_number: item.ticket_number,
+        title: item.title,
+        project_name: item.project_name,
+        phase_name: item.phase_name,
+        task_name: item.task_name,
+        company_name: item.company_name,
+        due_date: item.due_date,
+        additional_user_ids: item.additional_user_ids || [],
+        assigned_user_ids: item.assigned_user_ids || []
+      }));
+
+    return {
+      items: workItems,
+      total
+    };
+  } catch (error) {
+    console.error('Error searching dispatch work items:', error);
+    throw new Error('Failed to search dispatch work items');
+  }
+}
+
+
+// ==================================
+// Function for Work Item Picker
+// ==================================
+export async function searchPickerWorkItems(options: PickerSearchOptions): Promise<SearchResult> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    const searchTerm = options.searchTerm || '';
+    const statusFilter = options.statusFilter || 'all_open';
+    const page = options.page || 1;
+    const pageSize = options.pageSize || 10;
+    const offset = (page - 1) * pageSize;
+
+    let ticketsQuery = db('tickets as t')
+      .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
+      .where('t.tenant', tenant)
+      .innerJoin('companies as c', function() {
+        this.on('t.company_id', '=', 'c.company_id')
+            .andOn('t.tenant', '=', 'c.tenant');
+      })
+      .leftJoin('statuses as s', function() {
+        this.on('t.status_id', '=', 's.status_id')
+            .andOn('t.tenant', '=', 's.tenant');
+      })
+      .leftJoin(
+        db('ticket_resources')
+          .where('tenant', tenant)
+          .select('ticket_id')
+          .select(db.raw('array_agg(distinct additional_user_id) as additional_user_ids'))
+          .groupBy('ticket_id', 'tenant')
+          .as('tr'),
+        function() {
+          this.on('t.ticket_id', '=', 'tr.ticket_id')
+              .andOn('t.tenant', '=', db.raw('?', [tenant]));
+        }
+      )
+       .whereILike('t.title', db.raw('?', [`%${searchTerm}%`]))
+       .distinctOn('t.ticket_id')
+       .modify((queryBuilder) => {
+         if (statusFilter === 'all_open') {
+           queryBuilder.where('s.is_closed', false);
+         } else if (statusFilter === 'all_closed') {
+           queryBuilder.where('s.is_closed', true);
+         } else if (statusFilter && statusFilter !== 'all_open' && statusFilter !== 'all_closed') {
+           queryBuilder.where('t.status_id', statusFilter);
+         }
+
+         if (options.assignedToMe && options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('t.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         } else if (options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('t.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         }
+
+         if (options.companyId) {
+           queryBuilder.where('t.company_id', options.companyId);
+         }
+
+         const startDate = options.dateRange?.start;
+         const endDate = options.dateRange?.end;
+         if (startDate) {
+           queryBuilder.where(function() {
+             this.whereNull('t.closed_at')
+                 .orWhere('t.closed_at', '>=', db.raw('?', [startDate]));
+           });
+         }
+         if (endDate) {
+           queryBuilder.where(function() {
+             this.whereNull('t.closed_at')
+                 .orWhere('t.closed_at', '<=', db.raw('?', [endDate]));
+           });
+         }
+
+         if (options.workItemId) {
+           queryBuilder.where('t.ticket_id', options.workItemId);
+         }
+       })
+       .select(
+         't.ticket_id as work_item_id',
+         't.title as name',
+         db.raw("t.attributes ->> 'description' as description"),
+         db.raw("'ticket' as type"),
+         't.ticket_number',
+         't.title',
+         db.raw('NULL::text as project_name'),
+         db.raw('NULL::text as phase_name'),
+         db.raw('NULL::text as task_name'),
+         't.company_id',
+         'c.company_name as company_name',
+         db.raw('NULL::timestamp with time zone as scheduled_start'),
+         db.raw('NULL::timestamp with time zone as scheduled_end'),
+         db.raw('t.closed_at::timestamp with time zone as due_date'),
+         db.raw('ARRAY[t.assigned_to] as assigned_user_ids'),
+         'tr.additional_user_ids as additional_user_ids'
+       );
 
       let projectTasksQuery = db('project_tasks as pt')
       .whereNotIn('pt.task_id', options.availableWorkItemIds || [])
@@ -147,11 +333,6 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
               .andOn('pt.tenant', '=', db.raw('?', [tenant]));
         }
       )
-       .leftJoin('schedule_entries as se_task', function() {
-         this.on('pt.task_id', '=', 'se_task.work_item_id')
-             .andOn('pt.tenant', '=', 'se_task.tenant')
-             .andOn('se_task.work_item_type', '=', db.raw("'project_task'"));
-       })
        .whereILike('pt.task_name', db.raw('?', [`%${searchTerm}%`]))
        .distinctOn('pt.task_id')
        .modify((queryBuilder) => {
@@ -181,154 +362,110 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
             });
          }
 
-         if (filterUnscheduled) {
-           queryBuilder.whereNull('se_task.entry_id');
-         } else {
-           queryBuilder.whereNotNull('se_task.entry_id');
-         }
-
          if (!options.includeInactive) {
           queryBuilder.where('p.is_inactive', false);
         }
-      })
-      .select(
-        'pt.task_id as work_item_id',
-        'pt.task_name as name',
-        'pt.description',
-        db.raw("'project_task' as type"),
-        db.raw('NULL::text as ticket_number'),
-        db.raw('NULL::text as title'),
-        'p.project_name',
-        'pp.phase_name',
-        'pt.task_name',
-        'p.company_id',
-        'c.company_name as company_name',
-        db.raw('NULL::timestamp with time zone as scheduled_start'),
-        db.raw('NULL::timestamp with time zone as scheduled_end'),
-        db.raw('pt.due_date::timestamp with time zone as due_date'),
-        db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
-        'tr.additional_user_ids as additional_user_ids'
-      );
 
+         if (options.assignedToMe && options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('pt.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         } else if (options.assignedTo) {
+           queryBuilder.where(function() {
+             this.where('pt.assigned_to', options.assignedTo)
+                 .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
+           });
+         }
 
-    // Apply filters
-    if (options.type && options.type !== 'all') {
-      if (options.type === 'ticket') {
-        projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
-      } else if (options.type === 'project_task') {
-        ticketsQuery = ticketsQuery.whereRaw('1 = 0');
-      }
+         if (options.companyId) {
+           queryBuilder.where('p.company_id', options.companyId);
+         }
+
+         const startDate = options.dateRange?.start;
+         const endDate = options.dateRange?.end;
+         if (startDate) {
+           queryBuilder.where(function() {
+             this.whereNull('pt.due_date')
+                 .orWhere('pt.due_date', '>=', db.raw('?', [startDate]));
+           });
+         }
+         if (endDate) {
+           queryBuilder.where(function() {
+             this.whereNull('pt.due_date')
+                 .orWhere('pt.due_date', '<=', db.raw('?', [endDate]));
+           });
+         }
+
+         if (options.workItemId) {
+           queryBuilder.whereRaw('1 = 0');
+         }
+       })
+       .select(
+         'pt.task_id as work_item_id',
+         'pt.task_name as name',
+         'pt.description',
+         db.raw("'project_task' as type"),
+         db.raw('NULL::text as ticket_number'),
+         db.raw('NULL::text as title'),
+         'p.project_name',
+         'pp.phase_name',
+         'pt.task_name',
+         'p.company_id',
+         'c.company_name as company_name',
+         db.raw('NULL::timestamp with time zone as scheduled_start'),
+         db.raw('NULL::timestamp with time zone as scheduled_end'),
+         db.raw('pt.due_date::timestamp with time zone as due_date'),
+         db.raw('ARRAY[pt.assigned_to] as assigned_user_ids'),
+         'tr.additional_user_ids as additional_user_ids'
+       );
+
+    let queriesToUnion = [];
+    if (!options.type || options.type === 'all' || options.type === 'ticket') {
+        queriesToUnion.push(ticketsQuery);
+    }
+    if (!options.type || options.type === 'all' || options.type === 'project_task') {
+        queriesToUnion.push(projectTasksQuery);
     }
 
-    // Filter by assigned user
-    if (options.assignedToMe && options.assignedTo) {
-      // "Assigned to me" filter
-      ticketsQuery = ticketsQuery.where(function() {
-        this.where('t.assigned_to', options.assignedTo)
-            .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-      });
-      projectTasksQuery = projectTasksQuery.where(function() {
-        this.where('pt.assigned_to', options.assignedTo)
-            .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-      });
-    } else if (options.assignedTo) {
-      // Regular "Assigned to" filter
-      ticketsQuery = ticketsQuery.where(function() {
-        this.where('t.assigned_to', options.assignedTo)
-            .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-      });
-      projectTasksQuery = projectTasksQuery.where(function() {
-        this.where('pt.assigned_to', options.assignedTo)
-            .orWhereRaw('? = ANY(tr.additional_user_ids)', [options.assignedTo]);
-      });
+    let query = db.union(queriesToUnion, true);
+
+    const ticketsCountQuery = ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first();
+    const projectTasksCountQuery = projectTasksQuery.clone().clearSelect().clearOrder().count('* as count').first();
+
+    let total = 0;
+    const countPromises = [];
+    if (!options.type || options.type === 'all' || options.type === 'ticket') {
+        countPromises.push(ticketsCountQuery);
+    }
+    if (!options.type || options.type === 'all' || options.type === 'project_task') {
+        countPromises.push(projectTasksCountQuery);
     }
 
-    // Filter by company
-    if (options.companyId) {
-      ticketsQuery = ticketsQuery.where('t.company_id', options.companyId);
-      projectTasksQuery = projectTasksQuery.where('p.company_id', options.companyId);
-    }
+    const countResults = await Promise.all(countPromises);
+    total = countResults.reduce((sum, result) => sum + parseInt(result?.count as string || '0'), 0);
 
-    // Apply date filtering if dateRange is provided
-    const startDate = options.dateRange?.start;
-    const endDate = options.dateRange?.end;
 
-    if (startDate) {
-      // For tickets, filter on closed_at if it exists
-      ticketsQuery = ticketsQuery.where(function() {
-        this.whereNull('t.closed_at')
-            .orWhere('t.closed_at', '>=', db.raw('?', [startDate]));
-      });
-      
-      // For project tasks, filter on due_date if it exists
-      projectTasksQuery = projectTasksQuery.where(function() {
-        this.whereNull('pt.due_date')
-            .orWhere('pt.due_date', '>=', db.raw('?', [startDate]));
-      });
-      
-    }
-    
-    if (endDate) {
-      // For tickets, filter on closed_at if it exists
-      ticketsQuery = ticketsQuery.where(function() {
-        this.whereNull('t.closed_at')
-            .orWhere('t.closed_at', '<=', db.raw('?', [endDate]));
-      });
-      
-      // For project tasks, filter on due_date if it exists
-      projectTasksQuery = projectTasksQuery.where(function() {
-        this.whereNull('pt.due_date')
-            .orWhere('pt.due_date', '<=', db.raw('?', [endDate]));
-      });
-      
-    }
-
-    // Filter by specific work item ID if provided
-    if (options.workItemId) {
-      ticketsQuery = ticketsQuery.where('t.ticket_id', options.workItemId);
-      // Exclude other types when filtering by specific ticket ID
-      projectTasksQuery = projectTasksQuery.whereRaw('1 = 0');
-    }
-
-    // Combine queries based on context
-    let combinedQueries;
-    if (options.context === 'dispatch') {
-      // Dispatch only needs tickets
-      combinedQueries = [ticketsQuery];
-      // Ensure projectTasksQuery doesn't interfere if filters were applied
-      projectTasksQuery = projectTasksQuery.whereRaw('1 = 0'); 
-    } else {
-      // Picker needs both
-      combinedQueries = [ticketsQuery, projectTasksQuery];
-    }
-
-    let query = db.union(combinedQueries, true);
-
-    // Get total count before applying pagination
-    const countResult = await db.from(query.as('combined')).count('* as count').first();
-    const total = parseInt(countResult?.count as string || '0');
-
-    // Apply sorting
+    // Apply sorting to the main query
     if (options.sortBy) {
       const sortColumn = options.sortBy === 'name' ? 'name' : 'type';
-      query = db.from(query.as('combined'))
-        .orderBy(sortColumn, options.sortOrder || 'asc');
+      query = db.from(query.as('combined_items'))
+                .orderBy(sortColumn, options.sortOrder || 'asc');
     }
 
     // Apply pagination
     query = query.limit(pageSize).offset(offset);
 
-    // Execute query
+    // Execute query for items
     const results = await query;
 
     // Format results
-    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => {
-      const workItem: Omit<IExtendedWorkItem, "tenant"> = {
+    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => ({
         work_item_id: item.work_item_id,
         type: item.type,
         name: item.name,
         description: item.description,
-        is_billable: true, // You may need to adjust this based on your business logic
+        is_billable: true,
         ticket_number: item.ticket_number,
         title: item.title,
         project_name: item.project_name,
@@ -338,24 +475,15 @@ export async function searchWorkItems(options: SearchOptions): Promise<SearchRes
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || []
-      };
-
-      // Add scheduled times for ad-hoc items
-      if (item.type === 'ad_hoc' && item.scheduled_start && item.scheduled_end) {
-        workItem.scheduled_start = item.scheduled_start;
-        workItem.scheduled_end = item.scheduled_end;
-      }
-
-      return workItem;
-    });
+      }));
 
     return {
       items: workItems,
       total
     };
   } catch (error) {
-    console.error('Error searching work items:', error);
-    throw new Error('Failed to search work items');
+    console.error('Error searching picker work items:', error);
+    throw new Error('Failed to search picker work items');
   }
 }
 
@@ -363,11 +491,11 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
   try {
     const {tenant} = await createTenantKnex();
     const currentUser = await getCurrentUser();
-    
+
     if (!currentUser) {
       throw new Error('User not authenticated');
     }
-    
+
     if (!item.startTime || !item.endTime) {
       throw new Error('Start time and end time are required for ad-hoc entries');
     }
@@ -388,7 +516,7 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
 
     // For ad-hoc entries, use title as name if provided, otherwise use a default name
     const name = item.title || 'Ad-hoc Entry';
-    
+
     return {
       work_item_id: scheduleEntry.entry_id,
       type: 'ad_hoc',
@@ -429,7 +557,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
               .andOn('t.tenant', '=', 'u_assignee.tenant');
         })
         .leftJoin('contacts as ct', function() {
-          this.on('t.contact_name_id', '=', 'ct.contact_id')
+          this.on('t.contact_name_id', '=', 'ct.contact_name_id')
               .andOn('t.tenant', '=', 'ct.tenant');
         })
         .leftJoin('companies as co', function() {
@@ -458,8 +586,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           't.company_id',
           'co.company_name',
           's.name as status_name',
-          'ch.name as channel_name',
-          'u_assignee.full_name as assigned_to_name',
+          'ch.channel_name as channel_name',
+          db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
           'ct.full_name as contact_name',
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),

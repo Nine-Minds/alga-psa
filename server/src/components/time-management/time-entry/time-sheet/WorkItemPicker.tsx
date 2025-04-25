@@ -7,7 +7,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
-import { searchWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
+import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
 import { Button } from 'server/src/components/ui/Button';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -155,7 +155,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   const loadWorkItems = useCallback(async (term: string, page: number) => {
     setIsSearching(true);
     try {
-      const result = await searchWorkItems({ 
+      const result = await searchPickerWorkItems({
         searchTerm: term,
         page,
         pageSize,
@@ -171,10 +171,9 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
           end: endDate
         } : undefined,
         availableWorkItemIds: availableWorkItems.map(item => item.work_item_id),
-        context: 'picker'
       });
       
-      const itemsWithStatus = result.items.map((item): WorkItemWithStatus => ({
+      const itemsWithStatus = result.items.map((item: Omit<IExtendedWorkItem, "tenant">): WorkItemWithStatus => ({
         ...item,
         status: 'Active',
         scheduled_start: item.type === 'ad_hoc' ? item.scheduled_start : undefined,
@@ -442,8 +441,9 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                     setFilterState('active');
                     setClientTypeFilter('all');
                     setSearchType('all');
+                    setSearchTerm('');
                     setCurrentPage(1);
-                    loadWorkItems(searchTerm, 1);
+                    loadWorkItems('', 1);
                   }}
                   className="whitespace-nowrap flex items-center gap-2"
                   id="reset-filters"

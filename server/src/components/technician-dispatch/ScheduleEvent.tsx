@@ -71,25 +71,23 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
       <div className="font-bold relative left-4">{event.title.split(':')[0]}</div>
       <div className="relative left-4">{event.title.split(':')[1]}</div>
 
-      {event.work_item_type === 'ad_hoc' && (
-        <button
-          className="absolute top-1 left-1 w-4 h-4 text-[rgb(var(--color-text-300))]
-            hover:text-[rgb(var(--color-text-600))] transition-colors details-button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onClick();
-          }}
-          title="View Details"
-          onMouseDown={(e) => e.stopPropagation()}
-          style={{ zIndex: 1000 }}
-        >
-          <ExternalLink className="w-4 h-4 pointer-events-none" />
-        </button>
-      )}
+      <button
+        className="absolute top-1 left-1 w-4 h-4 text-[rgb(var(--color-text-600))]
+          hover:text-[rgb(var(--color-text-800))] transition-colors details-button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick();
+        }}
+        title="View Details"
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{ zIndex: 1000 }}
+      >
+        <ExternalLink className="w-4 h-4 pointer-events-none" />
+      </button>
 
       <button
-        className="absolute top-1 right-2 w-4 h-4 text-[rgb(var(--color-text-300))]
-          hover:text-[rgb(var(--color-text-600))] transition-colors delete-button"
+        className="absolute top-1 right-2 w-4 h-4 text-[rgb(var(--color-text-600))]
+          hover:text-[rgb(var(--color-text-800))] transition-colors delete-button"
         onClick={handleDeleteClick}
         title="Delete schedule entry"
         onMouseDown={(e) => e.stopPropagation()}
