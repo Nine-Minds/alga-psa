@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { Trash, ExternalLink } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Trash, ExternalLink, MoreVertical } from 'lucide-react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { getEventColors } from './utils';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Button } from 'server/src/components/ui/Button';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from 'server/src/components/ui/DropdownMenu';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -33,105 +39,199 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   onClick,
 }) => {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
+  const [deleteInitiatingEvent, setDeleteInitiatingEvent] = useState<React.MouseEvent | null>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [isRecentlyResized, setIsRecentlyResized] = useState(false);
+  const eventRef = useRef<HTMLDivElement>(null);
   const colors = getEventColors(event.work_item_type);
+  
+  useEffect(() => {
+    if (!isResizing && isRecentlyResized) {
+      const timer = setTimeout(() => {
+        setIsRecentlyResized(false);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    } else if (isResizing) {
+      setIsRecentlyResized(true);
+    }
+  }, [isResizing]);
+  
+  useEffect(() => {
+    const checkWidth = () => {
+      if (eventRef.current) {
+        setIsNarrow(eventRef.current.offsetWidth < 80);
+      }
+    };
+    
+    checkWidth();
+    
+    const resizeObserver = new ResizeObserver(checkWidth);
+    if (eventRef.current) {
+      resizeObserver.observe(eventRef.current);
+    }
+    
+    return () => {
+      if (eventRef.current) {
+        resizeObserver.unobserve(eventRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, [position.width]);
 
   const handleDeleteClick = (e: React.MouseEvent) => {
+    setDeleteInitiatingEvent(e);
     e.stopPropagation();
     setIsConfirmDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = () => {
-    onDelete(null as any);
+    if (deleteInitiatingEvent) {
+      onDelete(deleteInitiatingEvent);
+    }
     setIsConfirmDeleteDialogOpen(false);
+    setDeleteInitiatingEvent(null);
   };
 
   return (
-    <>
+    <div>
       <div
-        className={`text-xs ${colors.bg} ${colors.text} p-1 shadow-md rounded absolute 
+        ref={eventRef}
+        className={`text-xs ${colors.bg} ${colors.text} p-1 shadow-md rounded absolute
         ${!isResizing ? colors.hover : ''}
         ${isDragging ? 'opacity-70 shadow-lg' : ''}
         ${isResizing ? 'cursor-ew-resize pointer-events-none' : 'cursor-move'}`}
-      style={{
-        left: position.left,
-        width: position.width,
-        top: '0px',
-        height: '100%',
-        zIndex: isDragging ? 1000 : 50,
-        pointerEvents: isDragging ? 'none' : 'auto'
-      }}
-      onMouseDown={onMouseDown}
-      onMouseEnter={() => !isResizing && onMouseEnter()}
-      onMouseLeave={() => !isResizing && onMouseLeave()}
-      onClick={(e) => {
-        if (event.work_item_type !== 'ad_hoc' && !isDragging && !isResizing && !(e.target as HTMLElement).closest('.resize-handle') && !(e.target as HTMLElement).closest('.delete-button') && !(e.target as HTMLElement).closest('.details-button')) {
-          onClick();
-        }
-      }}
-    >
-      {/* Container for text */}
-      <div className="flex flex-col justify-center items-start h-full text-left px-2">
-        <div className="font-bold">{event.title.split(':')[0]}</div>
-        <div>{event.title.split(':')[1]}</div>
-      </div>
-
-      {/* Container for top-right buttons */}
-      <div className="absolute top-1 right-1 flex gap-1" style={{ zIndex: 1000 }}>
-        <Button
-          id={`view-details-${event.entry_id}`}
-          variant="icon"
-          size="icon"
-          className="w-4 h-4 details-button"
-          onClick={(e) => {
-            e.stopPropagation();
+        style={{
+          left: position.left,
+          width: position.width,
+          top: '0px',
+          height: '100%',
+          zIndex: isDragging ? 1000 : 50,
+          pointerEvents: isDragging ? 'none' : 'auto'
+        }}
+        onMouseDown={onMouseDown}
+        onMouseEnter={() => !isResizing && onMouseEnter()}
+        onMouseLeave={() => !isResizing && onMouseLeave()}
+        onClick={(e) => {
+          if (event.work_item_type !== 'ad_hoc' && !isDragging && !isResizing && !(e.target as HTMLElement).closest('.resize-handle') && !(e.target as HTMLElement).closest('.delete-button') && !(e.target as HTMLElement).closest('.details-button')) {
             onClick();
+          }
+        }}
+      >
+        {/* Main flex container */}
+        <div className="flex flex-col h-full w-full px-1 relative">
+          {/* Buttons container */}
+          <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 100 }}>
+            {/* Show individual buttons if not narrow */}
+            {!isNarrow && (
+              <div className="flex gap-1">
+              <Button
+                id={`view-details-${event.entry_id}`}
+                variant="icon"
+                size="icon"
+                className="w-4 h-4 details-button"
+                onClick={(e) => {
+                  if (!isResizing && !isRecentlyResized) {
+                    e.stopPropagation();
+                    onClick();
+                  }
+                }}
+                title="View Details"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <ExternalLink className="w-4 h-4 pointer-events-none" />
+              </Button>
+
+              <Button
+                id={`delete-entry-${event.entry_id}`}
+                variant="icon"
+                size="icon"
+                className="w-4 h-4 delete-button"
+                onClick={handleDeleteClick}
+                title="Delete schedule entry"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <Trash className="w-4 h-4 pointer-events-none" />
+              </Button>
+              </div>
+            )}
+
+            {/* Show dropdown menu if narrow */}
+            {isNarrow && (
+              <div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    id={`more-options-${event.entry_id}`}
+                    variant="icon"
+                    size="icon"
+                    className="w-4 h-4"
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="w-4 h-4 pointer-events-none" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32">
+                  <DropdownMenuItem 
+                    onClick={(e) => {
+                      if (!isResizing && !isRecentlyResized) {
+                        e.stopPropagation();
+                        onClick();
+                      }
+                    }}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDeleteClick}>
+                    <Trash className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              </div>
+            )}
+          </div>
+
+          {/* Text container */}
+          <div className="flex flex-col justify-center items-start text-left overflow-hidden flex-grow min-w-0 mt-1">
+            <div className="font-bold w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[0]}</div>
+            <div className="w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[1]}</div>
+          </div>
+        </div>
+
+        {/* Resize Handles - Remain absolutely positioned relative to the main container */}
+        <div
+          className="absolute top-0 bottom-0 left-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
+          style={{ zIndex: 150 }} // Ensure handles are above buttons
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onResizeStart(e, 'left');
           }}
-          title="View Details"
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <ExternalLink className="w-4 h-4 pointer-events-none" />
-        </Button>
-
-        <Button
-          id={`delete-entry-${event.entry_id}`}
-          variant="icon"
-          size="icon"
-          className="w-4 h-4 delete-button"
-          onClick={handleDeleteClick}
-          title="Delete schedule entry"
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <Trash className="w-4 h-4 pointer-events-none" />
-        </Button>
-      </div>
-
-      {/* Resize Handles */}
-      <div
-        className="absolute top-0 bottom-0 left-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          onResizeStart(e, 'left');
-        }}
-      ></div>
-      <div
-        className="absolute top-0 bottom-0 right-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-r resize-handle"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          onResizeStart(e, 'right');
-        }}
-      ></div>
+        ></div>
+        <div
+          className="absolute top-0 bottom-0 right-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-r resize-handle"
+          style={{ zIndex: 150 }} // Ensure handles are above buttons
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onResizeStart(e, 'right');
+          }}
+        ></div>
       </div>
 
       <ConfirmationDialog
         id={`delete-schedule-${event.entry_id}`}
         isOpen={isConfirmDeleteDialogOpen}
-        onClose={() => setIsConfirmDeleteDialogOpen(false)}
+        onClose={() => {
+          setIsConfirmDeleteDialogOpen(false);
+          setDeleteInitiatingEvent(null);
+        }}
         onConfirm={handleConfirmDelete}
         title="Confirm Deletion"
         message="Are you sure you want to delete this entry? This action cannot be undone."
         confirmLabel="Delete"
       />
-    </>
+    </div>
   );
 };
 
