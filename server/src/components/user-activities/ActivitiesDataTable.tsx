@@ -2,7 +2,8 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   Activity,
   ActivityType,
-  ActivityPriority
+  ActivityPriority,
+  ScheduleActivity
 } from '../../interfaces/activity.interfaces';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { DataTable } from '../ui/DataTable';
@@ -10,7 +11,7 @@ import { ColumnDefinition } from '../../interfaces/dataTable.interfaces';
 import { Badge } from '../ui/Badge';
 import { formatDistanceToNow } from 'date-fns';
 import { ActivityActionMenu } from './ActivityActionMenu';
-import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks } from 'lucide-react';
+import { AlertTriangle, Calendar, Briefcase, TicketIcon, Clock, ListChecks, Repeat } from 'lucide-react';
 
 interface ActivitiesDataTableProps {
   activities: Activity[];
@@ -122,9 +123,14 @@ export const ActivitiesDataTable = React.memo(function ActivitiesDataTable({
       width: '50%',
       render: (value, record) => (
         <div className="flex items-center gap-2">
-          <span className="font-medium text-gray-900">{value}</span>
+          <span className="font-medium text-gray-900 truncate">{value}</span>
+          {record.type === ActivityType.SCHEDULE && (record as ScheduleActivity).isRecurring && (
+             <span title="Recurring Event">
+               <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />
+             </span>
+          )}
           {record.priority === ActivityPriority.HIGH && (
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0 ml-1" />
           )}
         </div>
       ),

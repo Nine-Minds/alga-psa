@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   Activity,
+  ScheduleActivity,
   ActivityPriority,
   ActivityType
 } from "server/src/interfaces/activity.interfaces";
@@ -10,7 +11,7 @@ import { Card } from "server/src/components/ui/Card";
 import { Badge } from "server/src/components/ui/Badge";
 import { Button } from "server/src/components/ui/Button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "server/src/components/ui/DropdownMenu";
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Repeat } from 'lucide-react';
 
 // Format date to a readable format
 const formatDate = (dateString?: string) => {
@@ -99,7 +100,14 @@ export function ActivityCard({ activity, onViewDetails, renderExtra }: ActivityC
       id={`activity-card-${activity.id}`}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-medium text-gray-900 truncate">{activity.title}</h3>
+        <div className="flex items-center gap-2 truncate">
+          <h3 className="font-medium text-gray-900 truncate">{activity.title}</h3>
+          {activity.type === ActivityType.SCHEDULE && (activity as ScheduleActivity).isRecurring && (
+            <span title="Recurring Event">
+              <Repeat className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           {priorityIndicator[activity.priority]}
           <DropdownMenu>
