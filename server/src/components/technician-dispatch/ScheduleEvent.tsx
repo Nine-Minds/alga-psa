@@ -3,6 +3,7 @@ import { Trash, ExternalLink } from 'lucide-react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { getEventColors } from './utils';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Button } from 'server/src/components/ui/Button';
 
 interface ScheduleEventProps {
   event: Omit<IScheduleEntry, 'tenant'>;
@@ -40,7 +41,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   };
 
   const handleConfirmDelete = () => {
-    onDelete(undefined as any);
+    onDelete(null as any);
     setIsConfirmDeleteDialogOpen(false);
   };
 
@@ -68,34 +69,43 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         }
       }}
     >
-      <div className="font-bold relative left-4">{event.title.split(':')[0]}</div>
-      <div className="relative left-4">{event.title.split(':')[1]}</div>
+      {/* Container for text */}
+      <div className="flex flex-col justify-center items-start h-full text-left px-2">
+        <div className="font-bold">{event.title.split(':')[0]}</div>
+        <div>{event.title.split(':')[1]}</div>
+      </div>
 
-      <button
-        className="absolute top-1 left-1 w-4 h-4 text-[rgb(var(--color-text-600))]
-          hover:text-[rgb(var(--color-text-800))] transition-colors details-button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick();
-        }}
-        title="View Details"
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ zIndex: 1000 }}
-      >
-        <ExternalLink className="w-4 h-4 pointer-events-none" />
-      </button>
+      {/* Container for top-right buttons */}
+      <div className="absolute top-1 right-1 flex gap-1" style={{ zIndex: 1000 }}>
+        <Button
+          id={`view-details-${event.entry_id}`}
+          variant="icon"
+          size="icon"
+          className="w-4 h-4 details-button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick();
+          }}
+          title="View Details"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <ExternalLink className="w-4 h-4 pointer-events-none" />
+        </Button>
 
-      <button
-        className="absolute top-1 right-2 w-4 h-4 text-[rgb(var(--color-text-600))]
-          hover:text-[rgb(var(--color-text-800))] transition-colors delete-button"
-        onClick={handleDeleteClick}
-        title="Delete schedule entry"
-        onMouseDown={(e) => e.stopPropagation()}
-        style={{ zIndex: 1000 }}
-      >
-        <Trash className="w-4 h-4 pointer-events-none" />
-      </button>
+        <Button
+          id={`delete-entry-${event.entry_id}`}
+          variant="icon"
+          size="icon"
+          className="w-4 h-4 delete-button"
+          onClick={handleDeleteClick}
+          title="Delete schedule entry"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <Trash className="w-4 h-4 pointer-events-none" />
+        </Button>
+      </div>
 
+      {/* Resize Handles */}
       <div
         className="absolute top-0 bottom-0 left-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
         onMouseDown={(e) => {

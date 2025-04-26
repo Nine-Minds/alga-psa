@@ -154,16 +154,16 @@ export function TimeSheetTable({
                                         {isEditable && (
                                             <Button
                                                 id="delete-workitem-button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="absolute right-1 top-2 p-1 hover:bg-[rgb(var(--color-primary-50))]"
-                                                title="Delete"
+                                                variant="icon"
+                                                size="icon"
+                                                className="absolute right-1 top-2 p-1"
+                                                title="Delete Work Item"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setSelectedWorkItemToDelete(workItem.work_item_id);
                                                 }}
                                             >
-                                                <Trash className="h-4 w-4 text-[rgb(var(--color-text-300))] hover:text-red-600" />
+                                                <Trash className="h-4 w-4" /> 
                                             </Button>
                                         )}
                                     </td>

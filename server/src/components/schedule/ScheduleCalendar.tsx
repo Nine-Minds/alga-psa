@@ -406,13 +406,16 @@ const ScheduleCalendar: React.FC = () => {
             <div className={`event-title ${isTicketOrTask ? 'cursor-pointer hover:underline' : ''}`}>
               {event.title}
             </div>
-            <button
-              className="delete-entry-btn absolute top-1 right-1 text-[rgb(var(--color-text-300))] hover:text-[rgb(var(--color-text-600))] pointer-events-auto"
-              title="Delete"
+            <Button
+              id={`delete-entry-${event.entry_id}-btn`}
+              variant="icon"
+              size="icon"
+              className="delete-entry-btn absolute top-1 right-1 p-0"
+              title="Delete Entry"
               onClick={(e) => handleDeleteClick(event, e)}
             >
-              <Trash className="w-4 h-4 pointer-events-none" />
-            </button>
+              <Trash className="w-4 h-4" />
+            </Button>
           </div>
           <div className="flex-1">
             {children}
