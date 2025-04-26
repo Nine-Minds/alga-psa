@@ -1,0 +1,35 @@
+{
+  "name": "invoice-templates-assemblyscript",
+  "version": "1.0.0",
+  "description": "AssemblyScript templates for invoice generation",
+  "main": "index.js",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug --exportRuntime --transform json-as/transform",
+    "asbuild:release": "asc assembly/index.ts --target release --optimize --noAssert --exportRuntime --transform json-as/transform",
+    "build": "npm run asbuild:release",
+    "test": "node tests"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "assemblyscript",
+    "invoice",
+    "template"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@assemblyscript/loader": "^0.27.26",
+    "assemblyscript": "^0.27.26"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./build/release.js",
+      "types": "./build/release.d.ts"
+    }
+  },
+  "dependencies": {
+    "json-as": "^1.0.4"
+  }
+}

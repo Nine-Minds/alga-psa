@@ -1,0 +1,39 @@
+{
+  "name": "assemblyscript-invoice-template-boilerplate",
+  "version": "0.1.0",
+  "description": "Boilerplate for creating AssemblyScript invoice templates",
+  "main": "index.js",
+  "scripts": {
+    "asbuild:debug": "asc assembly/index.ts --target debug --outFile build/debug.wasm --sourceMap --exportRuntime --transform json-as/transform",
+    "asbuild:release": "asc assembly/index.ts --target release --outFile build/release.wasm --optimize --noAssert --exportRuntime --transform json-as/transform",
+    "build": "npm run asbuild:release",
+    "build:debug": "npm run asbuild:debug",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "eslint assembly/**/*.ts --fix",
+    "format": "prettier --write assembly/**/*.ts"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "assemblyscript",
+    "invoice",
+    "template",
+    "boilerplate"
+  ],
+  "author": "Your Name Here",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@assemblyscript/loader": "^0.27.26",
+    "assemblyscript": "^0.27.26",
+    "@typescript-eslint/eslint-plugin": "^7.11.0",
+    "@typescript-eslint/parser": "^7.11.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.1.3",
+    "prettier": "^3.2.5"
+  },
+  "type": "module",
+  "dependencies": {
+    "json-as": "^1.0.4"
+  }
+}
