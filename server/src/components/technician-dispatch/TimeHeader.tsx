@@ -16,7 +16,7 @@ const TimeHeader: React.FC<TimeHeaderProps> = ({ timeSlots }) => {
             key={slot}
             className={`text-center text-xs font-semibold ${isWorking ? 'time-header-working' : 'time-header-non-working'}`}
           >
-            {`${parseInt(slot) === 0 ? 12 : parseInt(slot) > 12 ? parseInt(slot) - 12 : parseInt(slot)}${parseInt(slot) >= 12 ? 'p' : 'a'}`}
+            {`${parseInt(slot) === 0 ? 12 : parseInt(slot) > 12 ? parseInt(slot) - 12 : parseInt(slot)}${parseInt(slot) >= 12 ? ' PM' : ' AM'}`}
           </div>
         );
       })}

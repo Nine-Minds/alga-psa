@@ -143,10 +143,11 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
     };
   }, []);
 
-  const handleDelete = useCallback((e: React.MouseEvent, eventId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this schedule entry?')) {
+  const handleDelete = useCallback((e: React.MouseEvent | null, eventId: string) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+     }
       onDeleteEvent(eventId);
       isDraggingRef.current = false;
       dragStateRef.current = null;
@@ -154,7 +155,6 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
       setIsDragging(false);
       setDragState(null);
       setHighlightedSlots(null);
-    }
   }, [onDeleteEvent]);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>, direction: 'left' | 'right') => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityFilters, ScheduleActivity } from '../../interfaces/activity.interfaces';
+import { ActivityFilters, ScheduleActivity, ActivityType } from '../../interfaces/activity.interfaces';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { ScheduleCard } from './ActivityCard';
@@ -69,8 +69,26 @@ export function ScheduleSection({ limit = 5, onViewAll }: ScheduleSectionProps) 
         }
         return 0;
       });
+
+      const uniqueUpcomingActivities: ScheduleActivity[] = [];
+      const addedRecurringSeries = new Set<string>();
+
+      for (const activity of sortedActivities) {
+        if (activity.type === ActivityType.SCHEDULE) {
+          const scheduleActivity = activity as ScheduleActivity;
+          if (scheduleActivity.isRecurring) {
+            const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
+            if (!addedRecurringSeries.has(seriesIdentifier)) {
+              uniqueUpcomingActivities.push(scheduleActivity);
+              addedRecurringSeries.add(seriesIdentifier);
+            }
+          } else {
+            uniqueUpcomingActivities.push(scheduleActivity);
+          }
+        }
+      }
       
-      setActivities(sortedActivities.slice(0, limit));
+      setActivities(uniqueUpcomingActivities.slice(0, limit));
       setError(null);
     } catch (err) {
       console.error('Error loading schedule activities:', err);
@@ -92,8 +110,26 @@ export function ScheduleSection({ limit = 5, onViewAll }: ScheduleSectionProps) 
         }
         return 0;
       });
+
+      const uniqueUpcomingActivities: ScheduleActivity[] = [];
+      const addedRecurringSeries = new Set<string>();
+
+      for (const activity of sortedActivities) {
+        if (activity.type === ActivityType.SCHEDULE) {
+          const scheduleActivity = activity as ScheduleActivity;
+          if (scheduleActivity.isRecurring) {
+            const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
+            if (!addedRecurringSeries.has(seriesIdentifier)) {
+              uniqueUpcomingActivities.push(scheduleActivity);
+              addedRecurringSeries.add(seriesIdentifier);
+            }
+          } else {
+            uniqueUpcomingActivities.push(scheduleActivity);
+          }
+        }
+      }
       
-      setActivities(sortedActivities.slice(0, limit));
+      setActivities(uniqueUpcomingActivities.slice(0, limit));
       setError(null);
     } catch (err) {
       console.error('Error refreshing schedule activities:', err);

@@ -4,15 +4,16 @@ import {
   ActivityFilters,
   ActivityType,
   ActivityResponse
-} from '../../interfaces/activity.interfaces';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
+} from 'server/src/interfaces/activity.interfaces';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from '../ui/Button';
 import { RefreshCw, Filter, XCircleIcon } from 'lucide-react';
-import { fetchActivities } from '../../lib/actions/activity-actions/activityServerActions';
+import { fetchActivities } from 'server/src/lib/actions/activity-actions/activityServerActions';
 import { ActivitiesDataTable } from './ActivitiesDataTable';
 import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/ActivitiesTableFilters';
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivitiesCache } from 'server/src/hooks/useActivitiesCache';
+import { ScheduleActivity } from 'server/src/interfaces/activity.interfaces';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -128,6 +129,29 @@ export function ActivitiesDataTableSection({
     setCurrentPage(newPage);
   }, []);
 
+  const filteredActivitiesForTable = useMemo(() => {
+    const uniqueUpcomingActivities: Activity[] = [];
+    const addedRecurringSeriesOnPage = new Set<string>();
+
+    for (const activity of activities) {
+      if (activity.type === ActivityType.SCHEDULE) {
+        const scheduleActivity = activity as ScheduleActivity;
+        if (scheduleActivity.isRecurring) {
+          const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
+          if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
+            uniqueUpcomingActivities.push(scheduleActivity);
+            addedRecurringSeriesOnPage.add(seriesIdentifier);
+          }
+        } else {
+          uniqueUpcomingActivities.push(scheduleActivity);
+        }
+      } else {
+        uniqueUpcomingActivities.push(activity);
+      }
+    }
+    return uniqueUpcomingActivities;
+  }, [activities]);
+ 
   return (
     <Card id={id}>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -191,13 +215,16 @@ export function ActivitiesDataTableSection({
           <div className="flex justify-center items-center h-40">
             <p className="text-gray-500">No activities found</p>
           </div>
+        ) : filteredActivitiesForTable.length === 0 ? (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-gray-500">No activities found matching filters</p>
+          </div>
         ) : (
           <ActivitiesDataTable
-            activities={activities}
+            activities={filteredActivitiesForTable}
             onViewDetails={handleViewDetails}
             onActionComplete={handleRefresh}
             isLoading={isLoading}
-            // Pass pagination props
             currentPage={currentPage}
             pageSize={pageSize}
             totalItems={totalItems}
@@ -205,7 +232,6 @@ export function ActivitiesDataTableSection({
           />
         )}
       </CardContent>
-
     </Card>
   );
 }

@@ -9,7 +9,7 @@ import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { searchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import { searchDispatchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
@@ -79,8 +79,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       start.setHours(0, 0, 0, 0);
       const end = new Date(selectedDate);
       end.setHours(23, 59, 59, 999);
-
-      const result = await searchWorkItems({
+ 
+      const result = await searchDispatchWorkItems({
         searchTerm: query,
         statusFilter: selectedStatusFilter,
         filterUnscheduled: filterUnscheduled,
@@ -92,8 +92,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           start,
           end
         },
-        workItemId: filterWorkItemId,
-        context: 'dispatch'
+        workItemId: filterWorkItemId
       });
       setWorkItems(result.items);
       setTotalItems(result.total);

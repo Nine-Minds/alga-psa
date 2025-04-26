@@ -21,9 +21,11 @@ const buttonVariants = cva(
         ghost: 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]',
         link: 'underline-offset-4 hover:underline text-[rgb(var(--color-primary-500))]',
         soft: 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))] hover:bg-[rgb(var(--color-primary-200))]',
+        icon: 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-900))]',
       },
       size: {
         default: 'h-10 py-2 px-4',
+        icon: 'h-4 w-4 p-0',
         sm: 'h-9 px-3 rounded-md',
         lg: 'h-11 px-8 rounded-md',
       },

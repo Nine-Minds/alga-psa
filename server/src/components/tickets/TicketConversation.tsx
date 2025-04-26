@@ -4,13 +4,12 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import { ArrowUpDown } from 'lucide-react';
-import { IComment, ITicket } from '../../interfaces';
-import { IDocument } from '../../interfaces/document.interface';
-import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
+import { IComment, ITicket } from 'server/src/interfaces';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import TextEditor, { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import CommentItem from './CommentItem';
-import CustomTabs from '../ui/CustomTabs';
-import Documents from '../documents/Documents';
+import CustomTabs from 'server/src/components/ui/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
@@ -279,7 +278,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   {...withDataAutomationId({ id: `${id}-current-user-avatar` })}
                   userId={currentUser?.id || ''}
                   userName={currentUser?.name || ''}
-                  avatarUrl={currentUser?.avatarUrl || null}
+                  avatarUrl={userMap[currentUser?.id || '']?.avatarUrl || currentUser?.avatarUrl || null}
                   size="md"
                 />
               </div>
