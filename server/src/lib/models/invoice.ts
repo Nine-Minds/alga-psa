@@ -236,15 +236,36 @@ export default class Invoice {
    */
   static async getStandardTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
+    // Select necessary fields including AS/Wasm related ones
     return knex('standard_invoice_templates')
-      .select('template_id', 'name', 'version', 'dsl')
+      .select(
+        'template_id',
+        'name',
+        'version'
+        // 'assemblyScriptSource', // Removed - Now stored as wasmBinary
+        // 'wasmPath' // Removed - Now stored as wasmBinary
+      )
       .orderBy('name');
   }
 
   static async getAllTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex, tenant } = await createTenantKnex();
     const [tenantTemplates, standardTemplates] = await Promise.all([
-      knex('invoice_templates').where({ tenant }).select('*'),
+      // Explicitly select necessary fields for tenant templates
+      knex('invoice_templates')
+        .where({ tenant })
+        .select(
+            'template_id',
+            'name',
+            'version',
+            'is_default',
+            'assemblyScriptSource', // Add AS source
+            // 'wasmBinary', // Exclude wasmBinary from list view
+            // Add any other necessary fields from IInvoiceTemplate that aren't covered by '*' implicitly
+            'created_at',
+            'updated_at'
+            // Note: 'dsl' might not exist on tenant templates table, adjust if needed
+        ),
       this.getStandardTemplates()
     ]);
 
@@ -279,11 +300,24 @@ export default class Invoice {
 
   static async saveTemplate(template: Omit<IInvoiceTemplate, 'tenant'>): Promise<IInvoiceTemplate> {
     const { knex, tenant } = await createTenantKnex();
+    
+    // Ensure version is provided (default to 1 if not specified)
+    const templateWithDefaults = {
+      ...template,
+      version: template.version || 1,
+      tenant: tenant
+    };
+    
+    // Log the template data to debug what's being inserted
+    console.log('Template data being inserted in saveTemplate:', templateWithDefaults);
+    
+    // Explicitly specify all required fields to ensure they're included in the SQL query
     const [savedTemplate] = await knex('invoice_templates')
-      .insert({ ...template, tenant: tenant })
+      .insert(templateWithDefaults)
       .onConflict(['tenant', 'template_id'])
-      .merge()
+      .merge(['name', 'version', 'assemblyScriptSource', 'wasmBinary', 'is_default'])
       .returning('*');
+    
     return savedTemplate;
   }
 

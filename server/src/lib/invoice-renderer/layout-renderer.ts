@@ -153,7 +153,7 @@ function renderDocument(element: DocumentElement, context: RenderContext): strin
   context.globalStyles = element.globalStyles; // Make global styles available
   context.css += generateGlobalCss(element.globalStyles); // Add global styles to CSS output
 
-  const childrenHtml = element.children.map(child => renderElement(child, context)).join('\n');
+  const childrenHtml = Array.isArray(element.children) ? element.children.map(child => renderElement(child, context)).join('\n') : '';
   // Using a simple div wrapper for the document for now. Could use <html><body> etc. if needed.
   const classList: string[] = ['Document']; // Explicitly type
   if (element.pageBreakBefore) classList.push('page-break-before');
@@ -163,7 +163,7 @@ function renderDocument(element: DocumentElement, context: RenderContext): strin
 }
 
 function renderSection(element: SectionElement, context: RenderContext): string {
-  const childrenHtml = element.children.map(child => renderElement(child, context)).join('\n');
+  const childrenHtml = Array.isArray(element.children) ? element.children.map(child => renderElement(child, context)).join('\n') : '';
   // Using <section> semantic tag
   const classList: string[] = ['Section']; // Explicitly type
   if (element.pageBreakBefore) classList.push('page-break-before');
@@ -173,7 +173,7 @@ function renderSection(element: SectionElement, context: RenderContext): string 
 }
 
 function renderRow(element: RowElement, context: RenderContext): string {
-  const childrenHtml = element.children.map(child => renderElement(child, context)).join('\n');
+  const childrenHtml = Array.isArray(element.children) ? element.children.map(child => renderElement(child, context)).join('\n') : '';
   // Simple div for row, assuming flexbox/grid styling will be applied via CSS
   const classList: string[] = ['Row']; // Explicitly type
   if (element.pageBreakBefore) classList.push('page-break-before');
@@ -183,7 +183,7 @@ function renderRow(element: RowElement, context: RenderContext): string {
 }
 
 function renderColumn(element: ColumnElement, context: RenderContext): string {
-  const childrenHtml = element.children.map(child => renderElement(child, context)).join('\n');
+  const childrenHtml = Array.isArray(element.children) ? element.children.map(child => renderElement(child, context)).join('\n') : '';
   // Simple div for column
   const classList: string[] = ['Column']; // Explicitly type
   if (element.span) classList.push(`span-${element.span}`);

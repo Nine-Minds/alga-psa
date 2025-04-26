@@ -103,11 +103,8 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  dsl: string;
-  parsed?: {
-      sections: Section[];
-      globals: GlobalCalculation[];
-  };
+  assemblyScriptSource: string;
+  wasmBinary?: Buffer;
   isStandard?: boolean;
   isClone?: boolean;
   is_default?: boolean;

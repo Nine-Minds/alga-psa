@@ -3,10 +3,15 @@ import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 import { FileStore } from '../types/storage';
 import { getInvoiceForRendering } from '../lib/actions/invoiceQueries';
-import { getInvoiceTemplates } from '../lib/actions/invoiceTemplates';
-import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
-import React from 'react';
+import { getInvoiceTemplates, getCompiledWasm } from '../lib/actions/invoiceTemplates';
+// Removed: import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
+// Removed: import React from 'react';
 import { runWithTenant, createTenantKnex } from '../lib/db';
+import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
+import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
+import type { InvoiceViewModel as WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Alias for clarity
+import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from '../interfaces/invoice.interfaces'; // Alias for clarity
+import { DateValue } from '@shared/types/temporal'; // Import DateValue if needed for conversion
 
 interface PDFGenerationOptions {
   invoiceId: string;
@@ -58,23 +63,63 @@ export class PDFGenerationService {
     return fileRecord;
   }
 
+  // Helper function to convert DateValue (Date or ISO string) to ISO string
+  private formatDateValue(date: DateValue | undefined): string {
+    if (!date) return '';
+    if (date instanceof Date) {
+      return date.toISOString();
+    }
+    // Assume it's already an ISO string if not a Date object
+    return String(date);
+  }
+
+
+  // Helper function to map DB Invoice data to the Wasm Renderer's ViewModel
+  private mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): WasmInvoiceViewModel {
+    return {
+      invoiceNumber: dbData.invoice_number,
+      issueDate: this.formatDateValue(dbData.invoice_date),
+      dueDate: this.formatDateValue(dbData.due_date),
+      customer: {
+        name: dbData.company?.name || 'N/A', // Combine company/contact info
+        address: dbData.contact?.address || dbData.company?.address || 'N/A', // Use contact address first, fallback to company
+      },
+      items: dbData.invoice_items.map((item: IInvoiceItem) => ({
+        id: item.item_id,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unit_price, // Assuming unit_price is the correct field
+        total: item.total_price, // Assuming total_price is the correct field
+        // Optional fields from WasmInvoiceViewModel can be added here if available in IInvoiceItem
+        // category: item.category, // Example
+        // itemType: item.itemType, // Example
+      })),
+      subtotal: dbData.subtotal,
+      tax: dbData.tax,
+      total: dbData.total_amount, // Map total_amount to total
+      // notes: dbData.notes, // Add if notes exist in DbInvoiceViewModel
+      // timeEntries: dbData.timeEntries, // Add if time entries exist
+    };
+  }
+
+
   private async getInvoiceHtml(invoiceId: string): Promise<string> {
     // Run all database operations with tenant context
     return runWithTenant(this.tenant, async () => {
       // Fetch invoice data and company's template
-    const [invoiceData, templates] = await Promise.all([
+    const [dbInvoiceData, templates] = await Promise.all([ // Renamed to dbInvoiceData
       getInvoiceForRendering(invoiceId),
       getInvoiceTemplates()
     ]);
 
-    if (!invoiceData) {
+    if (!dbInvoiceData) { // Use renamed variable
       throw new Error(`Invoice ${invoiceId} not found`);
     }
 
     // Get company's selected template or default template
     const { knex } = await createTenantKnex();
     const company = await knex('companies')
-      .where({ company_id: invoiceData.company_id })
+      .where({ company_id: dbInvoiceData.company_id }) // Use renamed variable
       .first();
 
     let template;
@@ -96,14 +141,37 @@ export class PDFGenerationService {
       throw new Error('No invoice templates found');
     }
 
-      // Render template using core renderer
-      const rendered = renderTemplateCore(template, invoiceData);
+      // Fetch the compiled Wasm binary for the selected template
+      if (!template.template_id) {
+        throw new Error('Selected template does not have an ID.');
+      }
+      const wasmBuffer = await getCompiledWasm(template.template_id);
+
+      // Map the fetched DB data to the ViewModel expected by the Wasm executor
+      const wasmInvoiceViewModel = this.mapInvoiceDataToViewModel(dbInvoiceData);
+
+      // Execute the Wasm template with the correctly mapped data
+      const layoutElement = await executeWasmTemplate(wasmInvoiceViewModel, wasmBuffer);
+
+      // Render the layout structure to HTML and CSS
+      const renderedOutput = renderLayout(layoutElement);
+
+      // Return the full HTML document string for PDF generation
       return `
-        <html>
+        <!DOCTYPE html>
+        <html lang="en">
           <head>
-            <style>${rendered.styles}</style>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Invoice</title> {/* Title might be useful for PDF metadata */}
+            <style>
+              /* Inject the generated CSS */
+              ${renderedOutput.css}
+            </style>
           </head>
-          <body>${rendered.html}</body>
+          <body>
+            ${renderedOutput.html}
+          </body>
         </html>
       `;
     });

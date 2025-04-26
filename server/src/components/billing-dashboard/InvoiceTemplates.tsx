@@ -1,20 +1,23 @@
 // InvoiceTemplates.tsx
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added router and searchParams import
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
-import InvoiceTemplateManager from './InvoiceTemplateManager';
-import { FileTextIcon } from 'lucide-react';
+// Removed InvoiceTemplateManager import
+import { FileTextIcon, PencilIcon } from 'lucide-react'; // Added PencilIcon import
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState<IInvoiceTemplate | null>(null);
+  // Removed selectedTemplate state
   const [error, setError] = useState<string | null>(null);
-  
+  const router = useRouter(); // Initialize router
+const searchParams = useSearchParams(); // Initialize searchParams
+
   const handleCloneTemplate = async (template: IInvoiceTemplate) => {
     try {
       const clonedTemplate = {
@@ -25,7 +28,7 @@ const InvoiceTemplates: React.FC = () => {
       };
       const savedTemplate = await saveInvoiceTemplate(clonedTemplate);
       await fetchTemplates();
-      setSelectedTemplate(savedTemplate);
+      // Removed setSelectedTemplate(savedTemplate); as the state is no longer used
       setError(null);
     } catch (error) {
       console.error('Error cloning template:', error);
@@ -59,19 +62,12 @@ const InvoiceTemplates: React.FC = () => {
     }
   };
 
-  const handleTemplateSelect = (template: IInvoiceTemplate) => {
-    setSelectedTemplate(template);
-  };
+  // Ensure handleTemplateSelect and handleTemplateUpdate are removed if they exist
 
-  const handleTemplateUpdate = async (updatedTemplate: IInvoiceTemplate) => {
-    try {
-      await fetchTemplates();
-      setSelectedTemplate(updatedTemplate);
-      setError(null);
-    } catch (error) {
-      console.error('Error updating templates:', error);
-      setError('Failed to refresh templates');
-    }
+  const handleNavigateToEditor = (templateId: string | 'new') => {
+    const params = new URLSearchParams(searchParams?.toString() ?? ''); // Keep existing params like 'tab'
+    params.set('templateId', templateId);
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   const templateColumns: ColumnDefinition<IInvoiceTemplate>[] = [
@@ -107,8 +103,21 @@ const InvoiceTemplates: React.FC = () => {
       width: '10%',
       render: (_, record) => (
         <div className="flex gap-2">
+           <Button
+             id={`edit-template-${record.template_id}-button`}
+             onClick={(e) => {
+               e.stopPropagation();
+               handleNavigateToEditor(record.template_id);
+             }}
+             variant="outline"
+             size="sm"
+             disabled={record.isStandard} // Disable for standard templates
+             title={record.isStandard ? "Standard templates cannot be edited" : "Edit Template"}
+           >
+             <PencilIcon className="h-4 w-4 mr-1" /> Edit
+           </Button>
           <Button
-            id="clone-template-button"
+            id={`clone-template-${record.template_id}-button`}
             onClick={(e) => {
               e.stopPropagation();
               handleCloneTemplate(record);
@@ -120,7 +129,7 @@ const InvoiceTemplates: React.FC = () => {
           </Button>
           {!record.isStandard && (
             <Button
-              id="set-default-template-button"
+              id={`set-default-template-${record.template_id}-button`}
               onClick={(e) => {
                 e.stopPropagation();
                 handleSetDefaultTemplate(record);
@@ -149,20 +158,21 @@ const InvoiceTemplates: React.FC = () => {
           </div>
         )}
         <div className="space-y-4">
+           <div className="flex justify-end">
+             <Button
+               id="create-new-template-button"
+               onClick={() => handleNavigateToEditor('new')}
+             >
+               Create New Template
+             </Button>
+           </div>
           <DataTable
             data={invoiceTemplates}
             columns={templateColumns}
             pagination={false}
-            onRowClick={handleTemplateSelect}
+            // Ensure onRowClick is removed
+            // Ensure InvoiceTemplateManager rendering is removed
           />
-          {selectedTemplate && (
-            <InvoiceTemplateManager
-              templates={invoiceTemplates}
-              onTemplateSelect={handleTemplateSelect}
-              onTemplateUpdate={handleTemplateUpdate}
-              selectedTemplate={selectedTemplate}
-            />
-          )}
         </div>
       </CardContent>
     </Card>

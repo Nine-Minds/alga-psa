@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
-import { getInvoiceTemplates, saveInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates';
+// Import compileAndSaveTemplate instead of saveInvoiceTemplate
+import { getInvoiceTemplates, compileAndSaveTemplate } from 'server/src/lib/actions/invoiceTemplates';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
+// Remove DSL parser import - no longer used
+// import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
 
 interface TemplateSelectorProps {
     onTemplateSelect: (template: IInvoiceTemplate) => void;
@@ -15,7 +17,8 @@ interface TemplateSelectorProps {
 
 const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onTemplateSelect, templates, onTemplatesUpdate, selectedTemplate }) => {
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-    const [customTemplate, setCustomTemplate] = useState('');
+    // State now holds AssemblyScript source
+    const [customTemplateSource, setCustomTemplateSource] = useState('');
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -25,7 +28,11 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onTemplateSelect, t
     useEffect(() => {
         if (selectedTemplate) {
             setSelectedTemplateId(selectedTemplate.template_id);
-            setCustomTemplate(selectedTemplate.dsl);
+            // Use assemblyScriptSource instead of dsl
+            setCustomTemplateSource(selectedTemplate.assemblyScriptSource || ''); // Default to empty string if null/undefined
+        } else {
+            // Clear source if no template is selected
+            setCustomTemplateSource('');
         }
     }, [selectedTemplate]);
 
@@ -42,31 +49,59 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onTemplateSelect, t
         const selected = templates.find(t => t.template_id === templateId);
         if (selected) {
             onTemplateSelect(selected);
-            setCustomTemplate(selected.dsl);
+            // Use assemblyScriptSource instead of dsl
+            setCustomTemplateSource(selected.assemblyScriptSource || ''); // Default to empty string
         }
     };
 
-    const handleCustomTemplateChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setCustomTemplate(e.target.value);
-        setError(null);
+    // Renamed handler for clarity
+    const handleCustomSourceChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setCustomTemplateSource(e.target.value);
+        setError(null); // Clear error on edit
     };
 
     const handleSaveCustomTemplate = async () => {
+        // Saving now involves sending the AssemblyScript source.
+        // The backend action `saveInvoiceTemplate` should handle compilation.
+        // We remove the client-side parsing logic.
+        setError(null); // Clear previous errors
         try {
-            const parsedTemplate = parseInvoiceTemplate(customTemplate);
-            const newTemplate: Omit<IInvoiceTemplate, 'tenant'> = {
-                template_id: `new-${Date.now()}`,
-                name: 'Custom Template',
+            // Basic validation: Check if source is empty
+            if (!customTemplateSource.trim()) {
+                setError('Cannot save an empty template.');
+                return;
+            }
+
+            // Prepare metadata for compileAndSaveTemplate
+            // Type: Omit<IInvoiceTemplate, 'tenant' | 'template_id' | 'assemblyScriptSource' | 'wasmPath' | 'isStandard'> & { template_id?: string; }
+            const metadata = {
+                name: 'Custom Template ' + new Date().toLocaleTimeString(),
                 version: 1,
-                dsl: customTemplate,
-                parsed: parsedTemplate,
+                is_default: false,
+                // template_id is optional here, letting the action generate one
             };
-            const savedTemplate = await saveInvoiceTemplate(newTemplate);
-            onTemplatesUpdate([...templates, savedTemplate]);
-            setSelectedTemplateId(savedTemplate.template_id);
-            onTemplateSelect(savedTemplate);
-        } catch (err) {
-            setError('Invalid template syntax. Please check your DSL.');
+
+            // Call the action that compiles and saves, passing source separately
+            const response = await compileAndSaveTemplate(metadata, customTemplateSource);
+
+            if (response.success) {
+                const savedTemplate = response.template;
+                // Update local state
+                onTemplatesUpdate([...templates, savedTemplate]); // Add the newly saved template
+                setSelectedTemplateId(savedTemplate.template_id); // Select the new template
+                onTemplateSelect(savedTemplate); // Notify parent component
+                setCustomTemplateSource(savedTemplate.assemblyScriptSource || ''); // Update text area
+            } else {
+                // Handle compilation/save error
+                console.error("Error saving custom template:", response.error, response.details);
+                setError(`Failed to save template: ${response.error}${response.details ? ` (${response.details.substring(0, 100)}...)` : ''}`);
+            }
+
+        } catch (err) { // Catch errors from the action call itself (e.g., network)
+            console.error("Error saving custom template:", err);
+            const message = err instanceof Error ? err.message : "An unknown error occurred during save.";
+            // Provide more specific feedback if possible (e.g., compilation error from backend)
+            setError(`Failed to save template: ${message}`);
         }
     };
 
@@ -81,14 +116,16 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({ onTemplateSelect, t
                 value={selectedTemplateId}
                 placeholder="Select invoice template..."
             />
+            {/* Text area now for AssemblyScript source */}
             <TextArea
-                value={customTemplate}
-                onChange={handleCustomTemplateChange}
-                placeholder="Enter custom template DSL here..."
-                rows={10}
+                value={customTemplateSource}
+                onChange={handleCustomSourceChange}
+                placeholder="Enter custom template AssemblyScript source here..."
+                rows={15} // Increase rows for source code
+                className="font-mono text-sm" // Use monospace font for code
             />
-            {error && <p className="text-red-500">{error}</p>}
-            <Button id='save-custom-template-button' onClick={handleSaveCustomTemplate}>Save Custom Template</Button>
+            {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+            <Button id='save-custom-template-button' onClick={handleSaveCustomTemplate}>Save as New Custom Template</Button>
         </div>
     );
 };

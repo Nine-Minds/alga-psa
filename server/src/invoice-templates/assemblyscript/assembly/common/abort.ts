@@ -1,15 +1,18 @@
-// Custom abort function to provide more context in case of errors
-// See: https://www.assemblyscript.org/concepts/runtime.html#custom-abort-function
-export function abort(message: string | null, fileName: string | null, lineNumber: u32, columnNumber: u32): void {
-  // Log the error details. In a real Wasm host, this might call a host function.
-  const msg = message ? message : "Unknown error";
-  const file = fileName ? fileName : "unknown file";
-  const line = lineNumber.toString();
-  const col = columnNumber.toString();
-  
-  // Example logging (replace with host function call if available)
-  console.error(`AssemblyScript Error: ${msg} at ${file}:${line}:${col}`);
+// Provides a basic abort implementation for AssemblyScript builds
+// See: https://www.assemblyscript.org/compiler.html#compiler-options (--use)
 
-  // Trigger the Wasm trap
-  unreachable(); 
+// @ts-ignore: decorator is valid
+@external("env", "abort") // Assuming host provides 'abort' in 'env' module
+declare function hostAbort(message: string | null, fileName: string | null, lineNumber: u32, columnNumber: u32): void;
+
+// This function will be called by AssemblyScript on assertion failures or explicit aborts
+export function abort(message: string | null, fileName: string | null, lineNumber: u32, columnNumber: u32): void {
+  // Log the error (if host provides logging) or just call the host's abort
+  // console.log("Abort called in Wasm:"); // console.log might not be available depending on host
+  // console.log("  Message: " + (message ? message : "N/A"));
+  // console.log("  File: " + (fileName ? fileName : "N/A"));
+  // console.log("  Location: " + lineNumber.toString() + ":" + columnNumber.toString());
+
+  // Call the host-provided abort function
+  hostAbort(message, fileName, lineNumber, columnNumber);
 }
