@@ -1,81 +1,87 @@
-exports.seed = async function (knex) {
-    // Get the tenant ID
-    const tenant = await knex('tenants').select('tenant').first();
-    if (!tenant) return;
+const fs = require('fs');
+const path = require('path');
 
-    return knex('invoice_templates').insert([
+exports.seed = async function (knex) {
+    // Define paths relative to the server root directory (where knex is likely run from)
+    const baseDir = path.resolve(__dirname, '../../'); // Go up two levels from seeds/dev
+    const standardTsDir = path.join(baseDir, 'src', 'invoice-templates', 'assemblyscript', 'standard');
+    const standardWasmOutputDir = 'dist/invoice-templates/standard'; // Relative path for DB
+
+    // Template definitions
+    const templates = [
         {
-            tenant: tenant.tenant,
-            template_id: knex.raw('gen_random_uuid()'),
             name: 'Standard Template',
-            version: 1,
-            dsl: `section header grid 12 x 3 {
-                field company_logo at 1 1 span 3 2
-                field company_name at 4 1 span 5 1
-                field invoice_number at 10 1 span 3 1
-                field invoice_date at 10 2 span 3 1
-            }
-            section items grid 12 x 10 {
-                list invoice_items group by category {
-                    field item_name at 1 1 span 6 1
-                    field quantity at 7 1 span 2 1
-                    field price at 9 1 span 2 1
-                    field total at 11 1 span 2 1
-                    calculate subtotal as sum total
-                }
-            }
-            section summary grid 12 x 4 {
-                field subtotal_label at 8 1 span 2 1
-                field subtotal at 10 1 span 3 1
-                field tax_label at 8 2 span 2 1
-                field tax at 10 2 span 3 1
-                field total_label at 8 3 span 2 1
-                field total at 10 3 span 3 1
-                style total {
-                    font-weight: "bold";
-                    font-size: 16;
-                }
-            }`,
-            is_default: true
+            is_default: true,
+            tsFileName: 'standard-default.ts',
+            wasmFileName: 'standard-default.wasm',
         },
         {
-            tenant: tenant.tenant,
-            template_id: knex.raw('gen_random_uuid()'),
             name: 'Detailed Template',
-            version: 1,
-            dsl: `section header grid 12 x 4 {
-                field company_logo at 1 1 span 3 2
-                field company_name at 4 1 span 5 1
-                field company_address at 4 2 span 5 1
-                field invoice_number at 10 1 span 3 1
-                field invoice_date at 10 2 span 3 1
-                field client_name at 1 3 span 6 1
-                field client_address at 1 4 span 6 1
-            }
-            section items grid 12 x 10 {
-                list invoice_items group by category {
-                    field item_name at 1 1 span 4 1
-                    field description at 1 2 span 4 1
-                    field quantity at 5 1 span 2 1
-                    field price at 7 1 span 2 1
-                    field total at 9 1 span 2 1
-                }
-                calculate subtotal as sum total
-            }
-            section summary grid 12 x 5 {
-                field subtotal_label at 8 1 span 2 1
-                field subtotal at 10 1 span 3 1
-                field tax_label at 8 2 span 2 1
-                field tax at 10 2 span 3 1
-                field total_label at 8 3 span 2 1
-                field total at 10 3 span 3 1
-                field notes at 1 4 span 12 2
-                style total {
-                    font-weight: "bold";
-                    font-size: 18;
-                }
-            }`,
-            is_default: false
+            is_default: false,
+            tsFileName: 'standard-detailed.ts',
+            wasmFileName: 'standard-detailed.wasm',
+        },
+    ];
+
+    const templatesToInsert = [];
+
+    for (const template of templates) {
+        const tsFilePath = path.join(standardTsDir, template.tsFileName);
+        const wasmDbPath = path.join(standardWasmOutputDir, template.wasmFileName); // Use POSIX separators for DB path
+
+        let assemblyScriptSource = '';
+        try {
+            assemblyScriptSource = fs.readFileSync(tsFilePath, 'utf8');
+            console.log(`Read source for ${template.name} from ${tsFilePath}`);
+        } catch (err) {
+            console.error(`Error reading AssemblyScript source file ${tsFilePath}:`, err);
+            // Decide how to handle error: skip this template, throw, etc.
+            // For seeding, skipping might be acceptable if the file is missing during build
+            continue;
         }
-    ]);
+
+        // Check if Wasm file exists (optional, but good practice for seeding)
+        const wasmBuildPath = path.join(baseDir, standardWasmOutputDir, template.wasmFileName);
+         if (!fs.existsSync(wasmBuildPath)) {
+             console.warn(`Warning: Compiled Wasm file not found at ${wasmBuildPath} for template ${template.name}. Skipping seed entry.`);
+             continue; // Skip if Wasm file doesn't exist
+         }
+
+
+        templatesToInsert.push({
+            // tenant: null, // Standard templates are not tenant-specific
+            template_id: knex.raw('gen_random_uuid()'),
+            name: template.name,
+            version: 1, // Assuming version 1 for initial seeding
+            assemblyScriptSource: assemblyScriptSource,
+            wasmPath: wasmDbPath.replace(/\\/g, '/'), // Ensure POSIX path separators for DB consistency
+            isStandard: true, // Mark as standard
+            is_default: template.is_default,
+            // dsl: null, // Ensure DSL is null or omitted if column allows null
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now(),
+        });
+    }
+
+    if (templatesToInsert.length > 0) {
+        // Use onConflict to update existing standard templates by name if they exist, otherwise insert.
+        // This makes the seed idempotent for standard templates.
+        await knex('invoice_templates')
+            .insert(templatesToInsert)
+            .onConflict(['name']) // Assuming 'name' should be unique for standard templates
+            .merge([ // Columns to update on conflict
+                'version',
+                'assemblyScriptSource',
+                'wasmPath',
+                'isStandard',
+                'is_default',
+                'updated_at'
+            ]);
+        console.log(`Successfully seeded/updated ${templatesToInsert.length} standard invoice templates.`);
+    } else {
+        console.log("No standard invoice templates to seed (source or wasm files might be missing).");
+    }
+
+    // Optional: Clean up any old standard templates that might have been assigned a tenant ID previously
+    // await knex('invoice_templates').where({ isStandard: true }).whereNotNull('tenant').update({ tenant: null });
 };

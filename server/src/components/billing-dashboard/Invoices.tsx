@@ -13,14 +13,18 @@ import {
 import CreditExpirationInfo from './CreditExpirationInfo';
 import {
 } from 'server/src/lib/actions/invoiceActions'; // This import will be removed or become empty
-import { fetchAllInvoices, getInvoiceLineItems } from 'server/src/lib/actions/invoiceQueries';
+// Import getInvoiceForRendering instead of getInvoiceLineItems
+import { fetchAllInvoices, getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
 import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { getAllCompanies } from 'server/src/lib/actions/companyActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+// Import both ViewModel types with aliases
+import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
+import type { InvoiceViewModel as WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import { mapDbInvoiceToWasmViewModel } from 'server/src/lib/adapters/invoiceAdapters'; // Import the correct adapter
 import { TemplateRenderer } from './TemplateRenderer';
 import PaperInvoice from './PaperInvoice';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -42,12 +46,17 @@ const Invoices: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [allInvoices, setAllInvoices] = useState<InvoiceViewModel[]>([]);
+  // allInvoices likely holds the DB/interface version
+  const [allInvoices, setAllInvoices] = useState<DbInvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
+
+  // State for detailed invoice preview - Use the Wasm/Renderer ViewModel type
+  const [detailedInvoiceData, setDetailedInvoiceData] = useState<WasmInvoiceViewModel | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'Draft' | 'Finalized'>('Draft');
   const selectedInvoiceId = searchParams?.get('invoiceId');
@@ -129,20 +138,84 @@ const Invoices: React.FC = () => {
     fetchData();
   }, [activeTab]); // Refresh when tab changes
 
-  const handleInvoiceSelect = (invoice: InvoiceViewModel) => {
-    const defaultTemplateId = templates.length > 0 ? templates[0].template_id : null;
-    updateUrlParams({
-      invoiceId: invoice.invoice_id,
-      templateId: defaultTemplateId,
-      managingInvoiceId: null
-    });
+  // Effect to load detailed invoice data for preview when selectedInvoiceId changes
+  useEffect(() => {
+    const loadDetailedData = async () => {
+      if (!selectedInvoiceId) {
+        setDetailedInvoiceData(null); // Clear details if no invoice is selected
+        return;
+      }
+
+      // Avoid refetching check removed as detailedInvoiceData (WasmInvoiceViewModel) lacks invoice_id
+      // The useEffect dependency array handles running only when selectedInvoiceId changes.
+
+      // Don't need to find basicInvoice first anymore
+
+      setIsPreviewLoading(true);
+      setError(null); // Clear previous preview errors
+      setDetailedInvoiceData(null); // Clear old data before loading new
+
+      try {
+        // Fetch the complete data needed for rendering using the dedicated query
+        const dbInvoiceData = await getInvoiceForRendering(selectedInvoiceId);
+
+        if (!dbInvoiceData) {
+          throw new Error(`Invoice data for ID ${selectedInvoiceId} not found.`);
+        }
+
+        // Use the adapter to map the DB data to the Wasm ViewModel required by TemplateRenderer
+        const viewModel = mapDbInvoiceToWasmViewModel(dbInvoiceData);
+
+        if (!viewModel) {
+            // This case should ideally not happen if dbInvoiceData was found,
+            // but handle defensively.
+            throw new Error(`Failed to map invoice data for ID ${selectedInvoiceId} to view model.`);
+        }
+
+        setDetailedInvoiceData(viewModel);
+
+      } catch (err) {
+        console.error(`Error fetching or mapping detailed data for invoice ${selectedInvoiceId}:`, err);
+        // Use err.message if available, otherwise a generic message
+        const message = err instanceof Error ? err.message : 'An unknown error occurred.';
+        setError(`Failed to load preview details: ${message}`);
+        setDetailedInvoiceData(null); // Ensure data is cleared on error
+      } finally {
+        setIsPreviewLoading(false);
+      }
+    };
+
+    loadDetailedData();
+    // Dependencies: Run when the selected ID changes, or when the master list updates
+  }, [selectedInvoiceId, allInvoices]);
+
+
+  // Parameter 'invoice' here comes from the DataTable row click, which uses 'allInvoices' data.
+  // So, it should be the DbInvoiceViewModel type.
+  const handleInvoiceSelect = (invoice: DbInvoiceViewModel) => {
+    // If clicking the already selected invoice, deselect it for preview
+    if (selectedInvoiceId === invoice.invoice_id) {
+        updateUrlParams({ invoiceId: null, templateId: null }); // Clear preview params
+    } else {
+        // Define defaultTemplateId here, only needed for the 'else' case
+        const defaultTemplateId = templates.length > 0 ? templates[0].template_id : null;
+        updateUrlParams({
+          invoiceId: invoice.invoice_id,
+          // Keep current template if one is selected, otherwise use default
+          templateId: selectedTemplateId || defaultTemplateId,
+          managingInvoiceId: null // Ensure managing mode is off
+        });
+    }
+    // The redundant updateUrlParams call below this block was removed by the user's edit, which is correct.
   };
 
   const handleTemplateSelect = (templateId: string) => {
     updateUrlParams({ templateId });
   };
 
-  const handleManageItemsClick = (invoice: InvoiceViewModel) => {
+  // Parameter 'invoice' here comes from the DropdownMenuItem click, using 'record' from DataTable.
+  // So, it should be the DbInvoiceViewModel type.
+  const handleManageItemsClick = (invoice: DbInvoiceViewModel) => {
     updateUrlParams({
       managingInvoiceId: invoice.invoice_id,
       invoiceId: null,
@@ -168,8 +241,8 @@ const Invoices: React.FC = () => {
     setSelectedInvoices(newSelection);
   };
 
-  // Define table columns
-  const baseColumns: ColumnDefinition<InvoiceViewModel>[] = [
+  // Define table columns - These operate on the 'allInvoices' data (DbInvoiceViewModel)
+  const baseColumns: ColumnDefinition<DbInvoiceViewModel>[] = [
     {
       title: (
         <div className="flex items-center">
@@ -613,25 +686,56 @@ const Invoices: React.FC = () => {
           </div>
         )}
 
-        {selectedInvoice && selectedTemplate && (
+        {/* Invoice Preview Section - Render based on selected IDs, show loading/error/content */}
+        {selectedInvoiceId && selectedTemplateId && (
           <div className="mt-8">
             <h3 className="text-xl font-semibold mb-4">Invoice Preview</h3>
-            <PaperInvoice>
-              <TemplateRenderer
-                template={selectedTemplate}
-                invoiceData={selectedInvoice}
-              />
-            </PaperInvoice>
-            
-            {/* Show credit expiration information if credits were applied */}
-            {selectedInvoice.credit_applied > 0 && (
-              <CreditExpirationInfo
-                creditApplied={selectedInvoice.credit_applied}
-                invoiceId={selectedInvoice.invoice_id}
-              />
+            {isPreviewLoading ? (
+              <div className="flex items-center justify-center h-64 border rounded-md bg-gray-50">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <span className="ml-2 text-gray-600">Loading Preview...</span>
+              </div>
+            ) : detailedInvoiceData && selectedTemplate ? (
+              // Only render if we have the detailed data and the selected template object
+              <>
+                <PaperInvoice>
+                  <TemplateRenderer
+                    template={selectedTemplate}
+                    invoiceData={detailedInvoiceData}
+                  />
+                </PaperInvoice>
+
+                {/* Show credit expiration information if credits were applied */}
+                {/* Need to get credit_applied and invoice_id from the original DbInvoiceViewModel */}
+                {(() => {
+                  // Find the original invoice data from the list
+                  const originalInvoice = allInvoices.find(inv => inv.invoice_id === selectedInvoiceId);
+                  // Render CreditExpirationInfo only if original data exists and credit was applied
+                  if (originalInvoice && originalInvoice.credit_applied > 0) {
+                    return (
+                      <CreditExpirationInfo
+                        creditApplied={originalInvoice.credit_applied}
+                        invoiceId={originalInvoice.invoice_id}
+                      />
+                    );
+                  }
+                  return null; // Don't render if no credit applied or original data missing
+                })()}
+              </>
+            ) : error ? (
+                 // Show error if loading failed
+                 <div className="text-red-500 text-center h-64 border border-red-300 bg-red-50 rounded-md flex items-center justify-center p-4">
+                    {error}
+                 </div>
+            ): (
+                 // Fallback if not loading, no error, but data is missing (e.g., initial state or basicInvoice not found)
+                 <div className="text-gray-500 text-center h-64 border rounded-md flex items-center justify-center">
+                     Could not display preview. Data might be missing.
+                 </div>
             )}
           </div>
         )}
+        {/* End Invoice Preview Section */}
       </div>
     </div>
   );

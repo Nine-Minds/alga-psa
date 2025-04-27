@@ -1,8 +1,8 @@
 import { JSON } from "json-as"; // Use json-as
 import {
   InvoiceViewModel,
-  InvoiceItem, // Import InvoiceItem
-  TimeEntry, // Add missing import for TimeEntry
+  InvoiceItem,
+  TimeEntry,
   LayoutElement,
   ElementStyle,
   RowElement,
@@ -10,9 +10,10 @@ import {
   DocumentElement,
   SectionElement,
   TextElement,
-  LayoutElementType,
   log // Import the declared host function
 } from "./types";
+import { applyStyle, instantiateStyle, PartialStyle } from "./common/style-helpers";
+import { formatCurrency } from "./common/format-helpers";
 
 // --- Constants ---
 const DEFAULT_CATEGORY = "Other Items";
@@ -31,21 +32,22 @@ export function generateLayout(dataString: string): string {
   log("Wasm: Received data string. Deserializing..."); // Log using host function
 
   // 1. Deserialize Input Data
-  const viewModel = JSON.parse<InvoiceViewModel>(dataString);
+  let viewModel: InvoiceViewModel | null = null; // Initialize to null
+  viewModel = JSON.parse<InvoiceViewModel>(dataString); // Attempt parsing
 
-  // Basic validation after parsing
-  if (viewModel.invoiceNumber == "") {
-      log("Wasm: Error - Deserialization likely failed (key property missing/default).");
-      // Return a simple error document
+  // Check for parsing failure (null or default/empty object)
+  // AssemblyScript's JSON.parse returns a default-constructed object on error, not null.
+  // We check a key property to infer failure.
+  if (viewModel === null || viewModel.invoiceNumber == "") {
+      log("Wasm: Error during deserialization or invalid data received.");
       const errorDoc = new DocumentElement([new TextElement("Error: Could not parse input data.")]);
       return JSON.stringify<DocumentElement>(errorDoc);
   }
+  // If we reach here, viewModel is valid and non-null.
   log("Wasm: Deserialization successful. Invoice #: " + viewModel.invoiceNumber);
 
   // --- Initialize Calculated Totals ---
   let calculatedSubtotal: f64 = 0.0;
-  let calculatedTax: f64 = 0.0;
-  let calculatedTotal: f64 = 0.0;
 
   // 2. Build Layout Structure
   log("Wasm: Building layout structure...");
@@ -58,11 +60,14 @@ export function generateLayout(dataString: string): string {
 
   // --- Items Section (Advanced: Grouping, Calculations, Conditionals) ---
   log("Wasm: Processing invoice items with advanced logic...");
-  const itemsSection = createItemsSection(viewModel.items, calculatedSubtotal); // Pass reference for subtotal calculation
+  // Use a wrapper object or return tuple to get calculated subtotal back
+  const itemsResult = createItemsSection(viewModel.items);
+  const itemsSection = itemsResult.section;
+  calculatedSubtotal = itemsResult.subtotal; // Get subtotal from the result
 
   // --- Recalculate Totals ---
-  calculatedTax = calculatedSubtotal * TAX_RATE;
-  calculatedTotal = calculatedSubtotal + calculatedTax;
+  const calculatedTax = calculatedSubtotal * TAX_RATE;
+  const calculatedTotal = calculatedSubtotal + calculatedTax;
   log("Wasm: Recalculated Totals - Subtotal: " + calculatedSubtotal.toString() + ", Tax: " + calculatedTax.toString() + ", Total: " + calculatedTotal.toString());
 
 
@@ -80,8 +85,6 @@ export function generateLayout(dataString: string): string {
           new TextElement(viewModel.notes!)
       ]);
       notesSection.id = "invoice-notes";
-      // Example: Add a page break before notes if they exist
-      // notesSection.pageBreakBefore = true; // Keep pagination hints minimal for now
   }
 
 
@@ -125,7 +128,7 @@ function createHeaderSection(viewModel: InvoiceViewModel): SectionElement {
                     new TextElement("Date Issued: " + viewModel.issueDate),
                     new TextElement("Due Date: " + viewModel.dueDate),
                 ]),
-                instantiateStyle(new PartialStyle("right")) // Align right
+                instantiateStyle(new PartialStyle( "right")) // Align right
             )
         ])
     ]);
@@ -147,7 +150,18 @@ function createCustomerSection(viewModel: InvoiceViewModel): SectionElement {
     return customerSection;
 }
 
-function createItemsSection(items: Array<InvoiceItem>, subtotalRef: f64): SectionElement {
+// Define a simple structure to return multiple values
+class ItemsSectionResult {
+    section: SectionElement;
+    subtotal: f64;
+
+    constructor(section: SectionElement, subtotal: f64) {
+        this.section = section;
+        this.subtotal = subtotal;
+    }
+}
+
+function createItemsSection(items: Array<InvoiceItem>): ItemsSectionResult {
     const sectionChildren = new Array<LayoutElement>();
     let runningSubtotal: f64 = 0.0; // Local variable for calculation
 
@@ -166,13 +180,7 @@ function createItemsSection(items: Array<InvoiceItem>, subtotalRef: f64): Sectio
         groupedItems.get(category).push(item);
     }
 
-    // Update the subtotal passed by reference
-    // NOTE: AssemblyScript passes basic types by value. To update the outer scope's
-    // subtotal, we'd typically return it or use a more complex structure (like a Box).
-    // For simplicity here, we'll log the discrepancy and use the locally calculated one.
-    // A better approach might involve returning a tuple or object from this function.
     log("Wasm: Calculated subtotal within createItemsSection: " + runningSubtotal.toString());
-    // subtotalRef = runningSubtotal; // This won't modify the original f64 outside
 
     // --- Generate Layout for Grouped Items ---
     const categories = groupedItems.keys();
@@ -209,7 +217,6 @@ function createItemsSection(items: Array<InvoiceItem>, subtotalRef: f64): Sectio
             const itemRow = new RowElement([
                 new ColumnElement([new TextElement(descriptionContent)]), // Use modified description
                 applyStyle<ColumnElement>(new ColumnElement([new TextElement(item.quantity.toString())]), instantiateStyle(new PartialStyle("right"))),
-                // TODO: Add host function for currency formatting if needed
                 applyStyle<ColumnElement>(new ColumnElement([new TextElement(formatCurrency(item.unitPrice))]), instantiateStyle(new PartialStyle("right"))),
                 applyStyle<ColumnElement>(new ColumnElement([new TextElement(formatCurrency(item.total))]), instantiateStyle(new PartialStyle("right"))),
             ]);
@@ -221,7 +228,7 @@ function createItemsSection(items: Array<InvoiceItem>, subtotalRef: f64): Sectio
         const categoryTotalRow = new RowElement([
             new ColumnElement([]), // Spacer
             new ColumnElement([]), // Spacer
-            applyStyle<ColumnElement>(new ColumnElement([new TextElement("Category Total:")]), instantiateStyle(new PartialStyle("right", "bold"))),
+            applyStyle<ColumnElement>(new ColumnElement([new TextElement("Category Total:")]) , instantiateStyle(new PartialStyle("right", "bold"))),
             applyStyle<ColumnElement>(new ColumnElement([new TextElement(formatCurrency(categoryTotal))]), instantiateStyle(new PartialStyle("right", "bold"))),
         ]);
         const categoryTotalStyle = new ElementStyle();
@@ -234,14 +241,8 @@ function createItemsSection(items: Array<InvoiceItem>, subtotalRef: f64): Sectio
 
     const itemsSection = new SectionElement(sectionChildren);
     itemsSection.id = "invoice-items";
-    // Example: Keep the items table together if possible (might be less effective with grouping)
-    // itemsSection.keepTogether = true;
 
-    // Hacky way to return subtotal for now - assign to a global or pass mutable object if needed
-    // For this example, we rely on the recalculation in the main function scope.
-    // This highlights a limitation/consideration when structuring AS code.
-
-    return itemsSection;
+    return new ItemsSectionResult(itemsSection, runningSubtotal);
 }
 
 function createItemTableHeaderRow(): RowElement {
@@ -277,12 +278,10 @@ function createTotalsSection(subtotal: f64, tax: f64, total: f64): SectionElemen
         ])
     ]);
     totalsSection.id = "invoice-totals";
-    // Example: Try to keep totals on the same page as the last items
     totalsSection.keepTogether = true;
     return totalsSection;
 }
 
-// Add the missing function definition if it wasn't added previously
 function createTimeSummarySection(timeEntries: Array<TimeEntry>): SectionElement {
     const sectionChildren = new Array<LayoutElement>();
     let totalHours: f64 = 0.0;
@@ -342,89 +341,8 @@ function createTimeSummarySection(timeEntries: Array<TimeEntry>): SectionElement
 
     const timeSection = new SectionElement(sectionChildren);
     timeSection.id = "time-summary-report"; // Unique ID for this report section
-    // Suggest page break before this side report
     timeSection.pageBreakBefore = true;
     timeSection.keepTogether = false; // Allow this report to break across pages if needed
 
     return timeSection;
-}
-
-
-// --- Styling Helpers ---
-
-// Define a class for the partial style structure (internal helper)
-class PartialStyle {
-    textAlign: string | null = null;
-    fontWeight: string | null = null;
-    borderBottom: string | null = null;
-    paddingBottom: string | null = null;
-    marginTop: string | null = null;
-    borderTop: string | null = null;
-    paddingTop: string | null = null;
-
-    constructor(
-        textAlign: string | null = null,
-        fontWeight: string | null = null,
-        borderBottom: string | null = null,
-        paddingBottom: string | null = null,
-        marginTop: string | null = null,
-        borderTop: string | null = null,
-        paddingTop: string | null = null
-    ) {
-        this.textAlign = textAlign;
-        this.fontWeight = fontWeight;
-        this.borderBottom = borderBottom;
-        this.paddingBottom = paddingBottom;
-        this.marginTop = marginTop;
-        this.borderTop = borderTop;
-        this.paddingTop = paddingTop;
-    }
-}
-
-// Helper to instantiate ElementStyle from a PartialStyle object
-function instantiateStyle(partialStyle: PartialStyle): ElementStyle {
-    const style = new ElementStyle();
-    if (partialStyle.textAlign !== null) style.textAlign = partialStyle.textAlign;
-    if (partialStyle.fontWeight !== null) style.fontWeight = partialStyle.fontWeight;
-    if (partialStyle.borderBottom !== null) style.borderBottom = partialStyle.borderBottom;
-    if (partialStyle.paddingBottom !== null) style.paddingBottom = partialStyle.paddingBottom;
-    if (partialStyle.marginTop !== null) style.marginTop = partialStyle.marginTop;
-    if (partialStyle.borderTop !== null) style.borderTop = partialStyle.borderTop;
-    if (partialStyle.paddingTop !== null) style.paddingTop = partialStyle.paddingTop;
-    return style;
-}
-
-// Generic function to apply a style object to a layout element
-function applyStyle<T extends LayoutElement>(element: T, style: ElementStyle): T {
-    element.style = style;
-    return element;
-}
-
-// --- Formatting Helpers ---
-
-// Basic currency formatting (replace with host function if complex rules needed)
-function formatCurrency(value: f64): string {
-    // Basic formatting, doesn't handle locales or complex scenarios.
-    // Manually format to two decimal places as toFixed is not available on f64.
-    const factor: f64 = 100.0;
-    // Round to nearest cent
-    const roundedValue = Math.round(value * factor) / factor;
-    let valueStr = roundedValue.toString();
-
-    // Ensure two decimal places
-    const decimalPointIndex = valueStr.indexOf('.');
-    if (decimalPointIndex === -1) {
-        valueStr += ".00";
-    } else {
-        const decimals = valueStr.length - decimalPointIndex - 1;
-        if (decimals === 1) {
-            valueStr += "0";
-        } else if (decimals === 0) {
-            // This case should ideally not happen with the rounding logic, but handle defensively
-            valueStr += "00";
-        }
-        // If more than 2 decimals, the rounding should have handled it, but could truncate here if needed.
-    }
-
-    return "$" + valueStr; // Add currency symbol
 }

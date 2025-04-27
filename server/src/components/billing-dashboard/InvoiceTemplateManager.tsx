@@ -1,16 +1,17 @@
 // server/src/components/InvoiceTemplateManager.tsx
 import React, { useState } from 'react';
-import { IInvoiceTemplate, IInvoice, InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+// Import the type expected by the renderer
+import type { InvoiceViewModel as RendererInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+// Import the type used by sample data, aliasing it
+import type { IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { TemplateRenderer } from './TemplateRenderer';
-import { sampleInvoices } from 'server/src/utils/sampleInvoiceData';
+import { sampleInvoices } from 'server/src/utils/sampleInvoiceData'; // This uses SampleInvoiceViewModel
 import PaperInvoice from './PaperInvoice';
-import { TextArea } from 'server/src/components/ui/TextArea';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';
-import { saveInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates';
+// Removed unused imports: TextArea, Button, Input, parseInvoiceTemplate, saveInvoiceTemplate
+import { Button } from 'server/src/components/ui/Button'; // Keep Button if needed elsewhere, otherwise remove
 
 interface InvoiceTemplateManagerProps {
+  // templates prop might be unused now, remove if so
   templates: IInvoiceTemplate[];
   onTemplateSelect: (template: IInvoiceTemplate) => void;
   onTemplateUpdate: (updatedTemplate: IInvoiceTemplate) => void;
@@ -24,8 +25,42 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
   selectedTemplate
 }) => {
   const [localTemplates, setLocalTemplates] = useState<IInvoiceTemplate[]>(templates);
-  const [selectedSampleInvoice, setSelectedSampleInvoice] = useState<InvoiceViewModel>(sampleInvoices[0]);
-  const [isSaving, setIsSaving] = useState(false);
+  // State now holds the type expected by the renderer
+  const [selectedSampleInvoice, setSelectedSampleInvoice] = useState<RendererInvoiceViewModel | null>(null);
+  // Removed isSaving state
+
+  // Function to map sample data to renderer data structure
+  const mapSampleToRendererViewModel = (sample: SampleInvoiceViewModel): RendererInvoiceViewModel => {
+    return {
+      invoiceNumber: sample.invoice_number,
+      // Convert Temporal dates to ISO strings
+      issueDate: sample.invoice_date.toString(),
+      dueDate: sample.due_date.toString(),
+      customer: {
+        name: sample.contact?.name || 'N/A', // Use contact name for customer name
+        address: sample.contact?.address || 'N/A', // Use contact address
+      },
+      items: sample.invoice_items.map(item => ({
+        id: item.item_id || `item-${Math.random()}`, // Ensure an ID exists
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unit_price,
+        total: item.total_price, // Use total_price from sample item
+        // Add optional fields if needed/available in sample
+      })),
+      subtotal: sample.subtotal,
+      tax: sample.tax,
+      total: sample.total,
+      // Removed notes mapping as it doesn't exist on SampleInvoiceViewModel
+      // Add timeEntries if available in sample data and needed by renderer type
+    };
+  };
+
+  // Initialize state with the first sample invoice mapped to the correct type
+  useState(() => {
+      setSelectedSampleInvoice(mapSampleToRendererViewModel(sampleInvoices[0]));
+  });
+
 
   const handleTemplatesUpdate = (updatedTemplates: IInvoiceTemplate[]) => {
     setLocalTemplates(updatedTemplates);
@@ -34,9 +69,10 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
   };
 
   const handleSampleInvoiceSelect = (invoice_number: string) => {
-    const selectedInvoice = sampleInvoices.find(invoice => invoice.invoice_number === invoice_number);
-    if (selectedInvoice) {
-      setSelectedSampleInvoice(selectedInvoice);
+    const selectedSample = sampleInvoices.find(invoice => invoice.invoice_number === invoice_number);
+    if (selectedSample) {
+      // Map the selected sample data to the renderer's expected format
+      setSelectedSampleInvoice(mapSampleToRendererViewModel(selectedSample));
     }
   };
 
@@ -51,78 +87,21 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
               <div
                 key={invoice.invoice_number}
                 className={`p-2 border rounded cursor-pointer hover:bg-gray-50 ${
-                  selectedSampleInvoice.invoice_number === invoice.invoice_number ? 'bg-blue-50 border-blue-300' : ''
+                  selectedSampleInvoice?.invoiceNumber === invoice.invoice_number ? 'bg-blue-50 border-blue-300' : '' // Compare with mapped data
                 }`}
                 onClick={() => handleSampleInvoiceSelect(invoice.invoice_number)}
               >
-                Invoice #{invoice.invoice_number} - {invoice.custom_fields?.project}
+                Invoice #{invoice.invoice_number} - {invoice.company?.name} {/* Display company name from sample */}
               </div>
             ))}
           </div>
         </div>
         
-        {!selectedTemplate?.isStandard && (
-          <div className="mt-8 space-y-4">
-            <h3 className="text-xl font-semibold">Edit Template</h3>
-            <div className="space-y-2">
-              <label htmlFor="template-name" className="block text-sm font-medium text-gray-700">
-                Template Name
-              </label>
-              <Input
-                id="template-name"
-                value={selectedTemplate?.name || ''}
-                onChange={(e) => {
-                  const updatedTemplate = {
-                    ...selectedTemplate!,
-                    name: e.target.value
-                  };
-                  onTemplateSelect(updatedTemplate);
-                }}
-                placeholder="Enter template name..."
-                className="w-full"
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="template-dsl" className="block text-sm font-medium text-gray-700">
-                Template DSL
-              </label>
-              <TextArea
-                id="template-dsl"
-                value={selectedTemplate?.dsl || ''}
-                onChange={(e) => {
-                  const updatedTemplate = {
-                    ...selectedTemplate!,
-                    dsl: e.target.value,
-                    parsed: parseInvoiceTemplate(e.target.value)
-                  };
-                  onTemplateSelect(updatedTemplate);
-                }}
-                placeholder="Enter template DSL..."
-                rows={10}
-                className="font-mono"
-              />
-            </div>
-            <Button
-              id='save-template-button'
-              onClick={async () => {
-                if (selectedTemplate) {
-                  try {
-                    setIsSaving(true);
-                    const savedTemplate = await saveInvoiceTemplate(selectedTemplate);
-                    onTemplateUpdate(savedTemplate);
-                  } finally {
-                    setIsSaving(false);
-                  }
-                }
-              }}
-              disabled={isSaving}
-            >
-              {isSaving ? 'Saving...' : 'Save Template'}
-            </Button>
-          </div>
-        )}
+        {/* Removed the entire "Edit Template" section (Name Input, DSL TextArea, Save Button) */}
+        {/* as editing is now handled by AssemblyScriptTemplateEditorComponent via navigation */}
       </div>
-      
+
+      {/* Render preview if a template and sample invoice are selected */}
       {selectedTemplate && selectedSampleInvoice && (
         <div className="space-y-4">
           <h3 className="text-xl font-semibold">Template Preview</h3>
