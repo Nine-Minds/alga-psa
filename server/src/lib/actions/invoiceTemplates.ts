@@ -319,37 +319,56 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
     const { knex, tenant } = await createTenantKnex();
 
     if (!tenant) {
+        // Although standard templates don't need a tenant, the initial check does.
+        // If tenant context is missing, we can't reliably check tenant templates first.
         throw new Error('Tenant context is missing. Cannot retrieve Wasm.');
     }
 
-    const template = await knex('invoice_templates')
-        .select('wasmPath') // Only select the path
+    // 1. Try fetching from tenant-specific templates
+    let template = await knex('invoice_templates')
+        .select('wasmPath')
         .where({
             template_id: templateId,
-            tenant: tenant
+            tenant: tenant // Filter by tenant
         })
         .first();
 
+    let isStandard = false;
+
+    // 2. If not found in tenant templates, try standard templates
     if (!template) {
-        throw new Error(`Template with ID ${templateId} not found for the current tenant.`);
+        template = await knex('standard_invoice_templates')
+            .select('wasmPath')
+            .where({ template_id: templateId }) // No tenant filter here
+            .first();
+        isStandard = true; // Mark that we found it in standard templates
     }
 
+    // 3. If not found in either table, throw an error
+    if (!template) {
+        throw new Error(`Template with ID ${templateId} not found for the current tenant or as a standard template.`);
+    }
+
+    // 4. Check if wasmPath exists
     if (!template.wasmPath) {
-        throw new Error(`Template with ID ${templateId} does not have a compiled Wasm path.`);
+        const tableChecked = isStandard ? 'standard_invoice_templates' : 'invoice_templates';
+        throw new Error(`Template with ID ${templateId} (found in ${tableChecked}) does not have a compiled Wasm path.`);
     }
 
-    // Construct the absolute path to the Wasm file
+    // 5. Construct the absolute path and read the file
+    // Standard template Wasm files might be in a different base directory, adjust if necessary.
+    // Assuming for now they follow the same relative structure from process.cwd().
+    // If standard templates are stored differently (e.g., 'wasm_templates/standard/'), adjust path construction.
     const absoluteWasmPath = path.join(process.cwd(), template.wasmPath);
 
     try {
-        // Read the file content
         const wasmBuffer = await fs.readFile(absoluteWasmPath);
         return wasmBuffer;
     } catch (error: any) {
         console.error(`Error reading Wasm file at ${absoluteWasmPath}:`, error);
         if (error.code === 'ENOENT') {
-            throw new Error(`Compiled Wasm file not found at path: ${template.wasmPath}`);
+            throw new Error(`Compiled Wasm file not found at path: ${template.wasmPath} (for template ID ${templateId})`);
         }
-        throw new Error(`Failed to read compiled Wasm file: ${error.message}`);
+        throw new Error(`Failed to read compiled Wasm file for template ID ${templateId}: ${error.message}`);
     }
 }

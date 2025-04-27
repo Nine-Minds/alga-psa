@@ -32,7 +32,7 @@ const baseServiceSchema = z.object({
   ),
   unit_of_measure: z.string(),
   category_id: z.string().uuid().nullable(), // Matches DB FK (nullable) - IService allows string | null
-  tax_rate_id: z.string().uuid().nullish(), // Changed to nullish to allow undefined during validation
+  tax_rate_id: z.string().uuid().nullable(), // Corrected: Matches DB FK (nullable)
   description: z.string().nullable(), // Added: Description field from the database
   service_type_name: z.string().optional(), // Add service_type_name to the schema
 });
@@ -57,7 +57,7 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
     // Keep null for fields that are string | null in IService
     category_id: inputData.category_id,
     description: inputData.description,
-    tax_rate_id: inputData.tax_rate_id, // Keep null for string | null
+    tax_rate_id: inputData.tax_rate_id,   // Keep null for string | null
     // Map null to undefined for fields that are optional (T | undefined) in IService
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
     custom_service_type_id: inputData.custom_service_type_id ?? undefined,
@@ -87,7 +87,7 @@ export const createServiceSchema = refinedCreateServiceSchema.transform((data) =
     ...inputData,
     category_id: inputData.category_id,
     description: inputData.description,
-    tax_rate_id: inputData.tax_rate_id, // Keep null for string | null
+    tax_rate_id: inputData.tax_rate_id,   // Keep null for string | null
     standard_service_type_id: inputData.standard_service_type_id ?? undefined,
     custom_service_type_id: inputData.custom_service_type_id ?? undefined,
   };
@@ -252,7 +252,7 @@ const Service = {
       default_rate: validatedData.default_rate,
       unit_of_measure: validatedData.unit_of_measure,
       category_id: validatedData.category_id ?? null, // category_id is string | null in IService
-      tax_rate_id: validatedData.tax_rate_id ?? null, // Add tax_rate_id
+      tax_rate_id: validatedData.tax_rate_id ?? null, // Corrected: Use tax_rate_id
       description: validatedData.description ?? '', // Add description field with default empty string
     };
 

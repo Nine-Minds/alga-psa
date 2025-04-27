@@ -52,7 +52,7 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
                 'sc.category_id',
                 'sc.tenant',
                 'sc.description',
-                'sc.tax_rate_id', // Add tax_rate_id to the select statement
+                'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
                 knex.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
             )
             .limit(pageSize)

@@ -236,15 +236,36 @@ export default class Invoice {
    */
   static async getStandardTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex } = await createTenantKnex();
+    // Select necessary fields including AS/Wasm related ones
     return knex('standard_invoice_templates')
-      .select('template_id', 'name', 'version', 'dsl')
+      .select(
+        'template_id',
+        'name',
+        'version',
+        'assemblyScriptSource', // Add AS source
+        'wasmPath' // Add Wasm path
+      )
       .orderBy('name');
   }
 
   static async getAllTemplates(): Promise<IInvoiceTemplate[]> {
     const { knex, tenant } = await createTenantKnex();
     const [tenantTemplates, standardTemplates] = await Promise.all([
-      knex('invoice_templates').where({ tenant }).select('*'),
+      // Explicitly select necessary fields for tenant templates
+      knex('invoice_templates')
+        .where({ tenant })
+        .select(
+            'template_id',
+            'name',
+            'version',
+            'is_default',
+            'assemblyScriptSource', // Add AS source
+            'wasmPath', // Add Wasm path
+            // Add any other necessary fields from IInvoiceTemplate that aren't covered by '*' implicitly
+            'created_at',
+            'updated_at'
+            // Note: 'dsl' might not exist on tenant templates table, adjust if needed
+        ),
       this.getStandardTemplates()
     ]);
 
