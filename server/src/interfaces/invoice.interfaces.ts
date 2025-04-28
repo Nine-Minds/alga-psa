@@ -103,10 +103,10 @@ export interface IInvoiceTemplate extends TenantEntity {
   template_id: string;
   name: string;
   version: number;
-  assemblyScriptSource: string;
-  wasmPath?: string;
+  typeScriptSource: string; // Renamed from assemblyScriptSource
+  // wasmPath?: string; // Removed - no longer storing Wasm path
   isStandard?: boolean;
-  isClone?: boolean;
+  isClone?: boolean; // Temporary flag for cloning logic, not stored in DB
   is_default?: boolean;
 }
 

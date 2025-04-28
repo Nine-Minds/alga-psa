@@ -1,6 +1,9 @@
+// Import IInvoiceItem from the main interfaces file
+import type { IInvoiceItem } from '../../interfaces/invoice.interfaces';
+
 /**
- * Represents the input data provided to the Wasm template engine.
- * This is a placeholder and should be expanded based on actual invoice data needs.
+ * Represents the input data provided to the template engine (Wasm or JS).
+ * This structure should align with the data prepared for rendering.
  */
 export interface InvoiceViewModel {
   invoiceNumber: string;
@@ -10,18 +13,11 @@ export interface InvoiceViewModel {
     name: string;
     address: string;
   };
-  items: Array<{
-    id: string; // Add an ID for better referencing
-    description: string;
-    quantity: number;
-    unitPrice: number;
-    total: number; // Keep pre-calculated total for now, AS can recalculate/validate
-    category?: string; // Optional: For grouping items
-    itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
-  }>;
+  // Use the standard IInvoiceItem interface for items
+  items: Array<IInvoiceItem>;
   subtotal: number;
   tax: number;
-  total: number;
+  total: number; // Note: This might be total_amount from IInvoice
   notes?: string;
   // Add sample structure for side report data
   timeEntries?: Array<{

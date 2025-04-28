@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 // Import the type expected by the renderer
 import type { InvoiceViewModel as RendererInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 // Import the type used by sample data, aliasing it
-import type { IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
+import type { IInvoiceItem, IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { TemplateRenderer } from './TemplateRenderer';
 import { sampleInvoices } from 'server/src/utils/sampleInvoiceData'; // This uses SampleInvoiceViewModel
 import PaperInvoice from './PaperInvoice';
@@ -40,13 +40,40 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
         name: sample.contact?.name || 'N/A', // Use contact name for customer name
         address: sample.contact?.address || 'N/A', // Use contact address
       },
-      items: sample.invoice_items.map(item => ({
-        id: item.item_id || `item-${Math.random()}`, // Ensure an ID exists
+      // Map sample items to conform to IInvoiceItem interface
+      items: sample.invoice_items.map((item): IInvoiceItem => ({
+        // Map existing fields
+        item_id: item.item_id || `sample-item-${Math.random().toString(36).substring(7)}`, // Use item_id, generate sample if missing
+        invoice_id: sample.invoice_id, // Use invoice_id from parent sample invoice
         description: item.description,
         quantity: item.quantity,
-        unitPrice: item.unit_price,
-        total: item.total_price, // Use total_price from sample item
-        // Add optional fields if needed/available in sample
+        unit_price: item.unit_price,
+        total_price: item.total_price,
+        // Add required fields from IInvoiceItem with defaults/placeholders
+        tenant: item.tenant || 'sample-tenant', // Add tenant (required by TenantEntity)
+        rate: item.rate ?? item.unit_price, // Add rate (required by NetAmountItem), fallback to unit_price
+        tax_amount: item.tax_amount ?? 0, // Add tax_amount (required), default to 0
+        net_amount: item.net_amount ?? item.total_price, // Add net_amount (required), fallback to total_price
+        is_manual: item.is_manual === true ? true : false, // Add is_manual (required), default to false
+        // Map optional fields if they exist in the sample item structure
+        service_id: item.service_id,
+        plan_id: item.plan_id,
+        tax_region: item.tax_region,
+        tax_rate: item.tax_rate,
+        is_taxable: item.is_taxable,
+        is_discount: item.is_discount,
+        discount_type: item.discount_type,
+        discount_percentage: item.discount_percentage,
+        applies_to_item_id: item.applies_to_item_id,
+        applies_to_service_id: item.applies_to_service_id,
+        company_bundle_id: item.company_bundle_id,
+        bundle_name: item.bundle_name,
+        is_bundle_header: item.is_bundle_header,
+        parent_item_id: item.parent_item_id,
+        created_by: item.created_by,
+        updated_by: item.updated_by,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
       })),
       subtotal: sample.subtotal,
       tax: sample.tax,

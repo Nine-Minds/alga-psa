@@ -1,0 +1,34 @@
+{
+  "name": "invoice-templates-assemblyscript",
+  "version": "1.0.0",
+  "description": "TypeScript templates for invoice generation",
+  "main": "index.js",
+  "scripts": {
+
+    "build:standard:default": "tsc standard/standard-default.ts --outDir ../../dist/invoice-templates/standard --target ES2020 --module commonjs --sourceMap --declaration --esModuleInterop",
+    "build:standard:detailed": "tsc standard/standard-detailed.ts --outDir ../../dist/invoice-templates/standard --target ES2020 --module commonjs --sourceMap --declaration --esModuleInterop",
+    "build:standard": "mkdir -p ../../dist/invoice-templates/standard && npm run build:standard:default && npm run build:standard:detailed",
+    "build": "npm run build:standard",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "typescript",
+    "invoice",
+    "template",
+    "quickjs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.0.0" 
+  },
+  "type": "module",
+  "exports": { 
+    ".": {
+      "import": "./build/release.js",
+      "types": "./build/release.d.ts"
+    }
+  },
+  "dependencies": {
+  }
+}

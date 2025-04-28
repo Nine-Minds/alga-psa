@@ -3,13 +3,17 @@ import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 import { FileStore } from '../types/storage';
 import { getInvoiceForRendering } from '../lib/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from '../lib/actions/invoiceTemplates';
+// Import the action to get template source
+import { getInvoiceTemplates, getTemplateSourceAndExecutor } from '../lib/actions/invoiceTemplates';
 // Removed: import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
 // Removed: import React from 'react';
 import { runWithTenant, createTenantKnex } from '../lib/db';
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
+// Import both executors
+// import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor'; // Removed Wasm executor import
+import { executeJsTemplate } from '../lib/invoice-renderer/quickjs-executor';
 import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import type { InvoiceViewModel as WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Alias for clarity
+// Keep InvoiceViewModel alias (previously WasmInvoiceViewModel), assuming TS templates use a similar structure
+import type { InvoiceViewModel as WasmInvoiceViewModel, LayoutElement } from '../lib/invoice-renderer/types';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from '../interfaces/invoice.interfaces'; // Alias for clarity
 import { DateValue } from '@shared/types/temporal'; // Import DateValue if needed for conversion
 
@@ -74,7 +78,7 @@ export class PDFGenerationService {
   }
 
 
-  // Helper function to map DB Invoice data to the Wasm Renderer's ViewModel
+  // Helper function to map DB Invoice data to the Template Renderer's ViewModel
   private mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): WasmInvoiceViewModel {
     return {
       invoiceNumber: dbData.invoice_number,
@@ -84,16 +88,8 @@ export class PDFGenerationService {
         name: dbData.company?.name || 'N/A', // Combine company/contact info
         address: dbData.contact?.address || dbData.company?.address || 'N/A', // Use contact address first, fallback to company
       },
-      items: dbData.invoice_items.map((item: IInvoiceItem) => ({
-        id: item.item_id,
-        description: item.description,
-        quantity: item.quantity,
-        unitPrice: item.unit_price, // Assuming unit_price is the correct field
-        total: item.total_price, // Assuming total_price is the correct field
-        // Optional fields from WasmInvoiceViewModel can be added here if available in IInvoiceItem
-        // category: item.category, // Example
-        // itemType: item.itemType, // Example
-      })),
+      // Map directly since InvoiceViewModel now expects IInvoiceItem[]
+      items: dbData.invoice_items,
       subtotal: dbData.subtotal,
       tax: dbData.tax,
       total: dbData.total_amount, // Map total_amount to total
@@ -141,19 +137,36 @@ export class PDFGenerationService {
       throw new Error('No invoice templates found');
     }
 
-      // Fetch the compiled Wasm binary for the selected template
+      // Fetch the template source/binary and determine the executor type
       if (!template.template_id) {
         throw new Error('Selected template does not have an ID.');
       }
-      const wasmBuffer = await getCompiledWasm(template.template_id);
+      console.log(`[PDF Service] Fetching source/binary for template: ${template.template_id}`);
+      const sourceInfo = await getTemplateSourceAndExecutor(template.template_id);
 
-      // Map the fetched DB data to the ViewModel expected by the Wasm executor
-      const wasmInvoiceViewModel = this.mapInvoiceDataToViewModel(dbInvoiceData);
+      // Map the fetched DB data to the ViewModel expected by the JS executor
+      const invoiceViewModel = this.mapInvoiceDataToViewModel(dbInvoiceData);
 
-      // Execute the Wasm template with the correctly mapped data
-      const layoutElement = await executeWasmTemplate(wasmBuffer, wasmInvoiceViewModel);
+      let layoutElement: LayoutElement;
+
+      // Execute with the appropriate engine based on the source type
+      switch (sourceInfo.type) {
+          case 'js':
+              console.log(`[PDF Service] Executing JS template: ${template.template_id}`);
+              layoutElement = await executeJsTemplate(sourceInfo.source, invoiceViewModel);
+              break;
+          // case 'wasm': // Removed Wasm execution path
+          //     console.log(`[PDF Service] Executing Wasm template: ${template.template_id}`);
+          //     layoutElement = await executeWasmTemplate(sourceInfo.binary, invoiceViewModel);
+          //     break;
+          case 'not-found':
+              throw new Error(`Template with ID ${template.template_id} could not be found for execution.`);
+          default:
+              throw new Error(`Unknown template source type for ID ${template.template_id}`);
+      }
 
       // Render the layout structure to HTML and CSS
+      console.log(`[PDF Service] Rendering layout for template: ${template.template_id}`);
       const renderedOutput = renderLayout(layoutElement);
 
       // Return the full HTML document string for PDF generation
