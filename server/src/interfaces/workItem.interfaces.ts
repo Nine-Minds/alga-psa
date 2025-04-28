@@ -50,4 +50,6 @@ export interface IExtendedWorkItem extends IWorkItem {
   };
   additional_user_ids?: string[];
   assigned_user_ids?: string[];
+  needsDispatch?: boolean;
+  agentsNeedingDispatch?: { user_id: string; first_name: string | null; last_name: string | null }[];
 }

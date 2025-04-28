@@ -2,7 +2,9 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IWorkItem, IExtendedWorkItem, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 import ScheduleEntry from 'server/src/lib/models/scheduleEntry';
+import User from 'server/src/lib/models/user';
 
 interface BaseSearchOptions {
   searchTerm?: string;
@@ -164,7 +166,53 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
 
     const results = await ticketsQuery;
 
-    const workItems = results.map((item: any): Omit<IExtendedWorkItem, "tenant"> => ({
+    const ticketIds = results.map((item: any) => item.work_item_id);
+    let allAssignedAgentIds = new Set<string>();
+    results.forEach((item: any) => {
+      (item.assigned_user_ids || []).forEach((id: string) => id && allAssignedAgentIds.add(id));
+      (item.additional_user_ids || []).forEach((id: string) => id && allAssignedAgentIds.add(id));
+    });
+
+    const scheduledEntriesMap = new Map<string, Set<string>>();
+    if (ticketIds.length > 0 && allAssignedAgentIds.size > 0) {
+      const scheduledEntries = await db('schedule_entries')
+        .where('schedule_entries.tenant', tenant)
+        .where('work_item_type', 'ticket')
+        .whereIn('work_item_id', ticketIds)
+        .join('schedule_entry_assignees as sea', function() {
+          this.on('schedule_entries.entry_id', '=', 'sea.entry_id')
+              .andOn('schedule_entries.tenant', '=', 'sea.tenant');
+        })
+        .whereIn('sea.user_id', Array.from(allAssignedAgentIds))
+        .select('schedule_entries.work_item_id', 'sea.user_id');
+
+      scheduledEntries.forEach(entry => {
+        if (!scheduledEntriesMap.has(entry.work_item_id)) {
+          scheduledEntriesMap.set(entry.work_item_id, new Set<string>());
+        }
+        scheduledEntriesMap.get(entry.work_item_id)!.add(entry.user_id);
+      });
+    }
+
+    const agentIdsNeedingDetails = new Set<string>();
+    let workItems: Omit<IExtendedWorkItem, "tenant">[] = results.map((item: any) => {
+      const assignedIds = new Set<string>([
+        ...(item.assigned_user_ids || []).filter((id: string | null) => id),
+        ...(item.additional_user_ids || []).filter((id: string | null) => id)
+      ]);
+      const scheduledAgentIds = scheduledEntriesMap.get(item.work_item_id) || new Set<string>();
+      let needsDispatch = false;
+      const agentsNeedingDispatchIds: string[] = [];
+
+      for (const agentId of assignedIds) {
+        if (!scheduledAgentIds.has(agentId)) {
+          needsDispatch = true;
+          agentsNeedingDispatchIds.push(agentId);
+          agentIdsNeedingDetails.add(agentId);
+        }
+      }
+
+      return {
         work_item_id: item.work_item_id,
         type: item.type,
         name: item.name,
@@ -178,8 +226,34 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
         company_name: item.company_name,
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
-        assigned_user_ids: item.assigned_user_ids || []
-      }));
+        assigned_user_ids: item.assigned_user_ids || [],
+        needsDispatch: needsDispatch,
+        agentsNeedingDispatch: needsDispatch ? agentsNeedingDispatchIds.map(id => ({ user_id: id, first_name: null, last_name: null })) : []
+      };
+    });
+
+    const userDetailsMap = new Map<string, { first_name: string | null; last_name: string | null }>();
+    if (agentIdsNeedingDetails.size > 0) {
+      const users = await User.getMultiple(Array.from(agentIdsNeedingDetails));
+
+      users.forEach((user: IUser) => {
+        userDetailsMap.set(user.user_id, { first_name: user.first_name ?? null, last_name: user.last_name ?? null });
+      });
+
+      workItems = workItems.map(item => {
+        if (item.needsDispatch && item.agentsNeedingDispatch) {
+          item.agentsNeedingDispatch = item.agentsNeedingDispatch.map(agent => {
+            const details = userDetailsMap.get(agent.user_id);
+            return {
+              ...agent,
+              first_name: details?.first_name || null,
+              last_name: details?.last_name || null,
+            };
+          });
+        }
+        return item;
+      });
+    }
 
     return {
       items: workItems,

@@ -511,6 +511,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                   description={item.description}
                   type={item.type}
                   isBillable={item.is_billable}
+                  needsDispatch={item.needsDispatch}
+                  agentsNeedingDispatch={item.agentsNeedingDispatch}
                   onClick={(e: React.MouseEvent) => {
                     e.stopPropagation(); // Prevent drag event from firing
                     openDrawer(
