@@ -47,6 +47,7 @@ interface TechnicianScheduleGridProps {
   onResize: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
   onDeleteEvent: (eventId: string) => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
+  onTechnicianClick: (technicianId: string) => void;
 }
 
 const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
@@ -56,7 +57,8 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
   onDrop,
   onResize,
   onDeleteEvent,
-  onEventClick
+  onEventClick,
+  onTechnicianClick
 }) => {
   const scheduleGridRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -586,9 +588,10 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
                   onEventMouseDown={handleMouseDown}
                   onEventDelete={handleDelete}
                   onEventResizeStart={handleResizeStart}
-                  onEventClick={onEventClick} // Pass prop down to TechnicianRow
+                  onEventClick={onEventClick}
+                  onTechnicianClick={onTechnicianClick} // Pass prop down to TechnicianRow
                 />
-              ))}
+                ))}
             </div>
           </div>
         </div>

@@ -20,6 +20,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
+import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths } from 'date-fns';
 
 interface TechnicianDispatchDashboardProps {
   filterWorkItemId?: string;
@@ -31,10 +32,13 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   filterWorkItemType
 }) => {
   const [selectedPriority, setSelectedPriority] = useState('All');
-  const [technicians, setTechnicians] = useState<Omit<IUser, 'tenant'>[]>([]);
+  const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
   const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [date, setDate] = useState(startOfDay(new Date()));
+  const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
+  const [primaryTechnicianId, setPrimaryTechnicianId] = useState<string | null>(null);
+  const [comparisonTechnicianIds, setComparisonTechnicianIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDragging, setIsDragging] = useState(false);
@@ -74,12 +78,12 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const performSearch = useCallback(async (query: string) => {
     try {
       const { selectedStatusFilter, filterUnscheduled, sortOrder, currentPage } = searchParamsRef.current;
-      // Get start and end of selected date
-      const start = new Date(selectedDate);
+      // TODO: Update date range calculation based on viewMode (Step 3.1 Data Fetching)
+      const start = new Date(date);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(selectedDate);
+      const end = new Date(date);
       end.setHours(23, 59, 59, 999);
- 
+
       const result = await searchDispatchWorkItems({
         searchTerm: query,
         statusFilter: selectedStatusFilter,
@@ -88,9 +92,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         sortOrder,
         page: currentPage,
         pageSize: ITEMS_PER_PAGE,
+        // TODO: Update date range based on viewMode (Step 3.1 Data Fetching)
+        // dateRange: calculateDateRange(date, viewMode),
         dateRange: {
-          start,
-          end
+           start,
+           end
         },
         workItemId: filterWorkItemId
       });
@@ -100,7 +106,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       console.error('Error searching work items:', err);
       setError('Failed to search work items');
     }
-  }, [selectedDate, filterWorkItemType, filterWorkItemId]);
+  }, [date, filterWorkItemType, filterWorkItemId]);
 
   // Fetch status options on mount
   useEffect(() => {
@@ -125,10 +131,12 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const refreshAllData = useCallback(async () => {
     try {
       await performSearch(searchQuery);
-      const start = new Date(selectedDate);
+      // TODO: Update date range calculation based on viewMode 
+      const start = new Date(date);
       start.setHours(0, 0, 0, 0);
-      const end = new Date(selectedDate);
+      const end = new Date(date);
       end.setHours(23, 59, 59, 999);
+      // TODO: Update getScheduleEntries call based on viewMode and selectedUserId 
       const scheduleResult = await getScheduleEntries(start, end);
       if (scheduleResult.success && scheduleResult.entries) {
         setEvents(scheduleResult.entries);
@@ -140,7 +148,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       console.error('Error refreshing data:', err);
       toast.error('Failed to refresh data');
     }
-  }, [performSearch, searchQuery, selectedDate]);
+  }, [performSearch, searchQuery, date]);
 
 
   const debouncedSearch = useCallback((query: string) => {
@@ -164,14 +172,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const users = await getAllUsers(true, 'internal');
-        setTechnicians(users);
+        const fetchedUsers = await getAllUsers(true, 'internal');
+        setUsers(fetchedUsers);
 
-        const start = new Date(selectedDate);
+        // TODO: Update date range calculation based on viewMode (Step 3.1 Data Fetching)
+        const start = new Date(date);
         start.setHours(0, 0, 0, 0);
-        const end = new Date(selectedDate);
+        const end = new Date(date);
         end.setHours(23, 59, 59, 999);
 
+        // TODO: Update getScheduleEntries call based on viewMode and selectedUserId (Step 3.1 Data Fetching)
         const scheduleResult = await getScheduleEntries(start, end);
         if (scheduleResult.success && scheduleResult.entries) {
           setEvents(scheduleResult.entries);
@@ -185,9 +195,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
 
     fetchInitialData();
-  }, [selectedDate]);
+  }, [date]);
 
-  // Updated useEffect dependencies
+
   useEffect(() => {
     debouncedSearch(searchQuery);
   }, [searchQuery, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch]);
@@ -349,10 +359,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       }
     };
 
-    // const handleDragEnd = () => {
-    //   setDragOverlay(null);
-    // };
-
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('dragend', handleDragEnd);
 
@@ -389,7 +395,40 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     }
   }, []);
 
+  const handleViewChange = (newViewMode: 'day' | 'week') => {
+    setViewMode(newViewMode);
+  };
+
+
+  const handleTechnicianClick = (technicianId: string) => {
+    console.log('Technician clicked:', technicianId);
+    // Implementation will be added in a later step
+    // For now, let's just set the primary technician
+    setPrimaryTechnicianId(technicianId);
+  };
+
+
+  const handleNavigate = (action: 'prev' | 'next' | 'today') => {
+    setDate(currentDate => {
+      const today = startOfDay(new Date());
+      if (action === 'today') {
+        return today;
+      }
+      const amount = action === 'prev' ? -1 : 1;
+      switch (viewMode) {
+        case 'day':
+          return addDays(currentDate, amount);
+        case 'week':
+          return addWeeks(currentDate, amount);
+        default:
+          return currentDate;
+      }
+    });
+  };
+
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+
 
   return (
     <div className="flex flex-col h-screen">
@@ -580,51 +619,96 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           </div>
         </div>
 
-        <div className="flex-1 p-4 bg-white overflow-hidden">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Technician Schedules</h2>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  newDate.setDate(newDate.getDate() - 1);
-                  setSelectedDate(newDate);
-                }}
-                className="px-4 py-2 bg-[rgb(var(--color-primary-400))] text-white rounded hover:bg-[rgb(var(--color-primary-500))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-300))] focus:ring-offset-2"
-              >
-                Previous Day
-              </button>
-              <div className="text-[rgb(var(--color-text-900))] font-medium">
-                {selectedDate.toLocaleDateString('en-US', { 
-                  weekday: 'long',
+        {/* Right Panel: Schedule View */}
+        <div className="flex-1 p-4 bg-white overflow-hidden flex flex-col">
+          {/* Header Section */}
+          <div className="flex flex-wrap justify-between items-center mb-4 gap-4 border-b border-[rgb(var(--color-border-200))] pb-4">
+            <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+               {/* View Mode Switcher - Styled like rbc-toolbar */}
+               <div className="flex items-center rounded-md border border-[rgb(var(--color-border-200))] overflow-hidden">
+                  <Button
+                    id="dispatch-day-view-button"
+                    variant={viewMode === 'day' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleViewChange('day')}
+                    className={`px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] ${viewMode === 'day' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
+                  >
+                    Day
+                  </Button>
+                  <Button
+                    id="dispatch-week-view-button"
+                    variant={viewMode === 'week' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => handleViewChange('week')}
+                    className={`px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] ${viewMode === 'week' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
+                  >
+                    Week
+                  </Button>
+                </div>
+
+
+              {/* Date Navigation - Styled like rbc-toolbar */}
+              <div className="flex items-center gap-1">
+                <Button
+                  id="dispatch-prev-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleNavigate('prev')}
+                  aria-label={`Previous ${viewMode}`}
+                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
+                >
+                  {'< Prev'}
+                </Button>
+                <Button
+                  id="dispatch-today-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleNavigate('today')}
+                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
+                >
+                  Today
+                </Button>
+                <Button
+                  id="dispatch-next-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleNavigate('next')}
+                  aria-label={`Next ${viewMode}`}
+                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
+                >
+                  {'Next >'}
+                </Button>
+              </div>
+              <div className="text-[rgb(var(--color-text-900))] font-medium text-center min-w-[250px]">
+                {date.toLocaleDateString('en-US', {
+                  // Adjust format based on view? Maybe just keep it simple for now.
+                  // weekday: 'long',
                   year: 'numeric',
                   month: 'long',
                   day: 'numeric'
                 })}
               </div>
-              <button
-                onClick={() => {
-                  const newDate = new Date(selectedDate);
-                  newDate.setDate(newDate.getDate() + 1);
-                  setSelectedDate(newDate);
-                }}
-                className="px-4 py-2 bg-[rgb(var(--color-primary-400))] text-white rounded hover:bg-[rgb(var(--color-primary-500))] transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-300))] focus:ring-offset-2"
-              >
-                Next Day
-              </button>
             </div>
           </div>
-          <div className="technician-schedule-grid h-[calc(100vh-160px)] overflow-hidden">
-            <TechnicianScheduleGrid
-              technicians={technicians}
-              events={events}
-              selectedDate={selectedDate}
-              onDrop={handleDrop}
-              onResize={onResize}
-              onDeleteEvent={handleDeleteEvent}
-              onEventClick={async (event: Omit<IScheduleEntry, 'tenant'>) => {
-                try {
-                  const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
+
+          {/* Schedule Area */}
+          {/* TODO: Implement conditional rendering based on viewMode (Step 3.1 Conditional Rendering) */}
+          <div className="technician-schedule-grid flex-1 overflow-hidden">
+            {/* Placeholder for conditional rendering */}
+            {viewMode === 'day' && (
+              <TechnicianScheduleGrid
+                // TODO: Update technicians prop based on primary/comparison IDs
+                technicians={users}
+                events={events}
+                selectedDate={date}
+                onDrop={handleDrop}
+                onTechnicianClick={handleTechnicianClick}
+                onResize={onResize}
+                onDeleteEvent={handleDeleteEvent}
+                onEventClick={async (event: Omit<IScheduleEntry, 'tenant'>) => {
+                  try {
+                    const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
 
                   if (!workItemDetails) {
                     toast.error('Could not load work item details.');
@@ -681,7 +765,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
                   toast.error('Failed to open work item details.');
                 }
               }}
-            />
+                />
+            )}
+             {viewMode === 'week' && <div className="p-4 text-center text-[rgb(var(--color-text-500))]">Weekly View Placeholder</div>}
           </div>
         </div>
       </div>
