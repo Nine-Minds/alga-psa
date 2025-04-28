@@ -1,13 +1,13 @@
 // TemplateRenderer.tsx
 'use client'
 import { useEffect, useState } from 'react';
+// Removed Buffer import - no longer needed client-side
 // Use the InvoiceViewModel type definition expected by the renderer
 import type { InvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces'; // Keep this for template structure
-import { getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates'; // Use the new action
-import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
-import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
-// Buffer is returned by getCompiledWasm, so no explicit import needed here unless manipulating it
+// Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
+// Import the new server action
+import { renderTemplateOnServer } from 'server/src/lib/actions/invoiceTemplates';
 
 interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
@@ -34,24 +34,30 @@ export function TemplateRenderer({ template, invoiceData }: TemplateRendererProp
         return;
       }
 
-      if (!template.wasmPath) {
-         setError("Selected template does not have a compiled Wasm module path.");
-         setIsLoading(false);
-         return;
-      }
-
-
       setIsLoading(true);
 
       try {
-        // 1. Fetch Wasm Module Content using the server action
-        const wasmBuffer = await getCompiledWasm(template.template_id);
+        // Prepare data for the server action, ensuring all numeric fields are numbers
+        const processedInvoiceData = {
+          ...invoiceData,
+          // Convert root-level numeric fields
+          subtotal: Number(invoiceData.subtotal || 0),
+          tax: Number(invoiceData.tax || 0),
+          total: Number(invoiceData.total || 0),
+          // Convert item-level numeric fields
+          items: invoiceData.items.map(item => ({
+            ...item,
+            // Convert quantity, unitPrice, and total strings to numbers, defaulting to 0
+            quantity: Number(item.quantity || 0),
+            unitPrice: Number(item.unitPrice || 0),
+            total: Number(item.total || 0)
+          }))
+        };
 
-        // 2. Execute Wasm Template (invoiceData prop now uses the correct type)
-        const layout = await executeWasmTemplate(wasmBuffer, invoiceData);
+        console.log("Processed Invoice Data:", processedInvoiceData);
 
-        // 3. Render Layout to HTML & CSS
-        const { html, css } = renderLayout(layout);
+        // Call the server action with the processed data
+        const { html, css } = await renderTemplateOnServer(template.template_id, processedInvoiceData);
 
         setRenderedHtml(html);
         setRenderedCss(css);

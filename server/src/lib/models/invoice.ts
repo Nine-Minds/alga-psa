@@ -241,9 +241,9 @@ export default class Invoice {
       .select(
         'template_id',
         'name',
-        'version',
-        'assemblyScriptSource', // Add AS source
-        'wasmPath' // Add Wasm path
+        'version'
+        // 'assemblyScriptSource', // Removed - Now stored as wasmBinary
+        // 'wasmPath' // Removed - Now stored as wasmBinary
       )
       .orderBy('name');
   }

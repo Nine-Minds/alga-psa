@@ -229,7 +229,8 @@ export async function compileAndSaveTemplate(
         // 3. Compile the AssemblyScript source to Wasm using asc
         //    Adjust optimization level and other flags as needed.
         //    Using npx ensures we use the locally installed asc version.
-        const compileCommand = `npx asc ${sourceFilePath} --outFile ${wasmOutputPath} --optimize`; // Add other flags like --runtime stub etc. if needed
+        //    **Crucially add --exportRuntime to include necessary memory management functions**
+        const compileCommand = `npx asc ${sourceFilePath} --outFile ${wasmOutputPath} --optimize --exportRuntime`; // Add other flags like --runtime stub etc. if needed
 
         console.log(`Executing compile command: ${compileCommand}`); // Logging for debugging
 
@@ -336,39 +337,102 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
     let isStandard = false;
 
     // 2. If not found in tenant templates, try standard templates
+    let standardTemplate;
     if (!template) {
-        template = await knex('standard_invoice_templates')
-            .select('wasmPath')
+        standardTemplate = await knex('standard_invoice_templates')
+            // Select the binary column for standard templates
+            .select('wasmBinary')
             .where({ template_id: templateId }) // No tenant filter here
             .first();
         isStandard = true; // Mark that we found it in standard templates
     }
 
-    // 3. If not found in either table, throw an error
-    if (!template) {
+    // 3. Handle based on where the template was found
+    if (isStandard) {
+        // Handle Standard Template (found in standard_invoice_templates)
+        if (!standardTemplate) {
+            // This case should technically not be reached if isStandard is true, but handle defensively
+            throw new Error(`Standard template with ID ${templateId} not found.`);
+        }
+        if (!standardTemplate.wasmBinary) {
+            throw new Error(`Standard template with ID ${templateId} does not have compiled Wasm binary data.`);
+        }
+        // Return the binary data directly (Knex should return it as a Buffer)
+        console.log(`Returning Wasm binary from DB for standard template ID: ${templateId}`);
+        return standardTemplate.wasmBinary;
+
+    } else if (template) {
+        // Handle Tenant Template (found in invoice_templates)
+        if (!template.wasmPath) {
+            throw new Error(`Tenant template with ID ${templateId} does not have a compiled Wasm path.`);
+        }
+
+        // Construct the absolute path and read the file
+        const absoluteWasmPath = path.join(process.cwd(), template.wasmPath);
+        console.log(`Reading Wasm file from path: ${absoluteWasmPath} for tenant template ID: ${templateId}`);
+
+        try {
+            const wasmBuffer = await fs.readFile(absoluteWasmPath);
+            return wasmBuffer;
+        } catch (error: any) {
+            console.error(`Error reading Wasm file at ${absoluteWasmPath}:`, error);
+            if (error.code === 'ENOENT') {
+                throw new Error(`Compiled Wasm file not found at path: ${template.wasmPath} (for tenant template ID ${templateId})`);
+            }
+            throw new Error(`Failed to read compiled Wasm file for tenant template ID ${templateId}: ${error.message}`);
+        }
+    } else {
+        // Not found in either table
         throw new Error(`Template with ID ${templateId} not found for the current tenant or as a standard template.`);
     }
+}
+// --- Server-Side Rendering Action ---
 
-    // 4. Check if wasmPath exists
-    if (!template.wasmPath) {
-        const tableChecked = isStandard ? 'standard_invoice_templates' : 'invoice_templates';
-        throw new Error(`Template with ID ${templateId} (found in ${tableChecked}) does not have a compiled Wasm path.`);
+import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
+import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
+import type { InvoiceViewModel, RenderOutput } from 'server/src/lib/invoice-renderer/types';
+
+/**
+ * Renders an invoice template entirely on the server-side.
+ * Fetches Wasm, executes it, and renders the resulting layout to HTML/CSS.
+ *
+ * @param templateId The ID of the template (standard or tenant).
+ * @param invoiceData The data to populate the template with.
+ * @returns A promise resolving to an object containing the rendered HTML and CSS.
+ * @throws If any step (fetching Wasm, executing Wasm, rendering layout) fails.
+ */
+export async function renderTemplateOnServer(
+    templateId: string,
+    invoiceData: InvoiceViewModel | null // Allow null invoiceData
+): Promise<RenderOutput> {
+    // Handle null invoiceData early
+    if (!invoiceData) {
+        console.warn(`renderTemplateOnServer called with null invoiceData for template ${templateId}. Returning empty output.`);
+        return { html: '', css: '' }; // Or throw an error if data is strictly required
     }
 
-    // 5. Construct the absolute path and read the file
-    // Standard template Wasm files might be in a different base directory, adjust if necessary.
-    // Assuming for now they follow the same relative structure from process.cwd().
-    // If standard templates are stored differently (e.g., 'wasm_templates/standard/'), adjust path construction.
-    const absoluteWasmPath = path.join(process.cwd(), template.wasmPath);
-
     try {
-        const wasmBuffer = await fs.readFile(absoluteWasmPath);
-        return wasmBuffer;
+        // 1. Get the compiled Wasm Buffer (handles standard vs tenant automatically)
+        console.log(`[Server Action] Fetching Wasm for template: ${templateId}`);
+        const wasmBuffer = await getCompiledWasm(templateId);
+
+        // 2. Execute the Wasm template to get the layout structure
+        console.log(`[Server Action] Preparing to execute Wasm for template: ${templateId} with invoice number: ${invoiceData.invoiceNumber}`); // Log invoice number
+        console.log(`[Server Action] Invoice Data for Wasm: ${JSON.stringify(invoiceData, null, 2)}`); // Log the full data
+        console.log(`[Server Action] Executing Wasm for template: ${templateId}`);
+        const layout = await executeWasmTemplate(wasmBuffer, invoiceData);
+
+        // 3. Render the layout structure to HTML and CSS
+        console.log(`[Server Action] Rendering layout for template: ${templateId}`);
+        const { html, css } = renderLayout(layout);
+
+        console.log(`[Server Action] Successfully rendered template: ${templateId}`);
+        return { html, css };
+
     } catch (error: any) {
-        console.error(`Error reading Wasm file at ${absoluteWasmPath}:`, error);
-        if (error.code === 'ENOENT') {
-            throw new Error(`Compiled Wasm file not found at path: ${template.wasmPath} (for template ID ${templateId})`);
-        }
-        throw new Error(`Failed to read compiled Wasm file for template ID ${templateId}: ${error.message}`);
+        console.error(`[Server Action] Error rendering template ${templateId}:`, error);
+        // Re-throw a more specific error or return a structured error object
+        // For now, re-throwing the original error message
+        throw new Error(`Failed to render template ${templateId} on server: ${error.message}`);
     }
 }

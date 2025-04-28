@@ -1,69 +1,40 @@
-import type { HostFunctions } from './types';
-
 /**
- * Provides the host-side implementations for functions callable from Wasm.
- * These functions are passed to the Wasmer runtime during Wasm module instantiation.
+ * Creates the import object for the Wasm module, adding provided host functions.
  *
- * Security Note: Ensure any data passed from Wasm is properly validated and sanitized,
- * especially if functions perform sensitive operations or interact with external systems.
- * For now, the 'log' function is simple and relatively safe.
+ * @param logFn - The host function implementation for 'env.log'.
+ * @param abortFn - The host function implementation for 'env.abort'.
+ * @returns The import object structure suitable for `@assemblyscript/loader`.
  */
-export const hostFunctionsImplementation: HostFunctions = {
-  /**
-   * Logs a message received from the Wasm module to the host console.
-   * @param message The string message sent from Wasm.
-   */
-  log: (message: string): void => {
-    // Basic logging. Could be enhanced to use a proper logger (e.g., Winston)
-    // and potentially prefix messages to indicate they came from Wasm.
-    console.log(`[Wasm Log]: ${message}`);
-  },
-
-  // Add implementations for other minimal host functions here as needed.
-  // Example:
-  // formatCurrency: (amount: number, currencyCode: string): string => {
-  //   // Implementation using Intl.NumberFormat or similar
-  //   try {
-  //     return new Intl.NumberFormat('en-US', { // Consider locale parameterization
-  //       style: 'currency',
-  //       currency: currencyCode,
-  //     }).format(amount);
-  //   } catch (error) {
-  //     console.error(`[Wasm Host Error] formatCurrency failed:`, error);
-  //     // Return a fallback or throw, depending on desired error handling
-  //     return `${amount} ${currencyCode}`;
-  //   }
-  // },
-};
-
-/**
- * Helper function to prepare the import object for Wasmer.
- * This maps the host function implementations to the structure Wasmer expects.
- * The namespace ('env' by default in AssemblyScript) must match the Wasm module's imports.
- *
- * @param implementations - The object containing the host function implementations.
- * @returns The import object structure for Wasmer.
- */
-export function createWasmerImportObject(
-  implementations: HostFunctions = hostFunctionsImplementation
+export function createWasmImportObject(
+    logFn: (ptr: number) => void,
+    abortFn: (msgPtr: number, filePtr: number, line: number, col: number) => void
 ): Record<string, Record<string, WebAssembly.ImportValue>> {
-  // AssemblyScript typically uses 'env' as the default import namespace.
-  // If a different namespace is used in AS, update it here.
-  const importNamespace = 'env';
 
-  const wasmerImports: Record<string, WebAssembly.ImportValue> = {};
+    // Define any other *truly* custom host functions here if needed
+    const customHostFunctions = {
+        // Example: myCustomFunction: () => { ... }
+    };
 
-  // Map the implementation functions to the import object.
-  // Wasmer/Wasm expects functions directly.
-  for (const key in implementations) {
-    if (Object.prototype.hasOwnProperty.call(implementations, key)) {
-      // Type assertion needed as HostFunctions uses specific types,
-      // but Wasmer expects generic WebAssembly.ImportValue.
-      wasmerImports[key] = implementations[key as keyof HostFunctions] as WebAssembly.ImportValue;
+    const importNamespace = 'env';
+
+    // Start with the required log and abort functions
+    const envImports: Record<string, WebAssembly.ImportValue> = {
+        log: logFn as WebAssembly.ImportValue,
+        abort: abortFn as WebAssembly.ImportValue,
+    };
+
+    // Assign any other custom host functions to the env namespace
+    for (const key in customHostFunctions) {
+        if (Object.prototype.hasOwnProperty.call(customHostFunctions, key)) {
+            envImports[key] = customHostFunctions[key as keyof typeof customHostFunctions] as WebAssembly.ImportValue;
+        }
     }
-  }
 
-  return {
-    [importNamespace]: wasmerImports,
-  };
+    // Construct the final import object
+    const importObject: Record<string, Record<string, WebAssembly.ImportValue>> = {
+        [importNamespace]: envImports
+    };
+
+    // The loader will merge its own required imports (e.g., for memory, GC).
+    return importObject;
 }

@@ -1,3 +1,4 @@
+// Keep JSON import only for parse:
 import { JSON } from "json-as";
 import {
   InvoiceViewModel, InvoiceItem,
@@ -26,7 +27,7 @@ export function generateLayout(dataString: string): string {
   if (!viewModel || viewModel.invoiceNumber == null || viewModel.invoiceNumber == "") {
     log("Wasm (standard-default): Error - Deserialization failed or key property missing.");
     const errorDoc = new DocumentElement([new TextElement("Error: Invalid input data.")]);
-    return JSON.stringify<DocumentElement>(errorDoc);
+    return errorDoc.toJsonString(); // Use toJsonString
   }
   log("Wasm (standard-default): Deserialized Invoice #: " + viewModel.invoiceNumber);
 
@@ -47,7 +48,7 @@ export function generateLayout(dataString: string): string {
   document.id = "invoice-document-standard-default";
 
   log("Wasm (standard-default): Serializing layout...");
-  const resultString = JSON.stringify<DocumentElement>(document);
+  const resultString = document.toJsonString(); // Use toJsonString
   log("Wasm (standard-default): Returning serialized layout.");
   return resultString;
 }
