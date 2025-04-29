@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, momentLocalizer, Views, View, NavigateAction, EventPropGetter } from 'react-big-calendar';
+import { Calendar, momentLocalizer, Views, View, NavigateAction, EventPropGetter, Components, ResourceHeaderProps } from 'react-big-calendar'; // Added Components, ResourceHeaderProps
 import moment from 'moment';
 import withDragAndDrop, { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -23,9 +23,14 @@ interface WeeklyDispatchCalendarProps {
   onSelectSlot: (slotInfo: { start: Date; end: Date; slots: Date[] | string[]; action: 'select' | 'click' | 'doubleClick', resourceId?: number | string }) => void;
   onEventDrop: withDragAndDropProps<IScheduleEntry, object>['onEventDrop'];
   onEventResize: withDragAndDropProps<IScheduleEntry, object>['onEventResize'];
-  onDropFromList?: (item: { event: IScheduleEntry; start: Date; end: Date }) => void;
+  onDropFromList: (item: { workItemId: string; start: Date; end: Date; resourceId: string | number }) => void;
   onSelectEvent?: (event: IScheduleEntry, e: React.SyntheticEvent<HTMLElement>) => void;
 }
+
+const CustomResourceHeader: React.FC<ResourceHeaderProps> = ({ label }) => {
+    return <div>{label}</div>;
+};
+
 
 const WeeklyDispatchCalendar: React.FC<WeeklyDispatchCalendarProps> = ({
   date,
@@ -56,56 +61,44 @@ const WeeklyDispatchCalendar: React.FC<WeeklyDispatchCalendarProps> = ({
   }, [primaryTechnicianId, comparisonTechnicianIds, allTechnicians]);
 
   const eventPropGetter: EventPropGetter<IScheduleEntry> = (event, start, end, isSelected) => {
-    let style: React.CSSProperties = {
-        // Base styles are now handled by CalendarStyleProvider
-    };
+    let style: React.CSSProperties = {};
 
-    const isComparisonOnly =
-      primaryTechnicianId !== null &&
-      event.assigned_user_ids?.length > 0 &&
-      !event.assigned_user_ids.includes(primaryTechnicianId) &&
-      event.assigned_user_ids.some(id => comparisonTechnicianIds.includes(id));
+    const isPrimaryEvent = primaryTechnicianId !== null && event.assigned_user_ids?.includes(primaryTechnicianId);
 
-    if (isComparisonOnly) {
+    if (isPrimaryEvent) {
       style = {
         ...style,
-        backgroundColor: 'rgb(var(--color-border-200))', // Use theme variable for background
-        color: 'rgb(var(--color-text-600))', // Use theme variable for text
-        opacity: 0.7,
-        border: '1px dashed rgb(var(--color-border-300))', // Add a subtle border
+        backgroundColor: 'rgb(var(--color-primary-500))',
+        color: 'white',
+        opacity: 1,
+        border: '1px solid rgb(var(--color-primary-600))',
       };
     } else {
-         // Explicitly set primary event background if needed, otherwise rely on global style
-         style.backgroundColor = 'rgb(var(--color-primary-500))';
-         style.color = 'white'; // Assuming primary events should have white text
+      // Style for comparison technicians' events
+      style = {
+        ...style,
+        backgroundColor: 'rgb(var(--color-gray-300))',
+        color: 'rgb(var(--color-gray-700))',
+        opacity: 0.7,
+        border: '1px dashed rgb(var(--color-gray-400))',
+      };
     }
-
-    // Placeholder for disabling drag/resize on comparison events
-    // if (isComparisonOnly) {
-    //   // Logic to disable DnD will be added here
-    // }
 
     return { style };
   };
 
   const handleEventDrop: withDragAndDropProps<IScheduleEntry, object>['onEventDrop'] = (args) => {
-    console.log("Dropped:", args);
     if (onEventDrop) {
         const isPrimaryEvent = primaryTechnicianId !== null && args.event.assigned_user_ids?.includes(primaryTechnicianId);
-        const targetResourceId = args.resourceId;
-
-        // Allow drop only if it's a primary event OR if dropping onto the primary technician's column
-        if (isPrimaryEvent || targetResourceId === primaryTechnicianId) {
-            // TODO: Add logic to potentially reassign user if dropped onto primary column
+        if (isPrimaryEvent) {
             onEventDrop(args);
         } else {
-            console.log("Prevented drop of comparison event onto another comparison column.");
+            console.log("Prevented drop of comparison event.");
         }
     }
   };
 
    const handleEventResize: withDragAndDropProps<IScheduleEntry, object>['onEventResize'] = (args) => {
-    console.log("Resized:", args);
      if (onEventResize) {
         const isPrimaryEvent = primaryTechnicianId !== null && args.event.assigned_user_ids?.includes(primaryTechnicianId);
         if (isPrimaryEvent) {
@@ -116,9 +109,53 @@ const WeeklyDispatchCalendar: React.FC<WeeklyDispatchCalendarProps> = ({
     }
    }
 
+   const draggableAccessor = (event: object) => {
+       const scheduleEvent = event as IScheduleEntry;
+       return primaryTechnicianId !== null && !!scheduleEvent.assigned_user_ids?.includes(primaryTechnicianId);
+   };
+
+   const resizableAccessor = (event: object) => {
+       const scheduleEvent = event as IScheduleEntry;
+       return primaryTechnicianId !== null && !!scheduleEvent.assigned_user_ids?.includes(primaryTechnicianId);
+   };
+
+   const handleDropFromList = (e: React.DragEvent<HTMLDivElement>) => {
+       e.preventDefault();
+       try {
+           const data = e.dataTransfer.getData('application/json');
+           if (!data) {
+               console.error("No data transferred");
+               return;
+           }
+           const { workItemId } = JSON.parse(data);
+           if (!workItemId) {
+               console.error("workItemId not found in transferred data");
+               return;
+           }
+
+           const placeholderStart = new Date();
+           const placeholderEnd = moment(placeholderStart).add(1, 'hour').toDate();
+           const placeholderResourceId = primaryTechnicianId || (resources.length > 0 ? resources[0].user_id : 'unknown'); // Default to primary or first resource
+
+           onDropFromList({
+               workItemId,
+               start: placeholderStart,
+               end: placeholderEnd,
+               resourceId: placeholderResourceId
+           });
+
+       } catch (error) {
+           console.error("Error handling drop from list:", error);
+       }
+   };
+
   return (
-    <div style={{ height: 'calc(100vh - 200px)' }}>
-      <CalendarStyleProvider /> {/* Render the style provider */}
+    <div
+        style={{ height: 'calc(100vh - 200px)' }}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDropFromList}
+    >
+      <CalendarStyleProvider />
       <DnDCalendar
         localizer={localizer}
         events={events}
@@ -146,7 +183,12 @@ const WeeklyDispatchCalendar: React.FC<WeeklyDispatchCalendarProps> = ({
         eventPropGetter={eventPropGetter as any}
         onEventDrop={handleEventDrop as any}
         onEventResize={handleEventResize as any}
-        resizable
+        draggableAccessor={draggableAccessor}
+        resizableAccessor={resizableAccessor}
+        components={{
+            resourceHeader: CustomResourceHeader
+        }}
+        toolbar={false}
       />
     </div>
   );

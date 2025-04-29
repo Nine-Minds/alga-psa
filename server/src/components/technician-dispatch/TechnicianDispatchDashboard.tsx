@@ -1,26 +1,32 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import WorkItemCard from './WorkItemCard';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { produce } from 'immer';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
-import TechnicianScheduleGrid from './TechnicianScheduleGrid';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import WorkItemListPanel from './WorkItemListPanel';
+import ScheduleViewPanel from './ScheduleViewPanel';
+import WorkItemCard from './WorkItemCard';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { searchDispatchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Input } from 'server/src/components/ui/Input';
-import { Button } from 'server/src/components/ui/Button';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
-import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths } from 'date-fns';
+import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+
+const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
+  if (viewMode === 'day') {
+    return { start: startOfDay(date), end: endOfDay(date) };
+  } else {
+    return { start: startOfWeek(date), end: endOfWeek(date) };
+  }
+};
 
 interface TechnicianDispatchDashboardProps {
   filterWorkItemId?: string;
@@ -32,7 +38,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   filterWorkItemType
 }) => {
   const [selectedPriority, setSelectedPriority] = useState('All');
-  const [users, setUsers] = useState<Omit<IUser, 'tenant'>[]>([]);
+  const [users, setUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]); // Changed type here
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
   const [workItems, setWorkItems] = useState<Omit<IExtendedWorkItem, "tenant">[]>([]);
   const [date, setDate] = useState(startOfDay(new Date()));
@@ -78,11 +84,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const performSearch = useCallback(async (query: string) => {
     try {
       const { selectedStatusFilter, filterUnscheduled, sortOrder, currentPage } = searchParamsRef.current;
-      // TODO: Update date range calculation based on viewMode (Step 3.1 Data Fetching)
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
+      const start = startOfDay(date);
+      const end = endOfDay(date);
 
       const result = await searchDispatchWorkItems({
         searchTerm: query,
@@ -92,8 +95,6 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         sortOrder,
         page: currentPage,
         pageSize: ITEMS_PER_PAGE,
-        // TODO: Update date range based on viewMode (Step 3.1 Data Fetching)
-        // dateRange: calculateDateRange(date, viewMode),
         dateRange: {
            start,
            end
@@ -131,12 +132,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const refreshAllData = useCallback(async () => {
     try {
       await performSearch(searchQuery);
-      // TODO: Update date range calculation based on viewMode 
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-      // TODO: Update getScheduleEntries call based on viewMode and selectedUserId 
+
+      const { start, end } = calculateDateRange(date, viewMode);
+
       const scheduleResult = await getScheduleEntries(start, end);
       if (scheduleResult.success && scheduleResult.entries) {
         setEvents(scheduleResult.entries);
@@ -148,7 +146,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       console.error('Error refreshing data:', err);
       toast.error('Failed to refresh data');
     }
-  }, [performSearch, searchQuery, date]);
+  }, [performSearch, searchQuery, date, viewMode]);
 
 
   const debouncedSearch = useCallback((query: string) => {
@@ -175,13 +173,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         const fetchedUsers = await getAllUsers(true, 'internal');
         setUsers(fetchedUsers);
 
-        // TODO: Update date range calculation based on viewMode (Step 3.1 Data Fetching)
-        const start = new Date(date);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(date);
-        end.setHours(23, 59, 59, 999);
+        const { start, end } = calculateDateRange(date, viewMode);
 
-        // TODO: Update getScheduleEntries call based on viewMode and selectedUserId (Step 3.1 Data Fetching)
         const scheduleResult = await getScheduleEntries(start, end);
         if (scheduleResult.success && scheduleResult.entries) {
           setEvents(scheduleResult.entries);
@@ -195,7 +188,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
 
     fetchInitialData();
-  }, [date]);
+  }, [date, viewMode]);
 
 
   useEffect(() => {
@@ -401,12 +394,22 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
 
   const handleTechnicianClick = (technicianId: string) => {
-    console.log('Technician clicked:', technicianId);
-    // Implementation will be added in a later step
-    // For now, let's just set the primary technician
+    setViewMode('week');
     setPrimaryTechnicianId(technicianId);
+    setComparisonTechnicianIds(new Set());
   };
 
+  const handleComparisonChange = (technicianId: string, isSelected: boolean) => {
+    setComparisonTechnicianIds(
+      produce((draft) => {
+        if (isSelected) {
+          draft.add(technicianId);
+        } else {
+          draft.delete(technicianId);
+        }
+      })
+    );
+  };
 
   const handleNavigate = (action: 'prev' | 'next' | 'today') => {
     setDate(currentDate => {
@@ -428,6 +431,161 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
+  const displayedTechnicians = useMemo(() => {
+    if (viewMode === 'day') {
+      return users;
+    } else {
+      const primaryTech = users.find(u => u.user_id === primaryTechnicianId);
+      const comparisonTechs = users.filter(u => comparisonTechnicianIds.has(u.user_id));
+      const combined = primaryTech ? [primaryTech, ...comparisonTechs.filter(ct => ct.user_id !== primaryTech.user_id)] : comparisonTechs;
+      return combined;
+    }
+  }, [users, viewMode, primaryTechnicianId, comparisonTechnicianIds]);
+
+  const displayedEvents = useMemo(() => {
+    if (displayedTechnicians.length === 0 && viewMode === 'week') {
+      return [];
+    }
+    const displayedTechIds = new Set(displayedTechnicians.map(t => t.user_id));
+    return events.filter(event =>
+      event.assigned_user_ids.some(assignedId => displayedTechIds.has(assignedId))
+    );
+  }, [events, displayedTechnicians, viewMode]);
+
+
+  const handleWorkItemClick = useCallback((e: React.MouseEvent, item: Omit<IExtendedWorkItem, "tenant">) => {
+    e.stopPropagation();
+    openDrawer(
+      <WorkItemDetailsDrawer
+        workItem={item as IExtendedWorkItem}
+        onClose={async () => {
+          await refreshAllData();
+          closeDrawer();
+        }}
+        onTaskUpdate={async (updatedTask) => {
+          try {
+            await refreshAllData();
+            toast.success('Task updated successfully');
+            closeDrawer();
+          } catch (err) {
+            console.error('Error updating task:', err);
+            toast.error('Failed to update task');
+          }
+        }}
+        onScheduleUpdate={async (entryData) => {
+          try {
+            const existingEvent = events.find(ev => ev.work_item_id === item.work_item_id);
+
+            if (existingEvent) {
+              // Update existing entry
+              const updateResult = await updateScheduleEntry(existingEvent.entry_id, {
+                ...entryData,
+                work_item_id: item.work_item_id,
+                work_item_type: item.type,
+                title: entryData.title || item.name
+              });
+
+              if (updateResult.success && updateResult.entry) {
+                const updatedEntry = updateResult.entry as Omit<IScheduleEntry, 'tenant'>;
+                setEvents(prevEvents => prevEvents.map(ev =>
+                  ev.entry_id === existingEvent.entry_id ? updatedEntry : ev
+                ));
+                toast.success('Schedule entry updated successfully');
+              } else {
+                setError('Failed to update schedule entry');
+                toast.error('Failed to update schedule entry');
+              }
+            } else if (item.type !== 'ad_hoc') {
+              // Create new entry
+              const createResult = await addScheduleEntry(
+                {
+                  ...entryData,
+                  work_item_id: item.work_item_id,
+                  work_item_type: item.type,
+                  title: entryData.title || item.name
+                },
+                { assignedUserIds: entryData.assigned_user_ids }
+              );
+
+              if (createResult.success && createResult.entry) {
+                const newEntry = createResult.entry as Omit<IScheduleEntry, 'tenant'>;
+                setEvents(prevEvents => [...prevEvents, newEntry]);
+                toast.success('Schedule entry created successfully');
+              } else {
+                setError('Failed to create schedule entry');
+                toast.error('Failed to create schedule entry');
+              }
+            }
+          } catch (err) {
+            console.error('Error saving schedule entry:', err);
+            setError('Failed to save schedule entry');
+            toast.error('Failed to save schedule entry');
+          }
+          closeDrawer();
+        }}
+      />
+    );
+  }, [openDrawer, closeDrawer, refreshAllData, events, updateScheduleEntry, addScheduleEntry]);
+
+  const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
+    try {
+      const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
+
+      if (!workItemDetails) {
+        toast.error('Could not load work item details.');
+        return;
+      }
+
+      openDrawer(
+        <WorkItemDetailsDrawer
+          workItem={workItemDetails}
+          onClose={async () => {
+            await refreshAllData();
+            closeDrawer();
+          }}
+          onTaskUpdate={async (updatedTask) => {
+            try {
+              await refreshAllData();
+              toast.success('Task updated successfully');
+              closeDrawer();
+            } catch (err) {
+              console.error('Error updating task:', err);
+              toast.error('Failed to update task');
+            }
+          }}
+          onScheduleUpdate={async (entryData) => {
+            try {
+              const updateResult = await updateScheduleEntry(event.entry_id, {
+                ...entryData,
+                work_item_id: workItemDetails.work_item_id,
+                work_item_type: workItemDetails.type,
+                title: entryData.title || workItemDetails.name
+              });
+
+              if (updateResult.success && updateResult.entry) {
+                const updatedEntry = updateResult.entry as Omit<IScheduleEntry, 'tenant'>;
+                setEvents(prevEvents => prevEvents.map(e =>
+                  e.entry_id === event.entry_id ? updatedEntry : e
+                ));
+                toast.success('Schedule entry updated successfully');
+              } else {
+                setError('Failed to update schedule entry');
+                toast.error('Failed to update schedule entry');
+              }
+            } catch (err) {
+              console.error('Error saving schedule entry:', err);
+              setError('Failed to save schedule entry');
+              toast.error('Failed to save schedule entry');
+            }
+            closeDrawer();
+          }}
+        />
+      );
+    } catch (err) {
+      console.error('Error opening work item details:', err);
+      toast.error('Failed to open work item details.');
+    }
+  }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry]);
 
 
   return (
@@ -440,372 +598,67 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         </div>
       )}
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/4 p-2 bg-[rgb(var(--color-border-50))] overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4 text-[rgb(var(--color-text-900))]">Work Items</h2>
+        <WorkItemListPanel
+          workItems={workItems}
+          totalItems={totalItems}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          searchQuery={searchQuery}
+          selectedStatusFilter={selectedStatusFilter}
+          filterUnscheduled={filterUnscheduled}
+          sortOrder={sortOrder}
+          statusFilterOptions={statusFilterOptions}
+          onSearchChange={(query) => {
+            setSearchQuery(query);
+            setCurrentPage(1);
+          }}
+          onStatusFilterChange={(value) => {
+            setSelectedStatusFilter(value);
+            setCurrentPage(1);
+          }}
+          onUnscheduledFilterChange={(checked) => {
+            setFilterUnscheduled(!checked);
+            setCurrentPage(1);
+          }}
+          onSortChange={() => {
+            setSortOrder(order => order === 'asc' ? 'desc' : 'asc');
+            setCurrentPage(1);
+          }}
+          onPageChange={setCurrentPage}
+          onWorkItemClick={handleWorkItemClick}
+          onWorkItemDragStart={handleDragStart}
+          onWorkItemDrag={handleDrag}
+          onWorkItemDragEnd={handleDragEnd}
+        />
 
-          <div className="space-y-3 mb-4">
-            <div className="flex gap-2 justify-between">
-              <Input
-                id="work-item-search"
-                type="text"
-                placeholder="Search work items..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="flex-grow mb-0"
-              />
-              <Button
-                id="sort-work-items"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSortOrder(order => order === 'asc' ? 'desc' : 'asc');
-                  setCurrentPage(1);
-                }}
-              >
-                {sortOrder === 'asc' ? '↑' : '↓'}
-              </Button>
-            </div>
-
-            <div className="flex gap-2 justify-between items-center">
-              <CustomSelect
-                value={selectedStatusFilter}
-                onValueChange={(value: string) => {
-                  setSelectedStatusFilter(value);
-                  setCurrentPage(1);
-                }}
-                options={statusFilterOptions}
-                placeholder="Filter by status..."
-              />
-
-              <div className="flex items-center gap-2">
-                <span className={`text-sm`}>
-                  {filterUnscheduled ? 'Unscheduled' : 'Scheduled'}
-                </span>
-                <Switch
-                  id="schedule-filter"
-                  checked={!filterUnscheduled}
-                  onCheckedChange={(checked: boolean) => {
-                    setFilterUnscheduled(!checked);
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2 mb-4">
-            {workItems.map((item): JSX.Element => (
-              <div
-                key={item.work_item_id}
-                className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white cursor-move hover:bg-[rgb(var(--color-border-50))] transition-colors"
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, item.work_item_id, item)}
-                onDrag={handleDrag}
-                onDragEnd={handleDragEnd}
-              >
-                <WorkItemCard
-                  title={item.name}
-                  description={item.description}
-                  type={item.type}
-                  isBillable={item.is_billable}
-                  needsDispatch={item.needsDispatch}
-                  agentsNeedingDispatch={item.agentsNeedingDispatch}
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation(); // Prevent drag event from firing
-                    openDrawer(
-                      <WorkItemDetailsDrawer
-                        workItem={item as IExtendedWorkItem}
-                        onClose={async () => {
-                          await refreshAllData();
-                          closeDrawer();
-                        }}
-                        onTaskUpdate={async (updatedTask) => {
-                          try {
-                            await refreshAllData();
-                            toast.success('Task updated successfully');
-                            closeDrawer();
-                          } catch (err) {
-                            console.error('Error updating task:', err);
-                            toast.error('Failed to update task');
-                          }
-                        }}
-                        onScheduleUpdate={async (entryData) => {
-                          try {
-                            const existingEvent = events.find(e => e.work_item_id === item.work_item_id);
-
-                            console.log('Existing event found:', existingEvent);
-                            console.log('Current item:', item);
-                            
-                            if (existingEvent) {
-                              // Update existing entry
-                              const updateResult = await updateScheduleEntry(existingEvent.entry_id, {
-                                ...entryData,
-                                work_item_id: item.work_item_id,
-                                work_item_type: item.type,
-                                title: entryData.title || item.name
-                              });
-                              
-                              if (updateResult.success && updateResult.entry) {
-                                const updatedEntry = updateResult.entry as Omit<IScheduleEntry, 'tenant'>;
-                                setEvents(prevEvents => prevEvents.map(e => 
-                                  e.entry_id === existingEvent.entry_id ? updatedEntry : e
-                                ));
-                                toast.success('Schedule entry updated successfully');
-                              } else {
-                                setError('Failed to update schedule entry');
-                                toast.error('Failed to update schedule entry');
-                              }
-                            } else if (item.type !== 'ad_hoc') {
-                              // Create new entry
-                              const createResult = await addScheduleEntry(
-                                {
-                                  ...entryData,
-                                  work_item_id: item.work_item_id,
-                                  work_item_type: item.type,
-                                  title: entryData.title || item.name
-                                },
-                                { assignedUserIds: entryData.assigned_user_ids }
-                              );
-                              
-                              if (createResult.success && createResult.entry) {
-                                const newEntry = createResult.entry as Omit<IScheduleEntry, 'tenant'>;
-                                setEvents(prevEvents => [...prevEvents, newEntry]);
-                                toast.success('Schedule entry created successfully');
-                              } else {
-                                setError('Failed to create schedule entry');
-                                toast.error('Failed to create schedule entry');
-                              }
-                            }
-                          } catch (err) {
-                            console.error('Error saving schedule entry:', err);
-                            setError('Failed to save schedule entry');
-                            toast.error('Failed to save schedule entry');
-                          }
-                          closeDrawer();
-                        }}
-                      />
-                    );
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-                className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-              >
-                Previous
-              </button>
-              <span className="text-[rgb(var(--color-text-700))]">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-                className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-              >
-                Next
-              </button>
-            </div>
-          )}
-
-          <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 text-center">
-            Showing {workItems.length} of {totalItems} items
-          </div>
-        </div>
-
-        {/* Right Panel: Schedule View */}
-        <div className="flex-1 p-4 bg-white overflow-hidden flex flex-col">
-          {/* Header Section */}
-          <div className="flex flex-wrap justify-between items-center mb-4 gap-4 border-b border-[rgb(var(--color-border-200))] pb-4">
-            <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-               {/* View Mode Switcher - Styled like rbc-toolbar */}
-               <div className="flex items-center rounded-md border border-[rgb(var(--color-border-200))] overflow-hidden">
-                  <Button
-                    id="dispatch-day-view-button"
-                    variant={viewMode === 'day' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleViewChange('day')}
-                    className={`px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] ${viewMode === 'day' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
-                  >
-                    Day
-                  </Button>
-                  <Button
-                    id="dispatch-week-view-button"
-                    variant={viewMode === 'week' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => handleViewChange('week')}
-                    className={`px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] ${viewMode === 'week' ? 'text-white hover:bg-[rgb(var(--color-primary-600))]' : 'text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]'}`}
-                  >
-                    Week
-                  </Button>
-                </div>
-
-
-              {/* Date Navigation - Styled like rbc-toolbar */}
-              <div className="flex items-center gap-1">
-                <Button
-                  id="dispatch-prev-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigate('prev')}
-                  aria-label={`Previous ${viewMode}`}
-                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
-                >
-                  {'< Prev'}
-                </Button>
-                <Button
-                  id="dispatch-today-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigate('today')}
-                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
-                >
-                  Today
-                </Button>
-                <Button
-                  id="dispatch-next-button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleNavigate('next')}
-                  aria-label={`Next ${viewMode}`}
-                  className="px-3 py-1 text-[rgb(var(--color-text-700))] border-[rgb(var(--color-border-200))] hover:bg-[rgb(var(--color-border-100))]"
-                >
-                  {'Next >'}
-                </Button>
-              </div>
-              <div className="text-[rgb(var(--color-text-900))] font-medium text-center min-w-[250px]">
-                {date.toLocaleDateString('en-US', {
-                  // Adjust format based on view? Maybe just keep it simple for now.
-                  // weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Schedule Area */}
-          {/* TODO: Implement conditional rendering based on viewMode (Step 3.1 Conditional Rendering) */}
-          <div className="technician-schedule-grid flex-1 overflow-hidden">
-            {/* Placeholder for conditional rendering */}
-            {viewMode === 'day' && (
-              <TechnicianScheduleGrid
-                // TODO: Update technicians prop based on primary/comparison IDs
-                technicians={users}
-                events={events}
-                selectedDate={date}
-                onDrop={handleDrop}
-                onTechnicianClick={handleTechnicianClick}
-                onResize={onResize}
-                onDeleteEvent={handleDeleteEvent}
-                onEventClick={async (event: Omit<IScheduleEntry, 'tenant'>) => {
-                  try {
-                    const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
-
-                  if (!workItemDetails) {
-                    toast.error('Could not load work item details.');
-                    return;
-                  }
-
-                  openDrawer(
-                    <WorkItemDetailsDrawer
-                      workItem={workItemDetails}
-                      onClose={async () => {
-                        await refreshAllData();
-                        closeDrawer();
-                      }}
-                      onTaskUpdate={async (updatedTask) => {
-                        try {
-                          await refreshAllData();
-                          toast.success('Task updated successfully');
-                          closeDrawer();
-                        } catch (err) {
-                          console.error('Error updating task:', err);
-                          toast.error('Failed to update task');
-                        }
-                      }}
-                      onScheduleUpdate={async (entryData) => {
-                        try {
-                           const updateResult = await updateScheduleEntry(event.entry_id, {
-                              ...entryData,
-                              work_item_id: workItemDetails.work_item_id,
-                              work_item_type: workItemDetails.type,
-                              title: entryData.title || workItemDetails.name
-                            });
-
-                            if (updateResult.success && updateResult.entry) {
-                              const updatedEntry = updateResult.entry as Omit<IScheduleEntry, 'tenant'>;
-                              setEvents(prevEvents => prevEvents.map(e =>
-                                e.entry_id === event.entry_id ? updatedEntry : e
-                              ));
-                              toast.success('Schedule entry updated successfully');
-                            } else {
-                              setError('Failed to update schedule entry');
-                              toast.error('Failed to update schedule entry');
-                            }
-                        } catch (err) {
-                          console.error('Error saving schedule entry:', err);
-                          setError('Failed to save schedule entry');
-                          toast.error('Failed to save schedule entry');
-                        }
-                        closeDrawer();
-                      }}
-                    /> 
-                  );
-                } catch (err) {
-                  console.error('Error opening work item details:', err);
-                  toast.error('Failed to open work item details.');
-                }
-              }}
-                />
-            )}
-             {viewMode === 'week' && <div className="p-4 text-center text-[rgb(var(--color-text-500))]">Weekly View Placeholder</div>}
-          </div>
-        </div>
+        <ScheduleViewPanel
+          viewMode={viewMode}
+          date={date}
+          events={displayedEvents}
+          technicians={displayedTechnicians}
+          primaryTechnicianId={primaryTechnicianId}
+          comparisonTechnicianIds={comparisonTechnicianIds}
+          onNavigate={handleNavigate}
+          onViewChange={handleViewChange}
+          onTechnicianClick={handleTechnicianClick}
+          onComparisonChange={handleComparisonChange}
+          onDrop={handleDrop}
+          onResize={onResize}
+          onDeleteEvent={handleDeleteEvent}
+          onEventClick={handleEventClick}
+          onDropFromList={handleDrop} // Added prop, using same handler
+          onSelectSlot={(slotInfo) => { /* Placeholder for select slot */ console.log("Slot selected:", slotInfo); }} // Added placeholder for required prop
+        />
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2">
-          <button
-            onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-            disabled={currentPage === 1}
-            className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-          >
-            Previous
-          </button>
-          <span className="text-[rgb(var(--color-text-700))]">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-            disabled={currentPage === totalPages}
-            className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:border-[rgb(var(--color-primary-400))] focus:ring-1 focus:ring-[rgb(var(--color-primary-400))]"
-          >
-            Next
-          </button>
-        </div>
-      )}
-
-      <div className="text-sm text-[rgb(var(--color-text-600))] mt-2 text-center">
-        Showing {workItems.length} of {totalItems} items
-      </div>
+      {/* Drag Overlay remains in the parent */}
       {dragOverlay && dragOverlay.visible && (
         <div
           style={{
             position: 'fixed',
-            left: dragOverlay.x ?? 0, 
+            left: dragOverlay.x ?? 0,
             top: dragOverlay.y ?? 0,
-            transform: 'translate(-50%, -50%)', 
+            transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
             zIndex: 9999,
             opacity: 0.6,

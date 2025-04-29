@@ -1,11 +1,11 @@
-interface WorkItemDrop {
+export interface WorkItemDrop {
   type: 'workItem';
   workItemId: string;
   techId: string;
   startTime: Date;
 }
 
-interface EventDrop {
+export interface EventDrop {
   type: 'scheduleEntry';
   eventId: string;
   techId: string;
