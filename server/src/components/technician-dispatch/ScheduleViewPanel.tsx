@@ -7,6 +7,7 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from 'server/src/interfaces/event.interfaces';
 import { View, NavigateAction } from 'react-big-calendar';
 import { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
+import { XCircle } from 'lucide-react';
 import moment from 'moment';
 
 interface ScheduleViewPanelProps {
@@ -26,6 +27,7 @@ interface ScheduleViewPanelProps {
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onDropFromList: (dropEvent: DropEvent) => void;
   onSelectSlot: (slotInfo: { start: Date; end: Date; resourceId?: string | number }) => void;
+  onResetSelections?: () => void;
 }
 
 const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
@@ -45,6 +47,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   onEventClick,
   onDropFromList,
   onSelectSlot,
+  onResetSelections,
 }) => {
 
   const handleNavigate = (newDate: Date, view: string, action: string) => {
@@ -121,45 +124,62 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
         <h2 className="text-xl font-bold text-[rgb(var(--color-text-900))]">Technician Dispatch</h2>
         <div className="flex justify-between items-center w-full">
           {/* Date Navigation - Left */}
-          <div className="flex items-center rounded-md border border-[rgb(var(--color-border-200))] overflow-hidden justify-start">
-            <Button
-              id="dispatch-prev-button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onNavigate('prev')}
-              aria-label={`Previous ${viewMode}`}
-              className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
-            >
-              {'< Prev'}
-            </Button>
-            <Button
-              id="dispatch-today-button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onNavigate('today')}
-              className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
-            >
-              Today
-            </Button>
-            <Button
-              id="dispatch-next-button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onNavigate('next')}
-              aria-label={`Next ${viewMode}`}
-              className="px-3 py-1 rounded-none text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
-            >
-              {'Next >'}
-            </Button>
+          <div className="flex items-center justify-start">
+            <div className="flex items-center rounded-md border border-[rgb(var(--color-border-200))] overflow-hidden">
+              <Button
+                id="dispatch-prev-button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onNavigate('prev')}
+                aria-label={`Previous ${viewMode}`}
+                className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+              >
+                {'< Prev'}
+              </Button>
+              <Button
+                id="dispatch-today-button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onNavigate('today')}
+                className="px-3 py-1 rounded-none border-r border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+              >
+                Today
+              </Button>
+              <Button
+                id="dispatch-next-button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onNavigate('next')}
+                aria-label={`Next ${viewMode}`}
+                className="px-3 py-1 rounded-none text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+              >
+                {'Next >'}
+              </Button>
+            </div>
+            
+            {viewMode === 'week' && onResetSelections && (
+              <Button
+                id="reset-selections-button"
+                variant="outline"
+                size="sm"
+                onClick={onResetSelections}
+                className="ml-2 px-3 py-1 flex items-center gap-1"
+              >
+                <XCircle className="h-4 w-4" />
+                Reset Selections
+              </Button>
+            )}
           </div>
 
           {/* Date Display - Center */}
-          <div className="text-[rgb(var(--color-text-800))] font-medium text-center min-w-[250px] flex-grow">
-            {date.toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}
+          <div className="text-[rgb(var(--color-text-800))] font-medium text-center min-w-[250px] flex-grow flex items-center justify-center">
+            <span>
+              {date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </span>
           </div>
 
           {/* View Mode Switcher - Right */}

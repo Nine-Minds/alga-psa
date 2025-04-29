@@ -43,7 +43,9 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   const [isNarrow, setIsNarrow] = useState(false);
   const [isRecentlyResized, setIsRecentlyResized] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
-  const colors = getEventColors(event.work_item_type);
+  const isPrimary = true;
+  const isComparison = false;
+  const { bg, hover, text } = getEventColors(event.work_item_type, isPrimary, isComparison);
   
   useEffect(() => {
     if (!isResizing && isRecentlyResized) {
@@ -97,8 +99,8 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
     <div>
       <div
         ref={eventRef}
-        className={`text-xs ${colors.bg} ${colors.text} p-1 shadow-md rounded absolute
-        ${!isResizing ? colors.hover : ''}
+        className={`text-xs ${bg} ${text} p-1 shadow-md rounded absolute
+        ${!isResizing ? hover : ''}
         ${isDragging ? 'opacity-70 shadow-lg' : ''}
         ${isResizing ? 'cursor-ew-resize pointer-events-none' : 'cursor-move'}`}
         style={{

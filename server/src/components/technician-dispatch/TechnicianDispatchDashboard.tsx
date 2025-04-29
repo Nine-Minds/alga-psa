@@ -397,8 +397,14 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   const handleTechnicianClick = (technicianId: string) => {
     setViewMode('week');
+    
+    setComparisonTechnicianIds(
+      produce((draft) => {
+        draft.delete(technicianId);
+      })
+    );
+    
     setPrimaryTechnicianId(technicianId);
-    setComparisonTechnicianIds(new Set());
   };
 
   const handleComparisonChange = (technicianId: string, isSelected: boolean) => {
@@ -411,6 +417,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         }
       })
     );
+  };
+  
+  const handleResetSelections = () => {
+    setPrimaryTechnicianId(null);
+    setComparisonTechnicianIds(new Set());
   };
 
   const handleNavigate = (action: 'prev' | 'next' | 'today') => {
@@ -643,6 +654,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onEventClick={handleEventClick}
           onDropFromList={handleDrop} // Added prop, using same handler
           onSelectSlot={(slotInfo) => { /* Placeholder for select slot */ console.log("Slot selected:", slotInfo); }} // Added placeholder for required prop
+          onResetSelections={handleResetSelections}
         />
       </div>
 
