@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import TechnicianScheduleGrid from './TechnicianScheduleGrid';
-import WeeklyDispatchCalendar from './WeeklyDispatchCalendar';
+import DailyTechnicianScheduleGrid from './DailyTechnicianScheduleGrid';
+import WeeklyTechnicianScheduleGrid from './WeeklyTechnicianScheduleGrid';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { DropEvent, EventDrop, WorkItemDrop } from 'server/src/interfaces/event.interfaces';
@@ -47,7 +47,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   onSelectSlot,
 }) => {
 
-  const handleNavigate = (newDate: Date, view: View, action: NavigateAction) => {
+  const handleNavigate = (newDate: Date, view: string, action: string) => {
     // We only care about the action ('PREV', 'NEXT', 'TODAY', 'DATE') for the parent
     // but might use newDate if the parent handler is updated
     if (action === 'PREV' || action === 'NEXT' || action === 'TODAY') {
@@ -57,7 +57,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
     }
   };
 
-  const handleViewChange = (view: View) => {
+  const handleViewChange = (view: string) => {
     if (view === 'week') {
         onViewChange('week');
     }
@@ -189,7 +189,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
       {/* Schedule Area */}
       <div className="technician-schedule-grid flex-1 overflow-hidden">
         {viewMode === 'day' && (
-          <TechnicianScheduleGrid
+          <DailyTechnicianScheduleGrid
             technicians={technicians}
             events={events}
             selectedDate={date}
@@ -201,7 +201,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
           />
         )}
         {viewMode === 'week' && (
-            <WeeklyDispatchCalendar
+            <WeeklyTechnicianScheduleGrid
                 date={date}
                 primaryTechnicianId={primaryTechnicianId}
                 comparisonTechnicianIds={Array.from(comparisonTechnicianIds)}
@@ -215,6 +215,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 onEventResize={handleEventResize}
                 onDropFromList={handleDropFromList}
                 onSelectEvent={handleSelectEvent}
+                onSetFocus={onTechnicianClick}
             />
         )}
       </div>

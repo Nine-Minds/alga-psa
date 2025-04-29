@@ -52,7 +52,6 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
 }) => {
   return (
     <div
-      onClick={() => onTechnicianClick(tech.user_id)}
       className="technician-row relative h-16 border border-[rgb(var(--color-border-200))] min-w-[2880px] mb-4"
       data-tech-id={tech.user_id}
     >

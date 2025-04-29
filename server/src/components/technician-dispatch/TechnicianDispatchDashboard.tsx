@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { produce } from 'immer';
+import { produce, enableMapSet } from 'immer';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
@@ -19,6 +19,8 @@ import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
 import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+
+enableMapSet();
 
 const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
   if (viewMode === 'day') {
@@ -432,15 +434,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const displayedTechnicians = useMemo(() => {
-    if (viewMode === 'day') {
-      return users;
-    } else {
-      const primaryTech = users.find(u => u.user_id === primaryTechnicianId);
-      const comparisonTechs = users.filter(u => comparisonTechnicianIds.has(u.user_id));
-      const combined = primaryTech ? [primaryTech, ...comparisonTechs.filter(ct => ct.user_id !== primaryTech.user_id)] : comparisonTechs;
-      return combined;
-    }
-  }, [users, viewMode, primaryTechnicianId, comparisonTechnicianIds]);
+    return users;
+  }, [users]);
 
   const displayedEvents = useMemo(() => {
     if (displayedTechnicians.length === 0 && viewMode === 'week') {
