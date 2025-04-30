@@ -4,21 +4,26 @@ import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import logger from '@shared/core/logger';
 import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
+import { syncStandardTemplates } from './startupTasks'; // Import the sync function
 
 export async function initializeApp() {
   try {
     // Initialize event bus
     await initializeEventBus();
     logger.info('Event bus initialized');
-    
+
     // Initialize scheduled jobs
     await initializeScheduledJobs();
     logger.info('Scheduled jobs initialized');
-    
+
     // Initialize workflow system
     await initializeServerWorkflows();
     logger.info('Workflow system initialized');
 
+    // Sync standard invoice templates
+    await syncStandardTemplates();
+    logger.info('Standard invoice templates synced');
+    
     // Register cleanup handlers
     process.on('SIGTERM', async () => {
       await cleanupEventBus();

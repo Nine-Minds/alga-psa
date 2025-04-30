@@ -16,6 +16,7 @@ import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 // import { configDotenv } from 'dotenv';
 import { config } from 'dotenv';
+import { syncStandardTemplates } from '../startupTasks';
 
 let isFunctionExecuted = false;
 
@@ -229,6 +230,10 @@ export async function initializeApp() {
             () => chars[crypto.randomInt(chars.length)]
         ).join('');
     };
+
+    // Sync standard invoice templates
+    await syncStandardTemplates();
+    logger.info('Standard invoice templates synced');        
 
     let newPassword;
     const glinda = await User.findUserByEmail("glinda@emeraldcity.oz");

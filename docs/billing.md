@@ -429,6 +429,15 @@ async function previewInvoice(
 - Respect user permissions for viewing billing data.
 - No persistent changes during preview.
 
+## Invoice Template System
+
+### Purpose
+The system allows for customization of the visual appearance and layout of generated invoices using templates written in AssemblyScript (a subset of TypeScript) which are compiled to WebAssembly (Wasm). This enables safe, server-side execution of custom rendering logic. Users can manage standard and custom templates through the Billing Dashboard.
+
+### Further Details
+For comprehensive information on the architecture, components (UI and backend), database schema, compilation/execution process, and workflows, please refer to the dedicated documentation:
+
+[Invoice Template System Documentation](./invoice_templates.md)
 ## Service Types
 
 The billing system uses service configurations to determine billing logic. Key types include:

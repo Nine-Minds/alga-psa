@@ -84,6 +84,12 @@ const config: Config = {
           hover: 'var(--color-submenu-hover)',
           icon: 'var(--color-submenu-icon)',
         },
+        // Add destructive colors based on assumed CSS variables
+        destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
+        'destructive-foreground': 'rgb(var(--color-destructive-foreground) / <alpha-value>)',
+      },
+      backgroundColor: { // Extend background colors specifically
+        destructive: 'rgb(var(--color-destructive) / <alpha-value>)',
       },
       borderColor: {
         main: {

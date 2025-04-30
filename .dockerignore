@@ -53,3 +53,4 @@ tests
 *draft*
 .next
 node_modules
+temp_wasm_compile

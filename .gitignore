@@ -91,3 +91,4 @@ secrets/
 .clinerules
 data/
 shared/dist
+temp_wasm_compile
