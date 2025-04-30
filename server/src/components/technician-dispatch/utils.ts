@@ -18,40 +18,40 @@ export const calculateTimeFromPosition = (
 };
 
 export const isWorkingHour = (hour: number): boolean => {
-  return hour >= 9 && hour < 17; // 9 AM to 5 PM
+  return hour >= 8 && hour < 17; // 8 AM to 5 PM
 };
 
-export const getEventColors = (type: WorkItemType) => {
+export const getEventColors = (
+  type: WorkItemType,
+  isPrimary: boolean,
+  isComparison: boolean
+) => {
+  let bg = 'bg-[rgb(var(--color-primary-200))]';
+  let hover = 'hover:bg-[rgb(var(--color-primary-300))]';
+  let text = 'text-[rgb(var(--color-text-900))]';
+
   switch (type) {
     case 'ticket':
-      return {
-        bg: 'bg-[rgb(var(--color-primary-100))]',
-        hover: 'hover:bg-[rgb(var(--color-primary-200))]',
-        text: 'text-[rgb(var(--color-text-900))]'
-      };
+      bg = 'bg-[rgb(var(--color-primary-200))]';
+      hover = 'hover:bg-[rgb(var(--color-primary-300))]';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
     case 'project_task':
-      return {
-        bg: 'bg-[rgb(var(--color-secondary-100))]',
-        hover: 'hover:bg-[rgb(var(--color-secondary-200))]',
-        text: 'text-[rgb(var(--color-text-900))]'
-      };
+      bg = 'bg-[rgb(var(--color-secondary-100))]';
+      hover = 'hover:bg-[rgb(var(--color-secondary-200))]';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
     case 'ad_hoc':
-      return {
-        bg: 'bg-[rgb(var(--color-border-200))]',
-        hover: 'hover:bg-[rgb(var(--color-border-300))]',
-        text: 'text-[rgb(var(--color-text-900))]'
-      };
+      bg = 'bg-[rgb(var(--color-border-200))]';
+      hover = 'hover:bg-[rgb(var(--color-border-300))]';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
     case 'non_billable_category':
-      return {
-        bg: 'bg-[rgb(var(--color-accent-100))]',
-        hover: 'hover:bg-[rgb(var(--color-accent-200))]',
-        text: 'text-[rgb(var(--color-text-900))]'
-      };
-    default:
-      return {
-        bg: 'bg-[rgb(var(--color-primary-100))]',
-        hover: 'hover:bg-[rgb(var(--color-primary-200))]',
-        text: 'text-[rgb(var(--color-text-900))]'
-      };
+      bg = 'bg-[rgb(var(--color-accent-100))]';
+      hover = 'hover:bg-[rgb(var(--color-accent-200))]';
+      text = 'text-[rgb(var(--color-text-900))]';
+      break;
   }
+
+  return { bg, hover, text };
 };

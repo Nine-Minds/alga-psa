@@ -79,6 +79,8 @@ export const CalendarStyleProvider: React.FC = () => {
       }
       .rbc-allday-cell {
         border-bottom: 1px solid rgb(var(--color-border-200));
+        max-height: 40px;
+        overflow: auto;
       }
       .rbc-time-header.rbc-overflowing {
         border-right: 1px solid rgb(var(--color-border-200));

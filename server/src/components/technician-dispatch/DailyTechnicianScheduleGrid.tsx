@@ -5,6 +5,8 @@ import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import TimeHeader from './TimeHeader';
 import TechnicianRow from './TechnicianRow';
+import { Button } from 'server/src/components/ui/Button';
+import { CalendarDays } from 'lucide-react';
 
 // Discriminated union type for drop events
 interface WorkItemDrop {
@@ -39,7 +41,7 @@ interface HighlightedSlot {
   timeSlot: string;
 }
 
-interface TechnicianScheduleGridProps {
+interface DailyTechnicianScheduleGridProps {
   technicians: Omit<IUser, 'tenant'>[];
   events: Omit<IScheduleEntry, 'tenant'>[];
   selectedDate: Date;
@@ -47,16 +49,18 @@ interface TechnicianScheduleGridProps {
   onResize: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
   onDeleteEvent: (eventId: string) => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
+  onTechnicianClick: (technicianId: string) => void;
 }
 
-const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
+const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = ({
   technicians,
   events,
   selectedDate,
   onDrop,
   onResize,
   onDeleteEvent,
-  onEventClick
+  onEventClick,
+  onTechnicianClick
 }) => {
   const scheduleGridRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -520,9 +524,20 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
           {technicians.map((tech) => (
             <div
               key={tech.user_id}
-              className="h-16 mb-4 flex items-center text-[rgb(var(--color-text-700))] pl-2"
+              className="h-16 mb-4 flex items-center justify-between text-[rgb(var(--color-text-700))] pl-2 pr-2"
             >
-              {tech.first_name} {tech.last_name}
+              <span className="truncate">{tech.first_name} {tech.last_name}</span>
+              <Button
+                id={`view-week-${tech.user_id}`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onTechnicianClick(tech.user_id)}
+                tooltipText="View Week"
+                tooltip={true}
+                aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+              >
+                <CalendarDays className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
@@ -586,9 +601,10 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
                   onEventMouseDown={handleMouseDown}
                   onEventDelete={handleDelete}
                   onEventResizeStart={handleResizeStart}
-                  onEventClick={onEventClick} // Pass prop down to TechnicianRow
+                  onEventClick={onEventClick}
+                  onTechnicianClick={onTechnicianClick}
                 />
-              ))}
+                ))}
             </div>
           </div>
         </div>
@@ -596,4 +612,4 @@ const TechnicianScheduleGrid: React.FC<TechnicianScheduleGridProps> = ({
   );
 };
 
-export default TechnicianScheduleGrid;
+export default DailyTechnicianScheduleGrid;

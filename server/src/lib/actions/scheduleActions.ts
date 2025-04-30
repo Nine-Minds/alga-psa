@@ -9,10 +9,21 @@ export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
 
-export async function getScheduleEntries(start: Date, end: Date): Promise<ScheduleActionResult<IScheduleEntry[]>> {
+export async function getScheduleEntries(
+  start: Date,
+  end: Date,
+  technicianIds?: string[]
+): Promise<ScheduleActionResult<IScheduleEntry[]>> {
   try {
-    const entries = await ScheduleEntry.getAll(start, end);
-    return { success: true, entries };
+    const allEntries = await ScheduleEntry.getAll(start, end);
+
+    const filteredEntries = technicianIds && technicianIds.length > 0
+      ? allEntries.filter(entry =>
+          entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId))
+        )
+      : allEntries;
+
+    return { success: true, entries: filteredEntries };
   } catch (error) {
     console.error('Error fetching schedule entries:', error);
     return { success: false, error: 'Failed to fetch schedule entries' };

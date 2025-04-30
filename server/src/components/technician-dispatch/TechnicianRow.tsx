@@ -27,6 +27,7 @@ interface TechnicianRowProps {
   onEventDelete: (e: React.MouseEvent, eventId: string) => void;
   onEventResizeStart: (e: React.MouseEvent, event: Omit<IScheduleEntry, 'tenant'>, direction: 'left' | 'right') => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
+  onTechnicianClick: (technicianId: string) => void;
 }
 
 const TechnicianRow: React.FC<TechnicianRowProps> = ({
@@ -46,7 +47,8 @@ const TechnicianRow: React.FC<TechnicianRowProps> = ({
   onEventDelete,
   onEventResizeStart,
   isResizing,
-  onEventClick, // Destructure new prop
+  onEventClick,
+  onTechnicianClick,
 }) => {
   return (
     <div
