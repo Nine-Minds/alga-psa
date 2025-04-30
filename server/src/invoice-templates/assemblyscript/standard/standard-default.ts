@@ -2,7 +2,7 @@
 import { JSON } from "json-as";
 import {
   InvoiceViewModel, InvoiceItem,
-  LayoutElement, ElementStyle, RowElement, ColumnElement, DocumentElement, SectionElement, TextElement,
+  LayoutElement, ElementStyle, RowElement, ColumnElement, DocumentElement, SectionElement, TextElement, ImageElement,
   log
 } from "../assembly/types"; // Adjusted import path
 import { applyStyle, instantiateStyle, PartialStyle } from "../assembly/common/style-helpers"; // Adjusted import path
@@ -24,6 +24,7 @@ export function generateLayout(dataString: string): string {
   const viewModel = JSON.parse<InvoiceViewModel>(dataString);
 
   // Basic validation after parsing
+  // Check for null customer object after the change in types.ts
   if (!viewModel || viewModel.invoiceNumber == null || viewModel.invoiceNumber == "") {
     log("Wasm (standard-default): Error - Deserialization failed or key property missing.");
     const errorDoc = new DocumentElement([new TextElement("Error: Invalid input data.")]);
@@ -40,10 +41,37 @@ export function generateLayout(dataString: string): string {
   const calculatedTotal = calculatedSubtotal + calculatedTax;
   const totalsSection = createTotalsSection_StdDefault(calculatedSubtotal, calculatedTax, calculatedTotal);
 
+  // Create Notes Section with Thank You message
+  const notesContent = new Array<LayoutElement>();
+  
+  // Add notes from the viewModel if available
+  if (viewModel.notes && viewModel.notes!.length > 0) {
+    notesContent.push(new TextElement("Notes:", "heading3"));
+    notesContent.push(new TextElement(viewModel.notes!));
+  }
+  
+  // Add "Thank you" message
+  const thankYouText = new TextElement("Thank you for your business!");
+  const thankYouStyle = new ElementStyle();
+  thankYouStyle.marginTop = "1em";
+  thankYouStyle.paddingLeft = "0.5em";
+  applyStyle(thankYouText, thankYouStyle);
+  notesContent.push(thankYouText);
+  
+  // Create Notes Section
+  const notesSection = new SectionElement(notesContent);
+  notesSection.id = "invoice-notes-std-default";
+  
+  const notesSectionStyle = new ElementStyle();
+  notesSectionStyle.marginTop = "2em";
+  applyStyle(notesSection, notesSectionStyle);
+  
+  // Add all sections to document
   const document = new DocumentElement([
     headerSection,
     itemsSection,
-    totalsSection
+    totalsSection,
+    notesSection
   ]);
   document.id = "invoice-document-standard-default";
 
@@ -62,24 +90,80 @@ function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionEle
   //          field invoice_number at 10 1 span 3 1
   //          field invoice_date at 10 2 span 3 1
   //      }
-  // Note: Accessing company logo/name requires these fields on InvoiceViewModel or host functions.
-  // Assuming they are available for now. If not, use placeholders or adjust ViewModel.
-  const logoCol = new ColumnElement([/* TODO: Add ImageElement if logo URL available */ new TextElement("[Logo Placeholder]")]);
-  logoCol.span = 3; // Roughly corresponds to span 3 2 in a 12-col grid (adjust as needed)
+  
+  // --- Logo Column ---
+  let logoCol: ColumnElement;
+  // Check if tenantCompany and logoUrl exist
+  if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
+    const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
+    
+    // Apply proper sizing to logo
+    const logoStyle = new PartialStyle();
+    logoStyle.width = "150px";
+    logoElement.style = instantiateStyle(logoStyle);
+    
+    logoCol = new ColumnElement([logoElement]);
+  } else {
+    // Placeholder if no logo URL is provided
+    logoCol = new ColumnElement([new TextElement("[Tenant Logo]")]);
+  }
+  logoCol.span = 3;
 
-  const companyNameCol = new ColumnElement([new TextElement(viewModel.customer.name)]); // Using customer name as placeholder for company name
-  companyNameCol.span = 5;
+  // --- Company Info Column ---
+  const tenantName = viewModel.tenantCompany != null && viewModel.tenantCompany!.name != null ? 
+                    viewModel.tenantCompany!.name! : 
+                    "[Tenant Name]";
+  const tenantAddress = viewModel.tenantCompany != null && viewModel.tenantCompany!.address != null ? 
+                        viewModel.tenantCompany!.address! : 
+                        "[Tenant Address]";
+  
+  const companyInfoCol = new ColumnElement([
+    new TextElement(tenantName, "heading3"),
+    new TextElement(tenantAddress)
+  ]);
+  companyInfoCol.span = 5;
+  
+  // Apply padding to company info
+  const companyInfoStyle = new PartialStyle();
+  companyInfoStyle.paddingLeft = "0.5em";
+  companyInfoStyle.paddingTop = "0.5em";
+  applyStyle(companyInfoCol, instantiateStyle(companyInfoStyle));
 
+  // --- Invoice Info Column ---
   const invoiceInfoCol = new ColumnElement([
     new TextElement("Invoice #: " + viewModel.invoiceNumber),
-    new TextElement("Date: " + viewModel.issueDate) // Using issueDate for invoice_date
+    new TextElement("Date: " + viewModel.issueDate)
   ]);
-  invoiceInfoCol.span = 4; // Adjust span to fit 12 columns (3+5+4 = 12)
-  applyStyle(invoiceInfoCol, instantiateStyle(new PartialStyle("right"))); // Align right
+  invoiceInfoCol.span = 4;
+  
+  // Create right-align style with padding
+  const rightAlignStyle = new PartialStyle();
+  rightAlignStyle.textAlign = "right";
+  rightAlignStyle.paddingRight = "0.5em";
+  applyStyle(invoiceInfoCol, instantiateStyle(rightAlignStyle));
 
-  const headerRow = new RowElement([logoCol, companyNameCol, invoiceInfoCol]);
-  const headerSection = new SectionElement([headerRow]);
+  // --- Customer Info Row ---
+  const customerInfoCol = new ColumnElement([
+    new TextElement("Bill To:", "heading3"),
+    new TextElement(viewModel.customer ? viewModel.customer!.name : "[Customer Name]"), // Add null check
+    new TextElement(viewModel.customer ? viewModel.customer!.address : "[Customer Address]") // Add null check
+  ]);
+  customerInfoCol.span = 6;
+  
+  // Apply padding to improve visual layout
+  const customerInfoStyle = new PartialStyle();
+  customerInfoStyle.paddingLeft = "1em";
+  customerInfoStyle.paddingTop = "0.5em";
+  applyStyle(customerInfoCol, instantiateStyle(customerInfoStyle));
+  
+  // Create header rows
+  const headerRow1 = new RowElement([logoCol, companyInfoCol, invoiceInfoCol]);
+  const headerRow2 = new RowElement([customerInfoCol]);
+  
+  // Create and return the header section
+  const headerSection = new SectionElement([headerRow1, headerRow2]);
   headerSection.id = "invoice-header-std-default";
+  
   return headerSection;
 }
 
@@ -123,30 +207,86 @@ function createItemsSection_StdDefault(items: Array<InvoiceItem>): ItemsSectionR
         const category = categories[i]; // Access using index
         const categoryItems = groupedItems.get(category); // Get items for this category
 
-        // Add Category Header (Optional, DSL doesn't explicitly show it but implies grouping)
-        const categoryHeader = new TextElement(category, "heading3"); // Use smaller heading
-        applyStyle(categoryHeader, instantiateStyle(new PartialStyle(null, null, "1px solid #eee", "0.2em", "1em")));
+        // Add Category Header with improved styling
+        const categoryHeader = new TextElement(category, "heading3");
+        
+        // Apply style to category header
+        const categoryHeaderTextStyle = new PartialStyle();
+        categoryHeaderTextStyle.marginTop = "1em"; // Add space above the header
+        categoryHeaderTextStyle.paddingBottom = "0.2em"; // Small space below text before table section
+        categoryHeaderTextStyle.paddingLeft = "0.5em"; // Left padding for alignment
+        applyStyle(categoryHeader, instantiateStyle(categoryHeaderTextStyle));
+        
         sectionChildren.push(categoryHeader);
-
+        
+        // Create section for items table with border and padding
+        const itemsTableChildren = new Array<LayoutElement>();
+        
         // Add Item Table Header Row
-        sectionChildren.push(createItemTableHeaderRow_StdDefault());
+        itemsTableChildren.push(createItemTableHeaderRow_StdDefault());
 
         // Add Item Rows
         // Check if categoryItems is not null before iterating
         if (categoryItems) {
             for (let j = 0; j < categoryItems.length; j++) {
                 const item = categoryItems[j];
-                const itemRow = new RowElement([
-                    // Column spans adjusted to fit 4 columns: 6, 2, 2, 2 (total 12)
-                applyStyle(new ColumnElement([new TextElement(item.description)]), instantiateStyle(new PartialStyle())), // Span 6
-                applyStyle(new ColumnElement([new TextElement(item.quantity.toString())]), instantiateStyle(new PartialStyle("right"))), // Span 2
-                applyStyle(new ColumnElement([new TextElement(formatCurrency(item.unitPrice))]), instantiateStyle(new PartialStyle("right"))), // Span 2
-                applyStyle(new ColumnElement([new TextElement(formatCurrency(item.total))]), instantiateStyle(new PartialStyle("right"))), // Span 2
-            ]);
-            itemRow.id = "item-row-" + item.id;
-            sectionChildren.push(itemRow);
+                const formattedUnitPrice = formatCurrency(item.unitPrice);
+                const formattedTotal = formatCurrency(item.total);
+                
+                // Description column with left padding
+                const defaultStyleForRow = new PartialStyle();
+                defaultStyleForRow.paddingLeft = "0.5em";  // Add left padding to description
+                const itemDescCol = applyStyle(new ColumnElement([new TextElement(item.description)]), instantiateStyle(defaultStyleForRow));
+                itemDescCol.span = 6;
+                
+                // Quantity column with right alignment
+                const rightAlignStyleForRow = new PartialStyle();
+                rightAlignStyleForRow.textAlign = "right";
+                const itemQtyCol = applyStyle(new ColumnElement([new TextElement(item.quantity.toString())]), instantiateStyle(rightAlignStyleForRow));
+                itemQtyCol.span = 2;
+                
+                // Price column with right alignment
+                const itemPriceCol = applyStyle(new ColumnElement([new TextElement(formattedUnitPrice)]), instantiateStyle(rightAlignStyleForRow));
+                itemPriceCol.span = 2;
+                
+                // Total column with right alignment and right padding
+                const itemTotalRightStyle = new PartialStyle();
+                itemTotalRightStyle.textAlign = "right";
+                itemTotalRightStyle.paddingRight = "0.5em"; // Add right padding to price
+                const itemTotalCol = applyStyle(new ColumnElement([new TextElement(formattedTotal)]), instantiateStyle(itemTotalRightStyle));
+                itemTotalCol.span = 2;
+                
+                // Create the item row with improved styling
+                const itemRow = new RowElement([itemDescCol, itemQtyCol, itemPriceCol, itemTotalCol]);
+                itemRow.id = "item-row-" + item.id;
+                
+                // Add row styling with proper padding
+                const itemRowStyle = new PartialStyle();
+                itemRowStyle.borderBottom = "0px";
+                itemRowStyle.paddingTop = "0.3em";
+                itemRowStyle.paddingBottom = "0.3em";
+                applyStyle(itemRow, instantiateStyle(itemRowStyle));
+                
+                itemsTableChildren.push(itemRow);
             }
         }
+        
+        // Create the section element for the items table
+        const itemsTableSection = new SectionElement(itemsTableChildren);
+        itemsTableSection.id = "items-table-section-" + category.replace(" ", "-").toLowerCase();
+        
+        // Apply border and padding to the items table section
+        const itemsSectionStyle = new PartialStyle();
+        itemsSectionStyle.border = "1px solid #ccc"; // Use border shorthand
+        itemsSectionStyle.paddingTop = "1em";       // Add top padding
+        itemsSectionStyle.paddingBottom = "1em";    // Add bottom padding
+        itemsSectionStyle.paddingLeft = "1em";      // Add left padding
+        itemsSectionStyle.paddingRight = "1em";     // Add right padding
+        itemsSectionStyle.marginBottom = "1em";     // Add bottom margin
+        applyStyle(itemsTableSection, instantiateStyle(itemsSectionStyle));
+        
+        // Add the section to the parent
+        sectionChildren.push(itemsTableSection);
     }
 
     const itemsSection = new SectionElement(sectionChildren);
@@ -155,18 +295,58 @@ function createItemsSection_StdDefault(items: Array<InvoiceItem>): ItemsSectionR
 }
 
 function createItemTableHeaderRow_StdDefault(): RowElement {
-    // Corresponds to fields: description, quantity, price, total
-    const headerRow = new RowElement([
-        applyStyle(new ColumnElement([new TextElement("Description", "label")]), instantiateStyle(new PartialStyle())), // Span 6
-        applyStyle(new ColumnElement([new TextElement("Qty", "label")]), instantiateStyle(new PartialStyle("right"))), // Span 2
-        applyStyle(new ColumnElement([new TextElement("Unit Price", "label")]), instantiateStyle(new PartialStyle("right"))), // Span 2
-        applyStyle(new ColumnElement([new TextElement("Total", "label")]), instantiateStyle(new PartialStyle("right"))), // Span 2
-    ]);
+    // Description Column
+    const descPartialStyle = new PartialStyle();
+    descPartialStyle.paddingLeft = "0.5em";  // Add left padding to match item rows
+    const descElementStyle = instantiateStyle(descPartialStyle);
+    const descTextElement = new TextElement("Description", "label");
+    const descColumnElement = new ColumnElement([descTextElement]);
+    const descCol = applyStyle(descColumnElement, descElementStyle);
+    descCol.span = 6;
+
+    // Quantity Column
+    const qtyPartialStyle = new PartialStyle();
+    qtyPartialStyle.textAlign = "right";
+    const qtyElementStyle = instantiateStyle(qtyPartialStyle);
+    const qtyTextElement = new TextElement("Qty", "label");
+    const qtyColumnElement = new ColumnElement([qtyTextElement]);
+    const qtyCol = applyStyle(qtyColumnElement, qtyElementStyle);
+    qtyCol.span = 2;
+
+    // Price Column
+    const pricePartialStyle = new PartialStyle();
+    pricePartialStyle.textAlign = "right";
+    const priceElementStyle = instantiateStyle(pricePartialStyle);
+    const priceTextElement = new TextElement("Unit Price", "label");
+    const priceColumnElement = new ColumnElement([priceTextElement]);
+    const priceCol = applyStyle(priceColumnElement, priceElementStyle);
+    priceCol.span = 2;
+
+    // Total Column
+    const totalPartialStyle = new PartialStyle();
+    totalPartialStyle.textAlign = "right";
+    const totalElementStyle = instantiateStyle(totalPartialStyle);
+    const totalTextElement = new TextElement("Total", "label");
+    
+    const totalTextElementStyle = new PartialStyle();
+    totalTextElementStyle.fontWeight = "bold";
+    totalTextElementStyle.paddingRight = "0.5em";  // Add proper right padding
+    totalTextElement.style = instantiateStyle(totalTextElementStyle);
+    
+    const totalColumnElement = new ColumnElement([totalTextElement]);
+    const totalCol = applyStyle(totalColumnElement, totalElementStyle);
+    totalCol.span = 2;
+
+    // Create the header row with all columns
+    const headerRow = new RowElement([descCol, qtyCol, priceCol, totalCol]);
+
+    // Apply styling to the entire row
     const headerStyle = new ElementStyle();
     headerStyle.fontWeight = "bold";
     headerStyle.borderBottom = "1px solid #ccc";
     headerStyle.paddingBottom = "0.5em";
     applyStyle(headerRow, headerStyle);
+    
     return headerRow;
 }
 
@@ -190,25 +370,43 @@ function createTotalsSection_StdDefault(subtotal: f64, tax: f64, total: f64): Se
         new TextElement("Total")
     ]);
     labelCol.span = 2;
-    applyStyle(labelCol, instantiateStyle(new PartialStyle("right")));
+    
+    // Create right-aligned style with padding for labels
+    const totalsLabelStyle = new PartialStyle();
+    totalsLabelStyle.textAlign = "right";
+    totalsLabelStyle.paddingRight = "1em"; // Add right padding to labels
+    applyStyle(labelCol, instantiateStyle(totalsLabelStyle));
 
+    // Use bold font for the total value
+    const totalValue = new TextElement(formatCurrency(total));
+    const totalValueStyle = new PartialStyle();
+    totalValueStyle.fontWeight = "bold";
+    applyStyle(totalValue, instantiateStyle(totalValueStyle));
+    
     const valueCol = new ColumnElement([
         new TextElement(formatCurrency(subtotal)),
         new TextElement(formatCurrency(tax)),
-        applyStyle(new TextElement(formatCurrency(total)), instantiateStyle(new PartialStyle(null, "bold"))) // Apply bold style to total value
+        totalValue
     ]);
     valueCol.span = 3;
-    applyStyle(valueCol, instantiateStyle(new PartialStyle("right")));
+    
+    // Add right-aligned style with padding for values
+    const totalsValueStyle = new PartialStyle();
+    totalsValueStyle.textAlign = "right";
+    totalsValueStyle.paddingRight = "0.5em"; // Add right padding to values
+    applyStyle(valueCol, instantiateStyle(totalsValueStyle));
 
-
+    // Create totals row and section
     const totalsRow = new RowElement([spacerCol, labelCol, valueCol]);
     const totalsSection = new SectionElement([totalsRow]);
     totalsSection.id = "invoice-totals-std-default";
-    // Add top border for separation
+    
+    // Add top border and proper spacing
     const sectionStyle = new ElementStyle();
     sectionStyle.borderTop = "1px solid #eee";
     sectionStyle.paddingTop = "1em";
     sectionStyle.marginTop = "1em";
+    sectionStyle.paddingBottom = "1em"; // Add bottom padding
     applyStyle(totalsSection, sectionStyle);
 
     return totalsSection;

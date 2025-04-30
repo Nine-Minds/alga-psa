@@ -2,7 +2,7 @@
  * Represents the input data provided to the Wasm template engine.
  * This is a placeholder and should be expanded based on actual invoice data needs.
  */
-export interface InvoiceViewModel {
+export interface WasmInvoiceViewModel {
   invoiceNumber: string;
   issueDate: string; // Consider using ISO8601String or a specific date format
   dueDate: string;   // Consider using ISO8601String or a specific date format
@@ -10,6 +10,12 @@ export interface InvoiceViewModel {
     name: string;
     address: string;
   };
+  tenantCompany: { // Details of the company issuing the invoice (the tenant)
+    name: string | null;
+    address: string | null;
+    logoUrl: string | null;
+  } | null;
+  companyLogoUrl?: string; // Optional company logo URL - KEEPING FOR NOW, maybe rename/remove later?
   items: Array<{
     id: string; // Add an ID for better referencing
     description: string;
@@ -212,6 +218,6 @@ export interface HostFunctions {
 // This will be implemented in Task 4 & 5
 
 export type RenderInvoiceFunction = (
-  data: InvoiceViewModel,
+  data: WasmInvoiceViewModel,
   templateWasm: Buffer
 ) => Promise<RenderOutput>; // Assuming async operation for Wasm execution/rendering

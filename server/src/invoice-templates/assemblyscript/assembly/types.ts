@@ -40,6 +40,13 @@ export class TimeEntry { // Keep exported, ensure structure matches host
     description: string = "";
 }
 
+// @ts-ignore: decorator is valid
+@json
+export class TenantCompany { // New class mirroring host structure
+    name: string | null = null;
+    address: string | null = null;
+    logoUrl: string | null = null;
+}
 
 // @ts-ignore: decorator is valid
 @json // Use lowercase decorator
@@ -47,13 +54,15 @@ export class InvoiceViewModel {
   invoiceNumber: string = ""; // Initialize
   issueDate: string = ""; // Initialize
   dueDate: string = ""; // Initialize
-  customer: Customer = new Customer(); // Use Customer class
+  customer: Customer | null = null; // Initialize as null
+  tenantCompany: TenantCompany | null = null; // ADDED tenantCompany field
   items: Array<InvoiceItem> = []; // Use InvoiceItem class
   subtotal: f64 = 0.0; // Initialize
   tax: f64 = 0.0; // Initialize
   total: f64 = 0.0; // Initialize
   notes: string | null = null; // Keep as string | null for now, initialize
   timeEntries: Array<TimeEntry> | null = null; // Use TimeEntry class, nullable array
+  companyLogoUrl: string | null = null; // KEEPING OLD FIELD FOR NOW - might be removable later
 }
 
 // --- Layout Data Structure (for Wasm to return) ---

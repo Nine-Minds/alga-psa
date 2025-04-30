@@ -5,12 +5,15 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
+// Import the interface InvoiceViewModel and other necessary types
 import {
-  InvoiceViewModel,
   IInvoiceItem,
   IInvoice,
-  PreviewInvoiceResponse
+  PreviewInvoiceResponse,
+  InvoiceViewModel // Restore import from interfaces
 } from 'server/src/interfaces/invoice.interfaces';
+// Import the renderer's ViewModel and alias it
+import { WasmInvoiceViewModel } from '../invoice-renderer/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { getServerSession } from "next-auth/next";
@@ -26,6 +29,8 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
+// Import the missing utility function
+import { getCompanyLogoUrl } from '../utils/avatarUtils';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
@@ -137,6 +142,69 @@ function getPaymentTermDays(paymentTerms: string): number {
     default:
       return 30; // Default to 30 days if unknown payment term
   }
+}
+
+// Adapter function to convert data to WasmInvoiceViewModel
+async function adaptToWasmViewModel(
+  billingResult: IBillingResult,
+  company: ICompany | null,
+  invoiceItems: IInvoiceItem[],
+  dueDate: string,
+  previewTax: number,
+  tenant: string | null // Added tenant for fetching tenant company info
+): Promise<WasmInvoiceViewModel> {
+  // Fetch Tenant Company Info (similar logic to getFullInvoiceById)
+  let tenantCompanyInfo = null;
+  if (tenant) {
+    const { knex } = await createTenantKnex(); // Get knex instance again if needed
+    const tenantCompanyLink = await knex('tenant_companies')
+      .where({ tenant_id: tenant, is_default: true })
+      .select('company_id')
+      .first();
+
+    if (tenantCompanyLink) {
+      const tenantCompanyDetails = await knex('companies')
+        .where({ company_id: tenantCompanyLink.company_id })
+        .select('company_name', 'address')
+        .first();
+
+      if (tenantCompanyDetails) {
+        // Assuming getCompanyLogoUrl is accessible or import it
+        // import { getCompanyLogoUrl } from '../utils/avatarUtils';
+        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, tenant);
+        tenantCompanyInfo = {
+          name: tenantCompanyDetails.company_name,
+          address: tenantCompanyDetails.address,
+          logoUrl: logoUrl || null, // Use null if logoUrl is empty/null
+        };
+      }
+    }
+  }
+
+
+  const previewViewModelItems = invoiceItems.map(item => ({
+    id: item.item_id,
+    description: item.description,
+    quantity: item.quantity,
+    unitPrice: item.unit_price,
+    total: item.total_price
+  }));
+
+  return {
+    invoiceNumber: 'PREVIEW',
+    issueDate: toISODate(Temporal.Now.plainDateISO()),
+    dueDate: dueDate,
+    customer: {
+      name: company?.company_name || 'N/A',
+      address: company?.address || 'N/A',
+    },
+    tenantCompany: tenantCompanyInfo, // Use fetched tenant company info
+    items: previewViewModelItems,
+    subtotal: billingResult.totalAmount,
+    tax: previewTax,
+    total: billingResult.totalAmount + previewTax,
+    // notes: undefined, // Add if needed
+  };
 }
 
 
@@ -277,35 +345,32 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       });
     }
 
-    const previewInvoice: InvoiceViewModel = {
-      invoice_id: 'preview-' + billing_cycle_id,
-      invoice_number: 'PREVIEW',
-      company_id,
-      company: {
-        name: company?.company_name || '',
-        logo: '',
-        address: company?.address || ''
-      },
-      contact: {
-        name: '',
-        address: ''
-      },
-      invoice_date: toISODate(Temporal.Now.plainDateISO()), // Keep as ISO string
-      due_date: due_date, // Keep as ISO string (already fetched as ISO)
-      status: 'draft',
-      subtotal: billingResult.totalAmount,
-      tax: await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''), // Uses local helper
-      total: billingResult.totalAmount + await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''), // Uses local helper
-      total_amount: billingResult.totalAmount + await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || ''), // Uses local helper
-      credit_applied: 0,
-      billing_cycle_id,
-      is_manual: false,
-      invoice_items: invoiceItems
-    };
+    // Calculate tax and total for the preview
+    const previewTax = await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || '');
+    const previewTotal = billingResult.totalAmount + previewTax;
+
+    // Map IInvoiceItem[] to the structure expected by InvoiceViewModel.items
+    const previewViewModelItems = invoiceItems.map(item => ({
+      id: item.item_id,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unit_price, // Assuming unit_price is correct here
+      total: item.total_price // Assuming total_price is correct here (net + tax?) - might need adjustment based on ViewModel definition
+    }));
+
+    // Use the adapter function to create the WasmInvoiceViewModel
+    const previewData = await adaptToWasmViewModel(
+      billingResult,
+      company,
+      invoiceItems,
+      due_date,
+      previewTax,
+      tenant // Pass tenant to adapter
+    );
 
     return {
       success: true,
-      data: previewInvoice
+      data: previewData
     };
   } catch (error) {
     return {
@@ -315,6 +380,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   }
 }
 
+// Update return type to the interface InvoiceViewModel
 export async function generateInvoice(billing_cycle_id: string): Promise<InvoiceViewModel | null> {
   const session = await getServerSession(options);
   if (!session?.user?.id) {
@@ -412,6 +478,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
       console.warn('finalizeInvoiceWithKnex needs to be imported and called here for zero-dollar finalized invoices.');
     }
 
+console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
     return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
   }
 
@@ -444,6 +511,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   // Pass the ISO timestamp to rolloverUnapprovedTime
   await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingTimestamp);
 
+console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
   return await Invoice.getFullInvoiceById(createdInvoice.invoice_id);
 }
 

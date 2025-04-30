@@ -1,5 +1,6 @@
 import { DateValue, ISO8601String } from '@shared/types/temporal';
 import { TenantEntity } from './index';
+import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
@@ -244,7 +245,7 @@ export interface IConditionalRule {
 
 export type PreviewInvoiceResponse = {
   success: true;
-  data: InvoiceViewModel;
+  data: WasmInvoiceViewModel; // Use the imported ViewModel alias
 } | {
   success: false;
   error: string;

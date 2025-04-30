@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 // Removed Buffer import - no longer needed client-side
 // Use the InvoiceViewModel type definition expected by the renderer
-import type { InvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces'; // Keep this for template structure
 // Removed getCompiledWasm, executeWasmTemplate, renderLayout imports
 // Import the new server action
@@ -12,7 +12,7 @@ import { renderTemplateOnServer } from 'server/src/lib/actions/invoiceTemplates'
 interface TemplateRendererProps {
   template: IInvoiceTemplate | null; // Allow null template
   // Use the correct InvoiceViewModel type for the prop
-  invoiceData: InvoiceViewModel | null; // Allow null invoiceData
+  invoiceData: WasmInvoiceViewModel | null; // Allow null invoiceData
 }
 
 export function TemplateRenderer({ template, invoiceData }: TemplateRendererProps) {

@@ -1,7 +1,7 @@
 // server/src/components/InvoiceTemplateManager.tsx
 import React, { useState } from 'react';
 // Import the type expected by the renderer
-import type { InvoiceViewModel as RendererInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel as RendererInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 // Import the type used by sample data, aliasing it
 import type { IInvoiceTemplate, InvoiceViewModel as SampleInvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { TemplateRenderer } from './TemplateRenderer';
@@ -36,6 +36,11 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
       // Convert Temporal dates to ISO strings
       issueDate: sample.invoice_date.toString(),
       dueDate: sample.due_date.toString(),
+      tenantCompany: {
+        name: sample.company?.name || null, // Use company name from sample
+        address: sample.company?.address || null, // Use company address
+        logoUrl: sample.company?.logo || null // Use company logo if available
+      },
       customer: {
         name: sample.contact?.name || 'N/A', // Use contact name for customer name
         address: sample.contact?.address || 'N/A', // Use contact address

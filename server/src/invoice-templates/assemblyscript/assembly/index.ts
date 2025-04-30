@@ -10,6 +10,7 @@ import {
   DocumentElement,
   SectionElement,
   TextElement,
+  ImageElement,
   log // Import the declared host function
 } from "./types";
 import { applyStyle, instantiateStyle, PartialStyle } from "./common/style-helpers";
@@ -119,19 +120,41 @@ export function generateLayout(dataString: string): string {
 // --- Helper Functions for Section Creation ---
 
 function createHeaderSection(viewModel: InvoiceViewModel): SectionElement {
-    const headerSection = new SectionElement([
-        new RowElement([
-            new ColumnElement([new TextElement("Invoice", "heading1")]),
-            applyStyle<ColumnElement>(
-                new ColumnElement([
-                    new TextElement("Invoice #: " + viewModel.invoiceNumber),
-                    new TextElement("Date Issued: " + viewModel.issueDate),
-                    new TextElement("Due Date: " + viewModel.dueDate),
-                ]),
-                instantiateStyle(new PartialStyle( "right")) // Align right
-            )
-        ])
+    // --- Tenant Logo Column ---
+    let logoCol: ColumnElement;
+    if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
+        const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
+        logoElement.style = instantiateStyle(new PartialStyle("width", "150px")); // Keep existing style
+        logoCol = new ColumnElement([logoElement]);
+    } else {
+        logoCol = new ColumnElement([new TextElement("[Tenant Logo]")]); // Placeholder
+    }
+    logoCol.span = 3; // Example span
+
+    // --- Tenant Info Column ---
+    const tenantName = viewModel.tenantCompany != null && viewModel.tenantCompany!.name != null ? viewModel.tenantCompany!.name! : "[Tenant Name]";
+    const tenantAddress = viewModel.tenantCompany != null && viewModel.tenantCompany!.address != null ? viewModel.tenantCompany!.address! : "[Tenant Address]";
+    const tenantInfoCol = new ColumnElement([
+        new TextElement(tenantName, "heading3"),
+        new TextElement(tenantAddress)
     ]);
+    tenantInfoCol.span = 5; // Example span
+
+    // --- Invoice Info Column ---
+    const invoiceInfoCol = applyStyle<ColumnElement>(
+        new ColumnElement([
+            new TextElement("Invoice #: " + viewModel.invoiceNumber),
+            new TextElement("Date Issued: " + viewModel.issueDate),
+            new TextElement("Due Date: " + viewModel.dueDate),
+        ]),
+        instantiateStyle(new PartialStyle("right")) // Keep right alignment
+    );
+    invoiceInfoCol.span = 4; // Example span
+
+    // --- Assemble Row and Section ---
+    const headerRow = new RowElement([logoCol, tenantInfoCol, invoiceInfoCol]); // Add all columns to the row
+
+    const headerSection = new SectionElement([headerRow]);
     headerSection.id = "invoice-header";
     return headerSection;
 }

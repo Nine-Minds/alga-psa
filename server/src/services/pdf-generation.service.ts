@@ -7,9 +7,11 @@ import { getInvoiceTemplates, getCompiledWasm } from '../lib/actions/invoiceTemp
 // Removed: import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
 // Removed: import React from 'react';
 import { runWithTenant, createTenantKnex } from '../lib/db';
+// Import getCompanyLogoUrl
+import { getCompanyLogoUrl } from '../lib/utils/avatarUtils';
 import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
 import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import type { InvoiceViewModel as WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Alias for clarity
+import type { WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Alias for clarity
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from '../interfaces/invoice.interfaces'; // Alias for clarity
 import { DateValue } from '@shared/types/temporal'; // Import DateValue if needed for conversion
 
@@ -75,7 +77,32 @@ export class PDFGenerationService {
 
 
   // Helper function to map DB Invoice data to the Wasm Renderer's ViewModel
-  private mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): WasmInvoiceViewModel {
+  // Make it async to allow fetching tenant company info
+  private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
+    // Fetch Tenant Company Info
+    let tenantCompanyInfo = null;
+    const { knex } = await createTenantKnex(); // Get knex instance
+    const tenantCompanyLink = await knex('tenant_companies')
+      .where({ tenant_id: this.tenant, is_default: true }) // Use this.tenant
+      .select('company_id')
+      .first();
+
+    if (tenantCompanyLink) {
+      const tenantCompanyDetails = await knex('companies')
+        .where({ company_id: tenantCompanyLink.company_id })
+        .select('company_name', 'address')
+        .first();
+
+      if (tenantCompanyDetails) {
+        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, this.tenant); // Use this.tenant
+        tenantCompanyInfo = {
+          name: tenantCompanyDetails.company_name,
+          address: tenantCompanyDetails.address,
+          logoUrl: logoUrl || null,
+        };
+      }
+    }
+
     return {
       invoiceNumber: dbData.invoice_number,
       issueDate: this.formatDateValue(dbData.invoice_date),
@@ -97,6 +124,7 @@ export class PDFGenerationService {
       subtotal: dbData.subtotal,
       tax: dbData.tax,
       total: dbData.total_amount, // Map total_amount to total
+      tenantCompany: tenantCompanyInfo, // Include fetched tenant company info
       // notes: dbData.notes, // Add if notes exist in DbInvoiceViewModel
       // timeEntries: dbData.timeEntries, // Add if time entries exist
     };
@@ -148,7 +176,8 @@ export class PDFGenerationService {
       const wasmBuffer = await getCompiledWasm(template.template_id);
 
       // Map the fetched DB data to the ViewModel expected by the Wasm executor
-      const wasmInvoiceViewModel = this.mapInvoiceDataToViewModel(dbInvoiceData);
+      // Await the async mapping function
+      const wasmInvoiceViewModel = await this.mapInvoiceDataToViewModel(dbInvoiceData);
 
       // Execute the Wasm template with the correctly mapped data
       const layoutElement = await executeWasmTemplate(wasmInvoiceViewModel, wasmBuffer);
