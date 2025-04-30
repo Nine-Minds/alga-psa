@@ -116,6 +116,7 @@
     "as-json": "^1.0.2",
     "assemblyscript": "^0.27.36",
     "autoprefixer": "^10.4.20",
+    "copy-webpack-plugin": "^13.0.0",
     "eslint": "^9.18.0",
     "eslint-plugin-react": "^7.37.3",
     "globals": "^15.14.0",

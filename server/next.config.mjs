@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import CopyPlugin from 'copy-webpack-plugin';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +78,33 @@ const nextConfig = {
       config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
     } else {
       config.output.webassemblyModuleFilename = '../static/wasm/[modulehash].wasm';
+
+      // Copy the AssemblyScript source files needed at runtime for standard template sync
+      config.plugins.push(
+        new CopyPlugin({
+          patterns: [
+            {
+              from: path.resolve(__dirname, 'src/invoice-templates/assemblyscript'),
+              // Copy to a location relative to the server build output (.next/server/)
+              // so that path.resolve(process.cwd(), 'src/...') works at runtime
+              to: path.resolve(config.output.path, 'src/invoice-templates/assemblyscript'),
+              // Filter to only include necessary files if needed, but copying the whole dir is simpler
+              // filter: async (resourcePath) => resourcePath.endsWith('.ts') || resourcePath.includes('/standard/'),
+              globOptions: {
+                ignore: [
+                  // Ignore temporary or build artifact directories if they exist within
+                  '**/temp_compile/**',
+                  '**/node_modules/**',
+                  '**/*.wasm', // Don't copy wasm files this way
+                  '**/*.js', // Don't copy compiled JS
+                  '**/package.json',
+                  '**/tsconfig.json',
+                ],
+              },
+            },
+          ],
+        })
+      );
     }
 
 

@@ -241,9 +241,10 @@ export default class Invoice {
       .select(
         'template_id',
         'name',
-        'version'
-        // 'assemblyScriptSource', // Removed - Now stored as wasmBinary
-        // 'wasmPath' // Removed - Now stored as wasmBinary
+        'version',
+        'assemblyScriptSource', // Add assemblyScriptSource
+        'sha' // Add sha
+        // wasmBinary is intentionally excluded from the list view/clone source
       )
       .orderBy('name');
   }

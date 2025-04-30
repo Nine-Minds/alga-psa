@@ -131,6 +131,10 @@ body,
     --color-accent-800: 255 219 153;
     --color-accent-900: 255 237 204;
 
+    /* Destructive Colors */
+    --color-destructive: 220 38 38; /* red-600 */
+    --color-destructive-foreground: 254 226 226; /* red-100 */
+
     /* Sidebar Colors  */
     --color-sidebar-bg: #1b1a1a;
     --color-sidebar-text: #f5f5f5;
@@ -215,6 +219,9 @@ body,
     --color-accent-800: 179 109 33;
     --color-accent-900: 153 94 28;
 
+    /* Destructive Colors */
+    --color-destructive: 220 38 38; /* red-600 */
+    --color-destructive-foreground: 153 27 27; /* red-800 */
 
     /* Sidebar Colors  */
     --color-sidebar-bg: #0C111D;

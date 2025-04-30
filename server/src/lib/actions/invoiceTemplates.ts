@@ -99,9 +99,11 @@ export async function setCompanyTemplate(companyId: string, templateId: string |
         .update({ invoice_template_id: templateId });
 }
 
-// Note: This function might need further review/refactoring in later phases.
-// It now needs to handle both assemblyScriptSource and wasmBinary
-export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }): Promise<IInvoiceTemplate> {
+// Note: This function handles saving tenant-specific invoice templates, including compilation.
+// It returns a structured response indicating success, the saved template, or compilation errors.
+export async function saveInvoiceTemplate(
+    template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
+): Promise<{ success: boolean; template?: IInvoiceTemplate; compilationError?: { error: string; details?: string } }> {
     // The original function had `isStandard` check, assuming it's handled before calling or within Invoice.saveTemplate
     // if (template.isStandard) {
     //   throw new Error('Cannot modify standard templates');
@@ -154,54 +156,62 @@ export async function saveInvoiceTemplate(template: Omit<IInvoiceTemplate, 'tena
     // If we have AssemblyScript source but no WASM binary (or it's null), compile it
     if (templateToSaveWithoutFlags.assemblyScriptSource &&
         (!templateToSaveWithoutFlags.wasmBinary || templateToSaveWithoutFlags.wasmBinary === null)) {
-        console.log('Template has AssemblyScript source but no WASM binary, compiling...');
-        
-        try {
-            // Use compileAndSaveTemplate to compile the AssemblyScript source
-            const compileResult = await compileAndSaveTemplate(
-                { // Pass existing template_id if available
-                    template_id: templateToSaveWithoutFlags.template_id,
-                    name: templateToSaveWithoutFlags.name,
-                    version: templateToSaveWithoutFlags.version,
-                    is_default: templateToSaveWithoutFlags.is_default
-                },
-                templateToSaveWithoutFlags.assemblyScriptSource
-                // Third argument (existingWasmBinary) removed
-            );
+        console.log('Template has AssemblyScript source but no WASM binary, attempting compilation...');
 
-            if (compileResult.success) {
-                console.log('Successfully compiled AssemblyScript source to WASM binary');
-                // Use the compiled template
-                return compileResult.template;
-            } else {
-                console.error('Failed to compile AssemblyScript source:', compileResult.error);
-                // Continue with saving the template without WASM binary
-            }
-        } catch (compileError) {
-            console.error('Error compiling AssemblyScript source:', compileError);
-            // Continue with saving the template without WASM binary
+        // Use compileAndSaveTemplate to compile the AssemblyScript source AND save/update the template
+        const compileResult = await compileAndSaveTemplate(
+            { // Pass existing template_id if available
+                template_id: templateToSaveWithoutFlags.template_id,
+                name: templateToSaveWithoutFlags.name,
+                version: templateToSaveWithoutFlags.version,
+                is_default: templateToSaveWithoutFlags.is_default
+            },
+            templateToSaveWithoutFlags.assemblyScriptSource
+        );
+
+        if (compileResult.success) {
+            console.log('Successfully compiled and saved AssemblyScript source to WASM binary');
+            // Return the successful result including the saved template
+            return { success: true, template: compileResult.template };
+        } else {
+            console.error('Failed to compile AssemblyScript source:', compileResult.error, compileResult.details);
+            // Return the compilation error directly
+            return {
+                success: false,
+                compilationError: {
+                    error: compileResult.error,
+                    details: compileResult.details
+                }
+            };
+        }
+        // No need for a separate catch block here, compileAndSaveTemplate handles its internal errors
+        // and returns a structured error response.
+    } else {
+        // If no compilation was needed (e.g., source didn't change or no source provided),
+        // proceed to save the template metadata using Invoice.saveTemplate.
+        console.log('No compilation needed, saving template metadata directly...');
+        try {
+            // Pass the template to saveTemplate
+            const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutFlags);
+
+            console.log('Template metadata saved successfully (no compilation):', {
+                id: savedTemplate.template_id,
+                name: savedTemplate.name,
+                version: savedTemplate.version,
+                hasAssemblyScriptSource: 'assemblyScriptSource' in savedTemplate,
+                hasWasmBinary: 'wasmBinary' in savedTemplate
+            });
+
+            // Return success with the saved template (might lack wasmBinary if not compiled)
+            // Casting to IInvoiceTemplate, acknowledging wasmBinary might be missing if not compiled/fetched
+            return { success: true, template: savedTemplate as IInvoiceTemplate };
+
+        } catch (saveError: any) {
+            console.error('Error saving template metadata (no compilation):', saveError);
+            // Return a generic save failure
+            return { success: false };
         }
     }
-
-    // Pass the template to saveTemplate
-    const savedTemplate = await Invoice.saveTemplate(templateToSaveWithoutFlags);
-
-    console.log('Template saved successfully:', {
-        id: savedTemplate.template_id,
-        name: savedTemplate.name,
-        version: savedTemplate.version,
-        hasAssemblyScriptSource: 'assemblyScriptSource' in savedTemplate,
-        hasWasmBinary: 'wasmBinary' in savedTemplate
-    });
-
-    // Return the saved template data. The full template including AS/Wasm
-    // would typically be fetched separately if needed after saving metadata.
-    // We need to construct a valid IInvoiceTemplate return type, but AS/Wasm are missing.
-    // Fetching the full template again might be the cleanest approach, but for now,
-    // let's return what we have and assume the caller handles the missing fields.
-    // This might require adjusting the return type or fetching the full template.
-    // For now, casting to satisfy the type, acknowledging AS/Wasm are missing.
-    return savedTemplate as IInvoiceTemplate;
 }
 
 // --- Custom Fields, Conditional Rules, Annotations ---
@@ -698,5 +708,232 @@ export async function renderTemplateOnServer(
         // Re-throw a more specific error or return a structured error object
         // For now, re-throwing the original error message
         throw new Error(`Failed to render template ${templateId} on server: ${error.message}`);
+    }
+}
+export async function deleteInvoiceTemplate(templateId: string): Promise<{ success: boolean; error?: string }> {
+    const { knex, tenant } = await createTenantKnex();
+
+    if (!tenant) {
+        return { success: false, error: 'Tenant context is missing.' };
+    }
+
+    try {
+        // 1. Check if the template is assigned to any company within the tenant
+        const companyUsingTemplate = await knex('companies')
+            .where({
+                invoice_template_id: templateId,
+                tenant: tenant
+            })
+            .first();
+
+        if (companyUsingTemplate) {
+            return {
+                success: false,
+                error: 'Template is currently assigned to one or more companies and cannot be deleted.'
+            };
+        }
+
+        // Check if the template is referenced by any conditional display rules within the tenant
+        const ruleUsingTemplate = await knex('conditional_display_rules')
+            .where({
+                template_id: templateId,
+                tenant: tenant
+            })
+            .first();
+
+        if (ruleUsingTemplate) {
+            return {
+                success: false,
+                error: 'Template is currently used by one or more conditional display rules and cannot be deleted.'
+            };
+        }
+
+        // 2. Attempt to delete the template from the tenant's invoice_templates table
+        // Standard templates are not in this table for a specific tenant, so they won't be deleted.
+        const deletedCount = await knex('invoice_templates')
+            .where({
+                template_id: templateId,
+                tenant: tenant
+            })
+            .del();
+
+        // 3. Check if any rows were actually deleted
+        if (deletedCount > 0) {
+            console.log(`Successfully deleted template ${templateId} for tenant ${tenant}`);
+            return { success: true };
+        } else {
+            // If no rows were deleted, it means the template didn't exist for this tenant
+            // (or it was a standard template, which is handled implicitly).
+            console.warn(`Template ${templateId} not found for tenant ${tenant} during delete attempt.`);
+            return { success: false, error: 'Template not found or cannot be deleted.' };
+        }
+
+    } catch (error: any) {
+        console.error(`Error deleting invoice template ${templateId} for tenant ${tenant}:`, error);
+        return {
+            success: false,
+            error: `An unexpected error occurred: ${error.message || String(error)}`, // Provide more specific error details
+        };
+    }
+}
+import crypto from 'crypto';
+// Removed incorrect import for createKnexInstance
+
+// Define the structure for the standard compile success response
+type CompileStandardSuccessResponse = {
+    success: true;
+    sha: string;
+    wasmBinary: Buffer;
+};
+
+// Define the structure for the standard compile error response
+type CompileStandardErrorResponse = {
+    success: false;
+    error: string;
+    details?: string; // Optional field for compiler output or other details
+};
+
+/**
+ * Compiles a standard AssemblyScript template and updates the standard_invoice_templates table.
+ * This function is intended to be called during server startup or maintenance tasks.
+ * It does NOT use tenant context.
+ *
+ * @param standard_invoice_template_code The code identifier (e.g., 'standard-default').
+ * @param assemblyScriptSource The source code content.
+ * @param knex A non-tenant Knex instance.
+ * @returns A promise resolving to a success or error response object.
+ */
+export async function compileStandardTemplate(
+    standard_invoice_template_code: string,
+    assemblyScriptSource: string,
+    knex: Knex // Expecting a non-tenant Knex instance
+): Promise<CompileStandardSuccessResponse | CompileStandardErrorResponse> {
+    console.log(`[compileStandardTemplate] Starting compilation for: ${standard_invoice_template_code}`);
+
+    // Calculate SHA of the source code
+    const currentSha = crypto.createHash('sha256').update(assemblyScriptSource).digest('hex');
+    console.log(`[compileStandardTemplate] Calculated source SHA: ${currentSha}`);
+
+    // Sanitize code for use in file paths
+    const sanitizedCode = standard_invoice_template_code.replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    // Define paths relative to the assemblyscript directory
+    // Corrected path: Removed 'server/' prefix assuming cwd is the server directory
+    const asmScriptProjectDir = path.resolve(process.cwd(), 'src/invoice-templates/assemblyscript');
+    const standardDir = path.resolve(asmScriptProjectDir, 'standard');
+    const sourceFilePath = path.resolve(standardDir, `${sanitizedCode}.ts`); // Source file *should* already exist here
+    const wasmOutputPath = path.resolve(standardDir, `${sanitizedCode}.wasm`); // Output WASM in the same directory
+
+    // Validate paths are within the expected directory
+    if (!sourceFilePath.startsWith(standardDir) || !wasmOutputPath.startsWith(standardDir)) {
+        return {
+            success: false,
+            error: 'Security violation: standard template path generation failed.',
+        };
+    }
+
+    let wasmBinary: Buffer | null = null;
+
+    try {
+        // Ensure the source file actually exists (it should, as we read it before calling this)
+        try {
+            await fs.access(sourceFilePath);
+        } catch (accessError) {
+             console.error(`[compileStandardTemplate] Source file not found at expected location: ${sourceFilePath}`);
+             return {
+                 success: false,
+                 error: `Standard template source file not found: ${sanitizedCode}.ts`,
+                 details: (accessError as Error).message
+             };
+        }
+
+        // Compile the AssemblyScript source to Wasm using asc
+        // Run the command from the assemblyscript directory to handle relative imports correctly
+        // Command: npx asc standard/<code>.ts --outFile standard/<code>.wasm --runtime stub --debug --exportRuntime --transform json-as/transform --sourceMap --baseDir .
+        const compileCommand = `cd "${asmScriptProjectDir}" && npx asc standard/${sanitizedCode}.ts --outFile standard/${sanitizedCode}.wasm --runtime stub --debug --exportRuntime --transform json-as/transform --sourceMap --baseDir .`;
+
+        console.log(`[compileStandardTemplate] Executing compile command: ${compileCommand}`);
+
+        try {
+            const { stdout, stderr } = await execPromise(compileCommand);
+
+            if (stderr) {
+                console.warn(`[compileStandardTemplate] Compilation stderr for ${standard_invoice_template_code}:`, stderr);
+                // Treat stderr as a warning unless the wasm file is missing
+            }
+            if (stdout) {
+                console.log(`[compileStandardTemplate] Compilation stdout for ${standard_invoice_template_code}:`, stdout);
+            }
+
+            // Check if Wasm file was created and read it
+            try {
+                await fs.access(wasmOutputPath);
+                wasmBinary = await fs.readFile(wasmOutputPath);
+                if (!wasmBinary || wasmBinary.length === 0) {
+                    throw new Error('Compiled WASM binary is empty.');
+                }
+                console.log(`[compileStandardTemplate] Successfully read WASM binary (${wasmBinary.length} bytes) from ${wasmOutputPath}`);
+            } catch (readError) {
+                 console.error(`[compileStandardTemplate] Wasm file not found or empty at ${wasmOutputPath} after compilation.`);
+                 throw new Error(`Compiler failed to produce a valid Wasm file. Stderr: ${stderr || 'None'}. Error: ${(readError as Error).message}`);
+            }
+
+        } catch (compileError: any) {
+            console.error(`[compileStandardTemplate] AssemblyScript compilation failed for ${standard_invoice_template_code}:`, compileError);
+            return {
+                success: false,
+                error: 'AssemblyScript compilation failed for standard template.',
+                details: compileError.stderr || compileError.stdout || compileError.message || 'Unknown compilation error',
+            };
+        }
+
+        // Update the standard_invoice_templates table
+        if (!wasmBinary) {
+             // This should not happen if compilation succeeded, but check defensively
+             throw new Error('WASM binary is null after successful compilation check.');
+        }
+
+        console.log(`[compileStandardTemplate] Updating standard_invoice_templates for ${standard_invoice_template_code}`);
+        const updatePayload = {
+            wasmBinary: knex.raw('?', [wasmBinary]), // Use the newly compiled binary
+            sha: currentSha, // Update SHA to match the source code that was just compiled
+            updated_at: knex.fn.now() // Update the timestamp
+        };
+
+        const updatedCount = await knex('standard_invoice_templates')
+            .where({ standard_invoice_template_code: standard_invoice_template_code })
+            .update(updatePayload);
+
+        if (updatedCount === 0) {
+            // This indicates the standard template code wasn't found in the DB, which is unexpected here.
+            console.error(`[compileStandardTemplate] Failed to find standard template ${standard_invoice_template_code} in DB for update.`);
+            return {
+                success: false,
+                error: `Standard template code '${standard_invoice_template_code}' not found in database for update.`,
+            };
+        }
+
+        console.log(`[compileStandardTemplate] Successfully compiled and updated standard template: ${standard_invoice_template_code}`);
+
+        // Clean up the generated .wasm file (optional, could keep it for debugging)
+        await fs.unlink(wasmOutputPath).catch(e => console.warn(`[compileStandardTemplate] Failed to cleanup WASM file ${wasmOutputPath}:`, e));
+
+        return {
+            success: true,
+            sha: currentSha,
+            wasmBinary: wasmBinary,
+        };
+
+    } catch (error: any) {
+        console.error(`[compileStandardTemplate] Error processing standard template ${standard_invoice_template_code}:`, error);
+        // Attempt cleanup of wasm file even on error
+        if (wasmOutputPath) {
+             await fs.unlink(wasmOutputPath).catch(e => console.warn(`[compileStandardTemplate] Failed to cleanup WASM file ${wasmOutputPath} on error:`, e));
+        }
+        return {
+            success: false,
+            error: 'An unexpected error occurred while compiling or saving the standard template.',
+            details: error.message || String(error),
+        };
     }
 }

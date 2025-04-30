@@ -1,12 +1,27 @@
 // InvoiceTemplates.tsx
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation'; // Added router and searchParams import
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from 'server/src/components/ui/Dialog'; // Added Dialog imports
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate } from 'server/src/lib/actions/invoiceTemplates';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from 'server/src/components/ui/DropdownMenu';
+import { getInvoiceTemplates, saveInvoiceTemplate, setDefaultTemplate, deleteInvoiceTemplate } from 'server/src/lib/actions/invoiceTemplates'; // Added deleteInvoiceTemplate import
 import { IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
 // Removed InvoiceTemplateManager import
-import { FileTextIcon, PencilIcon } from 'lucide-react'; // Added PencilIcon import
+import { FileTextIcon, PencilIcon, MoreVertical } from 'lucide-react'; // Added PencilIcon and MoreVertical imports
 import { GearIcon, CheckCircledIcon } from '@radix-ui/react-icons';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -15,8 +30,10 @@ const InvoiceTemplates: React.FC = () => {
   const [invoiceTemplates, setInvoiceTemplates] = useState<IInvoiceTemplate[]>([]);
   // Removed selectedTemplate state
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete-specific errors
+  const [templateToDeleteId, setTemplateToDeleteId] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const router = useRouter(); // Initialize router
-const searchParams = useSearchParams(); // Initialize searchParams
 
   const handleCloneTemplate = async (template: IInvoiceTemplate) => {
     try {
@@ -65,7 +82,7 @@ const searchParams = useSearchParams(); // Initialize searchParams
   // Ensure handleTemplateSelect and handleTemplateUpdate are removed if they exist
 
   const handleNavigateToEditor = (templateId: string | 'new') => {
-    const params = new URLSearchParams(searchParams?.toString() ?? ''); // Keep existing params like 'tab'
+    const params = new URLSearchParams(window.location.search); // Use window.location.search
     params.set('templateId', templateId);
     router.push(`/msp/billing?${params.toString()}`);
   };
@@ -102,53 +119,93 @@ const searchParams = useSearchParams(); // Initialize searchParams
       dataIndex: 'template_id',
       width: '10%',
       render: (_, record) => (
-        <div className="flex gap-2">
-           <Button
-             id={`edit-template-${record.template_id}-button`}
-             onClick={(e) => {
-               e.stopPropagation();
-               handleNavigateToEditor(record.template_id);
-             }}
-             variant="outline"
-             size="sm"
-             disabled={record.isStandard} // Disable for standard templates
-             title={record.isStandard ? "Standard templates cannot be edited" : "Edit Template"}
-           >
-             <PencilIcon className="h-4 w-4 mr-1" /> Edit
-           </Button>
-          <Button
-            id={`clone-template-${record.template_id}-button`}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCloneTemplate(record);
-            }}
-            variant="outline"
-            size="sm"
-          >
-            Clone
-          </Button>
-          {!record.isStandard && (
-            <Button
-              id={`set-default-template-${record.template_id}-button`}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id="invoice-template-actions-menu" // Per standard: {object}-actions-menu
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()} // Prevent row click
+              >
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id="edit-invoice-template-menu-item" // Per standard: edit-{object}-menu-item
+                disabled={record.isStandard}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNavigateToEditor(record.template_id);
+                }}
+              >
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id="clone-invoice-template-menu-item" // Per standard: clone-{object}-menu-item
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleCloneTemplate(record);
+                }}
+              >
+                Clone
+              </DropdownMenuItem>
+              {!record.isStandard && (
+                <DropdownMenuItem
+                  id="set-default-invoice-template-menu-item" // Per standard: set-default-{object}-menu-item
+                  disabled={record.is_default}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSetDefaultTemplate(record);
+                  }}
+                >
+                  Set as Default
+                </DropdownMenuItem>
+              )}
+            <DropdownMenuItem
+              id="delete-invoice-template-menu-item" // Per standard: delete-{object}-menu-item
+              className="text-red-600 focus:text-red-600" // Destructive styling
+              disabled={record.isStandard} // Cannot delete standard templates
               onClick={(e) => {
                 e.stopPropagation();
-                handleSetDefaultTemplate(record);
+                setTemplateToDeleteId(record.template_id);
+                setIsDeleteDialogOpen(true);
+                setDeleteError(null); // Clear previous delete errors
               }}
-              variant="outline"
-              size="sm"
-              disabled={record.is_default}
             >
-              {record.is_default ? 'Default' : 'Set as Default'}
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ];
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+    ),
+  },
+];
 
-  return (
-    <Card>
-      <CardHeader>
+const handleDeleteTemplate = async () => {
+  if (!templateToDeleteId) return;
+
+  try {
+    setDeleteError(null); // Clear previous errors
+    const result = await deleteInvoiceTemplate(templateToDeleteId);
+
+    if (result.success) {
+      setIsDeleteDialogOpen(false);
+      setTemplateToDeleteId(null);
+      await fetchTemplates(); // Refresh the list
+      // Optional: Show success notification
+    } else {
+      setDeleteError(result.error || 'Failed to delete template.');
+    }
+  } catch (err) {
+    console.error('Error deleting template:', err);
+    setDeleteError('An unexpected error occurred while deleting the template.');
+  }
+};
+
+return (
+  <Card>
+    <CardHeader>
         <h3 className="text-lg font-semibold">Invoice Templates</h3>
       </CardHeader>
       <CardContent>
@@ -170,11 +227,47 @@ const searchParams = useSearchParams(); // Initialize searchParams
             data={invoiceTemplates}
             columns={templateColumns}
             pagination={false}
-            // Ensure onRowClick is removed
+            onRowClick={(record) => {
+              if (!record.isStandard) {
+                handleNavigateToEditor(record.template_id);
+              }
+            }}
             // Ensure InvoiceTemplateManager rendering is removed
           />
         </div>
       </CardContent>
+      {/* Confirmation Dialog */}
+      <Dialog id="delete-template-dialog" isOpen={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete the template "{invoiceTemplates.find(t => t.template_id === templateToDeleteId)?.name || 'this template'}"?
+              This action cannot be undone.
+              {deleteError && (
+                <p className="text-red-600 mt-2">{deleteError}</p>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              id="cancel-delete-template-button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setDeleteError(null);
+              }}>Cancel</Button>
+            <Button
+              id="confirm-delete-template-button"
+              variant="destructive"
+              onClick={handleDeleteTemplate}
+              disabled={!!deleteError} // Disable if there was an error during the attempt
+            >
+              Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
