@@ -46,8 +46,47 @@ const nextConfig = {
       'tedious'
     ];
 
+    // Rule to handle .wasm files as assets
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/wasm/[name].[hash][ext]',
+      },
+    });
+
+    // Ensure .mjs files in node_modules are treated as JS auto (handles import.meta)
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
+      resolve: {
+        fullySpecified: false, // Needed for some packages that omit extensions
+      },
+    });
+
+    // Enable WebAssembly experiments
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      // layers: true, // Might be needed depending on the setup
+    };
+
+    // If running on serverless target, ensure wasm files are copied
+    if (!isServer) {
+      config.output.webassemblyModuleFilename = 'static/wasm/[modulehash].wasm';
+    } else {
+      config.output.webassemblyModuleFilename = '../static/wasm/[modulehash].wasm';
+    }
+
+
     return config;
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '5mb', // Increase limit for WASM uploads
+    }
+  }
 };
 
 export default nextConfig;

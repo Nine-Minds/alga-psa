@@ -187,13 +187,13 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
     let query = db('companies as c')
       .select(
         'c.*',
-        db.raw("u.first_name || ' ' || u.last_name as account_manager_full_name"),
+        // db.raw("u.first_name || ' ' || u.last_name as account_manager_full_name"), // Removed join on non-existent account_manager_id
         'da.document_id'
       )
-      .leftJoin('users as u', function() {
-        this.on('u.user_id', '=', 'c.account_manager_id')
-            .andOn('u.tenant', '=', 'c.tenant');
-      })
+      // .leftJoin('users as u', function() { // Removed join on non-existent account_manager_id
+      //   this.on('u.user_id', '=', 'c.account_manager_id')
+      //       .andOn('u.tenant', '=', 'c.tenant');
+      // })
       .leftJoin('document_associations as da', function() {
         this.on('da.entity_id', '=', 'c.company_id')
             .andOn('da.tenant', '=', 'c.tenant')

@@ -196,6 +196,15 @@ export interface GlobalStyles {
 export interface HostFunctions {
   // NOTE: Ensure these signatures match the `@external` declarations in AssemblyScript (`assembly/types.ts`).
   log: (message: string) => void;
+  /**
+   * Called by AssemblyScript's standard 'abort' mechanism.
+   * Receives pointers to strings in Wasm memory and line/column numbers.
+   * @param messagePtr Pointer (number) to the abort message string in Wasm memory.
+   * @param fileNamePtr Pointer (number) to the file name string in Wasm memory.
+   * @param lineNumber Line number where abort occurred.
+   * @param columnNumber Column number where abort occurred.
+   */
+  abort: (messagePtr: number, fileNamePtr: number, lineNumber: number, columnNumber: number) => void;
   // Add other utility functions here, e.g., formatCurrency, complexMath
 }
 

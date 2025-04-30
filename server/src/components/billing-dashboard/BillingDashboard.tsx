@@ -13,6 +13,7 @@ import BillingPlansOverview from './billing-plans/BillingPlansOverview';
 import TimePeriods from './TimePeriods';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
+import InvoiceTemplateEditor from './InvoiceTemplateEditor'; // Import the editor component
 import ServiceCatalog from './ServiceCatalog';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
@@ -109,7 +110,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="invoice-templates">
-          <InvoiceTemplates />
+          {searchParams?.has('templateId') ? (
+            <InvoiceTemplateEditor templateId={searchParams.get('templateId') === 'new' ? null : searchParams.get('templateId')} />
+          ) : (
+            <InvoiceTemplates />
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="tax-rates">

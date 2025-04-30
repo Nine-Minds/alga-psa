@@ -6,7 +6,11 @@
   "scripts": {
     "asbuild:debug": "asc assembly/index.ts --target debug --exportRuntime --transform json-as/transform",
     "asbuild:release": "asc assembly/index.ts --target release --optimize --noAssert --exportRuntime --transform json-as/transform",
-    "build": "npm run asbuild:release",
+    "build:example": "npm run asbuild:release",
+    "build:standard:default": "asc standard/standard-default.ts --runtime stub --debug --exportRuntime --transform json-as/transform -o ../../../../dist/server/src/invoice-templates/standard/standard-default.wasm --sourceMap",
+    "build:standard:detailed": "asc standard/standard-detailed.ts --runtime stub --debug --exportRuntime --transform json-as/transform -o ../../../../dist/server/src/invoice-templates/standard/standard-detailed.wasm --sourceMap",
+    "build:standard": "mkdir -p ../../../../dist/server/src/invoice-templates/standard && npm run build:standard:default && npm run build:standard:detailed",
+    "build": "npm run build:example && npm run build:standard",
     "test": "node tests"
   },
   "keywords": [
@@ -19,8 +23,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@assemblyscript/loader": "^0.27.26",
-    "assemblyscript": "^0.27.26"
+    "@assemblyscript/loader": "^0.27.36",
+    "assemblyscript": "^0.27.36"
   },
   "type": "module",
   "exports": {
