@@ -26,7 +26,7 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
         {
             title: '',
             dataIndex: 'checkbox',
-            width: '3%',
+            width: '4%',
             render: (value: string, record: ICompany) => (
                 <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
                   <input

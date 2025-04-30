@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { produce, enableMapSet } from 'immer';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
+import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType, IWorkItem, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import WorkItemListPanel from './WorkItemListPanel';
@@ -535,7 +535,15 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
     try {
-      const workItemDetails = await getWorkItemById(event.work_item_id || event.entry_id, event.work_item_type);
+      let workItemId = event.work_item_id || event.entry_id;
+      
+      if (workItemId.includes('_')) {
+        const [masterId] = workItemId.split('_');
+        console.log(`Detected recurring event. Using master ID: ${masterId} instead of virtual ID: ${workItemId}`);
+        workItemId = masterId;
+      }
+      
+      const workItemDetails = await getWorkItemById(workItemId, event.work_item_type);
 
       if (!workItemDetails) {
         toast.error('Could not load work item details.');
@@ -561,11 +569,18 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           }}
           onScheduleUpdate={async (entryData) => {
             try {
-              const updateResult = await updateScheduleEntry(event.entry_id, {
+              let entryId = event.entry_id;
+              
+              if (entryId.includes('_')) {
+                console.log(`Updating recurring event instance: ${entryId} with type: SINGLE`);
+              }
+              
+              const updateResult = await updateScheduleEntry(entryId, {
                 ...entryData,
                 work_item_id: workItemDetails.work_item_id,
                 work_item_type: workItemDetails.type,
-                title: entryData.title || workItemDetails.name
+                title: entryData.title || workItemDetails.name,
+                updateType: IEditScope.SINGLE
               });
 
               if (updateResult.success && updateResult.entry) {

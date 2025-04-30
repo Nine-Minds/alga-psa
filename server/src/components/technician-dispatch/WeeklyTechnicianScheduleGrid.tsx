@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+ import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Calendar, momentLocalizer, View, NavigateAction } from 'react-big-calendar';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
-import { CalendarDays, Layers2 } from 'lucide-react';
+import { CalendarDays, Layers2, XCircle } from 'lucide-react';
+import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import moment from 'moment';
 import withDragAndDrop, { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -10,7 +11,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { CalendarStyleProvider } from 'server/src/components/schedule/CalendarStyleProvider';
-import { getEventColors } from './utils';
+import { isWorkingHour } from './utils';
 
 const localizer = momentLocalizer(moment);
 
@@ -31,6 +32,8 @@ interface WeeklyTechnicianScheduleGridProps {
   onDropFromList: (item: { workItemId: string; start: Date; end: Date; resourceId: string | number }) => void;
   onSelectEvent?: (event: IScheduleEntry, e: React.SyntheticEvent<HTMLElement>) => void;
   onSetFocus?: (technicianId: string) => void;
+  onResetSelections?: () => void;
+  onDeleteEvent?: (eventId: string) => void;
 }
 
 // Custom component for the sidebar with technician names
@@ -39,16 +42,31 @@ const TechnicianSidebar = ({
   primaryTechnicianId, 
   comparisonTechnicianIds,
   onSetFocus,
-  onComparisonChange
+  onComparisonChange,
+  onResetSelections
 }: { 
   technicians: IUserWithRoles[]; 
   primaryTechnicianId: string | null;
   comparisonTechnicianIds: string[];
   onSetFocus?: (technicianId: string) => void;
   onComparisonChange: (technicianId: string, add: boolean) => void;
+  onResetSelections?: () => void;
 }) => {
   return (
     <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+      <div className="p-2 border-gray-200">
+        <Button
+          id="reset-selections-button"
+          variant="outline"
+          size="sm"
+          onClick={onResetSelections}
+          className="w-full px-3 py-1 flex items-center gap-1 justify-center"
+          disabled={!primaryTechnicianId && comparisonTechnicianIds.length === 0}
+        >
+          <XCircle className="h-4 w-4" />
+          Reset Selections
+        </Button>
+      </div>
       {technicians.map(tech => {
         const isFocus = tech.user_id === primaryTechnicianId;
         const isComparing = comparisonTechnicianIds.includes(tech.user_id);
@@ -119,9 +137,34 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   onDropFromList,
   onSelectEvent,
   onSetFocus,
+  onDeleteEvent,
+  onResetSelections,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  
+  // Auto-scroll to business hours when the calendar loads
+  useEffect(() => {
+    if (!hasScrolled && calendarRef.current && events.length > 0) {
+      const scrollToBusinessHours = () => {
+        const timeGridContainer = calendarRef.current?.querySelector('.rbc-time-content');
+        if (timeGridContainer) {
+          const pixelsPerHour = 121;
+          const scrollToHour = 8;
+          const scrollPosition = scrollToHour * pixelsPerHour;
+          
+          timeGridContainer.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
+          setHasScrolled(true);
+        }
+      };
+      
+      setTimeout(scrollToBusinessHours, 100);
+    }
+  }, [events, hasScrolled]);
 
   // Get the technicians to display
   const displayedTechnicians = useMemo(() => {
@@ -170,7 +213,25 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     const { event, start, end, resourceId } = args;
     
     if (primaryTechnicianId && event.assigned_user_ids && event.assigned_user_ids.includes(primaryTechnicianId)) {
-      onEventDrop(args);
+      const assignedUserIds = resourceId
+        ? (Array.isArray(resourceId)
+            ? resourceId.filter((id: string | null | undefined) => id !== null && id !== undefined)
+            : [resourceId].filter((id: string | null | undefined) => id !== null && id !== undefined))
+        : event.assigned_user_ids.filter((id: string | null | undefined) => id !== null && id !== undefined);
+      
+      const finalAssignedUserIds = assignedUserIds.length > 0
+        ? assignedUserIds
+        : [primaryTechnicianId];
+      
+      const updatedEvent = {
+        ...event,
+        assigned_user_ids: finalAssignedUserIds
+      };
+      
+      onEventDrop({
+        ...args,
+        event: updatedEvent
+      });
     } else {
       console.log("Prevented drop of comparison event.");
     }
@@ -186,32 +247,143 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     }
   }, [primaryTechnicianId, onEventResize]);
 
+  const handleResizeStart = useCallback((e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => {
+    e.stopPropagation();
+    
+    if (!primaryTechnicianId || !event.assigned_user_ids.includes(primaryTechnicianId)) {
+      console.log("Prevented resize of comparison event.");
+      return;
+    }
+    
+    const startY = e.clientY;
+    const initialStart = new Date(event.scheduled_start);
+    const initialEnd = new Date(event.scheduled_end);
+    
+    const handleResizeMove = (moveEvent: MouseEvent) => {
+      moveEvent.preventDefault();
+      
+      // Calculate time difference based on vertical movement
+      // Assuming 20px = 15 minutes (adjust as needed)
+      const deltaY = moveEvent.clientY - startY;
+      const deltaMinutes = Math.round(deltaY / 20) * 15;
+      
+      let newStart = new Date(initialStart);
+      let newEnd = new Date(initialEnd);
+      
+      if (direction === 'top') {
+        newStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
+        if (newEnd.getTime() - newStart.getTime() < 15 * 60000) {
+          return;
+        }
+      } else {
+        newEnd = new Date(initialEnd.getTime() + deltaMinutes * 60000);
+        if (newEnd.getTime() - newStart.getTime() < 15 * 60000) {
+          return;
+        }
+      }
+      
+      onEventResize({
+        event,
+        start: direction === 'top' ? newStart : initialStart,
+        end: direction === 'bottom' ? newEnd : initialEnd
+      });
+    };
+    
+    const handleResizeEnd = () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+    };
+    
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', handleResizeEnd);
+  }, [primaryTechnicianId, onEventResize]);
+
   // Handle drop from work item list
   const handleDropFromList = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     try {
-      const data = e.dataTransfer.getData('application/json');
-      if (!data) {
-        console.error("No data transferred");
-        return;
+      // Try to get data from both formats
+      let workItemId: string | null = null;
+      
+      // First try application/json format
+      const jsonData = e.dataTransfer.getData('application/json');
+      if (jsonData) {
+        try {
+          const parsed = JSON.parse(jsonData);
+          workItemId = parsed.workItemId;
+        } catch (jsonError) {
+          console.error("Error parsing JSON data:", jsonError);
+        }
       }
       
-      const { workItemId } = JSON.parse(data);
+      // If that fails, try text/plain format
       if (!workItemId) {
-        console.error("workItemId not found in transferred data");
+        workItemId = e.dataTransfer.getData('text/plain');
+      }
+      
+      if (!workItemId) {
+        console.error("No workItemId found in transferred data");
         return;
       }
 
-      const rect = calendarRef.current?.getBoundingClientRect();
-      if (!rect) return;
+      const calendarRect = calendarRef.current?.getBoundingClientRect();
+      if (!calendarRect) return;
       
-      const startTime = new Date();
-      startTime.setHours(9, 0, 0, 0);
+      const calendarDOMNode = calendarRef.current?.querySelector('.rbc-time-view');
+      if (!calendarDOMNode) return;
       
+      const calendarViewRect = calendarDOMNode.getBoundingClientRect();
+      
+      const dayCells = calendarDOMNode.querySelectorAll('.rbc-day-slot');
+      if (!dayCells || dayCells.length === 0) return;
+      
+      let targetDayCell: Element | null = null;
+      let targetDayCellIndex = -1;
+      
+      for (let i = 0; i < dayCells.length; i++) {
+        const cellRect = dayCells[i].getBoundingClientRect();
+        if (
+          e.clientX >= cellRect.left &&
+          e.clientX <= cellRect.right
+        ) {
+          targetDayCell = dayCells[i];
+          targetDayCellIndex = i;
+          break;
+        }
+      }
+      
+      if (!targetDayCell || targetDayCellIndex === -1) {
+        console.error("Could not determine day for drop");
+        return;
+      }
+      
+      const startOfWeek = moment(date).startOf('week').toDate();
+      const dropDate = new Date(startOfWeek);
+      dropDate.setDate(dropDate.getDate() + targetDayCellIndex);
+      
+      const cellRect = targetDayCell.getBoundingClientRect();
+      const cellHeight = cellRect.height;
+      const relativeY = e.clientY - cellRect.top;
+      
+      const totalSlots = 24 * 4;
+      const slotHeight = cellHeight / totalSlots;
+      const slotIndex = Math.floor(relativeY / slotHeight);
+      
+      const hours = Math.floor(slotIndex / 4);
+      const minutes = (slotIndex % 4) * 15;
+      
+      const startTime = new Date(dropDate);
+      startTime.setHours(hours, minutes, 0, 0);
+      
+      // Set end time to 1 hour later
       const endTime = new Date(startTime);
       endTime.setHours(startTime.getHours() + 1);
       
-      const resourceId = primaryTechnicianId || (displayedTechnicians.length > 0 ? displayedTechnicians[0].user_id : 'unknown');
+      // Use primary technician or first displayed technician
+      const resourceId = primaryTechnicianId ||
+        (displayedTechnicians.length > 0 ? displayedTechnicians[0].user_id : 'unknown');
+      
+      console.log(`Dropping workitem at ${startTime.toLocaleString()} (day ${targetDayCellIndex}, hour ${hours}, minute ${minutes})`);
       
       onDropFromList({
         workItemId,
@@ -222,7 +394,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     } catch (error) {
       console.error("Error handling drop from list:", error);
     }
-  }, [primaryTechnicianId, displayedTechnicians, onDropFromList]);
+  }, [primaryTechnicianId, displayedTechnicians, onDropFromList, date]);
 
   const draggableAccessor = useCallback((event: object) => {
     const scheduleEvent = event as IScheduleEntry;
@@ -232,6 +404,37 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   }, [primaryTechnicianId]);
 
 
+  const handleDeleteEvent = useCallback((eventToDelete: IScheduleEntry) => {
+    if (onDeleteEvent) {
+      onDeleteEvent(eventToDelete.entry_id);
+    }
+  }, [onDeleteEvent]);
+
+  const technicianMap = useMemo(() => {
+    return allTechnicians.reduce((map, tech) => {
+      map[tech.user_id] = {
+        first_name: tech.first_name || '',
+        last_name: tech.last_name || ''
+      };
+      return map;
+    }, {} as Record<string, { first_name: string; last_name: string }>);
+  }, [allTechnicians]);
+
+  const TimeSlotWrapper = useCallback((props: any) => {
+    if (props.value) {
+      const hour = props.value.getHours();
+      const isWorkHour = isWorkingHour(hour);
+      
+      return (
+        <div className={`${!isWorkHour ? 'bg-[rgb(var(--color-border-100))]' : ''}`}>
+          {props.children}
+        </div>
+      );
+    }
+    
+    return <div>{props.children}</div>;
+  }, []);
+  
   const EventComponent = useCallback(({ event }: { event: any }) => {
     const scheduleEvent = event as IScheduleEntry;
     const isPrimary = primaryTechnicianId !== null &&
@@ -239,44 +442,28 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     const isComparison = !isPrimary &&
                          comparisonTechnicianIds.length > 0 &&
                          scheduleEvent.assigned_user_ids?.some(id => comparisonTechnicianIds.includes(id));
-
-    const workItemType = scheduleEvent.work_item_type || 'ticket';
-    const { bg, text } = getEventColors(workItemType, isPrimary, isComparison);
-
-    // Find assigned technician names for tooltip
-    const assignedTechnicians = allTechnicians
-      .filter(tech => scheduleEvent.assigned_user_ids?.includes(tech.user_id))
-      .map(tech => `${tech.first_name} ${tech.last_name}`)
-      .join(', ');
-
-    // Format date and time for tooltip
-    const startMoment = moment(scheduleEvent.scheduled_start);
-    const endMoment = moment(scheduleEvent.scheduled_end);
-    const formattedDate = startMoment.format('MMM D, YYYY');
-    const formattedTime = `${startMoment.format('h:mm A')} - ${endMoment.format('h:mm A')}`;
-
-    // Construct detailed tooltip
-    const tooltipTitle = `${scheduleEvent.title}\nTechnician: ${assignedTechnicians || 'Unassigned'}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+    
+    const isHovered = hoveredEventId === scheduleEvent.entry_id;
 
     return (
-      <div
-        className={`absolute inset-0 text-xs overflow-hidden rounded-md ${bg} ${text}`}
+      <WeeklyScheduleEvent
+        event={scheduleEvent}
+        isHovered={isHovered}
+        isPrimary={isPrimary}
+        isComparison={isComparison}
         onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
         onMouseLeave={() => setHoveredEventId(null)}
-        title={tooltipTitle}
-        style={{ 
-          width: '100%', 
-          height: '100%',
-          margin: 0,
-          padding: '4px',
-          border: isComparison ? '2px dashed rgb(var(--color-border-600))' : 'none'
+        onSelectEvent={(event, e) => {
+          if (onSelectEvent) {
+            onSelectEvent(event, e as unknown as React.SyntheticEvent<HTMLElement>);
+          }
         }}
-      >
-        <div className="font-semibold truncate">{scheduleEvent.title?.split(':')[0] || 'Untitled'}</div>
-        <div className="truncate text-xs">{scheduleEvent.title?.split(':').slice(1).join(':').trim() || ''}</div>
-      </div>
+        onDeleteEvent={handleDeleteEvent}
+        onResizeStart={handleResizeStart}
+        technicianMap={technicianMap}
+      />
     );
-  }, [primaryTechnicianId, comparisonTechnicianIds, hoveredEventId, allTechnicians]);
+  }, [primaryTechnicianId, comparisonTechnicianIds, hoveredEventId, onSelectEvent, handleDeleteEvent, handleResizeStart, technicianMap]);
 
   return (
     <div className="h-full flex overflow-hidden" ref={calendarRef} onDragOver={(e) => e.preventDefault()} onDrop={handleDropFromList}>
@@ -287,6 +474,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
         comparisonTechnicianIds={comparisonTechnicianIds}
         onSetFocus={onSetFocus}
         onComparisonChange={onComparisonChange}
+        onResetSelections={onResetSelections}
       />
       
       {/* Calendar */}
@@ -314,8 +502,17 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
           selectable={true}
           onSelectSlot={onSelectSlot}
           onSelectEvent={(event, e) => {
+            const target = e.target as HTMLElement;
+            if (target.closest('.dropdown-trigger') || 
+                target.closest('.dropdown-menu-content') ||
+                target.closest('[role="menu"]') ||
+                target.closest('[data-radix-popper-content-wrapper]')) {
+              e.stopPropagation();
+              return;
+            }
+            
             if (onSelectEvent) {
-              onSelectEvent(event as IScheduleEntry, e);
+              onSelectEvent(event as IScheduleEntry, e as unknown as React.SyntheticEvent<HTMLElement>);
             }
           }}
           eventPropGetter={(event) => eventPropGetter(event as IScheduleEntry)}
@@ -326,7 +523,8 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
           step={15}
           timeslots={4}
           components={{
-            event: EventComponent
+            event: EventComponent,
+            timeSlotWrapper: TimeSlotWrapper
           }}
           toolbar={false}
           style={{ height: '100%' }}

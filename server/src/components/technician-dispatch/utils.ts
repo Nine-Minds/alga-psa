@@ -18,7 +18,7 @@ export const calculateTimeFromPosition = (
 };
 
 export const isWorkingHour = (hour: number): boolean => {
-  return hour >= 9 && hour < 17; // 9 AM to 5 PM
+  return hour >= 8 && hour < 17; // 8 AM to 5 PM
 };
 
 export const getEventColors = (

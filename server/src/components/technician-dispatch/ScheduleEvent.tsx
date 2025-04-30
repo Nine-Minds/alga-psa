@@ -42,6 +42,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
   const [deleteInitiatingEvent, setDeleteInitiatingEvent] = useState<React.MouseEvent | null>(null);
   const [isNarrow, setIsNarrow] = useState(false);
   const [isRecentlyResized, setIsRecentlyResized] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
   const isPrimary = true;
   const isComparison = false;
@@ -115,8 +116,18 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         onMouseEnter={() => !isResizing && onMouseEnter()}
         onMouseLeave={() => !isResizing && onMouseLeave()}
         onClick={(e) => {
-          if (event.work_item_type !== 'ad_hoc' && !isDragging && !isResizing && !(e.target as HTMLElement).closest('.resize-handle') && !(e.target as HTMLElement).closest('.delete-button') && !(e.target as HTMLElement).closest('.details-button')) {
+          if (event.work_item_type !== 'ad_hoc' &&
+              !isDragging &&
+              !isResizing &&
+              !isRecentlyResized &&
+              !(e.target as HTMLElement).closest('.resize-handle') &&
+              !(e.target as HTMLElement).closest('.delete-button') &&
+              !(e.target as HTMLElement).closest('.details-button') &&
+              !(e.target as HTMLElement).closest('.dropdown-trigger') &&
+              !isDropdownOpen) {
             onClick();
+          } else {
+            e.stopPropagation();
           }
         }}
       >
@@ -133,9 +144,12 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
                 size="icon"
                 className="w-4 h-4 details-button"
                 onClick={(e) => {
-                  if (!isResizing && !isRecentlyResized) {
+                  if (!isResizing) {
                     e.stopPropagation();
                     onClick();
+                    if (isRecentlyResized) {
+                      setIsRecentlyResized(false);
+                    }
                   }
                 }}
                 title="View Details"
@@ -161,31 +175,58 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
             {/* Show dropdown menu if narrow */}
             {isNarrow && (
               <div>
-              <DropdownMenu>
+              <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     id={`more-options-${event.entry_id}`}
                     variant="icon"
                     size="icon"
-                    className="w-4 h-4"
-                    onMouseDown={(e) => e.stopPropagation()}
+                    className="w-4 h-4 dropdown-trigger"
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                    }}
                   >
                     <MoreVertical className="w-4 h-4 pointer-events-none" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-32">
-                  <DropdownMenuItem 
+                <DropdownMenuContent
+                  align="end"
+                  className="w-32"
+                  onCloseAutoFocus={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <DropdownMenuItem
                     onClick={(e) => {
-                      if (!isResizing && !isRecentlyResized) {
+                      if (!isResizing) {
                         e.stopPropagation();
+                        setIsDropdownOpen(false); // Close dropdown
                         onClick();
+                        if (isRecentlyResized) {
+                          setIsRecentlyResized(false);
+                        }
                       }
                     }}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     View Details
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleDeleteClick}>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDropdownOpen(false); // Close dropdown
+                      handleDeleteClick(e);
+                    }}
+                  >
                     <Trash className="w-4 h-4 mr-2" />
                     Delete
                   </DropdownMenuItem>
@@ -204,19 +245,31 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
 
         {/* Resize Handles - Remain absolutely positioned relative to the main container */}
         <div
-          className="absolute top-0 bottom-0 left-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
-          style={{ zIndex: 150 }} // Ensure handles are above buttons
+          className="absolute top-0 bottom-0 left-0 w-1 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-l resize-handle"
+          style={{ zIndex: 150 }}
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
+            setIsRecentlyResized(true);
             onResizeStart(e, 'left');
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
         ></div>
         <div
-          className="absolute top-0 bottom-0 right-0 w-2 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-r resize-handle"
+          className="absolute top-0 bottom-0 right-0 w-1 bg-[rgb(var(--color-border-300))] cursor-ew-resize rounded-r resize-handle"
           style={{ zIndex: 150 }} // Ensure handles are above buttons
           onMouseDown={(e) => {
             e.stopPropagation();
+            e.preventDefault();
+            setIsRecentlyResized(true);
             onResizeStart(e, 'right');
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
           }}
         ></div>
       </div>

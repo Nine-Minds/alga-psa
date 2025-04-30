@@ -73,10 +73,23 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
     }
     const startTime = typeof start === 'string' ? moment(start).toDate() : start;
 
+    let techId: string;
+    if (resourceId && typeof resourceId === 'string' && resourceId.trim() !== '') {
+        techId = resourceId;
+    } else if (event.assigned_user_ids && event.assigned_user_ids.length > 0 &&
+               event.assigned_user_ids[0] !== null && event.assigned_user_ids[0] !== undefined) {
+        techId = event.assigned_user_ids[0];
+    } else if (primaryTechnicianId) {
+        techId = primaryTechnicianId;
+    } else {
+        console.error("Cannot determine technician ID for drop event");
+        return;
+    }
+
     const dropData: EventDrop = {
         type: 'scheduleEntry',
         eventId: event.entry_id.toString(),
-        techId: resourceId as string,
+        techId: techId,
         startTime: startTime,
     };
     onDrop(dropData);
@@ -87,8 +100,6 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
         console.error("Cannot resize event without ID or assigned user");
         return;
      }
-     // Assuming resize happens on the primary technician's event, use their ID
-     // Or if the event object contains the specific resource it was resized on
      const techId = primaryTechnicianId || event.assigned_user_ids[0];
      const newStart = typeof start === 'string' ? moment(start).toDate() : start;
      const newEnd = typeof end === 'string' ? moment(end).toDate() : end;
@@ -156,19 +167,6 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 {'Next >'}
               </Button>
             </div>
-            
-            {viewMode === 'week' && onResetSelections && (
-              <Button
-                id="reset-selections-button"
-                variant="outline"
-                size="sm"
-                onClick={onResetSelections}
-                className="ml-2 px-3 py-1 flex items-center gap-1"
-              >
-                <XCircle className="h-4 w-4" />
-                Reset Selections
-              </Button>
-            )}
           </div>
 
           {/* Date Display - Center */}
@@ -220,6 +218,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
             onEventClick={onEventClick}
           />
         )}
+
         {viewMode === 'week' && (
             <WeeklyTechnicianScheduleGrid
                 date={date}
@@ -236,6 +235,8 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 onDropFromList={handleDropFromList}
                 onSelectEvent={handleSelectEvent}
                 onSetFocus={onTechnicianClick}
+                onDeleteEvent={onDeleteEvent}
+                onResetSelections={onResetSelections}
             />
         )}
       </div>
