@@ -1,6 +1,6 @@
 import { instantiate, type ASUtil } from "@assemblyscript/loader"; // Import loader
 import { Buffer } from 'buffer';
-import type { InvoiceViewModel, LayoutElement } from './types';
+import type { WasmInvoiceViewModel, LayoutElement } from './types';
 import { createWasmImportObject } from './host-functions'; // Correct import name
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -22,7 +22,7 @@ type WasmTemplateModule = ASUtil & {
  * @throws If Wasm initialization, instantiation, or execution fails.
  */
 export async function executeWasmTemplate(
-  invoiceData: InvoiceViewModel,
+  invoiceData: WasmInvoiceViewModel,
   templateWasm: Buffer
 ): Promise<LayoutElement> {
   // 1. Define a variable to hold the actual __getString function, initialized to a dummy

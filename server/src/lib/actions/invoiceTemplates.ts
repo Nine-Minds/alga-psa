@@ -664,7 +664,7 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
 
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
-import type { InvoiceViewModel, RenderOutput } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel, RenderOutput } from 'server/src/lib/invoice-renderer/types';
 
 /**
  * Renders an invoice template entirely on the server-side.
@@ -677,7 +677,7 @@ import type { InvoiceViewModel, RenderOutput } from 'server/src/lib/invoice-rend
  */
 export async function renderTemplateOnServer(
     templateId: string,
-    invoiceData: InvoiceViewModel | null // Allow null invoiceData
+    invoiceData: WasmInvoiceViewModel | null // Allow null invoiceData
 ): Promise<RenderOutput> {
     // Handle null invoiceData early
     if (!invoiceData) {

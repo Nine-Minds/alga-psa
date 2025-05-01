@@ -1,7 +1,7 @@
 import { JSON } from "json-as";
 import {
   InvoiceViewModel, InvoiceItem,
-  LayoutElement, ElementStyle, RowElement, ColumnElement, DocumentElement, SectionElement, TextElement,
+  LayoutElement, ElementStyle, RowElement, ColumnElement, DocumentElement, SectionElement, TextElement, ImageElement,
   log
 } from "../assembly/types";
 import { applyStyle, instantiateStyle, PartialStyle } from "../assembly/common/style-helpers";
@@ -27,27 +27,22 @@ export function generateLayout(dataString: string): string {
   log("Wasm (standard-detailed): Deserialized Invoice #: " + viewModel.invoiceNumber);
 
   // --- Build Layout ---
-  const headerSection = createHeaderSection_StdDetailed(viewModel);
+  const documentChildren = new Array<LayoutElement>(); // Initialize the array
 
-  const itemsResult = createItemsSection_StdDetailed(viewModel.items);
+  // Call helpers, passing the children array
+  createHeaderSection_StdDetailed(viewModel, documentChildren);
 
-  const itemsSection = itemsResult.section;
-  const calculatedSubtotal = itemsResult.subtotal;
+  // createItemsSection now returns only the subtotal and modifies documentChildren directly
+  const calculatedSubtotal = createItemsSection_StdDetailed(viewModel.items, documentChildren);
 
   const calculatedTax = calculatedSubtotal * TAX_RATE;
-
   const calculatedTotal = calculatedSubtotal + calculatedTax;
-  const totalsSection = createTotalsSection_StdDetailed(calculatedSubtotal, calculatedTax, calculatedTotal);
-  const notesSection = createNotesSection_StdDetailed(viewModel);
 
-  const documentChildren: Array<LayoutElement> = [
-    headerSection,
-    itemsSection,
-    totalsSection
-  ];
-  if (notesSection) {
-      documentChildren.push(notesSection);
-  }
+  // Pass children array to totals and notes sections
+  createTotalsSection_StdDetailed(calculatedSubtotal, calculatedTax, calculatedTotal, documentChildren);
+  createNotesSection_StdDetailed(viewModel, documentChildren);
+
+  // documentChildren array is now populated by the helper functions
 
   const document = new DocumentElement(documentChildren);
   document.id = "invoice-document-standard-detailed";
@@ -60,17 +55,32 @@ export function generateLayout(dataString: string): string {
 
 // --- Section Creation Helpers (Specific to standard-detailed) ---
 
-function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel): SectionElement {
-  // Assuming company/contact info is on viewModel.customer for simplicity
-  const logoCol = new ColumnElement([new TextElement("[Logo Placeholder]")]);
-  logoCol.span = 3;
+// Modified to accept children array and return void
+function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: Array<LayoutElement>): void {
 
+  let logoCol: ColumnElement;
+  // --- Tenant Logo ---
+  // Check if tenantCompany and logoUrl exist
+  if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
+    const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
+    logoElement.style = instantiateStyle(new PartialStyle("width", "150px")); // Keep existing style for now
+    logoCol = new ColumnElement([logoElement]);
+  } else {
+    // Placeholder if no logo URL is provided
+    logoCol = new ColumnElement([new TextElement("[Tenant Logo]")]);
+  }
+  logoCol.span = 3; // Keep existing span
+
+  // --- Tenant Company Name & Address ---
+  const tenantName = viewModel.tenantCompany != null && viewModel.tenantCompany!.name != null ? viewModel.tenantCompany!.name! : "[Tenant Name]";
+  const tenantAddress = viewModel.tenantCompany != null && viewModel.tenantCompany!.address != null ? viewModel.tenantCompany!.address! : "[Tenant Address]";
   const companyInfoCol = new ColumnElement([
-    new TextElement(viewModel.customer.name), // Placeholder for company name
-    new TextElement(viewModel.customer.address) // Placeholder for company address
+    new TextElement(tenantName, "heading3"), // Use a heading style for name
+    new TextElement(tenantAddress)
   ]);
-  companyInfoCol.span = 5;
+  companyInfoCol.span = 5; // Keep existing span
 
+  // --- Invoice Info (Remains the same) ---
   const invoiceInfoCol = new ColumnElement([
     new TextElement("Invoice #: " + viewModel.invoiceNumber),
     new TextElement("Date: " + viewModel.issueDate)
@@ -83,30 +93,28 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel): SectionEl
 
   const customerInfoCol = new ColumnElement([
       new TextElement("Bill To:", "heading3"),
-      new TextElement(viewModel.customer.name),
-      new TextElement(viewModel.customer.address)
+      new TextElement(viewModel.customer ? viewModel.customer!.name : "[Customer Name]"), // Add null check
+      new TextElement(viewModel.customer ? viewModel.customer!.address : "[Customer Address]") // Add null check
   ]);
   customerInfoCol.span = 6; // Takes up half the width on a new line
+  
+  // Apply padding to improve visual layout
+  const customerInfoStyle = new PartialStyle();
+  customerInfoStyle.paddingLeft = "1em";
+  customerInfoStyle.paddingTop = "0.5em";
+  applyStyle(customerInfoCol, instantiateStyle(customerInfoStyle));
 
   const headerRow1 = new RowElement([logoCol, companyInfoCol, invoiceInfoCol]);
   const headerRow2 = new RowElement([customerInfoCol]); // Customer info on its own row
 
   const headerSection = new SectionElement([headerRow1, headerRow2]);
   headerSection.id = "invoice-header-std-detailed";
-  return headerSection;
+  children.push(headerSection); // Push directly to the passed array
 }
 
-class ItemsSectionResult {
-    section: SectionElement;
-    subtotal: f64;
-    constructor(section: SectionElement, subtotal: f64) { this.section = section; this.subtotal = subtotal; }
-}
-
-// *** CORRECTED createItemsSection_StdDetailed function ***
-function createItemsSection_StdDetailed(items: Array<InvoiceItem>): ItemsSectionResult {
-
-    // DSL: section items grid 12 x 10 { ... }
-    const sectionChildren = new Array<LayoutElement>();
+// *** MODIFIED createItemsSection_StdDetailed function ***
+// Accepts children array, returns only subtotal
+function createItemsSection_StdDetailed(items: Array<InvoiceItem>, children: Array<LayoutElement>): number {
     let runningSubtotal: f64 = 0.0;
 
     const groupedItems = new Map<string, Array<InvoiceItem>>();
@@ -169,95 +177,105 @@ function createItemsSection_StdDetailed(items: Array<InvoiceItem>): ItemsSection
             categoryItems = [];
         }
 
+        // --- Create Section for Category Header ---
         log("Wasm Debug: Creating categoryHeader TextElement for category: " + category);
         const categoryHeader = new TextElement(category, "heading3");
         log("Wasm Debug: categoryHeader created.");
 
-        log("Wasm Debug: Applying style to categoryHeader.");
-        // Create PartialStyle separately
-        const categoryHeaderStyle = new PartialStyle(null, null, "1px solid #eee", "0.2em", "1em");
-        applyStyle(categoryHeader, instantiateStyle(categoryHeaderStyle));
-        log("Wasm Debug: Style applied to categoryHeader.");
+        // Apply style (e.g., margin) to the header text element itself if needed
+        const categoryHeaderTextStyle = new PartialStyle();
+        categoryHeaderTextStyle.marginTop = "1em"; // Add space above the header
+        categoryHeaderTextStyle.paddingBottom = "0.2em"; // Small space below text before table section
+        applyStyle(categoryHeader, instantiateStyle(categoryHeaderTextStyle));
+        log("Wasm Debug: Style applied to categoryHeader TextElement.");
 
-        log("Wasm Debug: Pushing categoryHeader to sectionChildren.");
-        sectionChildren.push(categoryHeader);
-        log("Wasm Debug: categoryHeader pushed.");
+        // Add the styled TextElement header directly to the passed children array
+        children.push(categoryHeader);
+        log("Wasm Debug: Category header TextElement added.");
 
-        // Restore table header row creation and push
+
+        // --- Create Section for Items Table (Header + Rows) ---
+        const itemsTableChildren = new Array<LayoutElement>(); // Children for this specific table section
+
         log("Wasm Debug: Calling createItemTableHeaderRow_StdDetailed.");
         const tableHeaderRow = createItemTableHeaderRow_StdDetailed();
         log("Wasm Debug: createItemTableHeaderRow_StdDetailed returned.");
-
-        log("Wasm Debug: Pushing tableHeaderRow to sectionChildren.");
-        sectionChildren.push(tableHeaderRow);
-        log("Wasm Debug: tableHeaderRow pushed.");
-        // --- End restore ---
+        itemsTableChildren.push(tableHeaderRow); // Add table header to this section's children
+        log("Wasm Debug: tableHeaderRow pushed to itemsTableChildren.");
 
         // Check if categoryItems is not null AND has items before iterating
-        if (categoryItems != null && categoryItems.length > 0) { // More robust check
-            log("Wasm Debug: Entering inner loop for category '" + category + "' with length " + categoryItems.length.toString()); // Log before loop
-            // Restore inner loop
-            // The entire original for loop structure (lines 176-232) is restored below:
+        if (categoryItems != null && categoryItems.length > 0) {
+            log("Wasm Debug: Entering inner loop for category '" + category + "' with length " + categoryItems.length.toString());
             for (let j = 0; j < categoryItems.length; j++) {
-                // Explicit bounds check for safety before access - Keep this check
                 if (j >= categoryItems.length) {
                     log("Wasm Error: Index j=" + j.toString() + " out of bounds during loop for categoryItems.length=" + categoryItems.length.toString());
-                    // This should ideally not be reached if the loop condition is correct,
-                    // but break defensively to prevent runtime abort.
                     break;
                 }
-                log("Wasm Debug: Inner loop - Accessing categoryItems[" + j.toString() + "]. categoryItems.length=" + categoryItems.length.toString());
-                // Restore inner loop body
+                log("Wasm Debug: Inner loop - Accessing categoryItems[" + j.toString() + "]");
                 const item = categoryItems[j];
 
-                // Add logs before formatCurrency calls
+                // --- Create Item Row ---
                 log("Wasm Debug: Preparing item row for item ID: " + item.id);
-                log("Wasm Debug: Formatting unitPrice: " + item.unitPrice.toString());
                 const formattedUnitPrice = formatCurrency(item.unitPrice);
-                log("Wasm Debug: unitPrice formatted. Result: " + formattedUnitPrice);
-                log("Wasm Debug: Formatting total: " + item.total.toString());
                 const formattedTotal = formatCurrency(item.total);
-                log("Wasm Debug: total formatted. Result: " + formattedTotal);
 
-                // Now create the RowElement using the formatted values
-                // Create PartialStyle separately for right alignment
                 const rightAlignStyleForRow = new PartialStyle();
                 rightAlignStyleForRow.textAlign = "right";
-                const defaultStyleForRow = new PartialStyle(); // For description
+                
+                const defaultStyleForRow = new PartialStyle();
+                defaultStyleForRow.paddingLeft = "0.5em";  // Add left padding to description
 
-                // Restore itemRow creation with styling
-                log("Wasm Debug: Creating itemRow RowElement...");
-                // Break down itemRow creation further
-                log("Wasm Debug: Creating itemDescCol...");
-                const itemDescCol = applyStyle(new ColumnElement([new TextElement(item.description)]), instantiateStyle(defaultStyleForRow)); // Span 6
-                itemDescCol.span = 6; // Explicitly set span
-                log("Wasm Debug: Created itemDescCol.");
-
-                log("Wasm Debug: Creating itemQtyCol...");
-                const itemQtyCol = applyStyle(new ColumnElement([new TextElement(item.quantity.toString())]), instantiateStyle(rightAlignStyleForRow)); // Span 2
-                itemQtyCol.span = 2; // Explicitly set span
-                log("Wasm Debug: Created itemQtyCol.");
-
-                const itemPriceCol = applyStyle(new ColumnElement([new TextElement(formattedUnitPrice)]), instantiateStyle(rightAlignStyleForRow)); // Span 2, Use pre-formatted value
-                itemPriceCol.span = 2; // Explicitly set span
-
-                const itemTotalCol = applyStyle(new ColumnElement([new TextElement(formattedTotal)]), instantiateStyle(rightAlignStyleForRow)); // Span 2, Use pre-formatted value
-                itemTotalCol.span = 2; // Explicitly set span
-
+                const itemDescCol = applyStyle(new ColumnElement([new TextElement(item.description)]), instantiateStyle(defaultStyleForRow));
+                itemDescCol.span = 6;
+                
+                const itemQtyCol = applyStyle(new ColumnElement([new TextElement(item.quantity.toString())]), instantiateStyle(rightAlignStyleForRow));
+                itemQtyCol.span = 2;
+                
+                const itemPriceCol = applyStyle(new ColumnElement([new TextElement(formattedUnitPrice)]), instantiateStyle(rightAlignStyleForRow));
+                itemPriceCol.span = 2;
+                
+                const itemTotalRightStyle = new PartialStyle();
+                itemTotalRightStyle.textAlign = "right";
+                itemTotalRightStyle.paddingRight = "0.5em"; // Add right padding to price
+                
+                const itemTotalCol = applyStyle(new ColumnElement([new TextElement(formattedTotal)]), instantiateStyle(itemTotalRightStyle));
+                itemTotalCol.span = 2;
 
                 const itemRow = new RowElement([itemDescCol, itemQtyCol, itemPriceCol, itemTotalCol]);
                 itemRow.id = "item-row-" + item.id;
-                sectionChildren.push(itemRow);
-                // End restore inner loop body
+
+                const itemRowStyle = new PartialStyle();
+                itemRowStyle.borderBottom = "0px";
+                itemRowStyle.paddingTop = "0.3em";
+                itemRowStyle.paddingBottom = "0.3em";
+                applyStyle(itemRow, instantiateStyle(itemRowStyle));
+
+                itemsTableChildren.push(itemRow); // Add item row to this section's children
             }
-            // End restore inner loop structure
-        } // Closing brace for if(categoryItems)
+        }
+
+        // Create the section element for the items table
+        const itemsTableSection = new SectionElement(itemsTableChildren);
+        itemsTableSection.id = "items-table-section-" + category.replace(" ", "-").toLowerCase(); // Optional ID
+
+        // Apply border and padding to the items table section
+        const itemsSectionStyle = new PartialStyle();
+        itemsSectionStyle.border = "1px solid #ccc"; // Use border shorthand
+        itemsSectionStyle.paddingTop = "1em";       // Add top padding
+        itemsSectionStyle.paddingBottom = "1em";    // Add bottom padding
+        itemsSectionStyle.paddingLeft = "1em";      // Add left padding
+        itemsSectionStyle.paddingRight = "1em";     // Add right padding
+        // itemsSectionStyle.marginTop = "0.5em"; // Optional: Adjust margin if needed
+        applyStyle(itemsTableSection, instantiateStyle(itemsSectionStyle));
+
+        // Add the styled SectionElement containing the table directly to the passed children array
+        children.push(itemsTableSection);
+        log("Wasm Debug: Items table section added for category: " + category);
     } // Closing brace for for loop
     // End restore outer loop structure
 
-    const itemsSection = new SectionElement(sectionChildren);
-    itemsSection.id = "invoice-items-std-detailed";
-    return new ItemsSectionResult(itemsSection, runningSubtotal);
+    // Return only the subtotal
+    return runningSubtotal as number;
 }
 // *** END CORRECTED function ***
 
@@ -265,10 +283,12 @@ function createItemTableHeaderRow_StdDetailed(): RowElement {
     // Corresponds to fields: description, quantity, unit_price, total_price
     // Description Column (No specific alignment)
     const descPartialStyle = new PartialStyle();
+    descPartialStyle.paddingLeft = "0.5em";  // Add left padding to match item rows
     const descElementStyle = instantiateStyle(descPartialStyle);
     const descTextElement = new TextElement("Description", "label");
     const descColumnElement = new ColumnElement([descTextElement]);
     const descCol = applyStyle(descColumnElement, descElementStyle); // Span 6
+    descCol.span = 6;
 
     // Quantity Column (Right aligned - Modified Creation)
     const qtyPartialStyle = new PartialStyle(); // Create default
@@ -277,6 +297,7 @@ function createItemTableHeaderRow_StdDetailed(): RowElement {
     const qtyTextElement = new TextElement("Qty", "label");
     const qtyColumnElement = new ColumnElement([qtyTextElement]);
     const qtyCol = applyStyle(qtyColumnElement, qtyElementStyle); // Span 2
+    qtyCol.span = 2;
 
     // Price Column (Right aligned - Modified Creation)
     const pricePartialStyle = new PartialStyle(); // Create default
@@ -285,14 +306,22 @@ function createItemTableHeaderRow_StdDetailed(): RowElement {
     const priceTextElement = new TextElement("Unit Price", "label");
     const priceColumnElement = new ColumnElement([priceTextElement]);
     const priceCol = applyStyle(priceColumnElement, priceElementStyle); // Span 2
+    priceCol.span = 2;
 
     // Total Column (Right aligned - Modified Creation)
     const totalPartialStyle = new PartialStyle(); // Create default
     totalPartialStyle.textAlign = "right";      // Set property
     const totalElementStyle = instantiateStyle(totalPartialStyle);
     const totalTextElement = new TextElement("Total", "label");
+    
+    const totalTextElementStyle = new PartialStyle();
+    totalTextElementStyle.fontWeight = "bold";
+    totalTextElementStyle.paddingRight = "0.5em"; // Add proper right padding
+    totalTextElement.style = instantiateStyle(totalTextElementStyle);
+    
     const totalColumnElement = new ColumnElement([totalTextElement]);
     const totalCol = applyStyle(totalColumnElement, totalElementStyle); // Span 2
+    totalCol.span = 2;
 
 
     const headerRow = new RowElement([descCol, qtyCol, priceCol, totalCol]);
@@ -306,7 +335,8 @@ function createItemTableHeaderRow_StdDetailed(): RowElement {
     return headerRow;
 }
 
-function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64): SectionElement {
+// Modified to accept children array and return void
+function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64, children: Array<LayoutElement>): void {
     // DSL: section summary grid 12 x 5 { ... }
     const spacerCol = new ColumnElement([]);
     spacerCol.span = 7;
@@ -320,6 +350,7 @@ function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64): S
     // Create PartialStyle separately for right alignment
     const totalsLabelStyle = new PartialStyle();
     totalsLabelStyle.textAlign = "right";
+    totalsLabelStyle.paddingRight = "1em"; // Add right padding to labels
     applyStyle(labelCol, instantiateStyle(totalsLabelStyle));
 
     const valueCol = new ColumnElement([
@@ -331,6 +362,7 @@ function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64): S
     // Apply right alignment separately
     const totalsValueStyle = new PartialStyle();
     totalsValueStyle.textAlign = "right";
+    totalsValueStyle.paddingRight = "0.5em"; // Add right padding to values
     applyStyle(valueCol, instantiateStyle(totalsValueStyle));
 
 
@@ -339,15 +371,15 @@ function createTotalsSection_StdDetailed(subtotal: f64, tax: f64, total: f64): S
     totalsSection.id = "invoice-totals-std-detailed";
 
     const sectionStyle = new ElementStyle();
-    sectionStyle.borderTop = "1px solid #eee";
+    sectionStyle.borderTop = "0px";
     sectionStyle.paddingTop = "1em";
     sectionStyle.marginTop = "1em";
     applyStyle(totalsSection, sectionStyle);
-
-    return totalsSection;
+    children.push(totalsSection); // Push directly to the passed array
 }
 
-function createNotesSection_StdDetailed(viewModel: InvoiceViewModel): SectionElement | null {
+// Modified to accept children array and return void
+function createNotesSection_StdDetailed(viewModel: InvoiceViewModel, children: Array<LayoutElement>): void {
     // Handles both the explicit notes field and the "Thank you" text from the DSL summary
     const notesContent = new Array<LayoutElement>();
 
@@ -370,8 +402,7 @@ function createNotesSection_StdDetailed(viewModel: InvoiceViewModel): SectionEle
         const sectionStyle = new ElementStyle();
         sectionStyle.marginTop = "2em"; // Space before notes section
         applyStyle(notesSection, sectionStyle);
-        return notesSection;
+        children.push(notesSection); // Push directly to the passed array
     }
-
-    return null;
+    // No return needed
 }

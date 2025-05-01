@@ -1,8 +1,11 @@
 // server/src/lib/models/invoice.ts
 import { createTenantKnex } from '../db';
+// Restore InvoiceViewModel import from interfaces
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
+// Remove direct import from renderer types
 import { Temporal } from '@js-temporal/polyfill';
 import { getAdminConnection } from '../db/admin';
+import { getCompanyLogoUrl } from '../utils/avatarUtils'; // Added Import
 
 export default class Invoice {
   static async create(invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
@@ -383,6 +386,7 @@ export default class Invoice {
     }
   }
 
+  // Revert return type to InvoiceViewModel from interfaces
   static async getFullInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
     console.log('Getting full invoice details for:', invoiceId);
     const {knex, tenant} = await createTenantKnex();
@@ -421,6 +425,40 @@ export default class Invoice {
     if (!invoice) {
       throw new Error('Invoice not found');
     }
+
+    // --- Fetch Tenant's Default Company ---
+    let tenantCompanyInfo = null;
+    const tenantCompanyLink = await knex('tenant_companies')
+      .where({ tenant_id: tenant, is_default: true })
+      .select('company_id')
+      .first();
+
+    if (tenantCompanyLink) {
+      // Step 2: Modify query - remove 'logo_url'
+      const tenantCompanyDetails = await knex('companies')
+        .where({ company_id: tenantCompanyLink.company_id })
+        .select('company_name', 'address') // Removed 'logo_url'
+        .first();
+
+      // Step 3: Fetch Logo URL using the utility function
+      let logoUrl: string | null = null; // Initialize logoUrl
+      if (tenantCompanyDetails) {
+         logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, invoice.tenant); // Use invoice.tenant
+
+        // Step 4: Update ViewModel Population
+        tenantCompanyInfo = {
+          name: tenantCompanyDetails.company_name,
+          address: tenantCompanyDetails.address,
+          logoUrl: logoUrl, // Use the fetched logoUrl
+        };
+        console.log('Found tenant default company:', tenantCompanyInfo);
+      } else {
+        console.warn(`Tenant default company details not found for company_id: ${tenantCompanyLink.company_id}`);
+      }
+    } else {
+      console.warn(`No default company found for tenant: ${tenant}`);
+    }
+    // --- End Fetch Tenant's Default Company ---
   
     const invoice_items = await this.getInvoiceItems(invoiceId);
     console.log('Processing invoice items for view model:', {
@@ -436,6 +474,11 @@ export default class Invoice {
       }))
     });
     const company = await knex('companies').where({ company_id: invoice.company_id }).first();
+// Add check for company existence
+    if (!company) {
+      console.error(`!!! Critical Error: Company details not found for company_id ${invoice.company_id} associated with invoice ${invoiceId} !!!`);
+      throw new Error(`Customer company details not found for invoice ${invoiceId}. Cannot construct ViewModel.`);
+    }
   
     // Ensure all monetary values are integers
     const subtotal = typeof invoice.subtotal === 'string' ? parseInt(invoice.subtotal, 10) : invoice.subtotal;
@@ -452,75 +495,75 @@ export default class Invoice {
       matches: subtotal + tax === totalAmount ? 'Yes' : 'No'
     });
 
-    // Construct and return the InvoiceViewModel
-    const viewModel = {
-      invoice_number: invoice.invoice_number,
-      company_id: invoice.company_id,
-      company: {
-        name: company.company_name,
-        logo: company.logo || '',
-        address: company.address || '',
-      },
-      contact: {
-        name: invoice.contact_name || '',
-        address: invoice.contact_address || '',
-      },
-      invoice_date: Temporal.PlainDate.from(invoice.invoice_date.toISOString().replace('Z', '')),
-      due_date: Temporal.PlainDate.from(invoice.due_date.toISOString().replace('Z', '')),
-      status: invoice.status,
-      subtotal: subtotal,
-      tax: tax,
-      total: totalAmount,
-      total_amount: totalAmount,
-      invoice_id: invoice.invoice_id,
-      invoice_items: invoice_items.map((item): IInvoiceItem => {
-        console.log('Processing invoice item:', {
-          id: item.item_id,
-          isManual: item.is_manual,
-          serviceId: item.service_id,
-          description: item.description,
-          unitPrice: item.unit_price
-        });
+    // Construct and return the original InvoiceViewModel (from interfaces)
+    try {
+      // Fetch contact details (assuming a primary contact exists)
+      const contact = await knex('contacts')
+        .where({ company_id: invoice.company_id, is_primary: true }) // Adjust if primary logic differs
+        .first();
 
-        const mappedItem: IInvoiceItem = {
-          description: item.description,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          total_price: item.total_price - item.tax_amount,
-          tax_amount: item.tax_amount,
-          net_amount: item.net_amount,
-          item_id: item.item_id || '',
-          invoice_id: item.invoice_id || '',
-          service_id: item.service_id,
+      const viewModel: InvoiceViewModel = {
+        // Fields from the original InvoiceViewModel definition
+        invoice_id: invoice.invoice_id,
+        invoice_number: invoice.invoice_number,
+        company_id: invoice.company_id,
+        company: { // Populate company details
+          name: company.company_name || '',
+          address: company.address || '',
+          // Check tenant before calling getCompanyLogoUrl
+          logo: tenant ? (await getCompanyLogoUrl(invoice.company_id, tenant)) || '' : '',
+        },
+        contact: { // Populate contact details
+          name: contact?.name || '',
+          address: contact?.address || '', // Assuming contact has address
+        },
+        invoice_date: invoice.invoice_date, // Keep as DateValue
+        due_date: invoice.due_date,         // Keep as DateValue
+        status: invoice.status,
+        subtotal: subtotal,
+        tax: tax,
+        total: totalAmount, // Use totalAmount which includes tax
+        total_amount: totalAmount, // Keep for compatibility if needed, same as total
+        invoice_items: invoice_items.map(item => ({ // Map to IInvoiceItem structure
+          ...item, // Spread existing item properties
+          // Ensure types match IInvoiceItem (they should already from getInvoiceItems)
+          unit_price: typeof item.unit_price === 'string' ? parseInt(item.unit_price, 10) : item.unit_price,
+          total_price: typeof item.total_price === 'string' ? parseInt(item.total_price, 10) : item.total_price,
+          tax_amount: typeof item.tax_amount === 'string' ? parseInt(item.tax_amount, 10) : item.tax_amount,
+          net_amount: typeof item.net_amount === 'string' ? parseInt(item.net_amount, 10) : item.net_amount,
+          quantity: typeof item.quantity === 'string' ? parseInt(item.quantity, 10) : item.quantity,
+          // Add any missing required fields from IInvoiceItem with defaults if necessary
+          tenant: tenant ?? undefined, // Map null tenant to undefined
           is_manual: item.is_manual || false,
-          tenant: item.tenant,
-          rate: item.rate
-        };
+          rate: typeof item.unit_price === 'string' ? parseInt(item.unit_price, 10) : item.unit_price, // Add rate if needed, using unit_price
+        })),
+        // custom_fields: undefined, // Add if needed
+        finalized_at: invoice.finalized_at, // Keep as DateValue
+        credit_applied: creditApplied,
+        billing_cycle_id: invoice.billing_cycle_id,
+        is_manual: invoice.is_manual,
+      };
 
-        return mappedItem;
-      }),
-      custom_fields: invoice.custom_fields,
-      finalized_at: invoice.finalized_at ? Temporal.PlainDate.from(invoice.finalized_at) : undefined,
-      credit_applied: creditApplied,
-      is_manual: invoice.is_manual,
-    };
+      console.log('Returning original invoice view model:', {
+        number: viewModel.invoice_number,
+        itemCount: viewModel.invoice_items.length,
+        total: viewModel.total,
+      });
 
-    console.log('Returning invoice view model:', {
-      id: viewModel.invoice_id,
-      number: viewModel.invoice_number,
-      isManual: viewModel.is_manual,
-      itemCount: viewModel.invoice_items.length,
-      manualItems: viewModel.invoice_items.filter(item => item.is_manual).length,
-      automatedItems: viewModel.invoice_items.filter(item => !item.is_manual).length,
-      items: viewModel.invoice_items.map(item => ({
-        id: item.item_id,
-        isManual: item.is_manual,
-        serviceId: item.service_id,
-        description: item.description
-      }))
-    });
-
-    return viewModel;
+      return viewModel; // Return the original InvoiceViewModel
+    } catch (error) {
+      console.error("!!! Error constructing or returning InvoiceViewModel !!!", {
+        invoiceId: invoiceId,
+        tenant: tenant,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
+        invoiceData: invoice, // Log raw invoice data
+        tenantCompanyInfo: tenantCompanyInfo, // Log tenant info
+        itemsData: invoice_items // Log items data
+      });
+      // Decide how to handle: re-throw, return null, or return specific error object
+      throw new Error(`Failed to construct final InvoiceViewModel: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   static async generateInvoice(invoiceId: string): Promise<IInvoice> {

@@ -23,7 +23,7 @@ import { getAllCompanies } from 'server/src/lib/actions/companyActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 // Import both ViewModel types with aliases
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
-import type { InvoiceViewModel as WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import { mapDbInvoiceToWasmViewModel } from 'server/src/lib/adapters/invoiceAdapters'; // Import the correct adapter
 import { TemplateRenderer } from './TemplateRenderer';
 import PaperInvoice from './PaperInvoice';

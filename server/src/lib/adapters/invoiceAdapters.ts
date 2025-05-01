@@ -3,7 +3,8 @@ import type {
   InvoiceViewModel as DbInvoiceViewModel, // Source type from DB/interfaces
   IInvoiceItem
 } from 'server/src/interfaces/invoice.interfaces';
-import type { InvoiceViewModel as WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types'; // Target type for Wasm renderer
+// Ensure the correct type is imported
+import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import { DateValue } from '@shared/types/temporal';
 import { Temporal } from '@js-temporal/polyfill';
 // toPlainDate is likely not needed here as we format to string for Wasm
@@ -31,38 +32,58 @@ function formatDateValueToString(date: DateValue | undefined | null): string {
  * @param dbData - The detailed invoice data from the database query.
  * @returns An InvoiceViewModel suitable for the Wasm renderer, or null if input is null.
  */
-export function mapDbInvoiceToWasmViewModel(dbData: DbInvoiceViewModel | null): WasmInvoiceViewModel | null {
-  if (!dbData) {
+// Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
+export function mapDbInvoiceToWasmViewModel(inputData: any): WasmInvoiceViewModel | null {
+  console.log('[mapDbInvoiceToWasmViewModel] Received Data (Structure might be WasmViewModel already):', JSON.stringify(inputData, null, 2));
+
+  if (!inputData) {
+    console.log('[mapDbInvoiceToWasmViewModel] Input data is null, returning null.');
     return null;
   }
 
-  // Logic adapted from pdf-generation.service.ts mapInvoiceDataToViewModel
-  const viewModel: WasmInvoiceViewModel = {
-    invoiceNumber: dbData.invoice_number ?? 'N/A',
-    issueDate: formatDateValueToString(dbData.invoice_date), // Format date to string
-    dueDate: formatDateValueToString(dbData.due_date),       // Format date to string
-    customer: {
-      name: dbData.company?.name || 'N/A', // Combine company/contact info
-      address: dbData.contact?.address || dbData.company?.address || 'N/A', // Use contact address first, fallback to company
-    },
-    items: (dbData.invoice_items ?? []).map((item: IInvoiceItem) => ({ // Ensure items array exists
-      id: item.item_id,
-      description: item.description,
-      quantity: item.quantity,
-      unitPrice: item.unit_price, // Assuming unit_price is correct
-      total: item.total_price, // Assuming total_price is correct
-      // Optional fields from WasmInvoiceViewModel['items'][number] can be added here
-      // e.g., category: item.some_category_field,
-    })),
-    subtotal: dbData.subtotal ?? 0,
-    tax: dbData.tax ?? 0,
-    total: dbData.total_amount ?? 0, // Map total_amount to total for Wasm VM
-    // Add other optional fields expected by WasmInvoiceViewModel if available in dbData
-    // notes: dbData.notes,
-    // paymentTerms: dbData.payment_terms,
-  };
+  // Basic check for essential properties expected in the WasmViewModel structure
+  if (typeof inputData.invoiceNumber === 'undefined' || typeof inputData.customer === 'undefined' || typeof inputData.items === 'undefined') {
+      console.error('[mapDbInvoiceToWasmViewModel] Input data is missing essential WasmViewModel properties (invoiceNumber, customer, items). Cannot map reliably.');
+      return null; // Return null as mapping cannot proceed
+  }
 
-  return viewModel;
+  try {
+    // Assume inputData structure matches WasmInvoiceViewModel based on logs, focus on type coercion/defaults
+    const viewModel: WasmInvoiceViewModel = {
+      invoiceNumber: String(inputData.invoiceNumber ?? 'N/A'),
+      issueDate: String(inputData.issueDate ?? ''), // Already formatted string in input log
+      dueDate: String(inputData.dueDate ?? ''),   // Already formatted string in input log
+      customer: {
+        name: String(inputData.customer?.name ?? 'N/A'),
+        address: String(inputData.customer?.address ?? 'N/A'),
+      },
+      // Map tenantCompany if it exists in input, otherwise null
+      tenantCompany: inputData.tenantCompany ? {
+          name: String(inputData.tenantCompany.name ?? 'N/A'),
+          address: String(inputData.tenantCompany.address ?? 'N/A'),
+          logoUrl: inputData.tenantCompany.logoUrl ?? null // Keep logoUrl if present
+      } : null,
+      items: (inputData.items ?? []).map((item: any) => ({ // Use 'any' for item type due to uncertainty
+        id: String(item.id ?? ''),
+        description: String(item.description ?? ''),
+        quantity: Number(item.quantity ?? 0), // Ensure number
+        unitPrice: Number(item.unitPrice ?? 0), // Ensure number
+        total: Number(item.total ?? 0), // Ensure number (use item.total directly)
+      })),
+      subtotal: Number(inputData.subtotal ?? 0), // Ensure number
+      tax: Number(inputData.tax ?? 0), // Ensure number
+      total: Number(inputData.total ?? 0), // Ensure number (use inputData.total directly)
+      // notes: inputData.notes, // Add if needed
+    };
+
+    console.log('[mapDbInvoiceToWasmViewModel] Mapped ViewModel (Corrected based on input log):', JSON.stringify(viewModel, null, 2));
+    return viewModel;
+
+  } catch (error) {
+      console.error('[mapDbInvoiceToWasmViewModel] Error during mapping (Corrected logic):', error);
+      console.error('[mapDbInvoiceToWasmViewModel] Original Data causing error:', JSON.stringify(inputData, null, 2));
+      return null; // Return null on error
+  }
 }
 
 // --- The deprecated mapDbInvoiceToViewModel function below this line is now removed ---

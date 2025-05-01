@@ -12,9 +12,12 @@ import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // TooltipTrigger,
 import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
-import { InvoiceViewModel, PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
+// Import PreviewInvoiceResponse (which uses the correct VM internally)
+import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
+// Import the InvoiceViewModel directly from the renderer types
 import { generateInvoice, previewInvoice } from '../../lib/actions/invoiceGeneration';
 // Updated import for billing cycle actions
+import { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import { getInvoicedBillingCycles, removeBillingCycle, hardDeleteBillingCycle } from '../../lib/actions/billingCycleActions';
 import { ISO8601String } from '../../types/types.d';
 import { Dialog, DialogHeader, DialogTitle, DialogContent, DialogFooter, DialogDescription } from '../ui/Dialog';
@@ -66,7 +69,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   } | null>(null);
   // State to hold both preview data and the associated billing cycle ID
   const [previewState, setPreviewState] = useState<{
-    data: InvoiceViewModel | null;
+    data: WasmInvoiceViewModel | null; // Use the directly imported ViewModel type
     billingCycleId: string | null;
   }>({ data: null, billingCycleId: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
@@ -111,8 +114,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
   // Debug effect to log preview data
   useEffect(() => {
     if (previewState.data) {
-      console.log("Preview data items:", previewState.data.invoice_items);
-      console.log("Bundle headers:", previewState.data.invoice_items.filter(item => item.is_bundle_header));
+      console.log("Preview data items:", previewState.data.items); // Use items
+      // Need to check item structure for bundle headers if needed, assuming 'description' for now
+      console.log("Bundle headers:", previewState.data.items.filter(item => item.description?.startsWith('Bundle:')));
     }
   }, [previewState.data]);
 
@@ -145,6 +149,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     setErrors({}); // Clear previous errors
     const response = await previewInvoice(billingCycleId);
     if (response.success) {
+      // No cast needed now, types should match directly
       setPreviewState({ data: response.data, billingCycleId: billingCycleId });
       setShowPreviewDialog(true);
     } else {
@@ -586,8 +591,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
             <div className="space-y-4">
               <div className="border-b pb-4">
                 <h3 className="font-semibold">Company Details</h3>
-                <p>{previewState.data.company.name}</p>
-                <p>{previewState.data.company.address}</p>
+                {/* Use customer property */}
+                <p>{previewState.data.customer?.name}</p>
+                <p>{previewState.data.customer?.address}</p>
               </div>
 
               <div className="border-b pb-4">
@@ -595,15 +601,18 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-500">Invoice Number</p>
-                    <p>{previewState.data.invoice_number}</p>
+                    {/* Use invoiceNumber */}
+                    <p>{previewState.data.invoiceNumber}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Date</p>
-                    <p>{previewState.data.invoice_date.toLocaleString()}</p>
+                    {/* Use issueDate and convert */}
+                    <p>{toPlainDate(previewState.data.issueDate).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Due Date</p>
-                    <p>{previewState.data.due_date.toLocaleString()}</p>
+                    {/* Use dueDate and convert */}
+                    <p>{toPlainDate(previewState.data.dueDate).toLocaleString()}</p>
                   </div>
                 </div>
               </div>
@@ -620,46 +629,47 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Map over previewState.data.invoice_items */}
-                    {previewState.data.invoice_items.map((item) => {
-                      if (item.is_bundle_header) {
-                        // Render bundle header style (Option A)
+                    {/* Map over previewState.data.items */}
+                    {previewState.data.items.map((item) => {
+                      // Check for bundle header based on description (adjust if needed)
+                      const isBundleHeader = item.description?.startsWith('Bundle:');
+                      // Check for detail line (assuming no quantity/unitPrice for now)
+                      const isDetailLine = !isBundleHeader && item.quantity === undefined && item.unitPrice === undefined;
+
+                      if (isBundleHeader) {
+                        // Render bundle header style
                         return (
-                          <tr key={item.item_id} className="border-b bg-muted/50 font-semibold">
-                            {/* Use colSpan=4 to span all columns - Description, Qty, Rate, Amount */}
+                          <tr key={item.id} className="border-b bg-muted/50 font-semibold">
                             <td className="py-2 px-2" colSpan={4}>{item.description}</td>
                           </tr>
                         );
+                      } else if (isDetailLine) {
+                        // Render detail line (blank Qty/Rate)
+                        return (
+                          <tr key={item.id} className="border-b">
+                            <td className="py-2 px-2">{item.description}</td>
+                            <td className="text-right py-2 px-2"></td> {/* Blank Quantity */}
+                            <td className="text-right py-2 px-2"></td> {/* Blank Rate */}
+                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                          </tr>
+                        );
                       } else {
-                        // Check if it's a detail line (fixed-fee allocation or bundle component) by checking parent_item_id
-                        if (item.parent_item_id) {
-                          // Render detail line (blank Qty/Rate)
-                          return (
-                            <tr key={item.item_id} className="border-b">
-                              <td className="py-2 px-2">{item.description}</td>
-                              <td className="text-right py-2 px-2"></td> {/* Blank Quantity */}
-                              <td className="text-right py-2 px-2"></td> {/* Blank Rate */}
-                              <td className="text-right py-2 px-2">{formatCurrency(item.total_price / 100)}</td>
-                            </tr>
-                          );
-                        } else {
-                          // Render regular standalone item
-                          return (
-                            <tr key={item.item_id} className="border-b">
-                              <td className="py-2 px-2">{item.description}</td>
-                              <td className="text-right py-2 px-2">{item.quantity}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.unit_price / 100)}</td>
-                              <td className="text-right py-2 px-2">{formatCurrency(item.total_price / 100)}</td>
-                            </tr>
-                          );
-                        }
+                        // Render regular standalone item
+                        return (
+                          <tr key={item.id} className="border-b">
+                            <td className="py-2 px-2">{item.description}</td>
+                            <td className="text-right py-2 px-2">{item.quantity}</td>
+                            <td className="text-right py-2 px-2">{formatCurrency(item.unitPrice / 100)}</td>
+                            <td className="text-right py-2 px-2">{formatCurrency(item.total / 100)}</td>
+                          </tr>
+                        );
                       }
                     })}
                   </tbody>
                   <tfoot>
                     <tr>
                       <td colSpan={3} className="text-right py-2 font-semibold">Subtotal</td>
-                      {/* Use previewState.data for totals */}
+                      {/* Use previewState.data properties */}
                       <td className="text-right py-2">{formatCurrency(previewState.data.subtotal / 100)}</td>
                     </tr>
                     <tr>

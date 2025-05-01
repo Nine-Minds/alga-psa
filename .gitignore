@@ -44,6 +44,7 @@ Thumbs.db
 # Production
 /build
 
+*.map
 
 # Debug
 npm-debug.log*
