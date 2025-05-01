@@ -23,9 +23,10 @@ interface WorkItemListPanelProps {
   onSortChange: () => void;
   onPageChange: (page: number) => void;
   onWorkItemClick: (e: React.MouseEvent, item: Omit<IExtendedWorkItem, "tenant">) => void;
-  onWorkItemDragStart: (e: React.DragEvent, workItemId: string, item: Omit<IWorkItem, "tenant">) => void;
-  onWorkItemDrag: (e: React.DragEvent) => void;
-  onWorkItemDragEnd: () => void;
+  onWorkItemDragStart?: (e: React.DragEvent, workItemId: string, item: Omit<IWorkItem, "tenant">) => void;
+  onWorkItemDrag?: (e: React.DragEvent) => void;
+  onWorkItemDragEnd?: () => void;
+  canEdit?: boolean;
 }
 
 const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
@@ -98,8 +99,8 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
           <div
             key={item.work_item_id}
             className="p-2 border border-[rgb(var(--color-border-200))] rounded bg-white cursor-move hover:bg-[rgb(var(--color-border-50))] transition-colors"
-            draggable="true"
-            onDragStart={(e) => onWorkItemDragStart(e, item.work_item_id, item)}
+            draggable={!!onWorkItemDragStart}
+            onDragStart={(e) => onWorkItemDragStart?.(e, item.work_item_id, item)}
             onDrag={onWorkItemDrag}
             onDragEnd={onWorkItemDragEnd}
           >

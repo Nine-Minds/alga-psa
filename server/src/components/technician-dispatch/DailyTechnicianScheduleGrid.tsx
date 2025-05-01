@@ -45,9 +45,9 @@ interface DailyTechnicianScheduleGridProps {
   technicians: Omit<IUser, 'tenant'>[];
   events: Omit<IScheduleEntry, 'tenant'>[];
   selectedDate: Date;
-  onDrop: (dropEvent: DropEvent) => void;
-  onResize: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
-  onDeleteEvent: (eventId: string) => void;
+  onDrop?: (dropEvent: DropEvent) => void;
+  onResize?: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
+  onDeleteEvent?: (eventId: string) => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onTechnicianClick: (technicianId: string) => void;
 }
@@ -152,7 +152,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
       e.preventDefault();
       e.stopPropagation();
      }
-      onDeleteEvent(eventId);
+      onDeleteEvent?.(eventId);
       isDraggingRef.current = false;
       dragStateRef.current = null;
       resizingRef.current = null;
@@ -241,7 +241,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
 
       // Immediately call onResize with the latest values
       if (latestResizeRef.current) {
-        onResize(
+        onResize?.(
           latestResizeRef.current.eventId,
           latestResizeRef.current.techId,
           latestResizeRef.current.newStart,
@@ -253,7 +253,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
 
   const handleResizeEnd = useCallback(() => {
     if (latestResizeRef.current) {
-      onResize(
+      onResize?.(
         latestResizeRef.current.eventId,
         latestResizeRef.current.techId,
         latestResizeRef.current.newStart,
@@ -292,7 +292,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
         };
       }
 
-      onDrop(dropEvent);
+      onDrop?.(dropEvent);
     }
 
     isDraggingRef.current = false;
@@ -588,7 +588,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
                       const [hours, minutes] = timeSlot.split(':').map(Number);
                       const dropTime = new Date(selectedDate);
                       dropTime.setHours(hours, minutes, 0, 0);
-                      onDrop({
+                      onDrop?.({
                         type: 'workItem',
                         workItemId,
                         techId,

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { produce, enableMapSet } from 'immer';
+import { useSession } from 'next-auth/react';
 import { WorkItemDetailsDrawer } from './WorkItemDetailsDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
@@ -14,11 +15,14 @@ import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { searchDispatchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
+import { checkCurrentUserPermission } from 'server/src/lib/actions/permissionActions';
 import { toast } from 'react-hot-toast';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
 import { DropEvent } from 'server/src/interfaces/event.interfaces';
 import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import { AlertCircle } from 'lucide-react';
 
 enableMapSet();
 
@@ -30,6 +34,13 @@ const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
   }
 };
 
+function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
+  return (
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+  );
+}
+
 interface TechnicianDispatchDashboardProps {
   filterWorkItemId?: string;
   filterWorkItemType?: WorkItemType;
@@ -39,6 +50,9 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   filterWorkItemId,
   filterWorkItemType
 }) => {
+  const { data: session } = useSession();
+  const currentUser = session?.user;
+
   const [selectedPriority, setSelectedPriority] = useState('All');
   const [users, setUsers] = useState<Omit<IUserWithRoles, 'tenant'>[]>([]); // Changed type here
   const [events, setEvents] = useState<Omit<IScheduleEntry, 'tenant'>[]>([]);
@@ -47,7 +61,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [viewMode, setViewMode] = useState<'day' | 'week'>('day');
   const [primaryTechnicianId, setPrimaryTechnicianId] = useState<string | null>(null);
   const [comparisonTechnicianIds, setComparisonTechnicianIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // General error state
   const [searchQuery, setSearchQuery] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -59,6 +73,12 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const [statusFilterOptions, setStatusFilterOptions] = useState<StatusOption[]>([]);
   const [totalItems, setTotalItems] = useState(0);
   const ITEMS_PER_PAGE = 10;
+
+  // Permission states
+  const [canView, setCanView] = useState<boolean | null>(null);
+  const [canEdit, setCanEdit] = useState<boolean | null>(null);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(true);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
 
   const searchTimeoutRef = useRef<NodeJS.Timeout>();
   const isDraggingRef = useRef(false);
@@ -169,11 +189,41 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
   }, []);
 
+  // Fetch Permissions
   useEffect(() => {
+    const fetchPermissions = async () => {
+      setIsLoadingPermissions(true);
+      setPermissionError(null);
+      try {
+        const [viewResult, editResult] = await Promise.all([
+          checkCurrentUserPermission('technician_dispatch', 'read'),
+          checkCurrentUserPermission('technician_dispatch', 'update'),
+        ]);
+        setCanView(viewResult);
+        setCanEdit(editResult);
+      } catch (err) {
+        console.error('Error fetching permissions:', err);
+        setPermissionError('Failed to load permissions.');
+        setCanView(false);
+        setCanEdit(false);
+      } finally {
+        setIsLoadingPermissions(false);
+      }
+    };
+    fetchPermissions();
+  }, []);
+
+  useEffect(() => {
+    if (isLoadingPermissions || !canView) return;
+
     const fetchInitialData = async () => {
       try {
-        const fetchedUsers = await getAllUsers(true, 'internal');
-        setUsers(fetchedUsers);
+        if (canEdit || canView) {
+          const fetchedUsers = await getAllUsers(true, 'internal');
+          setUsers(fetchedUsers);
+        } else {
+          setUsers([]);
+        }
 
         const { start, end } = calculateDateRange(date, viewMode);
 
@@ -183,6 +233,8 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         } else {
           setError('Failed to fetch schedule entries');
         }
+        await performSearch(searchQuery);
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError('Failed to fetch data');
@@ -190,12 +242,13 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
 
     fetchInitialData();
-  }, [date, viewMode]);
+  }, [date, viewMode, isLoadingPermissions, canView, canEdit, performSearch, searchQuery]);
 
 
   useEffect(() => {
+    if (isLoadingPermissions || !canView) return;
     debouncedSearch(searchQuery);
-  }, [searchQuery, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch]);
+  }, [searchQuery, selectedStatusFilter, filterUnscheduled, sortOrder, currentPage, debouncedSearch, isLoadingPermissions, canView]);
 
   const debouncedSaveSchedule = useCallback(async (
     eventId: string,
@@ -227,6 +280,14 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   }, []);
 
   const handleDrop = useCallback(async (dropEvent: DropEvent) => {
+    const canPerformDrop = canEdit || (currentUser && dropEvent.techId === currentUser.id);
+
+    if (!canPerformDrop) {
+      toast.error("You don't have permission to schedule for this technician.");
+      setHighlightedSlots(null);
+      return;
+    }
+
     if (dropEvent.type === 'workItem') {
       const workItem = workItems.find((w) => w.work_item_id === dropEvent.workItemId);
 
@@ -394,6 +455,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     setViewMode(newViewMode);
   };
 
+  useEffect(() => {
+    if (viewMode === 'week' && canView && !canEdit && currentUser) {
+      setPrimaryTechnicianId(currentUser.id);
+      setComparisonTechnicianIds(new Set());
+    }
+    else if (viewMode !== 'week' && primaryTechnicianId === currentUser?.id && !canEdit) {
+       setPrimaryTechnicianId(null);
+    }
+  }, [viewMode, canView, canEdit, currentUser, primaryTechnicianId]);
+
 
   const handleTechnicianClick = (technicianId: string) => {
     setViewMode('week');
@@ -445,8 +516,17 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
   const displayedTechnicians = useMemo(() => {
-    return users;
-  }, [users]);
+    if (isLoadingPermissions || !currentUser) {
+      return [];
+    }
+    if (canEdit) {
+      return users;
+    }
+    if (canView) {
+      return users.filter(user => user.user_id === currentUser.id);
+    }
+    return [];
+  }, [users, canView, canEdit, currentUser, isLoadingPermissions]);
 
   const displayedEvents = useMemo(() => {
     if (displayedTechnicians.length === 0 && viewMode === 'week') {
@@ -609,6 +689,36 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
   }, [openDrawer, closeDrawer, refreshAllData, getWorkItemById, updateScheduleEntry]);
 
 
+  if (isLoadingPermissions) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (permissionError) {
+    return (
+      <div className="flex items-center justify-center h-screen p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{permissionError || 'An unknown error occurred.'}</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (canView === false) {
+     return (
+      <div className="flex items-center justify-center h-screen p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>Access Denied: You do not have permission to view the Technician Dispatch dashboard.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen">
       {filterWorkItemId && (
@@ -650,6 +760,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onWorkItemDragStart={handleDragStart}
           onWorkItemDrag={handleDrag}
           onWorkItemDragEnd={handleDragEnd}
+          canEdit={canEdit ?? false}
         />
 
         <ScheduleViewPanel
@@ -667,9 +778,10 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onResize={onResize}
           onDeleteEvent={handleDeleteEvent}
           onEventClick={handleEventClick}
-          onDropFromList={handleDrop} // Added prop, using same handler
-          onSelectSlot={(slotInfo) => { /* Placeholder for select slot */ console.log("Slot selected:", slotInfo); }} // Added placeholder for required prop
+          onDropFromList={handleDrop}
+          onSelectSlot={(slotInfo) => { /* Placeholder for select slot */ console.log("Slot selected:", slotInfo); }}
           onResetSelections={handleResetSelections}
+          canEdit={canEdit ?? false}
         />
       </div>
 

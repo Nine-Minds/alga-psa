@@ -21,13 +21,14 @@ interface ScheduleViewPanelProps {
   onViewChange: (newViewMode: 'day' | 'week') => void;
   onTechnicianClick: (technicianId: string) => void;
   onComparisonChange?: (technicianId: string, isSelected: boolean) => void;
-  onDrop: (dropEvent: DropEvent) => void;
-  onResize: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
-  onDeleteEvent: (eventId: string) => void;
+  onDrop?: (dropEvent: DropEvent) => void;
+  onResize?: (eventId: string, techId: string, newStart: Date, newEnd: Date) => void;
+  onDeleteEvent?: (eventId: string) => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
-  onDropFromList: (dropEvent: DropEvent) => void;
+  onDropFromList?: (dropEvent: DropEvent) => void;
   onSelectSlot: (slotInfo: { start: Date; end: Date; resourceId?: string | number }) => void;
   onResetSelections?: () => void;
+  canEdit?: boolean;
 }
 
 const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
@@ -92,7 +93,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
         techId: techId,
         startTime: startTime,
     };
-    onDrop(dropData);
+    onDrop?.(dropData);
   };
 
   const handleEventResize: withDragAndDropProps<IScheduleEntry, object>['onEventResize'] = ({ event, start, end }) => {
@@ -103,7 +104,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
      const techId = primaryTechnicianId || event.assigned_user_ids[0];
      const newStart = typeof start === 'string' ? moment(start).toDate() : start;
      const newEnd = typeof end === 'string' ? moment(end).toDate() : end;
-     onResize(event.entry_id.toString(), techId, newStart, newEnd);
+     onResize?.(event.entry_id.toString(), techId, newStart, newEnd);
   };
 
   const handleDropFromList = (item: { workItemId: string; start: Date; end: Date; resourceId: string | number }) => {
@@ -113,7 +114,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
           techId: item.resourceId as string,
           startTime: item.start,
       };
-      onDropFromList(dropData);
+      onDropFromList?.(dropData);
   };
 
   const handleSelectEvent = (event: IScheduleEntry, e: React.SyntheticEvent<HTMLElement>) => {
