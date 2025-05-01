@@ -36,6 +36,10 @@ interface EntryPopupProps {
   loading?: boolean;
   isInDrawer?: boolean;
   error?: string | null;
+  // New props for multi-user schedule logic
+  canModifySchedule: boolean;
+  focusedTechnicianId: string | null;
+  canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
 }
 
 const EntryPopup: React.FC<EntryPopupProps> = ({ 
@@ -49,7 +53,11 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   currentUserId,
   loading = false,
   isInDrawer = false,
-  error = null
+  error = null,
+  // Destructure new props
+  canModifySchedule,
+  focusedTechnicianId,
+  canAssignOthers
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
@@ -71,7 +79,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         work_item_id: null,
         status: 'scheduled',
         work_item_type: 'ad_hoc',
-        assigned_user_ids: [currentUserId],
+        // Default to focused technician if available, otherwise current user
+        assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
       };
     } else {
       return {
@@ -85,7 +94,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         work_item_id: null,
         status: 'scheduled',
         work_item_type: 'ad_hoc',
-        assigned_user_ids: [currentUserId],
+        // Default to focused technician if available, otherwise current user
+        assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
       };
     }
   });
@@ -94,7 +104,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isEditingWorkItem, setIsEditingWorkItem] = useState(false);
   const [availableWorkItems, setAvailableWorkItems] = useState<IWorkItem[]>([]);
 
-  // Fetch available work items when dialog opens
+    // Determine mode and permissions
+    const isEditing = !!event;
+    const isCurrentUserSoleAssignee = isEditing && event.assigned_user_ids?.length === 1 && event.assigned_user_ids[0] === currentUserId;
+    // User can edit fields if: not editing (i.e., creating new), OR has modify permission, OR is the sole assignee of the entry being edited.
+    const canEditFields = !isEditing || canModifySchedule || isCurrentUserSoleAssignee;
+    // User can modify assignment if they have the specific permission (passed as canAssignOthers)
+    const canModifyAssignment = canAssignOthers;
+  
+    // Fetch available work items when dialog opens
   useEffect(() => {
     if (isEditingWorkItem) {
       const fetchWorkItems = async () => {
@@ -398,6 +416,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               value={entryData.title}
               onChange={handleInputChange}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              disabled={!canEditFields} // Disable based on permissions
             />
           </div>
           {canAssignMultipleAgents && (
@@ -409,7 +428,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               value={entryData.assigned_user_ids?.[0] || currentUserId}
               onValueChange={(userId) => handleAssignedUsersChange([userId])}
               users={users}
-              disabled={loading}
+              // Disable if loading OR if user lacks permission to assign others
+              disabled={loading || !canModifyAssignment}
             />
             </div>
           )}
@@ -426,6 +446,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   }));
                 }}
                 className="mt-1"
+                disabled={!canEditFields} // Disable based on permissions
               />
             </div>
             <div className="flex-1">
@@ -441,6 +462,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 }}
                 className="mt-1"
                 minDate={entryData.scheduled_start}
+                disabled={!canEditFields} // Disable based on permissions
               />
             </div>
           </div>
@@ -455,6 +477,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               onChange={handleInputChange}
               rows={3}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              disabled={!canEditFields} // Disable based on permissions
             />
           </div>
         </div>
@@ -465,6 +488,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               value={recurrencePattern?.frequency || 'none'}
               onValueChange={handleRecurrenceChange}
               options={recurrenceOptions}
+              disabled={!canEditFields} // Disable based on permissions
             />
           </div>
         </div>
@@ -496,6 +520,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   }}
                   min={1}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
               <div className="flex-1">
@@ -504,6 +529,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   value={recurrencePattern.endDate ? 'date' : recurrencePattern.count ? 'count' : 'never'}
                   onValueChange={handleEndTypeChange}
                   options={endTypeOptions}
+                  disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
             </div>
@@ -521,6 +547,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     return { ...prev, endDate: new Date(e.target.value) };
                   })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
             )}
@@ -550,6 +577,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   }}
                   min={1}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
             )}
@@ -569,6 +597,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     };
                   })}
                   label="Workdays only (Mon-Fri, excluding holidays)"
+                  disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
             )}
@@ -581,7 +610,14 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             Cancel
           </Button>
         )}
-        <Button id="save-entry-btn" onClick={handleSave}>Save</Button>
+        <Button
+          id="save-entry-btn"
+          onClick={handleSave}
+          // Disable save only if editing AND user lacks permission to edit these fields
+          disabled={isEditing && !canEditFields}
+        >
+          Save
+        </Button>
       </div>
     </div>
   );

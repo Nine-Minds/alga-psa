@@ -175,6 +175,9 @@ export function ActivityDetailViewerDrawer({
                   onActionComplete?.();
                 }}
                 isInDrawer={true}
+                canModifySchedule={true}
+                focusedTechnicianId={currentUser?.user_id || ''}
+                canAssignOthers={true}
               />
             </div>
           );

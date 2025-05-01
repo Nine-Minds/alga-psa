@@ -141,8 +141,8 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
     }));
 
     // Filter by tenant and optionally by user_type
-    return usersWithRoles.filter(user => 
-      user.tenant === tenant && 
+    return usersWithRoles.filter(user =>
+      user.tenant === tenant &&
       (userType ? user.user_type === userType : true)
     );
   } catch (error) {
@@ -220,6 +220,41 @@ export async function getUserRolesWithPermissions(userId: string): Promise<IRole
   } catch (error) {
     console.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles with permissions');
+  }
+}
+
+/**
+ * Retrieves a flattened list of unique permission strings for the current user.
+ * @returns Promise<string[]> A promise that resolves to an array of unique permission strings.
+ */
+export async function getCurrentUserPermissions(): Promise<string[]> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      console.log('No current user found, returning empty permissions.');
+      return [];
+    }
+
+    const rolesWithPermissions = await getUserRolesWithPermissions(currentUser.user_id);
+
+    // Flatten permissions from all roles and make them unique
+    const allPermissions = rolesWithPermissions.reduce((acc, role) => {
+      if (role.permissions) {
+        role.permissions.forEach(permission => {
+          const permissionString = `${permission.resource}:${permission.action}`;
+          acc.add(permissionString);
+        });
+      }
+      return acc;
+    }, new Set<string>());
+
+    console.log(`User ${currentUser.user_id} has permissions: ${Array.from(allPermissions).join(', ')}`);
+    return Array.from(allPermissions);
+  } catch (error) {
+    console.error('Failed to get current user permissions:', error);
+    // Depending on requirements, you might want to return empty array or re-throw
+    // Returning empty array for now to avoid breaking flows that might expect an array
+    return [];
   }
 }
 
