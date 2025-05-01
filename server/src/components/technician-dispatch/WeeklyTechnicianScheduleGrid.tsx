@@ -34,6 +34,7 @@ interface WeeklyTechnicianScheduleGridProps {
   onSetFocus?: (technicianId: string) => void;
   onResetSelections?: () => void;
   onDeleteEvent?: (eventId: string) => void;
+  canEdit?: boolean;
 }
 
 // Custom component for the sidebar with technician names
@@ -139,6 +140,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   onSetFocus,
   onDeleteEvent,
   onResetSelections,
+  canEdit,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -465,15 +467,17 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
 
   return (
     <div className="h-full flex overflow-hidden" ref={calendarRef} onDragOver={(e) => e.preventDefault()} onDrop={handleDropFromList}>
-      {/* Technician sidebar - show ALL technicians, not just displayed ones */}
-      <TechnicianSidebar 
-        technicians={allTechnicians}
-        primaryTechnicianId={primaryTechnicianId}
-        comparisonTechnicianIds={comparisonTechnicianIds}
-        onSetFocus={onSetFocus}
-        onComparisonChange={onComparisonChange}
-        onResetSelections={onResetSelections}
-      />
+      {/* Technician sidebar - only show when user has edit permissions */}
+      {canEdit && (
+        <TechnicianSidebar 
+          technicians={allTechnicians}
+          primaryTechnicianId={primaryTechnicianId}
+          comparisonTechnicianIds={comparisonTechnicianIds}
+          onSetFocus={onSetFocus}
+          onComparisonChange={onComparisonChange}
+          onResetSelections={onResetSelections}
+        />
+      )}
       
       {/* Calendar */}
       <div className="flex-1 overflow-hidden">

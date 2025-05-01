@@ -50,6 +50,7 @@ interface DailyTechnicianScheduleGridProps {
   onDeleteEvent?: (eventId: string) => void;
   onEventClick: (event: Omit<IScheduleEntry, 'tenant'>) => void;
   onTechnicianClick: (technicianId: string) => void;
+  canEdit?: boolean;
 }
 
 const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = ({
@@ -60,7 +61,8 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
   onResize,
   onDeleteEvent,
   onEventClick,
-  onTechnicianClick
+  onTechnicianClick,
+  canEdit
 }) => {
   const scheduleGridRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -508,7 +510,7 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
       {/* Header row */}
       <div className="flex flex-shrink-0">
         {/* Empty corner cell */}
-        <div className="w-48 flex-shrink-0 h-8 bg-white z-20"></div>
+        {canEdit && <div className="w-48 flex-shrink-0 h-8 bg-white z-20"></div>}
         {/* Time header - scrolls horizontally */}
         <div className="overflow-x-auto overflow-y-hidden flex-1 scrollbar-hide" ref={headerRef} onScroll={handleHeaderScroll}>
           <div style={{ minWidth: '2880px' }}>
@@ -519,28 +521,30 @@ const DailyTechnicianScheduleGrid: React.FC<DailyTechnicianScheduleGridProps> = 
 
       {/* Body content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Technician names column - scrolls vertically */}
-        <div className="w-48 flex-shrink-0 bg-white z-10 overflow-y-auto overflow-x-hidden scrollbar-hide" ref={namesColumnRef} onScroll={handleNamesScroll}>
-          {technicians.map((tech) => (
-            <div
-              key={tech.user_id}
-              className="h-16 mb-4 flex items-center justify-between text-[rgb(var(--color-text-700))] pl-2 pr-2"
-            >
-              <span className="truncate">{tech.first_name} {tech.last_name}</span>
-              <Button
-                id={`view-week-${tech.user_id}`}
-                variant="ghost"
-                size="sm"
-                onClick={() => onTechnicianClick(tech.user_id)}
-                tooltipText="View Week"
-                tooltip={true}
-                aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+        {/* Technician names column - only visible for users with edit permissions */}
+        {canEdit && (
+          <div className="w-48 flex-shrink-0 bg-white z-10 overflow-y-auto overflow-x-hidden scrollbar-hide" ref={namesColumnRef} onScroll={handleNamesScroll}>
+            {technicians.map((tech) => (
+              <div
+                key={tech.user_id}
+                className="h-16 mb-4 flex items-center justify-between text-[rgb(var(--color-text-700))] pl-2 pr-2"
               >
-                <CalendarDays className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
+                <span className="truncate">{tech.first_name} {tech.last_name}</span>
+                <Button
+                  id={`view-week-${tech.user_id}`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onTechnicianClick(tech.user_id)}
+                  tooltipText="View Week"
+                  tooltip={true}
+                  aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Grid content - scrolls both horizontally and vertically */}
         <div className="flex-1 overflow-auto" ref={gridRef} onScroll={handleGridScroll}>

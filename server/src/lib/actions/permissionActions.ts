@@ -1,7 +1,7 @@
 'use server';
 
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { hasPermission } from 'server/src/lib/auth/rbac';
+import { hasPermission, checkMultiplePermissions, PermissionCheck, PermissionResult } from 'server/src/lib/auth/rbac';
 import logger from 'server/src/utils/logger.js'
 
 export async function checkCurrentUserPermission(
@@ -25,5 +25,38 @@ export async function checkCurrentUserPermission(
       error
     );
     return false;
+  }
+}
+
+// Check multiple permissions for the current user in a single operation
+
+export async function checkCurrentUserPermissions(
+  permissionChecks: PermissionCheck[]
+): Promise<PermissionResult[]> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      logger.warn(
+        `checkCurrentUserPermissions: User not found for batch permission check.`
+      );
+      return permissionChecks.map(check => ({
+        resource: check.resource,
+        action: check.action,
+        granted: false
+      }));
+    }
+
+    const results = await checkMultiplePermissions(currentUser, permissionChecks);
+    return results;
+  } catch (error) {
+    logger.error(
+      `Error checking batch permissions:`,
+      error
+    );
+    return permissionChecks.map(check => ({
+      resource: check.resource,
+      action: check.action,
+      granted: false
+    }));
   }
 }

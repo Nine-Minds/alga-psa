@@ -12,10 +12,10 @@ import WorkItemListPanel from './WorkItemListPanel';
 import ScheduleViewPanel from './ScheduleViewPanel';
 import WorkItemCard from './WorkItemCard';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { searchDispatchWorkItems, getWorkItemById } from 'server/src/lib/actions/workItemActions';
+import { searchDispatchWorkItems, getWorkItemById, DispatchSearchOptions } from 'server/src/lib/actions/workItemActions';
 import { addScheduleEntry, updateScheduleEntry, getScheduleEntries, deleteScheduleEntry, ScheduleActionResult } from 'server/src/lib/actions/scheduleActions';
 import { getWorkItemStatusOptions, StatusOption } from 'server/src/lib/actions/status-actions/statusActions';
-import { checkCurrentUserPermission } from 'server/src/lib/actions/permissionActions';
+import { checkCurrentUserPermission, checkCurrentUserPermissions } from 'server/src/lib/actions/permissionActions';
 import { toast } from 'react-hot-toast';
 import { DragState } from 'server/src/interfaces/drag.interfaces';
 import { HighlightedSlot } from 'server/src/interfaces/schedule.interfaces';
@@ -34,10 +34,10 @@ const calculateDateRange = (date: Date, viewMode: 'day' | 'week') => {
   }
 };
 
-function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const sizeClass = size === "sm" ? "h-4 w-4" : size === "lg" ? "h-8 w-8" : "h-6 w-6";
+function Spinner({ size = "lg" }: { size?: "sm" | "md" | "lg" }) {
+  const sizeClass = size === "sm" ? "h-6 w-6" : size === "md" ? "h-8 w-8" : "h-12 w-12";
   return (
-    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+    <div className={`animate-spin rounded-full border-4 border-gray-200 border-t-[rgb(var(--color-primary-600))] ${sizeClass}`}></div>
   );
 }
 
@@ -109,7 +109,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
       const start = startOfDay(date);
       const end = endOfDay(date);
 
-      const result = await searchDispatchWorkItems({
+      const searchOptions: DispatchSearchOptions = {
         searchTerm: query,
         statusFilter: selectedStatusFilter,
         filterUnscheduled: filterUnscheduled,
@@ -122,14 +122,17 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
            end
         },
         workItemId: filterWorkItemId
-      });
+      };
+
+
+      const result = await searchDispatchWorkItems(searchOptions);
       setWorkItems(result.items);
       setTotalItems(result.total);
     } catch (err) {
       console.error('Error searching work items:', err);
       setError('Failed to search work items');
     }
-  }, [date, filterWorkItemType, filterWorkItemId]);
+  }, [date, filterWorkItemType, filterWorkItemId, currentUser, canEdit, canView]);
 
   // Fetch status options on mount
   useEffect(() => {
@@ -189,18 +192,26 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     };
   }, []);
 
-  // Fetch Permissions
+  // Fetch Permissions using batched permission check
   useEffect(() => {
     const fetchPermissions = async () => {
       setIsLoadingPermissions(true);
       setPermissionError(null);
       try {
-        const [viewResult, editResult] = await Promise.all([
-          checkCurrentUserPermission('technician_dispatch', 'read'),
-          checkCurrentUserPermission('technician_dispatch', 'update'),
+        const permissionResults = await checkCurrentUserPermissions([
+          { resource: 'technician_dispatch', action: 'read' },
+          { resource: 'technician_dispatch', action: 'update' }
         ]);
-        setCanView(viewResult);
-        setCanEdit(editResult);
+        
+        const viewPermission = permissionResults.find(
+          p => p.resource === 'technician_dispatch' && p.action === 'read'
+        );
+        const editPermission = permissionResults.find(
+          p => p.resource === 'technician_dispatch' && p.action === 'update'
+        );
+        
+        setCanView(viewPermission?.granted ?? false);
+        setCanEdit(editPermission?.granted ?? false);
       } catch (err) {
         console.error('Error fetching permissions:', err);
         setPermissionError('Failed to load permissions.');
@@ -519,13 +530,33 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     if (isLoadingPermissions || !currentUser) {
       return [];
     }
+    
+    // Filter users based on permissions
+    let filteredUsers: Omit<IUserWithRoles, 'tenant'>[] = [];
     if (canEdit) {
-      return users;
+      filteredUsers = [...users];
+    } else if (canView) {
+      filteredUsers = users.filter(user => user.user_id === currentUser.id);
     }
-    if (canView) {
-      return users.filter(user => user.user_id === currentUser.id);
-    }
-    return [];
+    
+    // Sort technicians alphabetically by first name, then last name
+    return filteredUsers.sort((a, b) => {
+      // First sort by first name
+      const firstNameA = (a.first_name || '').toLowerCase();
+      const firstNameB = (b.first_name || '').toLowerCase();
+      
+      if (firstNameA < firstNameB) return -1;
+      if (firstNameA > firstNameB) return 1;
+      
+      // If first names are the same, sort by last name
+      const lastNameA = (a.last_name || '').toLowerCase();
+      const lastNameB = (b.last_name || '').toLowerCase();
+      
+      if (lastNameA < lastNameB) return -1;
+      if (lastNameA > lastNameB) return 1;
+      
+      return 0;
+    });
   }, [users, canView, canEdit, currentUser, isLoadingPermissions]);
 
   const displayedEvents = useMemo(() => {
@@ -699,7 +730,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   if (permissionError) {
     return (
-      <div className="flex items-center justify-center h-screen p-4">
+      <div className="p-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{permissionError || 'An unknown error occurred.'}</AlertDescription>
@@ -710,7 +741,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   if (canView === false) {
      return (
-      <div className="flex items-center justify-center h-screen p-4">
+      <div className="p-4">
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>Access Denied: You do not have permission to view the Technician Dispatch dashboard.</AlertDescription>

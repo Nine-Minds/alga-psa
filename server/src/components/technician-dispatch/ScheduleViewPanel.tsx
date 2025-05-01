@@ -49,6 +49,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   onDropFromList,
   onSelectSlot,
   onResetSelections,
+  canEdit,
 }) => {
 
   const handleNavigate = (newDate: Date, view: string, action: string) => {
@@ -217,6 +218,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
             onResize={onResize}
             onDeleteEvent={onDeleteEvent}
             onEventClick={onEventClick}
+            canEdit={canEdit}
           />
         )}
 
@@ -238,6 +240,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 onSetFocus={onTechnicianClick}
                 onDeleteEvent={onDeleteEvent}
                 onResetSelections={onResetSelections}
+                canEdit={canEdit}
             />
         )}
       </div>
