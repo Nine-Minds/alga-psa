@@ -17,6 +17,7 @@ FROM base AS deps
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY tsconfig.base.json ./
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
 # Use npm ci for a clean install
 RUN npm ci
