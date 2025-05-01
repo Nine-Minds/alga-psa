@@ -24,6 +24,9 @@ COPY server/seeds /app/server/seeds
 # Make entrypoint script executable
 RUN chmod +x ./entrypoint.sh
 
+WORKDIR /app
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+
 # Install dependencies
 WORKDIR /app/server
 RUN npm install

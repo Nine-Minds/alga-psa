@@ -13,6 +13,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
 # Install dependencies
 RUN npm install

@@ -17,6 +17,9 @@ COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 
 # Install dependencies (cached unless package files change)
+
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+
 RUN npm install
 
 COPY tsconfig.base.json ./
