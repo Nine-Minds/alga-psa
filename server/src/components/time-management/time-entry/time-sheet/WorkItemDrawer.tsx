@@ -186,6 +186,9 @@ export function WorkItemDrawer({
                                 onClose={onClose}
                                 onSave={onScheduleUpdate}
                                 isInDrawer={true}
+                                canModifySchedule={true}
+                                focusedTechnicianId={currentUser.user_id}
+                                canAssignOthers={false}
                             />
                         </div>
                     );

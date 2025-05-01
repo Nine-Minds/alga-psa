@@ -2,58 +2,70 @@
 import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { getCurrentUser } from './user-actions/userActions';
+import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions'; // Added getCurrentUserPermissions
 import { createTenantKnex } from 'server/src/lib/db';
 
-export type ScheduleActionResult<T> = 
+export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
   | { success: false; error: string; entries?: never }
 
+/**
+ * Fetches schedule entries based on date range and user permissions.
+ * - Users with 'user_schedule:update' can view all entries, optionally filtered by technicianIds.
+ * - Users with only 'user_schedule:read' can view only their own entries.
+ * - Users without 'user_schedule:read' cannot view any entries.
+ */
 export async function getScheduleEntries(
   start: Date,
   end: Date,
   technicianIds?: string[]
 ): Promise<ScheduleActionResult<IScheduleEntry[]>> {
   try {
-    const allEntries = await ScheduleEntry.getAll(start, end);
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated.' };
+    }
+    const userPermissions = await getCurrentUserPermissions();
 
-    const filteredEntries = technicianIds && technicianIds.length > 0
-      ? allEntries.filter(entry =>
-          entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId))
-        )
-      : allEntries;
+    // Check for basic read permission
+    const canRead = userPermissions.includes('user_schedule:read');
+    if (!canRead) {
+        // Return empty list if no read permission, as per plan implication
+        console.warn(`User ${currentUser.user_id} lacks user_schedule:read permission.`);
+        return { success: true, entries: [] };
+        // Alternative: return { success: false, error: 'Permission denied to view schedule entries.' };
+    }
+
+    const allEntries = await ScheduleEntry.getAll(start, end); // Fetch all entries for the tenant
+
+    let filteredEntries: IScheduleEntry[];
+
+    // Check if user has broader view/update permission
+    const canUpdate = userPermissions.includes('user_schedule:update');
+
+    if (canUpdate) {
+      // User has update permission: Can view all, filter by technicianIds if provided
+      filteredEntries = technicianIds && technicianIds.length > 0
+        ? allEntries.filter(entry =>
+            entry.assigned_user_ids.some(assignedId => technicianIds.includes(assignedId))
+          )
+        : allEntries; // Return all if no specific technicians requested
+    } else {
+      // User only has read permission: View only own entries, ignore technicianIds parameter
+      filteredEntries = allEntries.filter(entry =>
+        entry.assigned_user_ids.includes(currentUser.user_id)
+      );
+    }
 
     return { success: true, entries: filteredEntries };
   } catch (error) {
     console.error('Error fetching schedule entries:', error);
-    return { success: false, error: 'Failed to fetch schedule entries' };
+    const message = error instanceof Error ? error.message : 'Failed to fetch schedule entries';
+    return { success: false, error: message };
   }
 }
 
-export async function getScheduleEntriesByUser(start: Date, end: Date, userId: string): Promise<ScheduleActionResult<IScheduleEntry[]>> {
-  try {
-    const entries = await ScheduleEntry.getAll(start, end);
-    // Filter entries where user is assigned
-    const userEntries = entries.filter(entry => entry.assigned_user_ids.includes(userId));
-    return { success: true, entries: userEntries };
-  } catch (error) {
-    console.error('Error fetching user schedule entries:', error);
-    return { success: false, error: 'Failed to fetch user schedule entries' };
-  }
-}
-
-export async function getCurrentUserScheduleEntries(start: Date, end: Date): Promise<ScheduleActionResult<IScheduleEntry[]>> {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      return { success: false, error: 'No authenticated user found' };
-    }
-    return getScheduleEntriesByUser(start, end, user.user_id);
-  } catch (error) {
-    console.error('Error fetching current user schedule entries:', error);
-    return { success: false, error: 'Failed to fetch current user schedule entries' };
-  }
-}
+// Removed getScheduleEntriesByUser and getCurrentUserScheduleEntries as getScheduleEntries now handles permissions.
 
 export async function addScheduleEntry(
   entry: Omit<IScheduleEntry, 'entry_id' | 'created_at' | 'updated_at' | 'tenant'>, 
@@ -62,6 +74,18 @@ export async function addScheduleEntry(
   }
 ) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated.' };
+    }
+    const userPermissions = await getCurrentUserPermissions();
+
+    // Basic check: Must have at least read permission to add own entry
+    const canRead = userPermissions.includes('user_schedule:read');
+    if (!canRead) {
+        return { success: false, error: 'Permission denied to add schedule entries.' };
+    }
+
     // Validate work item ID based on type
     if (entry.work_item_type === 'ad_hoc') {
       // For ad-hoc entries, ensure work_item_id is null
@@ -73,7 +97,7 @@ export async function addScheduleEntry(
         error: 'Non-ad-hoc entries must have a valid work item ID'
       };
     }
-    
+
     // Ensure work_item_type is preserved for ticket and project_task entries
     if (entry.work_item_id && !entry.work_item_type) {
       return {
@@ -82,37 +106,34 @@ export async function addScheduleEntry(
       };
     }
 
-    // Ensure at least one user is assigned
-    if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-      options = {
-        ...options,
-        assignedUserIds: [user.user_id]
-      };
-    }
-
+    // Determine final assignedUserIds, defaulting to current user if none provided
     let assignedUserIds: string[];
-    
     if (!options?.assignedUserIds || options.assignedUserIds.length === 0) {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error('No authenticated user found');
-      }
-      assignedUserIds = [user.user_id];
+      assignedUserIds = [currentUser.user_id];
     } else {
       assignedUserIds = options.assignedUserIds;
     }
-    
+
+    // --- Permission Check ---
+    const isAssigningToOthers = assignedUserIds.some(id => id !== currentUser.user_id);
+    const canUpdate = userPermissions.includes('user_schedule:update');
+
+    if (isAssigningToOthers && !canUpdate) {
+      return {
+        success: false,
+        error: 'Permission denied to assign schedule entries to other users.'
+      };
+    }
+    // --- End Permission Check ---
+
     const createdEntry = await ScheduleEntry.create(entry, {
       assignedUserIds
     });
     return { success: true, entry: createdEntry };
   } catch (error) {
     console.error('Error creating schedule entry:', error);
-    return { success: false, error: 'Failed to create schedule entry' };
+    const message = error instanceof Error ? error.message : 'Failed to create schedule entry';
+    return { success: false, error: message };
   }
 }
 
@@ -121,34 +142,117 @@ export async function updateScheduleEntry(
   entry: Partial<IScheduleEntry>
 ) {
   try {
-    // Ensure work_item_type is preserved for ticket and project_task entries
-    if (entry.work_item_id && !entry.work_item_type) {
-      // Fetch the existing entry to get its work_item_type
-      const existingEntry = await ScheduleEntry.get(entry_id);
-      if (existingEntry && existingEntry.work_item_type) {
-        entry.work_item_type = existingEntry.work_item_type;
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated.' };
+    }
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdateGlobally = userPermissions.includes('user_schedule:update');
+
+    // Fetch the existing entry first to check permissions
+    const existingEntry = await ScheduleEntry.get(entry_id);
+    if (!existingEntry) {
+      return { success: false, error: 'Schedule entry not found.' };
+    }
+
+    // --- Permission Check ---
+    let canEditThisEntry = false;
+    if (canUpdateGlobally) {
+      canEditThisEntry = true; // Global update permission allows editing any entry
+    } else {
+      // User might only have 'user_schedule:read' (implicitly checked by reaching here)
+      // Check if the existing entry is solely assigned to the current user
+      const isOwnEntry =
+        existingEntry.assigned_user_ids.length === 1 &&
+        existingEntry.assigned_user_ids[0] === currentUser.user_id;
+
+      // Check if the update attempts to change assignment *away* from solely the current user
+      // If assigned_user_ids is not part of the update, assignment doesn't change.
+      // If it is part of the update, it must contain *only* the current user's ID.
+      const assignmentRemainsOwn = entry.assigned_user_ids
+        ? (entry.assigned_user_ids.length === 1 && entry.assigned_user_ids[0] === currentUser.user_id)
+        : true; // If assigned_user_ids is not being updated, the assignment aspect is permitted
+
+      if (isOwnEntry && assignmentRemainsOwn) {
+        canEditThisEntry = true; // Allowed to edit own entry if assignment isn't changed to others
       }
     }
-    
-    // If no assigned_user_ids provided, keep existing assignments
-    const updatedEntry = await ScheduleEntry.update(entry_id, {
-      ...entry,
-      assigned_user_ids: entry.assigned_user_ids
-    }, entry.updateType || IEditScope.SINGLE);
+
+    if (!canEditThisEntry) {
+      return { success: false, error: 'Permission denied to update this schedule entry.' };
+    }
+    // --- End Permission Check ---
+
+    // Ensure work_item_type is preserved if not explicitly updated
+    if (entry.work_item_id && !entry.work_item_type && existingEntry.work_item_type) {
+        entry.work_item_type = existingEntry.work_item_type;
+    }
+
+    // Prepare update data - use existing assignees if not provided in the update
+    const updateData = {
+        ...entry,
+        assigned_user_ids: entry.assigned_user_ids // Let ScheduleEntry.update handle merging if needed based on updateType
+    };
+
+    const updatedEntry = await ScheduleEntry.update(
+        entry_id,
+        updateData,
+        entry.updateType || IEditScope.SINGLE
+    );
+
     return { success: true, entry: updatedEntry };
   } catch (error) {
     console.error('Error updating schedule entry:', error);
-    return { success: false, error: 'Failed to update schedule entry' };
+    const message = error instanceof Error ? error.message : 'Failed to update schedule entry';
+    return { success: false, error: message };
   }
 }
 
 export async function deleteScheduleEntry(entry_id: string, deleteType: IEditScope = IEditScope.SINGLE) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'User not authenticated.' };
+    }
+    const userPermissions = await getCurrentUserPermissions();
+    const canUpdateGlobally = userPermissions.includes('user_schedule:update');
+
+    // Fetch the existing entry first to check permissions
+    const existingEntry = await ScheduleEntry.get(entry_id);
+    if (!existingEntry) {
+      // If entry doesn't exist, deletion is technically successful (idempotent)
+      // or we could return an error. Returning success for now.
+      return { success: true };
+      // Alternative: return { success: false, error: 'Schedule entry not found.' };
+    }
+
+    // --- Permission Check ---
+    let canDeleteThisEntry = false;
+    if (canUpdateGlobally) {
+      canDeleteThisEntry = true; // Global update permission allows deleting any entry
+    } else {
+      // User might only have 'user_schedule:read'
+      // Check if the existing entry is solely assigned to the current user
+      const isOwnEntry =
+        existingEntry.assigned_user_ids.length === 1 &&
+        existingEntry.assigned_user_ids[0] === currentUser.user_id;
+
+      if (isOwnEntry) {
+        canDeleteThisEntry = true; // Allowed to delete own entry
+      }
+    }
+
+    if (!canDeleteThisEntry) {
+      return { success: false, error: 'Permission denied to delete this schedule entry.' };
+    }
+    // --- End Permission Check ---
+
     const success = await ScheduleEntry.delete(entry_id, deleteType);
     return { success };
   } catch (error) {
     console.error('Error deleting schedule entry:', error);
-    return { success: false, error: 'Failed to delete schedule entry' };
+    const message = error instanceof Error ? error.message : 'Failed to delete schedule entry';
+    return { success: false, error: message };
   }
 }
 

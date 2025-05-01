@@ -1,0 +1,103 @@
+'use client'
+
+import React, { useMemo } from 'react';
+import { Button } from 'server/src/components/ui/Button';
+import { CalendarDays, Layers2, XCircle } from 'lucide-react';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+
+interface TechnicianSidebarProps {
+  technicians: IUserWithRoles[];
+  focusedTechnicianId: string | null;
+  comparisonTechnicianIds: string[];
+  onSetFocus: (technicianId: string) => void;
+  onComparisonChange: (technicianId: string, add: boolean) => void;
+  onResetSelections?: () => void;
+}
+
+const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
+  technicians,
+  focusedTechnicianId,
+  comparisonTechnicianIds,
+  onSetFocus,
+  onComparisonChange,
+  onResetSelections
+}) => {
+
+  const internalTechnicians = useMemo(() => {
+    return technicians.filter(tech => tech.user_type === 'internal');
+  }, [technicians]);
+  return (
+    <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+      <div className="p-2 border-gray-200">
+        <Button
+          id="reset-selections-button"
+          variant="outline"
+          size="sm"
+          onClick={onResetSelections}
+          className="w-full px-3 py-1 flex items-center gap-1 justify-center"
+          disabled={!focusedTechnicianId && comparisonTechnicianIds.length === 0}
+        >
+          <XCircle className="h-4 w-4" />
+          Reset Selections
+        </Button>
+      </div>
+      {internalTechnicians.map(tech => {
+        const isFocus = tech.user_id === focusedTechnicianId;
+        const isComparing = comparisonTechnicianIds.includes(tech.user_id);
+        const isInactive = tech.is_inactive;
+
+        return (
+          <div
+            key={tech.user_id}
+            className={`h-16 mb-4 flex items-center justify-between pl-2 rounded-md ${
+              isFocus
+                ? 'bg-[rgb(var(--color-primary-200))]'
+                : isComparing
+                  ? 'bg-[rgb(var(--color-primary-50))]'
+                  : ''
+            } ${
+              isInactive
+                ? 'text-[rgb(var(--color-text-400))]'
+                : 'text-[rgb(var(--color-text-700))]'
+            }`}
+          >
+            <span className="truncate">
+              {tech.first_name} {tech.last_name}
+              {isInactive && <span className="ml-1 text-xs">(Inactive)</span>}
+            </span>
+            <div className="flex items-center flex-shrink-0">
+              {!isFocus && (
+                <Button
+                  id={`view-week-${tech.user_id}`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetFocus(tech.user_id)}
+                  tooltipText="View Week"
+                  tooltip={true}
+                  aria-label={`View week for ${tech.first_name} ${tech.last_name}`}
+                >
+                  <CalendarDays className="h-4 w-4" />
+                </Button>
+              )}
+              {!isFocus && (
+                <Button
+                  id={`compare-tech-${tech.user_id}`}
+                  variant={isComparing ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => onComparisonChange(tech.user_id, !isComparing)}
+                  tooltipText={isComparing ? "Stop Comparing" : "Compare"}
+                  tooltip={true}
+                  aria-label={`Compare ${tech.first_name} ${tech.last_name}`}
+                >
+                  <Layers2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+export default TechnicianSidebar;
