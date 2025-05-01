@@ -28,12 +28,13 @@ interface WeeklyTechnicianScheduleGridProps {
   onComparisonChange: (technicianId: string, add: boolean) => void;
   onSelectSlot: (slotInfo: { start: Date; end: Date; slots: Date[] | string[]; action: 'select' | 'click' | 'doubleClick', resourceId?: number | string }) => void;
   onEventDrop: any;
-  onEventResize: any;
-  onDropFromList: (item: { workItemId: string; start: Date; end: Date; resourceId: string | number }) => void;
+  onEventResize?: any;
+  onDropFromList?: (item: { workItemId: string; start: Date; end: Date; resourceId: string | number }) => void;
   onSelectEvent?: (event: IScheduleEntry, e: React.SyntheticEvent<HTMLElement>) => void;
   onSetFocus?: (technicianId: string) => void;
   onResetSelections?: () => void;
   onDeleteEvent?: (eventId: string) => void;
+  canEdit?: boolean;
 }
 
 // Custom component for the sidebar with technician names
@@ -139,6 +140,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   onSetFocus,
   onDeleteEvent,
   onResetSelections,
+  canEdit,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -228,7 +230,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
         assigned_user_ids: finalAssignedUserIds
       };
       
-      onEventDrop({
+      onEventDrop?.({
         ...args,
         event: updatedEvent
       });
@@ -241,7 +243,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
     const { event, start, end } = args;
     
     if (primaryTechnicianId && event.assigned_user_ids && event.assigned_user_ids.includes(primaryTechnicianId)) {
-      onEventResize(args);
+      onEventResize?.(args);
     } else {
       console.log("Prevented resize of comparison event.");
     }
@@ -282,7 +284,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
         }
       }
       
-      onEventResize({
+      onEventResize?.({
         event,
         start: direction === 'top' ? newStart : initialStart,
         end: direction === 'bottom' ? newEnd : initialEnd
@@ -385,7 +387,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
       
       console.log(`Dropping workitem at ${startTime.toLocaleString()} (day ${targetDayCellIndex}, hour ${hours}, minute ${minutes})`);
       
-      onDropFromList({
+      onDropFromList?.({
         workItemId,
         start: startTime,
         end: endTime,
@@ -405,9 +407,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
 
 
   const handleDeleteEvent = useCallback((eventToDelete: IScheduleEntry) => {
-    if (onDeleteEvent) {
-      onDeleteEvent(eventToDelete.entry_id);
-    }
+    onDeleteEvent?.(eventToDelete.entry_id);
   }, [onDeleteEvent]);
 
   const technicianMap = useMemo(() => {
@@ -467,15 +467,17 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
 
   return (
     <div className="h-full flex overflow-hidden" ref={calendarRef} onDragOver={(e) => e.preventDefault()} onDrop={handleDropFromList}>
-      {/* Technician sidebar - show ALL technicians, not just displayed ones */}
-      <TechnicianSidebar 
-        technicians={allTechnicians}
-        primaryTechnicianId={primaryTechnicianId}
-        comparisonTechnicianIds={comparisonTechnicianIds}
-        onSetFocus={onSetFocus}
-        onComparisonChange={onComparisonChange}
-        onResetSelections={onResetSelections}
-      />
+      {/* Technician sidebar - only show when user has edit permissions */}
+      {canEdit && (
+        <TechnicianSidebar 
+          technicians={allTechnicians}
+          primaryTechnicianId={primaryTechnicianId}
+          comparisonTechnicianIds={comparisonTechnicianIds}
+          onSetFocus={onSetFocus}
+          onComparisonChange={onComparisonChange}
+          onResetSelections={onResetSelections}
+        />
+      )}
       
       {/* Calendar */}
       <div className="flex-1 overflow-hidden">

@@ -2,15 +2,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import { NextAuthOptions } from "next-auth";
-
-import { verifyAuthenticator } from "../../../../utils/authenticator/authenticator";
-import { authenticateUser } from "../../../../lib/actions/auth";
-import { getKeycloakToken } from "../../../../utils/keycloak";
-import { decodeToken } from "../../../../utils/tokenizer";
-import User from "../../../../lib/models/user";
+import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
+import { authenticateUser } from "server/src/lib/actions/auth";
+import { getKeycloakToken } from "server/src/utils/keycloak";
+import { decodeToken } from "server/src/utils/tokenizer";
+import User from "server/src/lib/models/user";
 import logger from '@shared/core/logger';
-import "../../../../types/next-auth";
-import { getAdminConnection } from "../../../../lib/db/admin";
+import "server/src/types/next-auth";
+import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
 

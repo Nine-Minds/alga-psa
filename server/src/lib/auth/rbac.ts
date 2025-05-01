@@ -58,3 +58,39 @@ export async function hasPermission(user: IUser, resource: string, action: strin
   }
   return false;
 }
+
+export interface PermissionCheck {
+  resource: string;
+  action: string;
+}
+
+export interface PermissionResult {
+  resource: string;
+  action: string;
+  granted: boolean;
+}
+
+
+// Check multiple permissions for a user in a single operation
+
+export async function checkMultiplePermissions(
+  user: IUser,
+  permissionChecks: PermissionCheck[]
+): Promise<PermissionResult[]> {
+  // Get all roles and permissions in a single database query
+  const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
+  
+  const userPermissions = new Set<string>();
+  
+  for (const role of rolesWithPermissions) {
+    for (const permission of role.permissions) {
+      userPermissions.add(`${permission.resource}:${permission.action}`);
+    }
+  }
+  
+  return permissionChecks.map(check => ({
+    resource: check.resource,
+    action: check.action,
+    granted: userPermissions.has(`${check.resource}:${check.action}`)
+  }));
+}

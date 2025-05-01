@@ -222,11 +222,7 @@ const User = {
         .where('roles.tenant', tenant);
       
       const roles = await query.select('roles.*');
-      // Convert role names to lowercase for case-insensitive comparison
-      return roles.map((role: IRole): IRole => ({
-        ...role,
-        role_name: role.role_name.toLowerCase()
-      }));
+      return roles;
     } catch (error) {
       logger.error(`Error getting roles for user with id ${user_id}:`, error);
       throw error;

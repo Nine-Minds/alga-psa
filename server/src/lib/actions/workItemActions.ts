@@ -6,7 +6,7 @@ import { IUser } from 'server/src/interfaces/auth.interfaces';
 import ScheduleEntry from 'server/src/lib/models/scheduleEntry';
 import User from 'server/src/lib/models/user';
 
-interface BaseSearchOptions {
+export interface BaseSearchOptions {
   searchTerm?: string;
   type?: WorkItemType | 'all';
   sortBy?: 'name' | 'type';
@@ -26,11 +26,11 @@ interface BaseSearchOptions {
   statusFilter?: string;
 }
 
-interface DispatchSearchOptions extends BaseSearchOptions {
+export interface DispatchSearchOptions extends BaseSearchOptions {
   filterUnscheduled?: boolean;
 }
 
-interface PickerSearchOptions extends BaseSearchOptions {
+export interface PickerSearchOptions extends BaseSearchOptions {
 }
 
 interface SearchResult {
