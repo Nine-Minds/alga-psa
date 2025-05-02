@@ -21,6 +21,8 @@ import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
+const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
+
 interface EntryPopupProps {
   event: IScheduleEntry | null;
   slot?: {
@@ -622,14 +624,34 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     </div>
   );
 
-  // When in a drawer, return the content directly
-  // When not in a drawer, wrap in Dialog
+  // Provide the context value to child components
+  const contextValue: EntryPopupProps = {
+    event, 
+    slot, 
+    onClose, 
+    onSave,
+    onDelete,
+    canAssignMultipleAgents,
+    users,
+    currentUserId,
+    loading,
+    isInDrawer,
+    error,
+    canModifySchedule,
+    focusedTechnicianId,
+    canAssignOthers
+  };
+
   return isInDrawer ? (
-    content
+    <EntryPopupContext.Provider value={contextValue}>
+      {content}
+    </EntryPopupContext.Provider>
   ) : (
     <Dialog isOpen={true} onClose={onClose} hideCloseButton={false}>
       <DialogContent>
-        {content}
+        <EntryPopupContext.Provider value={contextValue}>
+          {content}
+        </EntryPopupContext.Provider>
       </DialogContent>
       
       <ConfirmationDialog
@@ -680,6 +702,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
 // Component for the Open Drawer button
 const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
   const { openDrawer, closeDrawer } = useDrawer();
+  // Get access to the parent component's props
+  const parentProps = React.useContext(EntryPopupContext);
 
   const handleOpenDrawer = () => {
     const workItem = {
@@ -697,6 +721,11 @@ const OpenDrawerButton = ({ event }: { event: IScheduleEntry }) => {
       is_billable: true
     } as IExtendedWorkItem;
 
+    // Close the current popup first if not in a drawer
+    if (parentProps && !parentProps.isInDrawer) {
+      parentProps.onClose();
+    }
+    
     openDrawer(
       <div className="h-full">
         <WorkItemDrawer

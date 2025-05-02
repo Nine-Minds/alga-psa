@@ -346,6 +346,7 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         onClose={closeDrawer}
         isInDrawer={state.history.length > 1}
         hideCloseButton={true}
+        drawerVariant="nested"
       >
         {currentEntry && (
           <div className="flex flex-col h-full">

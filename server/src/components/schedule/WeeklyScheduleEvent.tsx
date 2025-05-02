@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Trash } from 'lucide-react';
@@ -43,8 +43,22 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   onSelectEvent,
   onDeleteEvent,
   onResizeStart,
-  technicianMap
+  technicianMap = {}
 }) => {
+  const eventRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    if (eventRef.current && isComparison) {
+      const parentElement = eventRef.current.closest('.rbc-event');
+      if (parentElement) {
+        const labels = parentElement.querySelectorAll('.rbc-event-label');
+        labels.forEach(label => {
+          (label as HTMLElement).style.display = 'none';
+        });
+      }
+    }
+  }, [isComparison]);
+
   const baseColor = workItemColors[event.work_item_type] || 'rgb(var(--color-border-200))';
   const hoverColor = workItemHoverColors[event.work_item_type] || 'rgb(var(--color-border-300))';
   
@@ -54,19 +68,31 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   
   const isTicketOrTask = event.work_item_type === 'ticket' || event.work_item_type === 'project_task';
   
-  const assignedUsersText = event.assigned_user_ids
-    .map(userId => {
-      const tech = technicianMap?.[userId];
-      return tech ? `${tech.first_name[0]}${tech.last_name[0]}` : '';
-    })
-    .filter(Boolean)
-    .join(', ');
-
   // Determine text color based on background color
   const textColor = event.work_item_type === 'ticket' ? 'text-primary-950' : 'text-gray-950';
 
+  // Find assigned technician names for tooltip
+  const assignedTechnicians = event.assigned_user_ids?.map(userId => {
+    const tech = technicianMap[userId];
+    return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+  }).join(', ') || 'Unassigned';
+
+  // Format date and time for tooltip
+  const startMoment = new Date(event.scheduled_start);
+  const endMoment = new Date(event.scheduled_end);
+  const formattedDate = startMoment.toLocaleDateString();
+  const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Construct detailed tooltip
+  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+
+  const titleParts = event.title?.split(':') || ['Untitled'];
+  const mainTitle = titleParts[0];
+  const subtitle = titleParts.slice(1).join(':').trim();
+
   return (
     <div
+      ref={eventRef}
       className={`absolute inset-0 text-xs overflow-hidden rounded-md ${textColor}`}
       style={{
         backgroundColor,
@@ -81,6 +107,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       onClick={(e) => onSelectEvent(event, e)}
+      title={tooltipTitle}
       tabIndex={-1}
     >
       {/* Top resize handle */}
@@ -126,12 +153,9 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         )}
       </div>
 
-      <div className="font-semibold truncate">{event.title?.split(':')[0] || 'Untitled'}</div>
-      <div className="truncate text-xs">{event.title?.split(':').slice(1).join(':').trim() || ''}</div>
-      
-      <div className="text-xs font-semibold mt-auto text-right opacity-80">
-        {assignedUsersText}
-      </div>
+      {/* Only display the title, not any time information */}
+      <div className="font-semibold truncate">{mainTitle}</div>
+      {subtitle && <div className="truncate text-xs">{subtitle}</div>}
     </div>
   );
 };

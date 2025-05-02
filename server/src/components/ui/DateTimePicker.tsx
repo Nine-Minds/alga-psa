@@ -42,6 +42,9 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
     timeFormat = '12h'
   }, ref) => {
     const [open, setOpen] = React.useState(false);
+    const hourListRef = React.useRef<HTMLDivElement>(null);
+    const minuteListRef = React.useRef<HTMLDivElement>(null);
+    
     const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(value);
     const [selectedHour, setSelectedHour] = React.useState(
       value ? format(value, timeFormat === '12h' ? 'hh' : 'HH') : '12'
@@ -52,6 +55,30 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
     const [period, setPeriod] = React.useState<'AM' | 'PM'>(
       value ? (format(value, 'a') as 'AM' | 'PM') : 'AM'
     );
+    
+    // Scroll to selected values when dropdown opens
+    React.useEffect(() => {
+      if (open) {
+        // Use setTimeout to ensure the DOM has updated
+        setTimeout(() => {
+          // Scroll hour list to selected hour
+          if (hourListRef.current) {
+            const selectedHourElement = hourListRef.current.querySelector(`button[data-value="${selectedHour}"]`);
+            if (selectedHourElement) {
+              selectedHourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+          }
+          
+          // Scroll minute list to selected minute
+          if (minuteListRef.current) {
+            const selectedMinuteElement = minuteListRef.current.querySelector(`button[data-value="${selectedMinute}"]`);
+            if (selectedMinuteElement) {
+              selectedMinuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+          }
+        }, 50);
+      }
+    }, [open, selectedHour, selectedMinute]);
 
     // Register with UI reflection system if id is provided
     const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<DateTimePickerComponent>({
@@ -139,69 +166,49 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
           >
             <span className="flex-1 text-left">{displayValue}</span>
             <div className="flex gap-2">
-              <CalendarIcon className="h-4 w-4 opacity-50" />
               <Clock className="h-4 w-4 opacity-50" />
             </div>
           </Popover.Trigger>
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-[280px] p-0 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
-              align="start"
+              className="z-50 w-[480px] p-0 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
+              align="center"
+              side="bottom"
               sideOffset={4}
+              avoidCollisions={true}
             >
-              <div className="flex flex-col">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={handleDateSelect}
-                  defaultMonth={value}
-                  fromDate={minDate}
-                  toDate={maxDate}
-                />
+              <div className="flex flex-row">
+                <div className="w-[280px]">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={handleDateSelect}
+                    defaultMonth={value}
+                    fromDate={minDate}
+                    toDate={maxDate}
+                  />
+                </div>
 
-                <div className="border-t border-gray-200 p-2">
-                  <div className="grid grid-cols-3 gap-1">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-500">Hour</label>
+                <div className="border-l border-gray-200 p-2 w-[200px]">
+                  <div className="flex items-start justify-between gap-2">
+                    
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Hour</label>
                       <div
-                        className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover-scroll-container"
-                        style={{ willChange: 'transform' }}
+                        ref={hourListRef}
+                        className="h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                         onWheel={(e) => {
+                          // Standard scrolling behavior
                           const container = e.currentTarget;
-                          const { scrollTop, scrollHeight, clientHeight } = container;
-                          const delta = e.deltaY > 0 ? 1 : -1;
-                          const maxScroll = scrollHeight - clientHeight;
-                          
-                          const itemHeight = 32; // Actual measured item height
-                          let newScroll = scrollTop + delta * (itemHeight / 4);
-                          let newIndex = hours.indexOf(selectedHour) + delta;
-
-                          if (newScroll > maxScroll) {
-                            newScroll = 0; // Reset to top
-                            newIndex = 0;
-                          } else if (newScroll < 0) {
-                            newScroll = maxScroll;
-                            newIndex = hours.length - 1;
-                          }
-
-                          container.scrollTo({
-                            top: newScroll,
-                            behavior: 'smooth'
-                          });
-
-                          if (newIndex >= 0 && newIndex < hours.length) {
-                            const newHour = hours[newIndex];
-                            setSelectedHour(newHour);
-                            handleTimeChange(newHour, selectedMinute, period);
-                          }
-                          
-                          e.preventDefault();
+                          const scrollAmount = e.deltaY;
+                          container.scrollTop += scrollAmount;
                         }}
                       >
                         {hours.map((hour) => (
                           <button
                             key={hour}
+                            data-value={hour}
                             onClick={() => {
                               setSelectedHour(hour);
                               handleTimeChange(hour, selectedMinute, period);
@@ -219,45 +226,22 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-gray-500">Minute</label>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Minute</label>
                       <div 
-                        className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                        ref={minuteListRef}
+                        className="h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                         onWheel={(e) => {
+                          // Standard scrolling behavior
                           const container = e.currentTarget;
-                          const { scrollTop, scrollHeight, clientHeight } = container;
-                          const delta = e.deltaY > 0 ? 1 : -1;
-                          const maxScroll = scrollHeight - clientHeight;
-                          
-                          const itemHeight = 32; // Actual measured item height
-                          let newScroll = scrollTop + delta * (itemHeight / 4);
-                          let newIndex = minutes.indexOf(selectedMinute) + delta;
-
-                          if (newScroll > maxScroll) {
-                            newScroll = 0; // Reset to top
-                            newIndex = 0;
-                          } else if (newScroll < 0) {
-                            newScroll = maxScroll;
-                            newIndex = minutes.length - 1;
-                          }
-
-                          container.scrollTo({
-                            top: newScroll,
-                            behavior: 'smooth'
-                          });
-
-                          if (newIndex >= 0 && newIndex < minutes.length) {
-                            const newMinute = minutes[newIndex];
-                            setSelectedMinute(newMinute);
-                            handleTimeChange(selectedHour, newMinute, period);
-                          }
-                          
-                          e.preventDefault();
+                          const scrollAmount = e.deltaY;
+                          container.scrollTop += scrollAmount;
                         }}
                       >
                         {minutes.map((minute) => (
                           <button
                             key={minute}
+                            data-value={minute}
                             onClick={() => {
                               setSelectedMinute(minute);
                               handleTimeChange(selectedHour, minute, period);
@@ -276,8 +260,8 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
                     </div>
 
                     {timeFormat === '12h' && (
-                      <div className="space-y-1">
-                        <label className="text-xs font-medium text-gray-500">Period</label>
+                      <div className="w-16">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
                         <div>
                           {(['AM', 'PM'] as const).map((p) => (
                             <button
