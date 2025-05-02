@@ -26,7 +26,15 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
 }) => {
 
   const internalTechnicians = useMemo(() => {
-    return technicians.filter(tech => tech.user_type === 'internal');
+    return technicians
+      .filter(tech => tech.user_type === 'internal')
+      .sort((a, b) => {
+        const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+        const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
   }, [technicians]);
   return (
     <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">

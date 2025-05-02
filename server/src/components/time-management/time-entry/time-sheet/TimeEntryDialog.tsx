@@ -216,6 +216,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         approval_status: 'DRAFT' as TimeSheetStatus
       };
       
+      // If the entry is supposed to be billable, ensure the billable_duration matches the actual duration
+      if (timeEntry.billable_duration > 0) {
+        const actualDuration = calculateDuration(parseISO(timeEntry.start_time), parseISO(timeEntry.end_time));
+        if (timeEntry.billable_duration !== actualDuration) {
+          console.log(`Correcting billable_duration from ${timeEntry.billable_duration} to ${actualDuration}`);
+          timeEntry.billable_duration = actualDuration;
+        }
+      }
+      
       console.log('Prepared time entry:', timeEntry);
       const savedEntry = await onSave(timeEntry);
       console.log('Saved entry response:', savedEntry);

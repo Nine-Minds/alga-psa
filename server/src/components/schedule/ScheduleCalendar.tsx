@@ -560,6 +560,81 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     );
   };
 
+  // Custom resize handler
+  const handleResizeStart = useCallback((e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => {
+    e.stopPropagation();
+    
+    // Only allow resize for primary events (events assigned to the focused technician)
+    if (!focusedTechnicianId || !event.assigned_user_ids.includes(focusedTechnicianId)) {
+      console.log("Prevented resize of comparison event.");
+      return;
+    }
+    
+    const startY = e.clientY;
+    const initialStart = new Date(event.scheduled_start);
+    const initialEnd = new Date(event.scheduled_end);
+    
+    const handleResizeMove = (moveEvent: globalThis.MouseEvent) => {
+      moveEvent.preventDefault();
+      
+      // Calculate time difference based on vertical movement
+      // Assuming 20px = 15 minutes (adjust as needed)
+      const deltaY = moveEvent.clientY - startY;
+      const deltaMinutes = Math.round(deltaY / 20) * 15;
+      
+      let newStart = new Date(initialStart);
+      let newEnd = new Date(initialEnd);
+      
+      if (direction === 'top') {
+        newStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
+        if (newEnd.getTime() - newStart.getTime() < 15 * 60000) {
+          return; // Prevent events shorter than 15 minutes
+        }
+      } else {
+        newEnd = new Date(initialEnd.getTime() + deltaMinutes * 60000);
+        if (newEnd.getTime() - newStart.getTime() < 15 * 60000) {
+          return; // Prevent events shorter than 15 minutes
+        }
+      }
+      
+      // Create a temporary updated event for UI update
+      const updatedEvent = {
+        ...event,
+        scheduled_start: direction === 'top' ? newStart : initialStart,
+        scheduled_end: direction === 'bottom' ? newEnd : initialEnd
+      };
+      
+      // Update the event locally for immediate feedback
+      updateEventLocally(updatedEvent);
+    };
+    
+    const handleResizeEnd = async () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      
+      // Get the current state of the event after resizing
+      const currentEvent = events.find(e => e.entry_id === event.entry_id);
+      if (currentEvent) {
+        // Save the changes to the server
+        const result = await updateScheduleEntry(event.entry_id, {
+          ...currentEvent,
+          assigned_user_ids: currentEvent.assigned_user_ids,
+          ...(currentEvent.entry_id.includes('_') ? { original_entry_id: currentEvent.original_entry_id } : {})
+        });
+        
+        if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
+          await fetchEvents();
+        } else if (!result.success) {
+          console.error("Resize failed, reverting UI");
+          await fetchEvents();
+        }
+      }
+    };
+    
+    document.addEventListener('mousemove', handleResizeMove);
+    document.addEventListener('mouseup', handleResizeEnd);
+  }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry, fetchEvents]);
+
   // Event component for the calendar
   const EventComponent = useCallback(({ event }: { event: any }) => {
     const scheduleEvent = event as IScheduleEntry;
@@ -574,6 +649,46 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                               (scheduleEvent.assigned_user_ids.length === 1 &&
                                scheduleEvent.assigned_user_ids[0] === currentUserId);
 
+    // For month view, use a different component to show more details
+    if (view === 'month') {
+      const titleParts = scheduleEvent.title?.split(':') || ['Untitled'];
+      const mainTitle = titleParts[0];
+      
+      const assignedTechnicians = scheduleEvent.assigned_user_ids?.map(userId => {
+        const tech = technicianMap[userId];
+        return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+      }).join(', ') || 'Unassigned';
+
+      const startMoment = new Date(scheduleEvent.scheduled_start);
+      const endMoment = new Date(scheduleEvent.scheduled_end);
+      const formattedDate = startMoment.toLocaleDateString();
+      const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+      
+      const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
+      
+      return (
+        <div 
+          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''}`}
+          style={{
+            backgroundColor: workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+            opacity
+          }}
+          onClick={(e) => handleSelectEvent(scheduleEvent as unknown as object, e as unknown as React.SyntheticEvent<HTMLElement>)}
+          onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
+          onMouseLeave={() => setHoveredEventId(null)}
+          title={tooltipTitle}
+        >
+          {mainTitle}
+        </div>
+      );
+    }
+
     return (
       <WeeklyScheduleEvent
         event={scheduleEvent}
@@ -586,16 +701,11 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           handleSelectEvent(event as unknown as object, e as unknown as React.SyntheticEvent<HTMLElement>);
         }}
         onDeleteEvent={(event: IScheduleEntry) => handleDeleteClick(event, new MouseEvent('click') as any)}
-        onResizeStart={(e: React.MouseEvent, event: IScheduleEntry, direction: 'top' | 'bottom') => {
-          // Only allow resize in week and day views
-          if (view === 'week' || view === 'day') {
-            console.log('Resize start', direction, event.entry_id);
-          }
-        }}
+        onResizeStart={handleResizeStart}
         technicianMap={technicianMap}
       />
     );
-  }, [view, focusedTechnicianId, comparisonTechnicianIds, hoveredEventId, canModifySchedule, currentUserId, technicianMap]);
+  }, [view, focusedTechnicianId, comparisonTechnicianIds, hoveredEventId, canModifySchedule, currentUserId, technicianMap, handleResizeStart, handleSelectEvent]);
 
 
   return (

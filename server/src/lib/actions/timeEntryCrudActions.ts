@@ -122,7 +122,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
       start_date: formatISO(entry.start_time),
       end_date: formatISO(entry.end_time),
       type: entry.work_item_type,
-      is_billable: entry.is_billable,
+      is_billable: entry.billable_duration > 0,
       ticket_number: entry.work_item_type === 'ticket' ? workItem.ticket_number : undefined,
       service: service ? {
         id: entry.service_id,
@@ -179,12 +179,19 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       tax_rate_id, // Extract tax_rate_id from input
     } = timeEntry;
 
+    const startDate = new Date(start_time);
+    const endDate = new Date(end_time);
+    const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+    
+    // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
+    const finalBillableDuration = billable_duration === 0 ? 0 : actualDurationMinutes;
+
     const cleanedEntry = {
       work_item_id,
       work_item_type,
       start_time,
       end_time,
-      billable_duration,
+      billable_duration: finalBillableDuration,
       notes,
       time_sheet_id,
       approval_status,
@@ -536,7 +543,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         workItemDetails = {
           ...task,
           type: 'project_task',
-          is_billable: true,
+          is_billable: entry.billable_duration > 0,
           project_name: task.project_name,
           phase_name: task.phase_name
         };
@@ -554,7 +561,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           name: schedule?.title || 'Ad Hoc Entry',
           description: '',
           type: 'ad_hoc',
-          is_billable: true
+          is_billable: entry.billable_duration > 0
         };
         break;
       }
@@ -573,7 +580,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
         workItemDetails = {
           ...ticket,
           type: 'ticket',
-          is_billable: true,
+          is_billable: entry.billable_duration > 0,
           ticket_number: ticket.ticket_number
         };
         break;
@@ -772,7 +779,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
           workItemDetails = {
             ...task,
             type: 'project_task',
-            is_billable: true,
+            is_billable: entry.billable_duration > 0,
             project_name: task.project_name,
             phase_name: task.phase_name
           };
@@ -790,7 +797,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             name: schedule?.title || 'Ad Hoc Entry',
             description: '',
             type: 'ad_hoc',
-            is_billable: true
+            is_billable: entry.billable_duration > 0
           };
           break;
         }
@@ -809,7 +816,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
           workItemDetails = {
             ...ticket,
             type: 'ticket',
-            is_billable: true,
+            is_billable: entry.billable_duration > 0,
             ticket_number: ticket.ticket_number
           };
           break;

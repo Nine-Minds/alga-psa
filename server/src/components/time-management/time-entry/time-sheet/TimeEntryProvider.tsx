@@ -176,11 +176,13 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       }));
     } else if (defaultStartTime && defaultEndTime) {
       const duration = calculateDuration(defaultStartTime, defaultEndTime);
+
+      const isBillable = workItem.is_billable !== undefined ? workItem.is_billable : true;
       newEntries = [{
         work_item_id: workItem.work_item_id,
         start_time: formatISO(defaultStartTime),
         end_time: formatISO(defaultEndTime),
-        billable_duration: duration,
+        billable_duration: isBillable ? duration : 0,
         work_item_type: workItem.type,
         notes: workItem.description || '',
         entry_id: '',
