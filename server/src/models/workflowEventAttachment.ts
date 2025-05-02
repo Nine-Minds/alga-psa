@@ -38,16 +38,35 @@ export class WorkflowEventAttachmentModel {
   static async getById(
     knex: Knex,
     attachmentId: string,
-    tenantId: string
-  ): Promise<IWorkflowEventAttachment | null> {
-    const attachment = await knex('workflow_event_attachments')
+    tenantId: string // Keep tenantId for potential RLS or future use, though not used for system query
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Add flag to return type
+    // Try tenant table first
+    const tenantAttachment = await knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         attachment_id: attachmentId,
-        tenant_id: tenantId
+        tenant_id: tenantId // Filter by tenant
       })
       .first();
-    
-    return attachment || null;
+
+    if (tenantAttachment) {
+      // Add the isSystemManaged property explicitly if needed by the type, though raw select handles it
+      // return { ...tenantAttachment, isSystemManaged: false };
+      return tenantAttachment;
+    }
+
+    // If not found, try system table
+    const systemAttachment = await knex('system_workflow_event_attachments')
+      .select('*', knex.raw('true as "isSystemManaged"'))
+      .where({
+        attachment_id: attachmentId
+        // No tenant filter for system table
+      })
+      .first();
+
+    // Add the isSystemManaged property explicitly if needed by the type
+    // return systemAttachment ? { ...systemAttachment, isSystemManaged: true } : null;
+    return systemAttachment || null;
   }
 
   /**
@@ -64,16 +83,32 @@ export class WorkflowEventAttachmentModel {
     workflowId: string,
     eventId: string,
     tenantId: string
-  ): Promise<IWorkflowEventAttachment | null> {
-    const attachment = await knex('workflow_event_attachments')
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Add flag to return type
+    // Try tenant table first
+    const tenantAttachment = await knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         workflow_id: workflowId,
         event_id: eventId,
-        tenant_id: tenantId
+        tenant_id: tenantId // Filter by tenant
       })
       .first();
-    
-    return attachment || null;
+
+    if (tenantAttachment) {
+      return tenantAttachment;
+    }
+
+    // If not found, try system table
+    const systemAttachment = await knex('system_workflow_event_attachments')
+      .select('*', knex.raw('true as "isSystemManaged"'))
+      .where({
+        workflow_id: workflowId,
+        event_id: eventId
+        // No tenant filter for system table
+      })
+      .first();
+
+    return systemAttachment || null;
   }
 
   /**
@@ -92,22 +127,38 @@ export class WorkflowEventAttachmentModel {
     options: {
       isActive?: boolean;
     } = {}
-  ): Promise<IWorkflowEventAttachment[]> {
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Add flag to return type
     const { isActive } = options;
-    
-    const query = knex('workflow_event_attachments')
+
+    // Tenant-specific attachments
+    const tenantQuery = knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         workflow_id: workflowId,
         tenant_id: tenantId
       });
-    
+
     if (isActive !== undefined) {
-      query.where('is_active', isActive);
+      tenantQuery.where('is_active', isActive);
     }
-    
-    const attachments = await query
+
+    // System attachments
+    const systemQuery = knex('system_workflow_event_attachments')
+      .select('*', knex.raw('true as "isSystemManaged"'))
+      .where({
+        workflow_id: workflowId // Match the same workflowId
+      });
+
+     if (isActive !== undefined) {
+      systemQuery.where('is_active', isActive);
+    }
+
+    // Combine results - only one of the queries should return results for a given workflowId
+    // unless a system workflow somehow has the same ID as a tenant one (unlikely with UUIDs)
+    const attachments = await knex
+      .unionAll([tenantQuery, systemQuery], true) // Wrap union for ordering
       .orderBy('created_at', 'asc');
-    
+
     return attachments;
   }
 
@@ -127,22 +178,37 @@ export class WorkflowEventAttachmentModel {
     options: {
       isActive?: boolean;
     } = {}
-  ): Promise<IWorkflowEventAttachment[]> {
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Add isSystemManaged to return type
     const { isActive } = options;
-    
-    const query = knex('workflow_event_attachments')
+
+    // Tenant-specific attachments
+    const tenantQuery = knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"')) // Add isSystemManaged flag
       .where({
         event_id: eventId,
         tenant_id: tenantId
       });
-    
+
     if (isActive !== undefined) {
-      query.where('is_active', isActive);
+      tenantQuery.where('is_active', isActive);
     }
-    
-    const attachments = await query
+
+    // System attachments
+    const systemQuery = knex('system_workflow_event_attachments')
+      .select('*', knex.raw('true as "isSystemManaged"')) // Add isSystemManaged flag
+      .where({
+        event_id: eventId
+      });
+
+    if (isActive !== undefined) {
+      systemQuery.where('is_active', isActive);
+    }
+
+    // Combine results
+    const attachments = await knex
+      .unionAll([tenantQuery, systemQuery], true) // Wrap union in subquery for ordering
       .orderBy('created_at', 'asc');
-    
+
     return attachments;
   }
 
@@ -210,9 +276,11 @@ export class WorkflowEventAttachmentModel {
     knex: Knex,
     eventType: string,
     tenantId: string
-  ): Promise<string[]> {
-    const results = await knex('workflow_event_attachments as wea')
+  ): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Update return type
+    // Tenant-specific attachments
+    const tenantQuery = knex('workflow_event_attachments as wea')
       .join('event_catalog as ec', function() {
+        // Assuming event_catalog is tenant-specific or has tenant_id
         this.on('wea.event_id', 'ec.event_id')
             .andOn('wea.tenant_id', 'ec.tenant_id');
       })
@@ -221,8 +289,26 @@ export class WorkflowEventAttachmentModel {
         'wea.tenant_id': tenantId,
         'wea.is_active': true
       })
-      .select('wea.workflow_id');
-    
-    return results.map(r => r.workflow_id);
+      .select('wea.workflow_id', knex.raw('false as "isSystemManaged"')); // Add flag
+
+    // System attachments
+    // Assuming event_catalog is global or has a separate system version
+    // If event_catalog is purely tenant-specific, system workflows cannot be triggered by event type directly
+    // Let's assume event_catalog is global for now.
+    const systemQuery = knex('system_workflow_event_attachments as swea')
+      .join('event_catalog as ec', 'swea.event_id', 'ec.event_id') // Join on event_id only
+      .where({
+        'ec.event_type': eventType,
+        // No tenant filter for system workflows
+        'swea.is_active': true
+      })
+      .select('swea.workflow_id', knex.raw('true as "isSystemManaged"')); // Add flag
+
+    // Combine results
+    const results = await knex
+      .unionAll([tenantQuery, systemQuery], true); // Wrap union
+
+    // No specific order needed here, just return the combined list
+    return results;
   }
 }
