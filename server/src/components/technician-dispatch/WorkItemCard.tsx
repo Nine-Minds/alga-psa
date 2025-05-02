@@ -12,7 +12,7 @@ interface WorkItemCardProps {
   title?: string;
   description?: string;
   type?: WorkItemType;
-  isBillable?: boolean;
+  // isBillable?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   needsDispatch?: boolean;
   agentsNeedingDispatch?: { user_id: string; first_name: string | null; last_name: string | null }[];
@@ -26,7 +26,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
   title,
   description,
   type,
-  isBillable,
+  // isBillable,
   onClick,
   needsDispatch,
   agentsNeedingDispatch
@@ -68,6 +68,8 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
             </div>
           </Tooltip>
         )}
+        {/* Billable badge structure kept for future use, but logic removed */}
+        {/*
         {typeof isBillable !== 'undefined' && (
            <div>
              <span className={cn(
@@ -84,6 +86,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
              </Badge>
            </div>
         )}
+        */}
       </div>
     </div>
   );

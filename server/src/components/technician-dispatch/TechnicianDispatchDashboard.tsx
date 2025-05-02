@@ -845,7 +845,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
             title={dragOverlay.item?.name || ''}
             description={dragOverlay.item?.description || ''}
             type={dragOverlay.item?.type || 'ticket'}
-            isBillable={dragOverlay.item?.is_billable || false}
+            // isBillable
           />
         </div>
       )}

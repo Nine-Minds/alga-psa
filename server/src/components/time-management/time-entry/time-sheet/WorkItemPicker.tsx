@@ -309,7 +309,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                       type: 'ad_hoc',
                       name: adHocTitle,
                       title: adHocTitle,
-                      is_billable: true,
+                      // is_billable: true,
                       description: '',
                       startTime,
                       endTime,
