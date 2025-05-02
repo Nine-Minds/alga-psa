@@ -108,7 +108,7 @@ const WorkItemListPanel: React.FC<WorkItemListPanelProps> = ({
               title={item.name}
               description={item.description}
               type={item.type}
-              isBillable={item.is_billable}
+              // isBillable={item.is_billable}
               needsDispatch={item.needsDispatch}
               agentsNeedingDispatch={item.agentsNeedingDispatch}
               onClick={(e) => onWorkItemClick(e, item)}

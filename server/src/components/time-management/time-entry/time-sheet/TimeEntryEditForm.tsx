@@ -121,7 +121,9 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     }
 
     if (duration <= 0) {
-      newErrors.duration = 'Duration must be greater than 0';
+      newErrors.duration = 'Duration must be at least 1 minute';
+    } else if (duration < 1) {
+      newErrors.duration = 'Minimum duration is 1 minute';
     }
 
     setValidationErrors(newErrors);
@@ -342,12 +344,16 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       )
     );
 
-    // Dependencies: service_id, companyId trigger the effect.
-    // entry.start_time is needed for plan filtering.
-    // entry.billing_plan_id and entry.tax_region are needed for comparison/default logic.
-    // selectedService provides service region_code.
-    // index and onUpdateEntry are needed to update the state.
-  }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, entry?.tax_region, selectedService, index, onUpdateEntry]);
+    onUpdateEntry(index, updatedEntry);
+    onUpdateTimeInputs({
+      [`${type}-${index}`]: value
+    });
+
+    setValidationErrors({});
+    if (showErrors) {
+      validateTimes();
+    }
+  }, [isEditable, entry, index, onUpdateEntry, onUpdateTimeInputs, showErrors, validateTimes]);
 
 
 
@@ -398,16 +404,14 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (hours < 0 || minutes < 0) return; // Silently ignore negative values
 
     const startTime = parseISO(entry.start_time);
-    const newEndTime = addMinutes(startTime, hours * 60 + minutes);
-    const totalMinutes = hours * 60 + minutes;
+    const totalMinutes = Math.max(1, hours * 60 + minutes); // Enforce minimum 1 minute
+    const newEndTime = addMinutes(startTime, totalMinutes);
 
-    const updatedEntry = updateBillableDuration(
-      {
-        ...entry,
-        end_time: formatISO(newEndTime)
-      },
-      totalMinutes
-    );
+    const updatedEntry = {
+      ...entry,
+      end_time: formatISO(newEndTime),
+      billable_duration: totalMinutes > 0 ? totalMinutes : 0
+    };
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({
@@ -418,7 +422,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (showErrors) {
       validateTimes();
     }
-  }, [entry, index, durationHours, durationMinutes, onUpdateEntry, onUpdateTimeInputs, validateTimes, updateBillableDuration, showErrors]);
+  }, [entry, index, durationHours, durationMinutes, onUpdateEntry, onUpdateTimeInputs, validateTimes, showErrors]);
 
   return (
     <div className="border p-4 rounded">
@@ -584,7 +588,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2 mt-2">
         <div className="flex items-center justify-between">
           <label className="text-sm font-medium text-gray-700">Duration</label>
           <div className="flex items-center space-x-2">
@@ -627,10 +631,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
                     parseISO(entry.end_time)
                   );
 
+                  console.log('Toggle billable switch:', { checked, duration });
+                  
                   onUpdateEntry(
                     index,
                     checked
-                      ? updateBillableDuration({ ...entry, billable_duration: 1 }, duration)
+                      ? { ...entry, billable_duration: duration }
                       : { ...entry, billable_duration: 0 }
                   );
                 }

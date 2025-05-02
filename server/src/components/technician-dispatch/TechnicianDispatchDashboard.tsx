@@ -505,6 +505,16 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
     setPrimaryTechnicianId(null);
     setComparisonTechnicianIds(new Set());
   };
+  
+  const handleSelectAll = () => {
+    const techIds = new Set<string>();
+    displayedTechnicians.forEach(tech => {
+      if (tech.user_id !== primaryTechnicianId) {
+        techIds.add(tech.user_id);
+      }
+    });
+    setComparisonTechnicianIds(techIds);
+  };
 
   const handleNavigate = (action: 'prev' | 'next' | 'today') => {
     setDate(currentDate => {
@@ -812,6 +822,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
           onDropFromList={handleDrop}
           onSelectSlot={(slotInfo) => { /* Placeholder for select slot */ console.log("Slot selected:", slotInfo); }}
           onResetSelections={handleResetSelections}
+          onSelectAll={handleSelectAll}
           canEdit={canEdit ?? false}
         />
       </div>
@@ -834,7 +845,7 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
             title={dragOverlay.item?.name || ''}
             description={dragOverlay.item?.description || ''}
             type={dragOverlay.item?.type || 'ticket'}
-            isBillable={dragOverlay.item?.is_billable || false}
+            // isBillable
           />
         </div>
       )}

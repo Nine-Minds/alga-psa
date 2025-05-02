@@ -171,6 +171,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
           end: endDate
         } : undefined,
         availableWorkItemIds: availableWorkItems.map(item => item.work_item_id),
+        isTimesheet: !!timePeriod?.period_id,
       });
       
       const itemsWithStatus = result.items.map((item: Omit<IExtendedWorkItem, "tenant">): WorkItemWithStatus => ({
@@ -308,7 +309,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                       type: 'ad_hoc',
                       name: adHocTitle,
                       title: adHocTitle,
-                      is_billable: true,
+                      // is_billable: true,
                       description: '',
                       startTime,
                       endTime,

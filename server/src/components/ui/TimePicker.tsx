@@ -17,16 +17,76 @@ export interface TimePickerProps {
   label?: string;
   /** Whether the field is required */
   required?: boolean;
+  /** Time format preference */
+  timeFormat?: '12h' | '24h';
 }
 
 export const TimePicker = React.forwardRef<HTMLDivElement, TimePickerProps>(
-  ({ value, onChange, placeholder = 'Select time', className, disabled, id, label, required }, ref) => {
+  ({ value, onChange, placeholder = 'Select time', className, disabled, id, label, required, timeFormat = '12h' }, ref) => {
     const [open, setOpen] = React.useState(false);
-    const [selectedHour, setSelectedHour] = React.useState(value ? value.split(':')[0] : '00');
-    const [selectedMinute, setSelectedMinute] = React.useState(value ? value.split(':')[1] : '00');
-    const [period, setPeriod] = React.useState(
-      value ? (parseInt(value.split(':')[0]) >= 12 ? 'PM' : 'AM') : 'AM'
-    );
+    const hourListRef = React.useRef<HTMLDivElement>(null);
+    const minuteListRef = React.useRef<HTMLDivElement>(null);
+    
+    // Parse the value to get hour, minute, and period
+    const parseValue = React.useCallback(() => {
+      if (!value) return { hour: '12', minute: '00', period: 'AM' as const };
+      
+      const [hourStr, minuteStr] = value.split(':');
+      const hourNum = parseInt(hourStr);
+      
+      if (timeFormat === '24h') {
+        return {
+          hour: hourStr.padStart(2, '0'),
+          minute: minuteStr.padStart(2, '0'),
+          period: hourNum >= 12 ? 'PM' as const : 'AM' as const
+        };
+      } else {
+        // 12h format
+        return {
+          hour: String(hourNum % 12 || 12).padStart(2, '0'),
+          minute: minuteStr.padStart(2, '0'),
+          period: hourNum >= 12 ? 'PM' as const : 'AM' as const
+        };
+      }
+    }, [value, timeFormat]);
+    
+    const { hour: initialHour, minute: initialMinute, period: initialPeriod } = parseValue();
+    
+    const [selectedHour, setSelectedHour] = React.useState(initialHour);
+    const [selectedMinute, setSelectedMinute] = React.useState(initialMinute);
+    const [period, setPeriod] = React.useState<'AM' | 'PM'>(initialPeriod);
+    
+    // Update state when value changes externally
+    React.useEffect(() => {
+      const { hour, minute, period } = parseValue();
+      setSelectedHour(hour);
+      setSelectedMinute(minute);
+      setPeriod(period);
+    }, [value, parseValue]);
+    
+    // Scroll to selected values when dropdown opens
+    React.useEffect(() => {
+      if (open) {
+        // Use setTimeout to ensure the DOM has updated
+        setTimeout(() => {
+          // Scroll hour list to selected hour
+          if (hourListRef.current) {
+            const selectedHourElement = hourListRef.current.querySelector(`button[data-value="${selectedHour}"]`);
+            if (selectedHourElement) {
+              selectedHourElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+          }
+          
+          // Scroll minute list to selected minute
+          if (minuteListRef.current) {
+            const selectedMinuteElement = minuteListRef.current.querySelector(`button[data-value="${selectedMinute}"]`);
+            if (selectedMinuteElement) {
+              selectedMinuteElement.scrollIntoView({ block: 'center', behavior: 'auto' });
+            }
+          }
+        }, 50);
+      }
+    }, [open, selectedHour, selectedMinute]);
     
     // Register with UI reflection system if id is provided
     const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<TimePickerComponent>({
@@ -50,116 +110,95 @@ export const TimePicker = React.forwardRef<HTMLDivElement, TimePickerProps>(
       }
     }, [value, disabled, required, updateMetadata]);
 
-    const hours = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-    const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+    const hours = React.useMemo(() => {
+      if (timeFormat === '24h') {
+        return Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+      }
+      return Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+    }, [timeFormat]);
+    
+    const minutes = React.useMemo(() => 
+      Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')),
+    []);
 
-    const handleTimeChange = (hour: string, minute: string, newPeriod: string) => {
+    const handleTimeChange = (hour: string, minute: string, newPeriod: 'AM' | 'PM') => {
       let h = parseInt(hour);
-      if (newPeriod === 'PM' && h !== 12) h += 12;
-      if (newPeriod === 'AM' && h === 12) h = 0;
+      if (timeFormat === '12h') {
+        if (newPeriod === 'PM' && h !== 12) h += 12;
+        if (newPeriod === 'AM' && h === 12) h = 0;
+      }
       const formattedHour = String(h).padStart(2, '0');
       onChange(`${formattedHour}:${minute}`);
     };
 
-    const displayValue = value ? 
-      `${selectedHour}:${selectedMinute} ${period}` : 
-      placeholder;
+    const displayValue = React.useMemo(() => {
+      if (!value) return placeholder;
+      
+      const { hour, minute, period } = parseValue();
+      if (timeFormat === '24h') {
+        return `${value}`;
+      } else {
+        return `${hour}:${minute} ${period}`;
+      }
+    }, [value, placeholder, parseValue, timeFormat]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const newValue = e.target.value;
       if (/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(newValue)) {
         onChange(newValue);
-        const hour = parseInt(newValue.split(':')[0]);
-        const minute = newValue.split(':')[1];
-        setSelectedHour(String(hour % 12 || 12).padStart(2, '0'));
-        setSelectedMinute(minute);
-        setPeriod(hour >= 12 ? 'PM' : 'AM');
       }
     };
 
     return (
       <Popover.Root open={open} onOpenChange={setOpen}>
         <div className={className} ref={ref}>
-          <div className="relative flex items-center">
-            <input
-              type="time"
-              value={value}
-              onChange={handleInputChange}
-              disabled={disabled}
-              className={`
-                w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
-                file:border-0 file:bg-transparent file:text-sm file:font-medium 
-                placeholder:text-gray-500
-                hover:border-gray-400
-                focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 
-                disabled:cursor-not-allowed disabled:opacity-50
-                [appearance:textfield]
-                [&::-webkit-calendar-picker-indicator]:hidden
-              `}
-              {...automationIdProps}
-            />
-            <Popover.Trigger
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 rounded-md"
-              disabled={disabled}
-              aria-label={label || placeholder}
-            >
-              <Clock className="h-4 w-4 opacity-50" />
-            </Popover.Trigger>
-          </div>
+          <Popover.Trigger
+            {...automationIdProps}
+            disabled={disabled}
+            aria-label={label || placeholder}
+            className={`
+              flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
+              file:border-0 file:bg-transparent file:text-sm file:font-medium 
+              placeholder:text-gray-500
+              hover:border-gray-400
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 
+              disabled:cursor-not-allowed disabled:opacity-50
+              ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+          >
+            <span className="flex-1 text-left">{displayValue}</span>
+            <Clock className="h-4 w-4 opacity-50" />
+          </Popover.Trigger>
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-64 p-3 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
+              className="z-50 w-[240px] p-3 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
               align="start"
               sideOffset={4}
             >
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500">Hour</label>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Hour</label>
                   <div
-                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover-scroll-container"
-                    style={{ willChange: 'transform' }}
+                    ref={hourListRef}
+                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                     onWheel={(e) => {
+                      // Standard scrolling behavior
                       const container = e.currentTarget;
-                      const { scrollTop, scrollHeight, clientHeight } = container;
-                      const delta = e.deltaY > 0 ? 1 : -1;
-                      const maxScroll = scrollHeight - clientHeight;
-                      
-                      const itemHeight = 32;
-                      let newScroll = scrollTop + delta * (itemHeight / 2);
-                      let newIndex = hours.indexOf(selectedHour) + delta;
-
-                      if (newScroll > maxScroll) {
-                        newScroll = 0;
-                        newIndex = 0;
-                      } else if (newScroll < 0) {
-                        newScroll = maxScroll;
-                        newIndex = hours.length - 1;
-                      }
-
-                      container.scrollTo({
-                        top: newScroll,
-                        behavior: 'smooth'
-                      });
-
-                      if (newIndex >= 0 && newIndex < hours.length) {
-                        const newHour = hours[newIndex];
-                        setSelectedHour(newHour);
-                        handleTimeChange(newHour, selectedMinute, period);
-                      }
-                      
-                      e.preventDefault();
+                      const scrollAmount = e.deltaY;
+                      container.scrollTop += scrollAmount;
                     }}
                   >
                     {hours.map((hour) => (
                       <button
                         key={hour}
+                        data-value={hour}
                         onClick={() => {
                           setSelectedHour(hour);
                           handleTimeChange(hour, selectedMinute, period);
                         }}
                         className={cn(
-                          'w-full px-2 py-1 text-left text-sm rounded-md',
+                          'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                           selectedHour === hour
                             ? 'bg-purple-100 text-purple-900'
                             : 'hover:bg-gray-100'
@@ -171,61 +210,28 @@ export const TimePicker = React.forwardRef<HTMLDivElement, TimePickerProps>(
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500">Minute</label>
-                  <div
-                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover-scroll-container"
-                    style={{ willChange: 'transform' }}
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Minute</label>
+                  <div 
+                    ref={minuteListRef}
+                    className="h-[160px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
                     onWheel={(e) => {
+                      // Standard scrolling behavior
                       const container = e.currentTarget;
-                      const { scrollTop, scrollHeight, clientHeight } = container;
-                      const delta = e.deltaY > 0 ? 1 : -1;
-                      const maxScroll = scrollHeight - clientHeight;
-                      
-                      const itemHeight = 32; // Actual measured item height
-                      let newScroll = scrollTop + delta * (itemHeight / 2);
-                      let newIndex = minutes.indexOf(selectedMinute) + delta;
-
-                      if (newScroll > maxScroll) {
-                        newScroll = 0;
-                        newIndex = 0;
-                      } else if (newScroll < 0) {
-                        newScroll = maxScroll;
-                        newIndex = minutes.length - 1;
-                      }
-
-                      // Handle infinite scroll wrapping
-                      if (newIndex >= minutes.length) {
-                        newIndex = 0;
-                        newScroll = 0;
-                      } else if (newIndex < 0) {
-                        newIndex = minutes.length - 1;
-                        newScroll = maxScroll;
-                      }
-
-                      container.scrollTo({
-                        top: newScroll,
-                        behavior: 'smooth'
-                      });
-
-                      if (newIndex >= 0 && newIndex < minutes.length) {
-                        const newMinute = minutes[newIndex];
-                        setSelectedMinute(newMinute);
-                        handleTimeChange(selectedHour, newMinute, period);
-                      }
-                      
-                      e.preventDefault();
+                      const scrollAmount = e.deltaY;
+                      container.scrollTop += scrollAmount;
                     }}
                   >
                     {minutes.map((minute) => (
                       <button
                         key={minute}
+                        data-value={minute}
                         onClick={() => {
                           setSelectedMinute(minute);
                           handleTimeChange(selectedHour, minute, period);
                         }}
                         className={cn(
-                          'w-full px-2 py-1 text-left text-sm rounded-md',
+                          'w-full px-2 py-1 text-left text-sm rounded-md text-center',
                           selectedMinute === minute
                             ? 'bg-purple-100 text-purple-900'
                             : 'hover:bg-gray-100'
@@ -237,29 +243,40 @@ export const TimePicker = React.forwardRef<HTMLDivElement, TimePickerProps>(
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-gray-500">Period</label>
-                  <div>
-                    {['AM', 'PM'].map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => {
-                          setPeriod(p);
-                          handleTimeChange(selectedHour, selectedMinute, p);
-                        }}
-                        className={cn(
-                          'w-full px-2 py-1 text-left text-sm rounded-md',
-                          period === p
-                            ? 'bg-purple-100 text-purple-900'
-                            : 'hover:bg-gray-100'
-                        )}
-                      >
-                        {p}
-                      </button>
-                    ))}
+                {timeFormat === '12h' && (
+                  <div className="w-16">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
+                    <div>
+                      {(['AM', 'PM'] as const).map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => {
+                            setPeriod(p);
+                            handleTimeChange(selectedHour, selectedMinute, p);
+                          }}
+                          className={cn(
+                            'w-full px-2 py-1 text-left text-sm rounded-md text-center',
+                            period === p
+                              ? 'bg-purple-100 text-purple-900'
+                              : 'hover:bg-gray-100'
+                          )}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
+              
+              {/* Hidden input for native time support */}
+              <input
+                type="time"
+                value={value}
+                onChange={handleInputChange}
+                className="sr-only"
+                tabIndex={-1}
+              />
             </Popover.Content>
           </Popover.Portal>
         </div>

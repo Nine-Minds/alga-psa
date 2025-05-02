@@ -8,7 +8,7 @@ export interface IWorkItem extends TenantEntity {
   name: string;
   title?: string;
   description: string;
-  is_billable: boolean;
+  is_billable?: boolean;
   startTime?: Date;
   endTime?: Date;
   scheduled_start?: string;

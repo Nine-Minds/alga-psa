@@ -2,7 +2,7 @@
 import { Calendar, momentLocalizer, View, NavigateAction } from 'react-big-calendar';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
-import { CalendarDays, Layers2, XCircle } from 'lucide-react';
+import { CalendarDays, Layers, Layers2, XCircle } from 'lucide-react';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
 import moment from 'moment';
 import withDragAndDrop, { withDragAndDropProps } from 'react-big-calendar/lib/addons/dragAndDrop';
@@ -33,6 +33,7 @@ interface WeeklyTechnicianScheduleGridProps {
   onSelectEvent?: (event: IScheduleEntry, e: React.SyntheticEvent<HTMLElement>) => void;
   onSetFocus?: (technicianId: string) => void;
   onResetSelections?: () => void;
+  onSelectAll?: () => void;
   onDeleteEvent?: (eventId: string) => void;
   canEdit?: boolean;
 }
@@ -44,7 +45,8 @@ const TechnicianSidebar = ({
   comparisonTechnicianIds,
   onSetFocus,
   onComparisonChange,
-  onResetSelections
+  onResetSelections,
+  onSelectAll
 }: { 
   technicians: IUserWithRoles[]; 
   primaryTechnicianId: string | null;
@@ -52,21 +54,34 @@ const TechnicianSidebar = ({
   onSetFocus?: (technicianId: string) => void;
   onComparisonChange: (technicianId: string, add: boolean) => void;
   onResetSelections?: () => void;
+  onSelectAll?: () => void;
 }) => {
   return (
     <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-2 border-gray-200">
-        <Button
-          id="reset-selections-button"
-          variant="outline"
-          size="sm"
-          onClick={onResetSelections}
-          className="w-full px-3 py-1 flex items-center gap-1 justify-center"
-          disabled={!primaryTechnicianId && comparisonTechnicianIds.length === 0}
-        >
-          <XCircle className="h-4 w-4" />
-          Reset Selections
-        </Button>
+        <div className="flex justify-center gap-1">
+          <Button
+            id="select-all-button"
+            variant="outline"
+            size="sm"
+            onClick={onSelectAll}
+            className="text-xs px-2 py-1 h-7"
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            All
+          </Button>
+          <Button
+            id="reset-selections-button"
+            variant="outline"
+            size="sm"
+            onClick={onResetSelections}
+            className="text-xs px-2 py-1 h-7"
+            disabled={!primaryTechnicianId && comparisonTechnicianIds.length === 0}
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            Clear All
+          </Button>
+        </div>
       </div>
       {technicians.map(tech => {
         const isFocus = tech.user_id === primaryTechnicianId;
@@ -140,6 +155,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
   onSetFocus,
   onDeleteEvent,
   onResetSelections,
+  onSelectAll,
   canEdit,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
@@ -476,6 +492,7 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
           onSetFocus={onSetFocus}
           onComparisonChange={onComparisonChange}
           onResetSelections={onResetSelections}
+          onSelectAll={onSelectAll}
         />
       )}
       

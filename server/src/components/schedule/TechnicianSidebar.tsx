@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { CalendarDays, Layers2, XCircle } from 'lucide-react';
+import { CalendarDays, Layers, Layers2, XCircle } from 'lucide-react';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 interface TechnicianSidebarProps {
@@ -12,6 +12,7 @@ interface TechnicianSidebarProps {
   onSetFocus: (technicianId: string) => void;
   onComparisonChange: (technicianId: string, add: boolean) => void;
   onResetSelections?: () => void;
+  onSelectAll?: () => void;
 }
 
 const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
@@ -20,26 +21,47 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
   comparisonTechnicianIds,
   onSetFocus,
   onComparisonChange,
-  onResetSelections
+  onResetSelections,
+  onSelectAll
 }) => {
 
   const internalTechnicians = useMemo(() => {
-    return technicians.filter(tech => tech.user_type === 'internal');
+    return technicians
+      .filter(tech => tech.user_type === 'internal')
+      .sort((a, b) => {
+        const nameA = `${a.first_name || ''} ${a.last_name || ''}`.toLowerCase();
+        const nameB = `${b.first_name || ''} ${b.last_name || ''}`.toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
   }, [technicians]);
   return (
     <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-2 border-gray-200">
-        <Button
-          id="reset-selections-button"
-          variant="outline"
-          size="sm"
-          onClick={onResetSelections}
-          className="w-full px-3 py-1 flex items-center gap-1 justify-center"
-          disabled={!focusedTechnicianId && comparisonTechnicianIds.length === 0}
-        >
-          <XCircle className="h-4 w-4" />
-          Reset Selections
-        </Button>
+        <div className="flex justify-center gap-1">
+          <Button
+            id="select-all-button"
+            variant="outline"
+            size="sm"
+            onClick={onSelectAll}
+            className="text-xs px-2 py-1 h-7"
+          >
+            <Layers className="h-4 w-4 mr-1" />
+            All
+          </Button>
+          <Button
+            id="reset-selections-button"
+            variant="outline"
+            size="sm"
+            onClick={onResetSelections}
+            className="text-xs px-2 py-1 h-7"
+            disabled={!focusedTechnicianId && comparisonTechnicianIds.length === 0}
+          >
+            <XCircle className="h-4 w-4 mr-1" />
+            Clear All
+          </Button>
+        </div>
       </div>
       {internalTechnicians.map(tech => {
         const isFocus = tech.user_id === focusedTechnicianId;

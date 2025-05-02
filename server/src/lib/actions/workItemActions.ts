@@ -31,6 +31,7 @@ export interface DispatchSearchOptions extends BaseSearchOptions {
 }
 
 export interface PickerSearchOptions extends BaseSearchOptions {
+  isTimesheet?: boolean;
 }
 
 interface SearchResult {
@@ -277,6 +278,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     const page = options.page || 1;
     const pageSize = options.pageSize || 10;
     const offset = (page - 1) * pageSize;
+    const isTimesheet = options.isTimesheet || false;
 
     let ticketsQuery = db('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
@@ -494,6 +496,68 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          'tr.additional_user_ids as additional_user_ids'
        );
 
+
+    let adHocQuery;
+    if (!isTimesheet && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+      adHocQuery = db('schedule_entries as se')
+        .whereNotIn('se.entry_id', options.availableWorkItemIds || [])
+        .where('se.tenant', tenant)
+        .where('work_item_type', 'ad_hoc')
+        .whereILike('title', db.raw('?', [`%${searchTerm}%`]))
+        .leftJoin(
+          db('schedule_entry_assignees')
+            .where('tenant', tenant)
+            .select('entry_id')
+            .select(db.raw('array_agg(distinct user_id) as assigned_user_ids'))
+            .groupBy('entry_id', 'tenant')
+            .as('sea'),
+          function() {
+            this.on('se.entry_id', '=', 'sea.entry_id')
+                .andOn('se.tenant', '=', db.raw('?', [tenant]));
+          }
+        )
+        .distinctOn('se.entry_id')
+        .modify((queryBuilder) => {
+          if (options.assignedToMe && options.assignedTo) {
+            queryBuilder.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
+          } else if (options.assignedTo) {
+            queryBuilder.whereRaw('? = ANY(sea.assigned_user_ids)', [options.assignedTo]);
+          }
+
+          // Filter by date range if provided
+          const startDate = options.dateRange?.start;
+          const endDate = options.dateRange?.end;
+          if (startDate) {
+            queryBuilder.where('se.scheduled_start', '>=', db.raw('?', [startDate]));
+          }
+          if (endDate) {
+            queryBuilder.where('se.scheduled_end', '<=', db.raw('?', [endDate]));
+          }
+
+          if (options.workItemId) {
+            queryBuilder.whereRaw('1 = 0');
+          }
+        })
+        .select(
+          'se.entry_id as work_item_id',
+          'se.title as name',
+          'se.notes as description',
+          db.raw("'ad_hoc' as type"),
+          db.raw('NULL::text as ticket_number'),
+          'se.title',
+          db.raw('NULL::text as project_name'),
+          db.raw('NULL::text as phase_name'),
+          db.raw('NULL::text as task_name'),
+          db.raw('NULL::uuid as company_id'),
+          db.raw('NULL::text as company_name'),
+          'se.scheduled_start',
+          'se.scheduled_end',
+          db.raw('NULL::timestamp with time zone as due_date'),
+          'sea.assigned_user_ids as assigned_user_ids',
+          db.raw('NULL::uuid[] as additional_user_ids')
+        );
+    }
+
     let queriesToUnion = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
         queriesToUnion.push(ticketsQuery);
@@ -501,23 +565,25 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     if (!options.type || options.type === 'all' || options.type === 'project_task') {
         queriesToUnion.push(projectTasksQuery);
     }
+    if (!isTimesheet && adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+        queriesToUnion.push(adHocQuery);
+    }
 
     let query = db.union(queriesToUnion, true);
 
-    const ticketsCountQuery = ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first();
-    const projectTasksCountQuery = projectTasksQuery.clone().clearSelect().clearOrder().count('* as count').first();
-
-    let total = 0;
     const countPromises = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
-        countPromises.push(ticketsCountQuery);
+        countPromises.push(ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
     if (!options.type || options.type === 'all' || options.type === 'project_task') {
-        countPromises.push(projectTasksCountQuery);
+        countPromises.push(projectTasksQuery.clone().clearSelect().clearOrder().count('* as count').first());
+    }
+    if (!isTimesheet && adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+        countPromises.push(adHocQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
 
     const countResults = await Promise.all(countPromises);
-    total = countResults.reduce((sum, result) => sum + parseInt(result?.count as string || '0'), 0);
+    let total = countResults.reduce((sum, result) => sum + parseInt(result?.count as string || '0'), 0);
 
 
     // Apply sorting to the main query
@@ -597,7 +663,7 @@ export async function createWorkItem(item: Omit<IWorkItem, "work_item_id">): Pro
       name: name,
       title: item.title,
       description: item.description,
-      is_billable: item.is_billable,
+      is_billable: item.is_billable !== undefined ? item.is_billable : true,
       scheduled_start: item.startTime.toISOString(),
       scheduled_end: item.endTime.toISOString()
     };
@@ -754,7 +820,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         type: workItem.type,
         name: workItem.name,
         description: workItem.description,
-        is_billable: true, // Adjust this based on your business logic
+        is_billable: true,
         ticket_number: workItem.ticket_number,
         title: workItem.title,
         project_name: workItem.project_name,
