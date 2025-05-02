@@ -87,6 +87,7 @@
     "moment": "^2.30.1",
     "next": "^14.2.16",
     "next-auth": "^4.24.7",
+    "node-vault": "^0.10.2",
     "nodemailer": "^6.9.16",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
