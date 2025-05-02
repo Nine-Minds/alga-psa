@@ -23,7 +23,7 @@ export async function getWorkflowEventAttachmentsForWorkflow(params: {
   workflowId: string;
   tenant: string;
   isActive?: boolean;
-}): Promise<IWorkflowEventAttachment[]> {
+}): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Updated return type
   const { workflowId, tenant, isActive } = params;
   
   const { knex } = await createTenantKnex();
@@ -46,7 +46,7 @@ export async function getWorkflowEventAttachmentsForEvent(params: {
   eventId: string;
   tenant: string;
   isActive?: boolean;
-}): Promise<IWorkflowEventAttachment[]> {
+}): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Updated return type
   const { eventId, tenant, isActive } = params;
   
   const { knex } = await createTenantKnex();
@@ -68,7 +68,7 @@ export async function getWorkflowEventAttachmentsForEvent(params: {
 export async function getWorkflowEventAttachmentById(params: {
   attachmentId: string;
   tenant: string;
-}): Promise<IWorkflowEventAttachment | null> {
+}): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Updated return type
   const { attachmentId, tenant } = params;
   
   const { knex } = await createTenantKnex();
@@ -227,15 +227,15 @@ export async function deleteWorkflowEventAttachment(params: {
 export async function getWorkflowsForEventType(params: {
   eventType: string;
   tenant: string;
-}): Promise<string[]> {
+}): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
   const { eventType, tenant } = params;
   
   const { knex } = await createTenantKnex();
   
-  // Get all workflows attached to the event type
-  const workflowIds = await WorkflowEventAttachmentModel.getWorkflowsForEventType(knex, eventType, tenant);
+  // Get all workflows attached to the event type (now returns objects with isSystemManaged flag)
+  const workflowAttachments = await WorkflowEventAttachmentModel.getWorkflowsForEventType(knex, eventType, tenant);
   
-  return workflowIds;
+  return workflowAttachments; // Return the full objects
 }
 
 /**

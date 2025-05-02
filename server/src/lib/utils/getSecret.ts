@@ -1,5 +1,5 @@
-import { secrets } from '../secrets'; // Import the new singleton secret provider instance
-import logger from 'server/src/utils/logger'; // Assuming logger exists here based on previous corrections
+import { getSecretProviderInstance } from '../secrets'; // Import the new singleton secret provider instance
+import logger from '@shared/core/logger.js'; // Corrected import path
 
 /**
  * Gets a secret value using the configured secret provider, with fallbacks.
@@ -15,6 +15,7 @@ import logger from 'server/src/utils/logger'; // Assuming logger exists here bas
  */
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   // 1. Try the configured secret provider first
+  const secrets = getSecretProviderInstance();
   const providerSecret = await secrets.getAppSecret(secretName);
 
   if (providerSecret !== undefined) {

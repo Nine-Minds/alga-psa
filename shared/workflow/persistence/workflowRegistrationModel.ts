@@ -7,10 +7,22 @@ import logger from '@shared/core/logger.js';
 export interface WorkflowRegistration {
   registration_id: string;
   name: string;
-  version: string;
-  definition: any;
-  parameters?: any;
+  version: string; // This seems to be from the registration table, maybe latest version?
+  definition: any; // From the version table
+  parameters?: any; // From the version table
+  // Add other fields from registration table if needed by UI
+  description?: string;
+  category?: string;
+  tags?: string[];
+  status?: string;
+  source_template_id?: string;
+  created_by?: string;
+  created_at?: string; // Consider adding timestamps if needed
+  updated_at?: string;
 }
+
+// Add the flag to the return type
+export type WorkflowRegistrationWithSystemFlag = WorkflowRegistration & { isSystemManaged: boolean };
 
 /**
  * Model for workflow registrations
@@ -29,45 +41,81 @@ export default {
    */
   async getById(
     knex: Knex,
-    tenant: string,
+    tenant: string, // Keep tenant for RLS/context, but system query ignores it
     id: string,
-    version?: string
-  ): Promise<WorkflowRegistration | null> {
+    version?: string // Version applies to both tenant and system lookups
+  ): Promise<WorkflowRegistrationWithSystemFlag | null> { // Updated return type
     try {
-      // Get the workflow registration
-      const registration = await knex('workflow_registrations')
-        .select('registration_id', 'name', 'version')
-        .where('registration_id', id)
-        .where('tenant_id', tenant)
+      // --- Try Tenant Workflow ---
+      const tenantRegistration = await knex('workflow_registrations as wr')
+        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .join('workflow_registration_versions as wrv', function() {
+          this.on('wr.registration_id', '=', 'wrv.registration_id')
+              .andOn('wr.tenant_id', '=', 'wrv.tenant_id'); // Join includes tenant
+          if (version) {
+            this.andOn('wrv.version', '=', knex.raw('?', [version]));
+          } else {
+            this.andOn('wrv.is_current', '=', knex.raw('?', [true]));
+          }
+        })
+        .where('wr.registration_id', id)
+        .where('wr.tenant_id', tenant) // Filter registration by tenant
         .first();
-        
-      if (!registration) {
-        return null;
+
+      if (tenantRegistration) {
+        // Map fields to expected WorkflowRegistration structure if needed
+        return {
+          registration_id: tenantRegistration.registration_id,
+          name: tenantRegistration.name,
+          version: tenantRegistration.current_version, // Use version from joined table
+          definition: tenantRegistration.definition,
+          parameters: tenantRegistration.parameters,
+          description: tenantRegistration.description,
+          category: tenantRegistration.category,
+          tags: tenantRegistration.tags,
+          status: tenantRegistration.status,
+          source_template_id: tenantRegistration.source_template_id,
+          created_by: tenantRegistration.created_by,
+          created_at: tenantRegistration.created_at,
+          updated_at: tenantRegistration.updated_at,
+          isSystemManaged: false,
+        };
       }
-      
-      // Get the specific version or current version
-      let versionQuery = knex('workflow_registration_versions')
-        .where('registration_id', registration.registration_id);
-        
-      if (version) {
-        versionQuery = versionQuery.where('tenant_id', tenant);
-        versionQuery = versionQuery.where('version', version);
-      } else {
-        versionQuery = versionQuery.where('tenant_id', tenant);
-        versionQuery = versionQuery.where('is_current', true);
+
+      // --- Try System Workflow ---
+      const systemRegistration = await knex('system_workflow_registrations as swr')
+        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .join('system_workflow_registration_versions as swrv', function() {
+          this.on('swr.registration_id', '=', 'swrv.registration_id'); // No tenant join
+          if (version) {
+            this.andOn('swrv.version', '=', knex.raw('?', [version]));
+          } else {
+            this.andOn('swrv.is_current', '=', knex.raw('?', [true]));
+          }
+        })
+        .where('swr.registration_id', id) // No tenant filter for system registration
+        .first();
+
+      if (systemRegistration) {
+        return {
+          registration_id: systemRegistration.registration_id,
+          name: systemRegistration.name,
+          version: systemRegistration.current_version,
+          definition: systemRegistration.definition,
+          parameters: systemRegistration.parameters,
+          description: systemRegistration.description,
+          category: systemRegistration.category,
+          tags: systemRegistration.tags,
+          status: systemRegistration.status,
+          source_template_id: systemRegistration.source_template_id,
+          created_by: systemRegistration.created_by,
+          created_at: systemRegistration.created_at,
+          updated_at: systemRegistration.updated_at,
+          isSystemManaged: true,
+        };
       }
-      
-      const versionRecord = await versionQuery.first();
-      
-      if (!versionRecord) {
-        return null;
-      }
-      
-      return {
-        ...registration,
-        definition: versionRecord.definition,
-        parameters: versionRecord.parameters
-      };
+
+      return null; // Not found in either table
     } catch (error) {
       logger.error(`Error getting workflow registration for ID ${id}:`, error);
       throw error;
@@ -84,46 +132,81 @@ export default {
    * @returns The workflow registration or null if not found
    */
   async getByName(
-    knex: Knex, 
-    tenant: string, 
-    name: string, 
+    knex: Knex,
+    tenant: string,
+    name: string,
     version?: string
-  ): Promise<WorkflowRegistration | null> {
+  ): Promise<WorkflowRegistrationWithSystemFlag | null> { // Updated return type
     try {
-      // Get the workflow registration
-      const registration = await knex('workflow_registrations')
-        .select('registration_id', 'name', 'version')
-        .where('name', name)
-        .where('tenant_id', tenant)
+      // --- Try Tenant Workflow ---
+      const tenantRegistration = await knex('workflow_registrations as wr')
+        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .join('workflow_registration_versions as wrv', function() {
+          this.on('wr.registration_id', '=', 'wrv.registration_id')
+              .andOn('wr.tenant_id', '=', 'wrv.tenant_id');
+          if (version) {
+            this.andOn('wrv.version', '=', knex.raw('?', [version]));
+          } else {
+            this.andOn('wrv.is_current', '=', knex.raw('?', [true]));
+          }
+        })
+        .where('wr.name', name)
+        .where('wr.tenant_id', tenant)
         .first();
-        
-      if (!registration) {
-        return null;
+
+      if (tenantRegistration) {
+        return {
+          registration_id: tenantRegistration.registration_id,
+          name: tenantRegistration.name,
+          version: tenantRegistration.current_version,
+          definition: tenantRegistration.definition,
+          parameters: tenantRegistration.parameters,
+          description: tenantRegistration.description,
+          category: tenantRegistration.category,
+          tags: tenantRegistration.tags,
+          status: tenantRegistration.status,
+          source_template_id: tenantRegistration.source_template_id,
+          created_by: tenantRegistration.created_by,
+          created_at: tenantRegistration.created_at,
+          updated_at: tenantRegistration.updated_at,
+          isSystemManaged: false,
+        };
       }
-      
-      // Get the specific version or current version
-      let versionQuery = knex('workflow_registration_versions')
-        .where('registration_id', registration.registration_id);
-        
-      if (version) {
-        versionQuery = versionQuery.where('tenant_id', tenant);
-        versionQuery = versionQuery.where('version', version);
-      } else {
-        versionQuery = versionQuery.where('tenant_id', tenant);
-        versionQuery = versionQuery.where('is_current', true);
+
+      // --- Try System Workflow ---
+      const systemRegistration = await knex('system_workflow_registrations as swr')
+        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .join('system_workflow_registration_versions as swrv', function() {
+          this.on('swr.registration_id', '=', 'swrv.registration_id');
+          if (version) {
+            this.andOn('swrv.version', '=', knex.raw('?', [version]));
+          } else {
+            this.andOn('swrv.is_current', '=', knex.raw('?', [true]));
+          }
+        })
+        .where('swr.name', name) // No tenant filter
+        .first();
+
+      if (systemRegistration) {
+         return {
+          registration_id: systemRegistration.registration_id,
+          name: systemRegistration.name,
+          version: systemRegistration.current_version,
+          definition: systemRegistration.definition,
+          parameters: systemRegistration.parameters,
+          description: systemRegistration.description,
+          category: systemRegistration.category,
+          tags: systemRegistration.tags,
+          status: systemRegistration.status,
+          source_template_id: systemRegistration.source_template_id,
+          created_by: systemRegistration.created_by,
+          created_at: systemRegistration.created_at,
+          updated_at: systemRegistration.updated_at,
+          isSystemManaged: true,
+        };
       }
-      
-      const versionRecord = await versionQuery.first();
-      
-      if (!versionRecord) {
-        return null;
-      }
-      
-      return {
-        ...registration,
-        definition: versionRecord.definition,
-        parameters: versionRecord.parameters
-      };
+
+      return null; // Not found
     } catch (error) {
       logger.error(`Error getting workflow registration for ${name}:`, error);
       throw error;
@@ -137,38 +220,49 @@ export default {
    * @param tenant The tenant ID
    * @returns Array of workflow registrations
    */
-  async getAll(knex: Knex, tenant: string): Promise<WorkflowRegistration[]> {
+  async getAll(knex: Knex, tenant: string): Promise<WorkflowRegistrationWithSystemFlag[]> { // Updated return type
     try {
-      // Get all active workflow registrations
-      const registrations = await knex('workflow_registrations')
-        .where('tenant_id', tenant)
-        .select('registration_id', 'name', 'version')
-        .where('status', 'active');
-      
-      if (!registrations.length) {
-        return [];
-      }
-      
-      // Get the current version for each registration
-      const results: WorkflowRegistration[] = [];
-      
-      for (const registration of registrations) {
-        const versionRecord = await knex('workflow_registration_versions')
-          .where('tenant_id', tenant)
-          .where('registration_id', registration.registration_id)
-          .where('is_current', true)
-          .first();
-        
-        if (versionRecord) {
-          results.push({
-            ...registration,
-            definition: versionRecord.definition,
-            parameters: versionRecord.parameters
-          });
-        }
-      }
-      
-      return results;
+      // --- Tenant Workflows ---
+      const tenantRegistrations = knex('workflow_registrations as wr')
+        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .join('workflow_registration_versions as wrv', function() {
+          this.on('wr.registration_id', '=', 'wrv.registration_id')
+              .andOn('wr.tenant_id', '=', 'wrv.tenant_id')
+              .andOn('wrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
+        })
+        .where('wr.tenant_id', tenant)
+        .where('wr.status', 'active'); // Assuming 'active' status means visible
+
+      // --- System Workflows ---
+      const systemRegistrations = knex('system_workflow_registrations as swr')
+        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .join('system_workflow_registration_versions as swrv', function() {
+          this.on('swr.registration_id', '=', 'swrv.registration_id')
+              .andOn('swrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
+        })
+        .where('swr.status', 'active'); // Assuming 'active' status means visible
+
+      // --- Combine Results ---
+      const combinedResults = await knex.unionAll([tenantRegistrations, systemRegistrations], true);
+
+      // Map to expected structure
+      return combinedResults.map(reg => ({
+        registration_id: reg.registration_id,
+        name: reg.name,
+        version: reg.current_version, // Use version from joined table
+        definition: reg.definition,
+        parameters: reg.parameters,
+        description: reg.description,
+        category: reg.category,
+        tags: reg.tags,
+        status: reg.status,
+        source_template_id: reg.source_template_id,
+        created_by: reg.created_by,
+        created_at: reg.created_at,
+        updated_at: reg.updated_at,
+        isSystemManaged: reg.isSystemManaged,
+      }));
+
     } catch (error) {
       logger.error('Error getting all workflow registrations:', error);
       throw error;

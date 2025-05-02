@@ -12,7 +12,8 @@ export default [
     ignores: [
       "eslint-plugin-custom-rules/**/*",
       "eslint.config.js",
-      "**/eslint.config.js"
+      "**/eslint.config.js",
+      "ee/server/migrations/**/*" // Ignore EE migration files (usually .cjs)
     ],
 
     // Define language options
