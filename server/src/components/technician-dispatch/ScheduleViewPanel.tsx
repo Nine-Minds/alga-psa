@@ -28,6 +28,7 @@ interface ScheduleViewPanelProps {
   onDropFromList?: (dropEvent: DropEvent) => void;
   onSelectSlot: (slotInfo: { start: Date; end: Date; resourceId?: string | number }) => void;
   onResetSelections?: () => void;
+  onSelectAll?: () => void;
   canEdit?: boolean;
 }
 
@@ -49,6 +50,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
   onDropFromList,
   onSelectSlot,
   onResetSelections,
+  onSelectAll,
   canEdit,
 }) => {
 
@@ -240,6 +242,7 @@ const ScheduleViewPanel: React.FC<ScheduleViewPanelProps> = ({
                 onSetFocus={onTechnicianClick}
                 onDeleteEvent={onDeleteEvent}
                 onResetSelections={onResetSelections}
+                onSelectAll={onSelectAll}
                 canEdit={canEdit}
             />
         )}

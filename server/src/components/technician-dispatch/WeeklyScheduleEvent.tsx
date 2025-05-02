@@ -53,6 +53,18 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   const { bg, text } = getEventColors(workItemType, isPrimary, isComparison);
 
   useEffect(() => {
+    if (eventRef.current && isComparison) {
+      const parentElement = eventRef.current.closest('.rbc-event');
+      if (parentElement) {
+        const labels = parentElement.querySelectorAll('.rbc-event-label');
+        labels.forEach(label => {
+          (label as HTMLElement).style.display = 'none';
+        });
+      }
+    }
+  }, [isComparison]);
+
+  useEffect(() => {
     if (eventRef.current) {
       const initialWidth = eventRef.current.offsetWidth;
       const initialIsNarrow = initialWidth < 80;

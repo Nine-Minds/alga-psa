@@ -22,7 +22,7 @@ import { getCurrentUser, getCurrentUserPermissions } from 'server/src/lib/action
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { Trash, ChevronLeft, ChevronRight, CalendarDays, Layers2 } from 'lucide-react';
+import { Trash, ChevronLeft, ChevronRight, CalendarDays, Layers, Layers2 } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Label } from 'server/src/components/ui/Label';
 
@@ -481,6 +481,14 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     }
   };
 
+  const handleSelectAll = () => {
+    const techIds = allTechnicians
+      ?.filter(tech => tech.user_id !== focusedTechnicianId && !tech.is_inactive)
+      .map(tech => tech.user_id) || [];
+    
+    setComparisonTechnicianIds(techIds);
+  };
+
   // Create a map of technician details for the event display
   const technicianMap = useMemo(() => {
     return (allTechnicians || []).reduce((map, tech) => {
@@ -605,6 +613,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
             onSetFocus={handleFocusTechnicianChange}
             onComparisonChange={handleComparisonChange}
             onResetSelections={handleResetSelections}
+            onSelectAll={handleSelectAll}
           />
         )}
         
