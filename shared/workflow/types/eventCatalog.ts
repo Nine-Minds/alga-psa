@@ -138,6 +138,7 @@ export interface IWorkflowEventAttachment {
   event_id: string;
   tenant_id: string;
   is_active: boolean;
+  isSystemManaged?: boolean; // Added flag for system managed workflows
   created_at: string;
   updated_at: string;
 }

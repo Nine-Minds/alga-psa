@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Code2, Plus, Search, MoreVertical, BookTemplate, History, Check, ArrowLeft, Save, Play, Tag, AlertTriangle, PlayCircle } from 'lucide-react';
-import { Input } from 'server/src/components/ui/Input';
+import { Input } from 'server/src/components/ui/Input'; // Assuming WorkflowDataWithSystemFlag is exported from here
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -22,7 +22,8 @@ import {
   setActiveWorkflowVersion,
   getWorkflowVersions,
   getWorkflow,
-  updateWorkflowStatus
+  updateWorkflowStatus,
+  WorkflowDataWithSystemFlag // Import the type
 } from 'server/src/lib/actions/workflow-editor-actions';
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
@@ -30,8 +31,8 @@ import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflo
 
 
 // Type for workflow data with events
-interface WorkflowWithEvents {
-  id: string;
+interface WorkflowWithEvents extends WorkflowDataWithSystemFlag { // Extend the imported type
+  id: string; // Ensure id is always present
   name: string;
   description?: string;
   version: string;
@@ -40,6 +41,7 @@ interface WorkflowWithEvents {
   code: string;
   events: string[];
   lastUpdated?: string;
+  isSystemManaged: boolean; // Ensure this is part of the interface
 }
 
 interface WorkflowsProps {
@@ -85,11 +87,12 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
       
       // TODO: Replace with actual event data when available
       // For now, we'll use placeholder event data
-      const workflowsWithEvents: WorkflowWithEvents[] = workflowsData.map(workflow => ({
+      const workflowsWithEvents: WorkflowWithEvents[] = workflowsData.map((workflow: WorkflowDataWithSystemFlag) => ({
         ...workflow,
-        id: workflow.id || '',
+        id: workflow.id || workflow.registration_id || '', // Ensure ID is set
         events: [],
-        lastUpdated: new Date().toISOString()
+        lastUpdated: workflow.updated_at || new Date().toISOString(), // Use updated_at if available
+        isSystemManaged: workflow.isSystemManaged // Map the flag
       }));
       
       setWorkflows(workflowsWithEvents);
@@ -116,6 +119,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
 
   // Handle editing a workflow
   const handleEditWorkflow = (id: string) => {
+    const workflow = workflows.find(w => w.id === id);
+    if (workflow?.isSystemManaged) return; // Don't allow editing system workflows
+
     setSelectedWorkflowId(id);
     setShowEditor(true);
   };
@@ -144,7 +150,8 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
             ...workflowData,
             id: workflowData.id || '',
             events: [],
-            lastUpdated: new Date().toISOString()
+            lastUpdated: new Date().toISOString(),
+            isSystemManaged: workflowData.isSystemManaged // Add the missing flag
           };
           setWorkflowToTest(workflowWithEvents);
           setIsTestModalOpen(true);
@@ -160,6 +167,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   
   // Handle activating/deactivating a workflow
   const handleToggleWorkflowStatus = async (id: string, currentlyActive: boolean) => {
+    const workflow = workflows.find(w => w.id === id);
+    if (workflow?.isSystemManaged) return; // Don't allow status change for system workflows
+
     try {
       console.log(`Toggle workflow status: id=${id}, currentlyActive=${currentlyActive}`);
       
@@ -305,8 +315,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" onClick={() => handleEditWorkflow(workflow.id)}>
-                              {workflow.name}
+                            <div className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}>
+                              {workflow.name} {workflow.isSystemManaged && (
+                               <Badge variant="secondary" className="ml-2">
+                                 System
+                               </Badge>
+                             )}
+
                             </div>
                             <div className="text-sm text-gray-500">{workflow.description}</div>
                           </div>
@@ -381,12 +396,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             <DropdownMenuItem
                               id={`edit-${workflow.id}-menu-item`}
                               onClick={() => handleEditWorkflow(workflow.id)}
+                              disabled={workflow.isSystemManaged}
                             >
                               Edit
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               id={`versions-${workflow.id}-menu-item`}
                               onClick={() => handleEditWorkflow(workflow.id)}
+                              disabled={workflow.isSystemManaged}
                             >
                               <History className="h-4 w-4 mr-2" />
                               Manage Versions
@@ -400,6 +417,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               id={`duplicate-${workflow.id}-menu-item`}
+                              disabled={workflow.isSystemManaged}
                             >
                               Duplicate
                             </DropdownMenuItem>
@@ -410,6 +428,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                                   console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
+                                disabled={workflow.isSystemManaged}
                               >
                                 Deactivate
                               </DropdownMenuItem>
@@ -420,6 +439,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                                   console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
+                                disabled={workflow.isSystemManaged}
                               >
                                 Activate
                               </DropdownMenuItem>
@@ -428,12 +448,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                               id={`delete-${workflow.id}-menu-item`}
                               className="text-red-600 focus:text-red-600"
                               onClick={async () => {
+                                if (workflow.isSystemManaged) return; // Prevent deletion
                                 // TODO: Implement delete workflow functionality
                                 if (confirm('Are you sure you want to delete this workflow? This action cannot be undone.')) {
                                   toast.success('Workflow deleted');
                                   await loadWorkflows();
                                 }
                               }}
+                              disabled={workflow.isSystemManaged}
                             >
                               Delete
                             </DropdownMenuItem>

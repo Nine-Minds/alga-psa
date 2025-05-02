@@ -15,6 +15,7 @@ import {
   checkWorkflowSecurity,
 } from "../utils/workflowValidation";
 import { EventType, EventTypeEnum, ICreateEventCatalogEntry } from "@shared/workflow/types/eventCatalog";
+import { WorkflowRegistrationModel } from "@shared/workflow/persistence";
 
 // Zod schema for workflow data
 
@@ -30,7 +31,22 @@ const WorkflowSchema = z.object({
 });
 
 // Type for workflow data
-export type WorkflowData = z.infer<typeof WorkflowSchema>;
+export type WorkflowData = z.infer<typeof WorkflowSchema> & {
+  // Add fields from WorkflowRegistration that might be needed by UI
+  registration_id?: string; // Use id from schema if available, else registration_id
+  description?: string;
+  category?: string;
+  tags?: string[];
+  status?: string;
+  source_template_id?: string;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+// Add the flag to the return type for actions
+export type WorkflowDataWithSystemFlag = WorkflowData & { isSystemManaged: boolean };
+
 
 // Type for workflow version data
 export type WorkflowVersionData = {
@@ -406,7 +422,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
  * @param id Workflow ID
  * @returns Workflow data
  */
-export async function getWorkflow(id: string): Promise<WorkflowData> {
+export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFlag> { // Updated return type
   let knexInstance;
   try {
     // Get current user
@@ -417,39 +433,16 @@ export async function getWorkflow(id: string): Promise<WorkflowData> {
     
     // Create Knex instance
     const { knex } = await createTenantKnex();
-    knexInstance = knex;
     
-    // Get workflow registration and current version in a single query with JOIN
-    const result = await knex('workflow_registrations as wr')
-      .join(
-        'workflow_registration_versions as wrv',
-        function() {
-          this.on('wrv.registration_id', '=', 'wr.registration_id')
-              .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
-              .andOn('wrv.is_current', '=', knex.raw('true'));
-        }
-      )
-      .where({
-        'wr.registration_id': id,
-        'wr.tenant_id': user.tenant,
-      })
-      .select(
-        'wr.registration_id',
-        'wr.name',
-        'wr.description',
-        'wr.tags',
-        'wr.status',
-        'wrv.version',
-        'wrv.definition'
-      )
-      .first();
+    // Use the model to get the workflow, which handles system/tenant logic
+    const result = await WorkflowRegistrationModel.getById(knex, id, user.tenant);
     
     if (!result) {
-      throw new Error(`Workflow with ID ${id} not found or has no current version`);
+      throw new Error(`Workflow with ID ${id} not found`);
     }
     
     // Parse definition
-    const definition = result.definition;
+    const definition = result.definition || {}; // Handle potentially missing definition
     
     // Return workflow data
     return {
@@ -457,15 +450,16 @@ export async function getWorkflow(id: string): Promise<WorkflowData> {
       name: result.name,
       description: result.description,
       version: result.version,
-      tags: Array.isArray(result.tags)
+      tags: Array.isArray(result.tags) // Check if it's already an array
         ? result.tags
-        : (typeof result.tags === 'string'
-            ? (result.tags.startsWith('[')
+        : typeof result.tags === 'string' // Check if it's a string
+            ? ((result.tags as string).startsWith('[') // Check if it's a JSON array string
                 ? JSON.parse(result.tags)
-                : result.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean))
-            : []),
+                : (result.tags as string).split(',').map((tag: string) => tag.trim()).filter(Boolean)) // Otherwise, assume comma-separated
+            : [], // Default to empty array if null or other type
       isActive: result.status === 'active',
       code: definition.executeFn,
+      isSystemManaged: result.isSystemManaged, // Add the flag
     };
   } catch (error) {
     logger.error(`Error getting workflow ${id}:`, error);
@@ -486,7 +480,7 @@ export async function getWorkflow(id: string): Promise<WorkflowData> {
  * @param includeInactive Whether to include inactive workflows (default: false)
  * @returns Array of workflow data
  */
-export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowData[]> {
+export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> { // Updated return type
   let knexInstance;
   try {
     console.log(`getAllWorkflows called with includeInactive=${includeInactive}`);
@@ -495,10 +489,23 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
     const { knex, tenant } = await createTenantKnex();
     knexInstance = knex;
     
-    // Single efficient query with JOIN to avoid N+1 problem
-    const workflowsData = await knex('workflow_registrations as wr')
+    // Call the updated model function which handles tenant/system union
+    // Note: The model's getAll currently only fetches active workflows.
+    // We might need to adjust the model or add a parameter if includeInactive needs to apply to system workflows too.
+    // For now, assume includeInactive only applies to tenant workflows as implemented in the model.
+    const workflowsData = await WorkflowRegistrationModel.getAll(knex, tenant || ''); // Pass tenant
+
+    // Filter based on includeInactive AFTER fetching (since model doesn't support it yet for combined results)
+    const filteredWorkflowsData = includeInactive
+      ? workflowsData
+      : workflowsData.filter(w => w.status === 'active' || w.isSystemManaged); // Keep all system workflows regardless of status? Or filter them too? Assuming keep all system ones for now.
+
+    console.log(`Fetched ${workflowsData.length} total, filtered to ${filteredWorkflowsData.length} based on includeInactive=${includeInactive}`);
+
+
+    const workflowsData_old = await knex('workflow_registrations as wr')
       .join(
-        'workflow_registration_versions as wrv',
+        'workflow_registration_versions as wrv', // This only gets tenant workflows
         function() {
           this.on('wrv.registration_id', '=', 'wr.registration_id')
               .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
@@ -527,33 +534,54 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
       )
       .orderBy('wr.created_at', 'desc');
     
-    // Process the results
-    const workflows: WorkflowData[] = workflowsData.map(data => {
-      const definition = data.definition;
+    // Process the results from the model function
+    const workflows: WorkflowDataWithSystemFlag[] = filteredWorkflowsData.map(data => { // Use filtered data
+      const definition = data.definition || {}; // Handle potentially missing definition
+      
+      // Safely parse tags
+      let parsedTags: string[] = [];
+      if (Array.isArray(data.tags)) {
+        parsedTags = data.tags;
+      } else if (typeof data.tags === 'string') {
+        const tagsString = data.tags as string; // Explicit cast
+        if (tagsString.startsWith('[')) {
+          try { parsedTags = JSON.parse(tagsString); } catch (e) { /* ignore parse error */ }
+        } else {
+          parsedTags = tagsString.split(',').map((tag: string) => tag.trim()).filter(Boolean);
+        }
+      }
       return {
-        id: data.registration_id,
+        // Map all fields from WorkflowRegistrationWithSystemFlag
+        registration_id: data.registration_id, // Use registration_id as the primary ID
+        id: data.registration_id, // Keep 'id' for compatibility if needed, but prefer registration_id
         name: data.name,
         description: data.description,
         version: data.version,
-        tags: Array.isArray(data.tags)
-          ? data.tags
-          : (typeof data.tags === 'string'
-              ? (data.tags.startsWith('[')
-                  ? JSON.parse(data.tags)
-                  : data.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean))
-              : []),
-        isActive: data.status === 'active',
-        code: definition.executeFn,
+        tags: parsedTags, // Use the safely parsed tags
+        isActive: data.status === 'active', // Status from registration table
+        code: definition.executeFn, // executeFn from definition JSONB
+        // Add other fields from the model result
+        category: data.category,
+        status: data.status,
+        source_template_id: data.source_template_id,
+        created_by: data.created_by,
+        created_at: data.created_at,
+        updated_at: data.updated_at,
+        // Pass the system flag
+        isSystemManaged: data.isSystemManaged,
       };
     });
-    
-    console.log(`Returning ${workflows.length} workflows, with statuses: ${workflows.map(w => w.isActive ? 'active' : 'inactive').join(', ')}`);
+
+    console.log(`Returning ${workflows.length} workflows`);
     return workflows;
   } catch (error) {
     logger.error("Error getting all workflows:", error);
+    // Re-throw the error to ensure the function signature is met
+    // and the error propagates correctly.
     throw error;
   } finally {
-    // Connection will be released automatically
+    // Connection release is handled by the pool, no explicit destroy needed here
+    // if (knexInstance) { await knexInstance.destroy(); } // Avoid destroying pooled connections
   }
 }
 
@@ -739,6 +767,7 @@ export async function executeWorkflowTest(
   eventPayload: any,
   workflowId: string
 ): Promise<WorkflowTestResult> {
+  let knexInstance; // Declare knexInstance here to be accessible in finally
   try {
     // Get current user
     const user = await getCurrentUser();
@@ -749,6 +778,7 @@ export async function executeWorkflowTest(
     // Create Knex instance
     const { knex, tenant } = await createTenantKnex();
     
+    knexInstance = knex; // Assign the created instance
     // First validate the workflow code
     const testResult = await testWorkflow(code);
     
@@ -871,5 +901,12 @@ export async function executeWorkflowTest(
       success: false,
       message: error instanceof Error ? error.message : String(error)
     };
+  } finally {
+    // Release the knex connection
+    // Note: knexInstance might not be declared if an error occurs before its assignment.
+    // Check if knexInstance was assigned before attempting to destroy it.
+    if (typeof knexInstance !== 'undefined' && knexInstance) {
+      await knexInstance.destroy();
+    }
   }
-}
+} // <-- Added missing closing brace for the function

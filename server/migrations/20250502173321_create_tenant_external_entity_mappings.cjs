@@ -22,7 +22,7 @@ exports.up = async function(knex) {
   // Create the table
   await knex.schema.createTable('tenant_external_entity_mappings', (table) => {
     table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.uuid('tenant_id').notNullable().references('id').inTable('tenants').onDelete('CASCADE').index(); // FK and index
+    table.uuid('tenant_id').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE').index(); // Corrected FK reference to 'tenant' column
     table.string('integration_type', 50).notNullable();
     table.string('alga_entity_type', 50).notNullable();
     table.string('alga_entity_id', 255).notNullable();
