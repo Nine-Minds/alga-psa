@@ -1,0 +1,96 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QBO Sync Error Review",
+  "description": "Form for reviewing details of a failed QuickBooks Online API sync attempt. Allows users to review the error and add comments. Intended for registration with the Form Registry using the formId 'qbo_sync_error'.",
+  "type": "object",
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "title": "Tenant ID",
+      "description": "The ID of the tenant experiencing the error.",
+      "readOnly": true
+    },
+    "realmId": {
+      "type": "string",
+      "title": "QBO Realm ID",
+      "description": "The QuickBooks Online company ID.",
+      "readOnly": true
+    },
+    "algaEntityType": {
+      "type": "string",
+      "title": "Alga Entity Type",
+      "description": "The type of Alga entity that failed to sync ('invoice' or 'customer').",
+      "readOnly": true
+    },
+    "algaEntityId": {
+      "type": "string",
+      "title": "Alga Entity ID",
+      "description": "The internal ID of the Alga entity.",
+      "readOnly": true
+    },
+    "operationType": {
+      "type": "string",
+      "title": "Operation Type",
+      "description": "The type of QBO operation that failed ('create' or 'update').",
+      "readOnly": true
+    },
+    "qboPayload": {
+      "type": ["object", "string"],
+      "title": "QBO Payload Sent",
+      "description": "The data payload sent to the QBO API (may be summarized or redacted).",
+      "readOnly": true
+    },
+    "errorMessage": {
+      "type": "string",
+      "title": "Error Message",
+      "description": "The primary error message received from the QBO API or sync process.",
+      "readOnly": true
+    },
+    "errorDetails": {
+      "type": ["object", "string", "null"],
+      "title": "Error Details",
+      "description": "Additional details or structured error information (if available).",
+      "readOnly": true
+    },
+    "comments": {
+      "type": "string",
+      "title": "Comments",
+      "description": "Add any relevant notes or comments regarding resolution or next steps.",
+      "format": "textarea"
+    }
+  },
+  "required": [
+    "tenantId",
+    "realmId",
+    "algaEntityType",
+    "algaEntityId",
+    "operationType",
+    "errorMessage"
+  ],
+  "uiSchema": {
+    "qboPayload": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 8
+      }
+    },
+    "errorMessage": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 3
+      }
+    },
+    "errorDetails": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 5
+      }
+    },
+    "comments": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 5
+      }
+    }
+  }
+}

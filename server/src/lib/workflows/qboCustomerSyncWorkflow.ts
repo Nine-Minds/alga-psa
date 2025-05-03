@@ -1,0 +1,362 @@
+import { WorkflowContext } from '@shared/workflow';
+// TODO: Import specific types for Alga Company, QBO Customer, Human Task, etc.
+// import { AlgaCompany } from '...';
+// import { QboCustomer } from '...';
+// import { HumanTaskInput } from '...';
+
+// Define placeholder types if real ones are not available yet
+type AlgaCompany = any;
+type QboCustomerInput = any;
+type QboCustomerResult = any;
+type HumanTaskInput = any;
+type TriggerEventPayload = {
+  realmId: string;
+  algaCompanyId: string;
+  // TODO: Confirm other potential payload fields like trigger type ('COMPANY_CREATED' | 'COMPANY_UPDATED')
+};
+// Removed incorrect TriggerEvent type based on TS errors. Assuming input is the payload.
+
+// Define possible states for the workflow
+type WorkflowState =
+  | 'INITIAL'
+  | 'FETCHING_DATA'
+  | 'MAPPING_DATA'
+  | 'MAPPING_ERROR'
+  | 'CHECKING_QBO_DUPLICATES' // Optional step
+  | 'DUPLICATE_CHECK_REQUIRED' // Optional step
+  | 'CALLING_QBO_CREATE'
+  | 'CALLING_QBO_UPDATE'
+  | 'QBO_API_ERROR'
+  | 'UPDATING_ALGA'
+  | 'SYNC_COMPLETE';
+
+
+/**
+ * Workflow to synchronize Alga PSA Company data to QuickBooks Online Customer.
+ * Triggered by COMPANY_CREATED or COMPANY_UPDATED events.
+ */
+export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger, input, setState, getCurrentState, tenant, executionId } = context;
+
+  // 1. Initialization & State
+  setState('INITIAL');
+  logger.info('QBO Customer Sync workflow started', { tenantId: tenant, executionId });
+
+  // 2. Trigger Event & Context
+  // TODO: Confirm exact structure of input payload (assuming input IS the payload)
+  if (!input) {
+      logger.error('Missing input payload in workflow context', { tenantId: tenant, executionId });
+      setState('MAPPING_ERROR'); // Or a more specific error state like 'MISSING_INPUT'
+      // TODO: Create human task for missing input
+      return;
+  }
+
+  // Assuming input directly contains the payload fields based on TS errors and common patterns
+  const { realmId, algaCompanyId } = input as TriggerEventPayload; // Cast to expected payload type
+
+  logger.info('Processing trigger event payload', { realmId, algaCompanyId, tenantId: tenant, executionId });
+
+  if (!realmId || !algaCompanyId) {
+      logger.error('Missing realmId or algaCompanyId in input payload', { payload: input, tenantId: tenant, executionId });
+      setState('MAPPING_ERROR'); // Or a more specific error state
+      // TODO: Create human task for missing critical IDs
+      return;
+  }
+
+  try {
+    // 3. Data Fetching
+    setState('FETCHING_DATA');
+    logger.info('Fetching Alga Company data', { algaCompanyId, tenantId: tenant });
+    // TODO: Confirm action name and parameters for getCompany
+    const algaCompany: AlgaCompany = await actions.getCompany({ companyId: algaCompanyId, tenantId: tenant });
+    if (!algaCompany) {
+        logger.error('Alga Company not found', { algaCompanyId, tenantId: tenant });
+        setState('MAPPING_ERROR'); // Or a more specific error state like 'DATA_NOT_FOUND'
+        // TODO: Create human task for data fetching issue
+        return;
+    }
+    data.set('algaCompany', algaCompany);
+    logger.info('Alga Company data fetched successfully', { algaCompanyId, tenantId: tenant });
+
+    // 4. Data Mapping
+    setState('MAPPING_DATA');
+    logger.info('Mapping Alga Company data to QBO Customer format', { algaCompanyId, tenantId: tenant });
+
+    // TODO: Refine mapping based on actual AlgaCompany and QboCustomer types
+    const qboCustomerData: QboCustomerInput = {
+        DisplayName: algaCompany.name, // Assuming 'name' field exists
+        PrimaryEmailAddr: { Address: algaCompany.email }, // Assuming 'email' field exists
+        PrimaryPhone: { FreeFormNumber: algaCompany.phone }, // Assuming 'phone' field exists
+        BillAddr: { // Assuming address fields exist and map like this
+            Line1: algaCompany.billingAddress?.line1,
+            City: algaCompany.billingAddress?.city,
+            CountrySubDivisionCode: algaCompany.billingAddress?.state, // Or province
+            PostalCode: algaCompany.billingAddress?.postalCode,
+            Country: algaCompany.billingAddress?.country,
+        },
+        ShipAddr: { // Assuming shipping address fields exist
+            Line1: algaCompany.shippingAddress?.line1,
+            City: algaCompany.shippingAddress?.city,
+            CountrySubDivisionCode: algaCompany.shippingAddress?.state,
+            PostalCode: algaCompany.shippingAddress?.postalCode,
+            Country: algaCompany.shippingAddress?.country,
+        },
+        // Add other relevant fields: Notes, WebAddr, etc.
+    };
+
+    // Map Payment Terms
+    if (algaCompany.paymentTerm) { // Assuming 'paymentTerm' field holds the Alga term name/ID
+        try {
+            // TODO: Confirm action name and parameters for lookupQboTermId or use generic lookupExternalEntityId
+            const qboTermId = await actions.lookupQboTermId({
+                algaTermIdentifier: algaCompany.paymentTerm,
+                tenantId: tenant,
+                realmId: realmId
+            });
+            if (qboTermId) {
+                qboCustomerData.SalesTermRef = { value: qboTermId };
+            } else {
+                logger.warn('QBO Term ID not found for Alga term', { algaTerm: algaCompany.paymentTerm, algaCompanyId, tenantId: tenant, realmId });
+                // Decide handling: proceed without term, or error out? Project plan implies error.
+                setState('MAPPING_ERROR');
+                // TODO: Define human task schema for qbo_mapping_error (term mapping)
+                await actions.createHumanTask({
+                    taskType: 'qbo_mapping_error',
+                    title: `QBO Term Mapping Missing for Company ${algaCompany.name}`,
+                    details: {
+                        message: `Could not find a corresponding QBO Term for Alga term: ${algaCompany.paymentTerm}`,
+                        algaCompanyId: algaCompanyId,
+                        algaCompanyName: algaCompany.name,
+                        algaTerm: algaCompany.paymentTerm,
+                        realmId: realmId,
+                    },
+                    tenantId: tenant,
+                    // assignedUserId: '...', // Optional: Assign to specific user/group
+                } as HumanTaskInput);
+                return; // Stop workflow execution
+            }
+        } catch (mappingError: any) {
+            logger.error('Error looking up QBO Term ID', { error: mappingError.message, algaTerm: algaCompany.paymentTerm, algaCompanyId, tenantId: tenant, realmId });
+            setState('MAPPING_ERROR');
+             // TODO: Define human task schema for qbo_mapping_error (lookup failure)
+            await actions.createHumanTask({
+                taskType: 'qbo_mapping_error',
+                title: `Error looking up QBO Term for Company ${algaCompany.name}`,
+                details: {
+                    message: `API call failed during QBO Term lookup for Alga term: ${algaCompany.paymentTerm}. Error: ${mappingError.message}`,
+                    algaCompanyId: algaCompanyId,
+                    algaCompanyName: algaCompany.name,
+                    algaTerm: algaCompany.paymentTerm,
+                    realmId: realmId,
+                    errorDetails: mappingError, // Include full error if helpful
+                },
+                tenantId: tenant,
+            } as HumanTaskInput);
+            return; // Stop workflow execution
+        }
+    }
+    data.set('mappedQboCustomerData', qboCustomerData);
+    logger.info('Data mapping complete', { algaCompanyId, tenantId: tenant });
+
+
+    // 5. Determine Operation & Execute QBO Action
+    const existingQboCustomerId = algaCompany.qbo_customer_id; // Assuming field name
+    const qboSyncToken = algaCompany.qbo_sync_token; // Assuming field name for updates
+
+    try {
+        let qboResult: QboCustomerResult;
+
+        if (existingQboCustomerId) {
+            // --- UPDATE PATH ---
+            setState('CALLING_QBO_UPDATE');
+            logger.info('Calling QBO Update Customer API', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant, realmId });
+            if (!qboSyncToken) {
+                 logger.error('Missing qboSyncToken for QBO Customer update', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant, realmId });
+                 setState('QBO_API_ERROR'); // Or a specific state like 'MISSING_SYNC_TOKEN'
+                 // TODO: Create human task for missing sync token
+                 await actions.createHumanTask({
+                     taskType: 'qbo_sync_error', // Reuse or create specific type
+                     title: `Missing SyncToken for QBO Customer Update - ${algaCompany.name}`,
+                     details: {
+                         message: `Cannot update QBO Customer ${existingQboCustomerId} because the qbo_sync_token is missing in the Alga Company record. Manual intervention may be required.`,
+                         algaCompanyId: algaCompanyId,
+                         qboCustomerId: existingQboCustomerId,
+                         realmId: realmId,
+                     },
+                     tenantId: tenant,
+                 } as HumanTaskInput);
+                 return;
+            }
+
+            // TODO: Confirm action name and parameters for updateQboCustomer
+            qboResult = await actions.updateQboCustomer({
+                qboCustomerId: existingQboCustomerId,
+                qboSyncToken: qboSyncToken,
+                qboCustomerData: { ...qboCustomerData, Id: existingQboCustomerId, SyncToken: qboSyncToken }, // QBO often requires Id and SyncToken in payload
+                tenantId: tenant,
+                realmId: realmId
+            });
+            logger.info('QBO Update Customer API call successful', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant });
+
+        } else {
+            // --- CREATE PATH ---
+
+            // Optional: Duplicate Check (Implement based on project plan decision)
+            const performDuplicateCheck = true; // Set based on config or decision
+            if (performDuplicateCheck) {
+                setState('CHECKING_QBO_DUPLICATES');
+                logger.info('Checking for potential QBO duplicate customers', { displayName: qboCustomerData.DisplayName, email: qboCustomerData.PrimaryEmailAddr?.Address, tenantId: tenant, realmId });
+                try {
+                    // TODO: Confirm action name and parameters for getQboCustomerByDisplayOrEmail
+                    const potentialDuplicates = await actions.getQboCustomerByDisplayOrEmail({
+                        displayName: qboCustomerData.DisplayName,
+                        email: qboCustomerData.PrimaryEmailAddr?.Address,
+                        tenantId: tenant,
+                        realmId: realmId
+                    });
+
+                    if (potentialDuplicates && potentialDuplicates.length > 0) {
+                        logger.warn('Potential QBO duplicate customer(s) found', {
+                            algaCompanyId,
+                            potentialDuplicates: potentialDuplicates.map((d: any) => ({ id: d.Id, name: d.DisplayName })), // Extract relevant info
+                            tenantId: tenant,
+                            realmId
+                        });
+                        setState('DUPLICATE_CHECK_REQUIRED');
+                        // TODO: Define human task schema for qbo_customer_duplicate
+                        await actions.createHumanTask({
+                            taskType: 'qbo_customer_duplicate',
+                            title: `Potential QBO Customer Duplicate for ${algaCompany.name}`,
+                            details: {
+                                message: `A potential duplicate QBO customer was found based on display name or email. Please review and resolve manually.`,
+                                algaCompanyId: algaCompanyId,
+                                algaCompanyName: algaCompany.name,
+                                mappedDisplayName: qboCustomerData.DisplayName,
+                                mappedEmail: qboCustomerData.PrimaryEmailAddr?.Address,
+                                potentialDuplicates: potentialDuplicates, // Include details of potential matches
+                                realmId: realmId,
+                            },
+                            tenantId: tenant,
+                        } as HumanTaskInput);
+                        return; // Stop workflow execution
+                    } else {
+                         logger.info('No potential QBO duplicates found.', { algaCompanyId, tenantId: tenant, realmId });
+                    }
+                } catch (dupCheckError: any) {
+                     logger.error('Error during QBO duplicate check', { error: dupCheckError.message, algaCompanyId, tenantId: tenant, realmId });
+                     // Decide how to handle: proceed with create, or fail? Failing might be safer.
+                     setState('QBO_API_ERROR'); // Treat as API error for now
+                     // TODO: Create human task for duplicate check failure
+                     await actions.createHumanTask({
+                         taskType: 'qbo_sync_error', // Reuse or create specific type
+                         title: `Error During QBO Duplicate Check - ${algaCompany.name}`,
+                         details: {
+                             message: `The check for duplicate QBO customers failed. Error: ${dupCheckError.message}. Cannot proceed with automatic creation.`,
+                             algaCompanyId: algaCompanyId,
+                             algaCompanyName: algaCompany.name,
+                             realmId: realmId,
+                             errorDetails: dupCheckError,
+                         },
+                         tenantId: tenant,
+                     } as HumanTaskInput);
+                     return;
+                }
+            } // End Optional Duplicate Check
+
+            // Proceed with Create
+            setState('CALLING_QBO_CREATE');
+            logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
+            // TODO: Confirm action name and parameters for createQboCustomer
+            qboResult = await actions.createQboCustomer({
+                qboCustomerData: qboCustomerData,
+                tenantId: tenant,
+                realmId: realmId
+            });
+            logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id, tenantId: tenant });
+        }
+
+        // --- POST-QBO CALL (Success) ---
+        const newQboCustomerId = qboResult?.Customer?.Id; // Adjust based on actual action result structure
+        const newQboSyncToken = qboResult?.Customer?.SyncToken; // Adjust based on actual action result structure
+
+        if (!newQboCustomerId || !newQboSyncToken) {
+             logger.error('QBO API result missing Customer ID or SyncToken', { qboResult, algaCompanyId, tenantId: tenant, realmId });
+             setState('QBO_API_ERROR'); // Or a specific state like 'INVALID_QBO_RESPONSE'
+             // TODO: Create human task for invalid QBO response
+             await actions.createHumanTask({
+                 taskType: 'qbo_sync_error', // Reuse or create specific type
+                 title: `Invalid Response from QBO API - ${algaCompany.name}`,
+                 details: {
+                     message: `The QBO API call succeeded but the response did not contain the expected Customer ID and/or SyncToken.`,
+                     algaCompanyId: algaCompanyId,
+                     qboApiResponse: qboResult, // Include response for debugging
+                     realmId: realmId,
+                 },
+                 tenantId: tenant,
+             } as HumanTaskInput);
+             return;
+        }
+
+        data.set('qboResult', qboResult);
+
+        // 6. Update Alga Company Record
+        setState('UPDATING_ALGA');
+        logger.info('Updating Alga Company with QBO details', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
+        // TODO: Confirm action name and parameters for updateCompanyQboDetails
+        await actions.updateCompanyQboDetails({
+            companyId: algaCompanyId,
+            qboCustomerId: newQboCustomerId,
+            qboSyncToken: newQboSyncToken,
+            tenantId: tenant
+        });
+        logger.info('Alga Company updated successfully', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
+
+        // 7. Final State
+        setState('SYNC_COMPLETE');
+        logger.info('QBO Customer sync successful', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant, executionId });
+
+    } catch (error: any) {
+        // --- QBO API CALL FAILED ---
+        // Ensure realmId is available in the catch block if needed for logging/task creation
+        const currentRealmId = (input as TriggerEventPayload)?.realmId || 'UNKNOWN'; // Get realmId safely
+        logger.error('QBO API call failed', { error: error.message, stack: error.stack, currentState: getCurrentState(), algaCompanyId, tenantId: tenant, realmId: currentRealmId });
+        setState('QBO_API_ERROR');
+        data.set('qboApiError', {
+            message: error.message,
+            details: error.response?.data || error.stack || error // Capture relevant details
+        });
+
+        // TODO: Implement more sophisticated retry logic if needed (e.g., using Temporal retries on the activity)
+        // Basic check: Maybe retry once on specific errors? For now, just log and create task.
+
+        // Create Human Task for persistent errors
+        // TODO: Define human task schema for qbo_sync_error
+        await actions.createHumanTask({
+            taskType: 'qbo_sync_error',
+            title: `QBO Customer Sync Failed for ${algaCompany?.name || `ID: ${algaCompanyId}`}`,
+            details: {
+                message: `The QBO API call failed during customer sync. Error: ${error.message}`,
+                algaCompanyId: algaCompanyId,
+                algaCompanyName: algaCompany?.name, // May be null if fetch failed earlier, though unlikely path here
+                qboCustomerIdAttempted: existingQboCustomerId, // If update was attempted
+                mappedData: data.get('mappedQboCustomerData'), // Include data sent
+                errorDetails: data.get('qboApiError'), // Include stored error
+                realmId: currentRealmId, // Use safely retrieved realmId
+                workflowState: getCurrentState(),
+            },
+            tenantId: tenant,
+        } as HumanTaskInput);
+        // Workflow ends here due to error
+    } // End outer try...catch for QBO call + Alga update
+
+  } catch (outerError: any) {
+      // Catch errors from initial data fetching or mapping stages
+      logger.error('Workflow failed before QBO interaction', { error: outerError.message, stack: outerError.stack, currentState: getCurrentState(), algaCompanyId: (input as TriggerEventPayload)?.algaCompanyId, tenantId: tenant, executionId });
+      // Ensure state reflects the error, potentially set earlier, or set a generic one
+      if (getCurrentState() !== 'MAPPING_ERROR') { // Avoid overwriting specific mapping errors
+          setState('QBO_API_ERROR'); // Reuse or create a more generic 'WORKFLOW_ERROR' state
+      }
+      // Optionally create a human task for these early failures too
+      // TODO: Consider if a human task is needed for fetch/map errors not already handled
+  }
+} // End workflow function

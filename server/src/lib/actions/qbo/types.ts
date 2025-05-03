@@ -272,5 +272,6 @@ export interface QboTenantCredentials {
   accessToken: string;
   refreshToken: string;
   realmId: string;
-  // Potentially add expiry times if needed for proactive refresh
+  accessTokenExpiresAt?: string; // ISO 8601 format timestamp
+  refreshTokenExpiresAt?: string; // ISO 8601 format timestamp
 }

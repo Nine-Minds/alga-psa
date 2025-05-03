@@ -1,0 +1,160 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QBO Potential Customer Duplicate Resolution",
+  "description": "Form for resolving potential duplicate QuickBooks Online customers found during sync. Allows users to link to an existing customer or proceed with creating a new one. Intended for registration with the Form Registry using the formId 'qbo_customer_duplicate'.",
+  "type": "object",
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "title": "Tenant ID",
+      "description": "The ID of the tenant.",
+      "readOnly": true
+    },
+    "realmId": {
+      "type": "string",
+      "title": "QBO Realm ID",
+      "description": "The QuickBooks Online company ID.",
+      "readOnly": true
+    },
+    "algaCompanyId": {
+      "type": "string",
+      "title": "Alga Company ID",
+      "description": "The internal ID of the Alga company.",
+      "readOnly": true
+    },
+    "algaCompanyName": {
+      "type": "string",
+      "title": "Alga Company Name",
+      "description": "The name of the Alga company.",
+      "readOnly": true
+    },
+    "potentialQboDuplicates": {
+      "type": "array",
+      "title": "Potential QBO Duplicate Customers",
+      "description": "List of existing QBO customers that might be duplicates.",
+      "readOnly": true,
+      "items": {
+        "type": "object",
+        "properties": {
+          "Id": {
+            "type": "string",
+            "title": "QBO ID"
+          },
+          "DisplayName": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "PrimaryEmailAddr": {
+            "type": "object",
+            "title": "Email",
+            "properties": {
+              "Address": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "resolutionAction": {
+      "type": "string",
+      "title": "Resolution Action",
+      "description": "Choose how to resolve the potential duplicate.",
+      "enum": [
+        "link_existing",
+        "create_new",
+        "cancel_sync"
+      ],
+      "enumNames": [
+        "Link to Existing QBO Customer",
+        "Create New QBO Customer Anyway",
+        "Cancel Sync for this Customer"
+      ],
+      "default": "cancel_sync"
+    },
+    "selectedQboCustomerId": {
+      "type": "string",
+      "title": "Selected QBO Customer ID",
+      "description": "If linking, enter the QBO ID of the customer to link to from the list above."
+    },
+    "comments": {
+      "type": "string",
+      "title": "Comments",
+      "description": "Add any relevant notes or comments.",
+      "format": "textarea"
+    }
+  },
+  "required": [
+    "tenantId",
+    "realmId",
+    "algaCompanyId",
+    "algaCompanyName",
+    "potentialQboDuplicates",
+    "resolutionAction"
+  ],
+  "dependencies": {
+    "resolutionAction": {
+      "oneOf": [
+        {
+          "properties": {
+            "resolutionAction": {
+              "const": "link_existing"
+            },
+            "selectedQboCustomerId": {}
+          },
+          "required": [
+            "selectedQboCustomerId"
+          ]
+        },
+        {
+          "properties": {
+            "resolutionAction": {
+              "const": "create_new"
+            }
+          }
+        },
+        {
+          "properties": {
+            "resolutionAction": {
+              "const": "cancel_sync"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "uiSchema": {
+    "potentialQboDuplicates": {
+      "ui:options": {
+        "addable": false,
+        "orderable": false,
+        "removable": false
+      },
+      "items": {
+        "ui:options": {
+          "inline": true
+        },
+        "PrimaryEmailAddr": {
+          "Address": {
+            "ui:widget": "text"
+          }
+        }
+      }
+    },
+    "resolutionAction": {
+      "ui:widget": "radio"
+    },
+    "selectedQboCustomerId": {
+      "ui:displayIf": {
+        "field": "resolutionAction",
+        "value": "link_existing"
+      }
+    },
+    "comments": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 5
+      }
+    }
+  }
+}

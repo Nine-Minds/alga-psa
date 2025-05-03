@@ -3,8 +3,8 @@
 // Removed Zod import
 import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@shared/workflow/core/actionRegistry'; // Corrected path, added ActionParameterDefinition and ActionExecutionContext
 // Removed WorkflowContext import as actions receive ActionExecutionContext
-import { QboCustomer, QboTenantCredentials, QboQueryResponse, QboEntityResponse } from './types'; // Added QboEntityResponse
-import { callQboApi, getTenantQboCredentials, handleQboApiError } from './qboUtils'; // Corrected path
+import { QboCustomer } from './types'; // Removed QboTenantCredentials, QboQueryResponse, QboEntityResponse
+import { getQboClient } from '../../qbo/qboClientService'; // Corrected import path
 
 const registry = getActionRegistry(); // Get the singleton instance
 
@@ -72,12 +72,12 @@ async function createQboCustomerAction(params: Record<string, any>, context: Act
 
   console.log(`[QBO Action] Starting Create Customer for tenant ${tenant}, realm ${realmId}`); // Use console.log or pass logger
 
-  try {
-    const credentials = await getTenantQboCredentials(tenant, realmId); // Use 'tenant'
-    const qboApiBaseUrl = 'https://quickbooks.api.intuit.com'; // Or sandbox URL based on environment
+  // Get the initialized QBO client for this tenant/realm
+  const qboClient = await getQboClient(tenant, realmId);
 
-    // --- TODO: Lookup QBO Term ID ---
-    // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
+  // --- TODO: Lookup QBO Term ID ---
+  // NOTE: This placeholder lookup logic remains for now.
+  // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
     // if (algaPaymentTerms) {
     //   // Placeholder: Call 'qbo:lookupTermId' action or implement direct lookup
     //   const termLookupResult = await lookupQboTermId({ alga_payment_terms: algaPaymentTerms, realmId }, context); // Needs proper call mechanism
@@ -92,33 +92,17 @@ async function createQboCustomerAction(params: Record<string, any>, context: Act
     // }
     // --- End Lookup ---
 
-    // QBO Create returns the full customer object keyed by "Customer"
-    const response = await callQboApi<QboEntityResponse<QboCustomer>>({
-      method: 'POST',
-      url: `${qboApiBaseUrl}/v3/company/${realmId}/customer`,
-      credentials,
-      realmId,
-      tenantId: tenant, // Pass tenant explicitly if needed by callQboApi internals
-      data: customerData, // Use validated data
-      // Removed context property from callQboApi args
-    });
+    // Use the QboClientService to create the customer
+    const createdCustomer = await qboClient.create<QboCustomer>('Customer', customerData);
 
-    // Extract customer from the response structure safely
-    const createdCustomer = response?.Customer;
-    // Type guard to ensure it's a QboCustomer object and not the 'time' string property
-    if (typeof createdCustomer !== 'object' || createdCustomer === null || !('Id' in createdCustomer)) {
-        throw new Error('QBO Create Customer response did not contain a valid Customer object with ID.');
+    // Basic validation on the response from the service
+    if (!createdCustomer?.Id) {
+        throw new Error('QBO Create Customer via service did not return a valid Customer object with ID.');
     }
 
     console.log(`[QBO Action] Successfully created Customer ${createdCustomer.Id} for tenant ${tenant}, realm ${realmId}`);
-    // Now createdCustomer is confirmed to be QboCustomer
-    return createdCustomer as QboCustomer;
-
-  } catch (error: any) {
-    console.error(`[QBO Action] Error creating QBO Customer for tenant ${tenant}, realm ${realmId}: ${error.message}`, error);
-    await handleQboApiError(error, tenant, realmId); // Pass tenant and realmId
-    throw error; // Re-throw after handling/logging
-  }
+    return createdCustomer; // Return the result from the service
+    // Removed the try/catch block that called handleQboApiError
 }
 
 /**
@@ -142,12 +126,12 @@ async function updateQboCustomerAction(params: Record<string, any>, context: Act
 
   console.log(`[QBO Action] Starting Update Customer ${qboCustomerId} for tenant ${tenant}, realm ${realmId}`);
 
-  try {
-    const credentials = await getTenantQboCredentials(tenant, realmId); // Use 'tenant'
-    const qboApiBaseUrl = 'https://quickbooks.api.intuit.com';
+  // Get the initialized QBO client for this tenant/realm
+  const qboClient = await getQboClient(tenant, realmId);
 
-    // --- TODO: Lookup QBO Term ID ---
-    // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
+  // --- TODO: Lookup QBO Term ID ---
+  // NOTE: This placeholder lookup logic remains for now.
+  // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
     // let qboTermRef: { value: string } | undefined = undefined;
     // if (algaPaymentTerms) {
     //   // Placeholder: Call 'qbo:lookupTermId' action or implement direct lookup
@@ -172,33 +156,17 @@ async function updateQboCustomerAction(params: Record<string, any>, context: Act
       sparse: true, // Indicate sparse update
     };
 
-    // QBO Update returns the full customer object keyed by "Customer"
-    const response = await callQboApi<QboEntityResponse<QboCustomer>>({
-      method: 'POST', // Updates use POST
-      url: `${qboApiBaseUrl}/v3/company/${realmId}/customer`, // Same endpoint as create
-      credentials,
-      realmId,
-      tenantId: tenant, // Pass tenant explicitly
-      data: updatePayload,
-      // Removed context property from callQboApi args
-    });
+    // Use the QboClientService to update the customer
+    const updatedCustomer = await qboClient.update<QboCustomer>('Customer', updatePayload);
 
-    // Extract customer from the response structure safely
-    const updatedCustomer = response?.Customer;
-    // Type guard to ensure it's a QboCustomer object
-    if (typeof updatedCustomer !== 'object' || updatedCustomer === null || !('Id' in updatedCustomer)) {
-        throw new Error('QBO Update Customer response did not contain a valid Customer object with ID.');
+    // Basic validation on the response from the service
+    if (!updatedCustomer?.Id) {
+        throw new Error('QBO Update Customer via service did not return a valid Customer object with ID.');
     }
 
     console.log(`[QBO Action] Successfully updated Customer ${updatedCustomer.Id} for tenant ${tenant}, realm ${realmId}`);
-    // Now updatedCustomer is confirmed to be QboCustomer
-    return updatedCustomer as QboCustomer;
-
-  } catch (error: any) {
-    console.error(`[QBO Action] Error updating QBO Customer ${qboCustomerId} for tenant ${tenant}, realm ${realmId}: ${error.message}`, error); // Use validated ID in log
-    await handleQboApiError(error, tenant, realmId); // Pass tenant and realmId
-    throw error;
-  }
+    return updatedCustomer; // Return the result from the service
+    // Removed the try/catch block that called handleQboApiError
 }
 
 /**
@@ -222,37 +190,21 @@ async function getQboCustomerAction(params: Record<string, any>, context: Action
 
     console.log(`[QBO Action] Starting Get Customer query for tenant ${tenant}, realm ${realmId}. Query: ${query}`); // Use validated query
 
-    try {
-        const credentials = await getTenantQboCredentials(tenant, realmId); // Use 'tenant'
-        const qboApiBaseUrl = 'https://quickbooks.api.intuit.com';
-        const selectFields = fields || '*'; // Use validated fields
-        const encodedQuery = encodeURIComponent(`select ${selectFields} from Customer where ${query}`); // Use validated query
-
-        const response = await callQboApi<QboQueryResponse<QboCustomer>>({
-            method: 'GET',
-            url: `${qboApiBaseUrl}/v3/company/${realmId}/query?query=${encodedQuery}`,
-            credentials,
-            realmId,
-            tenantId: tenant, // Pass tenant explicitly
-            // Removed context property from callQboApi args
-        });
-
-        // Extract customers from the QueryResponse structure safely
-        const customerData = response?.QueryResponse?.Customer;
-        // Type guard to ensure it's an array
-        const customers = Array.isArray(customerData) ? customerData : [];
-
-        console.log(`[QBO Action] Found ${customers.length} Customers matching query for tenant ${tenant}, realm ${realmId}`);
-        return customers;
-
-    } catch (error: any) {
-        console.error(`[QBO Action] Error querying QBO Customers for tenant ${tenant}, realm ${realmId}: ${error.message}`, error);
-        await handleQboApiError(error, tenant, realmId); // Pass tenant and realmId
-        // Depending on use case, might return empty array instead of throwing
-        return [];
-        // throw error;
-    }
-}
+    // Get the initialized QBO client for this tenant/realm
+    const qboClient = await getQboClient(tenant, realmId);
+  
+    const selectFields = fields || '*'; // Use validated fields
+    const fullQuery = `select ${selectFields} from Customer where ${query}`; // Use validated query
+  
+    // Use the QboClientService to execute the query
+    // The service's query method returns the array of entities directly.
+    const customers = await qboClient.query<QboCustomer>(fullQuery);
+  
+    console.log(`[QBO Action] Found ${customers.length} Customers matching query for tenant ${tenant}, realm ${realmId}`);
+    return customers; // Return the result from the service
+    // Removed the try/catch block that called handleQboApiError
+    // Error handling (like returning empty array vs throwing) is now managed within the service or calling workflow
+  }
 
 
 // --- Action Registration ---

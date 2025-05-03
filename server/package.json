@@ -68,6 +68,7 @@
     "nestjs-knex": "^2.0.0",
     "next": "^14.0.0",
     "next-auth": "^4.24.5",
+    "node-quickbooks": "^2.0.45",
     "nodemailer": "^6.9.16",
     "parsimmon": "^1.18.1",
     "pdf-lib": "^1.17.1",
