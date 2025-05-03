@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "QBO Mapping Error Resolution",
+  "description": "Form for resolving mapping issues between Alga entities and QuickBooks Online entities. Intended for registration with the Form Registry using the formId 'qbo_mapping_error'.",
+  "type": "object",
+  "properties": {
+    "tenantId": {
+      "type": "string",
+      "title": "Tenant ID",
+      "description": "The ID of the tenant experiencing the error.",
+      "readOnly": true
+    },
+    "realmId": {
+      "type": "string",
+      "title": "QBO Realm ID",
+      "description": "The QuickBooks Online company ID.",
+      "readOnly": true
+    },
+    "algaEntityType": {
+      "type": "string",
+      "title": "Alga Entity Type",
+      "description": "The type of Alga entity that failed to map (e.g., 'item', 'tax_code', 'term').",
+      "readOnly": true
+    },
+    "algaEntityId": {
+      "type": "string",
+      "title": "Alga Entity ID",
+      "description": "The internal ID of the Alga entity.",
+      "readOnly": true
+    },
+    "algaEntityName": {
+      "type": ["string", "null"],
+      "title": "Alga Entity Name",
+      "description": "The display name of the Alga entity (if available).",
+      "readOnly": true
+    },
+    "errorMessage": {
+      "type": "string",
+      "title": "Error Message",
+      "description": "The specific mapping error message from the workflow.",
+      "readOnly": true
+    },
+    "qboEntityId": {
+      "type": "string",
+      "title": "Correct QBO Entity ID",
+      "description": "Enter the correct QuickBooks Online ID for the corresponding Alga entity. You may need to look this up in QBO."
+    },
+    "comments": {
+      "type": "string",
+      "title": "Comments",
+      "description": "Add any relevant notes or comments.",
+      "format": "textarea"
+    }
+  },
+  "required": [
+    "tenantId",
+    "realmId",
+    "algaEntityType",
+    "algaEntityId",
+    "errorMessage",
+    "qboEntityId"
+  ],
+  "uiSchema": {
+    "errorMessage": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 3
+      }
+    },
+    "comments": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 5
+      }
+    }
+  }
+}

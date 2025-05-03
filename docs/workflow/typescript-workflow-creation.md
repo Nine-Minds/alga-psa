@@ -45,12 +45,14 @@ async function myWorkflow(context: WorkflowContext): Promise<void> {
 
 The workflow context provides access to various capabilities:
 
-- **actions**: Execute registered actions
-- **data**: Store and retrieve workflow data
-- **events**: Emit events
-- **logger**: Log information for debugging and monitoring
-- **input**: Access the trigger event and parameters
-- **setState/getCurrentState**: Manage workflow state
+- **executionId**: (string) The unique ID for the current workflow execution.
+- **tenant**: (string) The identifier for the tenant this workflow execution belongs to.
+- **actions**: (Record<string, any>) Proxy object for executing registered actions.
+- **data**: (WorkflowDataManager) Store and retrieve workflow-specific data.
+- **events**: (WorkflowEventManager) Emit events or wait for specific events.
+- **logger**: (WorkflowLogger) Log information for debugging and monitoring.
+- **input**: (object, optional) Contains input data for the workflow, typically including the `triggerEvent` (WorkflowEvent, optional) that initiated the execution.
+- **setState/getCurrentState**: (functions) Manage the workflow's current state string.
 
 ```typescript
 async function workflow(context: WorkflowContext): Promise<void> {

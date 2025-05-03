@@ -1,8 +1,8 @@
 // server/src/lib/actions/qbo/qboInvoiceActions.ts
 
 import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
-import { QboInvoice, QboEntityResponse, QboSalesItemLineDetail } from './types';
-import { callQboApi, getTenantQboCredentials, handleQboApiError } from './qboUtils';
+import { QboInvoice, QboSalesItemLineDetail } from './types'; // Removed QboEntityResponse as it's handled by the service
+import { getQboClient } from '../../qbo/qboClientService'; // Corrected import path
 
 const registry = getActionRegistry();
 
@@ -53,12 +53,13 @@ async function createQboInvoiceAction(params: Record<string, any>, context: Acti
 
   console.log(`[QBO Action] Starting Create Invoice for tenant ${tenant}, realm ${realmId}`);
 
-  try {
-    const credentials = await getTenantQboCredentials(tenant, realmId);
-    const qboApiBaseUrl = 'https://quickbooks.api.intuit.com'; // Or sandbox
+  // Get the initialized QBO client for this tenant/realm
+  const qboClient = await getQboClient(tenant, realmId);
 
-    // --- Lookup QBO Item IDs and Tax Code IDs for Lines ---
-    const processedLines = [];
+  // --- Lookup QBO Item IDs and Tax Code IDs for Lines ---
+  // NOTE: This placeholder lookup logic remains for now.
+  // In a real implementation, these lookups might also use the qboClient.query method.
+  const processedLines = [];
     for (const line of invoiceData.Line) {
         let finalSalesItemDetail: QboSalesItemLineDetail | undefined = undefined;
 
@@ -122,29 +123,19 @@ async function createQboInvoiceAction(params: Record<string, any>, context: Acti
     // --- End Lookups ---
 
 
-    // QBO Create returns the full invoice object keyed by "Invoice"
-    const response = await callQboApi<QboEntityResponse<QboInvoice>>({
-      method: 'POST',
-      url: `${qboApiBaseUrl}/v3/company/${realmId}/invoice`,
-      credentials,
-      realmId,
-      tenantId: tenant,
-      data: finalInvoiceData, // Use data with looked-up IDs
-    });
+    // Use the QboClientService to create the invoice
+    // The service handles the actual API call, headers, token, etc.
+    // The service's create method returns the created entity directly.
+    const createdInvoice = await qboClient.create<QboInvoice>('Invoice', finalInvoiceData);
 
-    const createdInvoice = response?.Invoice;
-    if (typeof createdInvoice !== 'object' || createdInvoice === null || !('Id' in createdInvoice)) {
-      throw new Error('QBO Create Invoice response did not contain a valid Invoice object with ID.');
+    // Basic validation on the response from the service
+    if (!createdInvoice?.Id) {
+        throw new Error('QBO Create Invoice via service did not return a valid Invoice object with ID.');
     }
 
     console.log(`[QBO Action] Successfully created Invoice ${createdInvoice.Id} for tenant ${tenant}, realm ${realmId}`);
-    return createdInvoice as QboInvoice;
-
-  } catch (error: any) {
-    console.error(`[QBO Action] Error creating QBO Invoice for tenant ${tenant}, realm ${realmId}: ${error.message}`, error);
-    await handleQboApiError(error, tenant, realmId);
-    throw error;
-  }
+    return createdInvoice; // Return the result from the service
+    // Removed the try/catch block that called handleQboApiError
 }
 
 /**
@@ -164,12 +155,12 @@ async function updateQboInvoiceAction(params: Record<string, any>, context: Acti
 
   console.log(`[QBO Action] Starting Update Invoice ${qboInvoiceId} for tenant ${tenant}, realm ${realmId}`);
 
-  try {
-    const credentials = await getTenantQboCredentials(tenant, realmId);
-    const qboApiBaseUrl = 'https://quickbooks.api.intuit.com'; // Or sandbox
+  // Get the initialized QBO client for this tenant/realm
+  const qboClient = await getQboClient(tenant, realmId);
 
-    // --- Lookup QBO Item IDs and Tax Code IDs for Lines (similar to create) ---
-    const processedLinesUpdate = [];
+  // --- Lookup QBO Item IDs and Tax Code IDs for Lines (similar to create) ---
+  // NOTE: This placeholder lookup logic remains for now.
+  const processedLinesUpdate = [];
     for (const line of invoiceData.Line) {
         let finalSalesItemDetailUpdate: QboSalesItemLineDetail | undefined = undefined;
 
@@ -227,29 +218,18 @@ async function updateQboInvoiceAction(params: Record<string, any>, context: Acti
       sparse: true,
     };
 
-    // QBO Update returns the full invoice object keyed by "Invoice"
-    const response = await callQboApi<QboEntityResponse<QboInvoice>>({
-      method: 'POST', // Updates use POST
-      url: `${qboApiBaseUrl}/v3/company/${realmId}/invoice`, // Same endpoint as create
-      credentials,
-      realmId,
-      tenantId: tenant,
-      data: updatePayload,
-    });
+    // Use the QboClientService to update the invoice
+    // The service handles the actual API call, headers, token, etc.
+    const updatedInvoice = await qboClient.update<QboInvoice>('Invoice', updatePayload);
 
-    const updatedInvoice = response?.Invoice;
-    if (typeof updatedInvoice !== 'object' || updatedInvoice === null || !('Id' in updatedInvoice)) {
-      throw new Error('QBO Update Invoice response did not contain a valid Invoice object with ID.');
+     // Basic validation on the response from the service
+    if (!updatedInvoice?.Id) {
+        throw new Error('QBO Update Invoice via service did not return a valid Invoice object with ID.');
     }
 
     console.log(`[QBO Action] Successfully updated Invoice ${updatedInvoice.Id} for tenant ${tenant}, realm ${realmId}`);
-    return updatedInvoice as QboInvoice;
-
-  } catch (error: any) {
-    console.error(`[QBO Action] Error updating QBO Invoice ${qboInvoiceId} for tenant ${tenant}, realm ${realmId}: ${error.message}`, error);
-    await handleQboApiError(error, tenant, realmId);
-    throw error;
-  }
+    return updatedInvoice; // Return the result from the service
+    // Removed the try/catch block that called handleQboApiError
 }
 
 // --- Action Registration ---
