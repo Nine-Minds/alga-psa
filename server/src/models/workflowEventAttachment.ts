@@ -311,4 +311,61 @@ export class WorkflowEventAttachmentModel {
     // No specific order needed here, just return the combined list
     return results;
   }
+
+  /**
+   * Delete tenant-specific attachments linked to specific system workflows and event types.
+   * Used during integration disconnection (e.g., QBO).
+   *
+   * @param knex Knex instance
+   * @param tenantId Tenant ID
+   * @param workflowEventMap A map where keys are system workflow names and values are arrays of event types.
+   * @returns The number of deleted attachments.
+   */
+  static async deleteSystemWorkflowAttachmentsForTenant(
+    knex: Knex,
+    tenantId: string,
+    workflowEventMap: Record<string, string[]>
+  ): Promise<number> {
+    console.log(`[Model] Deleting attachments for tenant ${tenantId} based on system workflow names and event types:`, workflowEventMap);
+
+    // Build the WHERE clause dynamically based on the map
+    const deleteQuery = knex('workflow_event_attachments as wea')
+      .join('system_workflows as sw', 'wea.workflow_id', 'sw.workflow_id')
+      .join('event_catalog as ec', function(this: Knex.JoinClause) { // Add type for 'this'
+          this.on('wea.event_id', 'ec.event_id')
+              .andOn('wea.tenant_id', 'ec.tenant_id'); // Ensure tenant match on event join
+      })
+      .where('wea.tenant_id', tenantId) // Filter attachments by tenant
+      .where(function(this: Knex.QueryBuilder) { // Add type for 'this'
+          let isFirstCondition = true;
+          for (const workflowName in workflowEventMap) {
+              const eventTypes = workflowEventMap[workflowName];
+              if (eventTypes && eventTypes.length > 0) {
+                  const condition = function(this: Knex.QueryBuilder) { // Add type for 'this'
+                      this.where('sw.name', workflowName)
+                          .whereIn('ec.event_type', eventTypes);
+                  };
+                  if (isFirstCondition) {
+                      this.where(condition);
+                      isFirstCondition = false;
+                  } else {
+                      this.orWhere(condition);
+                  }
+              }
+          }
+          // If the map was empty or invalid, this where clause might be empty,
+          // which is okay, the outer tenantId filter will still apply.
+          // If no conditions were added, potentially add a clause that ensures nothing is deleted.
+          if (isFirstCondition) {
+              console.warn("[Model] No valid workflow/event combinations provided for deletion. Adding 'where false'.");
+              this.whereRaw('false'); // Prevent accidental deletion if map is empty
+          }
+      });
+
+      // Execute the delete operation
+      const deleteResult = await deleteQuery.delete();
+
+      console.log(`[Model] Deleted ${deleteResult} attachments for tenant ${tenantId} matching criteria.`);
+      return deleteResult;
+  }
 }

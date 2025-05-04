@@ -5,20 +5,21 @@ import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } 
 // Removed WorkflowContext import as actions receive ActionExecutionContext
 import { QboCustomer } from './types'; // Removed QboTenantCredentials, QboQueryResponse, QboEntityResponse
 import { getQboClient } from '../../qbo/qboClientService'; // Corrected import path
-
+// Removed non-existent WorkflowError import
 const registry = getActionRegistry(); // Get the singleton instance
+// Removed unused WorkflowContext import
 
 // --- Action Parameters Interfaces (kept for internal type safety) ---
 
 interface CreateQboCustomerParams {
-  customerData: Omit<QboCustomer, 'Id' | 'SyncToken' | 'MetaData'>;
+  customerData: Omit<QboCustomer, 'Id' | 'SyncToken' | 'MetaData'> & { PaymentTerms?: string }; // Allow PaymentTerms for lookup
   realmId: string; // Added realmId
 }
 
 interface UpdateQboCustomerParams {
   qboCustomerId: string;
   syncToken: string;
-  customerData: Omit<QboCustomer, 'Id' | 'SyncToken' | 'MetaData'>;
+  customerData: Omit<QboCustomer, 'Id' | 'SyncToken' | 'MetaData'> & { PaymentTerms?: string }; // Allow PaymentTerms for lookup
   realmId: string; // Added realmId
 }
 
@@ -31,13 +32,13 @@ interface GetQboCustomerParams {
 // --- Action Parameter Definitions (for registration) ---
 
 const createQboCustomerParamsDef: ActionParameterDefinition[] = [
-  { name: 'customerData', type: 'object', required: true, description: 'QBO Customer object data (mapped from Alga)' },
+  { name: 'customerData', type: 'object', required: true, description: 'QBO Customer object data (mapped from Alga, may include PaymentTerms for lookup)' },
 ];
 
 const updateQboCustomerParamsDef: ActionParameterDefinition[] = [
   { name: 'qboCustomerId', type: 'string', required: true, description: 'The QBO ID of the customer to update' },
   { name: 'syncToken', type: 'string', required: true, description: 'The QBO SyncToken for optimistic locking' },
-  { name: 'customerData', type: 'object', required: true, description: 'QBO Customer object data (mapped from Alga)' },
+  { name: 'customerData', type: 'object', required: true, description: 'QBO Customer object data (mapped from Alga, may include PaymentTerms for lookup)' },
 ];
 
 const getQboCustomerParamsDef: ActionParameterDefinition[] = [
@@ -55,12 +56,12 @@ const getQboCustomerParamsDef: ActionParameterDefinition[] = [
  */
 // Corrected signature: context is ActionExecutionContext
 async function createQboCustomerAction(params: Record<string, any>, context: ActionExecutionContext): Promise<QboCustomer> {
-  // Internal type assertion/validation (includes realmId now)
-  const validatedParams = params as CreateQboCustomerParams;
+  // Use ActionExecutionContext
+  const validatedParams = params as CreateQboCustomerParams; // Keep internal type assertion
   const { customerData, realmId } = validatedParams;
   const { tenant } = context; // tenant is directly on ActionExecutionContext
 
-  // Logger is not available on ActionExecutionContext, rely on registry logging or pass logger via params if needed
+  // Removed checks for context.actions and context.input as they are not used
 
   if (!realmId) {
     throw new Error('QBO Realm ID not found in action parameters.');
@@ -70,30 +71,23 @@ async function createQboCustomerAction(params: Record<string, any>, context: Act
     throw new Error('Tenant ID not found in action execution context.');
   }
 
-  console.log(`[QBO Action] Starting Create Customer for tenant ${tenant}, realm ${realmId}`); // Use console.log or pass logger
+  console.log(`[QBO Action] Starting Create Customer for tenant ${tenant}, realm ${realmId}`);
 
   // Get the initialized QBO client for this tenant/realm
   const qboClient = await getQboClient(tenant, realmId);
 
-  // --- TODO: Lookup QBO Term ID ---
-  // NOTE: This placeholder lookup logic remains for now.
-  // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
-    // if (algaPaymentTerms) {
-    //   // Placeholder: Call 'qbo:lookupTermId' action or implement direct lookup
-    //   const termLookupResult = await lookupQboTermId({ alga_payment_terms: algaPaymentTerms, realmId }, context); // Needs proper call mechanism
-    //   if (termLookupResult.qbo_term_id) {
-    //      customerData.SalesTermRef = { value: termLookupResult.qbo_term_id };
-    //   } else {
-    //      console.warn(`[QBO Action] Missing QBO Term mapping for Alga terms: ${algaPaymentTerms}. Tenant: ${tenant}, Realm: ${realmId}`);
-    //      // TODO: Create Human Task for missing mapping (Phase 2 / Section 5.3)
-    //      // await createHumanTask({ taskType: 'QBO_MISSING_TERM_MAPPING', ... });
-    //      throw new Error(`Missing QBO Term mapping for Alga terms: ${algaPaymentTerms}`); // Fail action for now
-    //   }
-    // }
-    // --- End Lookup ---
+  // Removed Term lookup and human task creation logic - expected to be handled by workflow
 
-    // Use the QboClientService to create the customer
-    const createdCustomer = await qboClient.create<QboCustomer>('Customer', customerData);
+  // The workflow is expected to provide customerData with SalesTermRef already mapped (if applicable)
+  // and without the temporary PaymentTerms field.
+  if ((customerData as any).PaymentTerms) {
+      console.warn(`[QBO Action] customerData still contains PaymentTerms field for tenant ${tenant}, realm ${realmId}. This should be removed by the workflow.`);
+      // Optionally remove it here as a safeguard, though the workflow should handle it.
+      delete (customerData as any).PaymentTerms;
+  }
+
+  // Call QBO API with the data provided by the workflow
+  const createdCustomer = await qboClient.create<QboCustomer>('Customer', customerData);
 
     // Basic validation on the response from the service
     if (!createdCustomer?.Id) {
@@ -111,11 +105,14 @@ async function createQboCustomerAction(params: Record<string, any>, context: Act
  * Assumes locking/throttling is handled externally or within callQboApi.
  */
 // Corrected signature: context is ActionExecutionContext
+// Update signature to use WorkflowContext for consistency
 async function updateQboCustomerAction(params: Record<string, any>, context: ActionExecutionContext): Promise<QboCustomer> {
-  // Internal type assertion/validation (includes realmId now)
-  const validatedParams = params as UpdateQboCustomerParams;
+  // Use ActionExecutionContext
+  const validatedParams = params as UpdateQboCustomerParams; // Keep internal type assertion
   const { qboCustomerId, syncToken, customerData, realmId } = validatedParams;
-  const { tenant } = context;
+  const { tenant } = context; // tenant is directly on ActionExecutionContext
+
+  // Removed checks for context.actions and context.input as they are not used
 
   if (!realmId) {
     throw new Error('QBO Realm ID not found in action parameters.');
@@ -123,41 +120,34 @@ async function updateQboCustomerAction(params: Record<string, any>, context: Act
   if (!tenant) {
     throw new Error('Tenant ID not found in action execution context.');
   }
+  if (!qboCustomerId || !syncToken) {
+      throw new Error('Missing qboCustomerId or syncToken for update operation.');
+  }
 
   console.log(`[QBO Action] Starting Update Customer ${qboCustomerId} for tenant ${tenant}, realm ${realmId}`);
 
-  // Get the initialized QBO client for this tenant/realm
   const qboClient = await getQboClient(tenant, realmId);
 
-  // --- TODO: Lookup QBO Term ID ---
-  // NOTE: This placeholder lookup logic remains for now.
-  // const algaPaymentTerms = customerData.PaymentTerms; // Assuming this exists on the mapped data
-    // let qboTermRef: { value: string } | undefined = undefined;
-    // if (algaPaymentTerms) {
-    //   // Placeholder: Call 'qbo:lookupTermId' action or implement direct lookup
-    //   const termLookupResult = await lookupQboTermId({ alga_payment_terms: algaPaymentTerms, realmId }, context); // Needs proper call mechanism
-    //   if (termLookupResult.qbo_term_id) {
-    //      qboTermRef = { value: termLookupResult.qbo_term_id };
-    //   } else {
-    //      console.warn(`[QBO Action] Missing QBO Term mapping for Alga terms: ${algaPaymentTerms}. Tenant: ${tenant}, Realm: ${realmId}`);
-    //      // TODO: Create Human Task for missing mapping (Phase 2 / Section 5.3)
-    //      throw new Error(`Missing QBO Term mapping for Alga terms: ${algaPaymentTerms}`); // Fail action for now
-    //   }
-    // }
-    // --- End Lookup ---
+  // Removed Term lookup and human task creation logic - expected to be handled by workflow
 
+  // The workflow is expected to provide customerData with SalesTermRef already mapped (if applicable)
+  // and without the temporary PaymentTerms field.
+  if ((customerData as any).PaymentTerms) {
+      console.warn(`[QBO Action] customerData still contains PaymentTerms field for tenant ${tenant}, realm ${realmId}. This should be removed by the workflow.`);
+      // Optionally remove it here as a safeguard.
+      delete (customerData as any).PaymentTerms;
+  }
 
-    // QBO Update requires sparse update (only send changed fields) and the Id/SyncToken in the body
-    const updatePayload: Partial<QboCustomer> & { Id: string; SyncToken: string; sparse: boolean } = {
-      ...customerData, // Use validated data
-      // SalesTermRef: qboTermRef, // Add looked-up term ref
-      Id: qboCustomerId, // Use validated ID
-      SyncToken: syncToken, // Use validated token
-      sparse: true, // Indicate sparse update
-    };
+  // Prepare the final payload for update using data provided by the workflow
+  const updatePayload: Partial<QboCustomer> & { Id: string; SyncToken: string; sparse: boolean } = {
+    ...customerData, // Use the mapped data from parameters
+    Id: qboCustomerId,
+    SyncToken: syncToken,
+    sparse: true, // Use sparse update
+  };
 
-    // Use the QboClientService to update the customer
-    const updatedCustomer = await qboClient.update<QboCustomer>('Customer', updatePayload);
+  // Call QBO API with the prepared payload
+  const updatedCustomer = await qboClient.update<QboCustomer>('Customer', updatePayload);
 
     // Basic validation on the response from the service
     if (!updatedCustomer?.Id) {
@@ -228,21 +218,21 @@ registry.registerSimpleAction(
   'qbo:createCustomer',
   'Creates a new Customer in QuickBooks Online',
   createQboCustomerParamsDefWithRealm, // Use updated definitions
-  createQboCustomerAction
+  createQboCustomerAction // Remove 'as any' - signature now matches ActionExecutionContext
 );
 
 registry.registerSimpleAction(
   'qbo:updateCustomer',
   'Updates an existing Customer in QuickBooks Online',
   updateQboCustomerParamsDefWithRealm, // Use updated definitions
-  updateQboCustomerAction
+  updateQboCustomerAction // Remove 'as any' - signature now matches ActionExecutionContext
 );
 
 registry.registerSimpleAction(
   'qbo:getCustomer',
   'Queries for Customers in QuickBooks Online',
   getQboCustomerParamsDefWithRealm, // Use updated definitions
-  getQboCustomerAction
+  getQboCustomerAction // Keep as is, assuming it doesn't need the full WorkflowContext yet
 );
 
 // Export actions if needed elsewhere, though registry pattern often suffices

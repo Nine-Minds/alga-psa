@@ -4,6 +4,8 @@ import { getCurrentUser } from '../user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import axios from 'axios'; // Import axios
 import { ISecretProvider } from 'server/src/lib/secrets'; // Assuming path - Removed getSecretProvider as it's not exported
+import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
+import { createTenantKnex } from '../../db';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -263,6 +265,35 @@ export async function disconnectQbo(): Promise<{ success: boolean; error?: strin
     tenantId = currentUser.tenant;
 
     console.log(`QBO Disconnect Action: Initiating disconnect for tenant ${tenantId}`);
+
+    // --- Delete specific workflow event attachments using the model method ---
+    try {
+        const { knex } = await createTenantKnex(); // Get Knex instance for the tenant context
+
+        console.log(`QBO Disconnect Action: Attempting to delete QBO sync workflow event attachments for tenant ${tenantId} via model`);
+
+        // Define the specific workflows and events to target for deletion
+        const qboWorkflowEventMap: Record<string, string[]> = {
+            'Invoice Sync': ['INVOICE_CREATED', 'INVOICE_UPDATED'],
+            'Customer Sync': ['COMPANY_CREATED', 'COMPANY_UPDATED'],
+        };
+
+        // Call the static method on the model
+        const deletedCount = await WorkflowEventAttachmentModel.deleteSystemWorkflowAttachmentsForTenant(
+            knex,
+            tenantId,
+            qboWorkflowEventMap
+        );
+
+        console.log(`QBO Disconnect Action: Model deleted ${deletedCount} QBO sync workflow event attachments for tenant ${tenantId}`);
+
+    } catch (dbError: any) {
+        // Log the error but don't prevent credential deletion
+        console.error(`QBO Disconnect Action: Error deleting workflow event attachments via model for tenant ${tenantId}:`, dbError.message);
+        // Optionally, you could return a partial success/warning here if needed
+    }
+    // --- End delete workflow event attachments ---
+
 
     // Retrieve credentials *before* deleting if revocation is needed.
     const credentials = await getTenantQboCredentials(secretProvider, tenantId);
