@@ -1,102 +1,77 @@
-// server/src/app/api/integrations/qbo/connect/route.ts
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'; // Keep only one import
+import { getCurrentUser } from '../../../../../lib/actions/user-actions/userActions'; // Use relative path
 import crypto from 'crypto';
-import { URLSearchParams } from 'url';
-// TODO: Import the actual secret provider implementation
-// import { getAppSecret } from '@/lib/secrets/secretProvider';
-// TODO: Import or define how tenantId is accessed (e.g., from session/auth middleware)
-// import { getTenantIdFromRequest } from '@/lib/auth/tenant';
+// --- Import Actual Implementations ---
+// Assuming ISecretProvider is correctly imported and instantiated elsewhere or via getSecretProvider
+import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
+// TODO: Import the actual CSRF token storage mechanism
+// import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed
 
-// Placeholder for secret retrieval - replace with actual implementation
-const getAppSecret = async (secretName: string): Promise<string | undefined> => {
-  // In a real scenario, this would use the ISecretProvider implementation
-  // configured for the application (e.g., VaultProvider, FileSystemProvider)
-  console.log(`[Placeholder] Retrieving app secret: ${secretName}`);
-  if (secretName === 'QBO_CLIENT_ID') {
-    return process.env.QBO_CLIENT_ID || 'YOUR_QBO_CLIENT_ID_PLACEHOLDER'; // Replace with actual retrieval
-  }
-  return undefined;
-};
-
-// Placeholder for tenant ID retrieval - replace with actual implementation
-const getTenantIdFromRequest = (request: Request): string | null => {
-  // This should extract the tenantId based on the authentication/session mechanism
-  // For App Router, this might involve reading headers set by middleware,
-  // or using a server-side session library compatible with edge/node runtimes.
-  console.log('[Placeholder] Retrieving tenantId from request');
-  // Example: const tenantId = request.headers.get('X-Tenant-ID');
-  // For now, returning a placeholder or potentially extracting from query for testing
-  const { searchParams } = new URL(request.url);
-  return searchParams.get('tenantId') || 'TEST_TENANT_ID_PLACEHOLDER';
-};
-
-// Placeholder for CSRF token storage - replace with actual implementation
-const storeCsrfToken = async (tenantId: string, csrfToken: string): Promise<void> => {
-  // This should store the CSRF token securely, associated with the tenantId,
-  // with a short expiration (e.g., in Redis cache or session state).
-  console.log(`[Placeholder] Storing CSRF token for tenant ${tenantId}: ${csrfToken}`);
-  // Example: await redis.set(`qbo:csrf:${tenantId}`, csrfToken, 'EX', 300); // Store for 5 minutes
-};
-
-// Configuration (should ideally come from environment variables or config files)
-const QBO_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
-const QBO_SCOPES = [
-  'com.intuit.quickbooks.accounting',
-  'openid',
-  'profile',
-  'email',
-  'phone',
-  'address',
-].join(' ');
-// Use NEXT_PUBLIC_APP_URL for client-side accessible base URL if needed elsewhere,
-// but for server-side redirects, ensure this resolves correctly.
-// Using process.env.APP_BASE_URL assuming it's set correctly for the server environment.
-const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
-// IMPORTANT: The redirect URI registered with QBO MUST match this EXACTLY.
-const REGISTERED_REDIRECT_URI = `${APP_BASE_URL}/api/integrations/qbo/callback`;
+// Constants
+const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2'; // Use sandbox URL for development if needed
+const QBO_SCOPES = 'com.intuit.quickbooks.accounting';
+const QBO_CLIENT_ID_SECRET_NAME = 'qbo_client_id'; // Define constant
+const QBO_REDIRECT_URI_SECRET_NAME = 'qbo_redirect_uri'; // Define constant
 
 export async function GET(request: Request) {
+  let tenantId: string | null = null;
+  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
+  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+
   try {
-    const tenantId = getTenantIdFromRequest(request);
-    if (!tenantId) {
-      return NextResponse.json({ error: 'Unauthorized: Tenant ID missing.' }, { status: 401 });
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.tenant) {
+      console.error('QBO Connect: Tenant ID not found in current user session.');
+      // Redirecting to an error page might be better UX than just returning JSON
+      return NextResponse.json({ error: 'Unauthorized - Tenant ID missing' }, { status: 401 });
+    }
+    tenantId = currentUser.tenant;
+
+    // Retrieve QBO Client ID (App-level secret) using secret provider
+    const clientId = await secretProvider.getAppSecret(QBO_CLIENT_ID_SECRET_NAME);
+
+    // Retrieve Redirect URI using secret provider
+    const redirectUri = await secretProvider.getAppSecret(QBO_REDIRECT_URI_SECRET_NAME);
+
+    if (!clientId || !redirectUri) {
+      console.error(`QBO Connect: Missing QBO Client ID or Redirect URI in secrets.`); // Removed tenantId from log as these are app secrets
+      return NextResponse.json({ error: 'QBO integration is not configured correctly.' }, { status: 500 });
     }
 
-    const clientId = await getAppSecret('QBO_CLIENT_ID');
-    if (!clientId || clientId === 'YOUR_QBO_CLIENT_ID_PLACEHOLDER') {
-      console.error('QBO Client ID is not configured.');
-      return NextResponse.json({ error: 'Internal Server Error: QBO integration not configured.' }, { status: 500 });
-    }
-
-    // 1. Generate CSRF token
+    // Generate secure CSRF token
     const csrfToken = crypto.randomBytes(16).toString('hex');
 
-    // 2. Store CSRF token securely (e.g., in session or short-lived cache) associated with tenantId
-    await storeCsrfToken(tenantId, csrfToken);
+    // TODO: Store the CSRF token temporarily, associated with the user/tenant session, using the actual mechanism.
+    // await storeCsrfToken(tenantId, csrfToken); // Store CSRF token with a short TTL (e.g., 10 minutes)
+    console.log(`QBO Connect: Generated CSRF token for tenant ${tenantId}. Needs to be stored.`);
 
-    // 3. Create state parameter (encode tenantId and CSRF token)
-    const statePayload = JSON.stringify({ tenantId, csrf: csrfToken });
-    const state = Buffer.from(statePayload).toString('base64url');
+    // Create the state parameter including tenantId and CSRF token
+    // Encode as base64url for safe transmission in URL
+    const statePayload = {
+        tenantId: tenantId, // Include tenantId to link callback to tenant
+        csrf: csrfToken,
+    };
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
 
-    // 4. Construct the Intuit Authorization URL
+
+    // Construct the authorization URL
     const params = new URLSearchParams({
       client_id: clientId,
       response_type: 'code',
       scope: QBO_SCOPES,
-      redirect_uri: REGISTERED_REDIRECT_URI, // Use the exact registered URI
+      redirect_uri: redirectUri,
       state: state,
     });
 
-    const authorizationUrl = `${QBO_AUTH_URL}?${params.toString()}`;
+    const authorizationUrl = `${INTUIT_AUTH_URL}?${params.toString()}`;
 
-    // 5. Redirect the user
-    console.log(`Redirecting user to QBO authorization URL for tenant: ${tenantId}`);
-    return NextResponse.redirect(authorizationUrl, 302);
+    console.log(`QBO Connect: Redirecting tenant ${tenantId} to Intuit for authorization.`);
+    // Redirect the user's browser
+    return NextResponse.redirect(authorizationUrl);
 
-  } catch (error) {
-    console.error('Error initiating QBO OAuth flow:', error);
-    // TODO: Redirect to an error page in the UI?
-    // For now, return a generic server error.
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  } catch (error: any) {
+    console.error(`QBO Connect: Error initiating OAuth flow for tenant ${tenantId || 'UNKNOWN'}`, error);
+    // Redirect to an error page or return a JSON error
+    return NextResponse.json({ error: 'Failed to initiate QuickBooks connection.' }, { status: 500 });
   }
 }

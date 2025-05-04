@@ -87,6 +87,7 @@ volumes/
 
 prod.config.ini
 secrets/
+!server/src/lib/secrets/
 .secrets
 .clinerules
 data/
