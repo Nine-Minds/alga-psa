@@ -4,7 +4,10 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
+import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
 import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
+import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
+import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic
 // import { getAndVerifyCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path
 
@@ -147,6 +150,99 @@ export async function GET(request: Request) {
     await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, JSON.stringify(credentialsToStore));
 
     console.log(`QBO Callback: Successfully stored QBO credentials for tenant ${tenantId}, realm ${realmId}.`);
+
+    // --- BEGIN: Add Workflow Event Attachments using Action ---
+    try {
+      console.log(`QBO Callback: Attempting to add workflow event attachments via action for tenant ${tenantId}...`);
+      const { knex, tenant: contextTenant } = await createTenantKnex(); // Corrected: No argument needed
+
+      // Ensure the tenant from context matches the state parameter tenantId for safety
+      if (!contextTenant || contextTenant !== tenantId) {
+        console.error(`QBO Callback: Tenant mismatch! State tenant: ${tenantId}, Context tenant: ${contextTenant}. Aborting attachment creation.`);
+        throw new Error('Tenant context mismatch during attachment creation.'); // Or handle more gracefully
+      }
+
+      // Define target workflows and events
+      const invoiceSyncWorkflowName = 'Invoice Sync';
+      const customerSyncWorkflowName = 'Customer Sync';
+      const eventWorkflowMap: Record<string, string> = {
+        'INVOICE_CREATED': invoiceSyncWorkflowName,
+        'INVOICE_UPDATED': invoiceSyncWorkflowName,
+        'COMPANY_CREATED': customerSyncWorkflowName,
+        'COMPANY_UPDATED': customerSyncWorkflowName,
+      };
+
+      // Get system workflow IDs (No tenant filter needed for system tables)
+      const workflows = await knex('system_workflows')
+        .select('system_workflow_id', 'name')
+        .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]);
+
+      const workflowIdMap = workflows.reduce((acc, wf) => {
+        acc[wf.name] = wf.system_workflow_id;
+        return acc;
+      }, {} as Record<string, string>);
+
+      if (!workflowIdMap[invoiceSyncWorkflowName]) {
+        console.warn(`QBO Callback: System workflow '${invoiceSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
+      }
+      if (!workflowIdMap[customerSyncWorkflowName]) {
+        console.warn(`QBO Callback: System workflow '${customerSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
+      }
+
+      // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
+      const eventTypes = Object.keys(eventWorkflowMap);
+      // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
+      const events = await knex('event_catalog')
+        .select('event_id', 'event_type')
+        .where('tenant_id', tenantId) // Filter by tenant
+        .whereIn('event_type', eventTypes);
+
+      const eventIdMap = events.reduce((acc, ev) => {
+        acc[ev.event_type] = ev.event_id;
+        return acc;
+      }, {} as Record<string, string>);
+
+      // Create attachments using the action
+      for (const eventType of eventTypes) {
+        const workflowName = eventWorkflowMap[eventType];
+        const workflowId = workflowIdMap[workflowName];
+        const eventId = eventIdMap[eventType];
+
+        if (!workflowId) {
+          console.log(`QBO Callback: Skipping attachment for event type '${eventType}' due to missing workflow '${workflowName}' for tenant ${tenantId}.`);
+          continue;
+        }
+        if (!eventId) {
+          console.log(`QBO Callback: Skipping attachment for event type '${eventType}' as event was not found in catalog for tenant ${tenantId}.`);
+          // Consider if this should be an error or just a warning. If events are expected, it might be an error.
+          continue;
+        }
+
+        try {
+          console.log(`QBO Callback: Calling createWorkflowEventAttachment for tenant ${tenantId}, Event '${eventType}' (ID: ${eventId}) -> Workflow '${workflowName}' (ID: ${workflowId})`);
+          await createWorkflowEventAttachment({
+            tenant_id: tenantId,
+            event_id: eventId,
+            workflow_id: workflowId, // Assuming system workflows use system_workflow_id as their primary ID reference
+            is_active: true, // Default to active
+            // 'name' and 'description' are optional in ICreateWorkflowEventAttachment
+          });
+          console.log(`QBO Callback: Successfully processed attachment request for tenant ${tenantId}: Event '${eventType}' -> Workflow '${workflowName}'. Action handles idempotency.`);
+        } catch (actionError: any) {
+          // Log specific error from the action, but continue processing others
+          console.error(`QBO Callback: Error creating attachment for tenant ${tenantId}, Event '${eventType}' -> Workflow '${workflowName}':`, actionError.message || actionError);
+        }
+      }
+
+      console.log(`QBO Callback: Finished processing workflow event attachments for tenant ${tenantId}.`);
+
+    } catch (attachmentError: any) {
+      // Log the error but don't fail the entire callback, as token storage succeeded.
+      console.error(`QBO Callback: General error during workflow event attachment processing for tenant ${tenantId}:`, attachmentError);
+      // Optionally: Send an alert or log to a monitoring system
+    }
+    // --- END: Add Workflow Event Attachments using Action ---
+
 
     // 5. Redirect to Success Page (Task 83)
     return successRedirect();
