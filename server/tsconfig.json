@@ -16,6 +16,7 @@
   "exclude": [
     "node_modules",
     "dist",
-    "src/invoice-templates/assemblyscript" // Make path more specific relative to includes
+    "src/invoice-templates/assemblyscript",
+    "src/lib/workflows"
   ]
 }
