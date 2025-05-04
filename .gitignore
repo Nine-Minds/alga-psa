@@ -83,7 +83,6 @@ volumes/
 *.code-workspace
 
 # package-lock.json
-cli
 .aider*
 
 prod.config.ini
