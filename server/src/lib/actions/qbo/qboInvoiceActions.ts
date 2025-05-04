@@ -3,6 +3,7 @@
 import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
 import { QboInvoice, QboSalesItemLineDetail } from './types'; // Removed QboEntityResponse as it's handled by the service
 import { getQboClient } from '../../qbo/qboClientService'; // Corrected import path
+// Removed unused imports for lookupExternalEntityIdAction and createHumanTask as logic moved to workflow
 
 const registry = getActionRegistry();
 
@@ -56,77 +57,19 @@ async function createQboInvoiceAction(params: Record<string, any>, context: Acti
   // Get the initialized QBO client for this tenant/realm
   const qboClient = await getQboClient(tenant, realmId);
 
-  // --- Lookup QBO Item IDs and Tax Code IDs for Lines ---
-  // NOTE: This placeholder lookup logic remains for now.
-  // In a real implementation, these lookups might also use the qboClient.query method.
-  const processedLines = [];
-    for (const line of invoiceData.Line) {
-        let finalSalesItemDetail: QboSalesItemLineDetail | undefined = undefined;
+  // --- Data Validation (Optional - can be done in workflow) ---
+  // Basic check: Ensure invoiceData and Line items exist
+  if (!invoiceData || !Array.isArray(invoiceData.Line)) {
+      throw new Error('Invalid invoiceData structure provided to createQboInvoiceAction.');
+  }
+  // NOTE: Detailed line item validation (e.g., checking for ItemRef.value)
+  // is now expected to be handled by the calling workflow *before* this action.
 
-        if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
-            let currentDetail = { ...line.SalesItemLineDetail }; // Start with existing detail
-            let qboItemId: string | null = null;
-            let qboTaxCodeId: string | null = null;
-
-            // --- Lookup Item ID ---
-            if (currentDetail.ItemRef?.value) { // Check if Alga ID is present
-                const algaServiceId = currentDetail.ItemRef.value;
-                console.warn(`[QBO Action] Placeholder: Looking up Item ID for Alga Service ID ${algaServiceId}`);
-                // const itemLookupResult = await lookupQboItemId({ alga_service_id: algaServiceId, realmId }, context);
-                qboItemId = `qbo-item-for-${algaServiceId}`; // Placeholder result
-                if (!qboItemId) {
-                    console.warn(`[QBO Action] Missing QBO Item mapping for Alga Service ID: ${algaServiceId}. Tenant: ${tenant}, Realm: ${realmId}`);
-                    // TODO: Create Human Task for missing mapping
-                    throw new Error(`Missing QBO Item mapping for Alga Service ID: ${algaServiceId}`);
-                }
-            } else {
-                // ItemRef is required for SalesItemLineDetail
-                throw new Error(`Missing initial ItemRef value for SalesItemLineDetail on line: ${line.Description || 'N/A'}`);
-            }
-
-            // --- Lookup Tax Code ID (only proceed if Item lookup succeeded) ---
-            if (currentDetail.TaxCodeRef?.value) { // Check if Alga Tax ID is present
-                 const algaTaxId = currentDetail.TaxCodeRef.value;
-                 console.warn(`[QBO Action] Placeholder: Looking up Tax Code ID for Alga Tax ID/Region ${algaTaxId}`);
-                 // const taxLookupResult = await lookupQboTaxCodeId({ alga_tax_region: algaTaxId, realmId }, context);
-                 qboTaxCodeId = `qbo-taxcode-for-${algaTaxId}`; // Placeholder result
-                 if (!qboTaxCodeId) {
-                     console.warn(`[QBO Action] Missing QBO Tax Code mapping for Alga Tax ID/Region: ${algaTaxId}. Tenant: ${tenant}, Realm: ${realmId}`);
-                     // TODO: Create Human Task for missing mapping
-                     throw new Error(`Missing QBO Tax Code mapping for Alga Tax ID/Region: ${algaTaxId}`);
-                 }
-            }
-            // else: TaxCodeRef might be optional, no error if missing initially
-
-            // --- Construct final SalesItemLineDetail ---
-            // Ensure required ItemRef is present
-            finalSalesItemDetail = {
-                ...currentDetail, // Spread existing optional properties like Qty, UnitPrice etc.
-                ItemRef: { value: qboItemId }, // Assign looked-up ID (guaranteed non-null here)
-                TaxCodeRef: qboTaxCodeId ? { value: qboTaxCodeId } : undefined, // Assign looked-up ID or undefined
-            };
-
-        } else if (line.DetailType !== 'SalesItemLineDetail') {
-            // Handle other line types (Discount, DescriptionOnly etc.) - no lookups needed
-        } else {
-            // If it was supposed to be SalesItemLineDetail but was missing, throw error
-            throw new Error(`Missing SalesItemLineDetail object for line item: ${line.Description || 'N/A'}`);
-        }
-
-        // Construct the final processed line, replacing SalesItemLineDetail if applicable
-        processedLines.push({
-            ...line,
-            SalesItemLineDetail: finalSalesItemDetail, // Assign the processed detail (or undefined)
-        });
-    }
-    const finalInvoiceData = { ...invoiceData, Line: processedLines };
-    // --- End Lookups ---
-
-
-    // Use the QboClientService to create the invoice
-    // The service handles the actual API call, headers, token, etc.
-    // The service's create method returns the created entity directly.
-    const createdInvoice = await qboClient.create<QboInvoice>('Invoice', finalInvoiceData);
+  // --- QBO API Call ---
+  // Use the QboClientService to create the invoice
+  // The service handles the actual API call, headers, token, etc.
+  // The invoiceData is assumed to be fully mapped with correct QBO IDs by the workflow.
+  const createdInvoice = await qboClient.create<QboInvoice>('Invoice', invoiceData);
 
     // Basic validation on the response from the service
     if (!createdInvoice?.Id) {
@@ -158,65 +101,21 @@ async function updateQboInvoiceAction(params: Record<string, any>, context: Acti
   // Get the initialized QBO client for this tenant/realm
   const qboClient = await getQboClient(tenant, realmId);
 
-  // --- Lookup QBO Item IDs and Tax Code IDs for Lines (similar to create) ---
-  // NOTE: This placeholder lookup logic remains for now.
-  const processedLinesUpdate = [];
-    for (const line of invoiceData.Line) {
-        let finalSalesItemDetailUpdate: QboSalesItemLineDetail | undefined = undefined;
+  // --- Data Validation (Optional - can be done in workflow) ---
+  if (!invoiceData || !Array.isArray(invoiceData.Line)) {
+      throw new Error('Invalid invoiceData structure provided to updateQboInvoiceAction.');
+  }
+  // NOTE: Detailed line item validation (e.g., checking for ItemRef.value)
+  // is now expected to be handled by the calling workflow *before* this action.
 
-        if (line.DetailType === 'SalesItemLineDetail' && line.SalesItemLineDetail) {
-            let currentDetail = { ...line.SalesItemLineDetail };
-            let qboItemId: string | null = null;
-            let qboTaxCodeId: string | null = null;
-
-            // Lookup Item ID
-            if (currentDetail.ItemRef?.value) {
-                const algaServiceId = currentDetail.ItemRef.value;
-                console.warn(`[QBO Action] Placeholder: Looking up Item ID for Alga Service ID ${algaServiceId}`);
-                qboItemId = `qbo-item-for-${algaServiceId}`; // Placeholder
-                if (!qboItemId) {
-                    throw new Error(`Missing QBO Item mapping for Alga Service ID: ${algaServiceId}`);
-                }
-            } else {
-                 throw new Error(`Missing initial ItemRef value for SalesItemLineDetail on line: ${line.Description || 'N/A'}`);
-            }
-
-            // Lookup Tax Code ID
-            if (currentDetail.TaxCodeRef?.value) {
-                 const algaTaxId = currentDetail.TaxCodeRef.value;
-                 console.warn(`[QBO Action] Placeholder: Looking up Tax Code ID for Alga Tax ID/Region ${algaTaxId}`);
-                 qboTaxCodeId = `qbo-taxcode-for-${algaTaxId}`; // Placeholder
-                 if (!qboTaxCodeId) {
-                     throw new Error(`Missing QBO Tax Code mapping for Alga Tax ID/Region: ${algaTaxId}`);
-                 }
-            }
-
-            // Construct final SalesItemLineDetail
-            finalSalesItemDetailUpdate = {
-                ...currentDetail, // Spread existing optional properties
-                ItemRef: { value: qboItemId }, // Assign looked-up ID (guaranteed non-null)
-                TaxCodeRef: qboTaxCodeId ? { value: qboTaxCodeId } : undefined, // Assign looked-up ID or undefined
-            };
-        } else if (line.DetailType !== 'SalesItemLineDetail') {
-            // Handle other line types
-        } else {
-             throw new Error(`Missing SalesItemLineDetail object for line item: ${line.Description || 'N/A'}`);
-        }
-
-        processedLinesUpdate.push({
-            ...line,
-            SalesItemLineDetail: finalSalesItemDetailUpdate, // Assign the processed detail
-        });
-    }
-    const finalInvoiceDataUpdate = { ...invoiceData, Line: processedLinesUpdate };
-    // --- End Lookups ---
-
-    const updatePayload: Partial<QboInvoice> & { Id: string; SyncToken: string; sparse: boolean } = {
-      ...finalInvoiceDataUpdate, // Use data with looked-up IDs
-      Id: qboInvoiceId,
-      SyncToken: syncToken,
-      sparse: true,
-    };
+  // --- Prepare Update Payload ---
+  // The invoiceData is assumed to be fully mapped with correct QBO IDs by the workflow.
+  const updatePayload: Partial<QboInvoice> & { Id: string; SyncToken: string; sparse: boolean } = {
+    ...invoiceData, // Use the mapped data directly from parameters
+    Id: qboInvoiceId,
+    SyncToken: syncToken,
+    sparse: true, // Use sparse update
+  };
 
     // Use the QboClientService to update the invoice
     // The service handles the actual API call, headers, token, etc.
