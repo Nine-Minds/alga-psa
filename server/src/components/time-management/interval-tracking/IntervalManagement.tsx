@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { TicketInterval } from '../../../types/interval-tracking';
-import { IntervalTrackingService } from '../../../services/IntervalTrackingService';
+import { TicketInterval } from 'server/src/types/interval-tracking';
+import { IntervalTrackingService } from 'server/src/services/IntervalTrackingService';
 import { IntervalItem } from './IntervalItem';
 import { formatDuration, calculateTotalDuration, secondsToMinutes } from './utils';
-import { Button } from '../../ui/Button';
+import { Button } from 'server/src/components/ui/Button';
 import { Pencil, Trash, Play, Clock, Merge } from 'lucide-react';
-import { Card } from '../../ui/Card';
-import { Switch } from '../../ui/Switch';
-import { Label } from '../../ui/Label';
-import { Tooltip } from '../../ui/Tooltip';
-import { ITimeEntry } from '../../../interfaces/timeEntry.interfaces';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../ui/Dialog';
-import TimeEntryDialog from '../../time-management/time-entry/time-sheet/TimeEntryDialog';
+import { Card } from 'server/src/components/ui/Card';
+import { Switch } from 'server/src/components/ui/Switch';
+import { Label } from 'server/src/components/ui/Label';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import TimeEntryDialog from 'server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog';
+import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
+import { toast } from 'react-hot-toast';
+import { getCurrentTimePeriod } from 'server/src/lib/actions/timePeriodsActions';
+import { fetchOrCreateTimeSheet } from 'server/src/lib/actions/timeEntryActions';
 
 interface IntervalManagementProps {
   ticketId: string;
@@ -124,61 +128,107 @@ export function IntervalManagement({
     }
   };
   
+  // State for current time period
+  const [currentTimePeriod, setCurrentTimePeriod] = useState<any>(null);
+  const [currentTimeSheet, setCurrentTimeSheet] = useState<any>(null);
+
   // Create time entry from selected intervals
-  const handleCreateTimeEntry = () => {
+  const handleCreateTimeEntry = async () => {
     if (selectedIntervalIds.length === 0) return;
     
-    // Get selected intervals
-    const selectedIntervals = filteredIntervals.filter(
-      interval => selectedIntervalIds.includes(interval.id)
-    );
-    
-    if (selectedIntervals.length === 0) return;
-    
-    // Find earliest start and latest end
-    let earliestStart = new Date(selectedIntervals[0].startTime);
-    let latestEnd = selectedIntervals[0].endTime 
-      ? new Date(selectedIntervals[0].endTime) 
-      : new Date();
-    
-    selectedIntervals.forEach(interval => {
-      const start = new Date(interval.startTime);
-      if (start < earliestStart) {
-        earliestStart = start;
+    try {
+      // Get current time period
+      const timePeriod = await getCurrentTimePeriod();
+      if (!timePeriod) {
+        toast.error('No active time period found');
+        return;
       }
+      setCurrentTimePeriod(timePeriod);
       
-      const end = interval.endTime ? new Date(interval.endTime) : new Date();
-      if (end > latestEnd) {
-        latestEnd = end;
+      // Create or fetch time sheet
+      const timeSheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Failed to create or fetch time sheet');
+        return;
       }
-    });
-    
-    // Calculate duration in minutes
-    const durationSeconds = Math.floor((latestEnd.getTime() - earliestStart.getTime()) / 1000);
-    const durationMinutes = secondsToMinutes(durationSeconds);
-    
-    // Prepare time entry data
-    const timeEntry: Partial<ITimeEntry> = {
-      work_item_id: ticketId,
-      work_item_type: 'ticket',
-      start_time: earliestStart.toISOString(),
-      end_time: latestEnd.toISOString(),
-      billable_duration: durationMinutes,
-      notes: `Created from ${selectedIntervals.length} interval${selectedIntervals.length !== 1 ? 's' : ''}`,
-      user_id: userId
-    };
-    
-    setTimeEntryData(timeEntry);
-    setIsTimeEntryDialogOpen(true);
+      setCurrentTimeSheet(timeSheet);
+      
+      // Get selected intervals
+      const selectedIntervals = filteredIntervals.filter(
+        interval => selectedIntervalIds.includes(interval.id)
+      );
+      
+      if (selectedIntervals.length === 0) return;
+      
+      // Find earliest start and latest end
+      let earliestStart = new Date(selectedIntervals[0].startTime);
+      let latestEnd = selectedIntervals[0].endTime 
+        ? new Date(selectedIntervals[0].endTime) 
+        : new Date();
+      
+      selectedIntervals.forEach(interval => {
+        const start = new Date(interval.startTime);
+        if (start < earliestStart) {
+          earliestStart = start;
+        }
+        
+        const end = interval.endTime ? new Date(interval.endTime) : new Date();
+        if (end > latestEnd) {
+          latestEnd = end;
+        }
+      });
+      
+      // Calculate duration in minutes
+      const durationSeconds = Math.floor((latestEnd.getTime() - earliestStart.getTime()) / 1000);
+      const durationMinutes = secondsToMinutes(durationSeconds);
+      
+      // Prepare time entry data
+      const timeEntry: Partial<ITimeEntry> = {
+        work_item_id: ticketId,
+        work_item_type: 'ticket',
+        start_time: earliestStart.toISOString(),
+        end_time: latestEnd.toISOString(),
+        billable_duration: durationMinutes,
+        notes: `Created from ${selectedIntervals.length} interval${selectedIntervals.length !== 1 ? 's' : ''}`,
+        user_id: userId
+      };
+      
+      setTimeEntryData(timeEntry);
+      setIsTimeEntryDialogOpen(true);
+    } catch (error) {
+      console.error('Error preparing time entry:', error);
+      toast.error('Failed to prepare time entry');
+    }
   };
   
   // Handle saving time entry
   const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
     try {
-      // Save time entry using the provided callback
-      if (onCreateTimeEntry) {
-        await onCreateTimeEntry(timeEntry);
+      // Get current time period
+      const currentTimePeriod = await getCurrentTimePeriod();
+      if (!currentTimePeriod) {
+        toast.error('No active time period found');
+        return;
       }
+
+      // Create or fetch time sheet
+      const timeSheet = await fetchOrCreateTimeSheet(userId, currentTimePeriod.period_id);
+      if (!timeSheet) {
+        toast.error('Failed to create or fetch time sheet');
+        return;
+      }
+
+      // Save the time entry directly
+      await saveTimeEntry({
+        ...timeEntry,
+        time_sheet_id: timeSheet.id,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        approval_status: 'DRAFT',
+        work_item_type: 'ticket',
+        work_item_id: ticketId
+      });
       
       // Delete the intervals that were converted
       await intervalService.deleteIntervals(selectedIntervalIds);
@@ -186,9 +236,14 @@ export function IntervalManagement({
       // Reset selection and reload intervals
       setSelectedIntervalIds([]);
       setIsTimeEntryDialogOpen(false);
+      setTimeEntryData(null);
       await loadIntervals();
+      
+      // Show success message
+      toast.success('Time entry saved successfully');
     } catch (error) {
       console.error('Error saving time entry:', error);
+      toast.error('Failed to save time entry');
     }
   };
   
@@ -283,7 +338,7 @@ export function IntervalManagement({
       </div>
       
       {/* Time Entry Dialog */}
-      {timeEntryData && (
+      {timeEntryData && currentTimePeriod && currentTimeSheet && (
         <TimeEntryDialog
           isOpen={isTimeEntryDialogOpen}
           onClose={() => setIsTimeEntryDialogOpen(false)}
@@ -296,15 +351,11 @@ export function IntervalManagement({
           }}
           date={new Date()}
           existingEntries={[]}
-          timePeriod={{
-            period_id: '',
-            start_date: new Date().toISOString(),
-            end_date: new Date().toISOString()
-          }}
+          timePeriod={currentTimePeriod}
           isEditable={true}
           defaultStartTime={new Date(timeEntryData.start_time || '')}
           defaultEndTime={new Date(timeEntryData.end_time || '')}
-          timeSheetId=""
+          timeSheetId={currentTimeSheet.id}
           onSave={handleSaveTimeEntry}
           inDrawer={true}
         />

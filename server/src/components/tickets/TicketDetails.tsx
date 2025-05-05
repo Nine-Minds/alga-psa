@@ -957,7 +957,7 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                     </div>
-                    <div className="w-96" id="ticket-properties-container">
+                    <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}

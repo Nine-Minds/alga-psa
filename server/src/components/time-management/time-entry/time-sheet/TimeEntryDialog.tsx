@@ -169,7 +169,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   }, [isEditable, date, entries, workItem, defaultTaxRegion, updateEntry, setEditingIndex]);
 
   const handleSaveEntry = useCallback(async (index: number) => {
-    if (!isEditable || !timeSheetId) return;
+    if (!isEditable) return;
   
     const entry = entries[index];
     console.log('Entry to save:', entry);

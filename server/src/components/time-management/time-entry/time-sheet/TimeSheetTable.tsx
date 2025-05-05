@@ -155,7 +155,7 @@ export function TimeSheetTable({
                                             <Button
                                                 id="delete-workitem-button"
                                                 variant="icon"
-                                                size="icon"
+                                                size="sm"
                                                 className="absolute right-1 top-2 p-1"
                                                 title="Delete Work Item"
                                                 onClick={(e) => {

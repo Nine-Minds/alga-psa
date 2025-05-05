@@ -57,7 +57,7 @@ const TechnicianSidebar = ({
   onSelectAll?: () => void;
 }) => {
   return (
-    <div className="w-48 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+    <div className="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
       <div className="p-2 border-gray-200">
         <div className="flex justify-center gap-1">
           <Button
@@ -68,7 +68,7 @@ const TechnicianSidebar = ({
             className="text-xs px-2 py-1 h-7"
           >
             <Layers className="h-4 w-4 mr-1" />
-            All
+            Compare All
           </Button>
           <Button
             id="reset-selections-button"
