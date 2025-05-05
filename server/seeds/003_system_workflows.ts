@@ -64,8 +64,8 @@ export async function seed(knex: Knex): Promise<void> {
         registration_id: QBO_REGISTRATION_ID, // Use static ID
         version: qboSyncWorkflowDefinition.metadata.version,
         is_current: true,
-      definition: JSON.stringify(qboSyncWorkflowDefinition), // Store full definition as JSON string
-      created_by: 'system',
+        code: qboSyncWorkflowDefinition.executeFn, // Store executeFn string in 'code'
+        created_by: 'system',
       created_at: new Date().toISOString(),
       },
     ]);

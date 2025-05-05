@@ -312,7 +312,6 @@ export default {
             version: '1.0.0',
             status: 'active',
             source_template_id: templateId,
-            definition: template.definition,
             parameters: parameters || template.default_parameters || {}
           })
           .returning('registration_id');

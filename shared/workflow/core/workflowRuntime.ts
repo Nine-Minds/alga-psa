@@ -241,7 +241,14 @@ export class TypeScriptWorkflowRuntime {
            }
            this.andOn('ver.is_current', '=', knex.raw('?', [true]));
         })
-        .select('reg.name', 'reg.description as reg_description', 'ver.version', 'ver.definition', 'ver.parameters') // Select necessary fields
+        .select(
+          'reg.name',
+          'reg.description as reg_description',
+          'reg.definition as reg_definition', // Keep fetching registration definition for metadata like tags for now
+          'ver.version',
+          'ver.code', // Select the new code column
+          'ver.parameters'
+        ) // Select necessary fields
         .where('reg.registration_id', registrationId)
         .where(isSystemManaged ? {} : { 'reg.tenant_id': this.getTenant() }) // Filter by tenant only if not system managed
         .first();
@@ -251,23 +258,26 @@ export class TypeScriptWorkflowRuntime {
         return null;
       }
 
-      // Extract definition details (assuming definition is JSONB with executeFn, description, tags)
-      const definitionData = versionRecord.definition || {};
+      // Extract metadata from registration definition (if available)
+      // We still need this for tags, etc., until the registration table is also flattened.
+      const registrationDefinitionData = versionRecord.reg_definition || {};
 
       // Convert the stored definition to a WorkflowDefinition
       const serializedDefinition: SerializedWorkflowDefinition = {
         metadata: {
           name: versionRecord.name || 'Unknown',
-          description: definitionData.description || versionRecord.reg_description || '',
+          // Prefer registration description, fall back to definition description if needed (though definition shouldn't have it anymore)
+          description: versionRecord.reg_description || registrationDefinitionData.description || '',
           version: versionRecord.version,
-          tags: definitionData.tags || []
+          // Get tags from the registration definition for now
+          tags: registrationDefinitionData.tags || []
         },
-        // Assuming executeFn is stored within the definition JSONB
-        executeFn: definitionData.executeFn
+        // Use the code directly from the version table
+        executeFn: versionRecord.code
       };
 
       if (!serializedDefinition.executeFn) {
-         logger.error(`executeFn not found in definition for workflow registration ID: ${registrationId}`);
+         logger.error(`Workflow code not found in version record for workflow registration ID: ${registrationId}`);
          return null;
       }
 

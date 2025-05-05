@@ -114,7 +114,6 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
           tags: validatedData.tags, // Pass the array directly, not as a JSON string
           version: validatedData.version, // Add the version field
           status: validatedData.isActive ? 'active' : 'inactive',
-          definition: workflowDefinition, // Add the definition field
           created_by: user.user_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -129,7 +128,7 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
           tenant_id: user.tenant,
           version: validatedData.version,
           is_current: true,
-          definition: workflowDefinition, // Pass the object directly, not as a JSON string
+          code: validatedData.code, // Use the new code field
           created_by: user.user_id,
           created_at: new Date().toISOString(),
         });
@@ -236,7 +235,6 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
           tags: validatedData.tags,
           version: newVersion, // Update with incremented version
           status: validatedData.isActive ? 'active' : 'inactive',
-          definition: workflowDefinition,
           updated_at: new Date().toISOString(),
         });
       
@@ -257,7 +255,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
           tenant_id: user.tenant,
           version: newVersion, // Use the new version
           is_current: true,
-          definition: workflowDefinition,
+          code: validatedData.code, // Use the new code field
           created_by: user.user_id,
           created_at: new Date().toISOString(),
         });
@@ -441,9 +439,24 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
       throw new Error(`Workflow with ID ${id} not found`);
     }
     
-    // Parse definition
-    const definition = result.definition || {}; // Handle potentially missing definition
-    
+    // Fetch the current version's code separately
+    const currentVersion = await knex('workflow_registration_versions')
+      .where({
+        registration_id: id,
+        tenant_id: user.tenant,
+        is_current: true,
+      })
+      .select('code')
+      .first();
+
+    if (!currentVersion && !result.isSystemManaged) { // System workflows might not have a version initially? Or handle differently?
+      // If it's not a system workflow and has no current version, something is wrong
+      logger.warn(`Workflow ${id} has no current version, but registration exists.`);
+      // Depending on requirements, you might throw an error or return default code
+    }
+
+    const workflowCode = currentVersion?.code || ''; // Use empty string if no code found
+
     // Return workflow data
     return {
       id: result.registration_id,
@@ -458,7 +471,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
                 : (result.tags as string).split(',').map((tag: string) => tag.trim()).filter(Boolean)) // Otherwise, assume comma-separated
             : [], // Default to empty array if null or other type
       isActive: result.status === 'active',
-      code: definition.executeFn,
+      code: workflowCode, // Use code from the version table
       isSystemManaged: result.isSystemManaged, // Add the flag
     };
   } catch (error) {
@@ -534,10 +547,24 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
       )
       .orderBy('wr.created_at', 'desc');
     
+    // Fetch codes for all current versions in one go
+    const registrationIds = filteredWorkflowsData.map(w => w.registration_id);
+    const currentVersions = await knex('workflow_registration_versions')
+      .whereIn('registration_id', registrationIds)
+      .andWhere({
+        tenant_id: tenant || '', // Ensure tenant isolation
+        is_current: true,
+      })
+      .select('registration_id', 'code');
+
+    // Create a map for quick lookup: registration_id -> code
+    const codeMap = new Map<string, string>();
+    currentVersions.forEach(v => {
+      codeMap.set(v.registration_id, v.code);
+    });
+
     // Process the results from the model function
     const workflows: WorkflowDataWithSystemFlag[] = filteredWorkflowsData.map(data => { // Use filtered data
-      const definition = data.definition || {}; // Handle potentially missing definition
-      
       // Safely parse tags
       let parsedTags: string[] = [];
       if (Array.isArray(data.tags)) {
@@ -550,6 +577,10 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
           parsedTags = tagsString.split(',').map((tag: string) => tag.trim()).filter(Boolean);
         }
       }
+
+      // Get code from the map, default to empty string if not found
+      const workflowCode = codeMap.get(data.registration_id) || '';
+
       return {
         // Map all fields from WorkflowRegistrationWithSystemFlag
         registration_id: data.registration_id, // Use registration_id as the primary ID
@@ -559,7 +590,7 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
         version: data.version,
         tags: parsedTags, // Use the safely parsed tags
         isActive: data.status === 'active', // Status from registration table
-        code: definition.executeFn, // executeFn from definition JSONB
+        code: workflowCode, // Use code from the version table map
         // Add other fields from the model result
         category: data.category,
         status: data.status,
