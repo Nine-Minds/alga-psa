@@ -319,13 +319,23 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     // index and onUpdateEntry are needed to update the state.
   }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]); // Removed tax/service dependencies
 
-  const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
-    // If entry is billable, update duration. Otherwise keep it at 0
-    return {
-      ...updatedEntry,
-      billable_duration: updatedEntry.billable_duration > 0 ? Math.max(1, newDuration) : 0
-    };
-  }, []);
+const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
+  const durationToSet = Math.max(0, newDuration);
+  
+  const newBillableDuration = updatedEntry.billable_duration === 0 ? 0 : durationToSet;
+  
+  console.log('Updating billable duration:', {
+    oldBillableDuration: updatedEntry.billable_duration,
+    newDuration: durationToSet,
+    newBillableDuration,
+    isExplicitlyZero: updatedEntry.billable_duration === 0
+  });
+  
+  return {
+    ...updatedEntry,
+    billable_duration: newBillableDuration
+  };
+}, []);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -407,11 +417,21 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     const totalMinutes = Math.max(1, hours * 60 + minutes); // Enforce minimum 1 minute
     const newEndTime = addMinutes(startTime, totalMinutes);
 
+    const newBillableDuration = entry.billable_duration === 0 ? 0 : totalMinutes;
+    
     const updatedEntry = {
       ...entry,
       end_time: formatISO(newEndTime),
-      billable_duration: totalMinutes > 0 ? totalMinutes : 0
+      billable_duration: newBillableDuration
     };
+
+    console.log('Duration change:', { 
+      hours, 
+      minutes, 
+      totalMinutes, 
+      oldBillableDuration: entry.billable_duration,
+      newBillableDuration
+    });
 
     onUpdateEntry(index, updatedEntry);
     onUpdateTimeInputs({

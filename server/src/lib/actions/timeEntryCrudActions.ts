@@ -184,7 +184,17 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
     const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
     
     // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
-    const finalBillableDuration = billable_duration === 0 ? 0 : actualDurationMinutes;
+    const finalBillableDuration = billable_duration === 0 ? 0 :
+                               (typeof billable_duration === 'number' && billable_duration > 0 ? billable_duration : actualDurationMinutes);
+
+    console.log('Calculating billable duration:', {
+      providedBillableDuration: billable_duration,
+      actualDurationMinutes,
+      finalBillableDuration,
+      isExplicitlyZero: billable_duration === 0,
+      isValidNumber: typeof billable_duration === 'number' && billable_duration > 0,
+      billableDurationType: typeof billable_duration
+    });
 
     const cleanedEntry = {
       work_item_id,

@@ -201,13 +201,26 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     try {
       const { isNew, isDirty, tempId, ...cleanedEntry } = entry;
   
+      // Calculate actual duration for validation purposes
+      const actualDuration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
+      
+      // Force billable duration to be the actual duration unless explicitly set to 0
+      const durationToSend = entry.billable_duration === 0 ? 0 : Math.max(1, actualDuration);
+
+      console.log('Preparing time entry with billable_duration:', {
+        entryBillableDuration: entry.billable_duration,
+        actualDuration,
+        durationToSend,
+        forcingActualDuration: entry.billable_duration !== 0 && durationToSend === actualDuration
+      });
+
       // Prepare the time entry with all required fields
       const timeEntry = {
         ...cleanedEntry,
         work_item_id: workItem.work_item_id,
         work_item_type: workItem.type,
         time_sheet_id: timeSheetId,
-        billable_duration: entry.billable_duration || 0,
+        billable_duration: durationToSend,
         start_time: entry.start_time,
         end_time: entry.end_time,
         created_at: entry.created_at || formatISO(new Date()),
@@ -216,16 +229,15 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         approval_status: 'DRAFT' as TimeSheetStatus
       };
       
-      // If the entry is supposed to be billable, ensure the billable_duration matches the actual duration
-      if (timeEntry.billable_duration > 0) {
-        const actualDuration = calculateDuration(parseISO(timeEntry.start_time), parseISO(timeEntry.end_time));
-        if (timeEntry.billable_duration !== actualDuration) {
-          console.log(`Correcting billable_duration from ${timeEntry.billable_duration} to ${actualDuration}`);
-          timeEntry.billable_duration = actualDuration;
-        }
-      }
-      
       console.log('Prepared time entry:', timeEntry);
+      
+      console.log('Billable duration before sending to backend:', {
+        billableDuration: timeEntry.billable_duration,
+        type: typeof timeEntry.billable_duration,
+        isZero: timeEntry.billable_duration === 0,
+        isNumber: typeof timeEntry.billable_duration === 'number'
+      });
+      
       const savedEntry = await onSave(timeEntry);
       console.log('Saved entry response:', savedEntry);
   

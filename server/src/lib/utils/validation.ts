@@ -4,17 +4,21 @@ import { Temporal } from '@js-temporal/polyfill';
 
 // Basic validation utilities
 export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
-  if (process.env.NODE_ENV === 'development') {
+  try {
     return schema.parse(data);
+  } catch (error) {
+    console.error('Validation error:', error);
+    throw error;
   }
-  return data as T;
 }
 
 export function validateArray<T>(schema: z.ZodSchema<T>, data: unknown[]): T[] {
-  if (process.env.NODE_ENV === 'development') {
+  try {
     return z.array(schema).parse(data);
+  } catch (error) {
+    console.error('Array validation error:', error);
+    throw error;
   }
-  return data as T[];
 }
 
 // Shared schema utilities

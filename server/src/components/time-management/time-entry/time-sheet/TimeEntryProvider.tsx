@@ -177,7 +177,15 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     } else if (defaultStartTime && defaultEndTime) {
       const duration = calculateDuration(defaultStartTime, defaultEndTime);
 
-      const isBillable = workItem.is_billable !== undefined ? workItem.is_billable : true;
+      // Determine if the entry should be billable by default
+      const isBillable = workItem.is_billable === false ? false : true;
+      
+      console.log('Creating new time entry with defaults:', {
+        isBillable,
+        duration,
+        billableDuration: isBillable ? duration : 0
+      });
+      
       newEntries = [{
         work_item_id: workItem.work_item_id,
         start_time: formatISO(defaultStartTime),
@@ -216,12 +224,21 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       }
 
       const duration = calculateDuration(startTime, endTime);
+      
+      // Always set to billable (true) unless explicitly set to false
+      const isBillable = workItem.is_billable === false ? false : true;
+      
+      console.log('Creating new ad-hoc time entry:', {
+        isBillable,
+        duration,
+        billableDuration: isBillable ? duration : 0
+      });
 
       newEntries = [{
         work_item_id: workItem.work_item_id,
         start_time: formatISO(startTime),
         end_time: formatISO(endTime),
-        billable_duration: duration,
+        billable_duration: isBillable ? duration : 0,
         work_item_type: workItem.type,
         notes: workItem.description || '',
         entry_id: '',
