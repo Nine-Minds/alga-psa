@@ -17,9 +17,8 @@ export class FileSystemSecretProvider implements ISecretProvider {
   private basePath: string;
 
   constructor() {
-    // Default path relative to server root (/Users/robertisaacs/alga-psa/server)
-    // __dirname points to /Users/robertisaacs/alga-psa/server/src/lib/secrets
-    const defaultPath = path.resolve(__dirname, '../../../secrets');
+    const serverRoot = process.cwd(); // Gets the current working directory (app root)
+    const defaultPath = path.resolve(serverRoot, '../secrets');
     this.basePath = process.env.SECRET_FS_BASE_PATH || defaultPath;
     console.info(`FileSystemSecretProvider initialized with base path: ${this.basePath}`);
   }
