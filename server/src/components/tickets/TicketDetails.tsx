@@ -691,7 +691,21 @@ const handleClose = () => {
 
             // Calculate times based on timer
             const endTime = new Date();
-            const startTime = new Date(endTime.getTime() - (elapsedTime * 1000));
+            const startTime = new Date();
+            
+            startTime.setTime(startTime.getTime() - (elapsedTime * 1000));
+            if (elapsedTime > 0 && (endTime.getTime() - startTime.getTime()) < 60000) {
+                startTime.setTime(endTime.getTime() - 60000);
+            }
+            
+            console.log('Time entry times:', {
+                startTime,
+                endTime,
+                elapsedTimeSeconds: elapsedTime,
+                elapsedTimeMinutes: Math.round(elapsedTime / 60),
+                timeDifferenceMs: endTime.getTime() - startTime.getTime(),
+                timeDifferenceMinutes: (endTime.getTime() - startTime.getTime()) / 60000
+            });
 
             // Create initial time entry with description
             const initialEntry = {
@@ -718,11 +732,8 @@ const handleClose = () => {
                                 created_at: new Date().toISOString(),
                                 updated_at: new Date().toISOString(),
                                 approval_status: 'DRAFT',
-                                billable_duration: Math.round(elapsedTime / 60), // Convert seconds to minutes
                                 work_item_type: 'ticket',
-                                work_item_id: ticket.ticket_id!,
-                                start_time: startTime.toISOString(),
-                                end_time: endTime.toISOString()
+                                work_item_id: ticket.ticket_id!
                             });
                             toast.success('Time entry saved successfully');
                             closeDrawer();
@@ -946,7 +957,7 @@ const handleClose = () => {
                             </div>
                         </Suspense>
                     </div>
-                    <div className="w-96" id="ticket-properties-container">
+                    <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse bg-gray-200 h-96 rounded-lg mb-6"></div>}>
                             <TicketProperties
                                 id={`${id}-properties`}

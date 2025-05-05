@@ -79,11 +79,13 @@ export const timeEntrySchema = tenantSchema.extend({
   end_time: iso8601Schema,
   created_at: iso8601Schema,
   updated_at: iso8601Schema,
-  billable_duration: z.number(),
+  billable_duration: z.number().nonnegative(),
   notes: z.string(),
   user_id: z.string(),
   time_sheet_id: z.string().optional(),
   approval_status: timeSheetStatusSchema,
   service_id: z.string().optional(),
-  tax_region: z.string().optional()
+  tax_region: z.string().optional(),
+  billing_plan_id: z.string().optional(),
+  tax_rate_id: z.string().nullable().optional()
 });
