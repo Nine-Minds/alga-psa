@@ -48,7 +48,7 @@ export default {
     try {
       // --- Try Tenant Workflow ---
       const tenantRegistration = await knex('workflow_registrations as wr')
-        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .select('wr.*', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
               .andOn('wr.tenant_id', '=', 'wrv.tenant_id'); // Join includes tenant
@@ -84,7 +84,7 @@ export default {
 
       // --- Try System Workflow ---
       const systemRegistration = await knex('system_workflow_registrations as swr')
-        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .select('swr.*', 'swr.definition', 'swr.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
         .join('system_workflow_registration_versions as swrv', function() {
           this.on('swr.registration_id', '=', 'swrv.registration_id'); // No tenant join
           if (version) {
@@ -140,7 +140,7 @@ export default {
     try {
       // --- Try Tenant Workflow ---
       const tenantRegistration = await knex('workflow_registrations as wr')
-        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .select('wr.*', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
               .andOn('wr.tenant_id', '=', 'wrv.tenant_id');
@@ -175,7 +175,7 @@ export default {
 
       // --- Try System Workflow ---
       const systemRegistration = await knex('system_workflow_registrations as swr')
-        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .select('swr.*', 'swr.definition', 'swr.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
         .join('system_workflow_registration_versions as swrv', function() {
           this.on('swr.registration_id', '=', 'swrv.registration_id');
           if (version) {
@@ -224,7 +224,7 @@ export default {
     try {
       // --- Tenant Workflows ---
       const tenantRegistrations = knex('workflow_registrations as wr')
-        .select('wr.*', 'wrv.definition', 'wrv.parameters', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .select('wr.*', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
               .andOn('wr.tenant_id', '=', 'wrv.tenant_id')
@@ -235,7 +235,7 @@ export default {
 
       // --- System Workflows ---
       const systemRegistrations = knex('system_workflow_registrations as swr')
-        .select('swr.*', 'swrv.definition', 'swrv.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .select('swr.*', 'swr.definition', 'swr.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
         .join('system_workflow_registration_versions as swrv', function() {
           this.on('swr.registration_id', '=', 'swrv.registration_id')
               .andOn('swrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
