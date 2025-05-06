@@ -3,6 +3,7 @@ import {
   InvoiceViewModel,
   InvoiceItem,
   TimeEntry,
+  Customer,
   LayoutElement,
   ElementStyle,
   RowElement,
@@ -166,8 +167,10 @@ function createCustomerSection(viewModel: InvoiceViewModel): SectionElement {
     
     // Check if customer exists and use its properties if it does
     if (viewModel.customer !== null) {
-        customerName = viewModel.customer.name;
-        customerAddress = viewModel.customer.address;
+        // Use a local variable with the correct type
+        const customer = viewModel.customer as Customer;
+        customerName = customer.name;
+        customerAddress = customer.address;
     }
     
     const customerSection = new SectionElement([
