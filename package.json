@@ -20,8 +20,7 @@
     "build:shared": "cd shared && npm run build",
     "build:workflow-worker": "cd services/workflow-worker && npm run build",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
-    "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
-    "postinstall": "npm install --prefix server/src/invoice-templates/assemblyscript"
+    "dev:workflow-worker": "cd services/workflow-worker && npm run dev"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
