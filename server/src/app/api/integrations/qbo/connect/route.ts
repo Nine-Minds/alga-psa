@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'; // Keep only one import
-import { getCurrentUser } from '../../../../../lib/actions/user-actions/userActions'; // Use relative path
 import crypto from 'crypto';
 // --- Import Actual Implementations ---
-// Assuming ISecretProvider is correctly imported and instantiated elsewhere or via getSecretProvider
 import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
+import { getSecretProviderInstance } from '../../../../../lib/secrets';
+import { createTenantKnex } from '../../../../../lib/db'; // Import createTenantKnex
 // TODO: Import the actual CSRF token storage mechanism
 // import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed
 
@@ -11,30 +11,28 @@ import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
 const INTUIT_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2'; // Use sandbox URL for development if needed
 const QBO_SCOPES = 'com.intuit.quickbooks.accounting';
 const QBO_CLIENT_ID_SECRET_NAME = 'qbo_client_id'; // Define constant
-const QBO_REDIRECT_URI_SECRET_NAME = 'qbo_redirect_uri'; // Define constant
+const QBO_REDIRECT_URI = process.env.QBO_REDIRECT_URI || 'http://localhost:3000/api/integrations/qbo/callback';
 
 export async function GET(request: Request) {
   let tenantId: string | null = null;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
-    const currentUser = await getCurrentUser();
-    if (!currentUser?.tenant) {
-      console.error('QBO Connect: Tenant ID not found in current user session.');
+    // Get tenant ID from knex
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      console.error('QBO Connect: Tenant ID not found in current context.');
       // Redirecting to an error page might be better UX than just returning JSON
       return NextResponse.json({ error: 'Unauthorized - Tenant ID missing' }, { status: 401 });
     }
-    tenantId = currentUser.tenant;
+    tenantId = tenant;
 
     // Retrieve QBO Client ID (App-level secret) using secret provider
     const clientId = await secretProvider.getAppSecret(QBO_CLIENT_ID_SECRET_NAME);
 
-    // Retrieve Redirect URI using secret provider
-    const redirectUri = await secretProvider.getAppSecret(QBO_REDIRECT_URI_SECRET_NAME);
-
-    if (!clientId || !redirectUri) {
-      console.error(`QBO Connect: Missing QBO Client ID or Redirect URI in secrets.`); // Removed tenantId from log as these are app secrets
+    if (!clientId) {
+      console.error(`QBO Connect: Missing QBO Client ID in secrets.`);
       return NextResponse.json({ error: 'QBO integration is not configured correctly.' }, { status: 500 });
     }
 
@@ -59,7 +57,7 @@ export async function GET(request: Request) {
       client_id: clientId,
       response_type: 'code',
       scope: QBO_SCOPES,
-      redirect_uri: redirectUri,
+      redirect_uri: QBO_REDIRECT_URI,
       state: state,
     });
 

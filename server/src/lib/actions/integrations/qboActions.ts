@@ -6,6 +6,7 @@ import axios from 'axios'; // Import axios
 import { ISecretProvider } from 'server/src/lib/secrets'; // Assuming path - Removed getSecretProvider as it's not exported
 import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
 import { createTenantKnex } from '../../db';
+import { getSecretProviderInstance } from 'server/src/lib/secrets';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -116,8 +117,8 @@ export async function getQboItems(): Promise<QboItem[]> {
     return [];
   }
   const tenantId = user.tenant;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
     const credentials = await getTenantQboCredentials(secretProvider, tenantId); // Use helper
@@ -170,17 +171,17 @@ export async function getQboItems(): Promise<QboItem[]> {
  * Corresponds to Task 82.
  */
 export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
-  let tenantId: string | null = null;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
+  const { knex, tenant: tenantId } = await createTenantKnex();
 
   try {
     const currentUser = await getCurrentUser();
-    if (!currentUser?.tenant) {
+    if (!tenantId) {
       console.error('QBO Status Action: Tenant ID not found in current user session.');
       return { status: 'Not Connected', connected: false };
-    }
-    tenantId = currentUser.tenant;
+    }    
 
     const credentials = await getTenantQboCredentials(secretProvider, tenantId); // Use helper
 
@@ -253,8 +254,8 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
  */
 export async function disconnectQbo(): Promise<{ success: boolean; error?: string }> {
   let tenantId: string | null = null;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
     const currentUser = await getCurrentUser();
@@ -350,8 +351,8 @@ export async function getQboTaxCodes(): Promise<QboTaxCode[]> {
     return [];
   }
   const tenantId = user.tenant;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
     const credentials = await getTenantQboCredentials(secretProvider, tenantId); // Use helper
@@ -409,8 +410,8 @@ export async function getQboTerms(): Promise<QboTerm[]> {
     return [];
   }
   const tenantId = user.tenant;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
     const credentials = await getTenantQboCredentials(secretProvider, tenantId); // Use helper

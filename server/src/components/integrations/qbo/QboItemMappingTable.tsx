@@ -72,10 +72,10 @@ export interface DisplayMapping extends ExternalEntityMapping {
 
 interface QboItemMappingTableProps {
   realmId: string;
-  tenantId: string;
+  // Removed tenantId prop
 }
 
-export function QboItemMappingTable({ realmId, tenantId }: QboItemMappingTableProps) {
+export function QboItemMappingTable({ realmId }: QboItemMappingTableProps) {
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
   const [algaServices, setAlgaServices] = useState<IService[]>([]); // Use IService type
   const [qboItems, setQboItems] = useState<QboItem[]>([]);
@@ -130,7 +130,7 @@ export function QboItemMappingTable({ realmId, tenantId }: QboItemMappingTablePr
 
   useEffect(() => {
     fetchData();
-  }, [tenantId, realmId]); // Re-fetch if tenant or realmId changes
+  }, [realmId]); // Removed tenantId from dependency array
 
   const handleEdit = (mapping: DisplayMapping) => {
     setEditingMapping(mapping);
@@ -331,7 +331,7 @@ export function QboItemMappingTable({ realmId, tenantId }: QboItemMappingTablePr
           onClose={() => setIsFormOpen(false)}
           onSave={handleFormSave}
           existingMapping={editingMapping}
-          tenantId={tenantId}
+          // Removed tenantId prop
           realmId={realmId}
           algaEntityType={algaEntityType}
           externalEntityType={externalEntityType}
