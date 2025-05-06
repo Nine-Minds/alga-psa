@@ -192,9 +192,9 @@ export async function GET(request: Request) {
       // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
       const eventTypes = Object.keys(eventWorkflowMap);
       // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
-      const events = await knex('event_catalog')
+      const events = await knex('system_event_catalog') // Changed table name
         .select('event_id', 'event_type')
-        .where('tenant_id', tenantId) // Filter by tenant
+        // Removed tenant_id filter
         .whereIn('event_type', eventTypes);
 
       const eventIdMap = events.reduce((acc, ev) => {
