@@ -60,7 +60,7 @@ exports.up = async function(knex) { // Changed to exports.up, removed types
         registration_id: QBO_REGISTRATION_ID,
         version: qboSyncWorkflowDefinition.metadata.version,
         is_current: true,
-        code: qboSyncWorkflowDefinition.executeFn, // Store executeFn string in 'code'
+        definition: qboSyncWorkflowDefinition.executeFn,
         created_by: null, // Use null for system user
         created_at: new Date().toISOString(),
         // updated_at is handled by trigger in the schema migration
