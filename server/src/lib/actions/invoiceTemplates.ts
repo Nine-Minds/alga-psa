@@ -363,15 +363,26 @@ export async function compileAndSaveTemplate(
                 // This ensures that imports like "../assembly/types" will work correctly
                 const tempAssemblyDir = path.resolve(tempCompileDir, 'assembly');
                 
-                // Check if the symbolic link already exists
+                // Ensure the target path for the symlink is clear, then create it.
+                // Remove any existing file, directory, or symlink at tempAssemblyDir first.
                 try {
-                    await fs.access(tempAssemblyDir);
-                    console.log(`Symbolic link at ${tempAssemblyDir} already exists`);
-                } catch (linkError) {
-                    // Create the symbolic link if it doesn't exist
-                    console.log(`Creating symbolic link from ${tempAssemblyDir} to ${assemblyDir}`);
-                    await fs.symlink(assemblyDir, tempAssemblyDir, 'dir');
+                    // fs.rm can remove files, directories, and symlinks.
+                    // force: true - no error if path doesn't exist.
+                    // recursive: true - needed if path is a directory (though symlink target is 'dir', the symlink itself isn't necessarily a dir).
+                    await fs.rm(tempAssemblyDir, { force: true, recursive: true });
+                    console.log(`Ensured path ${tempAssemblyDir} is clear or was cleared.`);
+                } catch (rmError: any) {
+                    // This catch is for unexpected errors during fs.rm, e.g., permission issues.
+                    // force:true should prevent ENOENT errors. If fs.rm fails critically,
+                    // it's better to let the compilation process fail.
+                    console.error(`Error trying to clear path ${tempAssemblyDir} before creating symlink:`, rmError);
+                    throw rmError; // Re-throw to be caught by the outer try-catch block for compilation failure
                 }
+
+                // Create the new symbolic link
+                console.log(`Creating symbolic link from ${tempAssemblyDir} to ${assemblyDir}`);
+                await fs.symlink(assemblyDir, tempAssemblyDir, 'dir');
+                console.log(`Successfully created symbolic link at ${tempAssemblyDir} pointing to ${assemblyDir}`);
             } catch (error) {
                 console.error(`Required directory does not exist or cannot create temp directory:`, error);
                 return {
