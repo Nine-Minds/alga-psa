@@ -15,6 +15,9 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/services/invoiceService'; // Import persistManualInvoiceItems
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
+import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
+import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js'; // Import Redis stream client getter
+import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -525,6 +528,45 @@ async function updateManualInvoiceItemsInternal(
 
   // Recalculate totals after modifications
   await billingEngine.recalculateInvoice(invoiceId);
+
+  // Emit INVOICE_UPDATED event after recalculation is complete
+  try {
+    // Re-fetch the updated invoice details to include in the payload
+    const updatedInvoice = await knex('invoices')
+      .where({ invoice_id: invoiceId, tenant })
+      .first();
+
+    if (!updatedInvoice) {
+      // This shouldn't happen if recalculate succeeded, but good to check
+      console.error(`[updateManualInvoiceItemsInternal] Failed to fetch updated invoice ${invoiceId} for event emission.`);
+      return; // Exit if invoice somehow disappeared
+    }
+
+    const redisStreamClient = getRedisStreamClient();
+    const eventToPublish = {
+      event_id: uuidv4(), // Generate a new UUID for the event
+      execution_id: invoiceId, // Use invoiceId as the relevant identifier for this event
+      event_name: 'INVOICE_UPDATED',
+      event_type: 'INVOICE_UPDATED', // Use INVOICE_UPDATED as the event type
+      tenant: tenant,
+      timestamp: new Date().toISOString(),
+      user_id: session.user.id,
+      payload: {
+        invoiceId: invoiceId,
+        companyId: updatedInvoice.company_id,
+        status: updatedInvoice.status,
+        totalAmount: updatedInvoice.total_amount,
+        invoiceNumber: updatedInvoice.invoice_number,
+        // Add other relevant details if needed
+      },
+    };
+    await redisStreamClient.publishEvent(eventToPublish);
+    console.log(`[updateManualInvoiceItemsInternal] Successfully published INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}`);
+
+  } catch (eventError) {
+    console.error(`[updateManualInvoiceItemsInternal] Failed to enqueue INVOICE_UPDATED event for invoice ${invoiceId}:`, eventError);
+    // Decide if this error should be propagated or just logged
+  }
 }
 
 

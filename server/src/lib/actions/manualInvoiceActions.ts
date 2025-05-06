@@ -5,6 +5,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { IInvoiceItem, InvoiceViewModel, DiscountType } from 'server/src/interfaces/invoice.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
+import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel'; // Corrected import
+import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient';
+import { toStreamEvent } from '@shared/workflow/streams/workflowEventSchema';
+import { IWorkflowEvent } from '@shared/workflow/persistence/workflowInterfaces'; // Corrected import path
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import * as invoiceService from 'server/src/lib/services/invoiceService';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -217,6 +221,42 @@ export async function updateManualInvoice(
       tenant
     })
     .orderBy('created_at', 'asc');
+
+  // Emit INVOICE_UPDATED event
+  try {
+    const eventId = uuidv4();
+    const eventData: IWorkflowEvent = {
+      event_id: eventId,
+      event_name: 'INVOICE_UPDATED',
+      event_type: 'INVOICE_UPDATED', // Or 'invoice.lifecycle' if convention
+      tenant: tenant,
+      payload: {
+        invoiceId: invoiceId,
+        tenantId: tenant,
+        userId: session.user.id, // Include user ID if available
+        // Add other relevant details from updatedInvoice if needed
+      },
+      user_id: session.user.id,
+      from_state: existingInvoice.status, // Use existing status
+      to_state: updatedInvoice.status, // Use updated status
+      execution_id: invoiceId, // Use invoiceId for traceability
+      created_at: new Date().toISOString(), // Add created_at
+    };
+
+    // Persist event to DB
+    await WorkflowEventModel.create(knex, tenant, eventData);
+
+    // Publish event to Redis stream
+    const streamEvent = toStreamEvent(eventData);
+    const redisStreamClient = getRedisStreamClient();
+    await redisStreamClient.publishEvent(streamEvent);
+
+    console.log(`Successfully emitted INVOICE_UPDATED event for invoice ${invoiceId}`);
+
+  } catch (error) {
+    console.error(`Failed to emit INVOICE_UPDATED event for invoice ${invoiceId}:`, error);
+    // Do not re-throw, allow the invoice update to succeed
+  }
 
   // Return updated invoice view model
   return {
