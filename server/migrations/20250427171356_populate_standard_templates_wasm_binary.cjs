@@ -18,6 +18,7 @@
   // Add other standard templates here if they exist
 // ];
 
+
 exports.up = async function(knex) {
  return Promise.resolve
 }
