@@ -3,6 +3,7 @@ import {
   InvoiceViewModel,
   InvoiceItem,
   TimeEntry,
+  Customer,
   LayoutElement,
   ElementStyle,
   RowElement,
@@ -160,12 +161,24 @@ function createHeaderSection(viewModel: InvoiceViewModel): SectionElement {
 }
 
 function createCustomerSection(viewModel: InvoiceViewModel): SectionElement {
+    // Default values
+    let customerName: string = "[Customer Name]";
+    let customerAddress: string = "[Customer Address]";
+    
+    // Check if customer exists and use its properties if it does
+    if (viewModel.customer !== null) {
+        // Use a local variable with the correct type
+        const customer = viewModel.customer as Customer;
+        customerName = customer.name;
+        customerAddress = customer.address;
+    }
+    
     const customerSection = new SectionElement([
         new RowElement([
             new ColumnElement([
                 new TextElement("Bill To:", "heading2"),
-                new TextElement(viewModel.customer.name),
-                new TextElement(viewModel.customer.address),
+                new TextElement(customerName),
+                new TextElement(customerAddress),
             ])
         ])
     ]);

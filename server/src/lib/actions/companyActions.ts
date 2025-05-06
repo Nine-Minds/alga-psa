@@ -196,7 +196,13 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
     const companiesData = await baseQuery
       .select(
         'c.*',
-        db.raw('(SELECT document_id FROM document_associations da WHERE da.entity_id = c.company_id AND da.entity_type = \'company\' AND da.tenant = c.tenant LIMIT 1) as document_id')
+        db.raw(
+          `(SELECT document_id 
+          FROM document_associations da 
+          WHERE da.entity_id = c.company_id 
+          AND da.entity_type = 'company'
+          AND da.tenant = '${tenant}'
+          LIMIT 1) as document_id`)
       );
 
     // Fetch file_ids for logos
