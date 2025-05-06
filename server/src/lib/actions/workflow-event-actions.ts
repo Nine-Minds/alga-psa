@@ -7,6 +7,7 @@ import { getCurrentUser } from './user-actions/userActions';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from '../db';
 import { getEventBus } from '../eventBus';
+import { EventCatalogModel } from '../../models/eventCatalog'; // Added import
 import { getWorkflowsForEventType } from './workflow-event-attachment-actions';
 
 /**
@@ -114,10 +115,29 @@ export async function submitWorkflowEventAction(
         event_name
       });
       
+      // --- START NEW VALIDATION ---
+      // Validate event_type against both catalogs
+      const tenantEvent = await EventCatalogModel.getByEventType(knex, event_type, tenant);
+      let systemEvent = null;
+      if (!tenantEvent) {
+        // Check system catalog only if not found in tenant catalog
+        systemEvent = await knex('system_event_catalog')
+          .where({ event_type: event_type })
+          .first();
+      }
+
+      if (!tenantEvent && !systemEvent) {
+        logger.error(`[submitWorkflowEventAction] Event type "${event_type}" not found in tenant or system catalog for tenant ${tenant}`);
+        // Throw an error to prevent publishing potentially invalid events
+        throw new Error(`Event type "${event_type}" is not defined.`);
+      }
+      logger.info(`[submitWorkflowEventAction] Event type "${event_type}" validated successfully.`);
+      // --- END NEW VALIDATION ---
+
       // Get the event bus
       logger.info('[submitWorkflowEventAction] Initializing event bus');
       const eventBus = getEventBus();
-      
+
       // Publish the event to the event bus
       logger.info('[submitWorkflowEventAction] Publishing event to event bus', {
         eventType: event_type
@@ -139,17 +159,19 @@ export async function submitWorkflowEventAction(
         tenant
       });
       
-      const workflowIds = await getWorkflowsForEventType({
+      // This call should now correctly find tenant workflows attached to the event_type
+      const workflowAttachments = await getWorkflowsForEventType({
         eventType: event_type,
         tenant
       });
       
       logger.info('[submitWorkflowEventAction] Found attached workflows', {
-        count: workflowIds.length,
-        workflowIds
+        count: workflowAttachments.length,
+        // Log workflow IDs and whether they are system managed (though system managed shouldn't appear here yet)
+        attachments: workflowAttachments.map(a => ({ id: a.workflow_id, system: a.isSystemManaged }))
       });
-      
-      if (workflowIds.length === 0) {
+
+      if (workflowAttachments.length === 0) {
         logger.warn('[submitWorkflowEventAction] No workflows attached to event type', {
           eventType: event_type
         });
@@ -162,12 +184,12 @@ export async function submitWorkflowEventAction(
       
       // Return success
       logger.info('[submitWorkflowEventAction] Event successfully published to attached workflows', {
-        workflowCount: workflowIds.length,
+        workflowCount: workflowAttachments.length,
         event_type
       });
       
       return {
-        message: `Event published to ${workflowIds.length} attached workflow(s)`,
+        message: `Event published to ${workflowAttachments.length} attached workflow(s)`,
         status: 'accepted'
       };
     }

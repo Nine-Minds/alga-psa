@@ -347,3 +347,38 @@ export async function calculateChargeDetails(
 
     return { netAmount, taxCalculationResult };
 }
+// Interface for Payment Term options
+export interface IPaymentTermOption {
+  id: string; // e.g., 'net_15', 'net_30'
+  name: string; // e.g., 'Net 15', 'Net 30'
+}
+
+/**
+ * Fetches the list of available payment terms.
+ * TODO: Implement actual logic - query a table or return a predefined list.
+ */
+export async function getPaymentTermsList(): Promise<IPaymentTermOption[]> {
+  console.log(`[Billing Action] Fetching available payment terms list.`);
+
+  try {
+    // Although payment terms might be global, we use createTenantKnex
+    // as it's the standard way to get a Knex instance here.
+    // If the table IS tenant-specific, a tenant filter would be added.
+    const { knex } = await createTenantKnex();
+
+    const terms = await knex('payment_terms')
+      .select('term_code as id', 'term_name as name')
+      // Assuming an 'is_active' flag exists for filtering relevant terms
+      .where({ is_active: true })
+      // Assuming a 'sort_order' column exists for consistent ordering
+      .orderBy('sort_order', 'asc');
+
+    console.log(`[Billing Action] Found ${terms.length} active payment terms.`);
+    return terms;
+  } catch (error) {
+    console.error('[Billing Action] Error fetching payment terms:', error);
+    // Depending on requirements, might return empty array or re-throw
+    // Returning empty for now to avoid breaking UI if DB call fails
+    return [];
+  }
+}

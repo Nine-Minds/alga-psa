@@ -18,6 +18,7 @@ export class WorkflowEventAttachmentModel {
    */
   static async create(
     knex: Knex,
+    // Assuming ICreateWorkflowEventAttachment now has event_type instead of event_id
     data: ICreateWorkflowEventAttachment
   ): Promise<IWorkflowEventAttachment> {
     const [attachment] = await knex('workflow_event_attachments')
@@ -38,16 +39,36 @@ export class WorkflowEventAttachmentModel {
   static async getById(
     knex: Knex,
     attachmentId: string,
-    tenantId: string
-  ): Promise<IWorkflowEventAttachment | null> {
-    const attachment = await knex('workflow_event_attachments')
+    tenantId: string // Keep tenantId for potential RLS or future use, though not used for system query
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Add flag to return type
+    // Try tenant table first
+    const tenantAttachment = await knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         attachment_id: attachmentId,
-        tenant_id: tenantId
+        tenant_id: tenantId // Filter by tenant
       })
       .first();
-    
-    return attachment || null;
+
+    if (tenantAttachment) {
+      // Add the isSystemManaged property explicitly if needed by the type, though raw select handles it
+      // return { ...tenantAttachment, isSystemManaged: false };
+      return tenantAttachment;
+    }
+
+    // // If not found, try system table (Commented out as system table modification is out of scope)
+    // const systemAttachment = await knex('system_workflow_event_attachments')
+    //   .select('*', knex.raw('true as "isSystemManaged"'))
+    //   .where({
+    //     attachment_id: attachmentId
+    //     // No tenant filter for system table
+    //   })
+    //   .first();
+    //
+    // // Add the isSystemManaged property explicitly if needed by the type
+    // // return systemAttachment ? { ...systemAttachment, isSystemManaged: true } : null;
+    // return systemAttachment || null;
+    return null; // Return null if not found in tenant table
   }
 
   /**
@@ -55,25 +76,43 @@ export class WorkflowEventAttachmentModel {
    * 
    * @param knex Knex instance
    * @param workflowId Workflow ID
-   * @param eventId Event ID
+   * @param eventType Event Type
    * @param tenantId Tenant ID
    * @returns The workflow event attachment or null if not found
    */
-  static async getByWorkflowAndEvent(
+  static async getByWorkflowAndEventType( // Renamed method
     knex: Knex,
     workflowId: string,
-    eventId: string,
+    eventType: string, // Changed parameter name
     tenantId: string
-  ): Promise<IWorkflowEventAttachment | null> {
-    const attachment = await knex('workflow_event_attachments')
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean }) | null> { // Add flag to return type
+    // Try tenant table first
+    const tenantAttachment = await knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         workflow_id: workflowId,
-        event_id: eventId,
-        tenant_id: tenantId
+        event_type: eventType, // Changed column name
+        tenant_id: tenantId // Filter by tenant
       })
       .first();
-    
-    return attachment || null;
+
+    if (tenantAttachment) {
+      // Assuming IWorkflowEventAttachment now has event_type
+      return tenantAttachment;
+    }
+
+    // // If not found, try system table (Commented out as system table modification is out of scope)
+    // const systemAttachment = await knex('system_workflow_event_attachments')
+    //   .select('*', knex.raw('true as "isSystemManaged"'))
+    //   .where({
+    //     workflow_id: workflowId,
+    //     event_type: eventType // Assuming system table also uses event_type
+    //     // No tenant filter for system table
+    //   })
+    //   .first();
+    //
+    // return systemAttachment || null;
+    return null; // Return null if not found in tenant table
   }
 
   /**
@@ -92,22 +131,42 @@ export class WorkflowEventAttachmentModel {
     options: {
       isActive?: boolean;
     } = {}
-  ): Promise<IWorkflowEventAttachment[]> {
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Add flag to return type
     const { isActive } = options;
-    
-    const query = knex('workflow_event_attachments')
+
+    // Tenant-specific attachments
+    const tenantQuery = knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         workflow_id: workflowId,
         tenant_id: tenantId
       });
-    
+
     if (isActive !== undefined) {
-      query.where('is_active', isActive);
+      tenantQuery.where('is_active', isActive);
     }
-    
-    const attachments = await query
-      .orderBy('created_at', 'asc');
-    
+
+    // // System attachments (Commented out as system table modification is out of scope)
+    // const systemQuery = knex('system_workflow_event_attachments')
+    //   .select('*', knex.raw('true as "isSystemManaged"'))
+    //   .where({
+    //     workflow_id: workflowId // Match the same workflowId
+    //   });
+    //
+    //  if (isActive !== undefined) {
+    //   systemQuery.where('is_active', isActive);
+    // }
+    //
+    // // Combine results - only one of the queries should return results for a given workflowId
+    // // unless a system workflow somehow has the same ID as a tenant one (unlikely with UUIDs)
+    // const attachments = await knex
+    //   .unionAll([tenantQuery, systemQuery], true) // Wrap union for ordering
+    //   .orderBy('created_at', 'asc');
+
+    // Return only tenant attachments for now
+    const attachments = await tenantQuery.orderBy('created_at', 'asc');
+
+    // Assuming IWorkflowEventAttachment now has event_type
     return attachments;
   }
 
@@ -115,34 +174,53 @@ export class WorkflowEventAttachmentModel {
    * Get all workflow event attachments for an event
    * 
    * @param knex Knex instance
-   * @param eventId Event ID
+   * @param eventType Event Type
    * @param tenantId Tenant ID
    * @param options Query options
    * @returns Array of workflow event attachments
    */
-  static async getAllForEvent(
+  static async getAllForEventType( // Renamed method
     knex: Knex,
-    eventId: string,
+    eventType: string, // Changed parameter name
     tenantId: string,
     options: {
       isActive?: boolean;
     } = {}
-  ): Promise<IWorkflowEventAttachment[]> {
+  ): Promise<(IWorkflowEventAttachment & { isSystemManaged: boolean })[]> { // Add isSystemManaged to return type
     const { isActive } = options;
-    
-    const query = knex('workflow_event_attachments')
+
+    // Tenant-specific attachments
+    const tenantQuery = knex('workflow_event_attachments')
+      .select('*', knex.raw('false as "isSystemManaged"')) // Add isSystemManaged flag
       .where({
-        event_id: eventId,
+        event_type: eventType, // Changed column name
         tenant_id: tenantId
       });
-    
+
     if (isActive !== undefined) {
-      query.where('is_active', isActive);
+      tenantQuery.where('is_active', isActive);
     }
-    
-    const attachments = await query
-      .orderBy('created_at', 'asc');
-    
+
+    // // System attachments (Commented out as system table modification is out of scope)
+    // const systemQuery = knex('system_workflow_event_attachments')
+    //   .select('*', knex.raw('true as "isSystemManaged"')) // Add isSystemManaged flag
+    //   .where({
+    //     event_type: eventType // Assuming system table also uses event_type
+    //   });
+    //
+    // if (isActive !== undefined) {
+    //   systemQuery.where('is_active', isActive);
+    // }
+    //
+    // // Combine results
+    // const attachments = await knex
+    //   .unionAll([tenantQuery, systemQuery], true) // Wrap union in subquery for ordering
+    //   .orderBy('created_at', 'asc');
+
+    // Return only tenant attachments for now
+    const attachments = await tenantQuery.orderBy('created_at', 'asc');
+
+    // Assuming IWorkflowEventAttachment now has event_type
     return attachments;
   }
 
@@ -210,19 +288,87 @@ export class WorkflowEventAttachmentModel {
     knex: Knex,
     eventType: string,
     tenantId: string
-  ): Promise<string[]> {
-    const results = await knex('workflow_event_attachments as wea')
-      .join('event_catalog as ec', function() {
-        this.on('wea.event_id', 'ec.event_id')
-            .andOn('wea.tenant_id', 'ec.tenant_id');
-      })
+  ): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> {
+    // Tenant-specific attachments using the new event_type column directly
+    const tenantQuery = knex('workflow_event_attachments')
       .where({
-        'ec.event_type': eventType,
-        'wea.tenant_id': tenantId,
-        'wea.is_active': true
+        event_type: eventType,
+        tenant_id: tenantId,
+        is_active: true
       })
-      .select('wea.workflow_id');
-    
-    return results.map(r => r.workflow_id);
+      .select('workflow_id', knex.raw('false as "isSystemManaged"')); // Add flag
+
+    // // System attachments (Commented out as system table modification is out of scope)
+    // const systemQuery = knex('system_workflow_event_attachments')
+    //   .where({
+    //     event_type: eventType, // Assuming system table also uses event_type
+    //     // No tenant filter for system workflows
+    //     is_active: true
+    //   })
+    //   .select('workflow_id', knex.raw('true as "isSystemManaged"')); // Add flag
+    //
+    // // Combine results
+    // const results = await knex
+    //   .unionAll([tenantQuery, systemQuery], true); // Wrap union
+    //
+    // return results;
+
+    // Return only tenant results for now
+    const results = await tenantQuery;
+    return results;
+  }
+
+  /**
+   * Delete tenant-specific attachments linked to specific system workflows and event types.
+   * Used during integration disconnection (e.g., QBO).
+   *
+   * @param knex Knex instance
+   * @param tenantId Tenant ID
+   * @param workflowEventMap A map where keys are system workflow names and values are arrays of event types.
+   * @returns The number of deleted attachments.
+   */
+  static async deleteSystemWorkflowAttachmentsForTenant(
+    knex: Knex,
+    tenantId: string,
+    workflowEventMap: Record<string, string[]>
+  ): Promise<number> {
+    console.log(`[Model] Deleting attachments for tenant ${tenantId} based on system workflow names and event types:`, workflowEventMap);
+
+    // Build the WHERE clause dynamically based on the map
+    // Modify the query to use event_type directly from workflow_event_attachments
+    const deleteQuery = knex('workflow_event_attachments as wea')
+      .join('system_workflows as sw', 'wea.workflow_id', 'sw.workflow_id') // Join to get workflow name
+      .where('wea.tenant_id', tenantId) // Filter attachments by tenant
+      .where(function(this: Knex.QueryBuilder) { // Add type for 'this'
+          let isFirstCondition = true;
+          for (const workflowName in workflowEventMap) {
+              const eventTypes = workflowEventMap[workflowName];
+              if (eventTypes && eventTypes.length > 0) {
+                  const condition = function(this: Knex.QueryBuilder) { // Add type for 'this'
+                      this.where('sw.name', workflowName)
+                          .whereIn('wea.event_type', eventTypes); // Use event_type from wea
+                  };
+                  if (isFirstCondition) {
+                      this.where(condition);
+                      isFirstCondition = false;
+                  } else {
+                      this.orWhere(condition);
+                  }
+              }
+          }
+          // If the map was empty or invalid, this where clause might be empty,
+          // which is okay, the outer tenantId filter will still apply.
+          // If no conditions were added, potentially add a clause that ensures nothing is deleted.
+          if (isFirstCondition) {
+              console.warn("[Model] No valid workflow/event combinations provided for deletion. Adding 'where false'.");
+              this.whereRaw('false'); // Prevent accidental deletion if map is empty
+          }
+      });
+
+      // Execute the delete operation
+      const deleteResult = await deleteQuery.delete();
+
+      console.log(`[Model] Deleted ${deleteResult} attachments for tenant ${tenantId} matching criteria.`);
+      return deleteResult;
   }
 }

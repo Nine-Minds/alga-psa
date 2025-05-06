@@ -55,27 +55,48 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
       // Import WorkflowRegistrationModel
       const WorkflowRegistrationModel = (await import('@shared/workflow/persistence/workflowRegistrationModel')).default;
       
-      // Try to get the workflow by name
-      const registration = await WorkflowRegistrationModel.getByName(knex, tenant, definitionId);
-      
-      if (registration) {
-        console.log(`Found workflow registration for "${definitionId}" in database`);
-        
+      // Try to get the workflow registration and its current version's code
+      const registrationWithVersion = await knex('workflow_registrations as reg')
+        .join('workflow_registration_versions as ver', function() {
+          this.on('reg.registration_id', '=', 'ver.registration_id')
+              .andOn('ver.is_current', '=', knex.raw('true'));
+        })
+        .where({
+          'reg.tenant_id': tenant,
+          'reg.name': definitionId // Assuming definitionId is the workflow name
+        })
+        .select(
+          'reg.name',
+          'reg.description', // Get description from registration
+          'reg.tags', // Get tags from registration
+          'ver.version',
+          'ver.code' // Get code from the current version
+        )
+        .first();
+
+      if (registrationWithVersion) {
+        console.log(`Found workflow registration and current version for "${definitionId}" in database`);
+
         // Convert the stored definition to a WorkflowDefinition
         const { deserializeWorkflowDefinition } = await import('@shared/workflow/core/workflowDefinition');
-        
+
         try {
           // Create a serialized definition from the database record
           const serializedDefinition = {
             metadata: {
-              name: registration.name,
-              description: registration.definition.metadata?.description || '',
-              version: registration.version,
-              tags: registration.definition.metadata?.tags || []
+              name: registrationWithVersion.name,
+              description: registrationWithVersion.description || '', // Use registration description
+              version: registrationWithVersion.version,
+              tags: registrationWithVersion.tags || [] // Use registration tags
             },
-            executeFn: registration.definition.executeFn
+            executeFn: registrationWithVersion.code // Use code from the version table
           };
-          
+
+          if (!serializedDefinition.executeFn) {
+             console.error(`Workflow code not found in current version for "${definitionId}"`);
+             throw new Error(`Workflow code not found for ${definitionId}`);
+          }
+
           // Deserialize the workflow definition
           workflowDefinition = deserializeWorkflowDefinition(serializedDefinition);
           console.log(`Successfully deserialized workflow definition for "${definitionId}"`);
@@ -411,12 +432,22 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
         // Import WorkflowRegistrationModel
         const WorkflowRegistrationModel = (await import('@shared/workflow/persistence/workflowRegistrationModel')).default;
         
-        // Try to get the workflow by name
-        const registration = await WorkflowRegistrationModel.getByName(knex, tenant, definitionId);
-        
-        if (registration && registration.definition && registration.definition.executeFn) {
-          console.log(`Found workflow registration for "${definitionId}" in database, returning executeFn`);
-          return registration.definition.executeFn;
+        // Try to get the workflow registration and its current version's code
+        const registrationWithVersion = await knex('workflow_registrations as reg')
+          .join('workflow_registration_versions as ver', function() {
+            this.on('reg.registration_id', '=', 'ver.registration_id')
+                .andOn('ver.is_current', '=', knex.raw('true'));
+          })
+          .where({
+            'reg.tenant_id': tenant,
+            'reg.name': definitionId // Assuming definitionId is the workflow name
+          })
+          .select('ver.code') // Select only the code from the current version
+          .first();
+
+        if (registrationWithVersion && registrationWithVersion.code) {
+          console.log(`Found workflow registration for "${definitionId}" in database, returning code from current version`);
+          return registrationWithVersion.code;
         }
         
         // If we get here, the workflow was not found in the database either

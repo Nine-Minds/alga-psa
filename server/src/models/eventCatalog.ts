@@ -203,7 +203,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        is_system_event: true,
         tenant_id: tenantId
       },
       {
@@ -221,7 +220,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        is_system_event: true,
         tenant_id: tenantId
       },
       {
@@ -249,7 +247,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        is_system_event: true,
         tenant_id: tenantId
       },
       {
@@ -266,7 +263,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'projectId', 'userId']
         },
-        is_system_event: true,
         tenant_id: tenantId
       },
       {
@@ -285,7 +281,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
         },
-        is_system_event: true,
         tenant_id: tenantId
       },
       {
@@ -304,7 +299,6 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
         },
-        is_system_event: true,
         tenant_id: tenantId
       }
     ];

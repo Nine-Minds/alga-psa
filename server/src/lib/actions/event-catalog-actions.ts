@@ -124,19 +124,6 @@ export async function updateEventCatalogEntry(params: {
     throw new Error(`Event catalog entry with ID "${eventId}" not found`);
   }
   
-  // Check if the entry is a system event and prevent certain updates
-  if (entry.is_system_event) {
-    // Prevent changing the name or event type of system events
-    if (data.name) {
-      throw new Error('Cannot change the name of a system event');
-    }
-    
-    // Prevent changing the payload schema of system events
-    if (data.payload_schema) {
-      throw new Error('Cannot change the payload schema of a system event');
-    }
-  }
-  
   // Update the event catalog entry
   const updatedEntry = await EventCatalogModel.update(knex, eventId, tenant, data);
   
@@ -162,11 +149,6 @@ export async function deleteEventCatalogEntry(params: {
   
   if (!entry) {
     throw new Error(`Event catalog entry with ID "${eventId}" not found`);
-  }
-  
-  // Prevent deleting system events
-  if (entry.is_system_event) {
-    throw new Error('Cannot delete a system event');
   }
   
   // Delete the event catalog entry

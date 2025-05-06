@@ -90,6 +90,14 @@ export interface WorkflowContext {
   logger: WorkflowLogger;
   
   /**
+   * Input data for the workflow, often containing the trigger event
+   */
+  input?: {
+    triggerEvent?: WorkflowEvent;
+    [key: string]: any; // Allow other input properties
+  };
+  
+  /**
    * Get the current state of the workflow
    */
   getCurrentState(): string;

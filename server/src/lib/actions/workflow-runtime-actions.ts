@@ -6,7 +6,7 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import logger from '@shared/core/logger.js';
-import WorkflowRegistrationModel, { WorkflowRegistration } from '@shared/workflow/persistence/workflowRegistrationModel.js';
+import WorkflowRegistrationModel, { WorkflowRegistration, WorkflowRegistrationWithSystemFlag } from '@shared/workflow/persistence/workflowRegistrationModel.js'; // Import the new type
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,7 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
  * @param version Optional version string
  * @returns The workflow registration or null if not found
  */
-export async function getWorkflowRegistration(id: string, version?: string): Promise<WorkflowRegistration | null> {
+export async function getWorkflowRegistration(id: string, version?: string): Promise<WorkflowRegistrationWithSystemFlag | null> { // Updated return type
   const { knex, tenant } = await createTenantKnex();
   
   if (!tenant) {
@@ -41,7 +41,7 @@ export async function getWorkflowRegistration(id: string, version?: string): Pro
  * 
  * @returns Array of workflow registrations
  */
-export async function getAllWorkflowRegistrations(): Promise<WorkflowRegistration[]> {
+export async function getAllWorkflowRegistrations(): Promise<WorkflowRegistrationWithSystemFlag[]> { // Updated return type
   const { knex, tenant } = await createTenantKnex();
   
   if (!tenant) {

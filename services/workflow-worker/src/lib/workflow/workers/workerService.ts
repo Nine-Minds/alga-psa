@@ -1,5 +1,6 @@
 import { WorkflowWorker, WorkflowWorkerConfig, WorkerHealth } from './workflowWorker.js';
 import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '@shared/workflow/core/workflowRuntime.js';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry.js';
 import logger from '@shared/core/logger.js';
 import os from 'os';
 
@@ -51,8 +52,9 @@ export class WorkerService {
    */
   constructor(config: WorkerServiceConfig = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.workflowRuntime = getWorkflowRuntime();
-    
+    const actionRegistry = getActionRegistry();
+    this.workflowRuntime = getWorkflowRuntime(actionRegistry);
+
     logger.info(`[WorkerService] Created worker service with ${this.config.workerCount} workers`);
     
     if (this.config.autoStart) {

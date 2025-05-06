@@ -35,7 +35,7 @@ export interface IEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema: Record<string, any>; // JSON Schema for the event payload
-  is_system_event: boolean;
+  // is_system_event: boolean; // Removed as per system_event_catalog introduction
   tenant_id: string;
   created_at: string;
   updated_at: string;
@@ -50,7 +50,7 @@ export interface ICreateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema: Record<string, any>;
-  is_system_event?: boolean;
+  // is_system_event?: boolean; // Removed as per system_event_catalog introduction
   tenant_id: string;
 }
 
@@ -62,7 +62,7 @@ export interface IUpdateEventCatalogEntry {
   description?: string;
   category?: string;
   payload_schema?: Record<string, any>;
-  is_system_event?: boolean;
+  // is_system_event?: boolean; // Removed as per system_event_catalog introduction
 }
 
 /**
@@ -135,9 +135,10 @@ export interface IUpdateWorkflowEventMapping {
 export interface IWorkflowEventAttachment {
   attachment_id: string;
   workflow_id: string;
-  event_id: string;
+  event_type: string; // Changed from event_id
   tenant_id: string;
   is_active: boolean;
+  isSystemManaged?: boolean; // Added flag for system managed workflows
   created_at: string;
   updated_at: string;
 }
@@ -147,7 +148,7 @@ export interface IWorkflowEventAttachment {
  */
 export interface ICreateWorkflowEventAttachment {
   workflow_id: string;
-  event_id: string;
+  event_type: string; // Changed from event_id
   tenant_id: string;
   is_active?: boolean;
 }
@@ -169,7 +170,7 @@ export const EventCatalogEntrySchema = z.object({
   description: z.string().optional(),
   category: z.string().optional(),
   payload_schema: z.record(z.any()),
-  is_system_event: z.boolean().default(false),
+  // is_system_event: z.boolean().default(false), // Removed as per system_event_catalog introduction
   tenant_id: z.string().uuid(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime()
@@ -207,7 +208,7 @@ export const WorkflowEventMappingSchema = z.object({
 export const WorkflowEventAttachmentSchema = z.object({
   attachment_id: z.string().uuid(),
   workflow_id: z.string().uuid(),
-  event_id: z.string().uuid(),
+  event_type: z.string(), // Changed from event_id: z.string().uuid()
   tenant_id: z.string().uuid(),
   is_active: z.boolean().default(true),
   created_at: z.string().datetime(),

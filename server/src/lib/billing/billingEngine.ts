@@ -44,6 +44,7 @@ import { string, number } from 'zod';
 import billingPlan from '../models/billingPlan';
 import service from '../models/service';
 import { TaxService } from '../services/taxService';
+// Workflow imports removed as event emission is moved back to the calling action
 
 export class BillingEngine {
   private knex: Knex;
@@ -2053,5 +2054,7 @@ export class BillingEngine {
     });
 
     // Removed console log referencing deleted variables subtotal/totalTax
+
+    // Event emission removed - moved back to invoiceModification.ts
   }
 }

@@ -499,7 +499,7 @@ export default class Invoice {
     try {
       // Fetch contact details (assuming a primary contact exists)
       const contact = await knex('contacts')
-        .where({ company_id: invoice.company_id, is_primary: true }) // Adjust if primary logic differs
+        .where({ company_id: invoice.company_id }) // Adjust if primary logic differs
         .first();
 
       const viewModel: InvoiceViewModel = {

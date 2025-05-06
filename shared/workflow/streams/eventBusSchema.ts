@@ -18,6 +18,10 @@ export const EventTypeEnum = z.enum([
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
   'CUSTOM_EVENT', // Added for test events
+  'INVOICE_CREATED', // QBO Invoice Created
+  'INVOICE_UPDATED', // QBO Invoice Updated
+  'COMPANY_CREATED', // QBO Company Created
+  'COMPANY_UPDATED', // QBO Company Updated
 ]);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -89,6 +93,13 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   amount: z.number(),
 });
 
+// Company event payload schema
+export const CompanyEventPayloadSchema = BasePayloadSchema.extend({
+  companyId: z.string().uuid(),
+  userId: z.string().uuid().optional(), // User might not always be available for system-triggered events
+  changes: z.record(z.unknown()).optional(), // Details of what changed
+});
+
 // Custom event payload schema for test events
 export const CustomEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().optional(),
@@ -113,6 +124,10 @@ export const EventPayloadSchemas = {
   INVOICE_GENERATED: InvoiceEventPayloadSchema,
   INVOICE_FINALIZED: InvoiceEventPayloadSchema,
   CUSTOM_EVENT: CustomEventPayloadSchema,
+  INVOICE_CREATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
+  INVOICE_UPDATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
+  COMPANY_CREATED: CompanyEventPayloadSchema, // Use new Company schema
+  COMPANY_UPDATED: CompanyEventPayloadSchema, // Use new Company schema
 } as const;
 
 // Create specific event schemas by extending base schema with payload
@@ -162,7 +177,11 @@ export type Event =
   | InvoiceGeneratedEvent
   | InvoiceFinalizedEvent
   | TicketDeletedEvent
-  | CustomEvent;
+  | CustomEvent
+  | z.infer<typeof EventSchemas.INVOICE_CREATED> // QBO Invoice Created
+  | z.infer<typeof EventSchemas.INVOICE_UPDATED> // QBO Invoice Updated
+  | z.infer<typeof EventSchemas.COMPANY_CREATED> // QBO Company Created
+  | z.infer<typeof EventSchemas.COMPANY_UPDATED>; // QBO Company Updated
 
 /**
  * Convert an event bus event to a workflow event

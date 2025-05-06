@@ -522,9 +522,9 @@ export class WorkflowWorker {
         return;
       }
       
-      // Start each attached workflow
-      for (const workflowId of attachedWorkflows) {
-        await this.startWorkflowFromEvent(workflowId, {
+      // Start each attached workflow, passing the isSystemManaged flag
+      for (const attachment of attachedWorkflows) { // Iterate through objects now
+        await this.startWorkflowFromEvent(attachment.workflow_id, attachment.isSystemManaged, { // Pass isSystemManaged
           event_id: eventData.event_id,
           event_type: eventData.event_type,
           event_name: eventData.event_name,
@@ -546,36 +546,49 @@ export class WorkflowWorker {
    * @param tenant The tenant ID
    * @returns Array of workflow IDs
    */
-  private async findAttachedWorkflows(eventType: string, tenant: string): Promise<string[]> {
+  private async findAttachedWorkflows(eventType: string, tenant: string): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
     try {
       logger.info(`[WorkflowWorker] Finding workflows attached to event type ${eventType} for tenant ${tenant}`);
-      
-      
+
       // Get a database connection
       const db = await getAdminConnection();
-      // Query the workflow_event_attachments table
-      const attachments = await db('workflow_event_attachments as wea')
-        .join('event_catalog as ec', function(this: any) {
-          this.on('wea.event_id', 'ec.event_id')
-              .andOn('wea.tenant_id', 'ec.tenant_id');
+
+      // Tenant attachments
+      const tenantQuery = db('workflow_event_attachments as wea')
+        .join('event_catalog as ec', function() {
+          // Assuming event_catalog might be tenant-specific or global with tenant_id
+          this.on('wea.event_id', 'ec.event_id');
+          // Add tenant filter if event_catalog has tenant_id: .andOn('wea.tenant_id', 'ec.tenant_id');
         })
         .where({
           'ec.event_type': eventType,
-          'wea.tenant_id': tenant,
+          'wea.tenant_id': tenant, // Filter attachments by tenant
           'wea.is_active': true
         })
-        .select('wea.workflow_id');
-      
-      // Extract workflow IDs (these are registration_id values in workflow_registrations)
-      const workflowIds = attachments.map((attachment: any) => attachment.workflow_id);
-      
-      logger.info(`[WorkflowWorker] Found ${workflowIds.length} workflows attached to event type ${eventType}`, {
-        workflowIds,
+        // Filter event_catalog by tenant if applicable: .andWhere('ec.tenant_id', tenant)
+        .select('wea.workflow_id', db.raw('false as "isSystemManaged"'));
+
+      // System attachments (assuming global event_catalog)
+      const systemQuery = db('system_workflow_event_attachments as swea')
+        .join('event_catalog as ec', 'swea.event_id', 'ec.event_id') // Join on event_id only
+        .where({
+          'ec.event_type': eventType,
+          // No tenant filter for system attachments
+          'swea.is_active': true
+          // No tenant filter for global event_catalog
+        })
+        .select('swea.workflow_id', db.raw('true as "isSystemManaged"'));
+
+      // Combine results
+      const results = await db.unionAll([tenantQuery, systemQuery], true);
+
+      logger.info(`[WorkflowWorker] Found ${results.length} workflows attached to event type ${eventType}`, {
+        results, // Log the full results including isSystemManaged
         eventType,
         tenant
       });
-      
-      return workflowIds;
+
+      return results;
     } catch (error) {
       logger.error(`[WorkflowWorker] Error finding attached workflows for event type ${eventType}:`, error);
       return [];
@@ -585,21 +598,27 @@ export class WorkflowWorker {
   /**
    * Start a workflow from an event
    *
-   * @param workflowId The workflow ID
+   * @param workflowId The workflow registration ID
+   * @param isSystemManaged Flag indicating if it's a system workflow
    * @param event The event that triggered the workflow
    */
-  private async startWorkflowFromEvent(workflowId: string, event: any): Promise<void> {
+   private async startWorkflowFromEvent(
+    workflowId: string,
+    isSystemManaged: boolean, // Added parameter
+    event: any
+  ): Promise<void> {
     try {
-      logger.info(`[WorkflowWorker] Starting workflow ${workflowId} from event`, {
+      logger.info(`[WorkflowWorker] Starting ${isSystemManaged ? 'system' : 'tenant'} workflow ${workflowId} from event`, {
         workflowId,
+        isSystemManaged, // Log the flag
         eventId: event.event_id,
         eventType: event.event_type,
         tenant: event.tenant
       });
       
-      // Get the workflow registration
-      const workflow = await this.getWorkflowRegistration(workflowId, event.tenant);
-      
+      // Get the workflow registration, passing the system flag
+      const workflow = await this.getWorkflowRegistration(workflowId, event.tenant, isSystemManaged);
+
       if (!workflow) {
         logger.error(`[WorkflowWorker] Workflow ${workflowId} not found`);
         return;
@@ -666,22 +685,33 @@ export class WorkflowWorker {
    * @param tenant The tenant ID
    * @returns The workflow registration or null if not found
    */
-  private async getWorkflowRegistration(workflowId: string, tenant: string): Promise<any> {
+  private async getWorkflowRegistration(
+    workflowId: string,
+    tenant: string,
+    isSystemManaged: boolean // Added parameter
+  ): Promise<any> { // Consider defining a specific return type
     try {
       // Get a database connection
       const db = await getAdminConnection();
-      
-      // Query the workflow_registrations table and join with workflow_registration_versions
-      // to get the current version of the workflow
-      const registration = await db('workflow_registrations as wr')
-        .join('workflow_registration_versions as wrv', function() {
-          this.on('wrv.registration_id', '=', 'wr.registration_id')
-              .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
-              .andOn('wrv.is_current', '=', db.raw('true'));
+
+      const registrationTable = isSystemManaged ? 'system_workflow_registrations' : 'workflow_registrations';
+      const versionTable = isSystemManaged ? 'system_workflow_registration_versions' : 'workflow_registration_versions';
+      const tenantFilter = isSystemManaged ? {} : { 'wr.tenant_id': tenant };
+
+      // Query the appropriate tables based on isSystemManaged
+      const registration = await db(`${registrationTable} as wr`)
+        .join(`${versionTable} as wrv`, function() {
+          this.on('wrv.registration_id', '=', 'wr.registration_id');
+          // No tenant join needed for system tables or version table here
+          // if (!isSystemManaged) {
+          //   // Only join on tenant_id for tenant workflows - Redundant due to where clause?
+          //   // this.andOn('wrv.tenant_id', '=', 'wr.tenant_id');
+          // }
+          this.andOn('wrv.is_current', '=', db.raw('true'));
         })
         .where({
           'wr.registration_id': workflowId,
-          'wr.tenant_id': tenant
+          ...tenantFilter // Apply tenant filter only if not system managed
         })
         .select(
           'wr.registration_id',
@@ -689,24 +719,31 @@ export class WorkflowWorker {
           'wr.description',
           'wr.tags',
           'wr.status',
-          'wrv.version_id',
+          'wrv.version_id', // Need version_id to start the workflow
           'wrv.version',
           'wrv.definition'
+          // Add other fields if needed
         )
         .first();
-      
+
       if (registration) {
-        logger.info(`[WorkflowWorker] Found workflow registration with definition:`, {
+        logger.info(`[WorkflowWorker] Found ${isSystemManaged ? 'system' : 'tenant'} workflow registration:`, {
           workflowId,
           name: registration.name,
           version_id: registration.version_id,
-          definitionMetadata: registration.definition?.metadata
+          isSystemManaged
+        });
+      } else {
+         logger.warn(`[WorkflowWorker] ${isSystemManaged ? 'System' : 'Tenant'} workflow registration not found:`, {
+          workflowId,
+          tenant: isSystemManaged ? undefined : tenant,
+          isSystemManaged
         });
       }
-      
-      return registration;
+
+      return registration; // Return the fetched registration or null
     } catch (error) {
-      logger.error(`[WorkflowWorker] Error getting workflow registration ${workflowId}:`, error);
+      logger.error(`[WorkflowWorker] Error getting ${isSystemManaged ? 'system' : 'tenant'} workflow registration ${workflowId}:`, error);
       return null;
     }
   }

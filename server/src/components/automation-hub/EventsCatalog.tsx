@@ -20,7 +20,7 @@ import {
   getEventCategories
 } from 'server/src/lib/actions/event-catalog-actions';
 import {
-  getWorkflowEventAttachmentsForEvent,
+  getWorkflowEventAttachmentsForEventType,
   deleteWorkflowEventAttachment,
   updateWorkflowEventAttachment
 } from 'server/src/lib/actions/workflow-event-attachment-actions';
@@ -42,8 +42,8 @@ export default function EventsCatalog() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [eventAttachments, setEventAttachments] = useState<Record<string, IWorkflowEventAttachment[]>>({});
-  
+  const [eventAttachments, setEventAttachments] = useState<Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]>>({}); // Include isSystemManaged
+
   // Dialog states
   const [selectedEvent, setSelectedEvent] = useState<IEventCatalogEntry | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -66,10 +66,10 @@ export default function EventsCatalog() {
         setCategories(categoriesData);
         
         // Load attachments for each event
-        const attachmentsMap: Record<string, IWorkflowEventAttachment[]> = {};
+        const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
         for (const event of eventsData) {
-          const attachments = await getWorkflowEventAttachmentsForEvent({
-            eventId: event.event_id,
+          const attachments = await getWorkflowEventAttachmentsForEventType({
+            eventType: event.event_type,
             tenant: tenant || '',
             isActive: true
           });
@@ -131,10 +131,10 @@ export default function EventsCatalog() {
           
           // Refresh attachments for each event
           const loadAttachments = async () => {
-            const attachmentsMap: Record<string, IWorkflowEventAttachment[]> = {};
+            const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
             for (const event of eventsData) {
-              const attachments = await getWorkflowEventAttachmentsForEvent({
-                eventId: event.event_id,
+              const attachments = await getWorkflowEventAttachmentsForEventType({
+                eventType: event.event_type,
                 tenant: tenant || '',
                 isActive: true
               });
@@ -183,10 +183,10 @@ export default function EventsCatalog() {
       setFilteredEvents(eventsData);
       
       // Refresh attachments for each event
-      const attachmentsMap: Record<string, IWorkflowEventAttachment[]> = {};
+      const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
       for (const event of eventsData) {
-        const attachments = await getWorkflowEventAttachmentsForEvent({
-          eventId: event.event_id,
+        const attachments = await getWorkflowEventAttachmentsForEventType({
+          eventType: event.event_type,
           tenant: tenant || '',
           isActive: true
         });
@@ -226,10 +226,10 @@ export default function EventsCatalog() {
       setFilteredEvents(eventsData);
       
       // Refresh attachments for each event
-      const attachmentsMap: Record<string, IWorkflowEventAttachment[]> = {};
+      const attachmentsMap: Record<string, (IWorkflowEventAttachment & { isSystemManaged?: boolean })[]> = {}; // Include isSystemManaged
       for (const event of eventsData) {
-        const attachments = await getWorkflowEventAttachmentsForEvent({
-          eventId: event.event_id,
+        const attachments = await getWorkflowEventAttachmentsForEventType({
+          eventType: event.event_type,
           tenant: tenant || ''
           // Get all attachments, both active and inactive
         });
@@ -341,6 +341,9 @@ export default function EventsCatalog() {
                               {attachment.is_active ? 'Active' : 'Inactive'}
                             </Badge>
                             <span className="text-sm">{attachment.workflow_id}</span>
+                            {attachment.isSystemManaged && ( // Display badge if workflow is system managed
+                              <Badge variant="secondary" className="ml-2">System</Badge>
+                            )}
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -362,13 +365,15 @@ export default function EventsCatalog() {
                               <DropdownMenuItem
                                 id={`toggle-${attachment.attachment_id}-menu-item`}
                                 onClick={() => handleToggleWorkflowActive(attachment)}
+                                disabled={!!attachment.isSystemManaged} // Disable for system workflows
                               >
                                 {attachment.is_active ? 'Deactivate' : 'Activate'}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 id={`detach-${attachment.attachment_id}-menu-item`}
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => handleDetachWorkflow(attachment)}
+                                className={`text-red-600 focus:text-red-600 ${attachment.isSystemManaged ? 'opacity-50 cursor-not-allowed' : ''}`} // Add disabled styling
+                                onClick={() => !attachment.isSystemManaged && handleDetachWorkflow(attachment)} // Prevent action if system managed
+                                disabled={!!attachment.isSystemManaged} // Disable for system workflows
                               >
                                 Detach Workflow
                               </DropdownMenuItem>

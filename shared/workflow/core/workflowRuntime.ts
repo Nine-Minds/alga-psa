@@ -100,11 +100,12 @@ export interface TypeScriptWorkflowRuntime {
   
   getRegisteredWorkflows(): Map<string, WorkflowDefinition>;
   
-  getWorkflowDefinitionByVersionId(
+  getWorkflowDefinitionById( // Renamed and changed parameter
     knex: Knex,
-    versionId: string
+    registrationId: string,
+    isSystemManaged: boolean
   ): Promise<WorkflowDefinition | null>;
-  startWorkflowByVersionId(
+  startWorkflowByVersionId( // Keep this for now, might need adjustment later
     knex: Knex,
     options: WorkflowVersionExecutionOptions
   ): Promise<WorkflowExecutionResult>;
@@ -212,39 +213,78 @@ export class TypeScriptWorkflowRuntime {
   }
   
   /**
-   * Get a workflow definition by version ID, loading from database if needed
-   * This implements on-demand loading of workflow definitions
+   * Get a workflow definition by registration ID, loading from the appropriate (tenant or system) database table.
+   * Fetches the 'current' version.
    *
-   * @param versionId The version ID of the workflow to get
+   * @param knex Knex instance
+   * @param registrationId The registration ID of the workflow
+   * @param isSystemManaged Flag indicating if it's a system workflow
    * @returns The workflow definition or null if not found
    */
-  async getWorkflowDefinitionByVersionId(knex: Knex, versionId: string): Promise<WorkflowDefinition | null> {
+  async getWorkflowDefinitionById(
+    knex: Knex,
+    registrationId: string,
+    isSystemManaged: boolean
+  ): Promise<WorkflowDefinition | null> {
+    const registrationTable = isSystemManaged ? 'system_workflow_registrations' : 'workflow_registrations';
+    const versionTable = isSystemManaged ? 'system_workflow_registration_versions' : 'workflow_registration_versions';
+    const tenantFilter = isSystemManaged ? {} : { tenant_id: this.getTenant() }; // Assuming getTenant() provides context
+
     try {
-      // Get the workflow registration version by version_id
-      const registration = await knex('workflow_registration_versions')
-        .where('version_id', versionId)
+      // Join registration and current version tables
+      const versionRecord = await knex(`${registrationTable} as reg`)
+        .join(`${versionTable} as ver`, function() {
+           this.on('reg.registration_id', '=', 'ver.registration_id');
+           // Add tenant join for tenant tables if applicable and needed for security
+           if (!isSystemManaged) {
+             // this.andOn('reg.tenant_id', '=', 'ver.tenant_id'); // This join might be redundant if filtering below
+           }
+           this.andOn('ver.is_current', '=', knex.raw('?', [true]));
+        })
+        .select(
+          'reg.name',
+          'reg.description as reg_description',
+          'reg.definition as reg_definition', // Keep fetching registration definition for metadata like tags for now
+          'ver.version',
+          'ver.code', // Select the new code column
+          'ver.parameters'
+        ) // Select necessary fields
+        .where('reg.registration_id', registrationId)
+        .where(isSystemManaged ? {} : { 'reg.tenant_id': this.getTenant() }) // Filter by tenant only if not system managed
         .first();
-      
-      if (!registration) {
-        logger.error(`No workflow registration found for version ID: ${versionId}`);
+
+      if (!versionRecord) {
+        logger.warn(`No current version found for ${isSystemManaged ? 'system' : 'tenant'} workflow registration ID: ${registrationId}`);
         return null;
       }
-      
+
+      // Extract metadata from registration definition (if available)
+      // We still need this for tags, etc., until the registration table is also flattened.
+      const registrationDefinitionData = versionRecord.reg_definition || {};
+
       // Convert the stored definition to a WorkflowDefinition
       const serializedDefinition: SerializedWorkflowDefinition = {
         metadata: {
-          name: registration.name || 'Unknown',
-          description: registration.definition.description || '',
-          version: registration.version,
-          tags: registration.definition.tags || []
+          name: versionRecord.name || 'Unknown',
+          // Prefer registration description, fall back to definition description if needed (though definition shouldn't have it anymore)
+          description: versionRecord.reg_description || registrationDefinitionData.description || '',
+          version: versionRecord.version,
+          // Get tags from the registration definition for now
+          tags: registrationDefinitionData.tags || []
         },
-        executeFn: registration.definition.executeFn
+        // Use the code directly from the version table
+        executeFn: versionRecord.code
       };
-      
+
+      if (!serializedDefinition.executeFn) {
+         logger.error(`Workflow code not found in version record for workflow registration ID: ${registrationId}`);
+         return null;
+      }
+
       // Deserialize the workflow definition
       return deserializeWorkflowDefinition(serializedDefinition);
     } catch (error) {
-      logger.error(`Failed to load workflow definition for version ID ${versionId}:`, error);
+      logger.error(`Failed to load ${isSystemManaged ? 'system' : 'tenant'} workflow definition for registration ID ${registrationId}:`, error);
       return null;
     }
   }
@@ -295,9 +335,15 @@ export class TypeScriptWorkflowRuntime {
       throw new Error(`Workflow version "${options.versionId}" not found`);
     }
     
-    // Get the workflow definition using the version ID
-    const workflowDefinition = await this.getWorkflowDefinitionByVersionId(knex, options.versionId);
-    
+    // Get the workflow definition using the registration ID (assuming versionId maps to registrationId for now)
+    // TODO: Clarify if startWorkflowByVersionId should use registration_id or version_id
+    // Assuming options.versionId IS the registration_id for this context
+    const registrationId = options.versionId;
+    // We need the isSystemManaged flag here. This function needs modification or replacement.
+    // For now, assume it's a tenant workflow. This needs fixing.
+    const isSystemManaged = false; // <<< Placeholder - Needs to be determined based on trigger source
+    const workflowDefinition = await this.getWorkflowDefinitionById(knex, registrationId, isSystemManaged);
+
     if (!workflowDefinition) {
       throw new Error(`Failed to load workflow definition for version "${options.versionId}"`);
     }

@@ -152,7 +152,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       // Create the workflow event attachment
       const attachmentData: ICreateWorkflowEventAttachment = {
         workflow_id: selectedWorkflowId,
-        event_id: event.event_id,
+        event_type: event.event_type,
         tenant_id: tenant || "", // Get tenant ID from server action
         is_active: true
       };
