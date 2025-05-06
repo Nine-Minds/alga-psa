@@ -160,12 +160,16 @@ function createHeaderSection(viewModel: InvoiceViewModel): SectionElement {
 }
 
 function createCustomerSection(viewModel: InvoiceViewModel): SectionElement {
+    // Check if customer exists and provide default values if not
+    const customerName = viewModel.customer ? viewModel.customer.name : "[Customer Name]";
+    const customerAddress = viewModel.customer ? viewModel.customer.address : "[Customer Address]";
+    
     const customerSection = new SectionElement([
         new RowElement([
             new ColumnElement([
                 new TextElement("Bill To:", "heading2"),
-                new TextElement(viewModel.customer.name),
-                new TextElement(viewModel.customer.address),
+                new TextElement(customerName),
+                new TextElement(customerAddress),
             ])
         ])
     ]);
