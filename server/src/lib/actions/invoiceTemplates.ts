@@ -346,10 +346,18 @@ export async function compileAndSaveTemplate(
         if (assemblyScriptSource) {
             console.log('Compiling AssemblyScript source...');
 
-            // Make sure the assembly directory exists and create the temp directory
+            // Make sure the assembly directory exists and create the temp directory if needed
             try {
                 await fs.access(assemblyDir);
-                await fs.mkdir(tempDir, { recursive: true });
+                
+                // Check if tempDir already exists before trying to create it
+                try {
+                    await fs.access(tempDir);
+                    console.log(`Temp directory ${tempDir} already exists, skipping creation`);
+                } catch (tempDirError) {
+                    // tempDir doesn't exist, create it
+                    await fs.mkdir(tempDir, { recursive: true });
+                }
                 
                 // Create a symbolic link from temp_compile/assembly to the actual assembly directory
                 // This ensures that imports like "../assembly/types" will work correctly
