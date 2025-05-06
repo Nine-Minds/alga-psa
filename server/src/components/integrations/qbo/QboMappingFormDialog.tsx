@@ -32,7 +32,7 @@ interface QboMappingFormDialogProps {
   onClose: () => void;
   onSave: () => void; // Callback after successful save/update
   existingMapping: DisplayMapping | null; // Use the imported type
-  tenantId: string;
+  // Removed tenantId prop
   realmId: string;
   algaEntityType: string; // e.g., 'service'
   externalEntityType: string; // e.g., 'Item'
@@ -48,7 +48,7 @@ export function QboMappingFormDialog({
   onClose,
   onSave,
   existingMapping,
-  tenantId, // Note: tenantId is handled by server actions, but might be useful for context
+  // tenantId, // Removed from props
   realmId,
   algaEntityType,
   externalEntityType,

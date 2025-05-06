@@ -13,23 +13,23 @@ import { QboTermMappingTable } from './QboTermMappingTable';
 
 interface QboMappingManagerProps {
   realmId: string;
-  tenantId: string;
+  // Removed tenantId prop
 }
 
-export function QboMappingManager({ realmId, tenantId }: QboMappingManagerProps) {
+export function QboMappingManager({ realmId }: QboMappingManagerProps) {
   // Define the tabs according to the TabContent interface
   const mappingTabs: TabContent[] = [
     {
       label: 'Items / Services', // Label used as value and display text
-      content: <QboItemMappingTable realmId={realmId} tenantId={tenantId} />,
+      content: <QboItemMappingTable realmId={realmId} />, // Removed tenantId
     },
     {
       label: 'Tax Codes',
-      content: <QboTaxCodeMappingTable realmId={realmId} tenantId={tenantId} />,
+      content: <QboTaxCodeMappingTable realmId={realmId} />, // Removed tenantId
     },
     {
       label: 'Payment Terms',
-      content: <QboTermMappingTable realmId={realmId} tenantId={tenantId} />,
+      content: <QboTermMappingTable realmId={realmId} />, // Removed tenantId
     },
   ];
 

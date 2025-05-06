@@ -63,10 +63,10 @@ interface DisplayMapping extends ExternalEntityMapping {
 
 interface QboTaxCodeMappingTableProps {
   realmId: string;
-  tenantId: string;
+  // Removed tenantId prop
 }
 
-export function QboTaxCodeMappingTable({ realmId, tenantId }: QboTaxCodeMappingTableProps) {
+export function QboTaxCodeMappingTable({ realmId }: QboTaxCodeMappingTableProps) {
   const [mappings, setMappings] = useState<DisplayMapping[]>([]);
   const [algaEntities, setAlgaEntities] = useState<ITaxRegion[]>([]); // Use ITaxRegion type
   const [qboEntities, setQboEntities] = useState<QboTaxCode[]>([]);
@@ -118,7 +118,7 @@ export function QboTaxCodeMappingTable({ realmId, tenantId }: QboTaxCodeMappingT
 
   useEffect(() => {
     fetchData();
-  }, [tenantId, realmId]);
+  }, [realmId]); // Removed tenantId from dependency array
 
   const handleEdit = (mapping: DisplayMapping) => {
     setEditingMapping(mapping);
@@ -258,7 +258,7 @@ export function QboTaxCodeMappingTable({ realmId, tenantId }: QboTaxCodeMappingT
           onClose={() => setIsFormOpen(false)}
           onSave={handleFormSave}
           existingMapping={editingMapping}
-          tenantId={tenantId}
+          // Removed tenantId prop
           realmId={realmId}
           algaEntityType={algaEntityType}
           externalEntityType={externalEntityType}

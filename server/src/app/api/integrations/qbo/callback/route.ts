@@ -6,6 +6,7 @@ import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
 import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
 import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
+import { getSecretProviderInstance } from '../../../../../lib/secrets';
 import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
 import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic
@@ -15,15 +16,15 @@ import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added
 const QBO_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const QBO_CLIENT_ID_SECRET_NAME = 'qbo_client_id';
 const QBO_CLIENT_SECRET_SECRET_NAME = 'qbo_client_secret';
-const QBO_REDIRECT_URI_SECRET_NAME = 'qbo_redirect_uri';
+const QBO_REDIRECT_URI = process.env.QBO_REDIRECT_URI || 'http://localhost:3000/api/integrations/qbo/callback';
 const QBO_CREDENTIALS_SECRET_NAME = 'qbo_credentials'; // For storing tenant credentials
 
 // --- Configuration ---
 // Using process.env.APP_BASE_URL assuming it's set correctly for the server environment.
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 // Define UI redirect URLs relative to APP_BASE_URL
-const SUCCESS_REDIRECT_URL = `/settings/integrations?qbo_status=success`; // Task 83: Redirect back to settings
-const FAILURE_REDIRECT_URL = `/settings/integrations?qbo_status=failure&error=`; // Task 83: Redirect back to settings
+const SUCCESS_REDIRECT_URL = `/msp/settings?tab=integrations&qbo_status=success`; // Task 83: Redirect back to settings
+const FAILURE_REDIRECT_URL = `/msp/settings?tab=integrations&qbo_status=failure&error=`; // Task 83: Redirect back to settings
 
 // --- Handler ---
 
@@ -60,8 +61,8 @@ export async function GET(request: Request) {
   }
 
   let tenantId: string | null = null;
-  // TODO: Obtain secretProvider instance (e.g., via dependency injection or factory)
-  const secretProvider: ISecretProvider = {} as any; // Placeholder: Assume provider is available
+  // Get the secret provider instance
+  const secretProvider = getSecretProviderInstance();
 
   try {
     // 1. Validate State Parameter (CSRF Protection - Task 83)
@@ -93,11 +94,9 @@ export async function GET(request: Request) {
     // 2. Exchange Authorization Code for Tokens (Task 83)
     const clientId = await secretProvider.getAppSecret(QBO_CLIENT_ID_SECRET_NAME);
     const clientSecret = await secretProvider.getAppSecret(QBO_CLIENT_SECRET_SECRET_NAME);
-    const redirectUri = await secretProvider.getAppSecret(QBO_REDIRECT_URI_SECRET_NAME);
 
-
-    if (!clientId || !clientSecret || !redirectUri) {
-      console.error(`QBO Callback: Missing QBO Client ID, Secret, or Redirect URI in secrets.`);
+    if (!clientId || !clientSecret) {
+      console.error(`QBO Callback: Missing QBO Client ID or Secret in secrets.`);
       return failureRedirect('config_error');
     }
 
@@ -105,7 +104,7 @@ export async function GET(request: Request) {
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code: code,
-      redirect_uri: redirectUri, // Use the exact registered URI retrieved from secrets
+      redirect_uri: QBO_REDIRECT_URI, // Use the environment variable
     });
 
     console.log(`QBO Callback: Exchanging code for token for tenant ${tenantId}, realm ${realmId}...`);
@@ -163,8 +162,8 @@ export async function GET(request: Request) {
       }
 
       // Define target workflows and events
-      const invoiceSyncWorkflowName = 'Invoice Sync';
-      const customerSyncWorkflowName = 'Customer Sync';
+      const invoiceSyncWorkflowName = 'qboInvoiceSyncWorkflow';
+      const customerSyncWorkflowName = 'qboCustomerSyncWorkflow';
       const eventWorkflowMap: Record<string, string> = {
         'INVOICE_CREATED': invoiceSyncWorkflowName,
         'INVOICE_UPDATED': invoiceSyncWorkflowName,
@@ -172,21 +171,22 @@ export async function GET(request: Request) {
         'COMPANY_UPDATED': customerSyncWorkflowName,
       };
 
-      // Get system workflow IDs (No tenant filter needed for system tables)
-      const workflows = await knex('system_workflows')
-        .select('system_workflow_id', 'name')
-        .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]);
+      // Fetch system workflow registration IDs based on the correct names
+      const systemWorkflows = await knex('system_workflow_registrations')
+        .select('registration_id', 'name')
+        .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]); // Uses updated names
 
-      const workflowIdMap = workflows.reduce((acc, wf) => {
-        acc[wf.name] = wf.system_workflow_id;
+      const systemWorkflowIdMap = systemWorkflows.reduce((acc, wf) => {
+        acc[wf.name] = wf.registration_id; // Map name to registration_id
         return acc;
       }, {} as Record<string, string>);
 
-      if (!workflowIdMap[invoiceSyncWorkflowName]) {
-        console.warn(`QBO Callback: System workflow '${invoiceSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
+      // Warn if expected system workflow registrations are not found
+      if (!systemWorkflowIdMap[invoiceSyncWorkflowName]) { // Checks for 'qboInvoiceSyncWorkflow' ID
+        console.warn(`QBO Callback: System workflow registration '${invoiceSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
       }
-      if (!workflowIdMap[customerSyncWorkflowName]) {
-        console.warn(`QBO Callback: System workflow '${customerSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
+      if (!systemWorkflowIdMap[customerSyncWorkflowName]) { // Checks for 'qboCustomerSyncWorkflow' ID
+        console.warn(`QBO Callback: System workflow registration '${customerSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
       }
 
       // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
@@ -205,7 +205,7 @@ export async function GET(request: Request) {
       // Create attachments using the action
       for (const eventType of eventTypes) {
         const workflowName = eventWorkflowMap[eventType];
-        const workflowId = workflowIdMap[workflowName];
+        const workflowId = systemWorkflowIdMap[workflowName]; // Use the map with registration_ids
         const eventId = eventIdMap[eventType];
 
         if (!workflowId) {
@@ -222,8 +222,8 @@ export async function GET(request: Request) {
           console.log(`QBO Callback: Calling createWorkflowEventAttachment for tenant ${tenantId}, Event '${eventType}' (ID: ${eventId}) -> Workflow '${workflowName}' (ID: ${workflowId})`);
           await createWorkflowEventAttachment({
             tenant_id: tenantId,
-            event_id: eventId,
-            workflow_id: workflowId, // Assuming system workflows use system_workflow_id as their primary ID reference
+            event_type: eventType, // Use event_type instead of event_id
+            workflow_id: workflowId, // Pass the system workflow registration_id here
             is_active: true, // Default to active
             // 'name' and 'description' are optional in ICreateWorkflowEventAttachment
           });

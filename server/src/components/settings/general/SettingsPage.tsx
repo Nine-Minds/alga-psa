@@ -18,14 +18,18 @@ import ServiceTypeSettings from '../billing/ServiceTypeSettings'; // Import the 
 import NumberingSettings from './NumberingSettings';
 import NotificationsTab from './NotificationsTab';
 import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
+// Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
+import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
+// Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
+// Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  
+
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -37,10 +41,12 @@ const SettingsPage = (): JSX.Element =>  {
     'notifications': 'Notifications',
     'time-entry': 'Time Entry',
     'billing': 'Billing',
-    'tax': 'Tax'
+    'tax': 'Tax',
+    'integrations': 'Integrations' // Add slug for Integrations tab
   };
 
   // Determine initial active tab based on URL parameter
+  // Hooks are now valid again
   const [activeTab, setActiveTab] = React.useState<string>(() => {
     const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
     return initialLabel || 'General'; // Default to 'General' if param is missing or invalid
@@ -49,8 +55,12 @@ const SettingsPage = (): JSX.Element =>  {
   // Update active tab when URL parameter changes
   React.useEffect(() => {
     const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    setActiveTab(currentLabel || 'General');
-  }, [tabParam]);
+    const targetTab = currentLabel || 'General';
+    // Only update state if the derived tab is different from the current state
+    if (targetTab !== activeTab) {
+       setActiveTab(targetTab);
+    }
+  }, [tabParam]); // Correct dependency array
 
   const tabContent: TabContent[] = [
     {
@@ -146,6 +156,12 @@ const SettingsPage = (): JSX.Element =>  {
         </Card>
       ),
     }
+    ,
+    { // Add the new Integrations tab definition
+      label: "Integrations",
+      // Render the QBO settings client component directly
+      content: <QboIntegrationSettings />,
+    }
   ];
 
 
@@ -162,7 +178,8 @@ const SettingsPage = (): JSX.Element =>  {
             return acc;
           }, {} as Record<string, string>);
 
-          setActiveTab(tab); // Update the state for the CustomTabs component
+          // Re-add immediate state update on tab change
+          setActiveTab(tab);
 
           const urlSlug = labelToSlugMap[tab];
           // Update URL using pushState to avoid full page reload
