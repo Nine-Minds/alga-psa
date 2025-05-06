@@ -354,7 +354,7 @@ export async function compileAndSaveTemplate(
                 try {
                     await fs.access(tempDir);
                     console.log(`Temp directory ${tempDir} already exists, skipping creation`);
-                } catch (tempDirError) {
+                } catch {
                     // tempDir doesn't exist, create it
                     await fs.mkdir(tempDir, { recursive: true });
                 }
