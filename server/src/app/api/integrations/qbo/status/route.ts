@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'; // Mark the route as dynamic
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '../../../../../lib/actions/user-actions/userActions'; // Use relative path
 // TODO: Import necessary functions for secret retrieval (ISecretProvider)

@@ -872,7 +872,6 @@ export async function executeWorkflowTest(
               },
               required: ['tenantId']
             },
-            is_system_event: false,
             tenant_id: tenant || ''
           });
         }
