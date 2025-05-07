@@ -85,6 +85,7 @@ export function serializeWorkflowFunction(fn: WorkflowFunction): string {
  */
 export function deserializeWorkflowFunction(fnString: string): WorkflowFunction {
   try {
+    console.log('fnString length:', fnString.length);
     console.log('Deserializing workflow function:', fnString.length > 100 ? fnString.substring(0, 100) + '...' : fnString);
     
     // The function string should already be an async function with a context parameter
@@ -101,6 +102,7 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     });
     
     const jsCode = result.outputText;
+    // same here, let's not log the entire code AI!
     console.log('Compiled JavaScript:', jsCode);
     
     // Extract the function body from the compiled code
