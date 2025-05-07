@@ -13,6 +13,7 @@ import logger from '@shared/core/logger.js'; // Corrected import path
  * @param defaultValue - Optional default value if neither source exists (defaults to '').
  * @returns The secret value as a string.
  */
+// if the provider secret is blank, treat it as undefined AI!
 export async function getSecret(secretName: string, envVar: string, defaultValue: string = ''): Promise<string> {
   // 1. Try the configured secret provider first
   const secrets = getSecretProviderInstance();
