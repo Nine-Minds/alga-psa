@@ -81,6 +81,12 @@ jobs:
 
       # Note: We skip login and push steps for PR checks
 
+      - name: Set environment variables for build
+        run: |
+          # Export environment variables that will be used during the build
+          echo "NEXTAUTH_SECRET=$(cat secrets/nextauth_secret)" >> $GITHUB_ENV
+          echo "NEXTAUTH_URL=http://localhost:3000" >> $GITHUB_ENV
+
       - name: Build Docker image (no push)
         uses: docker/build-push-action@v4
         with:
