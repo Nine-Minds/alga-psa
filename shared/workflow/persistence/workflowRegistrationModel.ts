@@ -7,8 +7,8 @@ import logger from '@shared/core/logger.js';
 export interface WorkflowRegistration {
   registration_id: string;
   name: string;
-  version: string; // This seems to be from the registration table, maybe latest version?
-  definition: any; // From the version table
+  version: string;
+  code?: any; // From the version table (previously definition)
   parameters?: any; // From the version table
   // Add other fields from registration table if needed by UI
   description?: string;
@@ -48,7 +48,15 @@ export default {
     try {
       // --- Try Tenant Workflow ---
       const tenantRegistration = await knex('workflow_registrations as wr')
-        .select('wr.*', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .select(
+          'wr.registration_id', 'wr.name', 'wr.description', 'wr.category',
+          'wr.tags', 'wr.status', 'wr.source_template_id', 'wr.created_by',
+          'wr.created_at', 'wr.updated_at', // Select specific columns from wr
+          'wrv.code', // Select code from wrv
+          'wrv.parameters', // Select parameters from wrv
+          'wrv.version as current_version',
+          knex.raw('false as "isSystemManaged"')
+        )
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
               .andOn('wr.tenant_id', '=', 'wrv.tenant_id'); // Join includes tenant
@@ -67,9 +75,9 @@ export default {
         return {
           registration_id: tenantRegistration.registration_id,
           name: tenantRegistration.name,
-          version: tenantRegistration.current_version, // Use version from joined table
-          definition: tenantRegistration.definition,
-          parameters: tenantRegistration.parameters,
+          version: tenantRegistration.current_version,
+          code: tenantRegistration.code, // Use .code from the select
+          parameters: tenantRegistration.parameters, // Use .parameters from the select (from wrv)
           description: tenantRegistration.description,
           category: tenantRegistration.category,
           tags: tenantRegistration.tags,
@@ -84,7 +92,15 @@ export default {
 
       // --- Try System Workflow ---
       const systemRegistration = await knex('system_workflow_registrations as swr')
-        .select('swr.*', 'swr.definition', 'swr.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .select(
+          'swr.registration_id', 'swr.name', 'swr.description', 'swr.category',
+          'swr.tags', 'swr.status', 'swr.source_template_id', 'swr.created_by',
+          'swr.created_at', 'swr.updated_at',
+          'swrv.code', // Select code from version table
+          'swrv.parameters', // Select parameters from version table
+          'swrv.version as current_version',
+          knex.raw('true as "isSystemManaged"')
+        )
         .join('system_workflow_registration_versions as swrv', function() {
           this.on('swr.registration_id', '=', 'swrv.registration_id'); // No tenant join
           if (version) {
@@ -101,8 +117,8 @@ export default {
           registration_id: systemRegistration.registration_id,
           name: systemRegistration.name,
           version: systemRegistration.current_version,
-          definition: systemRegistration.definition,
-          parameters: systemRegistration.parameters,
+          code: systemRegistration.code, // Map to code
+          parameters: systemRegistration.parameters, // From swrv.parameters
           description: systemRegistration.description,
           category: systemRegistration.category,
           tags: systemRegistration.tags,
@@ -140,7 +156,15 @@ export default {
     try {
       // --- Try Tenant Workflow ---
       const tenantRegistration = await knex('workflow_registrations as wr')
-        .select('wr.*', 'wrv.version as current_version', knex.raw('false as "isSystemManaged"'))
+        .select(
+          'wr.registration_id', 'wr.name', 'wr.description', 'wr.category',
+          'wr.tags', 'wr.status', 'wr.source_template_id', 'wr.created_by',
+          'wr.created_at', 'wr.updated_at', // Select specific columns from wr
+          'wrv.code', // Select code from wrv
+          'wrv.parameters', // Select parameters from wrv
+          'wrv.version as current_version',
+          knex.raw('false as "isSystemManaged"')
+        )
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
               .andOn('wr.tenant_id', '=', 'wrv.tenant_id');
@@ -159,8 +183,8 @@ export default {
           registration_id: tenantRegistration.registration_id,
           name: tenantRegistration.name,
           version: tenantRegistration.current_version,
-          definition: tenantRegistration.definition,
-          parameters: tenantRegistration.parameters,
+          code: tenantRegistration.code, // Use .code from the select
+          parameters: tenantRegistration.parameters, // Use .parameters from the select (from wrv)
           description: tenantRegistration.description,
           category: tenantRegistration.category,
           tags: tenantRegistration.tags,
@@ -175,7 +199,15 @@ export default {
 
       // --- Try System Workflow ---
       const systemRegistration = await knex('system_workflow_registrations as swr')
-        .select('swr.*', 'swr.definition', 'swr.parameters', 'swrv.version as current_version', knex.raw('true as "isSystemManaged"'))
+        .select(
+          'swr.registration_id', 'swr.name', 'swr.description', 'swr.category',
+          'swr.tags', 'swr.status', 'swr.source_template_id', 'swr.created_by',
+          'swr.created_at', 'swr.updated_at',
+          'swrv.code', // Select code from version table
+          'swrv.parameters', // Select parameters from version table
+          'swrv.version as current_version',
+          knex.raw('true as "isSystemManaged"')
+        )
         .join('system_workflow_registration_versions as swrv', function() {
           this.on('swr.registration_id', '=', 'swrv.registration_id');
           if (version) {
@@ -192,8 +224,8 @@ export default {
           registration_id: systemRegistration.registration_id,
           name: systemRegistration.name,
           version: systemRegistration.current_version,
-          definition: systemRegistration.definition,
-          parameters: systemRegistration.parameters,
+          code: systemRegistration.code, // Map to code
+          parameters: systemRegistration.parameters, // From swrv.parameters
           description: systemRegistration.description,
           category: systemRegistration.category,
           tags: systemRegistration.tags,
@@ -236,7 +268,7 @@ export default {
           'wr.created_at',
           'wr.updated_at',
           'wrv.version as current_version',
-          'wrv.definition',
+          'wrv.code', // Select code directly
           'wrv.parameters',
           knex.raw('false as "isSystemManaged"')
         )
@@ -262,8 +294,8 @@ export default {
           'swr.created_at',
           'swr.updated_at',
           'swrv.version as current_version',
-          'swrv.definition',
-          'swrv.parameters',
+          'swrv.code', // Select code from version table for system workflows
+          'swrv.parameters', // Select parameters from version table
           knex.raw('true as "isSystemManaged"')
         )
         .join('system_workflow_registration_versions as swrv', function() {
@@ -279,9 +311,9 @@ export default {
       return combinedResults.map(reg => ({
         registration_id: reg.registration_id,
         name: reg.name,
-        version: reg.current_version, // Use version from joined table
-        definition: reg.definition,
-        parameters: reg.parameters,
+        version: reg.current_version,
+        code: reg.code, // Map to code
+        parameters: reg.parameters, // From version table's parameters
         description: reg.description,
         category: reg.category,
         tags: reg.tags,
@@ -353,7 +385,7 @@ export default {
             registration_id: registration.registration_id,
             version: '1.0.0',
             is_current: true,
-            definition: template.definition,
+            code: template.definition, // Assuming template.definition is the code/script
             parameters: parameters || template.default_parameters || {}
           });
         
