@@ -1,4 +1,4 @@
-import { WorkflowContext } from '@shared/workflow'; // Assuming path
+import { WorkflowContext } from '../../../../shared/workflow/core'; // Assuming path
 // TODO: Confirm actual path for WorkflowContext type
 
 // Define placeholder types for data structures until actual types are available
@@ -6,7 +6,8 @@ type AlgaInvoice = { id: string; companyId: string; qbo_invoice_id?: string; qbo
 type AlgaInvoiceItem = { id: string; invoiceId: string; productId?: string; amount?: number; /* ... other fields */ }; // Added amount
 type AlgaCompany = { id: string; qbo_customer_id?: string; qbo_term_id?: string; /* ... other fields */ };
 type QboInvoiceData = { Line: any[]; CustomerRef: { value: string }; /* ... other QBO fields */ };
-type TriggerEventPayload = { invoiceId: string; realmId?: string; tenantId?: string; /* ... other potential payload fields */ }; // Added realmId/tenantId possibility
+
+type TriggerEventPayload = { invoiceId: string; realmId?: string; tenantId?: string; eventName?: string; /* ... other potential payload fields */ }; // Added eventName, realmId/tenantId possibility
 type QboApiError = { message: string; details?: any; statusCode?: number };
 type HumanTaskDetails = { message: string; algaInvoiceId: string; tenantId: string; realmId: string; [key: string]: any; }; // Type for task details
 
@@ -40,18 +41,25 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
     const currentState = getCurrentState();
 
     logger.info(`QBO Invoice Sync workflow starting/resuming. Instance ID: ${executionId}. Current state: ${currentState ?? 'INITIAL'}`);
+    logger.info(`QBO Invoice Sync workflow received input:`, JSON.stringify(input, null, 2)); // Added logging for raw input
 
     // --- 1. Initialization & Trigger Context ---
     // tenant and executionId are now destructured directly from context
-    const triggerEvent = input?.triggerEvent;
-    const triggerPayload = triggerEvent?.payload as TriggerEventPayload | undefined;
-    const realmId = triggerPayload?.realmId; // Assuming it's in the payload, adjust if needed
-    const triggerEventName = triggerEvent?.name; // e.g., 'INVOICE_CREATED', 'INVOICE_UPDATED'
-    const algaInvoiceId = triggerPayload?.invoiceId;
+    // The workflow input is the workflow event object itself, not nested under triggerEvent.
+
+    // Access payload directly from input.
+    // Assuming 'input' from context IS the event payload object itself.
+    const triggerEventPayload = data.get<TriggerEventPayload>('eventPayload');
+    const realmId = triggerEventPayload?.realmId; // realmId should be on eventPayload
+    const algaInvoiceId = triggerEventPayload?.invoiceId; // invoiceId should be on eventPayload
+    // 'event_name' would be on the wrapper event, 'eventName' is in the payload.
+    // If the runtime provides context.eventName, that would be better.
+    // For now, let's assume we need to get it from the payload if input is payload.
+    const triggerEventName = triggerEventPayload?.eventName;
 
     // Use tenant from context
     if (!tenant || !realmId || !algaInvoiceId) {
-        logger.error('Missing critical context: tenant, realmId, or invoiceId in trigger payload.', { tenant, realmId, payload: triggerPayload, executionId });
+        logger.error('Missing critical context: tenant, realmId, or invoiceId from input payload.', { tenant, realmIdFromPayload: realmId, invoiceIdFromPayload: algaInvoiceId, retrievedEventPayload: triggerEventPayload, contextInput: input, executionId });
         setState('FAILED_INITIALIZATION');
         // Potentially create a human task here if this scenario needs manual intervention
         return;
@@ -426,7 +434,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         data.set('workflowError', errorInfo);
 
          // Update Alga status if possible
-         const algaInvoiceIdForError = data.get<AlgaInvoice>('algaInvoice')?.id ?? triggerPayload?.invoiceId;
+         const algaInvoiceIdForError = data.get<AlgaInvoice>('algaInvoice')?.id ?? input?.payload?.invoiceId;
          // Use tenant from context
          if (algaInvoiceIdForError && tenant) { // Use tenant variable
              try {

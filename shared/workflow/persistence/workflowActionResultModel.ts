@@ -183,7 +183,7 @@ const WorkflowActionResultModel = {
         })
         .update({
           success,
-          result: result ? result : undefined,
+          result: result !== undefined ? JSON.stringify(result) as any : undefined,
           error_message: errorMessage,
           completed_at: new Date().toISOString()
         });

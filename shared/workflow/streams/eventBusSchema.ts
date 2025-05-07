@@ -90,7 +90,11 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   invoiceId: z.string().uuid(),
   companyId: z.string().uuid(),
   userId: z.string().uuid(),
-  amount: z.number().optional(), // Made amount optional
+  totalAmount: z.string(), // Corrected type to string based on logs
+  realmId: z.string().nullable().optional(), // For QBO integration
+  eventName: z.string(), // Matches published 'eventName'
+  status: z.string(), // Matches published 'status'
+  invoiceNumber: z.string(), // Matches published 'invoiceNumber'
 });
 
 // Company event payload schema

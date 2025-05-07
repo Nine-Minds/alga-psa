@@ -768,7 +768,8 @@ export class WorkflowWorker {
               versionId: registration.version_id
             },
             userId: eventData.payload?.userId,
-            versionId: registration.version_id
+            versionId: registration.version_id,
+            isSystemManaged: false
           });
           
           logger.info(`[WorkflowWorker] Started workflow ${registration.name} with execution ID ${result.executionId}`, {
