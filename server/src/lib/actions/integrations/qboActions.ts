@@ -31,7 +31,7 @@ export interface QboConnectionStatus { // Exporting for use in UI components
 const QBO_CREDENTIALS_SECRET_NAME = 'qbo_credentials';
 const QBO_BASE_URL = process.env.QBO_API_BASE_URL || 'https://sandbox-quickbooks.api.intuit.com'; // Use sandbox by default, configure via env
 
-async function getTenantQboCredentials(secretProvider: ISecretProvider, tenantId: string): Promise<QboCredentials | null> {
+export async function getTenantQboCredentials(secretProvider: ISecretProvider, tenantId: string): Promise<QboCredentials | null> {
   const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
   if (!secret) {
     return null;

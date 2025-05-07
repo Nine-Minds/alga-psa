@@ -38,7 +38,7 @@ export interface IWorkflowActionResult {
   action_path?: string;
   action_group?: string;
   parameters?: Record<string, any>;
-  result?: Record<string, any>;
+  result?: any;
   success: boolean;
   error_message?: string;
   idempotency_key: string;

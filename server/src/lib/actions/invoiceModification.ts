@@ -20,6 +20,8 @@ import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import r
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
 import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
+import { getSecretProviderInstance } from 'server/src/lib/secrets';
+import { getTenantQboCredentials } from 'server/src/lib/actions/integrations/qboActions';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -544,6 +546,22 @@ async function updateManualInvoiceItemsInternal(
       return; // Exit if invoice somehow disappeared
     }
 
+    // Fetch realmId from qbo_credentials secret
+    let realmId: string | null = null;
+    try {
+      const secretProvider = getSecretProviderInstance();
+      const qboCredentials = await getTenantQboCredentials(secretProvider, tenant);
+      if (qboCredentials && qboCredentials.realmId) {
+        realmId = qboCredentials.realmId;
+        console.log(`[updateManualInvoiceItemsInternal] Found realmId in secrets for tenant ${tenant}: ${realmId}`);
+      } else {
+        console.warn(`[updateManualInvoiceItemsInternal] QBO realmId not found in secrets for tenant ${tenant}. realmId will be null for INVOICE_UPDATED event. This may cause issues in qboInvoiceSyncWorkflow.`);
+      }
+    } catch (error) {
+      console.error(`[updateManualInvoiceItemsInternal] Error fetching realmId from secrets for tenant ${tenant}:`, error);
+      // realmId remains null.
+    }
+
     const eventBus = getEventBus();
     const eventForBus = {
       eventType: 'INVOICE_UPDATED' as BusEventType, // Cast to ensure it's a valid EventType
@@ -557,8 +575,10 @@ async function updateManualInvoiceItemsInternal(
         status: updatedInvoice.status,
         totalAmount: updatedInvoice.total_amount,
         invoiceNumber: updatedInvoice.invoice_number,
+        realmId: realmId, // realmId for QBO sync
       }
     };
+    console.log(`[updateManualInvoiceItemsInternal] Publishing INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}. Event structure:`, JSON.stringify(eventForBus, null, 2)); // Added logging
     await eventBus.publish(eventForBus);
     console.log(`[updateManualInvoiceItemsInternal] Successfully published INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}`);
 

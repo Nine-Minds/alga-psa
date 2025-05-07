@@ -914,10 +914,7 @@ export class TypeScriptWorkflowRuntime {
     const actions = this.actionRegistry.getRegisteredActions();
     
     // Create proxy methods for each action
-    for (const [actionName, actionDef] of Object.entries(actions)) {
-      // Convert camelCase to snake_case for the proxy method name
-      const snakeCaseName = actionName.replace(/([A-Z])/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
-      
+    for (const [registeredName, actionDef] of Object.entries(actions)) {
       // Create a function that executes the action
       const executeAction = async (params: any) => {
         // Get the execution state to check if we have a user ID from a received event
@@ -929,27 +926,45 @@ export class TypeScriptWorkflowRuntime {
           .reverse()
           .find((e: any) => e.user_id)?.user_id;
           
-        // Include userId in the action context if available  
-        return this.actionRegistry.executeAction(actionName, {
+        // Include userId in the action context if available
+        // IMPORTANT: Always call actionRegistry.executeAction with the *original registeredName*
+        return this.actionRegistry.executeAction(registeredName, {
           tenant,
           executionId,
           parameters: params,
-          idempotencyKey: `${executionId}-${actionName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          idempotencyKey: `${executionId}-${registeredName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           userId: userIdFromEvents // Include user ID from events if available
         });
       };
-      
-      // Create proxy method with snake_case name
-      Object.defineProperty(proxy, snakeCaseName, {
+
+      // 1. Define proxy for the exact registered name
+      Object.defineProperty(proxy, registeredName, {
         value: executeAction,
         enumerable: true
       });
-      
-      // Also create proxy method with original camelCase name
-      Object.defineProperty(proxy, actionName, {
-        value: executeAction,
-        enumerable: true
-      });
+
+      // 2. If registeredName appears to be snake_case, create a camelCase alias
+      if (registeredName.includes('_')) {
+        const camelCaseName = registeredName.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+        // Only add if different and not already defined (though the latter is less likely here)
+        if (camelCaseName !== registeredName && !proxy.hasOwnProperty(camelCaseName)) {
+          Object.defineProperty(proxy, camelCaseName, {
+            value: executeAction,
+            enumerable: true // Typically aliases are also enumerable
+          });
+        }
+      }
+      // 3. Else if registeredName appears to be camelCase (no underscores, but has an uppercase char), create a snake_case alias
+      else if (/[A-Z]/.test(registeredName)) {
+        const snakeCaseName = registeredName.replace(/([A-Z])/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
+        // Only add if different and not already defined
+        if (snakeCaseName !== registeredName && !proxy.hasOwnProperty(snakeCaseName)) {
+          Object.defineProperty(proxy, snakeCaseName, {
+            value: executeAction,
+            enumerable: true // Typically aliases are also enumerable
+          });
+        }
+      }
     }
     
     return proxy;
