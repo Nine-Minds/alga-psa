@@ -9,6 +9,7 @@ export interface IWorkflowExecution {
   workflow_version: string;
   current_state: string;
   status: string;
+  workflow_type: 'system' | 'tenant';
   context_data?: Record<string, any>;
   created_at: string;
   updated_at: string;

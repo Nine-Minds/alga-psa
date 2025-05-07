@@ -912,7 +912,8 @@ export async function executeWorkflowTest(
     const executions = await knex('workflow_executions')
       .where({
         'tenant': tenant,
-        'version_id': workflowRegistration.version_id
+        'version_id': workflowRegistration.version_id,
+        'workflow_type': 'tenant'
       })
       .orderBy('created_at', 'desc')
       .limit(1);

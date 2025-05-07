@@ -496,7 +496,8 @@ export class WorkflowWorker {
               triggerEvent: eventData
             },
             userId: eventData.user_id,
-            versionId: versionId as string
+            versionId: versionId as string,
+            isSystemManaged: false // For this test event path, the preceding query only fetches tenant workflows
           });
           
           // Submit the original event to the workflow
@@ -549,41 +550,43 @@ export class WorkflowWorker {
   private async findAttachedWorkflows(eventType: string, tenant: string): Promise<{ workflow_id: string; isSystemManaged: boolean }[]> { // Updated return type
     try {
       logger.info(`[WorkflowWorker] Finding workflows attached to event type ${eventType} for tenant ${tenant}`);
-
-      // Get a database connection
       const db = await getAdminConnection();
 
-      // Tenant attachments
-      const tenantQuery = db('workflow_event_attachments as wea')
-        .join('event_catalog as ec', function() {
-          // Assuming event_catalog might be tenant-specific or global with tenant_id
-          this.on('wea.event_id', 'ec.event_id');
-          // Add tenant filter if event_catalog has tenant_id: .andOn('wea.tenant_id', 'ec.tenant_id');
-        })
+      // Step 1: Query workflow_event_attachments for the given eventType and tenant.
+      const attachments = await db('workflow_event_attachments as wea')
         .where({
-          'ec.event_type': eventType,
-          'wea.tenant_id': tenant, // Filter attachments by tenant
+          'wea.event_type': eventType,
+          'wea.tenant_id': tenant,
           'wea.is_active': true
         })
-        // Filter event_catalog by tenant if applicable: .andWhere('ec.tenant_id', tenant)
-        .select('wea.workflow_id', db.raw('false as "isSystemManaged"'));
+        .select('wea.workflow_id as workflow_id');
 
-      // System attachments (assuming global event_catalog)
-      const systemQuery = db('system_workflow_event_attachments as swea')
-        .join('event_catalog as ec', 'swea.event_id', 'ec.event_id') // Join on event_id only
-        .where({
-          'ec.event_type': eventType,
-          // No tenant filter for system attachments
-          'swea.is_active': true
-          // No tenant filter for global event_catalog
-        })
-        .select('swea.workflow_id', db.raw('true as "isSystemManaged"'));
+      if (!attachments || attachments.length === 0) {
+        logger.info(`[WorkflowWorker] No attachments found in workflow_event_attachments for event type ${eventType} and tenant ${tenant}`);
+        return [];
+      }
 
-      // Combine results
-      const results = await db.unionAll([tenantQuery, systemQuery], true);
+      const workflowIds = attachments.map(att => att.workflow_id);
+
+      // Step 2: Check which of these workflow_ids exist in system_workflow_registrations
+      // This helps determine if a workflow_id from a tenant's attachment
+      // actually points to a system-defined workflow.
+      const systemWorkflowRegistrations = await db('system_workflow_registrations as swr')
+        .whereIn('swr.registration_id', workflowIds)
+        .select('swr.registration_id');
+
+      const systemWorkflowIds = new Set(systemWorkflowRegistrations.map(reg => reg.registration_id));
+
+      // Step 3: Construct the results with the correct isSystemManaged flag
+      // If a workflow_id from workflow_event_attachments is found in system_workflow_registrations,
+      // then isSystemManaged is true. Otherwise, it's false.
+      const results = attachments.map(attachment => ({
+        workflow_id: attachment.workflow_id,
+        isSystemManaged: systemWorkflowIds.has(attachment.workflow_id)
+      }));
 
       logger.info(`[WorkflowWorker] Found ${results.length} workflows attached to event type ${eventType}`, {
-        results, // Log the full results including isSystemManaged
+        results,
         eventType,
         tenant
       });
@@ -653,7 +656,8 @@ export class WorkflowWorker {
           triggerEvent: event
         },
         userId: event.user_id,
-        versionId: workflow.version_id // Pass the version_id
+        versionId: workflow.version_id, // Pass the version_id
+        isSystemManaged: isSystemManaged // Pass the isSystemManaged flag
       });
       
       logger.info(`[WorkflowWorker] Started workflow ${workflow.name} with execution ID ${result.executionId}`, {
@@ -721,7 +725,7 @@ export class WorkflowWorker {
           'wr.status',
           'wrv.version_id', // Need version_id to start the workflow
           'wrv.version',
-          'wrv.definition'
+          'wrv.code as definition' // Use 'code' column and alias as 'definition'
           // Add other fields if needed
         )
         .first();
