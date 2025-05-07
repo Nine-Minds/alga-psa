@@ -81,13 +81,6 @@ jobs:
 
       # Note: We skip login and push steps for PR checks
       
-      - name: Set environment variables for build
-        run: |
-          # Export environment variables that will be used during the build
-          echo "NEXTAUTH_SECRET=$(cat secrets/nextauth_secret)" >> $GITHUB_ENV
-          echo "NEXTAUTH_URL=http://localhost:3000" >> $GITHUB_ENV
-          echo "ALGA_AUTH_KEY=$(cat secrets/alga_auth_key)" >> $GITHUB_ENV
-
       - name: Build Docker image (no push)
         uses: docker/build-push-action@v4
         with:
@@ -99,3 +92,7 @@ jobs:
           # tags are optional if not pushing or loading, but can be useful for debugging
           tags: |
             ghcr.io/nine-minds/alga-psa:pr-${{ github.event.number }}
+          build-args: |
+            NEXTAUTH_SECRET_ARG=$(cat secrets/nextauth_secret)
+            NEXTAUTH_URL_ARG=http://localhost:3000
+            ALGA_AUTH_KEY_ARG=$(cat secrets/alga_auth_key)

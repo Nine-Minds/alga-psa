@@ -52,10 +52,15 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 WORKDIR /app
-# Set environment variables needed for the build process
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-secure-32char-nextauth-key-placeholder-xx}
-ENV NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-ENV ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-secure-32char-auth-key-placeholder-xxxxx}
+# Declare ARGs that can be passed during build
+ARG NEXTAUTH_SECRET_ARG=secure-32char-nextauth-key-placeholder-xx
+ARG NEXTAUTH_URL_ARG=http://localhost:3000
+ARG ALGA_AUTH_KEY_ARG=secure-32char-auth-key-placeholder-xxxxx
+
+# Set ENV variables from ARGs for the build process
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET_ARG
+ENV NEXTAUTH_URL=$NEXTAUTH_URL_ARG
+ENV ALGA_AUTH_KEY=$ALGA_AUTH_KEY_ARG
 RUN npm run build
 
 # Final production image with minimal runtime artifacts
