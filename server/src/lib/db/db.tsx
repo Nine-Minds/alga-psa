@@ -41,6 +41,34 @@ const tenantKnexInstances = new Map<string, KnexType>();
  * Each instance manages its own connection pool.
  */
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
+  // If in build phase, return a mock Knex object to prevent DB connection attempts
+  if (process.env.IS_BUILD_PHASE === 'true') {
+    console.warn('Build phase detected: Returning mock Knex object for getConnection.');
+    // Return a basic mock that satisfies type checks and common method calls during build analysis
+    return {
+        transaction: async (callback: (trx: KnexType.Transaction) => Promise<any>) => {
+            console.warn('Mock Knex transaction called during build phase.');
+            // Provide a dummy transaction object if needed by the callback analysis
+            const mockTrx = {
+                // Add dummy methods for common Knex query builder functions if necessary
+                select: () => mockTrx,
+                from: () => mockTrx,
+                where: () => mockTrx,
+                first: async () => undefined,
+                // Add other methods as needed based on build errors
+            } as unknown as KnexType.Transaction; // Use type assertion carefully
+            // Avoid actually running the callback during build
+            // await callback(mockTrx); 
+            return Promise.resolve(); // Or return a dummy value if expected
+        },
+        // Add other top-level Knex methods used directly (if any) during build analysis
+        raw: () => ({}), 
+        destroy: async () => {},
+        // Add dummy query builder methods at the top level if needed
+        select: () => ({ from: () => ({ where: async () => [] }) }), 
+    } as unknown as KnexType; // Use type assertion carefully
+  }
+
   const effectiveTenantId = tenantId || 'default'; // Use 'default' for null/undefined tenant
 
   // Check cache first
