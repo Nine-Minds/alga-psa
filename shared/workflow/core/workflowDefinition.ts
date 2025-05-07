@@ -102,8 +102,7 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     });
     
     const jsCode = result.outputText;
-    // same here, let's not log the entire code AI!
-    console.log('Compiled JavaScript:', jsCode);
+    console.log('Compiled JavaScript:', jsCode.length > 100 ? jsCode.substring(0, 100) + '...' : jsCode);
     
     // Extract the function body from the compiled code
     // This regex extracts the content between the first { and the last }
