@@ -85,8 +85,7 @@ export function serializeWorkflowFunction(fn: WorkflowFunction): string {
  */
 export function deserializeWorkflowFunction(fnString: string): WorkflowFunction {
   try {
-    // do not display the entire function string in logs, just the first 100 characters AI!
-    console.log('Deserializing workflow function:', fnString);
+    console.log('Deserializing workflow function:', fnString.length > 100 ? fnString.substring(0, 100) + '...' : fnString);
     
     // The function string should already be an async function with a context parameter
     const wrappedCode = fnString;
