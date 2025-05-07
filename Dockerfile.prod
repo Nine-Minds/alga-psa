@@ -52,6 +52,10 @@ COPY .env.example /app/.env
 COPY .env.example /app/server/.env  
 
 WORKDIR /app
+# Set environment variables needed for the build process
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-secure-32char-nextauth-key-placeholder-xx}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+ENV ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-secure-32char-auth-key-placeholder-xxxxx}
 RUN npm run build
 
 # Final production image with minimal runtime artifacts
