@@ -92,6 +92,7 @@ jobs:
           # tags are optional if not pushing or loading, but can be useful for debugging
           tags: |
             ghcr.io/nine-minds/alga-psa:pr-${{ github.event.number }}
+          # build-args are used by ARG instructions in Dockerfile.prod
           build-args: |
             NEXTAUTH_SECRET_ARG=$(cat secrets/nextauth_secret)
             NEXTAUTH_URL_ARG=http://localhost:3000

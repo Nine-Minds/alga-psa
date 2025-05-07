@@ -47,9 +47,8 @@ RUN mkdir -p /app/secrets && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
     chmod 600 /app/secrets/*
-# Copy example environment file
-COPY .env.example /app/.env   
-COPY .env.example /app/server/.env  
+# Ensure the .env file prepared by CI is used.
+RUN if [ -f /app/.env ]; then cp /app/.env /app/server/.env; else echo "Warning: /app/.env not found, /app/server/.env may not be set as expected."; fi
 
 WORKDIR /app
 # Declare ARGs that can be passed during build
@@ -61,6 +60,7 @@ ARG ALGA_AUTH_KEY_ARG=secure-32char-auth-key-placeholder-xxxxx
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET_ARG
 ENV NEXTAUTH_URL=$NEXTAUTH_URL_ARG
 ENV ALGA_AUTH_KEY=$ALGA_AUTH_KEY_ARG
+# Database connection details will be read from .env or secrets by knexfile
 RUN npm run build
 
 # Final production image with minimal runtime artifacts

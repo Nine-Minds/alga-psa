@@ -17,19 +17,35 @@ const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : 
  * @returns The secret value as a string
  */
 function getSecret(secretName, envVar, defaultValue = '') {
+  // Prioritize environment variables during build/dev (when /run/secrets likely doesn't exist)
+  if (!fs.existsSync(DOCKER_SECRETS_PATH) && process.env[envVar]) {
+    // console.warn(`Using ${envVar} environment variable (build/dev mode)`); // Reduce noise
+    return process.env[envVar] || defaultValue;
+  }
+
+  // Try reading from Docker secret file (runtime or mounted build secret)
   const secretPath = path.join(SECRETS_PATH, secretName);
   try {
-    return fs.readFileSync(secretPath, 'utf8').trim();
-  } catch (error) {
-    if (process.env[envVar]) {
-      console.warn(`Using ${envVar} environment variable instead of Docker secret`);
-      const envVal = process.env[envVar] || defaultValue;
-      console.log(`Using ${envVar} environment variable: ${envVal}`);
-      return envVal;
+    // Check if file exists before reading
+    if (fs.existsSync(secretPath)) {
+        return fs.readFileSync(secretPath, 'utf8').trim();
     }
-    console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found, using default value`);
-    return defaultValue;
+  } catch (error) {
+      // Log error only if it's not ENOENT (file not found)
+      if (error.code !== 'ENOENT') {
+          console.error(`Error reading secret file ${secretPath}:`, error);
+      }
   }
+
+  // Fallback to environment variable if secret file read failed or didn't exist
+  if (process.env[envVar]) {
+    console.warn(`Using ${envVar} environment variable as fallback`);
+    return process.env[envVar] || defaultValue;
+  }
+
+  // Final fallback to default value
+  console.warn(`Neither secret file ${secretPath} nor ${envVar} environment variable found. Using default value.`);
+  return defaultValue;
 }
 
 const DatabaseType = {
