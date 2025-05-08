@@ -4,7 +4,7 @@ import { WorkflowContext } from '../../../../shared/workflow/core'; // Assuming 
 // Define placeholder types for data structures until actual types are available
 // Use snake_case matching database columns
 type AlgaInvoice = { invoice_id: string; company_id: string; qbo_invoice_id?: string; qbo_sync_token?: string; /* ... other fields like invoice_number, status etc */ };
-type AlgaInvoiceItem = { id: string; invoice_id: string; product_id?: string; amount?: number; /* ... other fields */ }; // Use product_id
+type AlgaInvoiceItem = { id: string; invoice_id: string; service_id?: string; amount?: number; /* ... other fields */ }; // Use service_id
 type AlgaCompany = { company_id: string; qbo_customer_id?: string; qbo_term_id?: string; /* ... other fields */ };
 type QboInvoiceData = { Line: any[]; CustomerRef: { value: string }; /* ... other QBO fields */ };
 
@@ -21,7 +21,7 @@ interface WorkflowActions {
     getInvoiceItems: (args: { invoiceId: string; tenantId: string }) => Promise<AlgaInvoiceItem[]>; // Returns snake_case objects
     getCompany: (args: { id: string; tenantId: string }) => Promise<AlgaCompany>; // Returns snake_case object
     // Assuming lookup returns the ID string directly, no object structure change needed for the Promise type
-    lookupQboItemId: (args: { algaProductId: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<string | null>;
+    lookupQboItemId: (args: { algaProductId: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; found: boolean; qboItemId?: string; message?: string; }>;
     // lookupQboTaxCodeId: (args: { algaTaxRateId: string; tenantId: string; realmId: string }) => Promise<string | null>;
     // lookupQboTermId: (args: { algaTermId: string; tenantId: string; realmId: string }) => Promise<string | null>;
     // Human task details might internally use snake_case now for consistency
@@ -31,8 +31,19 @@ interface WorkflowActions {
     updateQboInvoice: (args: { qboInvoiceData: QboInvoiceData; qboInvoiceId: string; qboSyncToken: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ Id: string; SyncToken: string }>;
     createQboInvoice: (args: { qboInvoiceData: QboInvoiceData; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ Id: string; SyncToken: string }>;
     // updateInvoiceQboDetails args need to align with the database fields it updates
-    updateInvoiceQboDetails: (args: { invoice_id: string; qbo_invoice_id?: string | null; qbo_sync_token?: string | null; last_sync_status: 'SUCCESS' | 'FAILED' | 'PENDING'; last_sync_timestamp: string; last_sync_error?: any; tenantId: string }) => Promise<void>;
+    updateInvoiceQboDetails: (args: { invoiceId: string; qboInvoiceId?: string | null; qboSyncToken?: string | null; tenantId: string }) => Promise<void>;
     get_secret: (args: { secretName: string; scopeIdentifier: string; tenantId: string; }) => Promise<{ success: boolean; secret?: any; message?: string }>;
+    get_external_entity_mapping: (args: {
+        algaEntityId: string;
+        externalSystemName: 'quickbooks_online';
+        externalRealmId: string;
+        tenantId: string;
+    }) => Promise<{
+        success: boolean;
+        found: boolean;
+        mapping?: { externalEntityId: string; [key: string]: any };
+        message?: string;
+    }>;
     // Add other necessary actions
 }
 
@@ -153,11 +164,13 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
         // Retrieve data from context after ensuring it's fetched/loaded
         const algaInvoice = data.get<AlgaInvoice>('algaInvoice');
-        const algaInvoiceItems = data.get<AlgaInvoiceItem[]>('algaInvoiceItems');
+        // The get_invoice_items action returns { success: boolean, items: AlgaInvoiceItem[] }
+        const algaInvoiceItemsResult = data.get<{ success: boolean; items: AlgaInvoiceItem[]; }>('algaInvoiceItems');
         const algaCompany = data.get<AlgaCompany>('algaCompany');
+        let qboCustomerIdToUse: string | undefined = algaCompany?.qbo_customer_id; // Initialize here
 
         // Double-check data presence after fetch/resume logic
-        if (!algaInvoice || !algaInvoiceItems || !algaCompany) {
+        if (!algaInvoice || !algaInvoiceItemsResult || !algaCompany) {
              logger.error('Required data not found in workflow context after fetch/resume.', { algaInvoiceId, executionId }); // This line was already correct
              setState('INTERNAL_ERROR'); // Indicate an unexpected state issue
              return;
@@ -172,37 +185,77 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             // Log using company_id
             logger.info('Checking for QBO Customer mapping.', { company_id: algaCompany.company_id, executionId });
 
-            if (!algaCompany.qbo_customer_id) {
-                // Log using company_id
-                logger.warn('QBO Customer ID missing for Company. Triggering Customer Sync.', { company_id: algaCompany.company_id, executionId });
-                setState('WAITING_FOR_CUSTOMER_SYNC');
+            // qboCustomerIdToUse is already initialized from algaCompany.qbo_customer_id
+            // Now, try to confirm/update it using get_external_entity_mapping
+            logger.info('Attempting to resolve QBO Customer ID via get_external_entity_mapping.', { company_id: algaCompany.company_id, current_known_id: qboCustomerIdToUse, executionId });
+            const mappingResult = await typedActions.get_external_entity_mapping({
+                algaEntityId: algaCompany.company_id,
+                externalSystemName: 'quickbooks_online',
+                externalRealmId: realmId,
+                tenantId: tenant,
+            });
 
-                // TODO: Confirm action name and parameters for triggering workflow
-                // Ensure the triggered workflow knows how to signal back or update the necessary state
-                await typedActions.triggerWorkflow({
-                    name: 'qboCustomerSyncWorkflow', // Standardized name
-                    input: {
-                        triggerEvent: { // Mimic structure if needed by target workflow
-                            name: 'CUSTOMER_SYNC_REQUESTED', // Event name indicating the trigger reason
-                            payload: {
-                                // Pass company_id in payload
-                                company_id: algaCompany.company_id,
-                                tenantId: tenant, // Use tenant variable
-                                realmId: realmId,
-                                originatingWorkflowInstanceId: executionId // Use executionId variable
-                            }
-                        },
-                        // secrets: data.get('secrets') // Removed: qboCustomerSyncWorkflow will fetch its own secrets
+            if (mappingResult.success) {
+                if (mappingResult.found && mappingResult.mapping?.externalEntityId) {
+                    qboCustomerIdToUse = mappingResult.mapping.externalEntityId;
+                    logger.info('QBO Customer ID found and confirmed/updated via get_external_entity_mapping.', { qbo_customer_id: qboCustomerIdToUse, company_id: algaCompany.company_id, executionId });
+                    if (algaCompany.qbo_customer_id !== qboCustomerIdToUse) {
+                        logger.info('Updating in-memory algaCompany.qbo_customer_id with mapped ID.', { old_id: algaCompany.qbo_customer_id, new_id: qboCustomerIdToUse, executionId });
+                        algaCompany.qbo_customer_id = qboCustomerIdToUse; // Keep in-memory company object consistent if it's used later
+                    }
+                } else { // Success but not found
+                    logger.warn('No QBO Customer mapping found via get_external_entity_mapping. Will trigger Customer Sync.', { company_id: algaCompany.company_id, executionId });
+                    qboCustomerIdToUse = undefined; // Explicitly mark as not found for the next step
+                }
+            } else { // Lookup failed
+                logger.error('Failed to lookup QBO Customer mapping via get_external_entity_mapping.', {
+                    company_id: algaCompany.company_id,
+                    error: mappingResult.message,
+                    executionId
+                });
+                setState('CUSTOMER_MAPPING_LOOKUP_ERROR');
+                await typedActions.createHumanTask({
+                    taskType: 'qbo_customer_mapping_lookup_error',
+                    title: `Failed QBO Customer Mapping Lookup for Company ID: ${algaCompany.company_id}`,
+                    details: {
+                        message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${algaCompany.company_id} in Realm ${realmId}. Error: ${mappingResult.message || 'Unknown error'}. Please investigate the mapping system or action.`,
+                        alga_company_id: algaCompany.company_id,
+                        alga_invoice_id: algaInvoiceId, // algaInvoiceId is in scope
+                        tenant_id: tenant,
+                        realm_id: realmId,
+                        workflow_instance_id: executionId,
                     },
-                    tenantId: tenant // Use tenant variable
+                    assignedUserId: null,
+                    tenantId: tenant,
                 });
 
-                logger.info('Customer Sync workflow triggered. Pausing Invoice Sync.', { executionId }); // This line was already correct
-                // Workflow pauses here implicitly by returning. Platform handles state persistence.
-                return;
+                logger.warn('Skipping updateInvoiceQboDetails for CUSTOMER_MAPPING_LOOKUP_ERROR as no QBO IDs are available and sync status is handled elsewhere.', { algaInvoiceId, tenant });
+                return; // Stop workflow
+            }
+
+            // Now, check if we need to trigger customer sync based on qboCustomerIdToUse
+            if (!qboCustomerIdToUse) {
+                logger.warn('QBO Customer ID is definitively missing after mapping check. Triggering Customer Sync.', { company_id: algaCompany.company_id, executionId });
+                setState('WAITING_FOR_CUSTOMER_SYNC');
+                await typedActions.triggerWorkflow({
+                    name: 'qboCustomerSyncWorkflow',
+                    input: {
+                        triggerEvent: {
+                            name: 'CUSTOMER_SYNC_REQUESTED',
+                            payload: {
+                                company_id: algaCompany.company_id,
+                                tenantId: tenant,
+                                realmId: realmId,
+                                originatingWorkflowInstanceId: executionId
+                            }
+                        },
+                    },
+                    tenantId: tenant
+                });
+                logger.info('Customer Sync workflow triggered. Pausing Invoice Sync.', { executionId });
+                return; // Workflow pauses
             } else {
-                // qbo_customer_id already snake_case
-                logger.info('QBO Customer mapping found.', { qbo_customer_id: algaCompany.qbo_customer_id, executionId });
+                 logger.info('Proceeding with QBO Customer ID for invoice processing.', { qbo_customer_id: qboCustomerIdToUse, company_id: algaCompany.company_id, executionId });
             }
         }
 
@@ -238,13 +291,8 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     tenantId: tenant,
                 });
                 // Update Alga invoice status to reflect failure
-                await typedActions.updateInvoiceQboDetails({
-                    invoice_id: algaInvoiceId,
-                    last_sync_status: 'FAILED',
-                    last_sync_timestamp: new Date().toISOString(),
-                    last_sync_error: { message: `Failed to fetch QBO credentials: ${secretResult.message}` },
-                    tenantId: tenant,
-                });
+                //责任分离：见上文关于 CUSTOMER_MAPPING_LOOKUP_ERROR 的注释。
+                logger.warn('Skipping updateInvoiceQboDetails for SECRET_FETCH_ERROR as sync status is handled elsewhere.', { algaInvoiceId, tenant });
                 return;
             }
             qboCredentials = secretResult.secret;
@@ -259,77 +307,111 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         logger.info('Mapping Alga Invoice data to QBO format.', { executionId }); // This line was already correct
 
         const qboInvoiceLines: any[] = [];
-        let mappingErrorOccurred = false; // Flag to prevent multiple human tasks for one run
 
-        for (const item of algaInvoiceItems) {
-            // TODO: Confirm lookup action names and parameters
-            let qboItemId: string | null = null;
+        // Ensure algaInvoiceItemsResult is an object with a 'success' property and an 'items' array property
+        const itemsToIterate = (algaInvoiceItemsResult && algaInvoiceItemsResult.success && Array.isArray(algaInvoiceItemsResult.items))
+            ? algaInvoiceItemsResult.items
+            : []; // Default to empty array if data is not as expected
+
+        for (const item of itemsToIterate) {
             // Check for product_id (snake_case)
-            if (item.product_id) {
-                 // Pass product_id as algaProductId param to action
-                 qboItemId = await typedActions.lookupQboItemId({ algaProductId: item.product_id, tenantId: tenant, realmId, qboCredentials });
-                 if (!qboItemId) {
-                    // Log using product_id
-                    logger.error('Failed to map Alga Product to QBO Item.', { alga_product_id: item.product_id, tenant, realmId, executionId });
-                    mappingErrorOccurred = true;
-                    // TODO: Define JSON schema for human task form
-                    await typedActions.createHumanTask({
-                        taskType: 'qbo_mapping_error',
-                        // Use product_id in title and details
-                        title: `QBO Item Mapping Required for Product ID: ${item.product_id}`,
-                        details: {
-                            message: `Cannot sync invoice ${algaInvoice.invoice_id} because Alga Product ID ${item.product_id} is not mapped to a QBO Item for Realm ID ${realmId}. Please map the product in Alga PSA settings.`,
-                            alga_invoice_id: algaInvoice.invoice_id,
-                            alga_product_id: item.product_id,
-                            tenant_id: tenant, // Use snake_case
-                            realm_id: realmId, // Use snake_case
-                            workflow_instance_id: executionId,
-                        },
-                        assignedUserId: null, // Or assign based on rules
-                        tenantId: tenant, // Use tenant variable
-                    });
-                    // Continue checking other items to potentially create multiple tasks if needed, or break/return here?
-                    // For now, let's break after the first mapping error to avoid spamming tasks for one invoice.
-                    break;
-                 }
-            } else {
-                // Handle description-only lines if applicable, might need a default item?
-                // Log using item.id (assuming item primary key is 'id')
-                logger.warn("Invoice line item does not have an associated product ID.", { line_item_id: item.id, executionId });
-                mappingErrorOccurred = true;
-                // Decide how to handle this - skip? use a default QBO item? error?
-                // Creating a human task seems appropriate.
-                 await typedActions.createHumanTask({
-                     taskType: 'qbo_mapping_error',
-                     title: `Invoice Line Item Missing Product Association`,
-                     details: {
-                         // Use invoice_id and item.id in details
-                         message: `Cannot sync invoice ${algaInvoice.invoice_id} because line item ${item.id} does not have an associated Alga Product. Please associate a product or handle description-only lines.`,
-                         alga_invoice_id: algaInvoice.invoice_id,
-                         alga_line_item_id: item.id,
-                         tenant_id: tenant, // Use snake_case
-                         realm_id: realmId, // Use snake_case
-                         workflow_instance_id: executionId,
-                     },
-                     assignedUserId: null,
-                     tenantId: tenant, // Use tenant variable
-                 });
-                 break; // Break after first error
+            if (!item.service_id) {
+                // Handle description-only lines or items without a service_id
+                logger.warn("Invoice line item does not have an associated product ID.", { item_id: item.id, executionId });
+                await typedActions.createHumanTask({
+                    taskType: 'qbo_mapping_error',
+                    title: `Invoice Line Item Missing Product Association`,
+                    details: {
+                        message: `Cannot sync invoice ${algaInvoice.invoice_id} because line item ${item.id} does not have an associated Alga Product. Please associate a product or handle description-only lines.`,
+                        alga_invoice_id: algaInvoice.invoice_id,
+                        alga_item_id: item.id,
+                        tenant_id: tenant,
+                        realm_id: realmId,
+                        workflow_instance_id: executionId,
+                    },
+                    assignedUserId: null,
+                    tenantId: tenant,
+                });
+                continue; // Skip this item, continue with the next
             }
 
+            // Pass service_id as algaProductId param to action
+            const mappingResult = await typedActions.lookupQboItemId({ algaProductId: item.service_id, tenantId: tenant, realmId, qboCredentials });
+
+            if (!mappingResult.success) {
+                // If lookup action itself failed
+                logger.error('QBO Item lookup action failed.', { alga_service_id: item.service_id, tenant, realmId, error: mappingResult.message, executionId });
+                await typedActions.createHumanTask({
+                    taskType: 'qbo_item_lookup_failed',
+                    title: `QBO Item Lookup Failed for Alga Service ID: ${item.service_id}`,
+                    details: {
+                        message: `The lookup action for Alga Service ID ${item.service_id} failed for Realm ID ${realmId}. Error: ${mappingResult.message || 'Unknown error'}. Please investigate the lookup action or system.`,
+                        alga_invoice_id: algaInvoice.invoice_id,
+                        alga_service_id: item.service_id,
+                        tenant_id: tenant,
+                        realm_id: realmId,
+                        workflow_instance_id: executionId,
+                    },
+                    assignedUserId: null,
+                    tenantId: tenant,
+                });
+                continue; // Skip this item, continue with the next
+            }
+
+            if (!mappingResult.found) {
+                // If lookup action succeeded but no mapping was found
+                logger.warn('No QBO Item mapping found for Alga Service ID.', { alga_service_id: item.service_id, tenant, realmId, executionId });
+                await typedActions.createHumanTask({
+                    taskType: 'qbo_item_mapping_missing',
+                    title: `QBO Item Mapping Missing for Alga Service ID: ${item.service_id}`,
+                    details: {
+                        message: `Cannot sync invoice ${algaInvoice.invoice_id} because Alga Service ID ${item.service_id} is not mapped to a QBO Item for Realm ID ${realmId}. Please map the product in Alga PSA settings.`,
+                        alga_invoice_id: algaInvoice.invoice_id,
+                        alga_service_id: item.service_id,
+                        tenant_id: tenant,
+                        realm_id: realmId,
+                        workflow_instance_id: executionId,
+                    },
+                    assignedUserId: null,
+                    tenantId: tenant,
+                });
+                continue; // Skip this item, continue with the next
+            }
+
+            // If lookup succeeded and mapping was found
+            const qboItemId = mappingResult.qboItemId;
+            if (!qboItemId) {
+                // This case should ideally not happen if found is true, but as a safeguard
+                logger.error('QBO Item lookup succeeded and found=true, but qboItemId is missing.', { alga_service_id: item.service_id, tenant, realmId, mappingResult, executionId });
+                await typedActions.createHumanTask({
+                    taskType: 'qbo_item_lookup_internal_error',
+                    title: `Internal Lookup Error for Alga Service ID: ${item.service_id}`,
+                    details: {
+                        message: `Internal workflow error: QBO Item lookup for Alga Service ID ${item.service_id} reported success but did not return an Item ID. Please investigate the lookup action.`,
+                        alga_invoice_id: algaInvoice.invoice_id,
+                        alga_service_id: item.service_id,
+                        tenant_id: tenant,
+                        realm_id: realmId,
+                        workflow_instance_id: executionId,
+                        mapping_result: mappingResult,
+                    },
+                    assignedUserId: null,
+                    tenantId: tenant,
+                });
+                continue; // Skip this item
+            }
 
             // TODO: Confirm lookup action name and parameters for TaxCode
             // const qboTaxCodeId = await typedActions.lookupQboTaxCodeId({ algaTaxRateId: item.taxRateId, tenantId: tenant, realmId }); // Use tenant variable
             // if (!qboTaxCodeId) {
             //     logger.error('Failed to map Alga Tax Rate to QBO Tax Code.', { algaTaxRateId: item.taxRateId, executionId }); // This line was already correct
-            //     mappingErrorOccurred = true;
-            //     // TODO: Create human task for tax code mapping
-            //     break;
+            //     await typedActions.createHumanTask({ /* ... tax code mapping task ... */ });
+            //     continue; // Skip this item if tax code mapping is critical
             // }
 
-            // Simplified mapping - expand based on QBO API requirements and Section 3 of Plan
+            // Proceed with creating the QBO line item object
             qboInvoiceLines.push({
-                Amount: item.amount ?? 0, // Use amount, ensure it exists
+                Amount: item.amount ?? 0,
                 DetailType: "SalesItemLineDetail",
                 SalesItemLineDetail: {
                     ItemRef: { value: qboItemId },
@@ -342,21 +424,33 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         }
 
         // If any mapping error occurred, set state and return
-        if (mappingErrorOccurred) {
-            setState('MAPPING_ERROR');
-            logger.warn('Mapping errors encountered. Halting sync for this invoice.', { executionId }); // This line was already correct
-             // Update Alga status to reflect mapping issue?
-             // Use tenant from context
-             await typedActions.updateInvoiceQboDetails({
-                 // Use snake_case for action parameters
-                 invoice_id: algaInvoice.invoice_id,
-                 last_sync_status: 'FAILED', // Use snake_case
-                 last_sync_timestamp: new Date().toISOString(),
-                 last_sync_error: { message: "Mapping error encountered. See Human Tasks for details." },
-                 tenantId: tenant
+        // The loop now uses 'continue' for individual item errors, so we only need to check if any lines were successfully mapped.
+        // If qboInvoiceLines.length === 0 and itemsToIterate.length > 0, it means all items failed mapping or there were no items.
+        if (qboInvoiceLines.length === 0 && itemsToIterate.length > 0) {
+             logger.warn('No line items were successfully mapped to QBO items.', { executionId });
+             setState('MAPPING_ERROR'); // Or a more specific state like NO_ITEMS_MAPPED
+             // A human task for the overall failure might be redundant if tasks were created per item,
+             // but could be useful for clarity. Let's add one for overall failure if no lines mapped.
+             await typedActions.createHumanTask({
+                 taskType: 'qbo_invoice_no_items_mapped',
+                 title: `No QBO Items Mapped for Invoice ID: ${algaInvoice.invoice_id}`,
+                 details: {
+                     message: `Invoice ${algaInvoice.invoice_id} could not be synced to QBO because none of its line items could be mapped to QBO Items. See other human tasks for specific item mapping issues.`,
+                     alga_invoice_id: algaInvoice.invoice_id,
+                     tenant_id: tenant,
+                     realm_id: realmId,
+                     workflow_instance_id: executionId,
+                 },
+                 assignedUserId: null,
+                 tenantId: tenant,
              });
-            return;
+             //责任分离：见上文关于 CUSTOMER_MAPPING_LOOKUP_ERROR 的注释。
+             logger.warn('Skipping updateInvoiceQboDetails for MAPPING_ERROR as sync status is handled elsewhere.', { invoiceId: algaInvoice.invoice_id, tenantId: tenant });
+             return; // Stop workflow if no items could be mapped
         }
+
+        // If we reach here, at least one line item was successfully mapped.
+        logger.info(`Successfully mapped ${qboInvoiceLines.length} line items to QBO format.`, { executionId });
 
         // TODO: Confirm lookup action name and parameters for Term (likely from Company)
         // const qboTermId = await typedActions.lookupQboTermId({ algaTermId: algaCompany.termId, tenantId: tenant, realmId }); // Use tenant variable
@@ -368,10 +462,32 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
          }
 
 
+        // At this point, if the workflow hasn't returned due to missing customer ID, qboCustomerIdToUse should be set.
+        if (!qboCustomerIdToUse) {
+            logger.error('Critical: QBO Customer ID not resolved before mapping QBO invoice data. This indicates an unexpected workflow state.', { company_id: algaCompany!.company_id, invoice_id: algaInvoice!.invoice_id, executionId });
+            setState('INTERNAL_ERROR_CUSTOMER_ID_MISSING');
+            await typedActions.createHumanTask({
+                taskType: 'internal_workflow_error',
+                title: `Critical Error: QBO Customer ID Missing for Invoice ${algaInvoice!.invoice_id}`,
+                details: {
+                    message: `The QBO Invoice Sync workflow reached the data mapping stage for invoice ${algaInvoice!.invoice_id} (Company ID: ${algaCompany!.company_id}) without a resolved QBO Customer ID. This should have been handled by earlier checks. Please investigate workflow logic.`,
+                    alga_invoice_id: algaInvoice!.invoice_id,
+                    alga_company_id: algaCompany!.company_id,
+                    tenant_id: tenant,
+                    realm_id: realmId,
+                    workflow_instance_id: executionId,
+                },
+                assignedUserId: null, // Assign to admin/devops
+                tenantId: tenant,
+            });
+            //责任分离：见上文关于 CUSTOMER_MAPPING_LOOKUP_ERROR 的注释。
+            logger.warn('Skipping updateInvoiceQboDetails for INTERNAL_ERROR_CUSTOMER_ID_MISSING as sync status is handled elsewhere.', { invoiceId: algaInvoice!.invoice_id, tenantId: tenant });
+            return; // Stop workflow
+        }
+
         const qboInvoiceData: QboInvoiceData = {
             Line: qboInvoiceLines,
-            // qbo_customer_id already snake_case
-            CustomerRef: { value: algaCompany.qbo_customer_id! },
+            CustomerRef: { value: qboCustomerIdToUse }, // Use the resolved qboCustomerIdToUse. The ! is removed as it's now guaranteed by the check above.
             // --- Add other fields based on Section 3 of Plan ---
             // DocNumber: algaInvoice.invoiceNumber,
             // TxnDate: algaInvoice.issueDate, // Format as YYYY-MM-DD
@@ -442,14 +558,14 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             // Use tenant from context
             // Pass snake_case args to action
             await typedActions.updateInvoiceQboDetails({
-                invoice_id: algaInvoice.invoice_id,
-                qbo_invoice_id: qboResult.Id, // QBO result ID
-                qbo_sync_token: qboResult.SyncToken, // QBO result token
-                last_sync_status: 'SUCCESS',
-                last_sync_timestamp: new Date().toISOString(),
-                last_sync_error: null, // Clear previous errors on success
+                invoiceId: algaInvoice.invoice_id,
+                qboInvoiceId: qboResult.Id, // QBO result ID
+                qboSyncToken: qboResult.SyncToken, // QBO result token
                 tenantId: tenant // Use tenant variable
             });
+            // TODO: Add separate action call here to update tenant_external_entity_mappings
+            // with lastSyncStatus: 'SUCCESS', lastSyncTimestamp, lastSyncError: null
+            logger.info('Successfully updated Alga invoice with QBO IDs. Sync status update in mapping table is pending new action.', { invoiceId: algaInvoice.invoice_id });
 
             setState('SYNC_COMPLETE');
             // Log using snake_case alga_invoice_id and camelCase qboResult.Id
@@ -505,15 +621,20 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
             // Update Alga status to reflect failure
              // Pass snake_case args to action
-             await typedActions.updateInvoiceQboDetails({
-                 invoice_id: algaInvoice.invoice_id,
-                 qbo_invoice_id: existingQboInvoiceId, // Keep old ID if update failed
-                 qbo_sync_token: qboSyncToken, // Keep old token if update failed
-                 last_sync_status: 'FAILED',
-                 last_sync_timestamp: new Date().toISOString(),
-                 last_sync_error: errorDetails,
-                 tenantId: tenant // Use tenant variable
-             });
+             //责任分离：仅更新 QBO ID（如果适用）。错误状态应在映射表中处理。
+             if (existingQboInvoiceId) { // Only update if we were trying to update an existing QBO invoice
+                 await typedActions.updateInvoiceQboDetails({
+                     invoiceId: algaInvoiceId,
+                     qboInvoiceId: existingQboInvoiceId,
+                     qboSyncToken: qboSyncToken,
+                     tenantId: tenant
+                 });
+                 logger.info('Retained existing QBO IDs on Alga invoice after QBO API error. Sync status update in mapping table is pending new action for error state.', { algaInvoiceId });
+             } else {
+                 logger.warn('No existing QBO IDs to update on Alga invoice after QBO API creation error. Sync status update in mapping table is pending new action for error state.', { algaInvoiceId });
+             }
+            // TODO: Add separate action call here to update tenant_external_entity_mappings
+            // with lastSyncStatus: 'FAILED', lastSyncTimestamp, lastSyncError: errorDetails
         }
 
     } catch (workflowError: any) {
@@ -530,13 +651,10 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
          if (algaInvoiceIdForError && tenant) { // Use tenant variable
              try {
                  // Pass snake_case args to action
-                 await typedActions.updateInvoiceQboDetails({
-                     invoice_id: algaInvoiceIdForError,
-                     last_sync_status: 'FAILED',
-                     last_sync_timestamp: new Date().toISOString(),
-                     last_sync_error: { message: "Unhandled workflow error", details: errorInfo },
-                     tenantId: tenant // Use tenant variable
-                 });
+                 //责任分离：见上文关于 QBO_API_ERROR 的注释。
+                 logger.warn('Skipping updateInvoiceQboDetails for WORKFLOW_ERROR as sync status is handled elsewhere. A separate action should update the mapping table.', { algaInvoiceIdForError, tenantId: tenant });
+                 // TODO: Add separate action call here to update tenant_external_entity_mappings
+                 // with lastSyncStatus: 'FAILED', lastSyncTimestamp, lastSyncError: { message: "Unhandled workflow error", details: errorInfo }
              } catch (updateError: any) {
                  logger.error('Failed to update Alga invoice status after unhandled workflow error.', { updateError: updateError?.message, executionId }); // This line was already correct
              }
