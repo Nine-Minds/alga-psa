@@ -745,7 +745,8 @@ export async function fetchWorkflowTaskActivities(
         status: task.execution_status || '',
         context_data: task.context_data,
         created_at: task.created_at,
-        updated_at: task.updated_at
+        updated_at: task.updated_at,
+        workflow_type: 'tenant'
       };
       
       return workflowTaskToActivity(task, execution);

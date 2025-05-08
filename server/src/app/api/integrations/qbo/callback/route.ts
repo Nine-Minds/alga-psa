@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // server/src/app/api/integrations/qbo/callback/route.ts
 // server/src/app/api/integrations/qbo/callback/route.ts
 import { NextResponse } from 'next/server';
