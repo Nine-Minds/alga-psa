@@ -2,19 +2,20 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { IDocument } from '../../interfaces/document.interface';
+import { IDocument } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
-import { Button } from '../ui/Button';
-import Drawer from '../ui/Drawer';
-import { Input } from '../ui/Input';
-import TextEditor from '../editor/TextEditor';
-import { Plus, Link, FileText } from 'lucide-react';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { Button } from 'server/src/components/ui/Button';
+import Drawer from 'server/src/components/ui/Drawer';
+import { Input } from 'server/src/components/ui/Input';
+import TextEditor from 'server/src/components/editor/TextEditor';
+import RichTextViewer from 'server/src/components/editor/RichTextViewer';
+import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { 
   getDocumentsByEntity,
   deleteDocument,
@@ -81,6 +82,7 @@ const Documents = ({
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCKS);
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
+  const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
 
   // Keep local documents state in sync with props
   useEffect(() => {
@@ -93,6 +95,7 @@ const Documents = ({
     setCurrentContent(DEFAULT_BLOCKS);
     setSelectedDocument(null);
     setIsLoadingContent(false);
+    setIsEditModeInDrawer(true);
     setIsDrawerOpen(true);
   };
 
@@ -349,6 +352,8 @@ const Documents = ({
                   onClick={() => {
                     setSelectedDocument(document);
                     setDocumentName(document.document_name);
+                    const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
+                    setIsEditModeInDrawer(isEditableContentDoc);
                     setIsDrawerOpen(true);
                   }}
                   isContentDocument={!document.file_id}
@@ -380,17 +385,54 @@ const Documents = ({
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 border-b pb-4">
               <h2 className="text-lg font-semibold">
-                {isCreatingNew ? 'New Document' : 'Edit Document'}
+                {isCreatingNew ? 'New Document' : (isEditModeInDrawer ? 'Edit Document' : 'View Document')}
               </h2>
-              {!isInDrawer && (
-                <Button
-                  id={`${id}-close-drawer-btn`}
-                  onClick={() => setIsDrawerOpen(false)}
-                  variant="ghost"
-                >
-                  ×
-                </Button>
-              )}
+              <div className="flex items-center space-x-2">
+                {selectedDocument &&
+                  (selectedDocument.type_name === 'text/plain' ||
+                   selectedDocument.type_name === 'text/markdown' ||
+                   (!selectedDocument.type_name && !selectedDocument.file_id)
+                  ) && (
+                  <Button
+                    id={`${id}-download-pdf-btn`}
+                    onClick={() => {
+                      if (selectedDocument) {
+                        window.open(`/api/documents/download/${selectedDocument.document_id}?format=pdf`, '_blank');
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                )}
+                {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
+                  <Button
+                    id={`${id}-edit-document-btn`}
+                    onClick={() => setIsEditModeInDrawer(true)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {!isInDrawer && (
+                  <Button
+                    id={`${id}-close-drawer-btn`}
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      if (!isCreatingNew) {
+                        setIsEditModeInDrawer(false);
+                      }
+                    }}
+                    variant="ghost"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -401,36 +443,41 @@ const Documents = ({
                   placeholder="Document Name"
                   value={isCreatingNew ? newDocumentName : documentName}
                   onChange={(e) => {
-                    if (isCreatingNew) {
-                      setNewDocumentName(e.target.value);
-                    } else {
-                      setDocumentName(e.target.value);
+                    if (isCreatingNew || isEditModeInDrawer) {
+                      if (isCreatingNew) {
+                        setNewDocumentName(e.target.value);
+                      } else {
+                        setDocumentName(e.target.value);
+                      }
                     }
                   }}
+                  readOnly={!isCreatingNew && !isEditModeInDrawer}
+                  className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto border-t border-b mb-4">
+              <div className="flex-1 overflow-y-auto border-t border-b mb-4 p-2">
                 <div className="h-full w-full">
-                  {isCreatingNew ? (
-                    <TextEditor
-                      key="editor-new"
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                    />
-                  ) : selectedDocument && !isLoadingContent ? (
-                    <TextEditor
-                      key={`editor-${selectedDocument.document_id}`}
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                    />
-                  ) : (
+                  {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                    </div>
+                  ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
+                    <TextEditor
+                      key={isCreatingNew ? "editor-new" : `editor-${selectedDocument?.document_id}`}
+                      id={`${id}-editor`}
+                      initialContent={currentContent}
+                      onContentChange={handleContentChange}
+                      editorRef={editorRef}
+                    />
+                  ) : selectedDocument ? (
+                    <RichTextViewer
+                      id={`${id}-viewer`}
+                      content={currentContent}
+                    />
+                  ) : (
+                    <div className="flex justify-center items-center h-full text-gray-500">
+                      Select a document or create a new one.
                     </div>
                   )}
                 </div>
@@ -439,19 +486,26 @@ const Documents = ({
               <div className="flex justify-end space-x-2">
                 <Button
                   id={`${id}-cancel-btn`}
-                  onClick={() => setIsDrawerOpen(false)}
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    if (!isCreatingNew) {
+                      setIsEditModeInDrawer(false);
+                    }
+                  }}
                   variant="outline"
                 >
                   Cancel
                 </Button>
-                <Button
-                  id={`${id}-save-btn`}
-                  onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
-                  disabled={isSaving}
-                  className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
-                </Button>
+                {(isCreatingNew || isEditModeInDrawer) && (
+                  <Button
+                    id={`${id}-save-btn`}
+                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
+                    disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
+                    className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

@@ -40,14 +40,21 @@ const Document = {
             return await db<IDocument>('documents')
                 .select(
                     'documents.*',
-                    'users.first_name',
-                    'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
+                    'users.first_name as created_by_first_name',
+                    'users.last_name as created_by_last_name',
+                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name"),
+                    db.raw("COALESCE(dt.type_name, sdt.type_name) as type_name"),
+                    db.raw("COALESCE(dt.icon, sdt.icon) as type_icon")
                 )
                 .leftJoin('users', function() {
                     this.on('documents.created_by', '=', 'users.user_id')
                         .andOn('users.tenant', '=', db.raw('?', [tenant]));
                 })
+                .leftJoin('document_types as dt', function() {
+                    this.on('documents.type_id', '=', 'dt.type_id')
+                        .andOn('documents.tenant', '=', 'dt.tenant');
+                })
+                .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
                 .where({
                     'documents.document_id': document_id,
                     'documents.tenant': tenant

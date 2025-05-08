@@ -386,3 +386,185 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
     return '[Table conversion error]';
   }
 }
+
+/**
+ * Extracts styled text content from block content array and converts to HTML
+ *
+ * @param content - The content array to extract styled text from
+ * @returns The extracted text with styling as an HTML string
+ */
+function extractStyledTextToHTML(content: any[]): string {
+  if (!Array.isArray(content)) return '';
+  if (content.length === 0) return '<br>';
+
+  return content
+    .filter((item: any) => item && item.type === 'text')
+    .map((item: any) => {
+      if (!item.text && item.text !== '') return '';
+
+      let result = item.text.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'); 
+
+      if (item.styles) {
+        if (item.styles.code) result = `<code>${result}</code>`; 
+        if (item.styles.strike) result = `<s>${result}</s>`;
+        if (item.styles.underline) result = `<u>${result}</u>`;
+        if (item.styles.italic) result = `<em>${result}</em>`;
+        if (item.styles.bold) result = `<strong>${result}</strong>`;
+
+        let stylesArray = [];
+        if (item.styles.textColor && item.styles.textColor !== 'default') {
+          stylesArray.push(`color:${item.styles.textColor}`);
+        }
+        if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
+          stylesArray.push(`background-color:${item.styles.backgroundColor}`);
+        }
+        if (stylesArray.length > 0) {
+          result = `<span style="${stylesArray.join(';')}">${result}</span>`;
+        }
+      }
+      return result;
+    })
+    .join('');
+}
+
+/**
+ * Converts BlockNote JSON blocks to an HTML string.
+ *
+ * @param blocks - BlockNote content as Block array, PartialBlock array, or JSON string.
+ * @returns An HTML string representation of the BlockNote content.
+ */
+export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string | undefined): string {
+  if (!blocks) return '<p>[No content]</p>';
+
+  let blockData: Block[] | PartialBlock[];
+  if (typeof blocks === 'string') {
+    try {
+      blockData = JSON.parse(blocks);
+    } catch (e) {
+      console.error("[BlockNoteUtils] Failed to parse BlockNote JSON string for HTML conversion:", e);
+      return '<p>[Invalid content format]</p>';
+    }
+  } else {
+    blockData = blocks;
+  }
+
+  let listBuffer: { type: 'ol' | 'ul', items: string[] } | null = null;
+  const output: string[] = [];
+
+  const flushListBuffer = () => {
+    if (listBuffer) {
+      output.push(`<${listBuffer.type}>${listBuffer.items.join('')}</${listBuffer.type}>`);
+      listBuffer = null;
+    }
+  };
+
+  blockData.forEach((block) => {
+    let blockStyles = '';
+    if (block.props) {
+      const props = block.props as any;
+      if (props.backgroundColor && props.backgroundColor !== 'default') {
+        blockStyles += `background-color:${props.backgroundColor};`;
+      }
+      if (props.textAlignment && props.textAlignment !== 'left') {
+        blockStyles += `text-align:${props.textAlignment};`;
+      }
+    }
+    const styleAttribute = blockStyles ? ` style="${blockStyles}"` : '';
+
+    let content = '';
+    let isListItem = false;
+
+    switch (block.type) {
+      case 'paragraph':
+        flushListBuffer();
+        content = extractStyledTextToHTML(block.content as any[]);
+        output.push(`<p${styleAttribute}>${content || '<br>'}</p>`); 
+        break;
+      case 'heading':
+        flushListBuffer();
+        const level = (block.props as any)?.level || 1;
+        content = extractStyledTextToHTML(block.content as any[]);
+        output.push(`<h${level}${styleAttribute}>${content}</h${level}>`);
+        break;
+      case 'numberedListItem':
+        content = extractStyledTextToHTML(block.content as any[]);
+        if (!listBuffer || listBuffer.type !== 'ol') {
+          flushListBuffer();
+          listBuffer = { type: 'ol', items: [] };
+        }
+        listBuffer.items.push(`<li${styleAttribute}>${content}</li>`);
+        isListItem = true;
+        break;
+      case 'bulletListItem':
+        content = extractStyledTextToHTML(block.content as any[]);
+        if (!listBuffer || listBuffer.type !== 'ul') {
+          flushListBuffer();
+          listBuffer = { type: 'ul', items: [] };
+        }
+        listBuffer.items.push(`<li${styleAttribute}>${content}</li>`);
+        isListItem = true;
+        break;
+      case 'checkListItem':
+        flushListBuffer();
+        const checked = (block.props as any)?.checked;
+        content = extractStyledTextToHTML(block.content as any[]);
+        output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
+        break;
+      case 'table':
+        flushListBuffer();
+        const tableContent = block.content as { type: 'tableContent', rows: Array<{ cells: Array<PartialBlock[]> }> };
+        if (!tableContent || !tableContent.rows) {
+           output.push('<!-- Invalid table structure -->');
+           break;
+        }
+        let tableHTML = '<table><tbody>';
+        tableContent.rows.forEach(row => {
+          tableHTML += '<tr>';
+          row.cells.forEach(cellContent => {
+            tableHTML += `<td>${extractStyledTextToHTML(cellContent as any[])}</td>`;
+          });
+          tableHTML += '</tr>';
+        });
+        tableHTML += '</tbody></table>';
+        output.push(blockStyles ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
+        break;
+      case 'codeBlock':
+        flushListBuffer();
+        const language = (block.props as any)?.language || '';
+        const codeText = (block.content as any[])
+            .map(item => item.text || '')
+            .join('\n')
+            .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+        content = `<code class="language-${language}">${codeText}</code>`;
+        output.push(`<pre${styleAttribute}>${content}</pre>`);
+        break;
+      // Add cases for other block types as needed
+      // case 'image':
+      //   flushListBuffer();
+      //   const src = (block.props as any)?.src;
+      //   if (src) output.push(`<img src="${src}" alt="Image" />`);
+      //   else output.push('<!-- Image block with no source -->');
+      //   break;
+      default:
+        flushListBuffer();
+        console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${block.type}`);
+        if (block.content && Array.isArray(block.content)) {
+           content = extractStyledTextToHTML(block.content as any[]);
+           output.push(`<div${styleAttribute}>${content}</div>`);
+        } else if (block.content && typeof block.content === 'string') {
+           const escapedContent = block.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+           output.push(`<div${styleAttribute}>${escapedContent}</div>`);
+        } else {
+           output.push(`<!-- Unsupported block type: ${block.type} -->`);
+        }
+        break;
+    }
+    if (!isListItem) {
+        flushListBuffer();
+    }
+  });
+
+  flushListBuffer();
+
+  return output.join('\n');
+}
