@@ -1,7 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { ChatStreamService } from 'ee/server/src/services/chatStreamService';
 
-export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
 
 export async function GET(
