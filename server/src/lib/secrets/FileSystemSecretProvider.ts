@@ -61,7 +61,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
     const filePath = path.join(this.basePath, safeName);
     console.debug(`Attempting to read app secret: ${filePath}`);
     
-    return this.readFileContent(filePath);
+    return this.readFileContent(filePath) || '';
   }
 
   /**
