@@ -85,7 +85,8 @@ export function serializeWorkflowFunction(fn: WorkflowFunction): string {
  */
 export function deserializeWorkflowFunction(fnString: string): WorkflowFunction {
   try {
-    console.log('Deserializing workflow function:', fnString);
+    console.log('fnString length:', fnString.length);
+    console.log('Deserializing workflow function:', fnString.length > 100 ? fnString.substring(0, 100) + '...' : fnString);
     
     // The function string should already be an async function with a context parameter
     const wrappedCode = fnString;
@@ -101,7 +102,7 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     });
     
     const jsCode = result.outputText;
-    console.log('Compiled JavaScript:', jsCode);
+    console.log('Compiled JavaScript:', jsCode.length > 100 ? jsCode.substring(0, 100) + '...' : jsCode);
     
     // Extract the function body from the compiled code
     // This regex extracts the content between the first { and the last }

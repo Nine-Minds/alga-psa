@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from 'next/server'; // Keep only one import
 import crypto from 'crypto';
 // --- Import Actual Implementations ---
@@ -13,7 +15,10 @@ const QBO_SCOPES = 'com.intuit.quickbooks.accounting';
 const QBO_CLIENT_ID_SECRET_NAME = 'qbo_client_id'; // Define constant
 const QBO_REDIRECT_URI = process.env.QBO_REDIRECT_URI || 'http://localhost:3000/api/integrations/qbo/callback';
 
-export async function GET(request: Request) {
+export async function GET(
+  request: Request,
+  { params }: { params: Record<string, string> }
+) {
   let tenantId: string | null = null;
   // Get the secret provider instance
   const secretProvider = getSecretProviderInstance();

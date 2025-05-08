@@ -488,6 +488,7 @@ export async function getWorkflowExecution(executionId: string): Promise<IWorkfl
             }
           }
         },
+        workflow_type: 'tenant',
         tenant: 'mock-tenant',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -514,7 +515,8 @@ export async function getWorkflowExecution(executionId: string): Promise<IWorkfl
       context_data: execution.context_data,
       tenant: execution.tenant,
       created_at: execution.created_at,
-      updated_at: execution.updated_at
+      updated_at: execution.updated_at,
+      workflow_type: 'tenant'
     };
   } catch (error) {
     console.error(`Error getting workflow execution ${executionId}:`, error);

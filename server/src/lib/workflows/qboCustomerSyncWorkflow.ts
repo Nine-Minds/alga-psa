@@ -1,4 +1,4 @@
-import { WorkflowContext } from '@shared/workflow';
+import { WorkflowContext } from '../../../../shared/workflow/core';
 // TODO: Import specific types for Alga Company, QBO Customer, Human Task, etc.
 // import { AlgaCompany } from '...';
 // import { QboCustomer } from '...';
@@ -11,10 +11,16 @@ type QboCustomerResult = any;
 type HumanTaskInput = any;
 type TriggerEventPayload = {
   realmId: string;
-  algaCompanyId: string;
+  company_id: string; // Corrected to match actual payload
   // TODO: Confirm other potential payload fields like trigger type ('COMPANY_CREATED' | 'COMPANY_UPDATED')
+  originatingWorkflowInstanceId?: string; // Add other fields from actual payload
+  tenantId?: string; // Add other fields from actual payload
 };
-// Removed incorrect TriggerEvent type based on TS errors. Assuming input is the payload.
+
+type TriggerEvent = {
+  name: string; // e.g., "CUSTOMER_SYNC_REQUESTED"
+  payload: TriggerEventPayload;
+};
 
 // Define possible states for the workflow
 type WorkflowState =
@@ -36,28 +42,28 @@ type WorkflowState =
  * Triggered by COMPANY_CREATED or COMPANY_UPDATED events.
  */
 export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise<void> {
-  const { actions, data, events, logger, input, setState, getCurrentState, tenant, executionId } = context;
+  const { actions, data, events, logger, setState, getCurrentState, tenant, executionId } = context;
 
   // 1. Initialization & State
   setState('INITIAL');
   logger.info('QBO Customer Sync workflow started', { tenantId: tenant, executionId });
 
   // 2. Trigger Event & Context
-  // TODO: Confirm exact structure of input payload (assuming input IS the payload)
-  if (!input) {
-      logger.error('Missing input payload in workflow context', { tenantId: tenant, executionId });
+  const triggerEvent = data.get<TriggerEvent>('triggerEvent');
+
+  if (!triggerEvent || !triggerEvent.payload) {
+      logger.error('Missing triggerEvent or its payload in workflow context data', { tenantId: tenant, executionId, contextData: data.get('triggerEvent') });
       setState('MAPPING_ERROR'); // Or a more specific error state like 'MISSING_INPUT'
       // TODO: Create human task for missing input
       return;
   }
 
-  // Assuming input directly contains the payload fields based on TS errors and common patterns
-  const { realmId, algaCompanyId } = input as TriggerEventPayload; // Cast to expected payload type
+  const { realmId, company_id: algaCompanyId } = triggerEvent.payload; // Use company_id and alias to algaCompanyId for consistency below
 
-  logger.info('Processing trigger event payload', { realmId, algaCompanyId, tenantId: tenant, executionId });
+  logger.info('Processing trigger event payload', { eventName: triggerEvent.name, realmId, algaCompanyId, tenantId: tenant, executionId });
 
   if (!realmId || !algaCompanyId) {
-      logger.error('Missing realmId or algaCompanyId in input payload', { payload: input, tenantId: tenant, executionId });
+      logger.error('Missing realmId or algaCompanyId in triggerEvent payload', { payload: triggerEvent.payload, tenantId: tenant, executionId });
       setState('MAPPING_ERROR'); // Or a more specific error state
       // TODO: Create human task for missing critical IDs
       return;
@@ -68,7 +74,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
     setState('FETCHING_DATA');
     logger.info('Fetching Alga Company data', { algaCompanyId, tenantId: tenant });
     // TODO: Confirm action name and parameters for getCompany
-    const algaCompany: AlgaCompany = await actions.getCompany({ companyId: algaCompanyId, tenantId: tenant });
+    const algaCompany: AlgaCompany = await actions.getCompany({ id: algaCompanyId, tenantId: tenant });
     if (!algaCompany) {
         logger.error('Alga Company not found', { algaCompanyId, tenantId: tenant });
         setState('MAPPING_ERROR'); // Or a more specific error state like 'DATA_NOT_FOUND'
@@ -84,7 +90,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
     // TODO: Refine mapping based on actual AlgaCompany and QboCustomer types
     const qboCustomerData: QboCustomerInput = {
-        DisplayName: algaCompany.name, // Assuming 'name' field exists
+        DisplayName: algaCompany.company_name,
         PrimaryEmailAddr: { Address: algaCompany.email }, // Assuming 'email' field exists
         PrimaryPhone: { FreeFormNumber: algaCompany.phone }, // Assuming 'phone' field exists
         BillAddr: { // Assuming address fields exist and map like this
@@ -158,10 +164,83 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
     data.set('mappedQboCustomerData', qboCustomerData);
     logger.info('Data mapping complete', { algaCompanyId, tenantId: tenant });
 
+    // Fetch QBO Credentials
+    logger.info('Fetching QBO credentials', { realmId, tenantId: tenant, executionId });
+    const secretResult = await actions.get_secret({
+        secretName: "qbo_credentials", // Changed from "QBO_CREDENTIALS"
+        scopeIdentifier: realmId,
+        tenantId: tenant // tenantId is implicitly passed via context by the action service, but good to be explicit if the action supports it
+    });
+
+    if (!secretResult || !secretResult.success) {
+        const errorMessage = secretResult?.message || 'Unknown error fetching QBO credentials.';
+        logger.error('Failed to fetch QBO credentials.', {
+            algaCompanyId,
+            realmId,
+            message: errorMessage,
+            errorDetails: secretResult?.errorDetails, // Assuming errorDetails might exist
+            tenantId: tenant,
+            executionId
+        });
+        setState('QBO_API_ERROR'); // Reusing QBO_API_ERROR state for secret fetch failure
+        await actions.createHumanTask({
+            taskType: 'qbo_sync_error', // Or a more specific 'secret_fetch_error'
+            title: `Failed to Fetch QBO Credentials for Company ${algaCompany.name || algaCompanyId}`,
+            details: {
+                message: `The workflow failed to retrieve QBO credentials for realmId: ${realmId}. Error: ${errorMessage}`,
+                algaCompanyId: algaCompanyId,
+                realmId: realmId,
+                errorDetails: secretResult?.errorDetails || errorMessage,
+            },
+            tenantId: tenant,
+        } as HumanTaskInput);
+        return; // Stop workflow execution
+    }
+
+    const qboCredentials = secretResult.secret;
+    data.set('qboCredentials', qboCredentials); // Store for potential resume/retry scenarios
+    logger.info('QBO credentials fetched and stored successfully', { realmId, tenantId: tenant, executionId });
+
 
     // 5. Determine Operation & Execute QBO Action
-    const existingQboCustomerId = algaCompany.qbo_customer_id; // Assuming field name
-    const qboSyncToken = algaCompany.qbo_sync_token; // Assuming field name for updates
+    logger.info('Fetching QBO customer mapping from tenant_external_entity_mappings', { algaCompanyId, realmId, tenantId: tenant });
+    const mappingResult = await actions.get_external_entity_mapping({
+        algaEntityId: algaCompanyId,
+        externalSystemName: 'quickbooks_online', // Or a constant if you have one defined
+        externalRealmId: realmId,
+        // tenantId is implicit
+    });
+
+    let existingQboCustomerId: string | undefined = undefined;
+    let qboSyncToken: string | undefined = undefined;
+
+    if (mappingResult && mappingResult.success && mappingResult.found && mappingResult.mapping) {
+        existingQboCustomerId = mappingResult.mapping.externalEntityId;
+        qboSyncToken = mappingResult.mapping.syncToken;
+        logger.info('Found existing QBO mapping', { algaCompanyId, existingQboCustomerId, qboSyncToken });
+    } else if (mappingResult && !mappingResult.success) {
+        logger.error('Failed to fetch QBO customer mapping', { algaCompanyId, error: mappingResult.message, details: mappingResult.errorDetails });
+        // Decide on error handling: stop workflow, create human task, or proceed to create?
+        // For now, let's log the error and proceed as if no mapping exists (which will lead to a create attempt).
+        // A human task might be appropriate here in a more robust implementation if the lookup fails.
+        setState('QBO_API_ERROR'); // Or a more specific state like 'MAPPING_LOOKUP_FAILED'
+        await actions.createHumanTask({
+            taskType: 'qbo_sync_error',
+            title: `Failed to lookup QBO mapping for Company ${algaCompany.company_name || algaCompanyId}`,
+            details: {
+                message: `The workflow failed to retrieve the QBO customer mapping for Alga Company ID ${algaCompanyId} and Realm ID ${realmId}. Error: ${mappingResult.message}`,
+                algaCompanyId: algaCompanyId,
+                realmId: realmId,
+                errorDetails: mappingResult.errorDetails || mappingResult.message,
+            },
+            tenantId: tenant,
+        } as HumanTaskInput);
+        return; // Stop workflow
+    } else {
+        logger.info('No existing QBO mapping found for company.', { algaCompanyId });
+    }
+    // const existingQboCustomerId = algaCompany.qbo_customer_id; // Assuming field name
+    // const qboSyncToken = algaCompany.qbo_sync_token; // Assuming field name for updates
 
     try {
         let qboResult: QboCustomerResult;
@@ -189,12 +268,13 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             }
 
             // TODO: Confirm action name and parameters for updateQboCustomer
-            qboResult = await actions.updateQboCustomer({
+            qboResult = await actions.update_qbo_customer({ // Corrected action name
                 qboCustomerId: existingQboCustomerId,
                 qboSyncToken: qboSyncToken,
                 qboCustomerData: { ...qboCustomerData, Id: existingQboCustomerId, SyncToken: qboSyncToken }, // QBO often requires Id and SyncToken in payload
                 tenantId: tenant,
-                realmId: realmId
+                realmId: realmId,
+                qboCredentials: qboCredentials // Pass fetched credentials
             });
             logger.info('QBO Update Customer API call successful', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant });
 
@@ -205,72 +285,107 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             const performDuplicateCheck = true; // Set based on config or decision
             if (performDuplicateCheck) {
                 setState('CHECKING_QBO_DUPLICATES');
-                logger.info('Checking for potential QBO duplicate customers', { displayName: qboCustomerData.DisplayName, email: qboCustomerData.PrimaryEmailAddr?.Address, tenantId: tenant, realmId });
-                try {
-                    // TODO: Confirm action name and parameters for getQboCustomerByDisplayOrEmail
-                    const potentialDuplicates = await actions.getQboCustomerByDisplayOrEmail({
-                        displayName: qboCustomerData.DisplayName,
-                        email: qboCustomerData.PrimaryEmailAddr?.Address,
-                        tenantId: tenant,
-                        realmId: realmId
-                    });
+                
+                const displayNameForCheck = qboCustomerData.DisplayName;
+                const emailForCheck = qboCustomerData.PrimaryEmailAddr?.Address;
 
-                    if (potentialDuplicates && potentialDuplicates.length > 0) {
-                        logger.warn('Potential QBO duplicate customer(s) found', {
-                            algaCompanyId,
-                            potentialDuplicates: potentialDuplicates.map((d: any) => ({ id: d.Id, name: d.DisplayName })), // Extract relevant info
+                if (!displayNameForCheck && !emailForCheck) {
+                    logger.warn('Cannot perform QBO duplicate check: both DisplayName and Email are missing from Alga Company data.', { algaCompanyId, tenantId: tenant, realmId });
+                    // Optionally, create a human task here if this is a critical issue.
+                    // For now, we proceed as if no duplicates were found, but this might need review based on business rules.
+                    logger.info('Skipping QBO duplicate check due to missing key identifiers. Proceeding as if no duplicates found.', { algaCompanyId, tenantId: tenant, realmId });
+                } else {
+                    logger.info('Checking for potential QBO duplicate customers', { displayName: displayNameForCheck, email: emailForCheck, tenantId: tenant, realmId });
+                    try {
+                        const potentialDuplicatesResult = await actions.get_qbo_customer_by_display_or_email({
+                            displayName: displayNameForCheck,
+                            email: emailForCheck,
                             tenantId: tenant,
-                            realmId
+                            realmId: realmId,
+                            qboCredentials: qboCredentials // Pass fetched credentials
                         });
-                        setState('DUPLICATE_CHECK_REQUIRED');
-                        // TODO: Define human task schema for qbo_customer_duplicate
-                        await actions.createHumanTask({
-                            taskType: 'qbo_customer_duplicate',
-                            title: `Potential QBO Customer Duplicate for ${algaCompany.name}`,
-                            details: {
-                                message: `A potential duplicate QBO customer was found based on display name or email. Please review and resolve manually.`,
-                                algaCompanyId: algaCompanyId,
-                                algaCompanyName: algaCompany.name,
-                                mappedDisplayName: qboCustomerData.DisplayName,
-                                mappedEmail: qboCustomerData.PrimaryEmailAddr?.Address,
-                                potentialDuplicates: potentialDuplicates, // Include details of potential matches
-                                realmId: realmId,
-                            },
-                            tenantId: tenant,
-                        } as HumanTaskInput);
-                        return; // Stop workflow execution
-                    } else {
-                         logger.info('No potential QBO duplicates found.', { algaCompanyId, tenantId: tenant, realmId });
-                    }
-                } catch (dupCheckError: any) {
-                     logger.error('Error during QBO duplicate check', { error: dupCheckError.message, algaCompanyId, tenantId: tenant, realmId });
-                     // Decide how to handle: proceed with create, or fail? Failing might be safer.
-                     setState('QBO_API_ERROR'); // Treat as API error for now
-                     // TODO: Create human task for duplicate check failure
-                     await actions.createHumanTask({
-                         taskType: 'qbo_sync_error', // Reuse or create specific type
-                         title: `Error During QBO Duplicate Check - ${algaCompany.name}`,
-                         details: {
-                             message: `The check for duplicate QBO customers failed. Error: ${dupCheckError.message}. Cannot proceed with automatic creation.`,
-                             algaCompanyId: algaCompanyId,
-                             algaCompanyName: algaCompany.name,
-                             realmId: realmId,
-                             errorDetails: dupCheckError,
-                         },
-                         tenantId: tenant,
-                     } as HumanTaskInput);
-                     return;
-                }
+
+                        if (!potentialDuplicatesResult.success) {
+                            logger.error('Failed to check for QBO duplicate customers.', {
+                                algaCompanyId,
+                                message: potentialDuplicatesResult.message,
+                                errorDetails: potentialDuplicatesResult.errorDetails,
+                                tenantId: tenant,
+                                realmId
+                            });
+                            setState('QBO_API_ERROR'); // Or a more specific state like 'DUPLICATE_CHECK_FAILED'
+                            await actions.createHumanTask({
+                                taskType: 'qbo_sync_error',
+                                title: `Failed Duplicate Check for ${algaCompany.name}`,
+                                details: {
+                                    message: `The QBO duplicate customer check failed: ${potentialDuplicatesResult.message || 'Unknown error'}. Manual review required.`,
+                                    algaCompanyId: algaCompanyId,
+                                    algaCompanyName: algaCompany.name,
+                                    realmId: realmId,
+                                    errorDetails: potentialDuplicatesResult.errorDetails || potentialDuplicatesResult.message,
+                                },
+                                tenantId: tenant,
+                            } as HumanTaskInput);
+                            return; // Stop workflow execution
+                        }
+
+                        if (potentialDuplicatesResult.found && potentialDuplicatesResult.customers && potentialDuplicatesResult.customers.length > 0) {
+                            logger.warn('Potential QBO duplicate customer(s) found', {
+                                algaCompanyId,
+                                potentialDuplicates: potentialDuplicatesResult.customers.map((d: any) => ({ id: d.Id, name: d.DisplayName, email: d.PrimaryEmailAddr?.Address })),
+                                tenantId: tenant,
+                                realmId
+                            });
+                            setState('DUPLICATE_CHECK_REQUIRED');
+                            await actions.createHumanTask({
+                                taskType: 'qbo_customer_duplicate',
+                                title: `Potential QBO Customer Duplicate for ${algaCompany.name}`,
+                                details: {
+                                    message: `A potential duplicate QBO customer was found based on display name or email. Please review and resolve manually.`,
+                                    algaCompanyId: algaCompanyId,
+                                    algaCompanyName: algaCompany.name,
+                                    mappedDisplayName: qboCustomerData.DisplayName,
+                                    mappedEmail: qboCustomerData.PrimaryEmailAddr?.Address,
+                                    potentialDuplicates: potentialDuplicatesResult.customers,
+                                    realmId: realmId,
+                                },
+                                tenantId: tenant,
+                            } as HumanTaskInput);
+                            return; // Stop workflow execution
+                        } else {
+                             logger.info('No potential QBO duplicates found or check was successful with no matches.', { algaCompanyId, tenantId: tenant, realmId });
+                        }
+                    } catch (dupCheckError: any) { // This catch block might now be less likely to be hit if the action itself handles errors gracefully
+                         logger.error('Unexpected error during QBO duplicate check invocation', { error: dupCheckError.message, algaCompanyId, tenantId: tenant, realmId });
+                         // Decide how to handle: proceed with create, or fail? Failing might be safer.
+                         setState('QBO_API_ERROR'); // Treat as API error for now
+                         // TODO: Create human task for duplicate check failure
+                         await actions.createHumanTask({
+                             taskType: 'qbo_sync_error', // Reuse or create specific type
+                             title: `Error During QBO Duplicate Check - ${algaCompany.name}`,
+                             details: {
+                                 message: `The check for duplicate QBO customers failed. Error: ${dupCheckError.message}. Cannot proceed with automatic creation.`,
+                                 algaCompanyId: algaCompanyId,
+                                 algaCompanyName: algaCompany.name,
+                                 realmId: realmId,
+                                 errorDetails: dupCheckError,
+                             },
+                             tenantId: tenant,
+                         } as HumanTaskInput);
+                         return;
+                    } // End of try-catch for duplicate check
+                } // End of else for if (!displayNameForCheck && !emailForCheck)
             } // End Optional Duplicate Check
 
             // Proceed with Create
             setState('CALLING_QBO_CREATE');
             logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
             // TODO: Confirm action name and parameters for createQboCustomer
-            qboResult = await actions.createQboCustomer({
+            qboResult = await actions.create_qbo_customer({
                 qboCustomerData: qboCustomerData,
                 tenantId: tenant,
-                realmId: realmId
+                realmId: realmId,
+                qboCredentials: qboCredentials // Pass fetched credentials
             });
             logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id, tenantId: tenant });
         }
@@ -303,11 +418,11 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
         setState('UPDATING_ALGA');
         logger.info('Updating Alga Company with QBO details', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
         // TODO: Confirm action name and parameters for updateCompanyQboDetails
-        await actions.updateCompanyQboDetails({
+        await actions.update_company_qbo_details({
             companyId: algaCompanyId,
             qboCustomerId: newQboCustomerId,
             qboSyncToken: newQboSyncToken,
-            tenantId: tenant
+            realmId: realmId
         });
         logger.info('Alga Company updated successfully', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
 
@@ -318,7 +433,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
     } catch (error: any) {
         // --- QBO API CALL FAILED ---
         // Ensure realmId is available in the catch block if needed for logging/task creation
-        const currentRealmId = (input as TriggerEventPayload)?.realmId || 'UNKNOWN'; // Get realmId safely
+        const currentRealmId = triggerEvent?.payload?.realmId || 'UNKNOWN'; // Get realmId safely from triggerEvent
         logger.error('QBO API call failed', { error: error.message, stack: error.stack, currentState: getCurrentState(), algaCompanyId, tenantId: tenant, realmId: currentRealmId });
         setState('QBO_API_ERROR');
         data.set('qboApiError', {
@@ -351,9 +466,10 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
   } catch (outerError: any) {
       // Catch errors from initial data fetching or mapping stages
-      logger.error('Workflow failed before QBO interaction', { error: outerError.message, stack: outerError.stack, currentState: getCurrentState(), algaCompanyId: (input as TriggerEventPayload)?.algaCompanyId, tenantId: tenant, executionId });
+      const currentAlgaCompanyId = triggerEvent?.payload?.company_id || 'UNKNOWN';
+      logger.error('Workflow failed before QBO interaction', { error: outerError.message, stack: outerError.stack, currentState: getCurrentState(), algaCompanyId: currentAlgaCompanyId, tenantId: tenant, executionId });
       // Ensure state reflects the error, potentially set earlier, or set a generic one
-      if (getCurrentState() !== 'MAPPING_ERROR') { // Avoid overwriting specific mapping errors
+      if (getCurrentState() !== 'MAPPING_ERROR' && getCurrentState() !== 'INITIAL') { // Avoid overwriting specific mapping errors or if still initial
           setState('QBO_API_ERROR'); // Reuse or create a more generic 'WORKFLOW_ERROR' state
       }
       // Optionally create a human task for these early failures too

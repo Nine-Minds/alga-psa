@@ -10,8 +10,8 @@ import { getConnection } from '../../db/db';
 const PROCESSED_EVENTS_TTL = 60 * 60 * 24 * 3; // 3 days in seconds
 
 // Get consumer group from config
-const config = getRedisConfig();
-const CONSUMER_GROUP = config.eventBus.consumerGroup;
+
+const CONSUMER_GROUP = () => { const config = getRedisConfig(); return config.eventBus.consumerGroup; };
 
 export async function initializeEmailNotificationConsumer(tenantId: string) {
   const config = getRedisConfig();
@@ -53,7 +53,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
       }
 
       // Create consumer group
-      await client.xGroupCreate(streamKey, CONSUMER_GROUP, '0', { MKSTREAM: true });
+      await client.xGroupCreate(streamKey, CONSUMER_GROUP(), '0', { MKSTREAM: true });
       logger.info(`[EmailNotificationConsumer] Created consumer group for stream: ${streamKey}`);
     } catch (error) {
       // Ignore if group already exists
@@ -289,7 +289,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
       }));
 
       const streamResponses = await client.xReadGroup(
-        CONSUMER_GROUP,
+        CONSUMER_GROUP(),
         consumerName,
         streams,
         {
@@ -311,7 +311,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                   eventType: baseEvent.eventType,
                   availableTypes: Object.keys(EventSchemas)
                 });
-                await client.xAck(stream, CONSUMER_GROUP, message.id);
+                await client.xAck(stream, CONSUMER_GROUP(), message.id);
                 continue;
               }
 
@@ -324,7 +324,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                   eventId: event.id,
                   eventType: event.eventType
                 });
-                await client.xAck(stream, CONSUMER_GROUP, message.id);
+                await client.xAck(stream, CONSUMER_GROUP(), message.id);
                 continue;
               }
 
@@ -335,7 +335,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                   eventType: event.eventType,
                   eventId: event.id
                 });
-                await client.xAck(stream, CONSUMER_GROUP, message.id);
+                await client.xAck(stream, CONSUMER_GROUP(), message.id);
                 continue;
               }
 
@@ -365,7 +365,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
 
               // Mark as processed and acknowledge
               await markEventProcessed(event);
-              await client.xAck(stream, CONSUMER_GROUP, message.id);
+              await client.xAck(stream, CONSUMER_GROUP(), message.id);
               
               logger.info('[EmailNotificationConsumer] Successfully processed event:', {
                 eventType: event.eventType,
@@ -402,7 +402,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
         // Get pending entries that are idle for more than 60 seconds
         const pendingInfo = await client.xPending(
           streamKey,
-          CONSUMER_GROUP
+          CONSUMER_GROUP()
         );
 
         if (pendingInfo.pending === 0) continue;
@@ -410,7 +410,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
         // Get detailed pending entries
         const pendingEntries = await client.xPendingRange(
           streamKey,
-          CONSUMER_GROUP,
+          CONSUMER_GROUP(),
           '-',
           '+',
           10
@@ -423,7 +423,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
             // Claim the message
             const claimed = await client.xClaim(
               streamKey,
-              CONSUMER_GROUP,
+              CONSUMER_GROUP(),
               consumerName,
               60000,
               [messageId]
@@ -441,7 +441,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                     eventType: baseEvent.eventType,
                     messageId
                   });
-                  await client.xAck(streamKey, CONSUMER_GROUP, messageId);
+                  await client.xAck(streamKey, CONSUMER_GROUP(), messageId);
                   continue;
                 }
 
@@ -454,7 +454,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                     eventId: event.id,
                     eventType: event.eventType
                   });
-                  await client.xAck(streamKey, CONSUMER_GROUP, messageId);
+                  await client.xAck(streamKey, CONSUMER_GROUP(), messageId);
                   continue;
                 }
 
@@ -465,7 +465,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                     eventType: event.eventType,
                     eventId: event.id
                   });
-                  await client.xAck(streamKey, CONSUMER_GROUP, messageId);
+                  await client.xAck(streamKey, CONSUMER_GROUP(), messageId);
                   continue;
                 }
 
@@ -495,7 +495,7 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
 
                 // Mark as processed and acknowledge
                 await markEventProcessed(event);
-                await client.xAck(streamKey, CONSUMER_GROUP, messageId);
+                await client.xAck(streamKey, CONSUMER_GROUP(), messageId);
 
                 logger.info('[EmailNotificationConsumer] Successfully processed pending event:', {
                   eventType: event.eventType,

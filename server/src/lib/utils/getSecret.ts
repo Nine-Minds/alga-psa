@@ -18,7 +18,7 @@ export async function getSecret(secretName: string, envVar: string, defaultValue
   const secrets = getSecretProviderInstance();
   const providerSecret = await secrets.getAppSecret(secretName);
 
-  if (providerSecret !== undefined) {
+  if (providerSecret !== undefined && providerSecret !== '') {
     logger.debug(`Retrieved secret '${secretName}' from configured provider.`);
     return providerSecret;
   }

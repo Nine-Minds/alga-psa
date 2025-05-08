@@ -237,37 +237,40 @@ def register-workflow [
     let sql_transaction = "
     BEGIN;
 
-    -- Step 1: Ensure registration exists and get its ID
-    WITH reg AS (
+    -- Step 1: Ensure registration exists and get its ID into a temporary table
+    CREATE TEMP TABLE _tmp_reg_id (registration_id UUID) ON COMMIT DROP;
+
+    WITH upsert_reg AS (
         INSERT INTO system_workflow_registrations (name, version, status)
-        VALUES (:'workflow_name', :'new_version_string', 'draft') -- Initial registration defaults
-        ON CONFLICT (name) DO UPDATE SET updated_at = now() -- Update timestamp if exists
+        VALUES (:'workflow_name', :'new_version_string', 'draft')
+        ON CONFLICT (name) DO UPDATE SET updated_at = now()
         RETURNING registration_id
-    ), selected_reg AS (
-        SELECT registration_id FROM system_workflow_registrations WHERE name = :'workflow_name'
-    ), reg_id_cte AS (
-        SELECT COALESCE( (SELECT registration_id FROM reg), (SELECT registration_id FROM selected_reg) ) as id
     )
+    INSERT INTO _tmp_reg_id (registration_id)
+    SELECT registration_id FROM upsert_reg
+    UNION ALL
+    SELECT registration_id FROM system_workflow_registrations
+    WHERE name = :'workflow_name' AND NOT EXISTS (SELECT 1 FROM upsert_reg LIMIT 1) -- Ensure this only runs if upsert_reg was empty (conflict occurred)
+    LIMIT 1;
+
     -- Step 2: Unset existing 'is_current' flag for this registration
-    , unset_current AS (
-        UPDATE system_workflow_registration_versions
-        SET is_current = false
-        WHERE registration_id = (SELECT id FROM reg_id_cte) AND is_current = true
-    )
+    UPDATE system_workflow_registration_versions
+    SET is_current = false
+    WHERE registration_id = (SELECT registration_id FROM _tmp_reg_id) AND is_current = true;
+
     -- Step 3: Insert the new version, marking it as current
-    , insert_version AS (
-        INSERT INTO system_workflow_registration_versions (registration_id, version, is_current, code)
-        SELECT id, :'new_version_string', true, :'content' -- Store content as text
-        FROM reg_id_cte
-        RETURNING version_id
-    )
+    INSERT INTO system_workflow_registration_versions (registration_id, version, is_current, code)
+    SELECT registration_id, :'new_version_string', true, :'content' -- Store content as text
+    FROM _tmp_reg_id;
+    -- RETURNING version_id; -- Not strictly needed for the rest of this transaction block
+
     -- Step 4: Update the main registration's version string and status
     UPDATE system_workflow_registrations
     SET
         version = :'new_version_string',
         status = 'active', -- Set to active once a version is added
         updated_at = now()
-    WHERE registration_id = (SELECT id FROM reg_id_cte);
+    WHERE registration_id = (SELECT registration_id FROM _tmp_reg_id);
 
     COMMIT;
     "
@@ -284,7 +287,8 @@ def register-workflow [
 
     # Check result
     if $result.exit_code == 0 {
-        print $"($color_green)System workflow '($workflow_name)' registered/versioned successfully (Version: ($new_version_string)).($color_reset)"
+        let version_info = $"Version: ($new_version_string)"
+        print $"($color_green)System workflow '($workflow_name)' registered/versioned successfully (($version_info)).($color_reset)"
     } else {
         print $"($color_red)($result.stderr)($color_reset)"
         # Note: psql might not output specific errors easily here if ON_ERROR_STOP is used

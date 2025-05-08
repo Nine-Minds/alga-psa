@@ -202,6 +202,10 @@ export class RedisStreamClient {
   public async publishEvent(event: WorkflowEventBase): Promise<string> {
     try {
       const client = await this.getClient();
+      if (!event.execution_id) {
+        throw new Error('Execution ID is required to publish an event');
+      }
+      
       const streamName = this.getStreamName(event.execution_id);
       
       // Ensure the stream and consumer group exist

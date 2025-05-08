@@ -9,7 +9,7 @@ import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
 import logger from '@shared/core/logger';
 import "server/src/types/next-auth";
-import { getAdminConnection } from "server/src/lib/db/admin";
+// import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
 
@@ -60,6 +60,7 @@ export const options: NextAuthOptions = {
                 twoFactorCode: { label: "2FA Code", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
+                const { getAdminConnection } = await import("server/src/lib/db/admin");
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -191,72 +192,72 @@ export const options: NextAuthOptions = {
                 }
             },
         }),
-        CredentialsProvider({
-            id: "keycloak-credentials",
-            name: "Keycloak-credentials",
-            credentials: {
-                email: { label: "Email", type: "email" },
-                password: { label: "Password", type: "password" },
-                twoFactorCode: { label: "2FA Code", type: "text" },
-            },
-            async authorize(credentials): Promise<ExtendedUser | null> {
-                logger.info("Starting Keycloak Credentials OAuth")
-                if (!credentials?.email || !credentials.password) {
-                    throw new Error("Missing username or password");
-                }
-                const user = await User.findUserByEmail(credentials.email);
-                if (!user || !user.user_id) {
-                    logger.warn("User not found with email", credentials.email);
-                    throw new Error("User not found");
-                }
-                if (!user) { return null; }
-                if (user.two_factor_enabled) {
-                    if (!credentials.twoFactorCode) {
-                        logger.warn("2FA code required for email", credentials.email);
-                        return null;
-                    }
-                    if (!user.two_factor_secret) {
-                        logger.warn("2FA secret not found for email", credentials.email);
-                        return null;
-                    }
-                    const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
-                    if (!isValid2FA) {
-                        logger.warn("Invalid 2FA code for email", credentials.email);
-                        return null;
-                    }
-                }
+        // CredentialsProvider({
+        //     id: "keycloak-credentials",
+        //     name: "Keycloak-credentials",
+        //     credentials: {
+        //         email: { label: "Email", type: "email" },
+        //         password: { label: "Password", type: "password" },
+        //         twoFactorCode: { label: "2FA Code", type: "text" },
+        //     },
+        //     async authorize(credentials): Promise<ExtendedUser | null> {
+        //         logger.info("Starting Keycloak Credentials OAuth")
+        //         if (!credentials?.email || !credentials.password) {
+        //             throw new Error("Missing username or password");
+        //         }
+        //         const user = await User.findUserByEmail(credentials.email);
+        //         if (!user || !user.user_id) {
+        //             logger.warn("User not found with email", credentials.email);
+        //             throw new Error("User not found");
+        //         }
+        //         if (!user) { return null; }
+        //         if (user.two_factor_enabled) {
+        //             if (!credentials.twoFactorCode) {
+        //                 logger.warn("2FA code required for email", credentials.email);
+        //                 return null;
+        //             }
+        //             if (!user.two_factor_secret) {
+        //                 logger.warn("2FA secret not found for email", credentials.email);
+        //                 return null;
+        //             }
+        //             const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
+        //             if (!isValid2FA) {
+        //                 logger.warn("Invalid 2FA code for email", credentials.email);
+        //                 return null;
+        //             }
+        //         }
 
-                try {
-                    // Get token from Keycloak
-                    const tokenData = await getKeycloakToken(user.username, credentials.password);
-                    logger.info("Token Data:", tokenData);
-                    if (!tokenData || !tokenData.access_token) {
-                        return null;
-                    }
-                    const tokenInfo = decodeToken(tokenData.access_token);
-                    if (!tokenInfo) {
-                        return null;
-                    }
+        //         try {
+        //             // Get token from Keycloak
+        //             const tokenData = await getKeycloakToken(user.username, credentials.password);
+        //             logger.info("Token Data:", tokenData);
+        //             if (!tokenData || !tokenData.access_token) {
+        //                 return null;
+        //             }
+        //             const tokenInfo = decodeToken(tokenData.access_token);
+        //             if (!tokenInfo) {
+        //                 return null;
+        //             }
 
-                    if (tokenInfo.email !== credentials.email) {
-                        return null;
-                    }
-                    return {
-                        id: user.user_id.toString(),
-                        email: user.email,
-                        username: user.username,
-                        image: user.image || '/image/avatar-purple-big.png',
-                        name: `${user.first_name} ${user.last_name}`,
-                        proToken: tokenData.access_token,
-                        tenant: user.tenant,
-                        user_type: user.user_type
-                    };
-                } catch (error) {
-                    logger.error("Failed to authenticate with Keycloak:", error);
-                    return null;
-                }
-            },
-        }),
+        //             if (tokenInfo.email !== credentials.email) {
+        //                 return null;
+        //             }
+        //             return {
+        //                 id: user.user_id.toString(),
+        //                 email: user.email,
+        //                 username: user.username,
+        //                 image: user.image || '/image/avatar-purple-big.png',
+        //                 name: `${user.first_name} ${user.last_name}`,
+        //                 proToken: tokenData.access_token,
+        //                 tenant: user.tenant,
+        //                 user_type: user.user_type
+        //             };
+        //         } catch (error) {
+        //             logger.error("Failed to authenticate with Keycloak:", error);
+        //             return null;
+        //         }
+        //     },
+        // }),
     ],
     pages: {
         signIn: '/auth/signin',

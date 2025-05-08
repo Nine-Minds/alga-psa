@@ -16,8 +16,11 @@ import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/s
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js'; // Import Redis stream client getter
+// import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
+import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
+import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
 import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
+import { getSecretProviderInstance } from 'server/src/lib/secrets';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -542,25 +545,56 @@ async function updateManualInvoiceItemsInternal(
       return; // Exit if invoice somehow disappeared
     }
 
-    const redisStreamClient = getRedisStreamClient();
-    const eventToPublish = {
-      event_id: uuidv4(), // Generate a new UUID for the event
-      execution_id: invoiceId, // Use invoiceId as the relevant identifier for this event
-      event_name: 'INVOICE_UPDATED',
-      event_type: 'INVOICE_UPDATED', // Use INVOICE_UPDATED as the event type
-      tenant: tenant,
-      timestamp: new Date().toISOString(),
-      user_id: session.user.id,
+    // Fetch realmId from qbo_credentials secret
+    let realmId: string | null = null;
+    try {
+      const secretProvider = getSecretProviderInstance();
+      const secretString = await secretProvider.getTenantSecret(tenant, 'qbo_credentials'); // Read the whole secret
+
+      if (secretString) {
+        const allCredentials: Record<string, any> = JSON.parse(secretString); // Parse the multi-realm object
+
+        // Find the first valid realmId
+        for (const currentRealmId in allCredentials) {
+          if (Object.prototype.hasOwnProperty.call(allCredentials, currentRealmId)) {
+            const creds = allCredentials[currentRealmId];
+            // Basic validation and check expiry
+            if (creds && creds.accessToken && creds.accessTokenExpiresAt && new Date(creds.accessTokenExpiresAt) > new Date()) {
+              realmId = currentRealmId; // Found a valid realm
+              console.log(`[updateManualInvoiceItemsInternal] Found valid realmId in multi-realm secrets for tenant ${tenant}: ${realmId}`);
+              break; // Use the first valid one found
+            }
+          }
+        }
+      }
+
+      if (!realmId) {
+         console.warn(`[updateManualInvoiceItemsInternal] No valid QBO realmId found in multi-realm secrets for tenant ${tenant}. realmId will be null for INVOICE_UPDATED event. This may cause issues in qboInvoiceSyncWorkflow.`);
+      }
+
+    } catch (error: any) {
+      console.error(`[updateManualInvoiceItemsInternal] Error fetching/parsing multi-realm secrets for tenant ${tenant}:`, error.message);
+      // realmId remains null.
+    }
+
+    const eventBus = getEventBus();
+    const eventForBus = {
+      eventType: 'INVOICE_UPDATED' as BusEventType, // Cast to ensure it's a valid EventType
       payload: {
+        tenantId: tenant,
+        userId: session.user.id,
+        eventName: 'INVOICE_UPDATED', // This will be used by convertToWorkflowEvent
+        // Original payload content:
         invoiceId: invoiceId,
         companyId: updatedInvoice.company_id,
         status: updatedInvoice.status,
         totalAmount: updatedInvoice.total_amount,
         invoiceNumber: updatedInvoice.invoice_number,
-        // Add other relevant details if needed
-      },
+        realmId: realmId, // realmId for QBO sync
+      }
     };
-    await redisStreamClient.publishEvent(eventToPublish);
+    console.log(`[updateManualInvoiceItemsInternal] Publishing INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}. Event structure:`, JSON.stringify(eventForBus, null, 2)); // Added logging
+    await eventBus.publish(eventForBus);
     console.log(`[updateManualInvoiceItemsInternal] Successfully published INVOICE_UPDATED event for invoice ${invoiceId} in tenant ${tenant}`);
 
   } catch (eventError) {

@@ -14,17 +14,17 @@ The system uses a TypeScript-based approach to workflow definition, allowing dev
 
 The workflow system is built on several key principles:
 
-1. **Event Sourcing**: The system uses event sourcing as its foundational pattern, where the state of a workflow is derived by replaying a sequence of events rather than storing the current state directly. This provides a complete audit trail and enables powerful time-travel debugging capabilities.
+1.  **Event Sourcing**: The system uses event sourcing as its foundational pattern, where the state of a workflow is derived by replaying a sequence of events rather than storing the current state directly. This provides a complete audit trail and enables powerful time-travel debugging capabilities.
 
-2. **Domain-Driven Design**: The workflow engine is designed to be a flexible tool that can model complex domain processes while keeping domain logic separate from the workflow infrastructure.
+2.  **Domain-Driven Design**: The workflow engine is designed to be a flexible tool that can model complex domain processes while keeping domain logic separate from the workflow infrastructure.
 
-3. **Programmatic Workflows**: Workflows are defined as TypeScript functions, allowing developers to use familiar programming constructs while maintaining the benefits of a structured workflow system.
+3.  **Programmatic Workflows**: Workflows are defined as TypeScript functions, allowing developers to use familiar programming constructs while maintaining the benefits of a structured workflow system.
 
-4. **Idempotent Execution**: Actions are executed idempotently, ensuring that even if the same event is processed multiple times (e.g., due to retries), the outcome remains consistent.
+4.  **Idempotent Execution**: Actions are executed idempotently, ensuring that even if the same event is processed multiple times (e.g., due to retries), the outcome remains consistent.
 
-5. **Parallel Execution**: The system supports executing actions in parallel based on explicit dependencies, enabling efficient processing of complex workflows.
+5.  **Parallel Execution**: The system supports executing actions in parallel based on explicit dependencies, enabling efficient processing of complex workflows.
 
-6. **Asynchronous Event Processing**: The system processes all events asynchronously through a message queue, providing improved scalability and fault tolerance.
+6.  **Asynchronous Event Processing**: The system processes all events asynchronously through a message queue, providing improved scalability and fault tolerance.
 
 ### Key Benefits
 
@@ -42,57 +42,67 @@ The workflow system is built on several key principles:
 
 The workflow system consists of the following major components:
 
-1. **TypeScript Workflow Runtime**: Executes workflows defined as TypeScript functions, managing their state and event handling.
+1.  **TypeScript Workflow Runtime**: Executes workflows defined as TypeScript functions, managing their state and event handling.
 
-2. **Action Executor**: Executes actions in parallel based on their dependencies, with support for various error handling strategies.
+2.  **Action Executor**: Executes actions in parallel based on their dependencies, with support for various error handling strategies.
 
-3. **Action Registry**: Manages the registration and execution of actions, ensuring idempotent execution.
+3.  **Action Registry**: Manages the registration and execution of actions, ensuring idempotent execution.
 
-4. **Persistence Layer**: Stores workflow executions, events, action results, and other workflow-related data.
+4.  **Persistence Layer**: Stores workflow executions, events, action results, and other workflow-related data.
 
-5. **Workflow Context**: Provides the execution context for workflows, including access to actions, data, events, and logging.
+5.  **Workflow Context**: Provides the execution context for workflows, including access to actions, data, events, and logging.
 
-6. **Redis Streams Integration**: Enables asynchronous event distribution across multiple servers.
+6.  **Redis Streams Integration**: Enables asynchronous event distribution across multiple servers.
 
-7. **Worker Service**: Processes events asynchronously from Redis Streams.
+7.  **Worker Service**: Processes events asynchronously from Redis Streams.
 
-8. **Distributed Coordination**: Ensures reliable processing in a distributed environment.
+8.  **Distributed Coordination**: Ensures reliable processing in a distributed environment.
 
 ### Data Flow
 
-1. **Event Submission**:
-   - A client publishes an event to the event bus (e.g., "INVOICE_CREATED")
-   - The event is persisted to the database
-   - The system identifies workflows attached to this event type
-   - For each attached workflow, a new execution is created
-   - In a distributed setup, the event is also published to Redis Streams
+1.  **Event Submission**:
+    - A client publishes an event to the event bus (e.g., "INVOICE_CREATED")
+    - The event is persisted to the database
+    - The system identifies workflows attached to this event type
+    - For each attached workflow, a new execution is created
+    - In a distributed setup, the event is also published to Redis Streams
 
-2. **Event Processing**:
-   - The workflow runtime processes the event within the context of the workflow function
-   - The workflow function determines how to handle the event based on its current state
-   - The workflow function may execute actions, update data, or change state
+2.  **Event Processing**:
+    - The workflow runtime processes the event within the context of the workflow function
+    - The workflow function determines how to handle the event based on its current state
+    - The workflow function may execute actions, update data, or change state
 
-3. **Action Execution**:
-   - The action executor builds a dependency graph of actions
-   - It executes actions in parallel based on their dependencies
-   - Results are stored in the database
-   - Any errors are handled according to the defined strategy
+3.  **Action Execution**:
+    - The action executor builds a dependency graph of actions
+    - It executes actions in parallel based on their dependencies
+    - Results are stored in the database
+    - Any errors are handled according to the defined strategy
 
-4. **State Update**:
-   - The workflow function updates its state based on the event and action results
-   - The complete event and its processing results are available for querying
+4.  **State Update**:
+    - The workflow function updates its state based on the event and action results
+    - The complete event and its processing results are available for querying
+
+### System Workflows and Tenant-Specific Triggering
+
+System workflows represent shared, reusable workflow definitions or templates that are available to all tenants within the platform. Examples of such workflows might include standard processes like `qboInvoiceSyncWorkflow` or other common business operations.
+
+A key aspect to understand is how these system workflows are invoked. Contrary to a potential misunderstanding that they might be triggered by global, non-tenant-specific "system events" (e.g., via a hypothetical `system_workflow_event_attachments` table for such global triggers), system workflows like `qboInvoiceSyncWorkflow` are typically triggered in the context of a *specific tenant*.
+
+The triggering mechanism relies on tenant-specific event attachments. When an event relevant to a system workflow (e.g., `INVOICE_UPDATED` for an invoice sync workflow) occurs for a particular tenant, the system consults the tenant-specific `workflow_event_attachments` table. An entry in this table links the `tenant_id`, the `event_type` (e.g., `INVOICE_UPDATED`), and the `workflow_id`. For a system workflow, this `workflow_id` corresponds to its `registration_id`, effectively associating the tenant-specific event with the shared system workflow definition.
+
+This ensures that while the workflow *definition* is shared, its *execution* is always tied to a specific tenant and triggered by events occurring within that tenant's scope. If a table named `system_workflow_event_attachments` exists, its purpose would be distinct from this tenant-specific triggering mechanism for workflows like `qboInvoiceSyncWorkflow`. For these, the attachment and subsequent workflow execution are inherently tenant-specific.
 
 ### Persistence Model
 
 The workflow system uses several database tables to store its data:
 
-1. **workflow_executions**: Stores metadata about workflow instances
-2. **workflow_events**: Stores the event log for each workflow execution
-3. **workflow_action_results**: Tracks the results of action executions
-4. **workflow_timers**: Manages workflow timers
-5. **workflow_action_dependencies**: Stores dependencies between actions
-6. **workflow_sync_points**: Manages synchronization points for parallel execution
-7. **workflow_event_processing**: Tracks the processing status of events in a distributed setup
+1.  **workflow_executions**: Stores metadata about workflow instances
+2.  **workflow_events**: Stores the event log for each workflow execution
+3.  **workflow_action_results**: Tracks the results of action executions
+4.  **workflow_timers**: Manages workflow timers
+5.  **workflow_action_dependencies**: Stores dependencies between actions
+6.  **workflow_sync_points**: Manages synchronization points for parallel execution
+7.  **workflow_event_processing**: Tracks the processing status of events in a distributed setup
 
 ## 3. TypeScript-Based Workflows
 
@@ -472,38 +482,38 @@ console.log('Event enqueued for processing');
 
 The workflow system provides several monitoring capabilities:
 
-1. **Workflow Telemetry**: Counts, rates, and durations of workflow events and actions
-2. **Event Tracing**: Correlation IDs for tracking events across the system
-3. **Health Checks**: API endpoints for checking the health of the workflow system
-4. **Logging**: Comprehensive logging of workflow activities
+1.  **Workflow Telemetry**: Counts, rates, and durations of workflow events and actions
+2.  **Event Tracing**: Correlation IDs for tracking events across the system
+3.  **Health Checks**: API endpoints for checking the health of the workflow system
+4.  **Logging**: Comprehensive logging of workflow activities
 
 ### Scaling
 
 The workflow system can be scaled in several ways:
 
-1. **Vertical Scaling**: Increase resources (CPU, memory) for the workflow runtime and worker processes
-2. **Horizontal Scaling**: Add more worker processes across multiple servers
-3. **Database Scaling**: Optimize database queries and indexes for efficient event loading and replay
-4. **Redis Scaling**: Configure Redis for high availability and performance
+1.  **Vertical Scaling**: Increase resources (CPU, memory) for the workflow runtime and worker processes
+2.  **Horizontal Scaling**: Add more worker processes across multiple servers
+3.  **Database Scaling**: Optimize database queries and indexes for efficient event loading and replay
+4.  **Redis Scaling**: Configure Redis for high availability and performance
 
 ### Troubleshooting
 
 Common issues and their solutions:
 
-1. **Events not being processed**:
-   - Check Redis connection
-   - Verify that events are being published to Redis Streams
-   - Check for errors in the worker logs
+1.  **Events not being processed**:
+    - Check Redis connection
+    - Verify that events are being published to Redis Streams
+    - Check for errors in the worker logs
 
-2. **High event processing latency**:
-   - Increase the number of workers
-   - Optimize database queries
-   - Check for resource bottlenecks
+2.  **High event processing latency**:
+    - Increase the number of workers
+    - Optimize database queries
+    - Check for resource bottlenecks
 
-3. **Inconsistent workflow state**:
-   - Verify that actions are idempotent
-   - Check for distributed lock failures
-   - Ensure that the event log is complete and ordered correctly
+3.  **Inconsistent workflow state**:
+    - Verify that actions are idempotent
+    - Check for distributed lock failures
+    - Ensure that the event log is complete and ordered correctly
 
 ### Integration with Domain Logic
 
@@ -568,13 +578,13 @@ await runtime.enqueueEvent({
 
 Planned enhancements for the workflow system include:
 
-1. **Workflow Designer UI**: A visual tool for designing and testing TypeScript workflows
-2. **Enhanced Monitoring**: More detailed metrics and visualizations
-3. **Advanced Error Recovery**: Automated recovery strategies for different error types
-4. **Performance Optimizations**: Improved event processing and action execution
-5. **TypeScript Workflow Analyzer**: Improved static analysis of TypeScript workflows for visualization and validation
-6. **Workflow Templates**: Reusable workflow patterns and templates
-7. **Enhanced Testing Tools**: Specialized tools for testing and debugging workflows
+1.  **Workflow Designer UI**: A visual tool for designing and testing TypeScript workflows
+2.  **Enhanced Monitoring**: More detailed metrics and visualizations
+3.  **Advanced Error Recovery**: Automated recovery strategies for different error types
+4.  **Performance Optimizations**: Improved event processing and action execution
+5.  **TypeScript Workflow Analyzer**: Improved static analysis of TypeScript workflows for visualization and validation
+6.  **Workflow Templates**: Reusable workflow patterns and templates
+7.  **Enhanced Testing Tools**: Specialized tools for testing and debugging workflows
 
 ## 9. Conclusion
 
@@ -582,14 +592,14 @@ The workflow system provides a powerful, flexible foundation for modeling and ex
 
 The TypeScript-based workflow approach offers several key advantages:
 
-1. **Familiar Programming Model**: Developers can use the full power of TypeScript, including its type system, control flow constructs, and error handling.
+1.  **Familiar Programming Model**: Developers can use the full power of TypeScript, including its type system, control flow constructs, and error handling.
 
-2. **IDE Support**: Full IDE support including code completion, refactoring, and navigation.
+2.  **IDE Support**: Full IDE support including code completion, refactoring, and navigation.
 
-3. **Testability**: Workflows can be unit tested like any other TypeScript code.
+3.  **Testability**: Workflows can be unit tested like any other TypeScript code.
 
-4. **Flexibility**: Complex business logic can be expressed naturally using programming constructs.
+4.  **Flexibility**: Complex business logic can be expressed naturally using programming constructs.
 
-5. **Maintainability**: Standard software engineering practices can be applied to workflow code.
+5.  **Maintainability**: Standard software engineering practices can be applied to workflow code.
 
 By separating the workflow infrastructure from domain logic, the system enables clean, maintainable code while providing the reliability and auditability required for critical business processes.

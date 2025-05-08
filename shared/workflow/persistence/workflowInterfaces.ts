@@ -9,10 +9,12 @@ export interface IWorkflowExecution {
   workflow_version: string;
   current_state: string;
   status: string;
+  workflow_type: 'system' | 'tenant';
   context_data?: Record<string, any>;
   created_at: string;
   updated_at: string;
   version_id?: string; // Reference to workflow_registration_versions
+  correlation_id?: string;
 }
 
 export interface IWorkflowEvent {
@@ -37,7 +39,7 @@ export interface IWorkflowActionResult {
   action_path?: string;
   action_group?: string;
   parameters?: Record<string, any>;
-  result?: Record<string, any>;
+  result?: any;
   success: boolean;
   error_message?: string;
   idempotency_key: string;

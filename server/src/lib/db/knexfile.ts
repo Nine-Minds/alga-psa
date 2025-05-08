@@ -58,7 +58,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: process.env.DB_USER_SERVER || 'app_user',
-      password: await getDbPassword(),
+      password: getDbPassword,
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -76,7 +76,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       host: process.env.DB_HOST || 'localhost',
       port: Number(process.env.DB_PORT) || 5432,
       user: 'app_user',
-      password: await getDbPassword(),
+      password: getDbPassword,
       database: process.env.DB_NAME_SERVER || 'server'
     },
     pool: {
@@ -91,20 +91,17 @@ const baseConfig: Record<string, CustomKnexConfig> = {
 };
 
 // Async function to get full config with passwords
-export async function getFullConfig(env: string): Promise<CustomKnexConfig> {
-  const password = await getDbPassword();
-  return {
-    ...baseConfig[env],
-    connection: {
-      ...baseConfig[env].connection,
-      password: password || baseConfig[env].connection.password
-    }
-  };
+export function getFullConfig(env: string): CustomKnexConfig {
+  const configForEnv = baseConfig[env];
+  if (!configForEnv) {
+    throw new Error(`Configuration for environment "${env}" not found.`);
+  }
+  return configForEnv;
 }
 
 // Main config getter function
 export async function getKnexConfig(env: string): Promise<CustomKnexConfig> {
-  const config = await getFullConfig(env);
+  const config = getFullConfig(env);
   console.log(`Getting knex config for environment: ${env}`);
   console.log(`Connection pool config: min=${config.pool?.min}, max=${config.pool?.max}`);
   return config;

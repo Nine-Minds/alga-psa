@@ -358,6 +358,9 @@ export class EventBus {
         workflowEvent
       });
 
+      // Log the object just before stringifying
+      console.log(`[DEBUG EventBus.publish] workflowEvent object BEFORE stringify:`, JSON.stringify(workflowEvent, null, 2));
+
       await client.xAdd(
         globalStream,
         '*',

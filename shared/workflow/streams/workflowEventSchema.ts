@@ -9,7 +9,7 @@ import { IWorkflowEvent } from '../persistence/index.js';
 // Base workflow event schema
 export const WorkflowEventBaseSchema = z.object({
   event_id: z.string().uuid(),
-  execution_id: z.string().uuid(),
+  execution_id: z.string().uuid().optional(), // Made execution_id optional
   event_name: z.string(),
   event_type: z.string(),
   tenant: z.string(),
