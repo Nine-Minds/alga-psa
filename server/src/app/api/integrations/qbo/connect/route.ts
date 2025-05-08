@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+// make this compile dynamically and not try to make a static file AI!
+import { NextResponse } from 'next/server'; // Keep only one import
 import crypto from 'crypto';
 // --- Import Actual Implementations ---
 import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
@@ -13,10 +14,7 @@ const QBO_SCOPES = 'com.intuit.quickbooks.accounting';
 const QBO_CLIENT_ID_SECRET_NAME = 'qbo_client_id'; // Define constant
 const QBO_REDIRECT_URI = process.env.QBO_REDIRECT_URI || 'http://localhost:3000/api/integrations/qbo/callback';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { slug?: string[] } }
-) {
+export async function GET(request: Request) {
   let tenantId: string | null = null;
   // Get the secret provider instance
   const secretProvider = getSecretProviderInstance();
