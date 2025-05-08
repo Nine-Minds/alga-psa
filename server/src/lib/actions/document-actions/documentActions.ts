@@ -7,10 +7,12 @@ import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import sharp from 'sharp';
+import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
 import Document from 'server/src/lib/models/document';
+import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import DocumentAssociation from 'server/src/lib/models/document-association';
 import {
     IDocument,
@@ -23,7 +25,7 @@ import {
 import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { getStorageConfig } from 'server/src/config/storage';
-import { deleteFile } from '../file-actions/fileActions';
+import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
@@ -226,208 +228,252 @@ export async function getDocumentByContactNameId(contactNameId: string) {
 }
 
 // Get document preview
-export async function getDocumentPreview(
-  file_id: string
-): Promise<PreviewResponse> {
+async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
+  let browser;
   try {
-    const { tenant } = await createTenantKnex();
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width, height });
+    const styledHtml = `
+      <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
+        p { margin-top: 0; margin-bottom: 1em; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
+        img { max-width: 100%; height: auto; }
+        /* Basic styling for BlockNote generated HTML */
+        .bn-editor table { width: 100%; border-collapse: collapse; }
+        .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
+      </style>
+      <div>${htmlContent}</div>
+    `;
+    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
+    const imageBuffer = await page.screenshot({ type: 'png' });
+
+    
+    return Buffer.from(imageBuffer);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+const IN_APP_TEXT_TYPE_NAMES = ['text', 'text document', 'plain text'];
+const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];
+const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote document', 'application/vnd.blocknote+json'];
+
+
+export async function getDocumentPreview(
+  identifier: string
+): Promise<PreviewResponse> {
+  console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
+  try {
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
+      console.error("[getDocumentPreview] No tenant found");
       throw new Error('No tenant found');
     }
 
-    // Get cache instance for this tenant
     const cache = CacheFactory.getPreviewCache(tenant);
-
-    // Check if preview exists in cache
-    const cachedPreview = await cache.get(file_id);
+    const cachedPreview = await cache.get(identifier);
     if (cachedPreview) {
-      // Read the cached preview image
+      console.log(`[getDocumentPreview] Cache hit for identifier: ${identifier}`);
       const imageBuffer = await sharp(cachedPreview).toBuffer();
       const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
       return {
         success: true,
         previewImage: base64Image,
-        content: 'PDF Document'
+        content: 'Cached Preview'
       };
     }
+    console.log(`[getDocumentPreview] Cache miss for identifier: ${identifier}`);
 
-    const result = await StorageService.downloadFile(file_id);
-    if (!result) {
-      throw new Error('File not found');
-    }
+    const document = await Document.get(identifier);
+    console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${JSON.stringify(document)}`);
 
-    const { buffer, metadata } = result;
-    const mime = metadata.mime_type.toLowerCase();
+    // Scenario 1: In-app document (content stored in document_content or document_block_content)
+    if (document && !document.file_id) {
+      console.log(`[getDocumentPreview] Processing as IN-APP document. ID: ${document.document_id}, Name: ${document.document_name}, Type: ${document.type_name}, Mime: ${document.mime_type}, File ID: ${document.file_id}`);
+      const docTypeName = document.type_name?.toLowerCase();
+      const docMimeType = document.mime_type?.toLowerCase();
+      let htmlToRender: string | null = null;
+      let previewCardContent = document.document_name;
+      let cacheKeyForInApp = identifier;
 
-    // Handle different file types
-    if (mime === 'application/pdf') {
-      try {
-        // First get basic PDF info
-        const pdfDoc = await PDFDocument.load(buffer);
-        const pageCount = pdfDoc.getPages().length;
-
-        const config = getStorageConfig();
-
-        // Create temp directory for processing
-        const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
-
-        // Ensure temp directory exists
-        try {
-          await mkdir(tempDir, { recursive: true });
-        } catch (error) {
-          // Check if error is a NodeJS.ErrnoException and has a code property
-          if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
-            throw error;
-          }
-          // Ignore EEXIST error (directory already exists)
+      if (IN_APP_BLOCKNOTE_TYPE_NAMES.includes(docTypeName || '') || IN_APP_BLOCKNOTE_TYPE_NAMES.includes(docMimeType || '')) {
+        const blockContent = await knex('document_block_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+        if (blockContent && blockContent.block_data) {
+          htmlToRender = convertBlockNoteToHTML(blockContent.block_data);
+          previewCardContent = "BlockNote Document";
         }
+      } else if (IN_APP_MARKDOWN_TYPE_NAMES.includes(docTypeName || '') || docMimeType === 'text/markdown' || document.document_name?.toLowerCase().endsWith('.md')) {
+        // Explicitly Markdown type (or .md extension)
+        const docContent = await knex('document_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+        if (docContent && docContent.content) {
+          const markdownSnippet = docContent.content.substring(0, 1000);
+          htmlToRender = await marked(markdownSnippet, { async: true });
+          previewCardContent = "Markdown Document";
+        }
+      } else if (IN_APP_TEXT_TYPE_NAMES.includes(docTypeName || '') || docMimeType === 'text/plain') {
+         // Explicitly Text type
+        const docContent = await knex('document_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+        if (docContent && docContent.content) {
+          const textSnippet = docContent.content.substring(0, 500);
+          htmlToRender = `<pre>${textSnippet.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">")}</pre>`;
+          previewCardContent = "Text Document";
+        }
+      } else {
+         console.log(`[getDocumentPreview] Type unknown for in-app doc ${document.document_id}. Attempting content table check.`);
+         const blockContent = await knex('document_block_content')
+           .where({ document_id: document.document_id, tenant })
+           .first();
+         if (blockContent && blockContent.block_data) {
+           console.log(`[getDocumentPreview] Fallback: Found block content for ${document.document_id}. Treating as BlockNote.`);
+           htmlToRender = convertBlockNoteToHTML(blockContent.block_data);
+           previewCardContent = "BlockNote Document";
+         } else {
+           const docContent = await knex('document_content')
+             .where({ document_id: document.document_id, tenant })
+             .first();
+           if (docContent && docContent.content) {
+             console.log(`[getDocumentPreview] Fallback: Found text content for ${document.document_id}. Treating as Text.`);
+             const textSnippet = docContent.content.substring(0, 500);
+             htmlToRender = `<pre>${textSnippet.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">")}</pre>`;
+             previewCardContent = "Text Document";
+           } else {
+              console.log(`[getDocumentPreview] Fallback: No content found in either table for ${document.document_id}.`);
+           }
+         }
+      }
 
-        const tempPdfPath = join(tempDir, `${file_id}.pdf`);
 
+      if (htmlToRender) {
         try {
-          // Write the PDF file
-          await writeFile(tempPdfPath, buffer);
-
-          // Set up pdf2pic options
-          const options = {
-            density: 100,
-            saveFilename: `${file_id}_thumb`,
-            savePath: tempDir,
-            format: "png",
-            width: 600,
-            height: 600,
-            quality: 75,
-            compression: "jpeg",
-            useIMagick: true // Use ImageMagick instead of GraphicsMagick
-          };
-
-          // Convert PDF to image
-          const convert = fromPath(tempPdfPath, options);
-          const pageToConvertAsImage = 1;
-          const result = await convert(pageToConvertAsImage);
-
-          // Read the generated image and optimize it
-          const imageBuffer = await sharp(result.path)
-            .resize(400, 400, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .png({ quality: 80 })
-            .toBuffer();
-
-          // Store in cache
-          await cache.set(file_id, imageBuffer);
-
-          // Convert to base64
+          const imageBuffer = await renderHtmlToPng(htmlToRender);
+          await cache.set(cacheKeyForInApp, imageBuffer);
           const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-          // Clean up temp files
-          await Promise.all([
-            unlink(tempPdfPath),
-            unlink(result.path!)
-          ]);
-
           return {
             success: true,
             previewImage: base64Image,
-            pageCount,
-            content: `PDF Document\nPages: ${pageCount}`
+            content: previewCardContent,
           };
-        } catch (conversionError) {
-          console.error('PDF conversion error:', conversionError);
-          // Clean up temp file if it exists
+        } catch (renderError) {
+          console.error(`Error generating preview for in-app document ${document.document_name}:`, renderError);
+          return { success: false, error: `Failed to generate preview for ${previewCardContent}` };
+        }
+      } else {
+        console.log(`[getDocumentPreview] No HTML to render for in-app document: ${document.document_id}`);
+        return { success: false, error: 'Preview not available for this in-app document type or content is missing.' };
+      }
+    } else {
+      console.log(`[getDocumentPreview] Processing as FILE-BASED or document NOT FOUND. Document exists: ${!!document}, Document File ID: ${document ? document.file_id : 'N/A'}`);
+      const fileIdForStorage = (document && document.file_id) ? document.file_id : identifier;
+      console.log(`[getDocumentPreview] Determined fileIdForStorage: ${fileIdForStorage}`);
+    
+      if (document && document.file_id && document.file_id !== identifier) {
+        console.log(`[getDocumentPreview] Re-checking cache for fileIdForStorage: ${fileIdForStorage}`);
+        const cachedFilePreview = await cache.get(fileIdForStorage);
+        if (cachedFilePreview) {
+            console.log(`[getDocumentPreview] Cache hit for fileIdForStorage: ${fileIdForStorage}`);
+            const imageBuffer = await sharp(cachedFilePreview).toBuffer();
+            const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+            return { success: true, previewImage: base64Image, content: 'Cached File Preview' };
+        }
+        console.log(`[getDocumentPreview] Cache miss for fileIdForStorage: ${fileIdForStorage}`);
+      }
+
+      console.log(`[getDocumentPreview] Attempting StorageService.downloadFile with: ${fileIdForStorage}`);
+      const downloadResult = await StorageService.downloadFile(fileIdForStorage);
+      if (!downloadResult) {
+        console.error(`[getDocumentPreview] StorageService.downloadFile for ${fileIdForStorage} returned null or undefined.`);
+        throw new Error(`File not found in storage for ID: ${fileIdForStorage}`);
+      }
+
+      const { buffer, metadata } = downloadResult;
+      const mime = metadata.mime_type.toLowerCase();
+      let htmlToRenderForFile: string | null = null;
+      let previewCardContentForFile = metadata.original_name || "File Preview";
+
+      if (mime === 'application/pdf') {
+        try {
+          const pdfDoc = await PDFDocument.load(buffer);
+          const pageCount = pdfDoc.getPages().length;
+          const config = getStorageConfig();
+          const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
+          await mkdir(tempDir, { recursive: true }).catch(err => { if (err.code !== 'EEXIST') throw err; });
+          const tempPdfPath = join(tempDir, `${fileIdForStorage}.pdf`);
+
           try {
-            await unlink(tempPdfPath);
-          } catch (cleanupError) {
-            console.error('Cleanup error:', cleanupError);
+            await writeFile(tempPdfPath, buffer);
+            const options = { density: 100, saveFilename: `${fileIdForStorage}_thumb`, savePath: tempDir, format: "png", width: 600, height: 600, quality: 75, useIMagick: true };
+            const convert = fromPath(tempPdfPath, options);
+            const conversionResult = await convert(1);
+            const imageBuffer = await sharp(conversionResult.path).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
+            await cache.set(fileIdForStorage, imageBuffer);
+            await Promise.all([unlink(tempPdfPath), unlink(conversionResult.path!)]).catch(e => console.error("Error cleaning up temp PDF files:", e));
+            const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+            return { success: true, previewImage: base64Image, pageCount, content: `PDF Document\nPages: ${pageCount}` };
+          } catch (conversionError) {
+            console.error('PDF conversion error:', conversionError);
+            await unlink(tempPdfPath).catch(e => console.error("Error cleaning up temp PDF file on error:", e));
+            return { success: true, pageCount, content: `PDF Document\nPages: ${pageCount}\n\nPreview image generation failed.` };
           }
-          // Fallback to basic info if image conversion fails
-          return {
-            success: true,
-            pageCount,
-            content: `PDF Document\nPages: ${pageCount}\n\nPreview image generation failed.`
-          };
+        } catch (pdfError) {
+          console.error('PDF parsing error:', pdfError);
+          return { success: false, error: 'Failed to parse PDF document' };
         }
-      } catch (pdfError) {
-        console.error('PDF parsing error:', pdfError);
-        return {
-          success: false,
-          error: 'Failed to parse PDF document'
-        };
-      }
-    } else if (mime.startsWith('image/')) {
-      try {
-        // Resize image using sharp
-        const imageBuffer = await sharp(buffer)
-          .resize(400, 400, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .png({ quality: 80 })
-          .toBuffer();
-
-        // Store in cache
-        await cache.set(file_id, imageBuffer);
-
-        // Convert to base64
-        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-        return {
-          success: true,
-          previewImage: base64Image,
-          content: `Image File (${metadata.original_name})`
-        };
-      } catch (imageError) {
-        console.error('Image processing error:', imageError);
-        return {
-          success: false,
-          error: 'Failed to process image file'
-        };
-      }
-    }
- 
-    // Handle markdown files
-    if (mime === 'text/markdown' || metadata.original_name.endsWith('.md')) {
-      try {
-        const markdown = buffer.toString('utf-8');
-        const html = await marked(markdown, { async: true });
-        return { success: true, content: html };
-      } catch (markdownError) {
-        console.error('Markdown parsing error:', markdownError);
-        return {
-          success: false,
-          error: 'Failed to parse markdown document'
-        };
-      }
-    }
-
-    // Handle text files
-    if (mime.startsWith('text/') || mime === 'application/json') {
-      try {
-        const text = buffer.toString('utf-8');
-        // For JSON, try to format it
-        if (mime === 'application/json') {
-          const obj = JSON.parse(text);
-          return { success: true, content: JSON.stringify(obj, null, 2) };
+      } else if (mime.startsWith('image/')) {
+        try {
+          const imageBuffer = await sharp(buffer).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
+          await cache.set(fileIdForStorage, imageBuffer);
+          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+          return { success: true, previewImage: base64Image, content: `Image File (${metadata.original_name || 'image'})` };
+        } catch (imageError) {
+          console.error('Image processing error:', imageError);
+          return { success: false, error: 'Failed to process image file' };
         }
-        return { success: true, content: text };
-      } catch (textError) {
-        console.error('Text parsing error:', textError);
-        return {
-          success: false,
-          error: 'Failed to parse text document'
-        };
+      } else if (mime === 'text/markdown' || metadata.original_name?.toLowerCase().endsWith('.md')) {
+        const markdownContent = buffer.toString('utf-8').substring(0, 1000);
+        htmlToRenderForFile = await marked(markdownContent, { async: true });
+        previewCardContentForFile = "Markdown File";
+      } else if (mime.startsWith('text/') || mime === 'application/json') {
+        const textContent = buffer.toString('utf-8').substring(0, 500);
+        const escapedTextContent = textContent.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+        htmlToRenderForFile = `<pre>${escapedTextContent}</pre>`;
+        previewCardContentForFile = mime === 'application/json' ? "JSON File" : "Text File";
       }
-    }
 
-    // For unsupported types
-    return {
-      success: false,
-      error: 'Preview not available for this file type'
-    };
+      if (htmlToRenderForFile) {
+        try {
+          const imageBuffer = await renderHtmlToPng(htmlToRenderForFile);
+          await cache.set(fileIdForStorage, imageBuffer);
+          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+          return { success: true, previewImage: base64Image, content: previewCardContentForFile };
+        } catch (renderError) {
+          console.error(`Error generating preview for file ${metadata.original_name || fileIdForStorage}:`, renderError);
+          return { success: false, error: `Failed to generate preview for ${previewCardContentForFile}` };
+        }
+      }
+      
+      console.log(`[getDocumentPreview] Unsupported file type for direct preview generation: ${mime} for ${fileIdForStorage}`);
+      return { success: false, error: 'Preview not available for this file type' };
+
+    }
   } catch (error) {
-    console.error('Preview file error:', error);
+    console.error(`[getDocumentPreview] General error for identifier ${identifier}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to preview file'

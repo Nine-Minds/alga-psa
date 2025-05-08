@@ -57,24 +57,30 @@ export default function DocumentStorageCard({
     console.log('Rendering DocumentStorageCard with document:', document);
 
     const loadPreview = async () => {
-        if (!document.file_id) return;
+        const identifierForPreview = document.file_id || document.document_id;
+        
+        if (!identifierForPreview) {
+            console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
+            setPreviewContent({ error: 'Preview not available (no identifier)' });
+            setIsLoading(false);
+            return;
+        }
 
         try {
             setIsLoading(true);
-            const preview = await getDocumentPreview(document.file_id);
+            const preview = await getDocumentPreview(identifierForPreview);
             setPreviewContent(preview);
         } catch (error) {
-            console.error('Error getting preview:', error);
+            console.error('Error getting document preview:', error);
             setPreviewContent({ error: 'Failed to load preview' });
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Load preview on mount
     useEffect(() => {
         loadPreview();
-    }, [document.file_id]);
+    }, [document.document_id, document.file_id]);
 
     const handleDelete = async () => {
         if (!onDelete) return;
