@@ -535,69 +535,24 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const { getAdminConnection } = await import('@shared/db/admin.js');
         const knex = await getAdminConnection();
         
-        const mapping = await knex('product_qbo_item_mappings')
-          .select('qbo_item_id')
+        const mapping = await knex('tenant_external_entity_mappings')
+          .select('external_entity_id')
           .where({
-            alga_product_id: params.algaProductId,
-            realm_id: params.realmId, // Using params.realmId for DB lookup as it's specific to the mapping
-            tenant: context.tenant
+            tenant_id: context.tenant,
+            alga_entity_id: params.algaProductId,
+            alga_entity_type: 'service', // Assuming this mapping type
+            integration_type: 'quickbooks_online',
+            external_realm_id: params.realmId
           })
           .first();
-          
-        if (mapping && mapping.qbo_item_id) {
-          logger.info(`[ACTION] lookup_qbo_item_id: Found QBO item ID: ${mapping.qbo_item_id} for Alga product ID: ${params.algaProductId} via DB mapping.`);
-          return { success: true, found: true, qboItemId: mapping.qbo_item_id, source: 'database' };
+
+        if (mapping) { // Check if mapping is not null/undefined
+          logger.info(`[ACTION] lookup_qbo_item_id: Found QBO item ID: ${mapping.external_entity_id} for Alga product ID: ${params.algaProductId} via DB mapping.`);
+          return { success: true, found: true, qboItemId: mapping.external_entity_id };
+        } else {
+          logger.info(`[ACTION] lookup_qbo_item_id: Alga product ID ${params.algaProductId} not found in DB mapping.`);
+          return { success: true, found: false, qboItemId: null };
         }
-        
-        // Option 2: Call QBO API if not found in mapping table
-        logger.info(`[ACTION] lookup_qbo_item_id: Alga product ID ${params.algaProductId} not found in DB mapping. Attempting QBO API lookup by name.`);
-        
-        const qboCredentials = params.qboCredentials as QboCredentials;
-
-        if (!qboCredentials) {
-          logger.error(`[ACTION] lookup_qbo_item_id: QBO credentials not provided for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, found: false, message: 'QBO credentials not provided.' };
-        }
-
-        const { accessToken, accessTokenExpiresAt } = qboCredentials;
-
-        if (!accessToken || !accessTokenExpiresAt) {
-          logger.error(`[ACTION] lookup_qbo_item_id: Missing QBO accessToken or accessTokenExpiresAt in provided credentials for tenant ${context.tenant}, realm ${params.realmId}.`);
-          return { success: false, found: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing in provided credentials).' };
-        }
-
-        if (new Date(accessTokenExpiresAt) < new Date()) {
-          logger.warn(`[ACTION] lookup_qbo_item_id: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
-          return { success: false, found: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
-        }
-
-        // QBO API usually queries by DisplayName for items. Assuming algaProductId can be used as a name.
-        // Note: QBO Item names are not guaranteed unique by default. This might return multiple items or the first match.
-        // A more robust lookup might involve SKUs if Alga Product ID maps to a QBO Item SKU.
-        const query = `SELECT Id, Name FROM Item WHERE Name = '${params.algaProductId.replace(/'/g, "\\'")}' MAXRESULTS 1`; // Escape single quotes
-        // API calls use params.realmId as the primary realmId for the endpoint
-        const queryUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/query?query=${encodeURIComponent(query)}&minorversion=69`;
-
-        logger.debug(`[ACTION] lookup_qbo_item_id: Querying QBO: ${queryUrl}`);
-
-        const response = await axios.get(queryUrl, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`, // Using accessToken from params.qboCredentials
-            'Accept': 'application/json',
-          },
-          timeout: 15000,
-        });
-
-        const qboApiItems = response.data?.QueryResponse?.Item;
-        if (qboApiItems && qboApiItems.length > 0) {
-          const qboItem = qboApiItems[0];
-          logger.info(`[ACTION] lookup_qbo_item_id: Found QBO Item via API: ID ${qboItem.Id}, Name ${qboItem.Name} for Alga Product ID ${params.algaProductId}`);
-          // Optionally, store this mapping back to your product_qbo_item_mappings table here.
-          return { success: true, found: true, qboItemId: qboItem.Id, source: 'qbo_api' };
-        }
-
-        logger.warn(`[ACTION] lookup_qbo_item_id: QBO item ID not found via API for Alga product ID: ${params.algaProductId}, realmId: ${params.realmId}`);
-        return { success: false, found: false, message: `QBO item ID not found via API for Alga product ID ${params.algaProductId}.` };
         
       } catch (error: any) {
         logger.error(`[ACTION] lookup_qbo_item_id: Error looking up QBO item ID for Alga product ID: ${params.algaProductId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
@@ -1052,6 +1007,119 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
+  // Update Alga company QBO mapping details
+  actionRegistry.registerSimpleAction(
+    'update_company_qbo_details',
+    'Update Alga company QBO mapping in tenant_external_entity_mappings with QBO customer ID and sync token.',
+    [
+      { name: 'companyId', type: 'string', required: true, description: 'The ID of the Alga company to update.' },
+      { name: 'qboCustomerId', type: 'string', required: true, description: 'The QBO customer ID.' },
+      { name: 'qboSyncToken', type: 'string', required: true, description: 'The QBO sync token for the customer.' },
+      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
+      logger.info(`${logPrefix} update_company_qbo_details called for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
+
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+
+        const mappingData = {
+          tenant_id: context.tenant,
+          integration_type: 'quickbooks_online',
+          alga_entity_type: 'company', // Assuming 'company' is the Alga entity type mapping to QBO Customer
+          alga_entity_id: params.companyId,
+          external_entity_id: params.qboCustomerId,
+          external_realm_id: params.realmId,
+          sync_status: 'SYNCED', // Or a more appropriate status
+          metadata: { qboSyncToken: params.qboSyncToken }, // Store sync token in metadata
+          updated_at: new Date(),
+        };
+
+        // Perform an upsert operation
+        // The conflict target should be the unique key identifying a mapping
+        // Adjust conflict target columns as per your actual table schema's unique constraints for a mapping
+        const conflictTarget = ['tenant_id', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
+        
+        const [updatedMapping] = await knex('tenant_external_entity_mappings')
+          .insert(mappingData)
+          .onConflict(conflictTarget)
+          .merge({
+            external_entity_id: params.qboCustomerId, // Ensure external_entity_id is updated on conflict
+            sync_status: 'SYNCED',
+            metadata: { qboSyncToken: params.qboSyncToken },
+            updated_at: new Date(),
+          })
+          .returning('*');
+
+        if (!updatedMapping) {
+          logger.warn(`${logPrefix} update_company_qbo_details: Mapping not created or updated for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
+          // This case might be unlikely with upsert unless there's a fundamental DB issue not caught by try/catch
+          return { success: false, updated: false, message: 'Mapping not created or updated.' };
+        }
+
+        logger.info(`${logPrefix} update_company_qbo_details: Successfully created/updated mapping for company ${params.companyId} with QBO customer ${params.qboCustomerId}.`);
+        return { success: true, updated: true, updatedMapping };
+
+      } catch (error: any) {
+        logger.error(`${logPrefix} update_company_qbo_details: Error creating/updating mapping for company ${params.companyId}, tenant: ${context.tenant}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
+
+  // Retrieves an external entity mapping for an Alga entity, system, and realm.
+  actionRegistry.registerSimpleAction(
+    'get_external_entity_mapping',
+    'Retrieves an external entity mapping for an Alga entity, system, and realm.',
+    [
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID).' },
+      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'QBO\').' },
+      { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system (e.g., QBO realmId).' },
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
+      logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
+
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+
+        const mapping = await knex('tenant_external_entity_mappings')
+          .select('external_entity_id', 'metadata', 'sync_status')
+          .where({
+            tenant_id: context.tenant,
+            alga_entity_id: params.algaEntityId,
+            alga_entity_type: 'company', // Assuming we're mapping companies for now
+            integration_type: params.externalSystemName,
+            external_realm_id: params.externalRealmId,
+          })
+          .first();
+
+        if (mapping) { // Check if mapping is not null/undefined
+          logger.info(`${logPrefix} get_external_entity_mapping: Found mapping for algaEntityId: ${params.algaEntityId}`);
+          return {
+            success: true,
+            found: true,
+            mapping: {
+              externalEntityId: mapping.external_entity_id,
+              syncToken: mapping.metadata?.qboSyncToken, // Get from mapping.metadata
+              metadata: mapping.metadata,                 // Return the correct metadata object
+              lastSyncStatus: mapping.sync_status // Get from mapping.sync_status
+            }
+          };
+        } else {
+          logger.info(`${logPrefix} get_external_entity_mapping: No mapping found for algaEntityId: ${params.algaEntityId}`);
+          return { success: true, found: false, mapping: null };
+        }
+      } catch (error: any) {
+        logger.error(`${logPrefix} get_external_entity_mapping: Error retrieving mapping for algaEntityId: ${params.algaEntityId}, tenant: ${context.tenant}`, error);
+        return { success: false, found: false, message: error.message, error };
+      }
+    }
+  );
+
   // Get Secret action
   actionRegistry.registerSimpleAction(
     'get_secret',
@@ -1161,50 +1229,47 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       { name: 'invoiceId', type: 'string', required: true },
       { name: 'qboInvoiceId', type: 'string', required: false },
       { name: 'qboSyncToken', type: 'string', required: false },
-      { name: 'lastSyncStatus', type: 'string', required: true },
-      { name: 'lastSyncTimestamp', type: 'string', required: true },
-      { name: 'lastSyncError', type: 'object', required: false },
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] update_invoice_qbo_details called for invoiceId: ${params.invoiceId}, status: ${params.lastSyncStatus}, tenant: ${context.tenant}`);
+      // Removed status from log as it's no longer a direct parameter for this action's core responsibility
+      logger.info(`[ACTION] update_invoice_qbo_details called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
         const { getAdminConnection } = await import('@shared/db/admin.js');
         const knex = await getAdminConnection();
         
-        const updateData: Record<string, any> = {
-          // Ensure column names match your 'invoices' table schema
-          last_sync_status: params.lastSyncStatus,
-          // Convert string timestamp to Date object for DB, ensure it's a valid ISO string or parse accordingly
-          last_sync_timestamp: params.lastSyncTimestamp ? new Date(params.lastSyncTimestamp) : new Date(),
-        };
-        
-        // Only include these fields in the update if they are provided (not undefined)
+        const updateData: Record<string, any> = {};
+        let hasUpdates = false;
+
+        // Only include QBO fields in the update if they are provided
         if (params.qboInvoiceId !== undefined) {
           updateData.qbo_invoice_id = params.qboInvoiceId;
+          hasUpdates = true;
         }
         if (params.qboSyncToken !== undefined) {
           updateData.qbo_sync_token = params.qboSyncToken;
+          hasUpdates = true;
         }
-        
-        // Handle lastSyncError: store as JSON string or null
-        if (params.lastSyncError !== undefined && params.lastSyncError !== null) {
-          updateData.last_sync_error = JSON.stringify(params.lastSyncError);
-        } else {
-          // If lastSyncError is explicitly null or undefined (meaning no error or cleared error)
-          updateData.last_sync_error = null;
+
+        // If neither qboInvoiceId nor qboSyncToken is provided, there's nothing to update on the invoice itself.
+        if (!hasUpdates) {
+            logger.info(`[ACTION] update_invoice_qbo_details: No QBO ID or SyncToken provided for invoiceId: ${params.invoiceId}. No update performed on 'invoices' table.`);
+            // Returning success: true because the action didn't fail, it just had nothing to do based on input.
+            // The workflow might still need to update the mapping table status separately.
+            return { success: true, updated: false, message: "No QBO ID or SyncToken provided; no update needed on invoice record." };
         }
-        
+
         const [updatedInvoice] = await knex('invoices')
-          .where({ id: params.invoiceId, tenant: context.tenant })
+          .where({ invoice_id: params.invoiceId, tenant: context.tenant }) // Assumes invoice_id is the correct column name
           .update(updateData)
           .returning('*'); // Or adjust if you only need a success/failure indication
-          
+
         if (!updatedInvoice) {
-            logger.warn(`[ACTION] update_invoice_qbo_details: Invoice not found or not updated for id: ${params.invoiceId}, tenant: ${context.tenant}`);
-            return { success: false, updated: false, message: `Invoice with id ${params.invoiceId} not found or no changes made.` };
+            logger.warn(`[ACTION] update_invoice_qbo_details: Invoice not found or not updated for id: ${params.invoiceId}, tenant: ${context.tenant} with data: ${JSON.stringify(updateData)}`);
+            // Throw an error here, as if we had data to update but didn't find the record, it's an issue.
+            throw new Error(`Invoice with id ${params.invoiceId} not found for tenant ${context.tenant}.`);
         }
-        
-        logger.info(`[ACTION] update_invoice_qbo_details: Successfully updated QBO details for invoiceId: ${params.invoiceId}`);
+
+        logger.info(`[ACTION] update_invoice_qbo_details: Successfully updated QBO ID/Token for invoiceId: ${params.invoiceId}`);
         return { success: true, updated: true, updatedInvoice };
       } catch (error: any) {
         logger.error(`[ACTION] update_invoice_qbo_details: Error updating QBO details for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`, error);

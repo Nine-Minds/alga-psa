@@ -90,7 +90,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
     // TODO: Refine mapping based on actual AlgaCompany and QboCustomer types
     const qboCustomerData: QboCustomerInput = {
-        DisplayName: algaCompany.name, // Assuming 'name' field exists
+        DisplayName: algaCompany.company_name,
         PrimaryEmailAddr: { Address: algaCompany.email }, // Assuming 'email' field exists
         PrimaryPhone: { FreeFormNumber: algaCompany.phone }, // Assuming 'phone' field exists
         BillAddr: { // Assuming address fields exist and map like this
@@ -203,8 +203,44 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
 
     // 5. Determine Operation & Execute QBO Action
-    const existingQboCustomerId = algaCompany.qbo_customer_id; // Assuming field name
-    const qboSyncToken = algaCompany.qbo_sync_token; // Assuming field name for updates
+    logger.info('Fetching QBO customer mapping from tenant_external_entity_mappings', { algaCompanyId, realmId, tenantId: tenant });
+    const mappingResult = await actions.get_external_entity_mapping({
+        algaEntityId: algaCompanyId,
+        externalSystemName: 'quickbooks_online', // Or a constant if you have one defined
+        externalRealmId: realmId,
+        // tenantId is implicit
+    });
+
+    let existingQboCustomerId: string | undefined = undefined;
+    let qboSyncToken: string | undefined = undefined;
+
+    if (mappingResult && mappingResult.success && mappingResult.found && mappingResult.mapping) {
+        existingQboCustomerId = mappingResult.mapping.externalEntityId;
+        qboSyncToken = mappingResult.mapping.syncToken;
+        logger.info('Found existing QBO mapping', { algaCompanyId, existingQboCustomerId, qboSyncToken });
+    } else if (mappingResult && !mappingResult.success) {
+        logger.error('Failed to fetch QBO customer mapping', { algaCompanyId, error: mappingResult.message, details: mappingResult.errorDetails });
+        // Decide on error handling: stop workflow, create human task, or proceed to create?
+        // For now, let's log the error and proceed as if no mapping exists (which will lead to a create attempt).
+        // A human task might be appropriate here in a more robust implementation if the lookup fails.
+        setState('QBO_API_ERROR'); // Or a more specific state like 'MAPPING_LOOKUP_FAILED'
+        await actions.createHumanTask({
+            taskType: 'qbo_sync_error',
+            title: `Failed to lookup QBO mapping for Company ${algaCompany.company_name || algaCompanyId}`,
+            details: {
+                message: `The workflow failed to retrieve the QBO customer mapping for Alga Company ID ${algaCompanyId} and Realm ID ${realmId}. Error: ${mappingResult.message}`,
+                algaCompanyId: algaCompanyId,
+                realmId: realmId,
+                errorDetails: mappingResult.errorDetails || mappingResult.message,
+            },
+            tenantId: tenant,
+        } as HumanTaskInput);
+        return; // Stop workflow
+    } else {
+        logger.info('No existing QBO mapping found for company.', { algaCompanyId });
+    }
+    // const existingQboCustomerId = algaCompany.qbo_customer_id; // Assuming field name
+    // const qboSyncToken = algaCompany.qbo_sync_token; // Assuming field name for updates
 
     try {
         let qboResult: QboCustomerResult;
@@ -382,11 +418,11 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
         setState('UPDATING_ALGA');
         logger.info('Updating Alga Company with QBO details', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
         // TODO: Confirm action name and parameters for updateCompanyQboDetails
-        await actions.updateCompanyQboDetails({
+        await actions.update_company_qbo_details({
             companyId: algaCompanyId,
             qboCustomerId: newQboCustomerId,
             qboSyncToken: newQboSyncToken,
-            tenantId: tenant
+            realmId: realmId
         });
         logger.info('Alga Company updated successfully', { algaCompanyId, qboCustomerId: newQboCustomerId, tenantId: tenant });
 
