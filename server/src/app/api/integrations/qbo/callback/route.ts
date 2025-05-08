@@ -137,18 +137,39 @@ export async function GET(request: Request) {
     const refreshTokenExpiresAt = new Date(now + refreshTokenExpiresIn * 1000).toISOString();
 
     // 4. Securely Store Credentials (including realmId) using ISecretProvider (Task 83)
-    const credentialsToStore = {
+    //    Read existing credentials, update/add the current realm, and save back.
+    let existingCredentials: Record<string, any> = {};
+    try {
+      const existingSecret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+      if (existingSecret) {
+        existingCredentials = JSON.parse(existingSecret);
+        if (typeof existingCredentials !== 'object' || existingCredentials === null) {
+           console.warn(`QBO Callback: Existing secret '${QBO_CREDENTIALS_SECRET_NAME}' for tenant ${tenantId} is not a valid object. Overwriting with new structure.`);
+           existingCredentials = {};
+        }
+      }
+    } catch (e: any) {
+      // Handle JSON parse error or other read errors gracefully by starting fresh
+      console.warn(`QBO Callback: Could not read/parse existing secret '${QBO_CREDENTIALS_SECRET_NAME}' for tenant ${tenantId}. Initializing new structure. Error: ${e.message}`);
+      existingCredentials = {};
+    }
+
+    // Prepare the credentials object for the current realm
+    const newRealmCredentials = {
       accessToken,
       refreshToken,
-      realmId: realmId, // Use realmId from query params
+      realmId: realmId, // Include realmId within the object as well for consistency
       accessTokenExpiresAt,
       refreshTokenExpiresAt,
     };
 
-    // Use the updated setTenantSecret method
-    await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, JSON.stringify(credentialsToStore));
+    // Add/Update the credentials for the current realmId in the main object
+    existingCredentials[realmId] = newRealmCredentials;
 
-    console.log(`QBO Callback: Successfully stored QBO credentials for tenant ${tenantId}, realm ${realmId}.`);
+    // Save the updated multi-realm credentials object
+    await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, JSON.stringify(existingCredentials, null, 2)); // Pretty print for readability
+
+    console.log(`QBO Callback: Successfully stored/updated QBO credentials for tenant ${tenantId}, realm ${realmId} within the multi-scope secret.`);
 
     // --- BEGIN: Add Workflow Event Attachments using Action ---
     try {

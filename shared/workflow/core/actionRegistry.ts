@@ -19,6 +19,9 @@ export interface ActionExecutionContext {
   idempotencyKey: string;
   parameters: Record<string, any>;
   userId?: string; // Added userId field which may be present in some contexts
+  secrets?: Record<string, any>; // Optional field for injected secrets
+  workflowName?: string; // Added for logging context
+  correlationId?: string; // Added for logging context and potential future use
 }
 
 /**

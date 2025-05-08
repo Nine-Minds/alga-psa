@@ -29,6 +29,7 @@ export interface WorkflowVersionExecutionOptions {
   userId?: string;
   versionId: string; // Required version_id from workflow_registration_versions
   isSystemManaged: boolean;
+  correlationId?: string;
 }
 
 /**
@@ -179,20 +180,35 @@ export class TypeScriptWorkflowRuntime {
     
     try {
       // Use event sourcing to replay events and derive state
-      const result = await WorkflowEventSourcing.replayEvents(knex, executionId, tenant, options);
+      const replayResult = await WorkflowEventSourcing.replayEvents(knex, executionId, tenant, options);
+      let derivedState = replayResult.executionState;
+
+      // Fetch the full execution record to get workflowName and correlationId
+      const executionRecord = await WorkflowExecutionModel.getById(knex, tenant, executionId);
+
+      if (executionRecord) {
+        derivedState = {
+          ...derivedState,
+          workflowName: executionRecord.workflow_name,
+          correlationId: executionRecord.correlation_id, // Ensure this is the correct property name from IWorkflowExecution
+        };
+      } else {
+        // This case should ideally not happen if replayEvents succeeded for a valid executionId
+        logger.warn(`[TypeScriptWorkflowRuntime] Execution record not found for ${executionId} after event replay.`);
+      }
       
       // Store derived state in memory cache
-      this.executionStates.set(executionId, result.executionState);
+      this.executionStates.set(executionId, derivedState);
       
       // Update cache with timestamp
       if (!options.debug && !options.replayUntil) {
         this.stateCache.set(executionId, {
           timestamp: Date.now(),
-          state: result.executionState
+          state: derivedState
         });
       }
       
-      return result.executionState;
+      return derivedState;
     } catch (error) {
       logger.error(`[TypeScriptWorkflowRuntime] Error loading execution state for ${executionId}:`, error);
       throw error;
@@ -321,7 +337,7 @@ export class TypeScriptWorkflowRuntime {
     knex: Knex,
     options: WorkflowVersionExecutionOptions
   ): Promise<WorkflowExecutionResult> {
-    const { versionId, tenant, isSystemManaged, userId, initialData } = options;
+    const { versionId, tenant, isSystemManaged, userId, initialData, correlationId } = options;
 
     const baseRegistrationTable = isSystemManaged ? 'system_workflow_registrations' : 'workflow_registrations';
     const baseVersionTable = isSystemManaged ? 'system_workflow_registration_versions' : 'workflow_registration_versions';
@@ -374,9 +390,11 @@ export class TypeScriptWorkflowRuntime {
       // Create initial execution state
       const executionState = {
         executionId,
-        tenant: tenant, // Use destructured tenant
+        workflowName: versionRecord.workflow_name,
+        correlationId: correlationId, // Add correlationId here
+        tenant: tenant,
         currentState: 'initial',
-        data: initialData || {}, // Use destructured initialData
+        data: initialData || {},
         events: [],
         isComplete: false
       };
@@ -385,15 +403,16 @@ export class TypeScriptWorkflowRuntime {
       this.executionStates.set(executionId, executionState);
       
       // Persist workflow execution record
-      await WorkflowExecutionModel.create(knex, tenant, { // Use destructured tenant
-        execution_id: executionId, // Use the UUID as execution_id
+      await WorkflowExecutionModel.create(knex, tenant, {
+        execution_id: executionId,
         workflow_name: versionRecord.workflow_name,
         workflow_version: versionRecord.version,
+        correlation_id: correlationId, // Add correlation_id here
         current_state: 'initial',
         status: 'active',
-        context_data: initialData || {}, // Use destructured initialData
-        tenant: tenant, // Use destructured tenant
-        version_id: versionId, // Use destructured versionId
+        context_data: initialData || {},
+        tenant: tenant,
+        version_id: versionId,
         workflow_type: options.isSystemManaged ? 'system' : 'tenant'
       });
       
@@ -881,16 +900,24 @@ export class TypeScriptWorkflowRuntime {
       // Logger
       logger: {
         info: (message: string, ...args: any[]): void => {
-          console.log(`[INFO] [${executionId}] ${message}`, ...args);
+          const { workflowName, correlationId } = executionState;
+          const prefix = `[INFO] [${workflowName}${correlationId ? `:${correlationId}` : ''} (${executionId})]`;
+          console.log(prefix, message, ...args);
         },
         warn: (message: string, ...args: any[]): void => {
-          console.warn(`[WARN] [${executionId}] ${message}`, ...args);
+          const { workflowName, correlationId } = executionState;
+          const prefix = `[WARN] [${workflowName}${correlationId ? `:${correlationId}` : ''} (${executionId})]`;
+          console.warn(prefix, message, ...args);
         },
         error: (message: string, ...args: any[]): void => {
-          console.error(`[ERROR] [${executionId}] ${message}`, ...args);
+          const { workflowName, correlationId } = executionState;
+          const prefix = `[ERROR] [${workflowName}${correlationId ? `:${correlationId}` : ''} (${executionId})]`;
+          console.error(prefix, message, ...args);
         },
         debug: (message: string, ...args: any[]): void => {
-          console.debug(`[DEBUG] [${executionId}] ${message}`, ...args);
+          const { workflowName, correlationId } = executionState;
+          const prefix = `[DEBUG] [${workflowName}${correlationId ? `:${correlationId}` : ''} (${executionId})]`;
+          console.debug(prefix, message, ...args);
         }
       },
       
@@ -926,11 +953,18 @@ export class TypeScriptWorkflowRuntime {
           .reverse()
           .find((e: any) => e.user_id)?.user_id;
           
-        // Include userId in the action context if available
+        // Include userId, workflowName, and correlationId in the action context if available
         // IMPORTANT: Always call actionRegistry.executeAction with the *original registeredName*
+        
+        // Log the secrets object from executionState.data before passing it to the action context
+        console.log(`[DEBUG ActionProxy] Secrets from executionState.data for action ${registeredName} (executionId: ${executionId}):`, currentExecutionState?.data?.secrets);
+        
         return this.actionRegistry.executeAction(registeredName, {
           tenant,
           executionId,
+          workflowName: currentExecutionState?.workflowName,
+          correlationId: currentExecutionState?.correlationId,
+          secrets: currentExecutionState?.data?.secrets, // Pass secrets from execution state data
           parameters: params,
           idempotencyKey: `${executionId}-${registeredName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           userId: userIdFromEvents // Include user ID from events if available

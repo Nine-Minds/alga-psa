@@ -62,6 +62,8 @@ export interface EventReplayResult {
     data: Record<string, any>;
     events: WorkflowEvent[];
     isComplete: boolean;
+    workflowName?: string; // Added for consistency, populated by TypeScriptWorkflowRuntime.loadExecutionState
+    correlationId?: string; // Added for consistency, populated by TypeScriptWorkflowRuntime.loadExecutionState
   };
   
   /**
