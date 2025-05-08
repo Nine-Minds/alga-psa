@@ -1,14 +1,18 @@
 "use client";
 
 import { useState, useEffect, KeyboardEvent } from 'react';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import Documents from 'server/src/components/documents/Documents';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { getAllDocuments } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getAllDocuments, getDistinctEntityTypes } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import { IUserWithRoles } from 'server/src/interfaces/index';
 import { toast } from 'react-hot-toast';
+import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
+import UserPicker from 'server/src/components/ui/UserPicker';
 
 export default function DocumentsPage() {
   const [documents, setDocuments] = useState<IDocument[]>([]);
@@ -16,56 +20,69 @@ export default function DocumentsPage() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
+  const [allUsersData, setAllUsersData] = useState<IUserWithRoles[]>([]);
+  const [entityTypeOptions, setEntityTypeOptions] = useState<SelectOption[]>([]);
 
-  const [filterInputs, setFilterInputs] = useState({
+  const [filterInputs, setFilterInputs] = useState<DocumentFilters>({
     type: 'all',
     entityType: '',
-    searchTerm: ''
+    searchTerm: '',
+    uploadedBy: '',
+    updated_at_start: '',
+    updated_at_end: ''
   });
 
   const documentTypes: SelectOption[] = [
+    { value: 'all', label: 'All Document Types' },
     { value: 'application/pdf', label: 'PDF' },
     { value: 'image', label: 'Images' },
     { value: 'text', label: 'Documents' },
     { value: 'application', label: 'Other' }
   ];
 
-  const entityTypes: SelectOption[] = [
-    { value: 'ticket', label: 'Tickets' },
-    { value: 'company', label: 'Clients' },
-    { value: 'contact', label: 'Contacts' },
-    { value: 'schedule', label: 'Schedules' }
-  ];
+  const capitalizeFirstLetter = (string: string) => {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  };
 
-  const handleSearch = async () => {
+  const fetchDocumentsForPage = async (page: number, filters = filterInputs) => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Fetching documents with filters:', filterInputs);
+      console.log('Fetching documents with filters:', filters, 'for page:', page);
 
-      // Only include filters that have values
       const searchFilters = {
-        ...(filterInputs.type !== 'all' && { type: filterInputs.type }),
-        ...(filterInputs.entityType && { entityType: filterInputs.entityType }),
-        ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
+        ...(filters.type !== 'all' && { type: filters.type }),
+        ...(filters.entityType && { entityType: filters.entityType }),
+        ...(filters.searchTerm && { searchTerm: filters.searchTerm }),
+        ...(filters.uploadedBy && { uploadedBy: filters.uploadedBy }),
+        ...(filters.updated_at_start && { updated_at_start: filters.updated_at_start }),
+        ...(filters.updated_at_end && { updated_at_end: filters.updated_at_end })
       };
 
-      const docs = await getAllDocuments(searchFilters);
-      console.log('Fetched documents:', docs);
+      const response = await getAllDocuments(searchFilters, page, pageSize);
+      console.log('Fetched documents response:', response);
 
-      if (!Array.isArray(docs)) {
-        console.error('Received non-array documents:', docs);
+      if (response && Array.isArray(response.documents)) {
+        setDocuments(response.documents);
+        setTotalPages(response.totalPages);
+        setCurrentPage(response.currentPage);
+      } else {
+        console.error('Received invalid documents data:', response);
         setDocuments([]);
+        setTotalPages(1);
+        setCurrentPage(1);
         setError('Invalid document data received');
-        return;
       }
-
-      setDocuments(docs);
     } catch (error) {
       console.error('Error fetching documents:', error);
       setError('Failed to fetch documents');
       toast.error('Failed to fetch documents');
       setDocuments([]);
+      setTotalPages(1);
+      setCurrentPage(1);
     } finally {
       setIsLoading(false);
     }
@@ -73,24 +90,34 @@ export default function DocumentsPage() {
 
   useEffect(() => {
     if (!initialized && filterInputs.searchTerm === '') {
-        return;
+      return;
     }
-
     const timerId = setTimeout(() => {
-      if (initialized || filterInputs.searchTerm) {
-        handleSearch();
-      }
+      setCurrentPage(1);
+      fetchDocumentsForPage(1, filterInputs);
     }, 500);
 
     return () => {
       clearTimeout(timerId);
     };
-  }, [filterInputs.searchTerm, initialized]);
+  }, [
+    filterInputs.searchTerm,
+    filterInputs.type,
+    filterInputs.entityType,
+    filterInputs.uploadedBy,
+    filterInputs.updated_at_start,
+    filterInputs.updated_at_end,
+    initialized
+  ]);
 
-  // Initialize data
+ useEffect(() => {
+    if (initialized) {
+        fetchDocumentsForPage(currentPage, filterInputs);
+    }
+  }, [currentPage, initialized]);
+
   useEffect(() => {
     let mounted = true;
-
     const initialize = async () => {
       if (initialized) return;
 
@@ -98,18 +125,38 @@ export default function DocumentsPage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch user first
-        const user = await getCurrentUser();
+        const [user, allUsersResponse, dbEntityTypes] = await Promise.all([
+          getCurrentUser(),
+          getAllUsers(),
+          getDistinctEntityTypes()
+        ]);
+
         if (!mounted) return;
 
         if (user) {
           setCurrentUserId(user.user_id);
-          // Fetch documents after we have the user
-          await handleSearch();
         } else {
-          setError('No user found');
-          toast.error('No user found');
+          setError('No current user found');
+          toast.error('No current user found');
         }
+
+        if (allUsersResponse && Array.isArray(allUsersResponse)) {
+          setAllUsersData(allUsersResponse);
+        } else {
+          console.error('Failed to fetch users for filter or response was not an array:', allUsersResponse);
+          setAllUsersData([]);
+        }
+
+        if (dbEntityTypes && Array.isArray(dbEntityTypes)) {
+          const options = dbEntityTypes.map(et => ({ value: et, label: capitalizeFirstLetter(et) }));
+          setEntityTypeOptions([{ value: 'all_entities', label: 'All Entity Types' }, ...options]);
+        } else {
+          console.error('Failed to fetch entity types or response was not an array:', dbEntityTypes);
+          setEntityTypeOptions([{ value: 'all_entities', label: 'All Entity Types' }]);
+        }
+        
+        await fetchDocumentsForPage(1, filterInputs);
+
       } catch (error) {
         console.error('Error during initialization:', error);
         if (mounted) {
@@ -125,57 +172,32 @@ export default function DocumentsPage() {
     };
 
     initialize();
-
     return () => {
       mounted = false;
     };
   }, []); // Run once on mount
 
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   const handleDocumentUpdate = async () => {
-    await handleSearch();
+    await fetchDocumentsForPage(currentPage, filterInputs);
   };
+
   const handleClearFilters = () => {
-    // Create cleared filters object
     const clearedFilters = {
       type: 'all',
       entityType: '',
-      searchTerm: ''
+      searchTerm: '',
+      uploadedBy: '',
+      updated_at_start: '',
+      updated_at_end: ''
     };
-
-    // Update the filter inputs state
     setFilterInputs(clearedFilters);
-
-    try {
-      setIsLoading(true);
-      setError(null);
-      console.log('Fetching all documents after clearing filters');
-
-      // Call getAllDocuments with empty filters
-      getAllDocuments({}).then(docs => {
-        console.log('Received documents after clearing filters:', docs.length);
-        if (Array.isArray(docs)) {
-          setDocuments(docs);
-        } else {
-          console.error('Received non-array documents:', docs);
-          setDocuments([]);
-          setError('Invalid document data received');
-        }
-      }).catch(error => {
-        console.error('Error fetching documents:', error);
-        setError('Failed to fetch documents');
-        toast.error('Failed to fetch documents');
-        setDocuments([]);
-      }).finally(() => {
-        setIsLoading(false);
-      });
-    } catch (error) {
-      console.error('Error in handleClearFilters:', error);
-      setIsLoading(false);
-    }
+    setCurrentPage(1);
   };
 
-  // Debug log for rendering
   console.log('Rendering DocumentsPage with:', {
     documentsLength: documents.length,
     isLoading,
@@ -222,99 +244,67 @@ export default function DocumentsPage() {
                 </label>
                 <CustomSelect
                   options={documentTypes}
-                  value={filterInputs.type}
-                  placeholder='All Document Types'
+                  value={filterInputs.type || 'all'}
                   onValueChange={(value: string) => {
-                    if (value == 'placeholder') {
-                      value = 'all';
-                    }
-
-                    // Update state
                     setFilterInputs({ ...filterInputs, type: value });
-                    
-                    // Call search with the new value directly instead of relying on state update
-                    const searchFilters = {
-                      ...(value !== 'all' && { type: value }),
-                      ...(filterInputs.entityType && { entityType: filterInputs.entityType }),
-                      ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
-                    };
-                    
-                    // Set loading state
-                    setIsLoading(true);
-                    setError(null);
-                    
-                    // Execute search with the new filters
-                    getAllDocuments(searchFilters)
-                      .then(docs => {
-                        if (Array.isArray(docs)) {
-                          setDocuments(docs);
-                        } else {
-                          console.error('Received non-array documents:', docs);
-                          setDocuments([]);
-                          setError('Invalid document data received');
-                        }
-                      })
-                      .catch(error => {
-                        console.error('Error fetching documents:', error);
-                        setError('Failed to fetch documents');
-                        toast.error('Failed to fetch documents');
-                        setDocuments([]);
-                      })
-                      .finally(() => {
-                        setIsLoading(false);
-                      });
                   }}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Entity Type
+                  Associated Entity Type
                 </label>
                 <CustomSelect
-                  options={entityTypes}
-                  value={filterInputs.entityType}
+                  options={entityTypeOptions}
+                  value={filterInputs.entityType || 'all_entities'}
                   onValueChange={(value: string) => {
-                    if (value === 'placeholder') {
-                      value = '';
+                    if (value === 'all_entities') {
+                      setFilterInputs({ ...filterInputs, entityType: '' });
+                    } else {
+                      setFilterInputs({ ...filterInputs, entityType: value });
                     }
-
-                    // Update state
-                    setFilterInputs({ ...filterInputs, entityType: value });
-                    
-                    // Call search with the new value directly instead of relying on state update
-                    const searchFilters = {
-                      ...(filterInputs.type !== 'all' && { type: filterInputs.type }),
-                      ...(value && { entityType: value }),
-                      ...(filterInputs.searchTerm && { searchTerm: filterInputs.searchTerm })
-                    };
-                    
-                    // Set loading state
-                    setIsLoading(true);
-                    setError(null);
-                    
-                    // Execute search with the new filters
-                    getAllDocuments(searchFilters)
-                      .then(docs => {
-                        if (Array.isArray(docs)) {
-                          setDocuments(docs);
-                        } else {
-                          console.error('Received non-array documents:', docs);
-                          setDocuments([]);
-                          setError('Invalid document data received');
-                        }
-                      })
-                      .catch(error => {
-                        console.error('Error fetching documents:', error);
-                        setError('Failed to fetch documents');
-                        toast.error('Failed to fetch documents');
-                        setDocuments([]);
-                      })
-                      .finally(() => {
-                        setIsLoading(false);
-                      });
                   }}
-                  placeholder="All Entities"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Uploaded By
+                </label>
+                <UserPicker
+                  users={allUsersData}
+                  value={filterInputs.uploadedBy || ''}
+                  onValueChange={(value: string) => {
+                    setFilterInputs({ ...filterInputs, uploadedBy: value });
+                  }}
+                  placeholder="All Users"
+                  buttonWidth="full"
+                  className="w-full"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Updated Date Start
+                </label>
+                <DatePicker
+                  value={filterInputs.updated_at_start ? new Date(filterInputs.updated_at_start) : undefined}
+                  onChange={(date: Date | null) => setFilterInputs({ ...filterInputs, updated_at_start: date ? date.toISOString().split('T')[0] : '' })}
+                  placeholder="Select start date"
+                  className="w-full"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Updated Date End
+                </label>
+                 <DatePicker
+                  value={filterInputs.updated_at_end ? new Date(filterInputs.updated_at_end) : undefined}
+                  onChange={(date: Date | null) => setFilterInputs({ ...filterInputs, updated_at_end: date ? date.toISOString().split('T')[0] : '' })}
+                  placeholder="Select end date"
+                  className="w-full"
                 />
               </div>
 
@@ -347,6 +337,17 @@ export default function DocumentsPage() {
                 onDocumentCreated={handleDocumentUpdate}
                 searchTermFromParent={filterInputs.searchTerm}
               />
+            )}
+            {/* Pagination controls for the main page list */}
+            {!isLoading && documents.length > 0 && totalPages > 1 && (
+              <div className="mt-4 flex justify-center">
+                 <DocumentsPagination
+                    id="main-documents-pagination"
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                  />
+              </div>
             )}
           </Card>
         </div>

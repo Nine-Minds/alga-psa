@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { IDocument } from 'server/src/interfaces/document.interface';
+import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
@@ -71,6 +71,11 @@ const Documents = ({
   searchTermFromParent = ''
 }: DocumentsProps): JSX.Element => {
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDocuments, setTotalDocuments] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
+
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +92,56 @@ const Documents = ({
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
 
   useEffect(() => {
-    if (!searchTermFromParent) {
-      setDocumentsToDisplay(initialDocuments);
+    if (initialDocuments && initialDocuments.length > 0 && !searchTermFromParent) {
+        setDocumentsToDisplay(initialDocuments);
     }
   }, [initialDocuments, searchTermFromParent]);
+
+
+  const fetchDocuments = useCallback(async (page: number, searchTerm?: string) => {
+    if (!entityId || !entityType) {
+      if (searchTerm) {
+        const filtered = initialDocuments.filter(doc =>
+          doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setDocumentsToDisplay(filtered);
+        setTotalPages(1);
+        setCurrentPage(1);
+      } else {
+        setDocumentsToDisplay(initialDocuments);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
+      return;
+    }
+
+    try {
+      const currentFilters: DocumentFilters = {
+        searchTerm: searchTerm || undefined,
+      };
+      const response = await getDocumentsByEntity(entityId, entityType, currentFilters, page, pageSize);
+      setDocumentsToDisplay(response.documents);
+      setTotalDocuments(response.totalCount);
+      setTotalPages(response.totalPages);
+      setCurrentPage(response.currentPage);
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+      setError('Failed to fetch documents.');
+      setDocumentsToDisplay([]);
+      setTotalPages(1);
+      setCurrentPage(1);
+    }
+  }, [entityId, entityType, pageSize, initialDocuments]);
+
+
+  useEffect(() => {
+    fetchDocuments(currentPage, searchTermFromParent);
+  }, [fetchDocuments, currentPage, searchTermFromParent]);
+
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   const handleCreateDocument = async () => {
     setIsCreatingNew(true);
@@ -153,8 +204,7 @@ const Documents = ({
 
       // Refresh documents list
       if (entityId && entityType) {
-        const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocumentsToDisplay(updatedDocuments);
+        fetchDocuments(currentPage, searchTermFromParent);
       }
 
       if (onDocumentCreated) {
@@ -193,8 +243,7 @@ const Documents = ({
 
       // Refresh documents list
       if (entityId && entityType) {
-        const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocumentsToDisplay(updatedDocuments);
+        fetchDocuments(currentPage, searchTermFromParent);
       }
 
       if (onDocumentCreated) {
@@ -246,44 +295,6 @@ const Documents = ({
     }
   }, [selectedDocument]);
 
-  const fetchAndFilterDocuments = useCallback(async (currentSearchTerm: string) => {
-    let baseDocuments: IDocument[] = [];
-    if (entityId && entityType) {
-      try {
-        baseDocuments = await getDocumentsByEntity(entityId, entityType);
-      } catch (err) {
-        console.error('Error fetching documents:', err);
-        setError('Failed to fetch documents.');
-        setDocumentsToDisplay([]);
-        return;
-      }
-    } else {
-      baseDocuments = initialDocuments;
-    }
-
-    if (currentSearchTerm) {
-      const filtered = baseDocuments.filter(doc =>
-        doc.document_name.toLowerCase().includes(currentSearchTerm.toLowerCase())
-      );
-      setDocumentsToDisplay(filtered);
-    } else {
-      setDocumentsToDisplay(baseDocuments);
-    }
-  }, [entityId, entityType, initialDocuments, setDocumentsToDisplay, setError]);
-
-  useEffect(() => {
-    if (!searchTermFromParent) {
-      fetchAndFilterDocuments('');
-    }
-
-    const timerId = setTimeout(() => {
-      fetchAndFilterDocuments(searchTermFromParent);
-    }, 500);
-
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [searchTermFromParent, fetchAndFilterDocuments, entityId, entityType]);
 
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
@@ -355,14 +366,11 @@ const Documents = ({
               // Refresh documents list after association
               if (entityId && entityType) {
                 try {
-                  const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-                  setDocumentsToDisplay(updatedDocuments);
                 } catch (error) {
-                  console.error('Error refreshing documents:', error);
-                  setError('Failed to refresh documents');
+                  console.error('Error associating documents:', error);
+                  setError('Failed to associate documents');
                 }
               }
-              
               setShowSelector(false);
               if (onDocumentCreated) await onDocumentCreated();
             }}
@@ -409,9 +417,14 @@ const Documents = ({
           </div>
         )}
 
-        {documentsToDisplay.length > 0 && (
+        {documentsToDisplay.length > 0 && totalPages > 1 && (
           <div className="mt-4">
-            <DocumentsPagination id={`${id}-pagination`} />
+            <DocumentsPagination
+              id={`${id}-pagination`}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
 

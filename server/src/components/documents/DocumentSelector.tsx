@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/Dialog';
-import { Button } from '../ui/Button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Button } from 'server/src/components/ui/Button';
 import { Search, X, Check, Loader2 } from 'lucide-react';
-import { Input } from '../ui/Input';
+import { Input } from 'server/src/components/ui/Input';
 import DocumentStorageCard from './DocumentStorageCard';
-import { IDocument } from '../../interfaces/document.interface';
-import { getAllDocuments, createDocumentAssociations } from '../../lib/actions/document-actions/documentActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getAllDocuments, createDocumentAssociations } from 'server/src/lib/actions/document-actions/documentActions';
 import { Text } from '@radix-ui/themes';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface DocumentSelectorProps {
     id: string;
@@ -38,20 +38,21 @@ export default function DocumentSelector({
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
 
-    // Load documents when dialog opens
     useEffect(() => {
         if (isOpen) {
-            loadDocuments();
+            loadDocuments(currentPage);
         }
-    }, [isOpen, entityId, entityType]);
+    }, [isOpen, entityId, entityType, searchTerm, currentPage]);
 
-    const loadDocuments = async () => {
+    const loadDocuments = async (pageToLoad: number) => {
         try {
             setIsLoading(true);
             setError(null);
             
-            // Validate required props before using them
             if (!entityId || !entityType) {
                 console.error('Missing required props: entityId or entityType is undefined');
                 setError('Configuration error: Missing entity information');
@@ -59,18 +60,35 @@ export default function DocumentSelector({
                 return;
             }
             
-            const docs = await getAllDocuments({
+            const response = await getAllDocuments({
                 searchTerm: searchTerm,
                 excludeEntityId: entityId,
                 excludeEntityType: entityType
-            });
-            setDocuments(docs);
+            }, pageToLoad, pageSize);
+
+            if (response && Array.isArray(response.documents)) {
+                setDocuments(response.documents);
+                setTotalPages(response.totalPages);
+                setCurrentPage(response.currentPage);
+            } else {
+                setDocuments([]);
+                setTotalPages(1);
+                setCurrentPage(1);
+                setError('Invalid document data received');
+            }
         } catch (error) {
             console.error('Error loading documents:', error);
             setError('Failed to load documents');
+            setDocuments([]);
+            setTotalPages(1);
+            setCurrentPage(1);
         } finally {
             setIsLoading(false);
         }
+    };
+    
+    const handlePageChange = (newPage: number) => {
+        setCurrentPage(newPage);
     };
 
     // Handle search input changes
@@ -81,7 +99,8 @@ export default function DocumentSelector({
     // Perform search when Enter is pressed
     const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
-            loadDocuments();
+            setCurrentPage(1);
+            loadDocuments(1);
         }
     };
 
@@ -212,7 +231,6 @@ export default function DocumentSelector({
                                                 document={document}
                                                 hideActions
                                             />
-                                            {/* Selection Indicator */}
                                             {selectedDocuments.has(document.document_id) && (
                                                 <div className="absolute top-2 right-2 bg-primary-500 text-white rounded-full p-1">
                                                     <Check className="w-4 h-4" />
@@ -221,16 +239,47 @@ export default function DocumentSelector({
                                         </div>
                                     ))}
                                     {documents.length === 0 && !isLoading && (
-                                        <div className="col-span-2 text-center py-8">
+                                        <div className="col-span-full text-center py-8">
                                             <Text as="div" size="2" color="gray">
                                                 No documents found
                                             </Text>
                                         </div>
                                     )}
                                 </div>
+                                
+                                {/* Pagination for Document Selector */}
+                                {totalPages > 1 && (
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            id={`${id}-selector-prev-btn`}
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1 || isLoading}
+                                            variant="outline"
+                                            size="sm"
+                                           className="mr-2"
+                                        >
+                                            Previous
+                                        </Button>
+                                        <span 
+                                            className="text-sm self-center"
+                                        >
+                                            Page {currentPage} of {totalPages}
+                                        </span>
+                                        <Button
+                                            id={`${id}-selector-next-btn`}
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages || isLoading}
+                                            variant="outline"
+                                            size="sm"
+                                            className="ml-2"
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                )}
 
                                 {/* Action Buttons */}
-                                <div className="flex justify-end space-x-2 pt-4 border-t">
+                                <div className="flex justify-end space-x-2 pt-4 border-t mt-4">
                                     <Button
                                         id="cancel-document-selection-button"
                                         variant="outline"
