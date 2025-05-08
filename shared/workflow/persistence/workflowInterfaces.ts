@@ -14,6 +14,7 @@ export interface IWorkflowExecution {
   created_at: string;
   updated_at: string;
   version_id?: string; // Reference to workflow_registration_versions
+  correlation_id?: string;
 }
 
 export interface IWorkflowEvent {

@@ -21,7 +21,6 @@ import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
 import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
 import { getSecretProviderInstance } from 'server/src/lib/secrets';
-import { getTenantQboCredentials } from 'server/src/lib/actions/integrations/qboActions';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -550,15 +549,31 @@ async function updateManualInvoiceItemsInternal(
     let realmId: string | null = null;
     try {
       const secretProvider = getSecretProviderInstance();
-      const qboCredentials = await getTenantQboCredentials(secretProvider, tenant);
-      if (qboCredentials && qboCredentials.realmId) {
-        realmId = qboCredentials.realmId;
-        console.log(`[updateManualInvoiceItemsInternal] Found realmId in secrets for tenant ${tenant}: ${realmId}`);
-      } else {
-        console.warn(`[updateManualInvoiceItemsInternal] QBO realmId not found in secrets for tenant ${tenant}. realmId will be null for INVOICE_UPDATED event. This may cause issues in qboInvoiceSyncWorkflow.`);
+      const secretString = await secretProvider.getTenantSecret(tenant, 'qbo_credentials'); // Read the whole secret
+
+      if (secretString) {
+        const allCredentials: Record<string, any> = JSON.parse(secretString); // Parse the multi-realm object
+
+        // Find the first valid realmId
+        for (const currentRealmId in allCredentials) {
+          if (Object.prototype.hasOwnProperty.call(allCredentials, currentRealmId)) {
+            const creds = allCredentials[currentRealmId];
+            // Basic validation and check expiry
+            if (creds && creds.accessToken && creds.accessTokenExpiresAt && new Date(creds.accessTokenExpiresAt) > new Date()) {
+              realmId = currentRealmId; // Found a valid realm
+              console.log(`[updateManualInvoiceItemsInternal] Found valid realmId in multi-realm secrets for tenant ${tenant}: ${realmId}`);
+              break; // Use the first valid one found
+            }
+          }
+        }
       }
-    } catch (error) {
-      console.error(`[updateManualInvoiceItemsInternal] Error fetching realmId from secrets for tenant ${tenant}:`, error);
+
+      if (!realmId) {
+         console.warn(`[updateManualInvoiceItemsInternal] No valid QBO realmId found in multi-realm secrets for tenant ${tenant}. realmId will be null for INVOICE_UPDATED event. This may cause issues in qboInvoiceSyncWorkflow.`);
+      }
+
+    } catch (error: any) {
+      console.error(`[updateManualInvoiceItemsInternal] Error fetching/parsing multi-realm secrets for tenant ${tenant}:`, error.message);
       // realmId remains null.
     }
 
