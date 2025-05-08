@@ -1,12 +1,12 @@
 'use client';
 
 import { CaretLeftIcon, CaretRightIcon } from '@radix-ui/react-icons';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ButtonComponent } from '../../types/ui-reflection/types';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent } from 'server/src/types/ui-reflection/types';
 
 interface DocumentsPaginationProps {
-    id: string; // Made required since it's needed for reflection registration
+    id: string;
 }
 
 const DocumentsPagination = ({ id }: DocumentsPaginationProps) => {

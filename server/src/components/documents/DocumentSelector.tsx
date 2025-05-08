@@ -12,9 +12,9 @@ import { Text } from '@radix-ui/themes';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface DocumentSelectorProps {
-    id: string; // Made required since it's needed for reflection registration
-    entityId: string; // Required - the ID of the entity to associate documents with
-    entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset'; // Required - the type of entity
+    id: string;
+    entityId: string;
+    entityType: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
     onDocumentSelected?: (document: IDocument) => Promise<void>;
     onDocumentsSelected?: () => Promise<void>;
     singleSelect?: boolean;

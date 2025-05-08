@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, KeyboardEvent } from 'react';
-import { IDocument } from '../../../interfaces/document.interface';
-import Documents from '../../../components/documents/Documents';
-import { Card } from '../../../components/ui/Card';
-import { Input } from '../../../components/ui/Input';
-import CustomSelect, { SelectOption } from '../../../components/ui/CustomSelect';
-import { getAllDocuments } from '../../../lib/actions/document-actions/documentActions';
-import { getCurrentUser } from '../../../lib/actions/user-actions/userActions';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import Documents from 'server/src/components/documents/Documents';
+import { Card } from 'server/src/components/ui/Card';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { getAllDocuments } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { toast } from 'react-hot-toast';
 
 export default function DocumentsPage() {
@@ -71,6 +71,22 @@ export default function DocumentsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!initialized && filterInputs.searchTerm === '') {
+        return;
+    }
+
+    const timerId = setTimeout(() => {
+      if (initialized || filterInputs.searchTerm) {
+        handleSearch();
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [filterInputs.searchTerm, initialized]);
+
   // Initialize data
   useEffect(() => {
     let mounted = true;
@@ -115,11 +131,6 @@ export default function DocumentsPage() {
     };
   }, []); // Run once on mount
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
 
   const handleDocumentUpdate = async () => {
     await handleSearch();
@@ -135,8 +146,6 @@ export default function DocumentsPage() {
     // Update the filter inputs state
     setFilterInputs(clearedFilters);
 
-    // Call handleSearch with the cleared filters directly
-    // This ensures we don't depend on the state update timing
     try {
       setIsLoading(true);
       setError(null);
@@ -204,7 +213,6 @@ export default function DocumentsPage() {
                   placeholder="Search by document name..."
                   value={filterInputs.searchTerm}
                   onChange={(e) => setFilterInputs({ ...filterInputs, searchTerm: e.target.value })}
-                  onKeyPress={handleKeyPress}
                 />
               </div>
 
@@ -337,6 +345,7 @@ export default function DocumentsPage() {
                 userId={currentUserId}
                 isLoading={isLoading}
                 onDocumentCreated={handleDocumentUpdate}
+                searchTermFromParent={filterInputs.searchTerm}
               />
             )}
           </Card>

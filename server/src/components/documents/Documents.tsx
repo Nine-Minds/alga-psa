@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
@@ -48,6 +48,7 @@ interface DocumentsProps {
   documents: IDocument[];
   gridColumns?: 3 | 4;
   userId: string;
+  searchTermFromParent?: string;
   entityId?: string;
   entityType?: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
   isLoading?: boolean;
@@ -66,9 +67,10 @@ const Documents = ({
   isLoading = false,
   onDocumentCreated,
   isInDrawer = false,
-  uploadFormRef
+  uploadFormRef,
+  searchTermFromParent = ''
 }: DocumentsProps): JSX.Element => {
-  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
+  const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -84,10 +86,11 @@ const Documents = ({
   const editorRef = useRef<BlockNoteEditor | null>(null);
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
 
-  // Keep local documents state in sync with props
   useEffect(() => {
-    setDocuments(initialDocuments);
-  }, [initialDocuments]);
+    if (!searchTermFromParent) {
+      setDocumentsToDisplay(initialDocuments);
+    }
+  }, [initialDocuments, searchTermFromParent]);
 
   const handleCreateDocument = async () => {
     setIsCreatingNew(true);
@@ -107,7 +110,7 @@ const Documents = ({
   const handleDelete = async (document: IDocument) => {
     try {
       await deleteDocument(document.document_id, userId);
-      setDocuments(prev => prev.filter(d => d.document_id !== document.document_id));
+      setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -122,7 +125,7 @@ const Documents = ({
 
     try {
       await removeDocumentAssociations(entityId, entityType, [document.document_id]);
-      setDocuments(prev => prev.filter(d => d.document_id !== document.document_id));
+      setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -151,7 +154,7 @@ const Documents = ({
       // Refresh documents list
       if (entityId && entityType) {
         const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocuments(updatedDocuments);
+        setDocumentsToDisplay(updatedDocuments);
       }
 
       if (onDocumentCreated) {
@@ -191,7 +194,7 @@ const Documents = ({
       // Refresh documents list
       if (entityId && entityType) {
         const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocuments(updatedDocuments);
+        setDocumentsToDisplay(updatedDocuments);
       }
 
       if (onDocumentCreated) {
@@ -243,6 +246,45 @@ const Documents = ({
     }
   }, [selectedDocument]);
 
+  const fetchAndFilterDocuments = useCallback(async (currentSearchTerm: string) => {
+    let baseDocuments: IDocument[] = [];
+    if (entityId && entityType) {
+      try {
+        baseDocuments = await getDocumentsByEntity(entityId, entityType);
+      } catch (err) {
+        console.error('Error fetching documents:', err);
+        setError('Failed to fetch documents.');
+        setDocumentsToDisplay([]);
+        return;
+      }
+    } else {
+      baseDocuments = initialDocuments;
+    }
+
+    if (currentSearchTerm) {
+      const filtered = baseDocuments.filter(doc =>
+        doc.document_name.toLowerCase().includes(currentSearchTerm.toLowerCase())
+      );
+      setDocumentsToDisplay(filtered);
+    } else {
+      setDocumentsToDisplay(baseDocuments);
+    }
+  }, [entityId, entityType, initialDocuments, setDocumentsToDisplay, setError]);
+
+  useEffect(() => {
+    if (!searchTermFromParent) {
+      fetchAndFilterDocuments('');
+    }
+
+    const timerId = setTimeout(() => {
+      fetchAndFilterDocuments(searchTermFromParent);
+    }, 500);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, [searchTermFromParent, fetchAndFilterDocuments, entityId, entityType]);
+
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
@@ -250,7 +292,7 @@ const Documents = ({
   return (
     <ReflectionContainer id={id} label="Documents">
       <div className="w-full space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
             <Button
               id={`${id}-new-document-btn`}
@@ -314,7 +356,7 @@ const Documents = ({
               if (entityId && entityType) {
                 try {
                   const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-                  setDocuments(updatedDocuments);
+                  setDocumentsToDisplay(updatedDocuments);
                 } catch (error) {
                   console.error('Error refreshing documents:', error);
                   setError('Failed to refresh documents');
@@ -339,9 +381,9 @@ const Documents = ({
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
           </div>
-        ) : documents.length > 0 ? (
+        ) : documentsToDisplay.length > 0 ? (
           <div className={`grid ${gridColumnsClass} gap-4`}>
-            {documents.map((document) => (
+            {documentsToDisplay.map((document) => (
               <div key={document.document_id} className="h-full">
                 <DocumentStorageCard
                   id={`${id}-document-${document.document_id}`}
@@ -367,7 +409,7 @@ const Documents = ({
           </div>
         )}
 
-        {documents.length > 0 && (
+        {documentsToDisplay.length > 0 && (
           <div className="mt-4">
             <DocumentsPagination id={`${id}-pagination`} />
           </div>
