@@ -448,123 +448,161 @@ export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string
     blockData = blocks;
   }
 
-  let listBuffer: { type: 'ol' | 'ul', items: string[] } | null = null;
   const output: string[] = [];
 
-  const flushListBuffer = () => {
-    if (listBuffer) {
-      output.push(`<${listBuffer.type}>${listBuffer.items.join('')}</${listBuffer.type}>`);
-      listBuffer = null;
-    }
-  };
 
-  blockData.forEach((block) => {
-    let blockStyles = '';
-    if (block.props) {
-      const props = block.props as any;
-      if (props.backgroundColor && props.backgroundColor !== 'default') {
-        blockStyles += `background-color:${props.backgroundColor};`;
+  function processBlocksRecursive(
+    blocksToProcess: Block[] | PartialBlock[],
+    currentLevel: number
+  ) {
+    let listBuffer: { type: 'ol' | 'ul'; items: string[] } | null = null;
+
+    const flushListBuffer = () => {
+      if (listBuffer) {
+        output.push(`<${listBuffer.type}>${listBuffer.items.join('')}</${listBuffer.type}>`);
+        listBuffer = null;
       }
-      if (props.textAlignment && props.textAlignment !== 'left') {
-        blockStyles += `text-align:${props.textAlignment};`;
+    };
+
+    blocksToProcess.forEach((block) => {
+      let blockStylesArray: string[] = [];
+      if (block.props) {
+        const props = block.props as any;
+        if (props.backgroundColor && props.backgroundColor !== 'default') {
+          blockStylesArray.push(`background-color:${props.backgroundColor}`);
+        }
+        if (props.textAlignment && props.textAlignment !== 'left') {
+          blockStylesArray.push(`text-align:${props.textAlignment}`);
+        }
       }
-    }
-    const styleAttribute = blockStyles ? ` style="${blockStyles}"` : '';
 
-    let content = '';
-    let isListItem = false;
+      if (block.type === 'paragraph' && currentLevel > 0) {
+        blockStylesArray.push(`margin-left: ${currentLevel * 25}px`); // 25px per indent level
+      }
+      
+      const styleAttribute = blockStylesArray.length > 0 ? ` style="${blockStylesArray.join(';')}"` : '';
 
-    switch (block.type) {
-      case 'paragraph':
-        flushListBuffer();
-        content = extractStyledTextToHTML(block.content as any[]);
-        output.push(`<p${styleAttribute}>${content || '<br>'}</p>`); 
-        break;
-      case 'heading':
-        flushListBuffer();
-        const level = (block.props as any)?.level || 1;
-        content = extractStyledTextToHTML(block.content as any[]);
-        output.push(`<h${level}${styleAttribute}>${content}</h${level}>`);
-        break;
-      case 'numberedListItem':
-        content = extractStyledTextToHTML(block.content as any[]);
-        if (!listBuffer || listBuffer.type !== 'ol') {
+      let content = '';
+      let isListItem = false;
+
+      switch (block.type) {
+        case 'paragraph':
           flushListBuffer();
-          listBuffer = { type: 'ol', items: [] };
-        }
-        listBuffer.items.push(`<li${styleAttribute}>${content}</li>`);
-        isListItem = true;
-        break;
-      case 'bulletListItem':
-        content = extractStyledTextToHTML(block.content as any[]);
-        if (!listBuffer || listBuffer.type !== 'ul') {
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<p${styleAttribute}>${content || '<br>'}</p>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'heading':
           flushListBuffer();
-          listBuffer = { type: 'ul', items: [] };
-        }
-        listBuffer.items.push(`<li${styleAttribute}>${content}</li>`);
-        isListItem = true;
-        break;
-      case 'checkListItem':
-        flushListBuffer();
-        const checked = (block.props as any)?.checked;
-        content = extractStyledTextToHTML(block.content as any[]);
-        output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
-        break;
-      case 'table':
-        flushListBuffer();
-        const tableContent = block.content as { type: 'tableContent', rows: Array<{ cells: Array<PartialBlock[]> }> };
-        if (!tableContent || !tableContent.rows) {
-           output.push('<!-- Invalid table structure -->');
-           break;
-        }
-        let tableHTML = '<table><tbody>';
-        tableContent.rows.forEach(row => {
-          tableHTML += '<tr>';
-          row.cells.forEach(cellContent => {
-            tableHTML += `<td>${extractStyledTextToHTML(cellContent as any[])}</td>`;
+          const level = (block.props as any)?.level || 1;
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<h${level}${styleAttribute}>${content}</h${level}>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'numberedListItem':
+          content = extractStyledTextToHTML(block.content as any[]);
+          if (!listBuffer || listBuffer.type !== 'ol') {
+            flushListBuffer();
+            listBuffer = { type: 'ol', items: [] };
+          }
+          let listItemContent = `<li${styleAttribute}>${content}`;
+          if (block.children && (block.children as any[]).length > 0) {
+            const nestedOutput: string[] = [];
+            const originalOutputRef = output;
+            (output as any) = nestedOutput;
+            processBlocksRecursive(block.children as Block[], 0);
+            (output as any) = originalOutputRef;
+            listItemContent += nestedOutput.join('\n');
+          }
+          listItemContent += `</li>`;
+          listBuffer.items.push(listItemContent);
+          isListItem = true;
+          break;
+        case 'bulletListItem':
+          content = extractStyledTextToHTML(block.content as any[]);
+          if (!listBuffer || listBuffer.type !== 'ul') {
+            flushListBuffer();
+            listBuffer = { type: 'ul', items: [] };
+          }
+          let bulletItemContent = `<li${styleAttribute}>${content}`;
+           if (block.children && (block.children as any[]).length > 0) {
+            const nestedOutput: string[] = [];
+            const originalOutputRef = output;
+            (output as any) = nestedOutput;
+            processBlocksRecursive(block.children as Block[], 0);
+            (output as any) = originalOutputRef;
+            bulletItemContent += nestedOutput.join('\n');
+          }
+          bulletItemContent += `</li>`;
+          listBuffer.items.push(bulletItemContent);
+          isListItem = true;
+          break;
+        case 'checkListItem':
+          flushListBuffer();
+          const checked = (block.props as any)?.checked;
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'table':
+          flushListBuffer();
+          const tableContent = block.content as { type: 'tableContent', rows: Array<{ cells: Array<PartialBlock[]> }> };
+          if (!tableContent || !tableContent.rows) {
+             output.push('<!-- Invalid table structure -->');
+             break;
+          }
+          let tableHTML = '<table><tbody>';
+          tableContent.rows.forEach(row => {
+            tableHTML += '<tr>';
+            row.cells.forEach(cellContent => {
+              tableHTML += `<td>${extractStyledTextToHTML(cellContent as any[])}</td>`;
+            });
+            tableHTML += '</tr>';
           });
-          tableHTML += '</tr>';
-        });
-        tableHTML += '</tbody></table>';
-        output.push(blockStyles ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
-        break;
-      case 'codeBlock':
+          tableHTML += '</tbody></table>';
+          output.push(blockStylesArray.length > 0 ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
+          break;
+        case 'codeBlock':
+          flushListBuffer();
+          const language = (block.props as any)?.language || '';
+          const codeText = (block.content as any[])
+              .map(item => item.text || '')
+              .join('\n')
+              .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+          content = `<code class="language-${language}">${codeText}</code>`;
+          output.push(`<pre${styleAttribute}>${content}</pre>`);
+          break;
+        default:
+          flushListBuffer();
+          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${block.type}`);
+          if (block.content && Array.isArray(block.content)) {
+             content = extractStyledTextToHTML(block.content as any[]);
+             output.push(`<div${styleAttribute}>${content}</div>`);
+          } else if (block.content && typeof block.content === 'string') {
+             const escapedContent = block.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+             output.push(`<div${styleAttribute}>${escapedContent}</div>`);
+          } else {
+             output.push(`<!-- Unsupported block type: ${block.type} -->`);
+          }
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+      }
+      if (!isListItem) {
         flushListBuffer();
-        const language = (block.props as any)?.language || '';
-        const codeText = (block.content as any[])
-            .map(item => item.text || '')
-            .join('\n')
-            .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-        content = `<code class="language-${language}">${codeText}</code>`;
-        output.push(`<pre${styleAttribute}>${content}</pre>`);
-        break;
-      // Add cases for other block types as needed
-      // case 'image':
-      //   flushListBuffer();
-      //   const src = (block.props as any)?.src;
-      //   if (src) output.push(`<img src="${src}" alt="Image" />`);
-      //   else output.push('<!-- Image block with no source -->');
-      //   break;
-      default:
-        flushListBuffer();
-        console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${block.type}`);
-        if (block.content && Array.isArray(block.content)) {
-           content = extractStyledTextToHTML(block.content as any[]);
-           output.push(`<div${styleAttribute}>${content}</div>`);
-        } else if (block.content && typeof block.content === 'string') {
-           const escapedContent = block.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
-           output.push(`<div${styleAttribute}>${escapedContent}</div>`);
-        } else {
-           output.push(`<!-- Unsupported block type: ${block.type} -->`);
-        }
-        break;
-    }
-    if (!isListItem) {
-        flushListBuffer();
-    }
-  });
+      }
+    });
+    flushListBuffer();
+  }
 
-  flushListBuffer();
+  processBlocksRecursive(blockData, 0);
 
   return output.join('\n');
 }

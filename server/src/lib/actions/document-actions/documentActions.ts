@@ -362,19 +362,11 @@ export async function getDocumentPreview(
 
 
       if (htmlToRender) {
-        try {
-          const imageBuffer = await renderHtmlToPng(htmlToRender);
-          await cache.set(cacheKeyForInApp, imageBuffer);
-          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-          return {
-            success: true,
-            previewImage: base64Image,
-            content: previewCardContent,
-          };
-        } catch (renderError) {
-          console.error(`Error generating preview for in-app document ${document.document_name}:`, renderError);
-          return { success: false, error: `Failed to generate preview for ${previewCardContent}` };
-        }
+        console.log(`[getDocumentPreview] Returning HTML content directly for in-app document: ${document.document_id}`);
+        return {
+          success: true,
+          content: htmlToRender
+        };
       } else {
         console.log(`[getDocumentPreview] No HTML to render for in-app document: ${document.document_id}`);
         return { success: false, error: 'Preview not available for this in-app document type or content is missing.' };
@@ -419,7 +411,7 @@ export async function getDocumentPreview(
 
           try {
             await writeFile(tempPdfPath, buffer);
-            const options = { density: 100, saveFilename: `${fileIdForStorage}_thumb`, savePath: tempDir, format: "png", width: 600, height: 600, quality: 75, useIMagick: true };
+            const options = { density: 100, saveFilename: `${fileIdForStorage}_thumb`, savePath: tempDir, format: "png", width: 600, quality: 75, useIMagick: true };
             const convert = fromPath(tempPdfPath, options);
             const conversionResult = await convert(1);
             const imageBuffer = await sharp(conversionResult.path).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).png({ quality: 80 }).toBuffer();

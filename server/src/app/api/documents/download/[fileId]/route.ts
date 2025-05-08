@@ -103,7 +103,16 @@ export async function GET(req: NextRequest, { params }: { params: { fileId: stri
       `;
 
       await page.setContent(fullHtml, { waitUntil: 'networkidle0' });
-      const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+      const pdfBuffer = await page.pdf({
+        format: 'Letter',
+        printBackground: true,
+        margin: {
+          top: '1cm',
+          right: '1cm',
+          bottom: '1cm',
+          left: '1cm',
+        },
+      });
       await browser.close();
       logger.info(`Successfully generated PDF for document: ${fileId}`);
 

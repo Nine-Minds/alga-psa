@@ -12,7 +12,6 @@ import {
     FileText,
     Image,
     File,
-    Loader2,
     FileSpreadsheet,
     FileType,
     FileCode,
@@ -207,7 +206,7 @@ export default function DocumentStorageCard({
                     {/* Preview Content */}
                     {isLoading ? (
                         <div className="mt-4 flex justify-center">
-                            <Loader2 className="animate-spin h-8 w-8 text-[rgb(var(--color-primary-400))]" />
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
                         </div>
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
@@ -232,7 +231,8 @@ export default function DocumentStorageCard({
                                     style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: '8',
-                                        WebkitBoxOrient: 'vertical'
+                                        WebkitBoxOrient: 'vertical',
+                                        whiteSpace: 'pre-wrap'
                                     }}
                                     dangerouslySetInnerHTML={{ __html: previewContent.content }}
                                     onClick={handleView}

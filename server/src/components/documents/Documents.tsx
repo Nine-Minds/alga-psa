@@ -438,7 +438,7 @@ const Documents = ({
             drawerVariant="document"
           >
           <div className="flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4 border-b pb-4">
+            <div className="flex justify-between items-center mb-4 pb-4">
               <h2 className="text-lg font-semibold">
                 {isCreatingNew ? 'New Document' : (isEditModeInDrawer ? 'Edit Document' : 'View Document')}
               </h2>
@@ -511,7 +511,7 @@ const Documents = ({
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto border-t border-b mb-4 p-2">
+              <div className="flex-1 overflow-y-auto mb-4 p-2">
                 <div className="h-full w-full">
                   {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
