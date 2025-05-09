@@ -1,5 +1,5 @@
 import { JobService, JobStepResult } from 'server/src/services/job.service';
-import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import Invoice from 'server/src/lib/models/invoice';
@@ -45,13 +45,10 @@ export class InvoiceEmailHandler {
     
     console.log(`Starting invoice email job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
 
-    const storageService = new StorageService();
     const jobService = await JobService.create();
     const emailService = await getEmailService();
-    const pdfService = new PDFGenerationService(storageService, {
-      pdfCacheDir: process.env.PDF_CACHE_DIR,
-      tenant: tenantId
-    });
+    // Use the factory function to create the PDF generation service
+    const pdfService = createPDFGenerationService(tenantId);
 
     try {
       // Process each invoice
@@ -138,7 +135,8 @@ export class InvoiceEmailHandler {
           const { file_id } = await pdfService.generateAndStore({
             invoiceId,
             invoiceNumber: invoice.invoice_number,
-            version: 1
+            version: 1,
+            userId: data.metadata?.user_id || 'system'
           });
 
           const pdfCompleteDetails = {

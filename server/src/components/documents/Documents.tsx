@@ -92,10 +92,10 @@ const Documents = ({
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
 
   useEffect(() => {
-    if (initialDocuments && initialDocuments.length > 0 && !searchTermFromParent) {
+    if (initialDocuments && initialDocuments.length > 0) {
         setDocumentsToDisplay(initialDocuments);
     }
-  }, [initialDocuments, searchTermFromParent]);
+  }, [initialDocuments]);
 
 
   const fetchDocuments = useCallback(async (page: number, searchTerm?: string) => {

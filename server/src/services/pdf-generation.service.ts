@@ -1,25 +1,30 @@
-import { StorageService } from '../lib/storage/StorageService';
-import puppeteer from 'puppeteer';
-import type { Browser, Page } from 'puppeteer';
-import { FileStore } from '../types/storage';
-import { getInvoiceForRendering } from '../lib/actions/invoiceQueries';
-import { getInvoiceTemplates, getCompiledWasm } from '../lib/actions/invoiceTemplates';
-// Removed: import { renderTemplateCore } from '../components/billing-dashboard/TemplateRendererCore';
-// Removed: import React from 'react';
-import { runWithTenant, createTenantKnex } from '../lib/db';
-// Import getCompanyLogoUrl
-import { getCompanyLogoUrl } from '../lib/utils/avatarUtils';
-import { executeWasmTemplate } from '../lib/invoice-renderer/wasm-executor';
-import { renderLayout } from '../lib/invoice-renderer/layout-renderer';
-import type { WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Alias for clarity
-import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from '../interfaces/invoice.interfaces'; // Alias for clarity
-import { DateValue } from '@shared/types/temporal'; // Import DateValue if needed for conversion
+import { StorageService } from 'server/src/lib/storage/StorageService';
+import { Browser } from 'puppeteer';
+import { FileStore } from 'server/src/types/storage';
+import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
+import { getInvoiceTemplates, getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates';
+import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
+import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
+import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
+import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
+import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
+import { DateValue } from '@shared/types/temporal';
+import { browserPoolService, BrowserPoolService } from './browser-pool.service';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
+import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+import { v4 as uuidv4 } from 'uuid';
+import { StorageProviderFactory, generateStoragePath } from 'server/src/lib/storage/StorageProviderFactory';
+import { FileStoreModel } from 'server/src/models/storage';
 
 interface PDFGenerationOptions {
-  invoiceId: string;
+  invoiceId?: string;
+  documentId?: string;
   invoiceNumber?: string;
   version?: number;
   cacheKey?: string;
+  userId: string;
 }
 
 export class PDFGenerationService {
@@ -28,6 +33,7 @@ export class PDFGenerationService {
 
   constructor(
     private readonly storageService: StorageService,
+    private readonly browserPool: BrowserPoolService,
     private config: {
       pdfCacheDir?: string;
       tenant: string;
@@ -41,49 +47,77 @@ export class PDFGenerationService {
   }
 
   async generateAndStore(options: PDFGenerationOptions): Promise<FileStore> {
-    // Generate HTML content from template
-    const htmlContent = await this.getInvoiceHtml(options.invoiceId);
-    
-    // Generate PDF buffer
-    const pdfBuffer = await this.generatePDFBuffer(htmlContent);
-    if (!options.invoiceNumber) {
-      throw new Error('Invoice number is required');
+    let htmlContent: string;
+    let entityId: string;
+    let fileName: string;
+
+    if (options.invoiceId) {
+      htmlContent = await this.getInvoiceHtml(options.invoiceId);
+      entityId = options.invoiceId;
+      if (!options.invoiceNumber) {
+        throw new Error('Invoice number is required for invoice PDF generation');
+      }
+      fileName = options.invoiceNumber;
+    } else if (options.documentId) {
+      htmlContent = await this.getDocumentHtml(options.documentId);
+      entityId = options.documentId;
+      
+      const document = await runWithTenant(this.tenant, () => getDocument(options.documentId!));
+      if (!document) {
+        throw new Error(`Document ${options.documentId} not found.`);
+      }
+      fileName = document.document_name || options.documentId;
+    } else {
+      throw new Error('Either invoiceId or documentId must be provided');
     }
+
+    const pdfBuffer = await this.generatePDFBuffer(htmlContent);
+
+    // Use the static method to store the PDF
+    const fileId = uuidv4();
+    const storagePath = generateStoragePath(this.tenant, 'pdfs', `${fileName}.pdf`);
     
-    // Store PDF
-    const fileRecord = await StorageService.storePDF(
-      options.invoiceId, // Database ID
-      options.invoiceNumber, // Filename number (fallback to ID)
-      Buffer.from(pdfBuffer),
-      {
+    // Get storage provider
+    const provider = await StorageProviderFactory.createProvider();
+    
+    // Upload the PDF
+    const uploadResult = await provider.upload(Buffer.from(pdfBuffer), storagePath, {
+      mime_type: 'application/pdf',
+    });
+    
+    const fileRecord = await FileStoreModel.create({
+      fileId,
+      file_name: storagePath.split('/').pop()!,
+      original_name: `${fileName}.pdf`,
+      mime_type: 'application/pdf',
+      file_size: pdfBuffer.length,
+      storage_path: uploadResult.path,
+      uploaded_by_id: options.userId,
+      metadata: {
         version: options.version || 1,
         cacheKey: options.cacheKey,
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        entityId,
+        tenant: this.tenant
       }
-    );
+    });
 
     return fileRecord;
   }
 
-  // Helper function to convert DateValue (Date or ISO string) to ISO string
   private formatDateValue(date: DateValue | undefined): string {
     if (!date) return '';
     if (date instanceof Date) {
       return date.toISOString();
     }
-    // Assume it's already an ISO string if not a Date object
     return String(date);
   }
 
-
-  // Helper function to map DB Invoice data to the Wasm Renderer's ViewModel
-  // Make it async to allow fetching tenant company info
   private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
-    // Fetch Tenant Company Info
     let tenantCompanyInfo = null;
-    const { knex } = await createTenantKnex(); // Get knex instance
+    const { knex } = await createTenantKnex();
     const tenantCompanyLink = await knex('tenant_companies')
-      .where({ tenant_id: this.tenant, is_default: true }) // Use this.tenant
+      .where({ tenant_id: this.tenant, is_default: true })
       .select('company_id')
       .first();
 
@@ -94,7 +128,7 @@ export class PDFGenerationService {
         .first();
 
       if (tenantCompanyDetails) {
-        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, this.tenant); // Use this.tenant
+        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, this.tenant);
         tenantCompanyInfo = {
           name: tenantCompanyDetails.company_name,
           address: tenantCompanyDetails.address,
@@ -108,93 +142,68 @@ export class PDFGenerationService {
       issueDate: this.formatDateValue(dbData.invoice_date),
       dueDate: this.formatDateValue(dbData.due_date),
       customer: {
-        name: dbData.company?.name || 'N/A', // Combine company/contact info
-        address: dbData.contact?.address || dbData.company?.address || 'N/A', // Use contact address first, fallback to company
+        name: dbData.company?.name || 'N/A',
+        address: dbData.contact?.address || dbData.company?.address || 'N/A',
       },
       items: dbData.invoice_items.map((item: IInvoiceItem) => ({
         id: item.item_id,
         description: item.description,
         quantity: item.quantity,
-        unitPrice: item.unit_price, // Assuming unit_price is the correct field
-        total: item.total_price, // Assuming total_price is the correct field
-        // Optional fields from WasmInvoiceViewModel can be added here if available in IInvoiceItem
-        // category: item.category, // Example
-        // itemType: item.itemType, // Example
+        unitPrice: item.unit_price,
+        total: item.total_price,
       })),
       subtotal: dbData.subtotal,
       tax: dbData.tax,
-      total: dbData.total_amount, // Map total_amount to total
-      tenantCompany: tenantCompanyInfo, // Include fetched tenant company info
-      // notes: dbData.notes, // Add if notes exist in DbInvoiceViewModel
-      // timeEntries: dbData.timeEntries, // Add if time entries exist
+      total: dbData.total_amount,
+      tenantCompany: tenantCompanyInfo,
     };
   }
 
-
   private async getInvoiceHtml(invoiceId: string): Promise<string> {
-    // Run all database operations with tenant context
     return runWithTenant(this.tenant, async () => {
-      // Fetch invoice data and company's template
-    const [dbInvoiceData, templates] = await Promise.all([ // Renamed to dbInvoiceData
-      getInvoiceForRendering(invoiceId),
-      getInvoiceTemplates()
-    ]);
+      const [dbInvoiceData, templates] = await Promise.all([
+        getInvoiceForRendering(invoiceId),
+        getInvoiceTemplates()
+      ]);
 
-    if (!dbInvoiceData) { // Use renamed variable
-      throw new Error(`Invoice ${invoiceId} not found`);
-    }
+      if (!dbInvoiceData) {
+        throw new Error(`Invoice ${invoiceId} not found`);
+      }
 
-    // Get company's selected template or default template
-    const { knex } = await createTenantKnex();
-    const company = await knex('companies')
-      .where({ company_id: dbInvoiceData.company_id }) // Use renamed variable
-      .first();
+      const { knex } = await createTenantKnex();
+      const company = await knex('companies')
+        .where({ company_id: dbInvoiceData.company_id })
+        .first();
 
-    let template;
-    if (company?.invoice_template_id) {
-      template = templates.find(t => t.template_id === company.invoice_template_id);
-    }
-    
-    if (!template) {
-      // Fall back to default template
-      template = templates.find(t => t.is_default);
-    }
-
-    if (!template && templates.length > 0) {
-      // Fall back to first template if no default set
-      template = templates[0];
-    }
-
-    if (!template) {
-      throw new Error('No invoice templates found');
-    }
-
-      // Fetch the compiled Wasm binary for the selected template
+      let template;
+      if (company?.invoice_template_id) {
+        template = templates.find(t => t.template_id === company.invoice_template_id);
+      }
+      if (!template) {
+        template = templates.find(t => t.is_default);
+      }
+      if (!template && templates.length > 0) {
+        template = templates[0];
+      }
+      if (!template) {
+        throw new Error('No invoice templates found');
+      }
       if (!template.template_id) {
         throw new Error('Selected template does not have an ID.');
       }
       const wasmBuffer = await getCompiledWasm(template.template_id);
-
-      // Map the fetched DB data to the ViewModel expected by the Wasm executor
-      // Await the async mapping function
       const wasmInvoiceViewModel = await this.mapInvoiceDataToViewModel(dbInvoiceData);
-
-      // Execute the Wasm template with the correctly mapped data
       const layoutElement = await executeWasmTemplate(wasmInvoiceViewModel, wasmBuffer);
-
-      // Render the layout structure to HTML and CSS
       const renderedOutput = renderLayout(layoutElement);
 
-      // Return the full HTML document string for PDF generation
       return `
         <!DOCTYPE html>
         <html lang="en">
           <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Invoice</title> {/* Title might be useful for PDF metadata */}
+            <title>Invoice</title>
             <style>
-              /* Inject the generated CSS */
               ${renderedOutput.css}
             </style>
           </head>
@@ -206,13 +215,77 @@ export class PDFGenerationService {
     });
   }
 
-  private async generatePDFBuffer(content: string): Promise<Uint8Array> {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+  private async getDocumentHtml(documentId: string): Promise<string> {
+    return runWithTenant(this.tenant, async () => {
+      const { knex } = await createTenantKnex();
+      const document = await getDocument(documentId);
+      
+      if (!document) {
+        throw new Error(`Document ${documentId} not found`);
+      }
+
+      let htmlContent = '';
+
+      // Check for BlockNote content
+      const blockContent = await knex('document_block_content')
+        .where({ document_id: documentId, tenant: this.tenant })
+        .first();
+        
+      if (blockContent && blockContent.block_data) {
+        htmlContent = convertBlockNoteToHTML(blockContent.block_data);
+      } else {
+        // Check for regular text content
+        const textContent = await knex('document_content')
+          .where({ document_id: documentId, tenant: this.tenant })
+          .first();
+          
+        if (textContent && textContent.content) {
+          if (document.mime_type === 'text/markdown') {
+            const marked = (await import('marked')).marked;
+            htmlContent = await marked(textContent.content);
+          } else {
+            // Plain text
+            const escapedText = textContent.content
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+            htmlContent = `<pre>${escapedText}</pre>`;
+          }
+        } else {
+          throw new Error(`Document ${documentId} has no content`);
+        }
+      }
+
+      return `
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${document.document_name || 'Document'}</title>
+            <style>
+              body { font-family: sans-serif; margin: 0; padding: 5mm; }
+              pre { white-space: pre-wrap; word-wrap: break-word; }
+              h1, h2, h3, h4, h5, h6 { margin-top: 1em; margin-bottom: 0.5em; }
+              p { margin-top: 0; margin-bottom: 1em; }
+              table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
+              img { max-width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            ${htmlContent}
+          </body>
+        </html>
+      `;
     });
-    
+  }
+
+  private async generatePDFBuffer(content: string): Promise<Uint8Array> {
+    let browser: Browser | null = null;
     try {
+      browser = await this.browserPool.getBrowser();
       const page = await browser.newPage();
       await page.setContent(content, {
         waitUntil: 'networkidle0'
@@ -222,16 +295,28 @@ export class PDFGenerationService {
         format: 'A4',
         printBackground: true,
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm'
+          top: '10mm',
+          right: '10mm',
+          bottom: '10mm',
+          left: '10mm'
         }
       });
-
+      await page.close();
       return pdfBuffer;
     } finally {
-      await browser.close();
+      if (browser) {
+        await this.browserPool.releaseBrowser(browser);
+      }
     }
   }
 }
+
+// Factory function to create a PDF generation service with the specified tenant
+export const createPDFGenerationService = (tenant: string) => {
+  // Create a new instance with the StorageService singleton
+  return new PDFGenerationService(
+    StorageService as any,
+    browserPoolService,
+    { tenant }
+  );
+};

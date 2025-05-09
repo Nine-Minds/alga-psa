@@ -9,7 +9,7 @@ const { FormData } = require('formdata-node');
 import fs from 'fs/promises';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { ZipGenerationService } from 'server/src/services/zip-generation.service';
-import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { JobStatus } from 'server/src/types/job.d';
 
 export interface InvoiceZipJobData extends Record<string, unknown> {
@@ -43,10 +43,9 @@ export class InvoiceZipJobHandler {
     this.zipService = new ZipGenerationService(storageService);
   }
 
-  private async processSingleInvoice(invoiceId: string, tenant: string): Promise<{file_id: string, storage_path: string, invoice_number: string}> {
-    const pdfService = new PDFGenerationService(this.storageService, {
-      tenant
-    });
+  private async processSingleInvoice(invoiceId: string, tenant: string, requesterId: string): Promise<{file_id: string, storage_path: string, invoice_number: string}> {
+    // Use the factory function to create the PDF generation service
+    const pdfService = createPDFGenerationService(tenant);
     
     // Get invoice details first
     const invoice = await getInvoiceForRendering(invoiceId);
@@ -58,7 +57,8 @@ export class InvoiceZipJobHandler {
     const fileRecord = await pdfService.generateAndStore({
       invoiceId,
       invoiceNumber: invoice.invoice_number,
-      version: 1
+      version: 1,
+      userId: requesterId
     });
     
     return {
@@ -110,7 +110,7 @@ export class InvoiceZipJobHandler {
           }
         });
         
-        const fileRecord = await this.processSingleInvoice(invoiceId, tenantId);
+        const fileRecord = await this.processSingleInvoice(invoiceId, tenantId, data.requesterId);
         fileRecords.push(fileRecord);
         
         // Complete invoice processing

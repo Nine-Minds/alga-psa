@@ -23,6 +23,7 @@ interface CompanyContactsListProps {
 const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, companies }) => {
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -60,28 +61,79 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
   }, [companyId]);
 
   const handleViewDetails = async (contact: IContact) => {
-    if (!currentUser) return; 
+    if (!currentUser) return;
 
     try {
-      // Fetch documents for this contact
-      const contactDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-      setDocuments(prev => ({
+      // Set loading state for this specific contact
+      setDocumentLoading(prev => ({
         ...prev,
-        [contact.contact_name_id]: contactDocuments
+        [contact.contact_name_id]: true
       }));
+
+      // Check if we already have documents for this contact
+      const existingDocuments = documents[contact.contact_name_id];
+      
+      // Only fetch documents if we don't have them already
+      if (!existingDocuments || existingDocuments.length === 0) {
+        // Fetch documents for this contact
+        const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+        
+        // Update documents state with the fetched documents
+        setDocuments(prev => {
+          const newDocuments = { ...prev };
+          // Handle both array and paginated response formats
+          newDocuments[contact.contact_name_id] = Array.isArray(response)
+            ? response
+            : response.documents || [];
+          return newDocuments;
+        });
+      }
 
       openDrawer(
         <ContactDetailsView
           initialContact={contact}
-          companies={companies} // Pass companies list
+          companies={companies}
           documents={documents[contact.contact_name_id] || []}
           userId={currentUser}
-          isInDrawer={true} // Assuming this is always in a drawer context here
-          // Add onDocumentCreated if needed, potentially passed down or handled differently
+          isInDrawer={true}
+          onDocumentCreated={async () => {
+            // Refresh documents after a new one is created
+            try {
+              setDocumentLoading(prev => ({
+                ...prev,
+                [contact.contact_name_id]: true
+              }));
+              
+              const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+              
+              // Update documents state with the refreshed documents
+              setDocuments(prev => {
+                const newDocuments = { ...prev };
+                // Handle both array and paginated response formats
+                newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                  ? updatedResponse
+                  : updatedResponse.documents || [];
+                return newDocuments;
+              });
+            } catch (err) {
+              console.error('Error refreshing documents:', err);
+            } finally {
+              setDocumentLoading(prev => ({
+                ...prev,
+                [contact.contact_name_id]: false
+              }));
+            }
+          }}
         />
       );
     } catch (error) {
       console.error('Error fetching contact documents:', error);
+    } finally {
+      // Clear loading state
+      setDocumentLoading(prev => ({
+        ...prev,
+        [contact.contact_name_id]: false
+      }));
     }
   };
 
@@ -132,11 +184,44 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
   ];
 
   if (loading) {
-    return <div>Loading contacts...</div>;
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="animate-pulse flex flex-col space-y-4 w-full">
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-12 bg-gray-200 rounded w-full"></div>
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-10 bg-gray-200 rounded w-full"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="text-red-600">{error}</div>;
+    return (
+      <div className="p-4 border border-red-300 bg-red-50 rounded-md text-red-600">
+        <p className="font-semibold">Error loading contacts</p>
+        <p>{error}</p>
+        <button
+          onClick={() => {
+            setLoading(true);
+            setError(null);
+            getContactsByCompany(companyId, 'active')
+              .then(setContacts)
+              .catch(err => {
+                console.error('Error retrying contact fetch:', err);
+                setError('Failed to load contacts. Please try again.');
+              })
+              .finally(() => setLoading(false));
+          }}
+          className="mt-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

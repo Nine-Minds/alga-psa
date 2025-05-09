@@ -17,8 +17,12 @@ const AssetDocuments: React.FC<AssetDocumentsProps> = ({ assetId, tenant }) => {
 
     const loadDocuments = async () => {
         try {
-            const docs = await getDocumentsByEntity(assetId, 'asset');
-            setDocuments(docs);
+            const response = await getDocumentsByEntity(assetId, 'asset');
+            // Handle both array and paginated response formats
+            const documentsList = Array.isArray(response)
+                ? response
+                : response.documents || [];
+            setDocuments(documentsList);
         } catch (error) {
             console.error('Error loading documents:', error);
         } finally {

@@ -30,6 +30,7 @@ import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
+import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -271,6 +272,13 @@ const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];
 const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote document', 'application/vnd.blocknote+json'];
 
 
+/**
+ * Generates a preview for a document
+ * Uses the Strategy pattern with document type handlers to handle different document types
+ *
+ * @param identifier The document ID or file ID to generate a preview for
+ * @returns A promise that resolves to a PreviewResponse
+ */
 export async function getDocumentPreview(
   identifier: string
 ): Promise<PreviewResponse> {
@@ -282,189 +290,53 @@ export async function getDocumentPreview(
       throw new Error('No tenant found');
     }
 
-    const cache = CacheFactory.getPreviewCache(tenant);
-    const cachedPreview = await cache.get(identifier);
-    if (cachedPreview) {
-      console.log(`[getDocumentPreview] Cache hit for identifier: ${identifier}`);
-      const imageBuffer = await sharp(cachedPreview).toBuffer();
-      const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      return {
-        success: true,
-        previewImage: base64Image,
-        content: 'Cached Preview'
-      };
-    }
-    console.log(`[getDocumentPreview] Cache miss for identifier: ${identifier}`);
+    // Check if the identifier is a document ID
+    let document = await Document.get(identifier);
+    console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
 
-    const document = await Document.get(identifier);
-    console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${JSON.stringify(document)}`);
-
-    // Scenario 1: In-app document (content stored in document_content or document_block_content)
-    if (document && !document.file_id) {
-      console.log(`[getDocumentPreview] Processing as IN-APP document. ID: ${document.document_id}, Name: ${document.document_name}, Type: ${document.type_name}, Mime: ${document.mime_type}, File ID: ${document.file_id}`);
-      const docTypeName = document.type_name?.toLowerCase();
-      const docMimeType = document.mime_type?.toLowerCase();
-      let htmlToRender: string | null = null;
-      let previewCardContent = document.document_name;
-      let cacheKeyForInApp = identifier;
-
-      if (IN_APP_BLOCKNOTE_TYPE_NAMES.includes(docTypeName || '') || IN_APP_BLOCKNOTE_TYPE_NAMES.includes(docMimeType || '')) {
-        const blockContent = await knex('document_block_content')
-          .where({ document_id: document.document_id, tenant })
-          .first();
-        if (blockContent && blockContent.block_data) {
-          htmlToRender = convertBlockNoteToHTML(blockContent.block_data);
-          previewCardContent = "BlockNote Document";
-        }
-      } else if (IN_APP_MARKDOWN_TYPE_NAMES.includes(docTypeName || '') || docMimeType === 'text/markdown' || document.document_name?.toLowerCase().endsWith('.md')) {
-        // Explicitly Markdown type (or .md extension)
-        const docContent = await knex('document_content')
-          .where({ document_id: document.document_id, tenant })
-          .first();
-        if (docContent && docContent.content) {
-          const markdownSnippet = docContent.content.substring(0, 1000);
-          htmlToRender = await marked(markdownSnippet, { async: true });
-          previewCardContent = "Markdown Document";
-        }
-      } else if (IN_APP_TEXT_TYPE_NAMES.includes(docTypeName || '') || docMimeType === 'text/plain') {
-         // Explicitly Text type
-        const docContent = await knex('document_content')
-          .where({ document_id: document.document_id, tenant })
-          .first();
-        if (docContent && docContent.content) {
-          const textSnippet = docContent.content.substring(0, 500);
-          htmlToRender = `<pre>${textSnippet.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">")}</pre>`;
-          previewCardContent = "Text Document";
-        }
-      } else {
-         console.log(`[getDocumentPreview] Type unknown for in-app doc ${document.document_id}. Attempting content table check.`);
-         const blockContent = await knex('document_block_content')
-           .where({ document_id: document.document_id, tenant })
-           .first();
-         if (blockContent && blockContent.block_data) {
-           console.log(`[getDocumentPreview] Fallback: Found block content for ${document.document_id}. Treating as BlockNote.`);
-           htmlToRender = convertBlockNoteToHTML(blockContent.block_data);
-           previewCardContent = "BlockNote Document";
-         } else {
-           const docContent = await knex('document_content')
-             .where({ document_id: document.document_id, tenant })
-             .first();
-           if (docContent && docContent.content) {
-             console.log(`[getDocumentPreview] Fallback: Found text content for ${document.document_id}. Treating as Text.`);
-             const textSnippet = docContent.content.substring(0, 500);
-             htmlToRender = `<pre>${textSnippet.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">")}</pre>`;
-             previewCardContent = "Text Document";
-           } else {
-              console.log(`[getDocumentPreview] Fallback: No content found in either table for ${document.document_id}.`);
-           }
-         }
-      }
-
-
-      if (htmlToRender) {
-        console.log(`[getDocumentPreview] Returning HTML content directly for in-app document: ${document.document_id}`);
+    // If document not found, try to treat identifier as a file ID
+    if (!document) {
+      console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
+      
+      // Check cache for file ID
+      const cache = CacheFactory.getPreviewCache(tenant);
+      const cachedPreview = await cache.get(identifier);
+      if (cachedPreview) {
+        console.log(`[getDocumentPreview] Cache hit for file ID: ${identifier}`);
+        const imageBuffer = await sharp(cachedPreview).toBuffer();
+        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
         return {
           success: true,
-          content: htmlToRender
+          previewImage: base64Image,
+          content: 'Cached Preview'
         };
-      } else {
-        console.log(`[getDocumentPreview] No HTML to render for in-app document: ${document.document_id}`);
-        return { success: false, error: 'Preview not available for this in-app document type or content is missing.' };
-      }
-    } else {
-      console.log(`[getDocumentPreview] Processing as FILE-BASED or document NOT FOUND. Document exists: ${!!document}, Document File ID: ${document ? document.file_id : 'N/A'}`);
-      const fileIdForStorage = (document && document.file_id) ? document.file_id : identifier;
-      console.log(`[getDocumentPreview] Determined fileIdForStorage: ${fileIdForStorage}`);
-    
-      if (document && document.file_id && document.file_id !== identifier) {
-        console.log(`[getDocumentPreview] Re-checking cache for fileIdForStorage: ${fileIdForStorage}`);
-        const cachedFilePreview = await cache.get(fileIdForStorage);
-        if (cachedFilePreview) {
-            console.log(`[getDocumentPreview] Cache hit for fileIdForStorage: ${fileIdForStorage}`);
-            const imageBuffer = await sharp(cachedFilePreview).toBuffer();
-            const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-            return { success: true, previewImage: base64Image, content: 'Cached File Preview' };
-        }
-        console.log(`[getDocumentPreview] Cache miss for fileIdForStorage: ${fileIdForStorage}`);
-      }
-
-      console.log(`[getDocumentPreview] Attempting StorageService.downloadFile with: ${fileIdForStorage}`);
-      const downloadResult = await StorageService.downloadFile(fileIdForStorage);
-      if (!downloadResult) {
-        console.error(`[getDocumentPreview] StorageService.downloadFile for ${fileIdForStorage} returned null or undefined.`);
-        throw new Error(`File not found in storage for ID: ${fileIdForStorage}`);
-      }
-
-      const { buffer, metadata } = downloadResult;
-      const mime = metadata.mime_type.toLowerCase();
-      let htmlToRenderForFile: string | null = null;
-      let previewCardContentForFile = metadata.original_name || "File Preview";
-
-      if (mime === 'application/pdf') {
-        try {
-          const pdfDoc = await PDFDocument.load(buffer);
-          const pageCount = pdfDoc.getPages().length;
-          const config = getStorageConfig();
-          const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
-          await mkdir(tempDir, { recursive: true }).catch(err => { if (err.code !== 'EEXIST') throw err; });
-          const tempPdfPath = join(tempDir, `${fileIdForStorage}.pdf`);
-
-          try {
-            await writeFile(tempPdfPath, buffer);
-            const options = { density: 100, saveFilename: `${fileIdForStorage}_thumb`, savePath: tempDir, format: "png", width: 600, quality: 75, useIMagick: true };
-            const convert = fromPath(tempPdfPath, options);
-            const conversionResult = await convert(1);
-            const imageBuffer = await sharp(conversionResult.path).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
-            await cache.set(fileIdForStorage, imageBuffer);
-            await Promise.all([unlink(tempPdfPath), unlink(conversionResult.path!)]).catch(e => console.error("Error cleaning up temp PDF files:", e));
-            const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-            return { success: true, previewImage: base64Image, pageCount, content: `PDF Document\nPages: ${pageCount}` };
-          } catch (conversionError) {
-            console.error('PDF conversion error:', conversionError);
-            await unlink(tempPdfPath).catch(e => console.error("Error cleaning up temp PDF file on error:", e));
-            return { success: true, pageCount, content: `PDF Document\nPages: ${pageCount}\n\nPreview image generation failed.` };
-          }
-        } catch (pdfError) {
-          console.error('PDF parsing error:', pdfError);
-          return { success: false, error: 'Failed to parse PDF document' };
-        }
-      } else if (mime.startsWith('image/')) {
-        try {
-          const imageBuffer = await sharp(buffer).resize(400, 400, { fit: 'inside', withoutEnlargement: true }).png({ quality: 80 }).toBuffer();
-          await cache.set(fileIdForStorage, imageBuffer);
-          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-          return { success: true, previewImage: base64Image, content: `Image File (${metadata.original_name || 'image'})` };
-        } catch (imageError) {
-          console.error('Image processing error:', imageError);
-          return { success: false, error: 'Failed to process image file' };
-        }
-      } else if (mime === 'text/markdown' || metadata.original_name?.toLowerCase().endsWith('.md')) {
-        const markdownContent = buffer.toString('utf-8').substring(0, 1000);
-        htmlToRenderForFile = await marked(markdownContent, { async: true });
-        previewCardContentForFile = "Markdown File";
-      } else if (mime.startsWith('text/') || mime === 'application/json') {
-        const textContent = buffer.toString('utf-8').substring(0, 500);
-        const escapedTextContent = textContent.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-        htmlToRenderForFile = `<pre>${escapedTextContent}</pre>`;
-        previewCardContentForFile = mime === 'application/json' ? "JSON File" : "Text File";
-      }
-
-      if (htmlToRenderForFile) {
-        try {
-          const imageBuffer = await renderHtmlToPng(htmlToRenderForFile);
-          await cache.set(fileIdForStorage, imageBuffer);
-          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-          return { success: true, previewImage: base64Image, content: previewCardContentForFile };
-        } catch (renderError) {
-          console.error(`Error generating preview for file ${metadata.original_name || fileIdForStorage}:`, renderError);
-          return { success: false, error: `Failed to generate preview for ${previewCardContentForFile}` };
-        }
       }
       
-      console.log(`[getDocumentPreview] Unsupported file type for direct preview generation: ${mime} for ${fileIdForStorage}`);
-      return { success: false, error: 'Preview not available for this file type' };
-
+      // Try to download the file to get metadata
+      const downloadResult = await StorageService.downloadFile(identifier);
+      if (!downloadResult) {
+        console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
+        throw new Error(`File not found in storage for ID: ${identifier}`);
+      }
+      
+      // Create a temporary document object with file metadata
+      document = {
+        document_id: identifier,
+        document_name: downloadResult.metadata.original_name || 'Unknown',
+        type_id: null,
+        user_id: '',
+        order_number: 0,
+        created_by: '',
+        tenant,
+        file_id: identifier,
+        mime_type: downloadResult.metadata.mime_type,
+        type_name: downloadResult.metadata.mime_type
+      };
     }
+
+    // Use the document handler registry to get the appropriate handler
+    const handlerRegistry = DocumentHandlerRegistry.getInstance();
+    return await handlerRegistry.generatePreview(document, tenant, knex);
   } catch (error) {
     console.error(`[getDocumentPreview] General error for identifier ${identifier}:`, error);
     return {

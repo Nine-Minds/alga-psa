@@ -10,6 +10,7 @@ import { IDocument } from 'server/src/interfaces/document.interface';
 import { getAllDocuments, createDocumentAssociations } from 'server/src/lib/actions/document-actions/documentActions';
 import { Text } from '@radix-ui/themes';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import Pagination from 'server/src/components/ui/Pagination';
 
 interface DocumentSelectorProps {
     id: string;
@@ -247,36 +248,16 @@ export default function DocumentSelector({
                                     )}
                                 </div>
                                 
-                                {/* Pagination for Document Selector */}
-                                {totalPages > 1 && (
-                                    <div className="flex justify-center pt-4">
-                                        <Button
-                                            id={`${id}-selector-prev-btn`}
-                                            onClick={() => handlePageChange(currentPage - 1)}
-                                            disabled={currentPage === 1 || isLoading}
-                                            variant="outline"
-                                            size="sm"
-                                           className="mr-2"
-                                        >
-                                            Previous
-                                        </Button>
-                                        <span 
-                                            className="text-sm self-center"
-                                        >
-                                            Page {currentPage} of {totalPages}
-                                        </span>
-                                        <Button
-                                            id={`${id}-selector-next-btn`}
-                                            onClick={() => handlePageChange(currentPage + 1)}
-                                            disabled={currentPage === totalPages || isLoading}
-                                            variant="outline"
-                                            size="sm"
-                                            className="ml-2"
-                                        >
-                                            Next
-                                        </Button>
-                                    </div>
-                                )}
+                                {/* Standardized Pagination for Document Selector */}
+                                <Pagination
+                                    id={`${id}-pagination`}
+                                    currentPage={currentPage}
+                                    totalItems={totalPages * pageSize}
+                                    itemsPerPage={pageSize}
+                                    onPageChange={handlePageChange}
+                                    variant="full"
+                                    className={totalPages <= 1 ? 'hidden' : ''}
+                                />
 
                                 {/* Action Buttons */}
                                 <div className="flex justify-end space-x-2 pt-4 border-t mt-4">
