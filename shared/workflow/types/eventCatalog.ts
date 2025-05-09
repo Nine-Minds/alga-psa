@@ -135,6 +135,8 @@ export interface IUpdateWorkflowEventMapping {
 export interface IWorkflowEventAttachment {
   attachment_id: string;
   workflow_id: string;
+  workflow_name: string; // Added workflow name
+  workflow_version: string; // Added workflow version
   event_type: string; // Changed from event_id
   tenant_id: string;
   is_active: boolean;
@@ -208,6 +210,8 @@ export const WorkflowEventMappingSchema = z.object({
 export const WorkflowEventAttachmentSchema = z.object({
   attachment_id: z.string().uuid(),
   workflow_id: z.string().uuid(),
+  workflow_name: z.string(), // Added workflow name
+  workflow_version: z.string(), // Added workflow version
   event_type: z.string(), // Changed from event_id: z.string().uuid()
   tenant_id: z.string().uuid(),
   is_active: z.boolean().default(true),

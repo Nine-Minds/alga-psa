@@ -93,15 +93,36 @@ export class EventCatalogModel {
   ): Promise<IEventCatalogEntry[]> {
     const { category, isSystemEvent, limit = 100, offset = 0 } = options;
     
-    const query = knex('event_catalog')
-      .where('tenant_id', tenantId);
-    
+    let query;
+    if (isSystemEvent === true) {
+      query = knex('system_event_catalog');
+    } else if (isSystemEvent === false) {
+      query = knex('event_catalog').where('tenant_id', tenantId);
+    } else {
+      // If isSystemEvent is undefined, query both tables and combine
+      const tenantEventsQuery = knex('event_catalog')
+        .where('tenant_id', tenantId);
+      
+      if (category !== undefined) {
+        tenantEventsQuery.where('category', category);
+      }
+
+      const systemEventsQuery = knex('system_event_catalog');
+
+      if (category !== undefined) {
+        systemEventsQuery.where('category', category);
+      }
+
+      // Combine results from both tables
+      const tenantEvents = await tenantEventsQuery.orderBy('name', 'asc').limit(limit).offset(offset);
+      const systemEvents = await systemEventsQuery.orderBy('name', 'asc').limit(limit).offset(offset);
+
+      // Simple concatenation for now, pagination/ordering across combined results might need more complex logic
+      return [...tenantEvents, ...systemEvents];
+    }
+
     if (category !== undefined) {
       query.where('category', category);
-    }
-    
-    if (isSystemEvent !== undefined) {
-      query.where('is_system_event', isSystemEvent);
     }
     
     const entries = await query
@@ -175,11 +196,8 @@ export class EventCatalogModel {
     tenantId: string
   ): Promise<void> {
     // Check if system events already exist for this tenant
-    const existingEvents = await knex('event_catalog')
-      .where({
-        tenant_id: tenantId,
-        is_system_event: true
-      })
+    // Check if system events already exist
+    const existingEvents = await knex('system_event_catalog')
       .count('* as count')
       .first();
     
@@ -304,6 +322,7 @@ export class EventCatalogModel {
     ];
 
     // Insert system events
-    await knex('event_catalog').insert(systemEvents);
+    // Insert system events
+    await knex('system_event_catalog').insert(systemEvents);
   }
 }

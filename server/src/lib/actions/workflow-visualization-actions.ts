@@ -75,7 +75,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
         .first();
 
       if (registrationWithVersion) {
-        console.log(`Found workflow registration and current version for "${definitionId}" in database`);
+        console.log(`Found workflow registration and current version for "${definitionId}" in tenant database`);
 
         // Convert the stored definition to a WorkflowDefinition
         const { deserializeWorkflowDefinition } = await import('@shared/workflow/core/workflowDefinition');
@@ -93,22 +93,74 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
           };
 
           if (!serializedDefinition.executeFn) {
-             console.error(`Workflow code not found in current version for "${definitionId}"`);
+             console.error(`Workflow code not found in current version for "${definitionId}" in tenant database`);
              throw new Error(`Workflow code not found for ${definitionId}`);
           }
 
           // Deserialize the workflow definition
           workflowDefinition = deserializeWorkflowDefinition(serializedDefinition);
-          console.log(`Successfully deserialized workflow definition for "${definitionId}"`);
+          console.log(`Successfully deserialized workflow definition for "${definitionId}" from tenant database`);
         }
         catch (error) {
-          console.error(`Error deserializing workflow definition for "${definitionId}":`, error);
+          console.error(`Error deserializing workflow definition for "${definitionId}" from tenant database:`, error);
         }
       } else {
-        console.log(`No workflow registration found for "${definitionId}" in database`);
+        console.log(`No workflow registration found for "${definitionId}" in tenant database, trying system database...`);
+
+        // Try to get the workflow registration and its current version's code from system tables
+        const systemRegistrationWithVersion = await knex('system_workflow_registrations as reg')
+          .join('system_workflow_registration_versions as ver', function() {
+            this.on('reg.registration_id', '=', 'ver.registration_id')
+                .andOn('ver.is_current', '=', knex.raw('true'));
+          })
+          .where({
+            'reg.name': definitionId // Assuming definitionId is the workflow name
+          })
+          .select(
+            'reg.name',
+            'reg.description', // Get description from registration
+            'reg.tags', // Get tags from registration
+            'ver.version',
+            'ver.code' // Get code from the current version
+          )
+          .first();
+
+        if (systemRegistrationWithVersion) {
+          console.log(`Found workflow registration and current version for "${definitionId}" in system database`);
+
+          // Convert the stored definition to a WorkflowDefinition
+          const { deserializeWorkflowDefinition } = await import('@shared/workflow/core/workflowDefinition');
+
+          try {
+            // Create a serialized definition from the database record
+            const serializedDefinition = {
+              metadata: {
+                name: systemRegistrationWithVersion.name,
+                description: systemRegistrationWithVersion.description || '', // Use registration description
+                version: systemRegistrationWithVersion.version,
+                tags: systemRegistrationWithVersion.tags || [] // Use registration tags
+              },
+              executeFn: systemRegistrationWithVersion.code // Use code from the version table
+            };
+
+            if (!serializedDefinition.executeFn) {
+               console.error(`Workflow code not found in current version for "${definitionId}" in system database`);
+               throw new Error(`Workflow code not found for ${definitionId}`);
+            }
+
+            // Deserialize the workflow definition
+            workflowDefinition = deserializeWorkflowDefinition(serializedDefinition);
+            console.log(`Successfully deserialized workflow definition for "${definitionId}" from system database`);
+          }
+          catch (error) {
+            console.error(`Error deserializing workflow definition for "${definitionId}" from system database:`, error);
+          }
+        } else {
+          console.log(`No workflow registration found for "${definitionId}" in system database`);
+        }
       }
     }
-    
+
     if (!workflowDefinition) {
       throw new Error(`Workflow definition not found: ${definitionId}`);
     }
@@ -446,11 +498,30 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
           .first();
 
         if (registrationWithVersion && registrationWithVersion.code) {
-          console.log(`Found workflow registration for "${definitionId}" in database, returning code from current version`);
+          console.log(`Found workflow registration for "${definitionId}" in tenant database, returning code from current version`);
           return registrationWithVersion.code;
+        } else {
+          console.log(`No workflow registration found for "${definitionId}" in tenant database, trying system database...`);
+
+          // Try to get the workflow registration and its current version's code from system tables
+          const systemRegistrationWithVersion = await knex('system_workflow_registrations as reg')
+            .join('system_workflow_registration_versions as ver', function() {
+              this.on('reg.registration_id', '=', 'ver.registration_id')
+                  .andOn('ver.is_current', '=', knex.raw('true'));
+            })
+            .where({
+              'reg.name': definitionId // Assuming definitionId is the workflow name
+            })
+            .select('ver.code') // Select only the code from the current version
+            .first();
+
+          if (systemRegistrationWithVersion && systemRegistrationWithVersion.code) {
+            console.log(`Found workflow registration for "${definitionId}" in system database, returning code from current version`);
+            return systemRegistrationWithVersion.code;
+          }
         }
-        
-        // If we get here, the workflow was not found in the database either
+
+        // If we get here, the workflow was not found in either database
         throw new Error(`Workflow definition not found: ${definitionId}`);
       }
       // Rethrow other errors

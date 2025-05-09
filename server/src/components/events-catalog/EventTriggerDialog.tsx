@@ -179,7 +179,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="basic">Basic Configuration</TabsTrigger>
-            <TabsTrigger value="parameters">Parameter Mapping</TabsTrigger>
+            <TabsTrigger value="parameters" disabled>Parameter Mapping</TabsTrigger>
           </TabsList>
 
           <TabsContent value="basic" className="space-y-4 py-4">
@@ -277,8 +277,12 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
             </div>
           </TabsContent>
 
-          <TabsContent value="parameters" className="space-y-4 py-4">
-            <div className="space-y-4">
+          <TabsContent value="parameters" className="space-y-4 py-4 relative">
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-gray-200 opacity-75 flex items-center justify-center z-10">
+              <p className="text-gray-800 text-lg font-semibold">Parameter mapping is coming soon.</p>
+            </div>
+            <div className="space-y-4 pointer-events-none">
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium">Parameter Mappings</h3>

@@ -9,6 +9,7 @@ import { Input } from 'server/src/components/ui/Input'; // Assuming WorkflowData
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -28,6 +29,7 @@ import {
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
+import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
 
 
 // Type for workflow data with events
@@ -66,6 +68,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
   const [workflowToTest, setWorkflowToTest] = useState<WorkflowWithEvents | null>(null);
+  const [selectedWorkflowForVersions, setSelectedWorkflowForVersions] = useState<WorkflowWithEvents | null>(null);
   
   // Handle workflowId if provided
   useEffect(() => {
@@ -104,12 +107,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     }
   };
   
-  // Filter workflows based on search term
-  const filteredWorkflows = workflows.filter(workflow =>
-    workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter workflows based on showInactive and search term
+  const filteredWorkflows = workflows
+    .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
+    .filter(workflow => // Then filter by search term
+      workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {
@@ -124,6 +129,12 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
 
     setSelectedWorkflowId(id);
     setShowEditor(true);
+  };
+
+  // Handle managing workflow versions
+  const handleManageVersions = (workflow: WorkflowWithEvents) => {
+    if (workflow.isSystemManaged) return; // Don't allow managing versions for system workflows
+    setSelectedWorkflowForVersions(workflow);
   };
 
   // Handle going back to the workflow list
@@ -212,12 +223,10 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="show-inactive-workflows"
+                <SwitchWithLabel
                   checked={showInactive}
-                  onChange={(e) => {
+                  onCheckedChange={(newValue) => {
                     // Update state first
-                    const newValue = e.target.checked;
                     setShowInactive(newValue);
                     console.log(`Show inactive set to: ${newValue}`);
                   }}
@@ -311,11 +320,15 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredWorkflows.map((workflow) => (
-                    <tr key={workflow.id} className="hover:bg-gray-50">
+                    <tr
+                      key={workflow.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}>
+                            <div className="text-sm font-medium text-gray-900">
                               {workflow.name} {workflow.isSystemManaged && (
                                <Badge variant="secondary" className="ml-2">
                                  System
@@ -341,13 +354,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             title="Test Workflow"
                           >
                             <span className="sr-only">Test workflow</span>
-                            <PlayCircle className="h-5 w-5 text-blue-600" />
+                            <PlayCircle className="h-5 w-5 text-primary" />
                           </Button>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Badge className="bg-blue-100 text-blue-800">
+                          <Badge className="bg-primary-100 text-primary-800">
                             v{workflow.version}
                           </Badge>
                         </div>
@@ -356,8 +369,8 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                         <Badge
                           className={`${
                             workflow.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-success-100 text-success-800'
+                              : 'bg-secondary-100 text-secondary-800'
                           }`}
                         >
                           {workflow.isActive ? 'Active' : 'Inactive'}
@@ -402,7 +415,10 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               id={`versions-${workflow.id}-menu-item`}
-                              onClick={() => handleEditWorkflow(workflow.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleManageVersions(workflow);
+                              }}
                               disabled={workflow.isSystemManaged}
                             >
                               <History className="h-4 w-4 mr-2" />
@@ -424,7 +440,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             {workflow.isActive ? (
                               <DropdownMenuItem
                                 id={`deactivate-${workflow.id}-menu-item`}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
@@ -435,7 +453,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             ) : (
                               <DropdownMenuItem
                                 id={`activate-${workflow.id}-menu-item`}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
@@ -478,6 +498,15 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
           onClose={() => setIsTestModalOpen(false)}
           workflowCode={workflowToTest.code}
           workflowId={workflowToTest.id}
+        />
+      )}
+      {selectedWorkflowForVersions && (
+        <WorkflowVersionsDialog
+          isOpen={selectedWorkflowForVersions !== null}
+          workflowId={selectedWorkflowForVersions.id}
+          currentVersion={selectedWorkflowForVersions.version}
+          onClose={() => setSelectedWorkflowForVersions(null)}
+          onVersionChange={loadWorkflows}
         />
       )}
     </div>
