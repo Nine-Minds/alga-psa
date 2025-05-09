@@ -33,54 +33,73 @@ function formatDateValueToString(date: DateValue | undefined | null): string {
  * @returns An InvoiceViewModel suitable for the Wasm renderer, or null if input is null.
  */
 // Change input type to 'any' as the actual input structure seems to be WasmInvoiceViewModel based on logs
-export function mapDbInvoiceToWasmViewModel(inputData: any): WasmInvoiceViewModel | null {
-  console.log('[mapDbInvoiceToWasmViewModel] Received Data (Structure might be WasmViewModel already):', JSON.stringify(inputData, null, 2));
+export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | WasmInvoiceViewModel | any): WasmInvoiceViewModel | null {
+  console.log('[mapDbInvoiceToWasmViewModel] Received Data:', JSON.stringify(inputData, null, 2));
 
   if (!inputData) {
     console.log('[mapDbInvoiceToWasmViewModel] Input data is null, returning null.');
     return null;
   }
 
-  // Basic check for essential properties expected in the WasmViewModel structure
-  if (typeof inputData.invoiceNumber === 'undefined' || typeof inputData.customer === 'undefined' || typeof inputData.items === 'undefined') {
-      console.error('[mapDbInvoiceToWasmViewModel] Input data is missing essential WasmViewModel properties (invoiceNumber, customer, items). Cannot map reliably.');
-      return null; // Return null as mapping cannot proceed
-  }
+  let viewModel: WasmInvoiceViewModel;
 
   try {
-    // Assume inputData structure matches WasmInvoiceViewModel based on logs, focus on type coercion/defaults
-    const viewModel: WasmInvoiceViewModel = {
-      invoiceNumber: String(inputData.invoiceNumber ?? 'N/A'),
-      issueDate: String(inputData.issueDate ?? ''), // Already formatted string in input log
-      dueDate: String(inputData.dueDate ?? ''),   // Already formatted string in input log
-      customer: {
-        name: String(inputData.customer?.name ?? 'N/A'),
-        address: String(inputData.customer?.address ?? 'N/A'),
-      },
-      // Map tenantCompany if it exists in input, otherwise null
-      tenantCompany: inputData.tenantCompany ? {
-          name: String(inputData.tenantCompany.name ?? 'N/A'),
-          address: String(inputData.tenantCompany.address ?? 'N/A'),
-          logoUrl: inputData.tenantCompany.logoUrl ?? null // Keep logoUrl if present
-      } : null,
-      items: (inputData.items ?? []).map((item: any) => ({ // Use 'any' for item type due to uncertainty
-        id: String(item.id ?? ''),
-        description: String(item.description ?? ''),
-        quantity: Number(item.quantity ?? 0), // Ensure number
-        unitPrice: Number(item.unitPrice ?? 0), // Ensure number
-        total: Number(item.total ?? 0), // Ensure number (use item.total directly)
-      })),
-      subtotal: Number(inputData.subtotal ?? 0), // Ensure number
-      tax: Number(inputData.tax ?? 0), // Ensure number
-      total: Number(inputData.total ?? 0), // Ensure number (use inputData.total directly)
-      // notes: inputData.notes, // Add if needed
-    };
+    // Check if the input data is in DbInvoiceViewModel format (from database)
+    if (typeof inputData.invoice_number !== 'undefined' && typeof inputData.company !== 'undefined' && typeof inputData.invoice_items !== 'undefined') {
+      console.log('[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...');
+      const dbData = inputData as DbInvoiceViewModel;
 
-    console.log('[mapDbInvoiceToWasmViewModel] Mapped ViewModel (Corrected based on input log):', JSON.stringify(viewModel, null, 2));
+      viewModel = {
+        invoiceNumber: String(dbData.invoice_number ?? 'N/A'),
+        issueDate: formatDateValueToString(dbData.invoice_date), // Corrected property name
+        dueDate: formatDateValueToString(dbData.due_date),
+        customer: {
+          name: String(dbData.company?.name ?? 'N/A'),
+          address: String(dbData.company?.address ?? 'N/A'),
+        },
+        // tenantCompany does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
+        tenantCompany: null,
+
+        items: (dbData.invoice_items ?? []).map((item: IInvoiceItem) => ({
+          id: String(item.item_id ?? ''), // Corrected property name
+          description: String(item.description ?? ''),
+          quantity: Number(item.quantity ?? 0),
+          unitPrice: Number(item.unit_price ?? 0),
+          total: Number(item.total_price ?? 0), // Corrected property name
+        })),
+        subtotal: Number(dbData.subtotal ?? 0),
+        tax: Number(dbData.tax ?? 0),
+        total: Number(dbData.total ?? 0),
+        // notes: dbData.notes, // Add if needed
+      };
+    }
+    // Check if the input data is already in WasmInvoiceViewModel format
+    else if (typeof inputData.invoiceNumber !== 'undefined' && typeof inputData.customer !== 'undefined' && typeof inputData.items !== 'undefined') {
+        console.log('[mapDbInvoiceToWasmViewModel] Input data appears to be in WasmInvoiceViewModel format. Using directly...');
+        viewModel = inputData as WasmInvoiceViewModel;
+        // Ensure numeric types are correct in case they were strings
+        viewModel.items = (viewModel.items ?? []).map(item => ({
+            ...item,
+            quantity: Number(item.quantity ?? 0),
+            unitPrice: Number(item.unitPrice ?? 0),
+            total: Number(item.total ?? 0),
+        }));
+        viewModel.subtotal = Number(viewModel.subtotal ?? 0);
+        viewModel.tax = Number(viewModel.tax ?? 0);
+        viewModel.total = Number(viewModel.total ?? 0);
+
+    } else {
+        console.error('[mapDbInvoiceToWasmViewModel] Input data format is unknown. Missing essential properties for both DbInvoiceViewModel and WasmInvoiceViewModel.');
+        console.error('[mapDbInvoiceToWasmViewModel] Original Data causing error:', JSON.stringify(inputData, null, 2));
+        return null; // Return null if format is unknown
+    }
+
+
+    console.log('[mapDbInvoiceToWasmViewModel] Mapped ViewModel:', JSON.stringify(viewModel, null, 2));
     return viewModel;
 
   } catch (error) {
-      console.error('[mapDbInvoiceToWasmViewModel] Error during mapping (Corrected logic):', error);
+      console.error('[mapDbInvoiceToWasmViewModel] Error during mapping:', error);
       console.error('[mapDbInvoiceToWasmViewModel] Original Data causing error:', JSON.stringify(inputData, null, 2));
       return null; // Return null on error
   }
