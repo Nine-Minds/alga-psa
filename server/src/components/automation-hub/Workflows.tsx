@@ -355,13 +355,13 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             title="Test Workflow"
                           >
                             <span className="sr-only">Test workflow</span>
-                            <PlayCircle className="h-5 w-5 text-blue-600" />
+                            <PlayCircle className="h-5 w-5 text-primary" />
                           </Button>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Badge className="bg-blue-100 text-blue-800">
+                          <Badge className="bg-primary-100 text-primary-800">
                             v{workflow.version}
                           </Badge>
                         </div>
@@ -370,8 +370,8 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                         <Badge
                           className={`${
                             workflow.isActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
+                              ? 'bg-success-100 text-success-800'
+                              : 'bg-secondary-100 text-secondary-800'
                           }`}
                         >
                           {workflow.isActive ? 'Active' : 'Inactive'}
