@@ -441,7 +441,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             {workflow.isActive ? (
                               <DropdownMenuItem
                                 id={`deactivate-${workflow.id}-menu-item`}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   console.log(`Deactivate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
@@ -452,7 +454,9 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             ) : (
                               <DropdownMenuItem
                                 id={`activate-${workflow.id}-menu-item`}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
                                   console.log(`Activate clicked for workflow ${workflow.id}, currently active: ${workflow.isActive}`);
                                   handleToggleWorkflowStatus(workflow.id, workflow.isActive);
                                 }}
