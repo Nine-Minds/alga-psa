@@ -53,39 +53,136 @@ export async function registerFormAction(
     throw error;
   }
 }
+/**
+ * Register a new system form definition
+ */
+export async function registerSystemWorkflowFormDefinitionAction(
+  params: FormRegistrationParams,
+  tags?: string[]
+): Promise<string> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    const userId = undefined; // We don't have access to userId from createTenantKnex
+
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    const formRegistry = getFormRegistry();
+
+    // Register the system form
+    // System forms are stored in a separate table and are not tenant-specific
+    const [formId] = await knex('system_workflow_form_definitions').insert({
+      form_id: params.formId || formRegistry.generateFormId(),
+      name: params.name,
+      description: params.description,
+      version: params.version,
+      category: params.category,
+      status: params.status,
+      json_schema: JSON.stringify(params.jsonSchema),
+      ui_schema: JSON.stringify(params.uiSchema),
+      default_values: JSON.stringify(params.defaultValues),
+      created_by: userId,
+      updated_by: userId,
+      tenant_id: null,
+      form_type: 'system'
+    }).returning('form_id');
+
+    // Add tags if provided
+    if (tags && tags.length > 0) {
+      await Promise.all(
+        tags.map(tagText =>
+          createTag({
+            tag_text: tagText,
+            tagged_id: formId,
+            tagged_type: 'workflow_form'
+          })
+        )
+      );
+    }
+
+    return formId;
+  } catch (error) {
+    console.error('Error registering system form definition:', error);
+    throw error;
+  }
+}
 
 /**
  * Get a form by ID and version
  */
 export async function getFormAction(
-  formId: string,
+  formId: string, // This is the task_definition_id
   version?: string
 ): Promise<FormWithSchema | null> {
   try {
     const { knex, tenant } = await createTenantKnex();
-    
+
     if (!tenant) {
       throw new Error('Tenant not found');
     }
-    
+
     const formRegistry = getFormRegistry();
-    
-    // Get the form
-    const form = await formRegistry.getForm(knex, tenant, formId, version);
-    
-    if (!form) {
+
+    // Look up the task definition to get the actual form_id and form_type
+    const taskDefinition = await knex('workflow_task_definitions')
+      .select('form_id', 'form_type')
+      .where({ task_definition_id: formId })
+      .first();
+
+    if (!taskDefinition) {
+      console.warn(`No task definition found for task_definition_id: ${formId}`);
       return null;
     }
-    
-    // Get tags
-    const tags = await findTagsByEntityId(formId, 'workflow_form');
-    
+
+    const actualFormId = taskDefinition.form_id;
+    const formType = taskDefinition.form_type;
+
+    let form: FormWithSchema | null = null;
+
+    if (formType === 'system') {
+      // Query system forms table using the retrieved actualFormId
+      const systemForm = await knex('system_workflow_form_definitions')
+        .where({ form_id: actualFormId })
+        .modify(queryBuilder => {
+          if (version) {
+            queryBuilder.where({ version });
+          } else {
+            // If no version is specified, get the latest version
+            queryBuilder.orderBy('created_at', 'desc').first();
+          }
+        })
+        .first(); // Ensure we get only one record if version is not specified
+
+      if (systemForm) {
+        form = {
+          ...systemForm,
+          // Ensure JSON fields are parsed
+          json_schema: typeof systemForm.json_schema === 'string' ? JSON.parse(systemForm.json_schema) : systemForm.json_schema,
+          ui_schema: typeof systemForm.ui_schema === 'string' ? JSON.parse(systemForm.ui_schema) : systemForm.ui_schema,
+          default_values: typeof systemForm.default_values === 'string' ? JSON.parse(systemForm.default_values) : systemForm.default_values,
+          tags: [] // Tags will be fetched separately
+        };
+      }
+    } else {
+      // Query tenant forms table using the retrieved actualFormId and tenant context
+      form = await formRegistry.getForm(knex, tenant, actualFormId, version);
+    }
+
+    if (!form) {
+      console.warn(`Form not found with form_id: ${actualFormId} (type: ${formType}, version: ${version})`);
+      return null;
+    }
+
+    // Get tags (tags are associated with the actualFormId regardless of table)
+    const tags = await findTagsByEntityId(actualFormId, 'workflow_form');
+
     return {
       ...form,
-      tags // This is fine since FormWithSchema expects ITag[] for tags
+      tags
     };
   } catch (error) {
-    console.error(`Error getting form ${formId}:`, error);
+    console.error(`Error getting form for task_definition_id ${formId}:`, error);
     throw error;
   }
 }

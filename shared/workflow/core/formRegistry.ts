@@ -35,9 +35,10 @@ export class FormRegistry {
         // Check if form already exists with this ID and version
         const existingForm = await FormDefinitionModel.getByIdAndVersion(
           trx,
-          tenant,
           params.formId,
-          params.version
+          params.version,
+          'tenant', // Registering a tenant-specific form
+          tenant
         );
         
         if (existingForm) {
@@ -80,30 +81,55 @@ export class FormRegistry {
    */
   async getForm(
     knex: Knex,
-    tenant: string,
+    tenant: string, // The current tenant context. For system forms, this might be a specific tenant ID or a generic system indicator if the caller knows.
     formId: string,
     version?: string
   ): Promise<FormWithSchema | null> {
     try {
-      let formDefinition: IFormDefinition | null;
-      
+      let formDefinition: IFormDefinition | null = null;
+      let formSchema: IFormSchema | null = null;
+      let determinedFormType: 'tenant' | 'system';
+
+      // Attempt to get as tenant-specific form first
       if (version) {
-        // Get specific version
-        formDefinition = await FormDefinitionModel.getByIdAndVersion(knex, tenant, formId, version);
+        formDefinition = await FormDefinitionModel.getByIdAndVersion(knex, formId, version, 'tenant', tenant);
       } else {
-        // Get latest version
-        formDefinition = await FormDefinitionModel.getLatestVersion(knex, tenant, formId);
+        formDefinition = await FormDefinitionModel.getLatestVersion(knex, formId, 'tenant', tenant);
+      }
+
+      if (formDefinition) {
+        determinedFormType = 'tenant';
+      } else {
+        // If not found as tenant-specific, try as system form
+        if (version) {
+          formDefinition = await FormDefinitionModel.getByIdAndVersion(knex, formId, version, 'system');
+        } else {
+          formDefinition = await FormDefinitionModel.getLatestVersion(knex, formId, 'system');
+        }
+        if (formDefinition) {
+          determinedFormType = 'system';
+        } else {
+          // console.warn(`[FormRegistry] Form ${formId} (version: ${version || 'latest'}) not found for tenant ${tenant} or as system form.`);
+          return null; // Not found as tenant or system
+        }
       }
       
-      if (!formDefinition) {
-        return null;
-      }
-      
-      // Get form schema
-      const formSchema = await FormSchemaModel.getByFormId(knex, tenant, formId);
+      // Now get the schema using the determined form type and the original tenant for tenant forms,
+      // or no tenant for system forms (as per FormSchemaModel.getByFormId's updated signature).
+      // The 'version' is passed to getByFormId because system schemas are tied to system definitions which are versioned.
+      // For tenant schemas, 'version' is not used by getByFormId as they are linked by form_id.
+      formSchema = await FormSchemaModel.getByFormId(
+        knex,
+        formId,
+        determinedFormType,
+        determinedFormType === 'tenant' ? tenant : undefined,
+        determinedFormType === 'system' ? formDefinition.version : undefined
+      );
       
       if (!formSchema) {
-        throw new Error(`Schema not found for form ${formId}`);
+        // This should ideally not happen if a definition was found, implies data inconsistency
+        console.error(`[FormRegistry] Definition found for form ${formId} (type: ${determinedFormType}), but schema is missing.`);
+        throw new Error(`Schema not found for form ${formId} (type: ${determinedFormType})`);
       }
       
       return {
@@ -111,7 +137,7 @@ export class FormRegistry {
         schema: formSchema
       };
     } catch (error) {
-      console.error(`Error getting form ${formId}:`, error);
+      console.error(`[FormRegistry] Error getting form ${formId} for tenant ${tenant}:`, error);
       throw error;
     }
   }
@@ -129,7 +155,7 @@ export class FormRegistry {
     return knex.transaction(async (trx) => {
       try {
         // Check if form exists
-        const existingForm = await FormDefinitionModel.getByIdAndVersion(trx, tenant, formId, version);
+        const existingForm = await FormDefinitionModel.getByIdAndVersion(trx, formId, version, 'tenant', tenant);
         
         if (!existingForm) {
           throw new Error(`Form with ID ${formId} and version ${version} not found`);
@@ -188,9 +214,10 @@ export class FormRegistry {
         // Check if the new version already exists
         const existingVersion = await FormDefinitionModel.getByIdAndVersion(
           trx,
-          tenant,
           formId,
-          newVersion
+          newVersion,
+          'tenant', // Creating new version for a tenant-specific form
+          tenant
         );
         
         if (existingVersion) {
@@ -240,7 +267,7 @@ export class FormRegistry {
   ): Promise<boolean> {
     try {
       // Check if form exists
-      const existingForm = await FormDefinitionModel.getByIdAndVersion(knex, tenant, formId, version);
+      const existingForm = await FormDefinitionModel.getByIdAndVersion(knex, formId, version, 'tenant', tenant);
       
       if (!existingForm) {
         throw new Error(`Form with ID ${formId} and version ${version} not found`);
@@ -266,7 +293,7 @@ export class FormRegistry {
     return knex.transaction(async (trx) => {
       try {
         // Check if form exists
-        const existingForm = await FormDefinitionModel.getByIdAndVersion(trx, tenant, formId, version);
+        const existingForm = await FormDefinitionModel.getByIdAndVersion(trx, formId, version, 'tenant', tenant);
         
         if (!existingForm) {
           throw new Error(`Form with ID ${formId} and version ${version} not found`);

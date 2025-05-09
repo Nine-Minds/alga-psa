@@ -224,6 +224,13 @@ export async function updateManualInvoice(
 
   // Emit INVOICE_UPDATED event
   try {
+    console.log('DEBUG: Session user info before creating event:', {
+      hasSession: !!session,
+      hasUser: !!session?.user,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    });
+
     const eventId = uuidv4();
     const eventData: IWorkflowEvent = {
       event_id: eventId,
@@ -242,6 +249,13 @@ export async function updateManualInvoice(
       execution_id: invoiceId, // Use invoiceId for traceability
       created_at: new Date().toISOString(), // Add created_at
     };
+
+    console.log('DEBUG: Created workflow event with user context:', {
+      eventId,
+      eventName: 'INVOICE_UPDATED',
+      userId: eventData.user_id,
+      payloadUserId: eventData.payload?.userId
+    });
 
     // Persist event to DB
     await WorkflowEventModel.create(knex, tenant, eventData);

@@ -435,8 +435,8 @@ export class TypeScriptWorkflowRuntime {
       // Persist the initial event
       await WorkflowEventModel.create(knex, tenant, startEvent); // Use destructured tenant
       
-      // Create workflow context
-      const context = this.createWorkflowContext(executionId, tenant); // Use destructured tenant
+      // Create workflow context with userId
+      const context = this.createWorkflowContext(executionId, tenant, userId); // Pass userId to context
       
       // Start workflow execution in background
       this.executeWorkflow(workflowDefinition.execute, context, executionState);
@@ -818,7 +818,7 @@ export class TypeScriptWorkflowRuntime {
   /**
    * Create a workflow context for execution
    */
-  private createWorkflowContext(executionId: string, tenant: string): WorkflowContext {
+  private createWorkflowContext(executionId: string, tenant: string, userId?: string): WorkflowContext {
     const executionState = this.executionStates.get(executionId)!;
     const eventListeners: Map<string, ((event: WorkflowEvent) => void)[]> = new Map();
     
@@ -831,6 +831,7 @@ export class TypeScriptWorkflowRuntime {
     return {
       executionId,
       tenant,
+      userId, // Include userId from the triggering event
       
       // Action proxy
       actions: actionProxy,
@@ -892,6 +893,7 @@ export class TypeScriptWorkflowRuntime {
             execution_id: executionId,
             event_name: eventName,
             payload,
+            user_id: userId, // Pass the userId from the workflow context
             tenant
           });
         }

@@ -67,6 +67,11 @@ export interface WorkflowContext {
    * Tenant ID
    */
   tenant: string;
+
+  /**
+   * User ID of the user who initiated the workflow or event
+   */
+  userId?: string;
   
   /**
    * Proxy object for executing actions
