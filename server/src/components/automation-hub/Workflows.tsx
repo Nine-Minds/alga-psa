@@ -9,6 +9,7 @@ import { Input } from 'server/src/components/ui/Input'; // Assuming WorkflowData
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
+import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -222,12 +223,10 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="show-inactive-workflows"
+                <SwitchWithLabel
                   checked={showInactive}
-                  onChange={(e) => {
+                  onCheckedChange={(newValue) => {
                     // Update state first
-                    const newValue = e.target.checked;
                     setShowInactive(newValue);
                     console.log(`Show inactive set to: ${newValue}`);
                   }}
