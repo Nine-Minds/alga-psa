@@ -38,6 +38,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
+  const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
@@ -151,12 +152,30 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     if (!currentUser) return; // Don't proceed if we don't have a user ID
 
     try {
-      // Fetch documents for this contact
-      const contactDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-      setDocuments(prev => ({
+      // Set loading state for this specific contact
+      setDocumentLoading(prev => ({
         ...prev,
-        [contact.contact_name_id]: contactDocuments
+        [contact.contact_name_id]: true
       }));
+
+      // Check if we already have documents for this contact
+      const existingDocuments = documents[contact.contact_name_id];
+      
+      // Only fetch documents if we don't have them already
+      if (!existingDocuments || existingDocuments.length === 0) {
+        // Fetch documents for this contact
+        const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+        
+        // Update documents state with the fetched documents
+        setDocuments(prev => {
+          const newDocuments = { ...prev };
+          // Handle both array and paginated response formats
+          newDocuments[contact.contact_name_id] = Array.isArray(response)
+            ? response
+            : response.documents || [];
+          return newDocuments;
+        });
+      }
 
       openDrawer(
         <ContactDetailsView
@@ -164,18 +183,35 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           companies={companies}
           documents={documents[contact.contact_name_id] || []}
           userId={currentUser}
+          isInDrawer={true}
           onDocumentCreated={async () => {
             // Refresh documents after a new one is created
-            const updatedDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-            setDocuments(prev => ({
-              ...prev,
-              [contact.contact_name_id]: updatedDocuments
-            }));
+            try {
+              const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+              
+              // Update documents state with the refreshed documents
+              setDocuments(prev => {
+                const newDocuments = { ...prev };
+                // Handle both array and paginated response formats
+                newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                  ? updatedResponse
+                  : updatedResponse.documents || [];
+                return newDocuments;
+              });
+            } catch (err) {
+              console.error('Error refreshing documents:', err);
+            }
           }}
         />
       );
     } catch (error) {
       console.error('Error fetching contact documents:', error);
+    } finally {
+      // Clear loading state
+      setDocumentLoading(prev => ({
+        ...prev,
+        [contact.contact_name_id]: false
+      }));
     }
   };
 
@@ -441,7 +477,29 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   }, [contacts, searchTerm, filterStatus, selectedTags]);
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <div className="h-8 bg-gray-200 rounded w-1/4 animate-pulse"></div>
+          <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="bg-white shadow rounded-lg p-4">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 bg-gray-200 rounded w-64 animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
+              <div className="h-10 bg-gray-200 rounded w-40 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 rounded w-32 animate-pulse"></div>
+          </div>
+          <div className="animate-pulse space-y-4">
+            {[...Array(10)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded w-full"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    }>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Contacts</h1>

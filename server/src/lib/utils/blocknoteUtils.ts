@@ -386,3 +386,223 @@ function convertTableToMarkdown(block: Block | PartialBlock): string {
     return '[Table conversion error]';
   }
 }
+
+/**
+ * Extracts styled text content from block content array and converts to HTML
+ *
+ * @param content - The content array to extract styled text from
+ * @returns The extracted text with styling as an HTML string
+ */
+function extractStyledTextToHTML(content: any[]): string {
+  if (!Array.isArray(content)) return '';
+  if (content.length === 0) return '<br>';
+
+  return content
+    .filter((item: any) => item && item.type === 'text')
+    .map((item: any) => {
+      if (!item.text && item.text !== '') return '';
+
+      let result = item.text.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>'); 
+
+      if (item.styles) {
+        if (item.styles.code) result = `<code>${result}</code>`; 
+        if (item.styles.strike) result = `<s>${result}</s>`;
+        if (item.styles.underline) result = `<u>${result}</u>`;
+        if (item.styles.italic) result = `<em>${result}</em>`;
+        if (item.styles.bold) result = `<strong>${result}</strong>`;
+
+        let stylesArray = [];
+        if (item.styles.textColor && item.styles.textColor !== 'default') {
+          stylesArray.push(`color:${item.styles.textColor}`);
+        }
+        if (item.styles.backgroundColor && item.styles.backgroundColor !== 'default') {
+          stylesArray.push(`background-color:${item.styles.backgroundColor}`);
+        }
+        if (stylesArray.length > 0) {
+          result = `<span style="${stylesArray.join(';')}">${result}</span>`;
+        }
+      }
+      return result;
+    })
+    .join('');
+}
+
+/**
+ * Converts BlockNote JSON blocks to an HTML string.
+ *
+ * @param blocks - BlockNote content as Block array, PartialBlock array, or JSON string.
+ * @returns An HTML string representation of the BlockNote content.
+ */
+export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string | undefined): string {
+  if (!blocks) return '<p>[No content]</p>';
+
+  let blockData: Block[] | PartialBlock[];
+  if (typeof blocks === 'string') {
+    try {
+      blockData = JSON.parse(blocks);
+    } catch (e) {
+      console.error("[BlockNoteUtils] Failed to parse BlockNote JSON string for HTML conversion:", e);
+      return '<p>[Invalid content format]</p>';
+    }
+  } else {
+    blockData = blocks;
+  }
+
+  const output: string[] = [];
+
+
+  function processBlocksRecursive(
+    blocksToProcess: Block[] | PartialBlock[],
+    currentLevel: number
+  ) {
+    let listBuffer: { type: 'ol' | 'ul'; items: string[] } | null = null;
+
+    const flushListBuffer = () => {
+      if (listBuffer) {
+        output.push(`<${listBuffer.type}>${listBuffer.items.join('')}</${listBuffer.type}>`);
+        listBuffer = null;
+      }
+    };
+
+    blocksToProcess.forEach((block) => {
+      let blockStylesArray: string[] = [];
+      if (block.props) {
+        const props = block.props as any;
+        if (props.backgroundColor && props.backgroundColor !== 'default') {
+          blockStylesArray.push(`background-color:${props.backgroundColor}`);
+        }
+        if (props.textAlignment && props.textAlignment !== 'left') {
+          blockStylesArray.push(`text-align:${props.textAlignment}`);
+        }
+      }
+
+      if (block.type === 'paragraph' && currentLevel > 0) {
+        blockStylesArray.push(`margin-left: ${currentLevel * 25}px`); // 25px per indent level
+      }
+      
+      const styleAttribute = blockStylesArray.length > 0 ? ` style="${blockStylesArray.join(';')}"` : '';
+
+      let content = '';
+      let isListItem = false;
+
+      switch (block.type) {
+        case 'paragraph':
+          flushListBuffer();
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<p${styleAttribute}>${content || '<br>'}</p>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'heading':
+          flushListBuffer();
+          const level = (block.props as any)?.level || 1;
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<h${level}${styleAttribute}>${content}</h${level}>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'numberedListItem':
+          content = extractStyledTextToHTML(block.content as any[]);
+          if (!listBuffer || listBuffer.type !== 'ol') {
+            flushListBuffer();
+            listBuffer = { type: 'ol', items: [] };
+          }
+          let listItemContent = `<li${styleAttribute}>${content}`;
+          if (block.children && (block.children as any[]).length > 0) {
+            const nestedOutput: string[] = [];
+            const originalOutputRef = output;
+            (output as any) = nestedOutput;
+            processBlocksRecursive(block.children as Block[], 0);
+            (output as any) = originalOutputRef;
+            listItemContent += nestedOutput.join('\n');
+          }
+          listItemContent += `</li>`;
+          listBuffer.items.push(listItemContent);
+          isListItem = true;
+          break;
+        case 'bulletListItem':
+          content = extractStyledTextToHTML(block.content as any[]);
+          if (!listBuffer || listBuffer.type !== 'ul') {
+            flushListBuffer();
+            listBuffer = { type: 'ul', items: [] };
+          }
+          let bulletItemContent = `<li${styleAttribute}>${content}`;
+           if (block.children && (block.children as any[]).length > 0) {
+            const nestedOutput: string[] = [];
+            const originalOutputRef = output;
+            (output as any) = nestedOutput;
+            processBlocksRecursive(block.children as Block[], 0);
+            (output as any) = originalOutputRef;
+            bulletItemContent += nestedOutput.join('\n');
+          }
+          bulletItemContent += `</li>`;
+          listBuffer.items.push(bulletItemContent);
+          isListItem = true;
+          break;
+        case 'checkListItem':
+          flushListBuffer();
+          const checked = (block.props as any)?.checked;
+          content = extractStyledTextToHTML(block.content as any[]);
+          output.push(`<div${styleAttribute}>[${checked ? 'x' : ' '}] ${content}</div>`);
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+        case 'table':
+          flushListBuffer();
+          const tableContent = block.content as { type: 'tableContent', rows: Array<{ cells: Array<PartialBlock[]> }> };
+          if (!tableContent || !tableContent.rows) {
+             output.push('<!-- Invalid table structure -->');
+             break;
+          }
+          let tableHTML = '<table><tbody>';
+          tableContent.rows.forEach(row => {
+            tableHTML += '<tr>';
+            row.cells.forEach(cellContent => {
+              tableHTML += `<td>${extractStyledTextToHTML(cellContent as any[])}</td>`;
+            });
+            tableHTML += '</tr>';
+          });
+          tableHTML += '</tbody></table>';
+          output.push(blockStylesArray.length > 0 ? `<div${styleAttribute}>${tableHTML}</div>` : tableHTML);
+          break;
+        case 'codeBlock':
+          flushListBuffer();
+          const language = (block.props as any)?.language || '';
+          const codeText = (block.content as any[])
+              .map(item => item.text || '')
+              .join('\n')
+              .replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+          content = `<code class="language-${language}">${codeText}</code>`;
+          output.push(`<pre${styleAttribute}>${content}</pre>`);
+          break;
+        default:
+          flushListBuffer();
+          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${block.type}`);
+          if (block.content && Array.isArray(block.content)) {
+             content = extractStyledTextToHTML(block.content as any[]);
+             output.push(`<div${styleAttribute}>${content}</div>`);
+          } else if (block.content && typeof block.content === 'string') {
+             const escapedContent = block.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+             output.push(`<div${styleAttribute}>${escapedContent}</div>`);
+          } else {
+             output.push(`<!-- Unsupported block type: ${block.type} -->`);
+          }
+          if (block.children && (block.children as any[]).length > 0) {
+            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          }
+          break;
+      }
+      if (!isListItem) {
+        flushListBuffer();
+      }
+    });
+    flushListBuffer();
+  }
+
+  processBlocksRecursive(blockData, 0);
+
+  return output.join('\n');
+}

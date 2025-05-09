@@ -1,20 +1,22 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
-import { IDocument } from '../../interfaces/document.interface';
+import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
-import { Button } from '../ui/Button';
-import Drawer from '../ui/Drawer';
-import { Input } from '../ui/Input';
-import TextEditor from '../editor/TextEditor';
-import { Plus, Link, FileText } from 'lucide-react';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
+import { Button } from 'server/src/components/ui/Button';
+import Drawer from 'server/src/components/ui/Drawer';
+import { Input } from 'server/src/components/ui/Input';
+import TextEditor from 'server/src/components/editor/TextEditor';
+import RichTextViewer from 'server/src/components/editor/RichTextViewer';
+import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { 
   getDocumentsByEntity,
   deleteDocument,
@@ -47,6 +49,7 @@ interface DocumentsProps {
   documents: IDocument[];
   gridColumns?: 3 | 4;
   userId: string;
+  searchTermFromParent?: string;
   entityId?: string;
   entityType?: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
   isLoading?: boolean;
@@ -65,9 +68,15 @@ const Documents = ({
   isLoading = false,
   onDocumentCreated,
   isInDrawer = false,
-  uploadFormRef
+  uploadFormRef,
+  searchTermFromParent = ''
 }: DocumentsProps): JSX.Element => {
-  const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
+  const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDocuments, setTotalDocuments] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
+
   const [showUpload, setShowUpload] = useState(false);
   const [showSelector, setShowSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,11 +90,59 @@ const Documents = ({
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCKS);
   const [hasContentChanged, setHasContentChanged] = useState(false);
   const editorRef = useRef<BlockNoteEditor | null>(null);
+  const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
 
-  // Keep local documents state in sync with props
   useEffect(() => {
-    setDocuments(initialDocuments);
+    if (initialDocuments && initialDocuments.length > 0) {
+        setDocumentsToDisplay(initialDocuments);
+    }
   }, [initialDocuments]);
+
+
+  const fetchDocuments = useCallback(async (page: number, searchTerm?: string) => {
+    if (!entityId || !entityType) {
+      if (searchTerm) {
+        const filtered = initialDocuments.filter(doc =>
+          doc.document_name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setDocumentsToDisplay(filtered);
+        setTotalPages(1);
+        setCurrentPage(1);
+      } else {
+        setDocumentsToDisplay(initialDocuments);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
+      return;
+    }
+
+    try {
+      const currentFilters: DocumentFilters = {
+        searchTerm: searchTerm || undefined,
+      };
+      const response = await getDocumentsByEntity(entityId, entityType, currentFilters, page, pageSize);
+      setDocumentsToDisplay(response.documents);
+      setTotalDocuments(response.totalCount);
+      setTotalPages(response.totalPages);
+      setCurrentPage(response.currentPage);
+    } catch (err) {
+      console.error('Error fetching documents:', err);
+      setError('Failed to fetch documents.');
+      setDocumentsToDisplay([]);
+      setTotalPages(1);
+      setCurrentPage(1);
+    }
+  }, [entityId, entityType, pageSize, initialDocuments]);
+
+
+  useEffect(() => {
+    fetchDocuments(currentPage, searchTermFromParent);
+  }, [fetchDocuments, currentPage, searchTermFromParent]);
+
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   const handleCreateDocument = async () => {
     setIsCreatingNew(true);
@@ -93,6 +150,7 @@ const Documents = ({
     setCurrentContent(DEFAULT_BLOCKS);
     setSelectedDocument(null);
     setIsLoadingContent(false);
+    setIsEditModeInDrawer(true);
     setIsDrawerOpen(true);
   };
 
@@ -104,7 +162,7 @@ const Documents = ({
   const handleDelete = async (document: IDocument) => {
     try {
       await deleteDocument(document.document_id, userId);
-      setDocuments(prev => prev.filter(d => d.document_id !== document.document_id));
+      setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -119,7 +177,7 @@ const Documents = ({
 
     try {
       await removeDocumentAssociations(entityId, entityType, [document.document_id]);
-      setDocuments(prev => prev.filter(d => d.document_id !== document.document_id));
+      setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -147,8 +205,7 @@ const Documents = ({
 
       // Refresh documents list
       if (entityId && entityType) {
-        const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocuments(updatedDocuments);
+        fetchDocuments(currentPage, searchTermFromParent);
       }
 
       if (onDocumentCreated) {
@@ -187,8 +244,7 @@ const Documents = ({
 
       // Refresh documents list
       if (entityId && entityType) {
-        const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-        setDocuments(updatedDocuments);
+        fetchDocuments(currentPage, searchTermFromParent);
       }
 
       if (onDocumentCreated) {
@@ -240,6 +296,7 @@ const Documents = ({
     }
   }, [selectedDocument]);
 
+
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
@@ -247,7 +304,7 @@ const Documents = ({
   return (
     <ReflectionContainer id={id} label="Documents">
       <div className="w-full space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
             <Button
               id={`${id}-new-document-btn`}
@@ -310,14 +367,11 @@ const Documents = ({
               // Refresh documents list after association
               if (entityId && entityType) {
                 try {
-                  const updatedDocuments = await getDocumentsByEntity(entityId, entityType);
-                  setDocuments(updatedDocuments);
                 } catch (error) {
-                  console.error('Error refreshing documents:', error);
-                  setError('Failed to refresh documents');
+                  console.error('Error associating documents:', error);
+                  setError('Failed to associate documents');
                 }
               }
-              
               setShowSelector(false);
               if (onDocumentCreated) await onDocumentCreated();
             }}
@@ -333,12 +387,10 @@ const Documents = ({
         )}
 
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
-          </div>
-        ) : documents.length > 0 ? (
+          <DocumentsGridSkeleton gridColumns={gridColumns} />
+        ) : documentsToDisplay.length > 0 ? (
           <div className={`grid ${gridColumnsClass} gap-4`}>
-            {documents.map((document) => (
+            {documentsToDisplay.map((document) => (
               <div key={document.document_id} className="h-full">
                 <DocumentStorageCard
                   id={`${id}-document-${document.document_id}`}
@@ -349,6 +401,8 @@ const Documents = ({
                   onClick={() => {
                     setSelectedDocument(document);
                     setDocumentName(document.document_name);
+                    const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
+                    setIsEditModeInDrawer(isEditableContentDoc);
                     setIsDrawerOpen(true);
                   }}
                   isContentDocument={!document.file_id}
@@ -362,9 +416,14 @@ const Documents = ({
           </div>
         )}
 
-        {documents.length > 0 && (
+        {documentsToDisplay.length > 0 && totalPages > 1 && (
           <div className="mt-4">
-            <DocumentsPagination id={`${id}-pagination`} />
+            <DocumentsPagination
+              id={`${id}-pagination`}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
 
@@ -378,19 +437,56 @@ const Documents = ({
             drawerVariant="document"
           >
           <div className="flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4 border-b pb-4">
+            <div className="flex justify-between items-center mb-4 pb-4">
               <h2 className="text-lg font-semibold">
-                {isCreatingNew ? 'New Document' : 'Edit Document'}
+                {isCreatingNew ? 'New Document' : (isEditModeInDrawer ? 'Edit Document' : 'View Document')}
               </h2>
-              {!isInDrawer && (
-                <Button
-                  id={`${id}-close-drawer-btn`}
-                  onClick={() => setIsDrawerOpen(false)}
-                  variant="ghost"
-                >
-                  ×
-                </Button>
-              )}
+              <div className="flex items-center space-x-2">
+                {selectedDocument &&
+                  (selectedDocument.type_name === 'text/plain' ||
+                   selectedDocument.type_name === 'text/markdown' ||
+                   (!selectedDocument.type_name && !selectedDocument.file_id)
+                  ) && (
+                  <Button
+                    id={`${id}-download-pdf-btn`}
+                    onClick={() => {
+                      if (selectedDocument) {
+                        window.open(`/api/documents/download/${selectedDocument.document_id}?format=pdf`, '_blank');
+                      }
+                    }}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    PDF
+                  </Button>
+                )}
+                {!isCreatingNew && !isEditModeInDrawer && selectedDocument && (
+                  <Button
+                    id={`${id}-edit-document-btn`}
+                    onClick={() => setIsEditModeInDrawer(true)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+                {!isInDrawer && (
+                  <Button
+                    id={`${id}-close-drawer-btn`}
+                    onClick={() => {
+                      setIsDrawerOpen(false);
+                      if (!isCreatingNew) {
+                        setIsEditModeInDrawer(false);
+                      }
+                    }}
+                    variant="ghost"
+                  >
+                    ×
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
@@ -401,36 +497,41 @@ const Documents = ({
                   placeholder="Document Name"
                   value={isCreatingNew ? newDocumentName : documentName}
                   onChange={(e) => {
-                    if (isCreatingNew) {
-                      setNewDocumentName(e.target.value);
-                    } else {
-                      setDocumentName(e.target.value);
+                    if (isCreatingNew || isEditModeInDrawer) {
+                      if (isCreatingNew) {
+                        setNewDocumentName(e.target.value);
+                      } else {
+                        setDocumentName(e.target.value);
+                      }
                     }
                   }}
+                  readOnly={!isCreatingNew && !isEditModeInDrawer}
+                  className={(!isCreatingNew && !isEditModeInDrawer) ? "bg-gray-100 cursor-default" : ""}
                 />
               </div>
 
-              <div className="flex-1 overflow-y-auto border-t border-b mb-4">
+              <div className="flex-1 overflow-y-auto mb-4 p-2">
                 <div className="h-full w-full">
-                  {isCreatingNew ? (
-                    <TextEditor
-                      key="editor-new"
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                    />
-                  ) : selectedDocument && !isLoadingContent ? (
-                    <TextEditor
-                      key={`editor-${selectedDocument.document_id}`}
-                      id={`${id}-editor`}
-                      initialContent={currentContent}
-                      onContentChange={handleContentChange}
-                      editorRef={editorRef}
-                    />
-                  ) : (
+                  {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                    </div>
+                  ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
+                    <TextEditor
+                      key={isCreatingNew ? "editor-new" : `editor-${selectedDocument?.document_id}`}
+                      id={`${id}-editor`}
+                      initialContent={currentContent}
+                      onContentChange={handleContentChange}
+                      editorRef={editorRef}
+                    />
+                  ) : selectedDocument ? (
+                    <RichTextViewer
+                      id={`${id}-viewer`}
+                      content={currentContent}
+                    />
+                  ) : (
+                    <div className="flex justify-center items-center h-full text-gray-500">
+                      Select a document or create a new one.
                     </div>
                   )}
                 </div>
@@ -439,19 +540,26 @@ const Documents = ({
               <div className="flex justify-end space-x-2">
                 <Button
                   id={`${id}-cancel-btn`}
-                  onClick={() => setIsDrawerOpen(false)}
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    if (!isCreatingNew) {
+                      setIsEditModeInDrawer(false);
+                    }
+                  }}
                   variant="outline"
                 >
                   Cancel
                 </Button>
-                <Button
-                  id={`${id}-save-btn`}
-                  onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
-                  disabled={isSaving}
-                  className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
-                >
-                  {isSaving ? 'Saving...' : 'Save'}
-                </Button>
+                {(isCreatingNew || isEditModeInDrawer) && (
+                  <Button
+                    id={`${id}-save-btn`}
+                    onClick={isCreatingNew ? handleSaveNewDocument : handleSaveChanges}
+                    disabled={isSaving || (!hasContentChanged && !isCreatingNew && documentName === selectedDocument?.document_name)}
+                    className="bg-[#6941C6] text-white hover:bg-[#5B34B5]"
+                  >
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Button>
+                )}
               </div>
             </div>
           </div>

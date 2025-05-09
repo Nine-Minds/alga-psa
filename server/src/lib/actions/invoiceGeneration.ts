@@ -5,14 +5,12 @@ import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
-// Import the interface InvoiceViewModel and other necessary types
 import {
   IInvoiceItem,
   IInvoice,
   PreviewInvoiceResponse,
-  InvoiceViewModel // Restore import from interfaces
+  InvoiceViewModel
 } from 'server/src/interfaces/invoice.interfaces';
-// Import the renderer's ViewModel and alias it
 import { WasmInvoiceViewModel } from '../invoice-renderer/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -21,7 +19,7 @@ import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
-import { PDFGenerationService } from 'server/src/services/pdf-generation.service';
+import { PDFGenerationService, createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { toPlainDate, toISODate, toISOTimestamp } from 'server/src/lib/utils/dateTimeUtils';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { ISO8601String } from 'server/src/types/types.d';
@@ -29,7 +27,6 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
-// Import the missing utility function
 import { getCompanyLogoUrl } from '../utils/avatarUtils';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 // TODO: Import these from billingAndTax.ts once created
@@ -526,17 +523,18 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
     throw new Error('No tenant found');
   }
 
-  const storageService = new StorageService();
-  const pdfGenerationService = new PDFGenerationService(
-    storageService,
-    {
-      pdfCacheDir: process.env.PDF_CACHE_DIR,
-      tenant
-    }
-  );
+  // Get the current user session
+  const session = await getServerSession(options);
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  // Use the factory function to create the PDF generation service
+  const pdfGenerationService = createPDFGenerationService(tenant);
 
   const fileRecord = await pdfGenerationService.generateAndStore({
-    invoiceId
+    invoiceId,
+    userId: session.user.id
   });
 
   return { file_id: fileRecord.file_id };

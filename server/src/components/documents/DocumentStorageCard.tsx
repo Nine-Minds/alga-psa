@@ -1,30 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ConfirmationDialog } from '../ui/ConfirmationDialog';
-import { IDocument } from '../../interfaces/document.interface';
-import { getDocumentPreview } from '../../lib/actions/document-actions/documentActions';
-import { getDocumentDownloadUrl } from '../../lib/utils/documentUtils';
-import { Button } from '../ui/Button';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
+import { getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
+import { Button } from 'server/src/components/ui/Button';
 import {
     Download,
     Trash2,
     FileText,
     Image,
     File,
-    Loader2,
     FileSpreadsheet,
     FileType,
     FileCode,
     Unlink,
     EyeOff
 } from 'lucide-react';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ContainerComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ContainerComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 
 export interface DocumentStorageCardProps {
-    id: string; // Made required since it's needed for reflection registration
+    id: string;
     document: IDocument;
     onDelete?: (document: IDocument) => void;
     onDisassociate?: (document: IDocument) => void;
@@ -57,24 +56,30 @@ export default function DocumentStorageCard({
     console.log('Rendering DocumentStorageCard with document:', document);
 
     const loadPreview = async () => {
-        if (!document.file_id) return;
+        const identifierForPreview = document.file_id || document.document_id;
+        
+        if (!identifierForPreview) {
+            console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
+            setPreviewContent({ error: 'Preview not available (no identifier)' });
+            setIsLoading(false);
+            return;
+        }
 
         try {
             setIsLoading(true);
-            const preview = await getDocumentPreview(document.file_id);
+            const preview = await getDocumentPreview(identifierForPreview);
             setPreviewContent(preview);
         } catch (error) {
-            console.error('Error getting preview:', error);
+            console.error('Error getting document preview:', error);
             setPreviewContent({ error: 'Failed to load preview' });
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Load preview on mount
     useEffect(() => {
         loadPreview();
-    }, [document.file_id]);
+    }, [document.document_id, document.file_id]);
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -201,7 +206,7 @@ export default function DocumentStorageCard({
                     {/* Preview Content */}
                     {isLoading ? (
                         <div className="mt-4 flex justify-center">
-                            <Loader2 className="animate-spin h-8 w-8 text-[rgb(var(--color-primary-400))]" />
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
                         </div>
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
@@ -226,7 +231,8 @@ export default function DocumentStorageCard({
                                     style={{
                                         display: '-webkit-box',
                                         WebkitLineClamp: '8',
-                                        WebkitBoxOrient: 'vertical'
+                                        WebkitBoxOrient: 'vertical',
+                                        whiteSpace: 'pre-wrap'
                                     }}
                                     dangerouslySetInnerHTML={{ __html: previewContent.content }}
                                     onClick={handleView}
@@ -240,23 +246,33 @@ export default function DocumentStorageCard({
 
                 {!hideActions && (
                     <div className="mt-4 pt-3 flex flex-col space-y-1.5 items-end border-t border-[rgb(var(--color-border-100))]">
-                        <a
-                            href={document.file_id ? getDocumentDownloadUrl(document.file_id) : '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-9 px-3 ${isLoading || !document.file_id
-                                ? 'opacity-50 cursor-not-allowed'
-                                : 'text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))]'
-                                }`}
+                        <Button
+                            id={`download-document-${document.document_id}-button`}
+                            variant="ghost"
+                            size="sm"
                             onClick={(e) => {
-                                if (isLoading || !document.file_id) {
-                                    e.preventDefault();
+                                e.stopPropagation();
+                                const isPdfTarget = document.type_name === 'text/plain' ||
+                                                    document.type_name === 'text/markdown' ||
+                                                    (!document.type_name && !document.file_id);
+                                
+                                let downloadUrl = '#';
+                                if (isPdfTarget) {
+                                    downloadUrl = `/api/documents/download/${document.document_id}?format=pdf`;
+                                } else if (document.document_id) {
+                                    downloadUrl = `/api/documents/download/${document.document_id}`;
+                                }
+                                
+                                if (downloadUrl !== '#') {
+                                    window.open(downloadUrl, '_blank');
                                 }
                             }}
+                            disabled={isLoading}
+                            className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] inline-flex items-center"
                         >
                             <Download className="w-4 h-4 mr-2" />
                             Download
-                        </a>
+                        </Button>
                         {showDisassociate && onDisassociate && (
                             <Button
                                 id={`disassociate-document-${document.document_id}-button`}

@@ -7,10 +7,12 @@ import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
 import { fromPath } from 'pdf2pic';
 import sharp from 'sharp';
+import puppeteer from 'puppeteer';
 import { writeFile, unlink, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { CacheFactory } from 'server/src/lib/cache/CacheFactory';
 import Document from 'server/src/lib/models/document';
+import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
 import DocumentAssociation from 'server/src/lib/models/document-association';
 import {
     IDocument,
@@ -18,15 +20,17 @@ import {
     ISharedDocumentType,
     DocumentFilters,
     PreviewResponse,
-    DocumentInput
+    DocumentInput,
+    PaginatedDocumentsResponse
 } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
 import { getStorageConfig } from 'server/src/config/storage';
-import { deleteFile } from '../file-actions/fileActions';
+import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
 import { deleteBlockContent } from './documentBlockContentActions';
+import { DocumentHandlerRegistry } from 'server/src/lib/document-handlers/DocumentHandlerRegistry';
 
 // Add new document
 export async function addDocument(data: DocumentInput) {
@@ -226,208 +230,115 @@ export async function getDocumentByContactNameId(contactNameId: string) {
 }
 
 // Get document preview
-export async function getDocumentPreview(
-  file_id: string
-): Promise<PreviewResponse> {
+async function renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
+  let browser;
   try {
-    const { tenant } = await createTenantKnex();
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width, height });
+    const styledHtml = `
+      <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
+        pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
+        h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
+        p { margin-top: 0; margin-bottom: 1em; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
+        img { max-width: 100%; height: auto; }
+        /* Basic styling for BlockNote generated HTML */
+        .bn-editor table { width: 100%; border-collapse: collapse; }
+        .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
+      </style>
+      <div>${htmlContent}</div>
+    `;
+    await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
+    const imageBuffer = await page.screenshot({ type: 'png' });
+
+    
+    return Buffer.from(imageBuffer);
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}
+
+const IN_APP_TEXT_TYPE_NAMES = ['text', 'text document', 'plain text'];
+const IN_APP_MARKDOWN_TYPE_NAMES = ['markdown', 'markdown document'];
+const IN_APP_BLOCKNOTE_TYPE_NAMES = ['blocknote', 'block note', 'blocknote document', 'application/vnd.blocknote+json'];
+
+
+/**
+ * Generates a preview for a document
+ * Uses the Strategy pattern with document type handlers to handle different document types
+ *
+ * @param identifier The document ID or file ID to generate a preview for
+ * @returns A promise that resolves to a PreviewResponse
+ */
+export async function getDocumentPreview(
+  identifier: string
+): Promise<PreviewResponse> {
+  console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
+  try {
+    const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
+      console.error("[getDocumentPreview] No tenant found");
       throw new Error('No tenant found');
     }
 
-    // Get cache instance for this tenant
-    const cache = CacheFactory.getPreviewCache(tenant);
+    // Check if the identifier is a document ID
+    let document = await Document.get(identifier);
+    console.log(`[getDocumentPreview] Document.get(${identifier}) result: ${document ? 'found' : 'not found'}`);
 
-    // Check if preview exists in cache
-    const cachedPreview = await cache.get(file_id);
-    if (cachedPreview) {
-      // Read the cached preview image
-      const imageBuffer = await sharp(cachedPreview).toBuffer();
-      const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-      return {
-        success: true,
-        previewImage: base64Image,
-        content: 'PDF Document'
-      };
-    }
-
-    const result = await StorageService.downloadFile(file_id);
-    if (!result) {
-      throw new Error('File not found');
-    }
-
-    const { buffer, metadata } = result;
-    const mime = metadata.mime_type.toLowerCase();
-
-    // Handle different file types
-    if (mime === 'application/pdf') {
-      try {
-        // First get basic PDF info
-        const pdfDoc = await PDFDocument.load(buffer);
-        const pageCount = pdfDoc.getPages().length;
-
-        const config = getStorageConfig();
-
-        // Create temp directory for processing
-        const tempDir = join(config.providers[config.defaultProvider!].basePath!, 'pdf-previews');
-
-        // Ensure temp directory exists
-        try {
-          await mkdir(tempDir, { recursive: true });
-        } catch (error) {
-          // Check if error is a NodeJS.ErrnoException and has a code property
-          if (error instanceof Error && 'code' in error && error.code !== 'EEXIST') {
-            throw error;
-          }
-          // Ignore EEXIST error (directory already exists)
-        }
-
-        const tempPdfPath = join(tempDir, `${file_id}.pdf`);
-
-        try {
-          // Write the PDF file
-          await writeFile(tempPdfPath, buffer);
-
-          // Set up pdf2pic options
-          const options = {
-            density: 100,
-            saveFilename: `${file_id}_thumb`,
-            savePath: tempDir,
-            format: "png",
-            width: 600,
-            height: 600,
-            quality: 75,
-            compression: "jpeg",
-            useIMagick: true // Use ImageMagick instead of GraphicsMagick
-          };
-
-          // Convert PDF to image
-          const convert = fromPath(tempPdfPath, options);
-          const pageToConvertAsImage = 1;
-          const result = await convert(pageToConvertAsImage);
-
-          // Read the generated image and optimize it
-          const imageBuffer = await sharp(result.path)
-            .resize(400, 400, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .png({ quality: 80 })
-            .toBuffer();
-
-          // Store in cache
-          await cache.set(file_id, imageBuffer);
-
-          // Convert to base64
-          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
-          // Clean up temp files
-          await Promise.all([
-            unlink(tempPdfPath),
-            unlink(result.path!)
-          ]);
-
-          return {
-            success: true,
-            previewImage: base64Image,
-            pageCount,
-            content: `PDF Document\nPages: ${pageCount}`
-          };
-        } catch (conversionError) {
-          console.error('PDF conversion error:', conversionError);
-          // Clean up temp file if it exists
-          try {
-            await unlink(tempPdfPath);
-          } catch (cleanupError) {
-            console.error('Cleanup error:', cleanupError);
-          }
-          // Fallback to basic info if image conversion fails
-          return {
-            success: true,
-            pageCount,
-            content: `PDF Document\nPages: ${pageCount}\n\nPreview image generation failed.`
-          };
-        }
-      } catch (pdfError) {
-        console.error('PDF parsing error:', pdfError);
-        return {
-          success: false,
-          error: 'Failed to parse PDF document'
-        };
-      }
-    } else if (mime.startsWith('image/')) {
-      try {
-        // Resize image using sharp
-        const imageBuffer = await sharp(buffer)
-          .resize(400, 400, {
-            fit: 'inside',
-            withoutEnlargement: true
-          })
-          .png({ quality: 80 })
-          .toBuffer();
-
-        // Store in cache
-        await cache.set(file_id, imageBuffer);
-
-        // Convert to base64
+    // If document not found, try to treat identifier as a file ID
+    if (!document) {
+      console.log(`[getDocumentPreview] Document not found, treating identifier as file ID: ${identifier}`);
+      
+      // Check cache for file ID
+      const cache = CacheFactory.getPreviewCache(tenant);
+      const cachedPreview = await cache.get(identifier);
+      if (cachedPreview) {
+        console.log(`[getDocumentPreview] Cache hit for file ID: ${identifier}`);
+        const imageBuffer = await sharp(cachedPreview).toBuffer();
         const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-
         return {
           success: true,
           previewImage: base64Image,
-          content: `Image File (${metadata.original_name})`
-        };
-      } catch (imageError) {
-        console.error('Image processing error:', imageError);
-        return {
-          success: false,
-          error: 'Failed to process image file'
+          content: 'Cached Preview'
         };
       }
-    }
- 
-    // Handle markdown files
-    if (mime === 'text/markdown' || metadata.original_name.endsWith('.md')) {
-      try {
-        const markdown = buffer.toString('utf-8');
-        const html = await marked(markdown, { async: true });
-        return { success: true, content: html };
-      } catch (markdownError) {
-        console.error('Markdown parsing error:', markdownError);
-        return {
-          success: false,
-          error: 'Failed to parse markdown document'
-        };
+      
+      // Try to download the file to get metadata
+      const downloadResult = await StorageService.downloadFile(identifier);
+      if (!downloadResult) {
+        console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
+        throw new Error(`File not found in storage for ID: ${identifier}`);
       }
-    }
-
-    // Handle text files
-    if (mime.startsWith('text/') || mime === 'application/json') {
-      try {
-        const text = buffer.toString('utf-8');
-        // For JSON, try to format it
-        if (mime === 'application/json') {
-          const obj = JSON.parse(text);
-          return { success: true, content: JSON.stringify(obj, null, 2) };
-        }
-        return { success: true, content: text };
-      } catch (textError) {
-        console.error('Text parsing error:', textError);
-        return {
-          success: false,
-          error: 'Failed to parse text document'
-        };
-      }
+      
+      // Create a temporary document object with file metadata
+      document = {
+        document_id: identifier,
+        document_name: downloadResult.metadata.original_name || 'Unknown',
+        type_id: null,
+        user_id: '',
+        order_number: 0,
+        created_by: '',
+        tenant,
+        file_id: identifier,
+        mime_type: downloadResult.metadata.mime_type,
+        type_name: downloadResult.metadata.mime_type
+      };
     }
 
-    // For unsupported types
-    return {
-      success: false,
-      error: 'Preview not available for this file type'
-    };
+    // Use the document handler registry to get the appropriate handler
+    const handlerRegistry = DocumentHandlerRegistry.getInstance();
+    return await handlerRegistry.generatePreview(document, tenant, knex);
   } catch (error) {
-    console.error('Preview file error:', error);
+    console.error(`[getDocumentPreview] General error for identifier ${identifier}:`, error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to preview file'
@@ -482,16 +393,72 @@ export async function downloadDocument(file_id: string) {
 }
 
 // Get documents by entity using the new association table
-export async function getDocumentsByEntity(entity_id: string, entity_type: string) {
+export async function getDocumentsByEntity(
+  entity_id: string,
+  entity_type: string,
+  filters?: DocumentFilters,
+  page: number = 1,
+  limit: number = 15
+): Promise<PaginatedDocumentsResponse> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    console.log('Getting documents for entity:', { entity_id, entity_type }); // Debug log
+    console.log('Getting documents for entity:', { entity_id, entity_type, filters, page, limit });
 
-    let query = knex('documents')
+    const offset = (page - 1) * limit;
+
+    // Base query structure, executed sequentially
+    const buildBaseQuery = () => {
+      let query = knex('documents')
+        .join('document_associations', function() {
+          this.on('documents.document_id', '=', 'document_associations.document_id')
+              .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+        })
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+        })
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+        .where('documents.tenant', tenant)
+        .where('document_associations.entity_id', entity_id)
+        .andWhere('document_associations.entity_type', entity_type);
+
+      if (filters) {
+        if (filters.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
+            [`%${filters.searchTerm.toLowerCase()}%`]);
+        }
+        if (filters.uploadedBy) {
+          query = query.where('documents.created_by', filters.uploadedBy);
+        }
+        if (filters.updated_at_start) {
+          query = query.where('documents.updated_at', '>=', filters.updated_at_start);
+        }
+        if (filters.updated_at_end) {
+          const endDate = new Date(filters.updated_at_end);
+          endDate.setDate(endDate.getDate() + 1);
+          query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
+        }
+      }
+      return query;
+    };
+
+    // Execute count query first
+    const countQuery = buildBaseQuery()
+      .countDistinct('documents.document_id as total')
+      .first();
+    const totalResult = await countQuery;
+    const totalCount = totalResult ? Number(totalResult.total) : 0;
+
+    // Execute data query second
+    const documentsQuery = buildBaseQuery()
       .select(
         'documents.*',
         'users.first_name',
@@ -502,34 +469,18 @@ export async function getDocumentsByEntity(entity_id: string, entity_type: strin
           COALESCE(dt.icon, sdt.icon) as type_icon
         `)
       )
-      .join('document_associations', function() {
-        this.on('documents.document_id', '=', 'document_associations.document_id')
-            .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('users', function() {
-        this.on('documents.created_by', '=', 'users.user_id')
-            .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('document_types as dt', function() {
-        this.on('documents.type_id', '=', 'dt.type_id')
-            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
-      .where('documents.tenant', tenant);
+      .orderBy('documents.updated_at', 'desc')
+      .limit(limit)
+      .offset(offset)
+      .distinct('documents.document_id');
 
-      // Get documents directly associated with the entity
-      query = query
-        .where('document_associations.entity_id', entity_id)
-        .andWhere('document_associations.entity_type', entity_type);
+    const documents = await documentsQuery;
 
-    const documents = await query
-      .orderBy('documents.entered_at', 'desc')
-      .distinct('documents.*');
-
-    console.log('Raw documents from database:', documents); // Debug log
+    console.log('Raw documents from database:', documents);
+    console.log('Total count:', totalCount);
 
     // Process the documents
-    const processedDocuments = documents.map((doc): IDocument => {
+    const processedDocuments = documents.map((doc: any): IDocument => {
       const processedDoc = {
         document_id: doc.document_id,
         document_name: doc.document_name,
@@ -549,12 +500,16 @@ export async function getDocumentsByEntity(entity_id: string, entity_type: strin
         entered_at: doc.entered_at,
         updated_at: doc.updated_at
       };
-
-      console.log('Processed document:', processedDoc); // Debug log
+      console.log('Processed document:', processedDoc);
       return processedDoc;
     });
 
-    return processedDocuments;
+    return {
+      documents: processedDocuments,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+    };
   } catch (error) {
     console.error('Error fetching documents by entity:', error);
     throw new Error('Failed to fetch documents');
@@ -562,17 +517,144 @@ export async function getDocumentsByEntity(entity_id: string, entity_type: strin
 }
 
 // Get all documents with optional filtering
-export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocument[]> {
+export async function getAllDocuments(
+  filters?: DocumentFilters,
+  page: number = 1,
+  limit: number = 10
+): Promise<PaginatedDocumentsResponse> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('No tenant found');
     }
 
-    console.log('Getting documents with filters:', filters); // Debug log
+    console.log('Getting documents with filters:', { filters, page, limit });
+    const offset = (page - 1) * limit;
 
-    // Start with a base query for documents
-    let query = knex('documents')
+    // Base query structure, executed sequentially
+    const buildBaseQuery = () => {
+      let query = knex('documents')
+        .where('documents.tenant', tenant);
+
+      query = query
+        .leftJoin('document_types as dt', function() {
+          this.on('documents.type_id', '=', 'dt.type_id')
+              .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
+        })
+        .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id')
+        .leftJoin('users', function() {
+          this.on('documents.created_by', '=', 'users.user_id')
+              .andOn('users.tenant', '=', knex.raw('?', [tenant]));
+        });
+
+      if (filters) {
+        if (filters.searchTerm) {
+          query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
+            [`%${filters.searchTerm.toLowerCase()}%`]);
+        }
+
+        if (filters.type) {
+           if (filters.type === 'application/pdf') {
+            query = query.where(function() {
+              this.where(function() {
+                this.where('dt.type_name', '=', 'application/pdf')
+                    .orWhere('sdt.type_name', '=', 'application/pdf');
+              }).whereNotNull('documents.file_id');
+            });
+          } else if (filters.type === 'image') {
+            query = query.where(function() {
+              this.where(function() {
+                this.where('dt.type_name', 'like', 'image/%')
+                    .orWhere('sdt.type_name', 'like', 'image/%');
+              }).whereNotNull('documents.file_id');
+            });
+          } else if (filters.type === 'text') {
+             query = query.where(function() {
+              this.where('dt.type_name', 'like', 'text/%')
+                  .orWhere('sdt.type_name', 'like', 'text/%')
+                  .orWhere('dt.type_name', '=', 'application/msword')
+                  .orWhere('sdt.type_name', '=', 'application/msword')
+                  .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                  .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                  .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                  .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                  .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                  .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
+                  .orWhereNull('documents.file_id');
+            });
+          } else if (filters.type === 'application') {
+             query = query.where(function() {
+              this.where(function() {
+                this.where(function() {
+                  this.where('dt.type_name', 'like', 'application/%')
+                      .whereNot('dt.type_name', '=', 'application/pdf')
+                      .whereNot('dt.type_name', '=', 'application/msword')
+                      .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                      .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
+                      .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+                }).orWhere(function() {
+                  this.where('sdt.type_name', 'like', 'application/%')
+                      .whereNot('sdt.type_name', '=', 'application/pdf')
+                      .whereNot('sdt.type_name', '=', 'application/msword')
+                      .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
+                      .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
+                      .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
+                });
+             }).whereNotNull('documents.file_id');
+            });
+          } else {
+            query = query.where(function() {
+              this.where('dt.type_name', 'like', `${filters.type}%`)
+                  .orWhere('sdt.type_name', 'like', `${filters.type}%`);
+            });
+          }
+        }
+
+        if (filters.uploadedBy) {
+          query = query.where('documents.created_by', filters.uploadedBy);
+        }
+
+        if (filters.updated_at_start) {
+          query = query.where('documents.updated_at', '>=', filters.updated_at_start);
+        }
+        if (filters.updated_at_end) {
+          const endDate = new Date(filters.updated_at_end);
+          endDate.setDate(endDate.getDate() + 1);
+          query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
+        }
+
+        if (filters.excludeEntityId && filters.excludeEntityType) {
+          query = query.whereNotExists(function() {
+            this.select('*')
+                .from('document_associations')
+                .whereRaw('document_associations.document_id = documents.document_id')
+                .andWhere('document_associations.entity_id', filters.excludeEntityId)
+                .andWhere('document_associations.entity_type', filters.excludeEntityType)
+                .andWhere('document_associations.tenant', tenant);
+          });
+        }
+
+        if (filters.entityType) {
+          query = query
+            .leftJoin('document_associations', function() {
+              this.on('documents.document_id', '=', 'document_associations.document_id')
+                  .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
+            })
+            .where('document_associations.entity_type', filters.entityType);
+        }
+      }
+      return query;
+    };
+
+    // Execute count query first
+    const countQuery = buildBaseQuery()
+      .countDistinct('documents.document_id as total')
+      .first();
+    const totalResult = await countQuery;
+    const totalCount = totalResult ? Number(totalResult.total) : 0;
+
+    // Execute data query second
+    const documentsQuery = buildBaseQuery()
       .select(
         'documents.*',
         'users.first_name',
@@ -583,135 +665,34 @@ export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocum
           COALESCE(dt.icon, sdt.icon) as type_icon
         `)
       )
-      .where('documents.tenant', tenant);
+      .limit(limit)
+      .offset(offset)
+      .distinct('documents.document_id');
+    
+    // Apply sorting based on filters
+    if (filters?.sortBy) {
+      const sortField = filters.sortBy;
+      const sortOrder = filters.sortOrder || 'desc';
       
-    // Add joins based on filters to optimize query performance
-    // Always join with document types since we need type_name and icon
-    query = query
-      // Left join with document_types to get tenant-specific types
-      .leftJoin('document_types as dt', function() {
-        this.on('documents.type_id', '=', 'dt.type_id')
-            .andOn('dt.tenant', '=', knex.raw('?', [tenant]));
-      })
-      // Left join with shared_document_types to get shared types
-      .leftJoin('shared_document_types as sdt', 'documents.shared_type_id', 'sdt.type_id');
-      
-    // Only join with users table if we need user information
-    query = query.leftJoin('users', function() {
-      this.on('documents.created_by', '=', 'users.user_id')
-          .andOn('users.tenant', '=', knex.raw('?', [tenant]));
-    });
-
-    // Apply filters if provided
-    if (filters) {
-      if (filters.searchTerm) {
-        console.log('Applying search term filter:', filters.searchTerm);
-        
-        // Use whereRaw with LOWER function for case-insensitive search
-        // This is more compatible across different database systems
-        query = query.whereRaw('LOWER(documents.document_name) LIKE ?',
-          [`%${filters.searchTerm.toLowerCase()}%`]);
+      // Handle special case for created_by_full_name which is a computed field
+      if (sortField === 'created_by_full_name') {
+        documentsQuery.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+      } else {
+        // For other fields, prefix with table name for clarity
+        documentsQuery.orderBy(`documents.${sortField}`, sortOrder);
       }
-
-      if (filters.type) {
-        // Handle different document type filters
-        if (filters.type === 'application/pdf') {
-          // PDF filter - exact match for PDF and ensure file_id is not null
-          query = query.where(function() {
-            this.where(function() {
-              this.where('dt.type_name', '=', 'application/pdf')
-                  .orWhere('sdt.type_name', '=', 'application/pdf');
-            }).whereNotNull('documents.file_id'); // Exclude block editor documents
-          });
-        } else if (filters.type === 'image') {
-          // Images filter - match any image/* MIME type and ensure file_id is not null
-          query = query.where(function() {
-            this.where(function() {
-              this.where('dt.type_name', 'like', 'image/%')
-                  .orWhere('sdt.type_name', 'like', 'image/%');
-            }).whereNotNull('documents.file_id'); // Exclude block editor documents
-          });
-        } else if (filters.type === 'text') {
-          // Documents filter - match text/* MIME types and block editor documents (file_id is null)
-          query = query.where(function() {
-            this.where('dt.type_name', 'like', 'text/%')
-                .orWhere('sdt.type_name', 'like', 'text/%')
-                // Also include specific document formats
-                .orWhere('dt.type_name', '=', 'application/msword')
-                .orWhere('sdt.type_name', '=', 'application/msword')
-                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                .orWhere('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                .orWhere('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                .orWhere('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                .orWhere('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%')
-                // Include block editor documents (where file_id is null)
-                .orWhereNull('documents.file_id');
-          });
-        } else if (filters.type === 'application') {
-          // Other filter - match application/* MIME types except PDFs and office documents
-          // Also ensure file_id is not null (exclude block editor documents)
-          query = query.where(function() {
-            this.where(function() {
-              this.where(function() {
-                this.where('dt.type_name', 'like', 'application/%')
-                    .whereNot('dt.type_name', '=', 'application/pdf')
-                    .whereNot('dt.type_name', '=', 'application/msword')
-                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .whereNot('dt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .whereNot('dt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-              }).orWhere(function() {
-                this.where('sdt.type_name', 'like', 'application/%')
-                    .whereNot('sdt.type_name', '=', 'application/pdf')
-                    .whereNot('sdt.type_name', '=', 'application/msword')
-                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.wordprocessing%')
-                    .whereNot('sdt.type_name', 'like', 'application/vnd.ms-excel%')
-                    .whereNot('sdt.type_name', 'like', 'application/vnd.openxmlformats-officedocument.spreadsheet%');
-              });
-            }).whereNotNull('documents.file_id'); // Exclude block editor documents
-          });
-        } else {
-          // Fallback to the original behavior for any other filter
-          query = query.where(function() {
-            this.where('dt.type_name', 'like', `${filters.type}%`)
-                .orWhere('sdt.type_name', 'like', `${filters.type}%`);
-          });
-        }
-      }
-
-      // Exclude documents that are already associated with the specified entity
-      if (filters.excludeEntityId && filters.excludeEntityType) {
-        query = query.whereNotExists(function() {
-          this.select('*')
-              .from('document_associations')
-              .whereRaw('document_associations.document_id = documents.document_id')
-              .andWhere('document_associations.entity_id', filters.excludeEntityId)
-              .andWhere('document_associations.entity_type', filters.excludeEntityType)
-              .andWhere('document_associations.tenant', tenant);
-        });
-      }
-
-      // Only apply entity type filter if specified
-      if (filters.entityType) {
-        query = query
-          .leftJoin('document_associations', function() {
-            this.on('documents.document_id', '=', 'document_associations.document_id')
-                .andOn('document_associations.tenant', '=', knex.raw('?', [tenant]));
-          })
-          .where('document_associations.entity_type', filters.entityType);
-      }
+    } else {
+      // Default sort by updated_at desc if no sort specified
+      documentsQuery.orderBy('documents.updated_at', 'desc');
     }
 
-    // Get the documents with performance optimizations
-    const documents = await query
-      .orderBy('documents.entered_at', 'desc')
-      .distinct('documents.*')
-      .limit(1000); // Add reasonable limit to prevent excessive data retrieval
+    const documents = await documentsQuery;
 
-    console.log('Raw documents from database:', documents); // Debug log
+    console.log('Raw documents from database:', documents);
+    console.log('Total count:', totalCount);
 
     // Process the documents
-    const processedDocuments = documents.map((doc): IDocument => {
+    const processedDocuments = documents.map((doc: any): IDocument => {
       const processedDoc = {
         document_id: doc.document_id,
         document_name: doc.document_name,
@@ -731,12 +712,16 @@ export async function getAllDocuments(filters?: DocumentFilters): Promise<IDocum
         entered_at: doc.entered_at,
         updated_at: doc.updated_at
       };
-
-      console.log('Processed document:', processedDoc); // Debug log
+      console.log('Processed document:', processedDoc);
       return processedDoc;
     });
 
-    return processedDocuments;
+    return {
+      documents: processedDocuments,
+      totalCount,
+      currentPage: page,
+      totalPages: Math.ceil(totalCount / limit),
+    };
   } catch (error) {
     console.error('Error fetching documents:', error);
     throw error;
@@ -1059,5 +1044,24 @@ export async function getImageUrl(file_id: string): Promise<string | null> {
   } catch (error) {
     console.error(`getImageUrl: Error generating URL for file_id ${file_id}:`, error);
     return null;
+  }
+}
+
+export async function getDistinctEntityTypes(): Promise<string[]> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('No tenant found');
+    }
+
+    const result = await knex('document_associations')
+      .distinct('entity_type')
+      .where('tenant', tenant)
+      .orderBy('entity_type', 'asc');
+
+    return result.map((row: { entity_type: string }) => row.entity_type);
+  } catch (error) {
+    console.error('Error fetching distinct entity types:', error);
+    throw new Error('Failed to fetch distinct entity types');
   }
 }

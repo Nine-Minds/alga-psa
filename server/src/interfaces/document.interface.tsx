@@ -3,14 +3,14 @@ import { TenantEntity } from ".";
 export interface IDocument extends TenantEntity {
     document_id: string;
     document_name: string;
-    type_id: string | null;  // Updated to allow null for shared document types
-    shared_type_id?: string;  // New field for shared document types
+    type_id: string | null;
+    shared_type_id?: string;
     user_id: string;
     contact_name_id?: string;
     company_id?: string;
     ticket_id?: string;
     schedule_id?: string;
-    asset_id?: string;  // Added for asset document associations
+    asset_id?: string;
     order_number: number;
     created_by: string;
     edited_by?: string;
@@ -18,15 +18,15 @@ export interface IDocument extends TenantEntity {
     updated_at?: Date;
 
     // Storage-related fields
-    file_id?: string;  // Reference to external_files table
-    storage_path?: string;  // Path within the storage provider
-    mime_type?: string;  // MIME type of the stored file
-    file_size?: number;  // Size of the file in bytes
+    file_id?: string;
+    storage_path?: string;
+    mime_type?: string;
+    file_size?: number;
 
     // Additional fields (not in the database)
     created_by_full_name?: string;
-    type_name?: string;  // Document type name from document_types or shared_document_types
-    type_icon?: string;  // Document type icon from document_types or shared_document_types
+    type_name?: string;
+    type_icon?: string;
 }
 
 export interface IDocumentType extends TenantEntity {
@@ -67,8 +67,12 @@ export interface DocumentFilters {
     entityType?: string;
     uploadedBy?: string;
     searchTerm?: string;
-    excludeEntityId?: string;  // Added to exclude documents associated with a specific entity
-    excludeEntityType?: string;  // Added to specify the entity type to exclude
+    excludeEntityId?: string;
+    excludeEntityType?: string;
+    updated_at_start?: string;
+    updated_at_end?: string;
+    sortBy?: 'document_name' | 'updated_at' | 'file_size' | 'created_by_full_name';
+    sortOrder?: 'asc' | 'desc';
 }
 
 // Document preview response
@@ -98,4 +102,10 @@ export type DocumentContentInput = Omit<IDocumentContent, 'id'>;
 export interface UpdateDocumentContentInput {
     content: string;
     updated_by_id: string;
+}
+export interface PaginatedDocumentsResponse {
+  documents: IDocument[];
+  totalCount: number;
+  currentPage: number;
+  totalPages: number;
 }
