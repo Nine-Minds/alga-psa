@@ -12,24 +12,27 @@ interface WorkflowVersionsDialogProps {
   workflowId: string;
   currentVersion: string;
   onVersionChange?: () => void;
+  isOpen: boolean; // Add isOpen prop
+  onClose: () => void; // Add onClose prop
 }
 
-export default function WorkflowVersionsDialog({ 
-  workflowId, 
+export default function WorkflowVersionsDialog({
+  workflowId,
   currentVersion,
-  onVersionChange 
+  onVersionChange,
+  isOpen, // Destructure isOpen
+  onClose // Destructure onClose
 }: WorkflowVersionsDialogProps) {
-  const [open, setOpen] = useState(false);
   const [versions, setVersions] = useState<WorkflowVersionData[]>([]);
   const [loading, setLoading] = useState(false);
   const [activating, setActivating] = useState<string | null>(null);
 
   // Load versions when dialog opens
   useEffect(() => {
-    if (open) {
+    if (isOpen) { // Use isOpen prop
       loadVersions();
     }
-  }, [open, workflowId]);
+  }, [isOpen, workflowId]); // Depend on isOpen
 
   // Load workflow versions
   const loadVersions = async () => {
@@ -74,7 +77,7 @@ export default function WorkflowVersionsDialog({
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => setOpen(false)}>
+    <Dialog isOpen={isOpen} onClose={onClose}>
       <DialogTrigger asChild>
         <Button
           id="workflow-versions-button"

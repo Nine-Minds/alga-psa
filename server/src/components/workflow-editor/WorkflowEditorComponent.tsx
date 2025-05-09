@@ -72,6 +72,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [testWarnings, setTestWarnings] = useState<string[]>([]);
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
+  const [isVersionsDialogOpen, setIsVersionsDialogOpen] = useState<boolean>(false);
   const [savedWorkflowId, setSavedWorkflowId] = useState<string | undefined>(undefined);
 
   // Load workflow data if in edit mode
@@ -228,10 +229,21 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
           </div>
           <div className="flex items-center space-x-2">
             {isEditMode && workflowId && (
-              <WorkflowVersionsDialog
-                workflowId={workflowId}
-                currentVersion={version}
-                onVersionChange={async () => {
+              <>
+                <Button
+                  id="view-versions-button"
+                  variant="outline"
+                  onClick={() => setIsVersionsDialogOpen(true)}
+                >
+                  <Tag className="h-4 w-4 mr-2" />
+                  Versions
+                </Button>
+                <WorkflowVersionsDialog
+                  isOpen={isVersionsDialogOpen}
+                  onClose={() => setIsVersionsDialogOpen(false)}
+                  workflowId={workflowId}
+                  currentVersion={version}
+                  onVersionChange={async () => {
                   try {
                     const workflow = await getWorkflow(workflowId);
                     
@@ -250,6 +262,7 @@ export default function WorkflowEditorComponent({ workflowId, onBack }: Workflow
                   }
                 }}
               />
+              </>
             )}
             {!isEditMode && (
               <Button

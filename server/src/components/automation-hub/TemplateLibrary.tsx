@@ -17,6 +17,7 @@ export default function TemplateLibrary() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [templatesDisabled, setTemplatesDisabled] = useState(true); // Disable template cards initially
   
   // Template preview state
   const [previewTemplate, setPreviewTemplate] = useState<TemplateData | null>(null);
@@ -154,41 +155,50 @@ export default function TemplateLibrary() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTemplates.map((template) => (
-              <Card key={template.template_id} className="p-4 border border-gray-200">
-                <h3 className="text-lg font-medium mb-2">{template.name}</h3>
-                <p className="text-gray-600 text-sm mb-3">{template.description}</p>
-                {template.category && (
-                  <div className="flex items-center mb-3">
-                    <span className="text-xs font-medium bg-primary-100 text-primary-800 rounded-full px-2 py-1">
-                      {template.category}
-                    </span>
+              <Card key={template.template_id} className={`p-4 border border-gray-200 relative ${templatesDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                {templatesDisabled && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10 rounded-md">
+                    <p className="text-lg font-semibold text-gray-800">Coming Soon</p>
                   </div>
                 )}
-                {template.tags && template.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-4">
-                    {template.tags.map((tag) => (
-                      <span key={tag} className="text-xs bg-gray-100 text-gray-800 rounded-full px-2 py-0.5">
-                        {tag}
+                <div className={`${templatesDisabled ? 'pointer-events-none' : ''}`}>
+                  <h3 className="text-lg font-medium mb-2">{template.name}</h3>
+                  <p className="text-gray-600 text-sm mb-3">{template.description}</p>
+                  {template.category && (
+                    <div className="flex items-center mb-3">
+                      <span className="text-xs font-medium bg-primary-100 text-primary-800 rounded-full px-2 py-1">
+                        {template.category}
                       </span>
-                    ))}
+                    </div>
+                  )}
+                  {template.tags && template.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-4">
+                      {template.tags.map((tag) => (
+                        <span key={tag} className="text-xs bg-gray-100 text-gray-800 rounded-full px-2 py-0.5">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex space-x-2 mt-auto">
+                    <Button
+                      id={`preview-${template.template_id}-button`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePreview(template)}
+                      disabled={templatesDisabled} // Disable button
+                    >
+                      Preview
+                    </Button>
+                    <Button
+                      id={`use-${template.template_id}-button`}
+                      size="sm"
+                      onClick={() => handleUseTemplate(template)}
+                      disabled={templatesDisabled} // Disable button
+                    >
+                      Use Template
+                    </Button>
                   </div>
-                )}
-                <div className="flex space-x-2 mt-auto">
-                  <Button
-                    id={`preview-${template.template_id}-button`}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePreview(template)}
-                  >
-                    Preview
-                  </Button>
-                  <Button
-                    id={`use-${template.template_id}-button`}
-                    size="sm"
-                    onClick={() => handleUseTemplate(template)}
-                  >
-                    Use Template
-                  </Button>
                 </div>
               </Card>
             ))}
