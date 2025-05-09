@@ -732,7 +732,8 @@ ${action.parameters.map((param: ActionParameterDefinition) => `    ${param.name}
                 horizontal: "auto",
                 verticalScrollbarSize: 12,
                 horizontalScrollbarSize: 12
-              }
+              },
+              theme: "vs-dark"
             }}
             beforeMount={(monaco) => {
               // Configure Monaco to treat all files as TypeScript
