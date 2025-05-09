@@ -311,11 +311,15 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredWorkflows.map((workflow) => (
-                    <tr key={workflow.id} className="hover:bg-gray-50">
+                    <tr
+                      key={workflow.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
-                            <div className="text-sm font-medium text-gray-900 hover:text-blue-600 hover:underline cursor-pointer" onClick={() => !workflow.isSystemManaged && handleEditWorkflow(workflow.id)}>
+                            <div className="text-sm font-medium text-gray-900">
                               {workflow.name} {workflow.isSystemManaged && (
                                <Badge variant="secondary" className="ml-2">
                                  System
