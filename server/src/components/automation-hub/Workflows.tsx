@@ -28,6 +28,7 @@ import {
 import { toast } from 'react-hot-toast';
 import WorkflowEditorComponent from 'server/src/components/workflow-editor/WorkflowEditorComponent';
 import TestWorkflowModal from 'server/src/components/workflow-editor/TestWorkflowModal';
+import WorkflowVersionsDialog from 'server/src/components/workflow-editor/WorkflowVersionsDialog';
 
 
 // Type for workflow data with events
@@ -66,6 +67,7 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [isTestModalOpen, setIsTestModalOpen] = useState<boolean>(false);
   const [workflowToTest, setWorkflowToTest] = useState<WorkflowWithEvents | null>(null);
+  const [selectedWorkflowForVersions, setSelectedWorkflowForVersions] = useState<WorkflowWithEvents | null>(null);
   
   // Handle workflowId if provided
   useEffect(() => {
@@ -104,12 +106,14 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
     }
   };
   
-  // Filter workflows based on search term
-  const filteredWorkflows = workflows.filter(workflow =>
-    workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Filter workflows based on showInactive and search term
+  const filteredWorkflows = workflows
+    .filter(workflow => showInactive || workflow.isActive) // Filter by active status first
+    .filter(workflow => // Then filter by search term
+      workflow.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      workflow.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
   // Handle creating a new workflow
   const handleCreateWorkflow = () => {
@@ -124,6 +128,12 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
 
     setSelectedWorkflowId(id);
     setShowEditor(true);
+  };
+
+  // Handle managing workflow versions
+  const handleManageVersions = (workflow: WorkflowWithEvents) => {
+    if (workflow.isSystemManaged) return; // Don't allow managing versions for system workflows
+    setSelectedWorkflowForVersions(workflow);
   };
 
   // Handle going back to the workflow list
@@ -406,7 +416,10 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               id={`versions-${workflow.id}-menu-item`}
-                              onClick={() => handleEditWorkflow(workflow.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleManageVersions(workflow);
+                              }}
                               disabled={workflow.isSystemManaged}
                             >
                               <History className="h-4 w-4 mr-2" />
@@ -482,6 +495,15 @@ export default function Workflows({ workflowId }: WorkflowsProps) {
           onClose={() => setIsTestModalOpen(false)}
           workflowCode={workflowToTest.code}
           workflowId={workflowToTest.id}
+        />
+      )}
+      {selectedWorkflowForVersions && (
+        <WorkflowVersionsDialog
+          isOpen={selectedWorkflowForVersions !== null}
+          workflowId={selectedWorkflowForVersions.id}
+          currentVersion={selectedWorkflowForVersions.version}
+          onClose={() => setSelectedWorkflowForVersions(null)}
+          onVersionChange={loadWorkflows}
         />
       )}
     </div>

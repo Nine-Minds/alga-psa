@@ -493,7 +493,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
  * @param includeInactive Whether to include inactive workflows (default: false)
  * @returns Array of workflow data
  */
-export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> { // Updated return type
+export async function getAllWorkflows(includeInactive: boolean = false): Promise<WorkflowDataWithSystemFlag[]> {
   let knexInstance;
   try {
     console.log(`getAllWorkflows called with includeInactive=${includeInactive}`);
@@ -501,70 +501,74 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
     // Create Knex instance
     const { knex, tenant } = await createTenantKnex();
     knexInstance = knex;
-    
-    // Call the updated model function which handles tenant/system union
-    // Note: The model's getAll currently only fetches active workflows.
-    // We might need to adjust the model or add a parameter if includeInactive needs to apply to system workflows too.
-    // For now, assume includeInactive only applies to tenant workflows as implemented in the model.
-    const workflowsData = await WorkflowRegistrationModel.getAll(knex, tenant || ''); // Pass tenant
 
-    // Filter based on includeInactive AFTER fetching (since model doesn't support it yet for combined results)
-    const filteredWorkflowsData = includeInactive
-      ? workflowsData
-      : workflowsData.filter(w => w.status === 'active' || w.isSystemManaged); // Keep all system workflows regardless of status? Or filter them too? Assuming keep all system ones for now.
-
-    console.log(`Fetched ${workflowsData.length} total, filtered to ${filteredWorkflowsData.length} based on includeInactive=${includeInactive}`);
-
-
-    const workflowsData_old = await knex('workflow_registrations as wr')
-      .join(
-        'workflow_registration_versions as wrv', // This only gets tenant workflows
-        function() {
-          this.on('wrv.registration_id', '=', 'wr.registration_id')
-              .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
-              .andOn('wrv.is_current', '=', knex.raw('true'));
-        }
-      )
-      .where(function() {
-        this.where('wr.tenant_id', tenant);
-        
-        // Only show active workflows unless includeInactive is true
-        if (!includeInactive) {
-          console.log('Filtering to show only active workflows');
-          this.andWhere('wr.status', 'active');
-        } else {
-          console.log('Showing all workflows (active and inactive)');
-        }
+    // Fetch tenant workflows
+    let tenantWorkflowsQuery = knex('workflow_registrations as wr')
+      .join('workflow_registration_versions as wrv', function() {
+        this.on('wrv.registration_id', '=', 'wr.registration_id')
+            .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
+            .andOn('wrv.is_current', '=', knex.raw('true'));
       })
+      .where('wr.tenant_id', tenant)
       .select(
         'wr.registration_id',
         'wr.name',
         'wr.description',
+        'wr.category',
         'wr.tags',
         'wr.status',
+        'wr.source_template_id',
+        'wr.created_by',
+        'wr.created_at',
+        'wr.updated_at',
         'wrv.version',
-        'wrv.code'
-      )
-      .orderBy('wr.created_at', 'desc');
-    
-    // Fetch codes for all current versions in one go
-    const registrationIds = filteredWorkflowsData.map(w => w.registration_id);
-    const currentVersions = await knex('workflow_registration_versions')
-      .whereIn('registration_id', registrationIds)
-      .andWhere({
-        tenant_id: tenant || '', // Ensure tenant isolation
-        is_current: true,
+        'wrv.code',
+        knex.raw('false as "isSystemManaged"') // Explicitly mark as not system managed
+      );
+
+    if (!includeInactive) {
+      console.log('Filtering tenant workflows to show only active');
+      tenantWorkflowsQuery = tenantWorkflowsQuery.andWhere('wr.status', 'active');
+    }
+
+    const tenantWorkflows = await tenantWorkflowsQuery;
+
+    // Fetch system workflows
+    let systemWorkflowsQuery = knex('system_workflow_registrations as swr')
+      .join('system_workflow_registration_versions as swrv', function() {
+        this.on('swrv.registration_id', '=', 'swr.registration_id')
+            .andOn('swrv.is_current', '=', knex.raw('true'));
       })
-      .select('registration_id', 'code');
+      .select(
+        'swr.registration_id',
+        'swr.name',
+        'swr.description',
+        'swr.category',
+        'swr.tags',
+        'swr.status',
+        'swr.source_template_id',
+        'swr.created_by',
+        'swr.created_at',
+        'swr.updated_at',
+        'swrv.version',
+        'swrv.code',
+        knex.raw('true as "isSystemManaged"') // Explicitly mark as system managed
+      );
 
-    // Create a map for quick lookup: registration_id -> code
-    const codeMap = new Map<string, string>();
-    currentVersions.forEach(v => {
-      codeMap.set(v.registration_id, v.code);
-    });
+    if (!includeInactive) {
+      console.log('Filtering system workflows to show only active');
+      systemWorkflowsQuery = systemWorkflowsQuery.andWhere('swr.status', 'active');
+    }
 
-    // Process the results from the model function
-    const workflows: WorkflowDataWithSystemFlag[] = filteredWorkflowsData.map(data => { // Use filtered data
+    const systemWorkflows = await systemWorkflowsQuery;
+
+    // Combine and process the results
+    const allWorkflowsData = [...tenantWorkflows, ...systemWorkflows];
+
+    console.log(`Fetched ${tenantWorkflows.length} tenant and ${systemWorkflows.length} system workflows. Total: ${allWorkflowsData.length}`);
+
+    // Map to the desired output format
+    const workflows: WorkflowDataWithSystemFlag[] = allWorkflowsData.map(data => {
       // Safely parse tags
       let parsedTags: string[] = [];
       if (Array.isArray(data.tags)) {
@@ -578,27 +582,21 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
         }
       }
 
-      // Get code from the map, default to empty string if not found
-      const workflowCode = codeMap.get(data.registration_id) || '';
-
       return {
-        // Map all fields from WorkflowRegistrationWithSystemFlag
-        registration_id: data.registration_id, // Use registration_id as the primary ID
-        id: data.registration_id, // Keep 'id' for compatibility if needed, but prefer registration_id
+        registration_id: data.registration_id,
+        id: data.registration_id,
         name: data.name,
         description: data.description,
         version: data.version,
-        tags: parsedTags, // Use the safely parsed tags
-        isActive: data.status === 'active', // Status from registration table
-        code: workflowCode, // Use code from the version table map
-        // Add other fields from the model result
+        tags: parsedTags,
+        isActive: data.status === 'active',
+        code: data.code,
         category: data.category,
         status: data.status,
         source_template_id: data.source_template_id,
         created_by: data.created_by,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        // Pass the system flag
         isSystemManaged: data.isSystemManaged,
       };
     });
@@ -607,12 +605,9 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
     return workflows;
   } catch (error) {
     logger.error("Error getting all workflows:", error);
-    // Re-throw the error to ensure the function signature is met
-    // and the error propagates correctly.
     throw error;
   } finally {
-    // Connection release is handled by the pool, no explicit destroy needed here
-    // if (knexInstance) { await knexInstance.destroy(); } // Avoid destroying pooled connections
+    // Connection release is handled by the pool
   }
 }
 

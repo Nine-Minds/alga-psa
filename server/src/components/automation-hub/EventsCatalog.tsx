@@ -340,7 +340,10 @@ export default function EventsCatalog() {
                             >
                               {attachment.is_active ? 'Active' : 'Inactive'}
                             </Badge>
-                            <span className="text-sm">{attachment.workflow_id}</span>
+                            <div className="text-sm">
+                              {attachment.workflow_name} ({attachment.workflow_version})<br />
+                              Id: {attachment.workflow_id}
+                            </div>
                             {attachment.isSystemManaged && ( // Display badge if workflow is system managed
                               <Badge variant="secondary" className="ml-2">System</Badge>
                             )}
