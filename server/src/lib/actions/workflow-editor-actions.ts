@@ -433,7 +433,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
     const { knex } = await createTenantKnex();
     
     // Use the model to get the workflow, which handles system/tenant logic
-    const result = await WorkflowRegistrationModel.getById(knex, id, user.tenant);
+    const result = await WorkflowRegistrationModel.getById(knex, user.tenant, id);
     
     if (!result) {
       throw new Error(`Workflow with ID ${id} not found`);
@@ -543,7 +543,7 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
         'wr.tags',
         'wr.status',
         'wrv.version',
-        'wrv.definition'
+        'wrv.code'
       )
       .orderBy('wr.created_at', 'desc');
     
