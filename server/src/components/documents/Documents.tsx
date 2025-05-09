@@ -7,6 +7,7 @@ import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
+import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
 import { Button } from 'server/src/components/ui/Button';
 import Drawer from 'server/src/components/ui/Drawer';
 import { Input } from 'server/src/components/ui/Input';
@@ -386,9 +387,7 @@ const Documents = ({
         )}
 
         {isLoading ? (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
-          </div>
+          <DocumentsGridSkeleton gridColumns={gridColumns} />
         ) : documentsToDisplay.length > 0 ? (
           <div className={`grid ${gridColumnsClass} gap-4`}>
             {documentsToDisplay.map((document) => (

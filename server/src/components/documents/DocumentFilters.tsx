@@ -7,6 +7,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { IUserWithRoles } from 'server/src/interfaces/index';
 import { Card } from 'server/src/components/ui/Card';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 
 interface DocumentFiltersProps {
   filters: DocumentFilters;
@@ -22,6 +23,21 @@ const documentTypes: SelectOption[] = [
   { value: 'image', label: 'Images' },
   { value: 'text', label: 'Documents' },
   { value: 'application', label: 'Other' }
+];
+
+// Define default sort orders for each field
+const defaultSortOrders: Record<string, 'asc' | 'desc'> = {
+  'updated_at': 'desc',      // Newest first
+  'document_name': 'asc',    // A-Z
+  'file_size': 'desc',       // Largest first
+  'created_by_full_name': 'asc'  // A-Z
+};
+
+const sortOptions: SelectOption[] = [
+  { value: 'updated_at', label: 'Date' },
+  { value: 'document_name', label: 'Document name' },
+  { value: 'file_size', label: 'File size' },
+  { value: 'created_by_full_name', label: 'Created By' }
 ];
 
 export default function DocumentFilters({
@@ -125,6 +141,54 @@ export default function DocumentFilters({
             placeholder="Select end date"
             className="w-full"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Sort By
+          </label>
+          <div className="flex items-center space-x-2">
+            <CustomSelect
+              options={sortOptions}
+              value={filters.sortBy || 'updated_at'}
+              onValueChange={(value: string) => {
+                const sortField = value as DocumentFilters['sortBy'];
+                const defaultOrder = sortField ? defaultSortOrders[sortField] : 'desc';
+                
+                onFiltersChange({
+                  ...filters,
+                  sortBy: sortField,
+                  sortOrder: defaultOrder
+                });
+              }}
+              className="flex-1"
+            />
+            <button
+              onClick={() => {
+                const newOrder = filters.sortOrder === 'asc' ? 'desc' : 'asc';
+                onFiltersChange({
+                  ...filters,
+                  sortOrder: newOrder
+                });
+              }}
+              className="p-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              title={
+                filters.sortOrder === 'asc'
+                  ? `Show ${filters.sortBy === 'document_name' ? 'Z-A' :
+                      filters.sortBy === 'updated_at' ? 'Newest First' :
+                      filters.sortBy === 'file_size' ? 'Largest First' : 'Z-A'}`
+                  : `Show ${filters.sortBy === 'document_name' ? 'A-Z' :
+                      filters.sortBy === 'updated_at' ? 'Oldest First' :
+                      filters.sortBy === 'file_size' ? 'Smallest First' : 'A-Z'}`
+              }
+            >
+              {filters.sortOrder === 'asc' ? (
+                <ArrowUp className="h-4 w-4" />
+              ) : (
+                <ArrowDown className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         </div>
 
         <div className="pt-4">

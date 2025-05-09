@@ -11,6 +11,7 @@ import { IUserWithRoles } from 'server/src/interfaces/index';
 import { toast } from 'react-hot-toast';
 import DocumentsPagination from 'server/src/components/documents/DocumentsPagination';
 import DocumentFilters from 'server/src/components/documents/DocumentFilters';
+import DocumentsPageSkeleton from 'server/src/components/documents/DocumentsPageSkeleton';
 import { usePagination } from 'server/src/hooks/usePagination';
 import { useDocuments } from 'server/src/hooks/useDocuments';
 
@@ -26,7 +27,9 @@ export default function DocumentsPage() {
     searchTerm: '',
     uploadedBy: '',
     updated_at_start: '',
-    updated_at_end: ''
+    updated_at_end: '',
+    sortBy: 'updated_at',
+    sortOrder: 'desc'
   });
 
   const pageSize = 15;
@@ -64,12 +67,14 @@ export default function DocumentsPage() {
   };
 
   const handleClearFilters = () => {
-    const clearedFilters = {
+    const clearedFilters: DocumentFilterType = {
       entityType: '',
       searchTerm: '',
       uploadedBy: '',
       updated_at_start: '',
-      updated_at_end: ''
+      updated_at_end: '',
+      sortBy: 'updated_at',
+      sortOrder: 'desc'
     };
     setFilterInputs(clearedFilters);
   };
@@ -143,13 +148,7 @@ export default function DocumentsPage() {
 
 
   if (!initialized) {
-    return (
-      <div className="p-6">
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
-        </div>
-      </div>
-    );
+    return <DocumentsPageSkeleton />;
   }
 
   const displayError = error || documentsError;

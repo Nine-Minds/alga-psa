@@ -665,10 +665,26 @@ export async function getAllDocuments(
           COALESCE(dt.icon, sdt.icon) as type_icon
         `)
       )
-      .orderBy('documents.entered_at', 'desc')
       .limit(limit)
       .offset(offset)
       .distinct('documents.document_id');
+    
+    // Apply sorting based on filters
+    if (filters?.sortBy) {
+      const sortField = filters.sortBy;
+      const sortOrder = filters.sortOrder || 'desc';
+      
+      // Handle special case for created_by_full_name which is a computed field
+      if (sortField === 'created_by_full_name') {
+        documentsQuery.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+      } else {
+        // For other fields, prefix with table name for clarity
+        documentsQuery.orderBy(`documents.${sortField}`, sortOrder);
+      }
+    } else {
+      // Default sort by updated_at desc if no sort specified
+      documentsQuery.orderBy('documents.updated_at', 'desc');
+    }
 
     const documents = await documentsQuery;
 

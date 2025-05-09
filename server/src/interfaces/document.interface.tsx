@@ -71,6 +71,8 @@ export interface DocumentFilters {
     excludeEntityType?: string;
     updated_at_start?: string;
     updated_at_end?: string;
+    sortBy?: 'document_name' | 'updated_at' | 'file_size' | 'created_by_full_name';
+    sortOrder?: 'asc' | 'desc';
 }
 
 // Document preview response
