@@ -3,9 +3,8 @@
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { getEligibleBillingPlansForUI, getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { getCompanyById } from 'server/src/lib/actions/companyActions';
-// import { fetchDefaultCompanyTaxRateInfoForWorkItem } from 'server/src/lib/actions/timeEntryActions'; // Removed - Tax determined by service
 import { formatISO, parseISO, addMinutes } from 'date-fns';
-import { IService } from 'server/src/interfaces/billing.interfaces'; // Added IService import
+import { IService } from 'server/src/interfaces/billing.interfaces';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -78,14 +77,6 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     }))
   }, []);
 
-  // Removed taxRegionOptions
-
-
-
-
-
-
-
   const selectedService = useMemo(() =>
     services.find(s => s.id === entry?.service_id),
     [services, entry?.service_id] // Added services dependency
@@ -96,16 +87,13 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     endTime?: string;
     duration?: string;
     service?: string;
-    // taxRegion?: string; // Removed
     billingPlan?: string;
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  // Use a more complete type that includes dates
   const [eligibleBillingPlans, setEligibleBillingPlans] = useState<EligiblePlanUI[]>([]);
   const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
   const [companyId, setCompanyId] = useState<string | null>(null);
-  // const [taxRegionManuallySet, setTaxRegionManuallySet] = useState(false); // Removed
   const prevServiceIdRef = useRef<string | undefined | null>();
 
   const validateTimes = useCallback(() => {
@@ -312,12 +300,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-
-    // Dependencies: service_id, companyId trigger the effect.
-    // entry.start_time is needed for plan filtering.
-    // entry.billing_plan_id is needed for comparison/default logic.
-    // index and onUpdateEntry are needed to update the state.
-  }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]); // Removed tax/service dependencies
+  }, [entry?.service_id, companyId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -367,14 +350,16 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
 
 
-  const handleSave = useCallback((index: number) => {
+  const handleSave = useCallback(() => {
     setShowErrors(true);
     if (!validateTimes()) {
       return;
     }
 
-    // Ensure we have required fields
-    if (!entry?.service_id) {
+    const isAdHoc = entry?.work_item_type === 'ad_hoc';
+
+    // Ensure we have required fields (skip for ad_hoc)
+    if (!isAdHoc && !entry?.service_id) {
       setValidationErrors(prev => ({
         ...prev,
         service: 'Service is required'
@@ -382,16 +367,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    // Removed tax region validation
-    // Removed validation check related to is_taxable and tax_region
-    // Taxability is now derived from tax_rate_id
-    //     taxRegion: 'Tax region is required for taxable services'
-    //   }));
-    //   return;
-    // }
 
-    // Validate billing plan selection if multiple plans are available
-    if (showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
+    // Validate billing plan selection if multiple plans are available (skip for ad_hoc)
+    if (!isAdHoc && showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
       setValidationErrors(prev => ({
         ...prev,
         billingPlan: 'Billing plan is required when multiple plans are available'
@@ -404,7 +382,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes]);
+  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showBillingPlanSelector, eligibleBillingPlans.length, entry?.billing_plan_id, index]);
 
   const handleDurationChange = useCallback((type: 'hours' | 'minutes', value: number) => {
     if (!entry) return;
@@ -484,24 +462,6 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               <span className="text-sm text-red-500">{validationErrors.service}</span>
             )}
           </div>
-          {/* Tax Region Selector and Label Removed */}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -560,8 +520,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                   ? "No eligible plans"
                   : eligibleBillingPlans.length === 1
                     ? `Using ${eligibleBillingPlans[0].plan_name}`
-                    : "Select a billing plan"}
-            />
+                      : "Select a billing plan"}
+              />
 
             {eligibleBillingPlans.length > 1 && (
               <div className="mt-1 text-xs text-gray-600">
@@ -694,7 +654,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
           )}
           <Button
             id={`${id}-save-entry-${index}-btn`}
-            onClick={() => handleSave(index)}
+            onClick={handleSave}
             variant="default"
             size="default"
             className="w-32"

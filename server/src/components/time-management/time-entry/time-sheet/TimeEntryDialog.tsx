@@ -173,45 +173,51 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   
     const entry = entries[index];
     console.log('Entry to save:', entry);
-    
-    // Validate required fields
-    if (!entry.service_id) {
-      toast.error('Please select a service');
-      return;
+
+    const isAdHoc = workItem.type === 'ad_hoc';
+
+    // Skip service validation for ad_hoc items
+    if (!isAdHoc) {
+      // Validate required fields
+      if (!entry.service_id) {
+        toast.error('Please select a service');
+        return;
+      }
+
+      const selectedService = services.find(s => s.id === entry.service_id);
+      if (!selectedService) {
+        toast.error('Invalid service selected');
+        return;
+      }
+
+      if (selectedService.tax_rate_id != null && !entry.tax_region) {
+        toast.error('Please select a tax region for taxable services');
+        return;
+      }
     }
-  
-    const selectedService = services.find(s => s.id === entry.service_id);
-    if (!selectedService) {
-      toast.error('Invalid service selected');
-      return;
-    }
-  
-    if (selectedService.tax_rate_id != null && !entry.tax_region) {
-      toast.error('Please select a tax region for taxable services');
-      return;
-    }
-  
+
     if (!validateTimeEntry(entry)) {
       toast.error('Please check the time entry values');
       return;
     }
-  
+
     const loadingToast = toast.loading('Saving time entry...');
-    
+
     try {
       const { isNew, isDirty, tempId, ...cleanedEntry } = entry;
-  
+
       // Calculate actual duration for validation purposes
       const actualDuration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
-      
-      // Force billable duration to be the actual duration unless explicitly set to 0
-      const durationToSend = entry.billable_duration === 0 ? 0 : Math.max(1, actualDuration);
+
+      // Set billable duration to 0 for ad_hoc items, otherwise use calculated duration
+      const durationToSend = isAdHoc ? 0 : Math.max(1, actualDuration);
 
       console.log('Preparing time entry with billable_duration:', {
         entryBillableDuration: entry.billable_duration,
         actualDuration,
         durationToSend,
-        forcingActualDuration: entry.billable_duration !== 0 && durationToSend === actualDuration
+        isAdHoc,
+        forcingActualDuration: !isAdHoc && durationToSend === actualDuration
       });
 
       // Prepare the time entry with all required fields
@@ -226,18 +232,21 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
         created_at: entry.created_at || formatISO(new Date()),
         updated_at: formatISO(new Date()),
         notes: entry.notes || '',
-        approval_status: 'DRAFT' as TimeSheetStatus
+        approval_status: 'DRAFT' as TimeSheetStatus,
+        // Ensure service_id and tax_region are null/undefined for ad_hoc if not selected
+        service_id: isAdHoc ? undefined : entry.service_id,
+        tax_region: isAdHoc ? undefined : entry.tax_region,
       };
-      
+
       console.log('Prepared time entry:', timeEntry);
-      
+
       console.log('Billable duration before sending to backend:', {
         billableDuration: timeEntry.billable_duration,
         type: typeof timeEntry.billable_duration,
         isZero: timeEntry.billable_duration === 0,
         isNumber: typeof timeEntry.billable_duration === 'number'
       });
-      
+
       const savedEntry = await onSave(timeEntry);
       console.log('Saved entry response:', savedEntry);
   

@@ -498,7 +498,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
 
 
     let adHocQuery;
-    if (!isTimesheet && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+    if (!options.type || options.type === 'all' || options.type === 'ad_hoc') {
       adHocQuery = db('schedule_entries as se')
         .whereNotIn('se.entry_id', options.availableWorkItemIds || [])
         .where('se.tenant', tenant)
@@ -565,7 +565,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     if (!options.type || options.type === 'all' || options.type === 'project_task') {
         queriesToUnion.push(projectTasksQuery);
     }
-    if (!isTimesheet && adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+    if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         queriesToUnion.push(adHocQuery);
     }
 
@@ -578,7 +578,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     if (!options.type || options.type === 'all' || options.type === 'project_task') {
         countPromises.push(projectTasksQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
-    if (!isTimesheet && adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
+    if (adHocQuery && (!options.type || options.type === 'all' || options.type === 'ad_hoc')) {
         countPromises.push(adHocQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
 
@@ -614,7 +614,9 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         company_name: item.company_name,
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
-        assigned_user_ids: item.assigned_user_ids || []
+        assigned_user_ids: item.assigned_user_ids || [],
+        scheduled_start: item.scheduled_start,
+        scheduled_end: item.scheduled_end
       }));
 
     return {
