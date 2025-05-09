@@ -37,7 +37,7 @@ const TechnicianSidebar: React.FC<TechnicianSidebarProps> = ({
       });
   }, [technicians]);
   return (
-    <div className="w-64 flex-shrink-0 bg-white border-r border-gray-200 overflow-y-auto">
+    <div className="w-64 flex-shrink-0 bg-white border border-gray-200 rounded-lg overflow-y-auto">
       <div className="p-2 border-gray-200">
         <div className="flex justify-center gap-1">
           <Button

@@ -401,6 +401,7 @@ const Documents = ({
                   onClick={() => {
                     setSelectedDocument(document);
                     setDocumentName(document.document_name);
+                    setIsCreatingNew(false);
                     const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
                     setIsEditModeInDrawer(isEditableContentDoc);
                     setIsDrawerOpen(true);
@@ -490,7 +491,7 @@ const Documents = ({
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
-              <div className="mb-4">
+              <div className="mb-4 relative p-0.5">
                 <Input
                   id={`${id}-document-name`}
                   type="text"
