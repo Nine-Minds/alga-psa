@@ -470,8 +470,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const items = await knex('invoice_items')
-          .select('*')
-          .where({ invoice_id: params.invoiceId, tenant: context.tenant });
+          .select('invoice_items.*', 'service_catalog.service_name')
+          .leftJoin('service_catalog', 'invoice_items.service_id', 'service_catalog.service_id')
+          .where({ 'invoice_items.invoice_id': params.invoiceId, 'invoice_items.tenant': context.tenant });
           
         logger.info(`${logPrefix} get_invoice_items: Successfully fetched ${items.length} items for invoiceId: ${params.invoiceId}`);
         return { success: true, items };
