@@ -347,159 +347,26 @@ exports.up = async function(knex) {
       await trx('system_workflow_form_definitions').insert(form);
     }
 
-    // Drop incorrect foreign key constraint if it exists
-    await trx.schema.table('workflow_task_definitions', (table) => {
-      table.dropForeign('form_id', 'workflow_task_definitions_form_id_foreign');
-    }).catch(() => {}); // Ignore error if constraint doesn't exist
-
-    // Task Definitions
-    const taskDefinitions = [
-      {
-        task_definition_id: 'qbo_customer_mapping_lookup_error',
-        tenant: 'system',
-        task_type: 'qbo_customer_mapping_lookup_error',
-        name: 'QBO Customer Mapping Lookup Error',
-        description: 'Error occurred when looking up QBO customer mapping',
-        form_id: 'qbo-customer-mapping-lookup-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'secret_fetch_error',
-        tenant: 'system',
-        task_type: 'secret_fetch_error',
-        name: 'Secret Fetch Error',
-        description: 'Error occurred while fetching a secret',
-        form_id: 'secret-fetch-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_mapping_error',
-        tenant: 'system',
-        task_type: 'qbo_mapping_error',
-        name: 'QBO Mapping Error',
-        description: 'Generic QBO mapping error',
-        form_id: 'qbo-mapping-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_item_lookup_failed',
-        tenant: 'system',
-        task_type: 'qbo_item_lookup_failed',
-        name: 'QBO Item Lookup Failed',
-        description: 'QBO item lookup failed',
-        form_id: 'qbo-item-lookup-failed-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_item_mapping_missing',
-        tenant: 'system',
-        task_type: 'qbo_item_mapping_missing',
-        name: 'QBO Item Mapping Missing',
-        description: 'QBO item mapping is missing',
-        form_id: 'qbo-item-mapping-missing-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_item_lookup_internal_error',
-        tenant: 'system',
-        task_type: 'qbo_item_lookup_internal_error',
-        name: 'QBO Item Lookup Internal Error',
-        description: 'Internal error during QBO item lookup',
-        form_id: 'qbo-item-lookup-internal-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_invoice_no_items_mapped',
-        tenant: 'system',
-        task_type: 'qbo_invoice_no_items_mapped',
-        name: 'QBO Invoice No Items Mapped',
-        description: 'QBO invoice has no items mapped',
-        form_id: 'qbo-invoice-no-items-mapped-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'qbo_sync_error',
-        tenant: 'system',
-        task_type: 'qbo_sync_error',
-        name: 'QBO Sync Error',
-        description: 'Generic QBO sync error',
-        form_id: 'qbo-sync-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'workflow_execution_error',
-        tenant: 'system',
-        task_type: 'workflow_execution_error',
-        name: 'Workflow Execution Error',
-        description: 'Generic workflow execution error',
-        form_id: 'workflow-execution-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      },
-      {
-        task_definition_id: 'internal_workflow_error',
-        tenant: 'system',
-        task_type: 'internal_workflow_error',
-        name: 'Internal Workflow Error',
-        description: 'Internal workflow error',
-        form_id: 'internal-workflow-error-form',
-        default_priority: 'high',
-        default_sla_days: 1,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
-      }
-    ];
-
-    for (const task of taskDefinitions) {
-      await trx('workflow_task_definitions').insert(task);
-    }
+    // The attempt to drop 'workflow_task_definitions_form_id_foreign' has been removed.
+    // If this foreign key needs to be managed, it should be done by a migration
+    // that specifically addresses the state and constraints of workflow_task_definitions.form_id.
+    // This migration's primary focus is the creation and population of system_workflow_form_definitions.
+    
+    // Task Definitions are now handled by the new refactor_system_task_definitions migration.
+    // This section is intentionally left blank.
+    // The new migration will ensure these definitions are created in the `system_workflow_task_definitions` table.
   });
 };
 
 exports.down = async function(knex) {
   await knex.transaction(async (trx) => {
-    // Task Definitions
-    const taskDefinitionIds = [
-      'qbo_customer_mapping_lookup_error',
-      'secret_fetch_error',
-      'qbo_mapping_error',
-      'qbo_item_lookup_failed',
-      'qbo_item_mapping_missing',
-      'qbo_item_lookup_internal_error',
-      'qbo_invoice_no_items_mapped',
-      'qbo_sync_error',
-      'workflow_execution_error',
-      'internal_workflow_error'
-    ];
-    await trx('workflow_task_definitions').whereIn('task_definition_id', taskDefinitionIds).del();
+    // This migration (20250509175818_add_qbo_invoice_sync_forms) is primarily responsible for
+    // creating `system_workflow_form_definitions` and populating it.
+    // It should NOT be responsible for cleaning up task definitions from `system_workflow_task_definitions`
+    // or `workflow_task_definitions` as that is handled by the `refactor_system_task_definitions` migration.
+    // So, we remove the task definition cleanup logic from this `down` method.
 
-    // System Form Definitions
+    // System Form Definitions - this is correct, as this migration's `up` creates them.
     const systemFormNames = [
       'qbo-mapping-error-form',
       'qbo-lookup-error-form',

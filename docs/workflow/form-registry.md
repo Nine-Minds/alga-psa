@@ -279,18 +279,30 @@ const taskResult = await context.actions.createHumanTask({
 });
 ```
 
-### Form Type in Task Definitions
+### Linking Tasks to Forms via Task Definitions
 
-The `workflow_task_definitions` table now includes a `form_type` field that indicates whether the `formId` refers to a tenant-specific form (`'tenant'`) or a system form (`'system'`). This optimization allows the Form Registry service to directly query the appropriate table without needing to first check the tenant-specific table and then fall back to the system table.
+The system now uses a structured approach to link a running workflow task (`workflow_tasks` table) to its corresponding form definition. This involves separate tables for system-level and tenant-specific task definitions.
 
-When a human task is created, the `formId` (which is actually the task_definition_id) from the task definition is used to look up the actual form definition:
+1.  **Task Definition Tables:**
+    *   **`system_workflow_task_definitions`**: Stores definitions for system-wide tasks (e.g., `qbo_mapping_error`). Its primary key is `task_type` (e.g., 'qbo_mapping_error'). Each record contains a `form_id` (the name of the form, e.g., 'qbo-mapping-error-form') and a `form_type` (typically 'system', indicating the form definition is in `system_workflow_form_definitions`).
+    *   **`workflow_task_definitions`**: Stores definitions for tenant-specific tasks. Its primary key is `task_definition_id` (a UUID). Each record also contains a `form_id` and `form_type`.
 
-1. The system first looks up the task definition to get the actual form_id and form_type.
-2. Based on the form_type, it directly queries the appropriate table:
-   - If `form_type` is `'system'`, it looks for the form in the `system_workflow_form_definitions` table.
-   - If `form_type` is `'tenant'` or not specified, it looks for the form in the tenant-specific `workflow_form_definitions` table.
+2.  **Linking in `workflow_tasks` Table:**
+    The `workflow_tasks` table (which stores instances of running tasks) has the following key columns to link to a task definition:
+    *   `task_definition_type` (TEXT): Stores either 'system' or 'tenant'.
+    *   `tenant_task_definition_id` (UUID, NULLABLE): Foreign key to `workflow_task_definitions.task_definition_id`. Populated if `task_definition_type` is 'tenant'.
+    *   `system_task_definition_task_type` (TEXT, NULLABLE): Foreign key to `system_workflow_task_definitions.task_type`. Populated if `task_definition_type` is 'system'.
+    *   A CHECK constraint ensures that only the appropriate foreign key column is populated based on `task_definition_type`.
 
-This approach is more efficient as it avoids unnecessary fallback queries and potential issues with foreign key constraints, as each table can have its own foreign key relationship.
+3.  **Resolving the Form for a Task:**
+    When a human task instance needs its form:
+    a. The system inspects `workflow_tasks.task_definition_type`.
+    b. If 'tenant', it uses `workflow_tasks.tenant_task_definition_id` to look up the record in `workflow_task_definitions`.
+    c. If 'system', it uses `workflow_tasks.system_task_definition_task_type` to look up the record in `system_workflow_task_definitions`.
+    d. The retrieved task definition record (from either table) contains the `form_id` (the name of the form) and the `form_type` ('system' or 'tenant').
+    e. Based on this `form_type`, the Form Registry service queries either `system_workflow_form_definitions` (if `form_type` is 'system') or `workflow_form_definitions` (if `form_type` is 'tenant') using the `form_id` (name) to get the actual form schema.
+
+This refined structure ensures clear separation and robust linking for both system and tenant-specific task and form definitions.
 
 ### QBO Invoice Sync Integration
 
@@ -415,4 +427,4 @@ This migration:
    - `workflow-execution-error-form`
    - `internal-workflow-error-form`
 
-4. Creates task definitions that associate each task type with its corresponding form, including the `form_type: 'system'` field to indicate that these forms are System Forms.
+4. Creates system task definitions in the `system_workflow_task_definitions` table. Each of these definitions associates a system `task_type` (e.g., 'qbo_customer_mapping_lookup_error') with its corresponding `form_id` (e.g., 'qbo-customer-mapping-lookup-error-form') and sets `form_type: 'system'`, indicating the form itself is a System Form defined in `system_workflow_form_definitions`.
