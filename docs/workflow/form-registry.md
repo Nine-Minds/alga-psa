@@ -24,10 +24,10 @@ For comprehensive documentation on System Forms, please refer to the dedicated [
 
 - **Shared Definitions**: System Forms are defined once at the system level and are available to all tenants. These serve as reusable templates for common human task interactions.
 - **Tenant-Specific Usage**: While the form *definition* is shared, its *instantiation and data capture* remain tenant-specific, ensuring data isolation. When a human task requiring a form is generated for a specific tenant, it can utilize a System Form definition.
-- **Identification**: System Forms are identified by a unique `name` in the `system_workflow_form_definitions` table. The `formId` parameter used when creating human tasks (e.g., in `qboInvoiceSyncWorkflow`) points to this `name`.
+- **Identification**: System Forms are identified by a unique `name` in the `system_workflow_form_definitions` table. When a human task is created using a `taskType`, the system looks up the corresponding task definition. This task definition then specifies the `form_id` (which is the `name` of the form in `system_workflow_form_definitions` or `workflow_form_definitions`) and `form_type` to be used.
 - **Usage by Tenant-Specific Workflows**:
   - Tenant-specific workflows (defined in `workflow_registrations`) can utilize System Forms.
-  - When a human task is created within a tenant's workflow using a `formId`, the Form Registry service uses the `form_type` field in the task definition to determine which table to query:
+  - When a human task is created using a `taskType`, the system first retrieves the associated task definition (either from `system_workflow_task_definitions` or `workflow_task_definitions`). This task definition contains a `form_id` and a `form_type`. The Form Registry service then uses this `form_type` to determine which form definition table to query:
     - If `form_type` is 'system', it directly queries the `system_workflow_form_definitions` table.
     - If `form_type` is 'tenant' or not specified, it queries the tenant-specific `workflow_form_definitions` table.
   - This approach is more efficient as it avoids unnecessary fallback queries.
@@ -263,8 +263,7 @@ The Form Registry is designed to work seamlessly with the Task Inbox system. Whe
 ```typescript
 // Create a task with a form from the Form Registry
 const taskResult = await context.actions.createHumanTask({
-  taskType: 'approval',
-  formId: 'credit-reimbursement-request', // Reference to the form in the Form Registry
+  taskType: 'approval', // The taskType implies a pre-defined task definition which links to a form
   title: 'Approve Credit Reimbursement',
   description: 'Please review and approve this credit reimbursement request',
   priority: 'high',
@@ -310,8 +309,7 @@ The QBO Invoice Sync Workflow creates human tasks with associated forms for erro
 
 ```typescript
 await typedActions.createHumanTask({
-  taskType: 'qbo_customer_mapping_lookup_error',
-  formId: 'qbo-customer-mapping-lookup-error-form', // Reference to the form in the Form Registry
+  taskType: 'qbo_customer_mapping_lookup_error', // The form is determined by the task definition associated with this taskType
   title: `Failed QBO Customer Mapping Lookup for Company ID: ${algaCompany.company_id}`,
   details: {
     message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${algaCompany.company_id} in Realm ${realmId}. Error: ${mappingResult.message || 'Unknown error'}. Please investigate the mapping system or action.`,

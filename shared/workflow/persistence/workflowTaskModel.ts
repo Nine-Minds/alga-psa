@@ -86,7 +86,7 @@ const WorkflowTaskModel = {
     task: Omit<IWorkflowTask, 'task_id' | 'created_at' | 'updated_at'> // event_id is optional in IWorkflowTask, allow it to be passed
   ): Promise<string> => {
     try {
-      const taskId = `task-${uuidv4()}`;
+      const taskId = uuidv4(); // Removed "task-" prefix
       
       const taskToInsert: IWorkflowTask = {
         ...task, // Spread the incoming task payload which should match the new structure
@@ -348,7 +348,7 @@ const WorkflowTaskModel = {
     history: Omit<IWorkflowTaskHistory, 'history_id' | 'timestamp'>
   ): Promise<string> => {
     try {
-      const historyId = `hist-${uuidv4()}`;
+      const historyId = uuidv4(); // Removed "hist-" prefix
       
       const [result] = await knex('workflow_task_history')
         .insert({

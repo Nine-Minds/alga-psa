@@ -12,11 +12,11 @@ System Forms provide a way to define forms once at the system level and make the
 
 - **Tenant-Specific Usage**: While the form *definition* is shared, its *instantiation and data capture* remain tenant-specific, ensuring data isolation. When a human task requiring a form is generated for a specific tenant, it can utilize a System Form definition.
 
-- **Identification**: System Forms are identified by a unique `name` in the `system_workflow_form_definitions` table. The `formId` parameter used when creating human tasks (e.g., in `qboInvoiceSyncWorkflow`) points to this `name`.
+- **Identification**: System Forms are identified by a unique `name` in the `system_workflow_form_definitions` table. When a human task is created using a `taskType`, the system looks up the corresponding task definition. This task definition then specifies the `form_id` (which is the `name` of the form in `system_workflow_form_definitions` or `workflow_form_definitions`) and `form_type` to be used.
 
 - **Usage by Tenant-Specific Workflows**:
   - Tenant-specific workflows (defined in `workflow_registrations`) can utilize System Forms.
-  - When a human task is created within a tenant's workflow using a `formId`, the Form Registry service uses the `form_type` field in the task definition to determine which table to query:
+  - When a human task is created using a `taskType`, the system first retrieves the associated task definition (either from `system_workflow_task_definitions` or `workflow_task_definitions`). This task definition contains a `form_id` and a `form_type`. The Form Registry service then uses this `form_type` to determine which form definition table to query:
     - If `form_type` is 'system', it directly queries the `system_workflow_form_definitions` table.
     - If `form_type` is 'tenant' or not specified, it queries the tenant-specific `workflow_form_definitions` table.
   - This approach is more efficient as it avoids unnecessary fallback queries.
@@ -49,7 +49,7 @@ Unlike tenant-specific forms, which use separate tables for form definitions (`w
 
 The `workflow_task_definitions` table includes a `form_type` field that indicates whether the `formId` refers to a tenant-specific form (`'tenant'`) or a system form (`'system'`). This optimization allows the Form Registry service to directly query the appropriate table without needing to first check the tenant-specific table and then fall back to the system table.
 
-When a human task is created, the `formId` (which is actually the task_definition_id) from the task definition is used to look up the actual form definition:
+When a human task is created using a `taskType`, the system first looks up the corresponding task definition (system or tenant-specific). This task definition contains the `form_id` (the name of the form, e.g., 'qbo-customer-mapping-lookup-error-form') and `form_type` which are then used to retrieve the actual form schema:
 
 1. The system first looks up the task definition to get the actual form_id and form_type.
 2. Based on the form_type, it directly queries the appropriate table:
@@ -180,8 +180,7 @@ When creating a human task that requires a form, you can reference a System Form
 
 ```typescript
 await typedActions.createHumanTask({
-  taskType: 'qbo_customer_mapping_lookup_error',
-  formId: 'qbo-customer-mapping-lookup-error-form', // Reference to the System Form
+  taskType: 'qbo_customer_mapping_lookup_error', // The form is determined by the task definition associated with this taskType
   title: `Failed QBO Customer Mapping Lookup for Company ID: ${algaCompany.company_id}`,
   details: {
     // Task details...
@@ -191,4 +190,4 @@ await typedActions.createHumanTask({
 });
 ```
 
-The Form Registry service will automatically resolve the `formId` to the appropriate System Form definition.
+The Form Registry service will resolve the form based on the `form_id` and `form_type` found in the task definition, which was looked up using the `taskType` provided during task creation.

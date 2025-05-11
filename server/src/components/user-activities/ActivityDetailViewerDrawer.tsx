@@ -288,7 +288,11 @@ export function ActivityDetailViewerDrawer({
         case ActivityType.WORKFLOW_TASK: {
           const taskDetails = await getTaskDetails(activityId);
           
-          if (taskDetails.formId && taskDetails.formSchema) {
+          console.log('[ActivityDetailViewerDrawer] Raw Task details for WORKFLOW_TASK:', JSON.stringify(taskDetails, null, 2));
+          
+          if (taskDetails.formId && taskDetails.formSchema && taskDetails.formSchema.jsonSchema) {
+            console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - JSONSchema:', JSON.stringify(taskDetails.formSchema.jsonSchema, null, 2));
+            console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - UISchema:', JSON.stringify(taskDetails.formSchema.uiSchema, null, 2));
             setContent(
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">Workflow Task</h2>

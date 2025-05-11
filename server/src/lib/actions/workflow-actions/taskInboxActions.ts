@@ -328,6 +328,8 @@ export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
     // and formRegistry.getForm can resolve this.
     const form = await formRegistry.getForm(knex, tenant, taskDefinition.form_id);
     
+    console.log('[taskInboxAction] Form:', form);
+
     // Return task details
     return {
       taskId: task.task_id,

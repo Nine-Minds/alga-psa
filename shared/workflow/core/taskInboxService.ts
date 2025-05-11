@@ -68,45 +68,9 @@ export class TaskInboxService {
           systemTaskDefinitionTaskTypeForTask = systemTaskDef.task_type; // For system tasks, task_type is the ID
           resolvedDefinitionType = 'system';
         } else {
-          // 3. Auto-Creating Tenant-Specific Definition (if no definition found above)
-          const newTaskDefId = `taskdef-${uuidv4()}`;
-
-          if (!params.formId) {
-            throw new Error('Form ID is required for creating a new task definition when taskType does not exist');
-          }
-
-          const formRegistry = getFormRegistry();
-          const form = await formRegistry.getForm(knex, tenant, params.formId);
-
-          if (!form) {
-            throw new Error(`Form with ID ${params.formId} not found for tenant ${tenant}`);
-          }
-          
-          // Determine form_type for the new task definition based on the source of the form.
-          if (form.definition && form.definition.hasOwnProperty('tenant') && form.definition.tenant != null) {
-            formTypeForNewDef = 'tenant';
-          } else {
-            formTypeForNewDef = 'system';
-          }
-
-          await knex('workflow_task_definitions').insert({
-            task_definition_id: newTaskDefId,
-            tenant,
-            task_type: params.taskType,
-            name: params.title,
-            description: params.description,
-            form_id: params.formId,
-            form_type: formTypeForNewDef,
-            default_priority: params.priority || 'medium',
-            default_sla_days: params.dueDate
-              ? Math.ceil((new Date(params.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
-              : 3,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
-
-          tenantTaskDefinitionIdForTask = newTaskDefId;
-          resolvedDefinitionType = 'tenant'; // The task definition created is tenant-specific
+          // If neither tenant nor system definition is found, throw an error.
+          // Task definitions must exist before tasks can be created.
+          throw new Error(`Task definition with taskType '${params.taskType}' not found for tenant '${tenant}' or as a system definition.`);
         }
       }
 
@@ -256,8 +220,7 @@ export class TaskInboxService {
         { name: 'priority', type: 'string', required: false },
         { name: 'dueDate', type: 'string', required: false },
         { name: 'assignTo', type: 'object', required: false },
-        { name: 'contextData', type: 'object', required: false },
-        { name: 'formId', type: 'string', required: false }
+        { name: 'contextData', type: 'object', required: false }
       ],
       async (params: Record<string, any>, context: ActionExecutionContext) => {
         try {
@@ -329,8 +292,7 @@ export class TaskInboxService {
               priority: params.priority,
               dueDate: params.dueDate,
               assignTo: assignTo,
-              contextData: params.contextData,
-              formId: params.formId
+              contextData: params.contextData
             },
             context.userId
           );

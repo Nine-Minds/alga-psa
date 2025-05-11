@@ -85,10 +85,13 @@ export class FormRegistry {
     formId: string,
     version?: string
   ): Promise<FormWithSchema | null> {
-    try {
       let formDefinition: IFormDefinition | null = null;
       let formSchema: IFormSchema | null = null;
-      let determinedFormType: 'tenant' | 'system';
+      let determinedFormType: 'tenant' | 'system' | undefined; // Initialize as undefined
+
+    try {
+      // 1. At the beginning of the getForm method: Log the input parameters
+      console.log('[FormRegistry.getForm] Attempting to get form. Tenant:', tenant, 'FormID:', formId, 'Version:', version || 'latest');
 
       // Attempt to get as tenant-specific form first
       if (version) {
@@ -98,8 +101,13 @@ export class FormRegistry {
       }
 
       if (formDefinition) {
+        // 2. After attempting to fetch the tenant-specific form definition: If found
+        console.log('[FormRegistry.getForm] Found tenant-specific form definition:', JSON.stringify(formDefinition));
         determinedFormType = 'tenant';
       } else {
+        // 2. After attempting to fetch the tenant-specific form definition: If not found
+        console.log('[FormRegistry.getForm] Tenant-specific form definition not found for FormID:', formId, 'Version:', version || 'latest', 'Tenant:', tenant);
+
         // If not found as tenant-specific, try as system form
         if (version) {
           formDefinition = await FormDefinitionModel.getByIdAndVersion(knex, formId, version, 'system');
@@ -107,24 +115,57 @@ export class FormRegistry {
           formDefinition = await FormDefinitionModel.getLatestVersion(knex, formId, 'system');
         }
         if (formDefinition) {
+          // 3. After attempting to fetch the system form definition: If found
+          console.log('[FormRegistry.getForm] Found system form definition:', JSON.stringify(formDefinition));
           determinedFormType = 'system';
         } else {
-          // console.warn(`[FormRegistry] Form ${formId} (version: ${version || 'latest'}) not found for tenant ${tenant} or as system form.`);
+          // 3. After attempting to fetch the system form definition: If not found
+          console.log('[FormRegistry.getForm] System form definition not found for FormID:', formId, 'Version:', version || 'latest');
+
+          // 4. If no form definition is found at all: Log warning before returning null
+          console.warn('[FormRegistry.getForm] No form definition found for FormID:', formId, 'Version:', version || 'latest', 'Tenant:', tenant, '(searched tenant and system). Returning null.');
           return null; // Not found as tenant or system
         }
       }
       
+      // 5. Before retrieving/constructing the schema: Log processing definition
+      console.log('[FormRegistry.getForm] Processing definition. Determined Type:', determinedFormType, 'Definition ID:', formDefinition.definition_id || formDefinition.form_id, 'Form Name:', formDefinition.name);
+
       // Now get the schema using the determined form type and the original tenant for tenant forms,
       // or no tenant for system forms (as per FormSchemaModel.getByFormId's updated signature).
       // The 'version' is passed to getByFormId because system schemas are tied to system definitions which are versioned.
       // For tenant schemas, 'version' is not used by getByFormId as they are linked by form_id.
-      formSchema = await FormSchemaModel.getByFormId(
-        knex,
-        formId,
-        determinedFormType,
-        determinedFormType === 'tenant' ? tenant : undefined,
-        determinedFormType === 'system' ? formDefinition.version : undefined
-      );
+      if (determinedFormType === 'system') {
+        // System forms embed schema directly
+        formSchema = {
+          schema_id: `system-schema-${formDefinition.definition_id}`, // Using definition_id as a base for schema_id
+          form_id: formDefinition.name, // System forms are identified by name
+          tenant: undefined, // System forms are not tenant-specific
+          json_schema: formDefinition.json_schema,
+          ui_schema: formDefinition.ui_schema,
+          default_values: formDefinition.default_values,
+          created_at: formDefinition.created_at,
+          updated_at: formDefinition.updated_at
+        } as IFormSchema;
+        // 6. After successfully constructing a schema for a system form
+        console.log('[FormRegistry.getForm] Constructed schema for system form:', JSON.stringify(formSchema));
+      } else {
+        // Tenant forms have schemas stored separately, linked by form_id (UUID)
+        formSchema = await FormSchemaModel.getByFormId(
+          knex,
+          formDefinition.form_id, // Use the UUID form_id from the definition
+          determinedFormType,
+          tenant, // Always pass tenant for tenant forms
+          undefined // Version is not used for tenant schemas
+        );
+        // 7. After successfully fetching a schema for a tenant form
+        if (formSchema) {
+          console.log('[FormRegistry.getForm] Fetched schema for tenant form:', JSON.stringify(formSchema));
+        } else {
+          // This case is handled by the !formSchema check below, but adding a log here for completeness if logic changes
+          console.warn('[FormRegistry.getForm] Schema not found for tenant form. Form Definition ID:', formDefinition.form_id, 'Tenant:', tenant);
+        }
+      }
       
       if (!formSchema) {
         // This should ideally not happen if a definition was found, implies data inconsistency
@@ -132,12 +173,15 @@ export class FormRegistry {
         throw new Error(`Schema not found for form ${formId} (type: ${determinedFormType})`);
       }
       
+      // 8. At the end of the try block, before returning
+      console.log('[FormRegistry.getForm] Successfully retrieved form and schema. FormID:', formId, 'Version:', version || 'latest', 'Tenant:', tenant, 'Returning:', JSON.stringify({ definition: formDefinition, schema: formSchema }));
       return {
         definition: formDefinition,
         schema: formSchema
       };
     } catch (error) {
-      console.error(`[FormRegistry] Error getting form ${formId} for tenant ${tenant}:`, error);
+      // 9. In the catch block: Modify existing log
+      console.error(`[FormRegistry] Error getting form ${formId} (Version: ${version || 'latest'}) for tenant ${tenant}. Determined type (if any): ${determinedFormType || 'N/A'}:`, error);
       throw error;
     }
   }

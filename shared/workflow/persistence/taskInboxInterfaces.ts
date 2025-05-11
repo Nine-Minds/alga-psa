@@ -17,7 +17,6 @@ export interface TaskCreationParams {
     users?: string[];
   };
   contextData?: Record<string, any>;
-  formId?: string;
 }
 
 /**

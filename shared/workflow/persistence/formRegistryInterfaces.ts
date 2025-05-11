@@ -6,7 +6,8 @@
  * Form definition interface
  */
 export interface IFormDefinition {
-  form_id: string;
+  definition_id?: string; // Assuming this might be optional or generated
+  form_id: string; // This is the UUID primary key for tenant forms, name for system forms
   tenant: string;
   name: string;
   description?: string;
@@ -16,6 +17,10 @@ export interface IFormDefinition {
   created_by?: string;
   created_at: string;
   updated_at: string;
+  // Added schema properties for system forms
+  json_schema?: Record<string, any>;
+  ui_schema?: Record<string, any>;
+  default_values?: Record<string, any>;
 }
 
 /**
@@ -24,7 +29,7 @@ export interface IFormDefinition {
 export interface IFormSchema {
   schema_id: string;
   form_id: string;
-  tenant: string;
+  tenant: string | undefined;
   json_schema: Record<string, any>;
   ui_schema?: Record<string, any>;
   default_values?: Record<string, any>;
