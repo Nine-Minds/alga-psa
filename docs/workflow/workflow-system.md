@@ -143,7 +143,7 @@ The `WorkflowContext` provides access to:
 - **data**: Data manager for storing and retrieving workflow data
 - **events**: Event manager for waiting for and emitting events
 - **logger**: Logger for workflow execution
-- **setState/getCurrentState**: Methods for managing workflow state
+- **setState/getCurrentState**: Methods for marking and retrieving the conceptual state of the workflow. `setState` is primarily used for logging, auditing, and understanding the workflow's progression at various points. It does **not** directly control the execution path; control flow is managed by standard TypeScript `async/await`, loops, and conditional logic. The event sourcing mechanism ensures that the workflow can be replayed and its state reconstructed from the sequence of events and these state markers.
 
 #### Control Flow
 
@@ -272,37 +272,45 @@ Example usage within a workflow function:
 async function invoiceApprovalWorkflow(context: WorkflowContext) {
   const { actions, data, events, logger, setState } = context;
   
-  // Set initial state
+  // Mark the initial conceptual state
   setState('draft');
+  logger.info('Workflow entered DRAFT state.');
   
   // Store workflow data
   data.set('invoice', { id: 'inv-123', amount: 500, status: 'draft' });
   
-  // Wait for an event
+  // Imperatively wait for a 'Submit' event. Execution pauses here.
   const submitEvent = await events.waitFor('Submit');
-  logger.info(`Invoice submitted by ${submitEvent.user_id}`);
+  logger.info(`Invoice submitted by ${submitEvent.user_id}. Resuming execution.`);
   
-  // Execute an action
+  // Execute an action now that the 'Submit' event has occurred
   await actions.sendNotification({
     recipient: 'manager',
     message: 'Invoice submitted for approval'
   });
   
-  // Update state
+  // Mark the new conceptual state
   setState('submitted');
+  logger.info('Workflow entered SUBMITTED state.');
   
-  // Wait for approval or rejection
+  // Imperatively wait for either 'Approve' or 'Reject' event. Execution pauses.
   const decisionEvent = await events.waitFor(['Approve', 'Reject']);
+  logger.info(`Decision event '${decisionEvent.name}' received. Resuming execution.`);
   
+  // Imperative control flow based on the received event
   if (decisionEvent.name === 'Approve') {
     await actions.updateInvoiceStatus({ status: 'approved' });
-    setState('approved');
+    setState('approved'); // Mark final conceptual state
+    logger.info('Workflow entered APPROVED state.');
   } else {
     await actions.updateInvoiceStatus({ status: 'rejected' });
-    setState('rejected');
+    setState('rejected'); // Mark final conceptual state
+    logger.info('Workflow entered REJECTED state.');
   }
+  // Workflow execution completes here.
 }
 ```
+Note how `setState` is used to mark logical points, but the actual flow (pausing and resuming) is handled by `await events.waitFor()` and standard conditional logic. The workflow doesn't "jump" to a state; it proceeds imperatively.
 
 ### Action Executor
 
