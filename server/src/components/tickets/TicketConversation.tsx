@@ -195,9 +195,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
-      label: "Client Visible",
+      label: "Client",
       content: (
-        <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Visible Comments">
+        <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
           {renderComments(conversations.filter(conversation => !conversation.is_internal))}
         </ReflectionContainer>
       )
@@ -338,7 +338,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={hideInternalTab ? "All Comments" : "Client Visible"}
+          defaultTab={hideInternalTab ? "All Comments" : "Client"}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={
