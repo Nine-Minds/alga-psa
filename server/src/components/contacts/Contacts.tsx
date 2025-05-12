@@ -21,7 +21,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
 import { getUniqueTagTexts, getAvatarUrl } from 'server/src/utils/colorUtils';
-import GenericDialog from 'server/src/components/ui/GenericDialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
@@ -572,7 +572,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             id="contacts-table"
             data={useMemo(() => filteredContacts.map((contact): typeof filteredContacts[number] & { id: string } => ({
               ...contact,
-              id: contact.contact_name_id // Add id property for unique keys
+              id: contact.contact_name_id
             })), [filteredContacts])}
             columns={columns}
             pagination={true}
@@ -596,58 +596,26 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           companies={companies}
         />
 
-        {/* Delete Confirmation Dialog */}
-        <GenericDialog
-          id={`delete-contact-dialog`}
+        {/* ConfirmationDialog for Delete */}
+        <ConfirmationDialog
+          id="delete-contact-dialog"
           isOpen={isDeleteDialogOpen}
           onClose={() => {
             setIsDeleteDialogOpen(false);
             setContactToDelete(null);
             setDeleteError(null);
           }}
+          onConfirm={confirmDelete}
           title="Delete Contact"
-        >
-          <div className="p-6">
-            {deleteError ? (
-              <>
-                <p className="mb-4 text-red-600">{deleteError}</p>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setIsDeleteDialogOpen(false);
-                      setContactToDelete(null);
-                      setDeleteError(null);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded"
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="mb-4">Are you sure you want to delete this contact? This action cannot be undone.</p>
-                <div className="flex justify-end gap-4">
-                  <button
-                    onClick={() => {
-                      setIsDeleteDialogOpen(false);
-                      setContactToDelete(null);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={confirmDelete}
-                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </GenericDialog>
+          message={
+            deleteError
+              ? deleteError
+              : "Are you sure you want to delete this contact? This action cannot be undone."
+          }
+          confirmLabel={deleteError ? undefined : "Delete"}
+          cancelLabel={deleteError ? "Close" : "Cancel"}
+          isConfirming={false}
+        />
       </div>
     </Suspense >
   );

@@ -15,8 +15,8 @@ import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreVertical, XCircle, Clock } from 'lucide-react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { MoreVertical, XCircle, Clock, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from '../../hooks/useIntervalTracking';
@@ -59,6 +59,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
+  const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
   // Initialize currentUser directly from props if available to prevent any flashing
   const [currentUser, setCurrentUser] = useState<any>(user || null);
@@ -84,8 +86,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleDeleteTicket = (ticketId: string) => {
+  const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
     setTicketToDelete(ticketId);
+    setTicketToDeleteName(ticketNameOrNumber);
+    setDeleteError(null);
   };
   
   // Initialize currentUser state from props if available
@@ -124,10 +128,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       // Instead, we'll just remove the deleted ticket from the state
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
       setFilteredTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-    } catch (error) {
-      console.error('Failed to delete ticket:', error);
-    } finally {
       setTicketToDelete(null);
+      setTicketToDeleteName(null);
+      setDeleteError(null);
+    } catch (error: any) {
+      console.error('Failed to delete ticket:', error);
+      if (error.message && error.message.startsWith('VALIDATION_ERROR:')) {
+        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
+      } else {
+        setDeleteError('An unexpected error occurred while deleting the ticket.');
+      }
     }
   };
 
@@ -190,29 +200,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dataIndex: 'actions',
       width: '5%',
       render: (value: string, record: ITicketListItem) => (
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
-              id="ticket-actions-button"
+              id={`ticket-actions-${record.ticket_id}`}
               variant="ghost"
+              size="sm"
               className="h-8 w-8 p-0"
             >
               <span className="sr-only">Open menu</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
-          </DropdownMenu.Trigger>
-
-          <DropdownMenu.Content
-            className="w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-          >
-            <DropdownMenu.Item
-              className="px-4 py-2 text-sm text-red-600 hover:bg-gray-100 cursor-pointer outline-none"
-              onSelect={() => handleDeleteTicket(record.ticket_id as string)}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white z-50">
+            <DropdownMenuItem
+              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
+              onSelect={() => handleDeleteTicket(record.ticket_id as string, record.title || record.ticket_number)}
             >
+              <Trash2 className="mr-2 h-4 w-4" /> 
               Delete
-            </DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu.Root>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     }
   ], []);
@@ -602,14 +611,22 @@ useEffect(() => {
         onTicketAdded={handleTicketAdded}
       />
       <ConfirmationDialog
-        id={`${id}-delete-dialog`}
+        id={`${id}-delete-ticket-dialog`}
         isOpen={!!ticketToDelete}
-        onClose={() => setTicketToDelete(null)}
+        onClose={() => {
+          setTicketToDelete(null);
+          setTicketToDeleteName(null);
+          setDeleteError(null);
+        }}
         onConfirm={confirmDeleteTicket}
         title="Delete Ticket"
-        message="Are you sure you want to delete this ticket? This action cannot be undone."
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        message={
+          deleteError
+            ? deleteError
+            : `Are you sure you want to delete ticket "${ticketToDeleteName || ticketToDelete}"? This action cannot be undone.`
+        }
+        confirmLabel={deleteError ? undefined : "Delete"}
+        cancelLabel={deleteError ? "Close" : "Cancel"}
       />
       
       {/* Interval Management Drawer */}

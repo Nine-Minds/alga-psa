@@ -18,9 +18,11 @@ interface DialogProps {
   /** Unique identifier for UI reflection system */
   id?: string;
   hideCloseButton?: boolean;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
+  onOpenAutoFocus?: (event: Event) => void;
 }
 
-export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog', hideCloseButton = false }) => {
+export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClose, children, className, title = '', id = 'dialog', hideCloseButton = false, onKeyDown, onOpenAutoFocus }) => {
   const { automationIdProps: updateDialog, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: `${id}-dialog`,
     type: 'dialog',
@@ -39,7 +41,11 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
       <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
         <RadixDialog.Portal>
           <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-          <RadixDialog.Content className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}>
+          <RadixDialog.Content
+            className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}
+            onKeyDown={onKeyDown}
+            onOpenAutoFocus={onOpenAutoFocus}
+          >
               {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
               {children}
             {!hideCloseButton && (
