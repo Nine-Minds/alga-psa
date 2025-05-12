@@ -41,7 +41,10 @@ export function DynamicForm({
 }: DynamicFormProps) {
 console.log('[DynamicForm] Received contextData:', contextData);
   console.log('[DynamicForm] Received schema:', schema);
-  const [internalFormData, setInternalFormData] = useState(formData);
+  // Process initial formData prop with contextData
+  const initialProcessedFormData = useMemo(() => processTemplateVariables(formData, contextData), [formData, contextData]);
+  console.log('[DynamicForm] Initial processed formData:', initialProcessedFormData);
+  const [internalFormData, setInternalFormData] = useState(initialProcessedFormData);
   const [error, setError] = useState<string | null>(null);
   const [finalSchema, setFinalSchema] = useState(schema);
   const [finalUiSchema, setFinalUiSchema] = useState(uiSchema);
@@ -167,6 +170,12 @@ console.log('[DynamicForm] Received contextData:', contextData);
     }
   };
   
+  // Process the final schema and uiSchema with template variables
+  const processedFinalSchema = useMemo(() => processTemplateVariables(finalSchema, contextData), [finalSchema, contextData]);
+  const processedFinalUiSchema = useMemo(() => processTemplateVariables(finalUiSchema, contextData), [finalUiSchema, contextData]);
+  
+  console.log('[DynamicForm] Processed finalSchema:', processedFinalSchema);
+  console.log('[DynamicForm] Processed finalUiSchema:', processedFinalUiSchema);
   return (
     <div>
       {error && (
@@ -176,9 +185,9 @@ console.log('[DynamicForm] Received contextData:', contextData);
       )}
       
       <ThemedForm
-        schema={finalSchema}
+        schema={processedFinalSchema}
         uiSchema={{
-          ...finalUiSchema,
+          ...processedFinalUiSchema,
           'ui:submitButtonOptions': {
             norender: true, // Disable default submit button
           },

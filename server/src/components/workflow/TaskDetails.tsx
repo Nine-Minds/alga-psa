@@ -339,15 +339,22 @@ export function TaskDetailsComponent({
           
           <TabsContent value="form">
             {task.formSchema ? (
-              <TaskForm
-                taskId={taskId}
-                schema={task.formSchema.jsonSchema}
-                uiSchema={task.formSchema.uiSchema || {}}
-                initialFormData={task.responseData || task.formSchema.defaultValues || {}}
-                onComplete={handleTaskComplete}
-                contextData={task.contextData}
-                executionId={task.executionId}
-              />
+              (() => {
+                console.log('[TaskDetails] Rendering TaskForm. task.contextData:', JSON.stringify(task.contextData, null, 2));
+                console.log('[TaskDetails] Rendering TaskForm. task.formSchema.defaultValues:', JSON.stringify(task.formSchema.defaultValues, null, 2));
+                console.log('[TaskDetails] Rendering TaskForm. task.responseData:', JSON.stringify(task.responseData, null, 2));
+                return (
+                  <TaskForm
+                    taskId={taskId}
+                    schema={task.formSchema.jsonSchema}
+                    uiSchema={task.formSchema.uiSchema || {}}
+                    initialFormData={task.responseData || task.formSchema.defaultValues || {}}
+                    onComplete={handleTaskComplete}
+                    contextData={task.contextData}
+                    executionId={task.executionId}
+                  />
+                );
+              })()
             ) : (
               <p className="text-gray-500">No form available for this task.</p>
             )}

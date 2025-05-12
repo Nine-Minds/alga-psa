@@ -27,6 +27,11 @@ export function TaskForm({
   isInDrawer = false
 }: TaskFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  console.log('[TaskForm] Props received. taskId:', taskId);
+  console.log('[TaskForm] Props received. initialFormData:', JSON.stringify(initialFormData, null, 2));
+  console.log('[TaskForm] Props received. contextData:', JSON.stringify(contextData, null, 2));
+  console.log('[TaskForm] Props received. schema:', JSON.stringify(schema, null, 2));
   
   // Default task actions if none provided
   let taskActions: Action[] = actions || [];

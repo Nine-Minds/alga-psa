@@ -650,6 +650,10 @@ export class TypeScriptWorkflowRuntime {
         // Load execution state using event sourcing
         // This ensures we have the latest state derived from all events
         const executionState = await this.loadExecutionState(knex, executionId, tenant);
+
+        // Store the user ID from the current event being processed in the execution state
+        // This makes it available to the action proxy if the workflow resumes due to this event
+        executionState.currentEventUserId = event.user_id;
         
         // Store the previous state
         const previousState = executionState.currentState;
@@ -946,21 +950,20 @@ export class TypeScriptWorkflowRuntime {
     for (const [registeredName, actionDef] of Object.entries(actions)) {
       // Create a function that executes the action
       const executeAction = async (params: any) => {
-        // Get the execution state to check if we have a user ID from a received event
+        // Get the execution state
         const currentExecutionState = this.executionStates.get(executionId);
-        
-        // Find the most recent event with a user_id, if any
-        const userIdFromEvents = currentExecutionState?.events
-          .slice()
-          .reverse()
-          .find((e: any) => e.user_id)?.user_id;
-          
+
+        // Determine the effective user ID for the action:
+        // 1. Use the user ID from the event currently being processed (if available in state).
+        // 2. Fall back to the initial user ID the workflow started with (if available in state).
+        const effectiveUserIdForAction = currentExecutionState?.currentEventUserId ?? currentExecutionState?.userId; // Assuming initial userId is stored
+
         // Include userId, workflowName, and correlationId in the action context if available
         // IMPORTANT: Always call actionRegistry.executeAction with the *original registeredName*
-        
+
         // Log the secrets object from executionState.data before passing it to the action context
-        console.log(`[DEBUG ActionProxy] Secrets from executionState.data for action ${registeredName} (executionId: ${executionId}):`, currentExecutionState?.data?.secrets);
-        
+        logger.debug(`[ActionProxy] Secrets from executionState.data for action ${registeredName} (executionId: ${executionId}):`, currentExecutionState?.data?.secrets);
+
         return this.actionRegistry.executeAction(registeredName, {
           tenant,
           executionId,
@@ -969,7 +972,7 @@ export class TypeScriptWorkflowRuntime {
           secrets: currentExecutionState?.data?.secrets, // Pass secrets from execution state data
           parameters: params,
           idempotencyKey: `${executionId}-${registeredName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          userId: userIdFromEvents // Include user ID from events if available
+          userId: effectiveUserIdForAction // Use the determined effective user ID
         });
       };
 
