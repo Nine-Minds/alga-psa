@@ -25,6 +25,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -264,6 +265,9 @@ const TicketingSettings = (): JSX.Element => {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [userId, setUserId] = useState<string>('');
   const editInputRef = useRef<HTMLInputElement>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<IChannel | IStatus | IPriority | ITicketCategory | null>(null);
+  const [itemTypeToDelete, setItemTypeToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     const initUser = async () => {
@@ -515,19 +519,88 @@ const TicketingSettings = (): JSX.Element => {
       }
     };
 
-    const handleDeleteChannel = async (channelId: string): Promise<void> => {
-      const channelToDelete = channels.find(c => c.channel_id === channelId);
-      if (!channelToDelete) return;
-      
+    const handleDeleteItemRequest = (item: IChannel | IStatus | IPriority | ITicketCategory, type: string): void => {
+      setItemToDelete(item);
+      setItemTypeToDelete(type);
+      setShowDeleteDialog(true);
+    };
 
+    const confirmDeleteItem = async (): Promise<void> => {
+      if (!itemToDelete || !itemTypeToDelete) return;
+
+      let itemName = '';
       try {
-        await deleteChannel(channelId);
-        setChannels(channels.filter(channel => channel.channel_id !== channelId));
-        toast.success(`Channel "${channelToDelete.channel_name}" deleted successfully.`);
+        if (itemTypeToDelete === 'channel' && 'channel_id' in itemToDelete) {
+          itemName = (itemToDelete as IChannel).channel_name || 'Channel';
+          await deleteChannel((itemToDelete as IChannel).channel_id!);
+          setChannels(channels.filter(channel => channel.channel_id !== (itemToDelete as IChannel).channel_id));
+        } else if (itemTypeToDelete === 'status' && 'status_id' in itemToDelete) {
+          itemName = (itemToDelete as IStatus).name || 'Status';
+          await deleteStatus((itemToDelete as IStatus).status_id!);
+          setStatuses(statuses.filter(status => status.status_id !== (itemToDelete as IStatus).status_id));
+        } else if (itemTypeToDelete === 'priority' && 'priority_id' in itemToDelete) {
+          itemName = (itemToDelete as IPriority).priority_name || 'Priority';
+          await deletePriority((itemToDelete as IPriority).priority_id!);
+          setPriorities(priorities.filter(priority => priority.priority_id !== (itemToDelete as IPriority).priority_id));
+        } else if (itemTypeToDelete === 'category' && 'category_id' in itemToDelete) {
+          itemName = (itemToDelete as ITicketCategory).category_name || 'Category';
+          const category = itemToDelete as ITicketCategory;
+          const hasSubcategories = categories.some(c => c.parent_category === category.category_id);
+          if (hasSubcategories) {
+            toast.error(`Cannot delete "${category.category_name}" because it has subcategories. Please delete all subcategories first.`);
+            setShowDeleteDialog(false);
+            setItemToDelete(null);
+            setItemTypeToDelete(null);
+            return;
+          }
+          await deleteTicketCategory(category.category_id!);
+          setCategories(categories.filter(c => c.category_id !== category.category_id));
+        }
+        toast.success(`${itemName} deleted successfully.`);
       } catch (error) {
-        console.error('Error deleting channel:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to delete channel.');
+        console.error(`Error deleting ${itemTypeToDelete}:`, error);
+        const specificError = error instanceof Error ? error.message : `Failed to delete ${itemTypeToDelete}.`;
+        if (specificError.toLowerCase().includes('in use') || specificError.toLowerCase().includes('referenced') || specificError.toLowerCase().includes('foreign key')) {
+            toast.error(`Cannot delete "${itemName}" because it is currently in use.`);
+        } else {
+            toast.error(specificError);
+        }
+      } finally {
+        setShowDeleteDialog(false);
+        setItemToDelete(null);
+        setItemTypeToDelete(null);
       }
+    };
+  
+    const handleDeleteChannelRequestWrapper = (channelId: string): void => {
+      const channel = channels.find(c => c.channel_id === channelId);
+      if (channel) handleDeleteItemRequest(channel, 'channel');
+    };
+
+    const handleDeleteStatusRequestWrapper = (statusId: string): void => {
+      const status = statuses.find(s => s.status_id === statusId);
+      if (status) {
+        if (status.is_closed) {
+          const otherClosedStatuses = statuses.filter(s_1 =>
+            s_1.status_id !== statusId && s_1.is_closed && s_1.status_type === status.status_type
+          );
+          if (otherClosedStatuses.length === 0) {
+            toast.error('Cannot delete the last closed status for this type.');
+            return;
+          }
+        }
+        handleDeleteItemRequest(status, 'status');
+      }
+    };
+
+    const handleDeletePriorityRequestWrapper = (priorityId: string): void => {
+      const priority = priorities.find(p => p.priority_id === priorityId);
+      if (priority) handleDeleteItemRequest(priority, 'priority');
+    };
+
+    const handleDeleteCategoryRequestWrapper = (categoryId: string): void => {
+      const category = categories.find(c => c.category_id === categoryId);
+      if (category) handleDeleteItemRequest(category, 'category');
     };
   
     const handleDeleteStatus = async (statusId: string): Promise<void> => {
@@ -925,7 +998,7 @@ const TicketingSettings = (): JSX.Element => {
             setNewItem={setNewChannel}
             addItem={addChannel}
             updateItem={updateChannelItem}
-            deleteItem={handleDeleteChannel}
+            deleteItem={handleDeleteChannelRequestWrapper}
             getItemName={(channel) => channel.channel_name || ''}
             getItemKey={(channel) => channel.channel_id || ''}
             columns={channelColumns}
@@ -974,7 +1047,7 @@ const TicketingSettings = (): JSX.Element => {
             setNewItem={setNewStatus}
             addItem={addStatus}
             updateItem={updateStatusItem}
-            deleteItem={handleDeleteStatus}
+            deleteItem={handleDeleteStatusRequestWrapper}
             getItemName={(status) => status.name}
             getItemKey={(status) => status.status_id || ''}
             columns={getStatusColumns(selectedStatusType)}
@@ -1003,7 +1076,7 @@ const TicketingSettings = (): JSX.Element => {
           setNewItem={setNewPriority}
           addItem={addPriority}
           updateItem={updatePriorityItem}
-          deleteItem={handleDeletePriority}
+          deleteItem={handleDeletePriorityRequestWrapper}
           getItemName={(priority) => priority.priority_name}
           getItemKey={(priority) => priority.priority_id}
           columns={priorityColumns}
@@ -1090,7 +1163,7 @@ const TicketingSettings = (): JSX.Element => {
                             className="text-red-600 focus:text-red-600"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteCategory(item.category_id);
+                              handleDeleteCategoryRequestWrapper(item.category_id);
                             }}
                           >
                             Delete
@@ -1144,6 +1217,22 @@ const TicketingSettings = (): JSX.Element => {
     <div className="p-6 bg-gray-100 min-h-screen">
       <h2 className="text-xl font-bold mb-4 text-gray-800">Ticket Settings</h2>
       <CustomTabs tabs={tabs} defaultTab="Categories" />
+
+      {/* Generic Confirmation Dialog */}
+      <ConfirmationDialog
+        id="delete-item-dialog"
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setItemToDelete(null);
+          setItemTypeToDelete(null);
+        }}
+        onConfirm={confirmDeleteItem}
+        title={`Delete ${itemTypeToDelete ? itemTypeToDelete.charAt(0).toUpperCase() + itemTypeToDelete.slice(1) : 'Item'}`}
+        message={`Are you sure you want to delete this ${itemTypeToDelete || 'item'}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from './Dialog';
 import { Button } from './Button';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
@@ -35,13 +35,14 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedValue, setSelectedValue] = useState('');
-
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  
   useEffect(() => {
     if (options?.[0]?.value) {
       setSelectedValue(options[0].value);
     }
-  }, [options]);
-
+  }, [isOpen, options]);
+  
   const handleConfirm = async () => {
     setIsProcessing(true);
     try {
@@ -58,6 +59,10 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
       id={id}
       title={title}
       className={className}
+      onOpenAutoFocus={(e) => {
+        e.preventDefault();
+        confirmButtonRef.current?.focus();
+      }}
     >
       <DialogContent>
         <p className="text-gray-600">{message}</p>
@@ -81,17 +86,20 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
         )}
         <DialogFooter>
           <div className="mt-4 space-x-2">
-          <Button 
-            variant="outline" 
+          {/* Render Cancel button first */}
+          <Button
+            variant="outline"
             onClick={onClose}
             id={`${id}-cancel`}
           >
             {cancelLabel}
           </Button>
-          <Button 
+          {/* Render Confirm button second (last focusable element) */}
+          <Button
             onClick={handleConfirm}
             disabled={isConfirming || isProcessing}
             id={`${id}-confirm`}
+            ref={confirmButtonRef}
           >
             {confirmLabel}
           </Button>

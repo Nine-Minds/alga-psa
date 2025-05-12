@@ -11,6 +11,7 @@ import ProjectQuickAdd from './ProjectQuickAdd';
 import { deleteProject } from 'server/src/lib/actions/project-actions/projectActions';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -140,25 +141,34 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       render: (_: unknown, record: IProject) => (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <div
-              role="button"
-              tabIndex={0}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 p-0"
+            <Button
+              id={`project-actions-${record.project_id}`}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => e.stopPropagation()}
             >
-              <MoreVertical size={16} />
-            </div>
+              <span className="sr-only">Open menu</span>
+              <MoreVertical className="h-4 w-4" />
+            </Button>
           </DropdownMenu.Trigger>
-          <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-            <DropdownMenu.Item 
+          <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1 z-50">
+            <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-              onSelect={() => handleEditProject(record)}
+              onSelect={(e) => {
+                e.stopPropagation();
+                handleEditProject(record);
+              }}
             >
               <Pen size={14} className="mr-2" />
               Edit
             </DropdownMenu.Item>
-            <DropdownMenu.Item 
+            <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center text-red-600"
-              onSelect={() => handleDelete(record)}
+              onSelect={(e) => {
+                e.stopPropagation();
+                handleDelete(record);
+              }}
             >
               <Trash2 size={14} className="mr-2" />
               Delete
@@ -252,35 +262,19 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         />
       )}
 
-      {showDeleteConfirm && projectToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Delete Project</h2>
-            <p className="mb-4">
-              Are you sure you want to delete project "{projectToDelete.project_name}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <Button
-                id='cancel-button'
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setProjectToDelete(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                id='delete-button'
-                variant="destructive"
-                onClick={confirmDelete}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationDialog
+        id="delete-project-confirmation"
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setProjectToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Project"
+        message={projectToDelete ? `Are you sure you want to delete project "${projectToDelete.project_name}"? This action cannot be undone.` : ""}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 }

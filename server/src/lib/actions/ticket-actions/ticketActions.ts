@@ -728,8 +728,12 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
 
     // Revalidate relevant paths
     revalidatePath('/msp/tickets');
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to delete ticket:', error);
+
+    if (error.message && error.message.includes('ticket_resources_tenant_ticket_id_assigned_to_foreign')) {
+      throw new Error('VALIDATION_ERROR: This ticket cannot be deleted because it has associated resources or tasks. Please remove them first.');
+    }
     throw new Error('Failed to delete ticket');
   }
 }
