@@ -64,11 +64,25 @@ export function TaskForm({
     
     try {
       console.log(`Handling task action: ${actionId}`, { taskId, formData });
-      
+
+      // Determine userAction based on actionId
+      // Assuming 'submit' implies the issue is fixed for retry purposes
+      // Other actions might imply different user intentions
+      let userAction: string | undefined = undefined;
       if (actionId === 'submit') {
+        userAction = 'fixed'; 
+      } else if (actionId === 'cancel') {
+        // If cancel needs to inform the workflow, it should also call submitTaskForm
+        // For now, we assume cancel just closes the UI or handles locally
+        userAction = 'cancel'; // Example if cancel needed to notify workflow
+      }
+      // Add more conditions here if other buttons imply different userActions
+
+      if (actionId === 'submit') { // Only call submitTaskForm for the primary submit action for now
         await submitTaskForm({
           taskId,
-          formData
+          formData,
+          userAction // Pass the determined userAction
         });
         
         if (onComplete) {

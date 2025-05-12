@@ -18,7 +18,8 @@ import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
  * This function handles the conversion of form submissions to workflow events
  */
 export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ success: boolean }> {
-  const { taskId, formData, comments } = params;
+  // Destructure userAction along with other params
+  const { taskId, formData, comments, userAction } = params; 
   
   try {
     const { knex, tenant } = await createTenantKnex();
@@ -95,13 +96,19 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       const finalFormData = comments
         ? { ...formData, __comments: comments }
         : formData;
+
+      // Prepare the payload for the event, including the userAction
+      const eventPayload = {
+        formData: finalFormData,
+        userAction: userAction // Include the userAction here
+      };
       
       // 1. Update task status to completed
       await WorkflowTaskModel.completeTask(
         trx,
         tenant,
         taskId,
-        finalFormData,
+        eventPayload.formData, // Use formData from the prepared payload
         userId
       );
       
@@ -116,7 +123,8 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
           from_status: task.status,
           to_status: WorkflowTaskStatus.COMPLETED,
           user_id: userId,
-          details: { formData: finalFormData }
+          // Include userAction in history details as well for auditability
+          details: { formData: eventPayload.formData, userAction: eventPayload.userAction } 
         }
       );
       
@@ -131,7 +139,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
         from_state: task.status,
         to_state: WorkflowTaskStatus.COMPLETED,
         user_id: userId,
-        payload: finalFormData,
+        payload: eventPayload, // Use the prepared payload with userAction
         created_at: new Date().toISOString()
       };
       
@@ -150,7 +158,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
         await workflowRuntime.enqueueEvent(trx, {
           execution_id: task.execution_id,
           event_name: TaskEventNames.taskCompleted(taskId),
-          payload: finalFormData,
+          payload: eventPayload, // Pass the payload with userAction
           user_id: userId,
           tenant
         });

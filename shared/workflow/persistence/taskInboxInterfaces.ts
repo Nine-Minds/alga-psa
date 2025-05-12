@@ -27,6 +27,7 @@ export interface TaskSubmissionParams {
   formData: Record<string, any>;
   comments?: string;
   userId?: string;
+  userAction?: string; // Added to indicate the user's intent (e.g., 'fixed', 'cancel')
 }
 
 /**
