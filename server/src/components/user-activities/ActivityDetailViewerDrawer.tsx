@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ISO8601String } from '@shared/types/temporal';
 import { ActivityType } from "server/src/interfaces/activity.interfaces";
+import { processTemplateVariables } from "server/src/utils/templateUtils";
 import { useDrawer } from "server/src/context/DrawerContext";
 import { useActivitiesCache } from "server/src/hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
@@ -291,8 +292,22 @@ export function ActivityDetailViewerDrawer({
           console.log('[ActivityDetailViewerDrawer] Raw Task details for WORKFLOW_TASK:', JSON.stringify(taskDetails, null, 2));
           
           if (taskDetails.formId && taskDetails.formSchema && taskDetails.formSchema.jsonSchema) {
+            let initialDataForForm = taskDetails.responseData || {};
+            if (!taskDetails.responseData || Object.keys(taskDetails.responseData).length === 0) {
+              if (taskDetails.formSchema.defaultValues) {
+                console.log('[ActivityDetailViewerDrawer] Processing defaultValues for initialFormData. Raw defaultValues:', JSON.stringify(taskDetails.formSchema.defaultValues, null, 2));
+                console.log('[ActivityDetailViewerDrawer] ContextData for defaultValues processing:', JSON.stringify(taskDetails.contextData, null, 2));
+                initialDataForForm = processTemplateVariables(
+                  taskDetails.formSchema.defaultValues,
+                  taskDetails.contextData
+                );
+                console.log('[ActivityDetailViewerDrawer] Processed defaultValues for initialFormData:', JSON.stringify(initialDataForForm, null, 2));
+              }
+            }
+
             console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - JSONSchema:', JSON.stringify(taskDetails.formSchema.jsonSchema, null, 2));
             console.log('[ActivityDetailViewerDrawer] Passing to TaskForm - UISchema:', JSON.stringify(taskDetails.formSchema.uiSchema, null, 2));
+            console.log('[ActivityDetailViewerDrawer] Task contextData:', taskDetails.contextData);
             setContent(
               <div className="h-full p-6">
                 <h2 className="text-xl font-semibold mb-4">Workflow Task</h2>
@@ -300,7 +315,7 @@ export function ActivityDetailViewerDrawer({
                   taskId={activityId}
                   schema={taskDetails.formSchema.jsonSchema || {}}
                   uiSchema={taskDetails.formSchema.uiSchema || {}}
-                  initialFormData={taskDetails.responseData || {}}
+                  initialFormData={initialDataForForm} // Use the prepared initialDataForForm
                   onComplete={() => {
                     // Invalidate cache for this activity type
                     invalidateCache({ activityType: ActivityType.WORKFLOW_TASK });

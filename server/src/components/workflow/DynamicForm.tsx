@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
@@ -7,6 +7,7 @@ import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplat
 import { Action, actionHandlerRegistry, ActionHandlerContext } from '../../lib/workflow/forms/actionHandlerRegistry';
 import { ActionButtonGroup } from './ActionButtonGroup';
 import { applyConditionalLogic } from '../../lib/workflow/forms/conditionalLogic';
+import { processTemplateVariables } from '../../utils/templateUtils';
 
 // Create a themed form with default theme
 const ThemedForm = withTheme({});
@@ -38,10 +39,12 @@ export function DynamicForm({
   isSubmitting = false,
   isInDrawer = false
 }: DynamicFormProps) {
+console.log('[DynamicForm] Received contextData:', contextData);
+  console.log('[DynamicForm] Received schema:', schema);
   const [internalFormData, setInternalFormData] = useState(formData);
   const [error, setError] = useState<string | null>(null);
-  const [processedSchema, setProcessedSchema] = useState(schema);
-  const [processedUiSchema, setProcessedUiSchema] = useState(uiSchema);
+  const [finalSchema, setFinalSchema] = useState(schema);
+  const [finalUiSchema, setFinalUiSchema] = useState(uiSchema);
   
   // Create default actions if none provided
   let formActions = actions;
@@ -77,25 +80,32 @@ export function DynamicForm({
   // Create a form context to allow widgets to update other fields
   const formContext = {
     updateFormData: (updates: Record<string, any>) => {
-      setInternalFormData((current: any) => ({
-        ...current,
-        ...updates
-      }));
-    }
+      setInternalFormData((current: any) => {
+        const newData = {
+          ...current,
+          ...updates
+        };
+        return processTemplateVariables(newData, contextData);
+      });
+    },
+    // Pass contextData through formContext if widgets need direct access
+    // although processing at DynamicForm level should cover most cases.
+    taskContextData: contextData,
+    formData: internalFormData // current processed form data
   };
   
   // Apply conditional display logic when form data changes
   useEffect(() => {
-    const { schema: newSchema, uiSchema: newUiSchema } = applyConditionalLogic(
-      schema,
-      uiSchema,
+    const { schema: newSchemaFromConditionalLogic, uiSchema: newUiSchemaFromConditionalLogic } = applyConditionalLogic(
+      schema, // Use the original schema prop
+      uiSchema, // Original uiSchema prop is still the base for conditional UI changes
       internalFormData
     );
     
-    setProcessedSchema(newSchema);
-    setProcessedUiSchema(newUiSchema);
+    setFinalSchema(newSchemaFromConditionalLogic);
+    setFinalUiSchema(newUiSchemaFromConditionalLogic);
   }, [schema, uiSchema, internalFormData]);
-  
+
   // Handle form submission
   const handleSubmit = async (data: any, event: FormEvent<any>) => {
     if (!data.formData) return;
@@ -166,9 +176,9 @@ export function DynamicForm({
       )}
       
       <ThemedForm
-        schema={processedSchema}
+        schema={finalSchema}
         uiSchema={{
-          ...processedUiSchema,
+          ...finalUiSchema,
           'ui:submitButtonOptions': {
             norender: true, // Disable default submit button
           },
@@ -177,7 +187,10 @@ export function DynamicForm({
         formContext={formContext}
         onChange={(data: any) => {
           if (data.formData) {
-            setInternalFormData(data.formData);
+            console.log('[DynamicForm onChange] data.formData from RJSF:', JSON.stringify(data.formData, null, 2)); // Log RJSF's data
+            const processedData = processTemplateVariables(data.formData, contextData);
+            console.log('[DynamicForm onChange] processedData to be set:', JSON.stringify(processedData, null, 2)); // Log data after our processing
+            setInternalFormData(processedData);
           }
         }}
         onSubmit={handleSubmit}

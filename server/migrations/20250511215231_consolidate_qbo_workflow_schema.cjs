@@ -47,33 +47,24 @@ exports.up = async function(knex) {
       json_schema: {
         "type": "object",
         "properties": {
-          "errorMessage": { "type": "string", "title": "Error Message", "readOnly": true },
-          "workflowInstanceId": { "type": "string", "title": "Workflow Instance ID", "readOnly": true },
-          "algaInvoiceId": { "type": "string", "title": "Alga Invoice ID", "readOnly": true },
-          "entityId": { "type": "string", "title": "Entity ID", "readOnly": true },
-          "resolutionStatus": { "type": "string", "title": "Resolution Status", "enum": ["resolved", "escalated", "deferred"] },
-          "resolutionNotes": { "type": "string", "title": "Resolution Notes" },
-          "createMapping": { "type": "boolean", "title": "Create Mapping" },
           "instructions": { "type": "string", "title": "Action Required", "description": "Please follow these steps to resolve the missing product mapping:", "readOnly": true },
           "quickbooksSetupLink": { "type": "string", "title": "QuickBooks Integration Setup", "format": "uri", "description": "Click here to open the QuickBooks integration setup page" },
           "productDetails": { "type": "string", "title": "Product Details", "description": "Create a mapping for this product in QuickBooks", "readOnly": true },
           "mappingCreated": { "type": "boolean", "title": "I've Created the Mapping", "description": "Check this box once you have created the mapping in QuickBooks" }
         },
-        "required": ["errorMessage", "workflowInstanceId", "resolutionStatus"]
+        "required": []
       },
       ui_schema: {
         "instructions": { "ui:widget": "AlertWidget", "ui:options": { "alertType": "info" } },
         "quickbooksSetupLink": { "ui:widget": "ButtonLinkWidget", "ui:options": { "buttonText": "Go to QuickBooks Integration Setup", "target": "_blank" } },
         "productDetails": { "ui:widget": "HighlightWidget" },
         "mappingCreated": { "ui:widget": "checkbox", "ui:options": { "inline": true } },
-        "errorMessage": { "ui:widget": "textarea", "ui:options": { "rows": 3 } },
-        "resolutionNotes": { "ui:widget": "textarea" },
-        "ui:order": ["instructions", "productDetails", "quickbooksSetupLink", "mappingCreated", "errorMessage", "*", "resolutionNotes"]
+        "ui:order": ["instructions", "productDetails", "quickbooksSetupLink", "mappingCreated"]
       },
       default_values: {
-        "instructions": "A product or customer in your Alga PSA system needs to be mapped to a QuickBooks entity before this invoice can be synced. Please create this mapping in the QuickBooks integration settings.",
+        "instructions": "Action Required: Please create a mapping in QuickBooks for product '${contextData.service_name}' from company '${contextData.company_name}'. This mapping is required before the invoice can be synced.",
         "quickbooksSetupLink": "/settings/integrations/quickbooks/${contextData.tenant_id}/${contextData.realm_id}/mappings",
-        "productDetails": "Details: ${contextData.service_name} (ID: ${contextData.alga_service_id}), Customer: ${contextData.company_name} (ID: ${contextData.alga_company_id})",
+        "productDetails": "Product: ${contextData.service_name} (ID: ${contextData.alga_service_id})\nCompany: ${contextData.company_name} (ID: ${contextData.alga_company_id})\n\nThis product needs to be mapped to a corresponding QuickBooks item. Please go to the QuickBooks Integration Setup page using the button below and create this mapping.",
         "mappingCreated": false
       }
     };

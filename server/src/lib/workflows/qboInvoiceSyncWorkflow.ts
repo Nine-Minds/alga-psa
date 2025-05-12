@@ -321,12 +321,17 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     priority: 'medium',
                     assignTo: context.userId ? { users: [context.userId] } : undefined,
                     contextData: {
-                        message: `Cannot sync invoice #${algaInvoice?.invoice_number || 'Unknown'} to QuickBooks because product '${item.service_name || 'Unknown Product'}' (ID: ${item.service_id || 'Unknown'}) is not mapped to a QuickBooks item. Please create this mapping in the QuickBooks integration settings.`,
-                        alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
+                        // For productDetails field template:
                         alga_service_id: item.service_id,
+                        service_name: item.service_name || 'Unknown Product',
+                        alga_company_id: algaCompany?.company_id,
+                        // Providing company_id as company_name if actual name isn't on AlgaCompany type
+                        company_name: algaCompany?.company_id || 'Unknown Company', 
+                        // For quickbooksSetupLink field template:
                         tenant_id: tenant,
                         realm_id: realmId,
-                        workflow_instance_id: executionId,
+                        // Removed contextData fields: message, alga_invoice_id, workflow_instance_id
+                        // as their corresponding form fields are being removed.
                     },
                 });
                 continue;
