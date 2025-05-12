@@ -16,9 +16,18 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
   await knex.schema.alterTable('system_workflow_registrations', (table) => {
-    // Add the column back as it was, including the NOT NULL constraint.
-    // If there's a concern about data inserted while the column was dropped,
-    // this might need a default value or be made nullable temporarily.
-    table.jsonb('definition').notNullable();
+    // Add the column back as nullable first
+    table.jsonb('definition').nullable();
+  });
+
+  // Provide a default value for any rows that might have been created
+  // while the column was dropped.
+  await knex('system_workflow_registrations')
+    .whereNull('definition')
+    .update({ definition: '{}' });
+
+  // Now, alter the column to be NOT NULL
+  await knex.schema.alterTable('system_workflow_registrations', (table) => {
+    table.jsonb('definition').notNullable().alter();
   });
 };

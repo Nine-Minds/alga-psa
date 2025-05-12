@@ -3,8 +3,11 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // 1. Create an ENUM type named public.workflow_execution_type
-  await knex.raw("CREATE TYPE public.workflow_execution_type AS ENUM ('system', 'tenant');");
+  // 1. Create an ENUM type named public.workflow_execution_type if it doesn't already exist
+  const typeExists = await knex.raw(`SELECT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'workflow_execution_type');`).then(result => result.rows[0].exists);
+  if (!typeExists) {
+    await knex.raw("CREATE TYPE public.workflow_execution_type AS ENUM ('system', 'tenant');");
+  }
 
   // 2. Remove the foreign key constraint workflow_executions_version_id_foreign
   await knex.raw('ALTER TABLE public.workflow_executions DROP CONSTRAINT IF EXISTS workflow_executions_version_id_foreign;');

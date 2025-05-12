@@ -28,14 +28,57 @@ export default class FormSchemaModel {
    */
   static async getByFormId(
     knex: Knex,
-    tenant: string,
-    formId: string
+    formId: string,
+    formType: 'system' | 'tenant',
+    tenant?: string, // Required if formType is 'tenant'
+    version?: string // Optional version, primarily for system forms
   ): Promise<IFormSchema | null> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
-      .first();
-    
-    return result || null;
+    if (formType === 'system') {
+      // Fetch from system_workflow_form_definitions
+      const systemFormRecord = await knex('system_workflow_form_definitions')
+        .where({ name: formId }) // In system table, formId is the 'name'
+        .modify((queryBuilder) => {
+          if (version) {
+            queryBuilder.andWhere({ version: version });
+          } else {
+            // Get latest version if version not specified by ordering
+            queryBuilder.orderBy('created_at', 'desc');
+          }
+        })
+        .first();
+
+      if (systemFormRecord) {
+        // Adapt systemFormRecord to IFormSchema structure
+        return {
+          schema_id: systemFormRecord.definition_id,
+          form_id: systemFormRecord.name,
+          tenant: 'system', // Explicitly mark as system schema context
+          json_schema: systemFormRecord.json_schema,
+          ui_schema: systemFormRecord.ui_schema,
+          default_values: systemFormRecord.default_values,
+          created_at: typeof systemFormRecord.created_at === 'string'
+            ? systemFormRecord.created_at
+            : systemFormRecord.created_at.toISOString(),
+          updated_at: typeof systemFormRecord.updated_at === 'string'
+            ? systemFormRecord.updated_at
+            : systemFormRecord.updated_at.toISOString(),
+        };
+      }
+      return null; // System form not found
+    } else if (formType === 'tenant') {
+      if (!tenant) {
+        throw new Error("Tenant ID is required for formType 'tenant'");
+      }
+      // Fetch from tenant-specific workflow_form_schemas
+      // Tenant-specific schemas are not versioned independently here. Version param is ignored.
+      const result = await knex(this.TABLE_NAME)
+        .where({ tenant, form_id: formId })
+        .first();
+      
+      return result || null;
+    } else {
+      throw new Error(`Invalid formType: ${formType}`);
+    }
   }
 
   /**

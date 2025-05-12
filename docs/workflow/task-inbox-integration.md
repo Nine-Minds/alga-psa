@@ -18,18 +18,33 @@ This document outlines the technical implementation for integrating a Task Inbox
 The Task Inbox requires these primary data structures:
 
 #### Task Definition
-Metadata that describes a type of human task:
-- Task type (identifier for the kind of task)
-- Name and description
-- Form schema reference (links to Form Registry)
-- Default assignment rules
-- SLA/Due date calculations
+Metadata that describes a type of human task. Task definitions can be system-wide or tenant-specific:
 
-#### Task Instance
+-   **System Task Definitions (`system_workflow_task_definitions` table):**
+    -   `task_type` (TEXT, Primary Key): Identifier for the kind of system task (e.g., 'qbo_mapping_error').
+    -   Name and description.
+    -   `form_id` (TEXT): Name of the form definition (usually a system form).
+    -   `form_type` (TEXT): Indicates if the form is 'system' or 'tenant'. For system task definitions, this is typically 'system'.
+    -   Default assignment rules, priority, SLA/due date calculations.
+    -   No `tenant` column, as these are global.
+
+-   **Tenant-Specific Task Definitions (`workflow_task_definitions` table):**
+    -   `task_definition_id` (UUID, Primary Key): Unique identifier for this tenant's custom task definition.
+    -   `tenant` (UUID): Tenant identifier.
+    -   `task_type` (TEXT): A type identifier, which could overlap with system task types if a tenant overrides a system behavior (though linkage is distinct).
+    -   Name and description.
+    -   `form_id` (TEXT): Name of the form definition (can be a system form or a tenant-specific form).
+    -   `form_type` (TEXT): Indicates if the form is 'system' or 'tenant'.
+    -   Default assignment rules, priority, SLA/due date calculations.
+
+#### Task Instance (`workflow_tasks` table)
 A specific task assigned to a user:
 - Task ID (unique identifier)
 - Execution ID (reference to workflow execution)
-- Task definition reference
+- **Task Definition Linkage:**
+    -   `task_definition_type` (TEXT): Stores 'system' or 'tenant', indicating which type of definition this task instance uses.
+    -   `tenant_task_definition_id` (UUID, NULLABLE): Foreign key to `workflow_task_definitions.task_definition_id`. Populated if `task_definition_type` is 'tenant'.
+    -   `system_task_definition_task_type` (TEXT, NULLABLE): Foreign key to `system_workflow_task_definitions.task_type`. Populated if `task_definition_type` is 'system'.
 - Status (pending, claimed, completed, canceled)
 - Assignment information
 - Due date
@@ -102,11 +117,22 @@ async function completeTask(taskId, formData, userId) {
   
   try {
     // Get task details
-    const task = await getTaskById(taskId, trx);
+    const task = await getTaskById(taskId, trx); // task will have tenant_task_definition_id, system_task_definition_task_type, and task_definition_type
     
     // Get form schema
-    const taskDef = await getTaskDefinition(task.taskDefinitionId, trx);
-    const formSchema = await getFormSchema(taskDef.formId, trx);
+    let taskDef;
+    if (task.task_definition_type === 'tenant') {
+      taskDef = await getTenantTaskDefinition(task.tenant_task_definition_id, trx);
+    } else if (task.task_definition_type === 'system') {
+      taskDef = await getSystemTaskDefinition(task.system_task_definition_task_type, trx);
+    }
+    
+    if (!taskDef) {
+      throw new Error('Task definition not found for the task.');
+    }
+    
+    // The taskDef object (from either system or tenant table) contains form_id and form_type
+    const formSchema = await getFormSchema(taskDef.form_id, taskDef.form_type, task.tenant, trx); // getFormSchema might need tenant for tenant-specific forms
     
     // Validate form data
     const isValid = validateFormData(formSchema.jsonSchema, formData);
@@ -211,45 +237,71 @@ Dynamic form generation based on JSON Schema:
 ### 5. Database Schema
 
 ```sql
--- Task definitions table
-CREATE TABLE workflow_task_definitions (
-  task_definition_id VARCHAR(255) PRIMARY KEY,
-  tenant VARCHAR(255) NOT NULL,
-  task_type VARCHAR(100) NOT NULL,
-  name VARCHAR(255) NOT NULL,
+-- System Task Definitions table
+CREATE TABLE system_workflow_task_definitions (
+  task_type TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
   description TEXT,
-  form_id VARCHAR(255) NOT NULL,
-  default_priority VARCHAR(50) DEFAULT 'medium',
+  form_id TEXT NOT NULL, -- Refers to system_workflow_form_definitions.name
+  form_type TEXT NOT NULL DEFAULT 'system', -- Indicates the form is a system form
+  default_priority TEXT DEFAULT 'medium',
   default_sla_days INTEGER DEFAULT 3,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(tenant, task_type)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  -- No tenant column
+  -- FOREIGN KEY (form_id) REFERENCES system_workflow_form_definitions(name) -- If desired, though form_id is a name string
 );
 
--- Task instances table
+-- Tenant-Specific Task Definitions table
+CREATE TABLE workflow_task_definitions (
+  task_definition_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Changed to UUID
+  tenant UUID NOT NULL, -- Changed to UUID
+  task_type TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  form_id TEXT NOT NULL, -- Can refer to system_workflow_form_definitions.name or workflow_form_definitions.name
+  form_type TEXT NOT NULL, -- 'system' or 'tenant'
+  default_priority TEXT DEFAULT 'medium',
+  default_sla_days INTEGER DEFAULT 3,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(tenant, task_type)
+  -- FOREIGN KEY (form_id) ... depends on how you resolve form_id/form_type logic for FKs
+);
+
+-- Task Instances table
 CREATE TABLE workflow_tasks (
-  task_id VARCHAR(255) PRIMARY KEY,
-  tenant VARCHAR(255) NOT NULL,
-  execution_id VARCHAR(255) NOT NULL,
-  event_id VARCHAR(255) NOT NULL,
-  task_definition_id VARCHAR(255) NOT NULL,
-  title VARCHAR(255) NOT NULL,
+  task_id UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- Changed to UUID
+  tenant UUID NOT NULL, -- Changed to UUID
+  execution_id UUID NOT NULL, -- Assuming this is also UUID
+  -- event_id VARCHAR(255) NOT NULL, -- Consider if this is still needed or how it relates
+  
+  task_definition_type TEXT NOT NULL, -- 'system' or 'tenant'
+  tenant_task_definition_id UUID NULL,
+  system_task_definition_task_type TEXT NULL,
+
+  title TEXT NOT NULL,
   description TEXT,
   status VARCHAR(50) NOT NULL DEFAULT 'pending',
   priority VARCHAR(50) NOT NULL DEFAULT 'medium',
-  due_date TIMESTAMP,
+  due_date TIMESTAMPTZ,
   context_data JSONB,
   assigned_roles JSONB,
   assigned_users JSONB,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  created_by VARCHAR(255),
-  claimed_at TIMESTAMP,
-  claimed_by VARCHAR(255),
-  completed_at TIMESTAMP,
-  completed_by VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID, -- Assuming user IDs are UUIDs
+  claimed_at TIMESTAMPTZ,
+  claimed_by UUID,
+  completed_at TIMESTAMPTZ,
+  completed_by UUID,
   response_data JSONB,
-  FOREIGN KEY (task_definition_id) REFERENCES workflow_task_definitions(task_definition_id)
+
+  FOREIGN KEY (tenant_task_definition_id) REFERENCES workflow_task_definitions(task_definition_id),
+  FOREIGN KEY (system_task_definition_task_type) REFERENCES system_workflow_task_definitions(task_type),
+  CONSTRAINT chk_task_def_type CHECK
+    ((task_definition_type = 'tenant' AND tenant_task_definition_id IS NOT NULL AND system_task_definition_task_type IS NULL) OR
+     (task_definition_type = 'system' AND system_task_definition_task_type IS NOT NULL AND tenant_task_definition_id IS NULL))
 );
 
 -- Task history table for audit trail

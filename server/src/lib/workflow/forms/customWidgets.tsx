@@ -7,11 +7,14 @@ import UserPicker from '../../../components/ui/UserPicker';
 import { CompanyPicker } from '../../../components/companies/CompanyPicker';
 import { ICompany } from '../../../interfaces/company.interfaces';
 import { IUserWithRoles } from '../../../interfaces/auth.interfaces';
+import AlertWidget from '../../../components/ui/widgets/AlertWidget';
+import HighlightWidget from '../../../components/ui/widgets/HighlightWidget';
+import ButtonLinkWidget from '../../../components/ui/widgets/ButtonLinkWidget';
 
 // Company Picker Widget
 export const CompanyPickerWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, options } = props;
-  
+
   return (
     <CompanyPicker
       id={id}
@@ -19,7 +22,7 @@ export const CompanyPickerWidget = (props: WidgetProps) => {
       onSelect={(companyId) => {
         // Store just the ID in the form data
         onChange(companyId);
-        
+
         // If the widget should update other fields based on selection
         if (options?.updateFields && props.formContext?.updateFormData) {
           // In a real implementation, we would fetch company details here
@@ -33,9 +36,9 @@ export const CompanyPickerWidget = (props: WidgetProps) => {
         }
       }}
       filterState="active"
-      onFilterStateChange={() => {}}
+      onFilterStateChange={() => { }}
       clientTypeFilter="all"
-      onClientTypeFilterChange={() => {}}
+      onClientTypeFilterChange={() => { }}
     />
   );
 };
@@ -43,7 +46,7 @@ export const CompanyPickerWidget = (props: WidgetProps) => {
 // Input Widget
 export const InputWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, placeholder } = props;
-  
+
   return (
     <Input
       id={id}
@@ -58,7 +61,7 @@ export const InputWidget = (props: WidgetProps) => {
 // TextArea Widget
 export const TextAreaWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, placeholder } = props;
-  
+
   return (
     <TextArea
       id={id}
@@ -73,7 +76,7 @@ export const TextAreaWidget = (props: WidgetProps) => {
 // DatePicker Widget
 export const DatePickerWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly } = props;
-  
+
   return (
     <DatePicker
       id={id}
@@ -87,11 +90,11 @@ export const DatePickerWidget = (props: WidgetProps) => {
 // UserPicker Widget
 export const UserPickerWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, options } = props;
-  
+
   // In a real implementation, we would fetch users here
   // For now, we'll just use an empty array
   const users: IUserWithRoles[] = [];
-  
+
   return (
     <UserPicker
       value={value || ''}
@@ -106,7 +109,7 @@ export const UserPickerWidget = (props: WidgetProps) => {
 // Checkbox Widget
 export const CheckboxWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, label } = props;
-  
+
   return (
     <Checkbox
       id={id}
@@ -126,5 +129,8 @@ export const customWidgets = {
   DatePickerWidget,
   UserPickerWidget,
   CheckboxWidget,
+  AlertWidget,
+  ButtonLinkWidget,
+  HighlightWidget,
   // Add all other custom widgets
 };

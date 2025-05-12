@@ -25,7 +25,10 @@ export interface IWorkflowTask {
   tenant: string;
   execution_id: string;
   event_id?: string;
-  task_definition_id: string;
+  // task_definition_id: string; // OLD: Stores UUID for tenant task_definitions, or task_type (string) for system_task_definitions
+  tenant_task_definition_id?: string | null; // FK to workflow_task_definitions.task_definition_id (UUID)
+  system_task_definition_task_type?: string | null; // FK to system_workflow_task_definitions.task_type (TEXT)
+  task_definition_type: 'tenant' | 'system'; // Indicates which FK is active
   title: string;
   description?: string;
   status: WorkflowTaskStatus;
@@ -80,72 +83,41 @@ const WorkflowTaskModel = {
   createTask: async (
     knex: Knex,
     tenant: string,
-    task: Omit<IWorkflowTask, 'task_id' | 'created_at' | 'updated_at'>
+    task: Omit<IWorkflowTask, 'task_id' | 'created_at' | 'updated_at'> // event_id is optional in IWorkflowTask, allow it to be passed
   ): Promise<string> => {
     try {
-      const taskId = `task-${uuidv4()}`;
+      const taskId = uuidv4(); // Removed "task-" prefix
       
-      // Create the record with appropriate values for insertion
-      const taskRecord = {
-        ...task,
+      const taskToInsert: IWorkflowTask = {
+        ...task, // Spread the incoming task payload which should match the new structure
         task_id: taskId,
-        tenant,
+        tenant, // Ensure tenant is part of the final object if not already in `task`
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        // Ensure event_id is handled if it's part of the input `task` or set to undefined
+        event_id: task.event_id || undefined,
       };
       
-      console.log('DEBUG WorkflowTaskModel.createTask - About to insert task:', JSON.stringify(taskRecord, null, 2));
-      console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles type:', typeof taskRecord.assigned_roles);
+      console.log('DEBUG WorkflowTaskModel.createTask - About to insert task:', JSON.stringify(taskToInsert, null, 2));
       
-      // Explicitly stringify and re-parse the JSON fields to ensure proper format
-      if (taskRecord.assigned_roles !== undefined) {
-        try {
-          // Force proper JSON format by stringifying and re-parsing
-          const jsonString = JSON.stringify(taskRecord.assigned_roles);
-          console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles stringified:', jsonString);
-          
-          // Store the raw JSON string directly to avoid any driver conversion issues
-          // This ensures PostgreSQL gets exactly what we expect
-          taskRecord.assigned_roles = JSON.parse(jsonString);
-          console.log('DEBUG WorkflowTaskModel.createTask - assigned_roles re-parsed:', taskRecord.assigned_roles);
-        } catch (e: any) {
-          console.error('DEBUG WorkflowTaskModel.createTask - ERROR: assigned_roles JSON processing failed:', e.message);
-          taskRecord.assigned_roles = undefined;
-        }
-      }
-      
-      if (taskRecord.assigned_users !== undefined) {
-        try {
-          // Force proper JSON format by stringifying and re-parsing
-          const jsonString = JSON.stringify(taskRecord.assigned_users);
-          console.log('DEBUG WorkflowTaskModel.createTask - assigned_users stringified:', jsonString);
-          
-          // Store the raw JSON string directly to avoid any driver conversion issues
-          taskRecord.assigned_users = JSON.parse(jsonString);
-          console.log('DEBUG WorkflowTaskModel.createTask - assigned_users re-parsed:', taskRecord.assigned_users);
-        } catch (e: any) {
-          console.error('DEBUG WorkflowTaskModel.createTask - ERROR: assigned_users JSON processing failed:', e.message);
-          taskRecord.assigned_users = undefined;
-        }
-      }
-      
-      // To be extra safe, manually build the SQL to ensure proper JSON serialization
-      // This is a more direct approach when dealing with JSONB fields that may be causing issues
-      const pgTaskRecord = {
-        ...taskRecord,
-        // Force PostgreSQL to see these as proper JSON strings
-        assigned_roles: taskRecord.assigned_roles ? JSON.stringify(taskRecord.assigned_roles) : null,
-        assigned_users: taskRecord.assigned_users ? JSON.stringify(taskRecord.assigned_users) : null,
-        context_data: taskRecord.context_data ? JSON.stringify(taskRecord.context_data) : null
+      // Ensure JSON fields are correctly formatted for PostgreSQL
+      const finalTaskRecord = {
+        ...taskToInsert,
+        assigned_roles: taskToInsert.assigned_roles ? JSON.stringify(taskToInsert.assigned_roles) : null,
+        assigned_users: taskToInsert.assigned_users ? JSON.stringify(taskToInsert.assigned_users) : null,
+        context_data: taskToInsert.context_data ? JSON.stringify(taskToInsert.context_data) : null,
+        response_data: taskToInsert.response_data ? JSON.stringify(taskToInsert.response_data) : null,
       };
       
-      console.log('DEBUG WorkflowTaskModel.createTask - Final pgTaskRecord:',
-        'assigned_roles:', pgTaskRecord.assigned_roles,
-        'type:', typeof pgTaskRecord.assigned_roles);
+      console.log('DEBUG WorkflowTaskModel.createTask - Final record for DB:', JSON.stringify(finalTaskRecord, null, 2));
       
       const [result] = await knex('workflow_tasks')
-        .insert(pgTaskRecord)
+        .insert(finalTaskRecord)
         .returning('task_id');
+      
+      if (!result || !result.task_id) {
+        throw new Error('Task creation failed, no task_id returned.');
+      }
       
       console.log('DEBUG WorkflowTaskModel.createTask - Successfully inserted task with ID:', result.task_id);
       return result.task_id;
@@ -376,7 +348,7 @@ const WorkflowTaskModel = {
     history: Omit<IWorkflowTaskHistory, 'history_id' | 'timestamp'>
   ): Promise<string> => {
     try {
-      const historyId = `hist-${uuidv4()}`;
+      const historyId = uuidv4(); // Removed "hist-" prefix
       
       const [result] = await knex('workflow_task_history')
         .insert({

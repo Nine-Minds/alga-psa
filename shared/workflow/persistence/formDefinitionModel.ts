@@ -28,15 +28,38 @@ export default class FormDefinitionModel {
    */
   static async getByIdAndVersion(
     knex: Knex,
-    tenant: string,
     formId: string,
-    version: string
+    version: string,
+    formType: 'system' | 'tenant',
+    tenant?: string // Required if formType is 'tenant'
   ): Promise<IFormDefinition | null> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId, version })
-      .first();
-    
-    return result || null;
+    if (formType === 'system') {
+      const systemFormRecord = await knex('system_workflow_form_definitions')
+        .where({ name: formId, version })
+        .first();
+      if (systemFormRecord) {
+        // Assuming direct compatibility for most fields, adjust as necessary
+        return {
+          ...systemFormRecord,
+          form_id: systemFormRecord.name, // System forms use 'name' as their unique ID
+          tenant: 'system',
+          // Ensure date fields are consistently strings if IFormDefinition expects that
+          created_at: new Date(systemFormRecord.created_at).toISOString(),
+          updated_at: new Date(systemFormRecord.updated_at).toISOString(),
+        } as IFormDefinition; // Cast if confident about compatibility
+      }
+      return null;
+    } else if (formType === 'tenant') {
+      if (!tenant) {
+        throw new Error("Tenant ID is required for formType 'tenant' in getByIdAndVersion");
+      }
+      const result = await knex(this.TABLE_NAME)
+        .where({ tenant, form_id: formId, version })
+        .first();
+      return result ? { ...result, created_at: new Date(result.created_at).toISOString(), updated_at: new Date(result.updated_at).toISOString()} as IFormDefinition : null;
+    } else {
+      throw new Error(`Invalid formType: ${formType}`);
+    }
   }
 
   /**
@@ -86,15 +109,40 @@ export default class FormDefinitionModel {
    */
   static async getLatestVersion(
     knex: Knex,
-    tenant: string,
-    formId: string
+    formId: string,
+    formType: 'system' | 'tenant',
+    tenant?: string // Required if formType is 'tenant'
   ): Promise<IFormDefinition | null> {
-    const result = await knex(this.TABLE_NAME)
-      .where({ tenant, form_id: formId })
-      .orderBy('version', 'desc')
-      .first();
-    
-    return result || null;
+    if (formType === 'system') {
+      const systemFormRecord = await knex('system_workflow_form_definitions')
+        .where({ name: formId })
+        // System forms might use 'version' string or 'created_at' for latest.
+        // Using created_at as a robust way if versions aren't strictly semver.
+        .orderBy('created_at', 'desc')
+        .first();
+      if (systemFormRecord) {
+        return {
+          ...systemFormRecord,
+          form_id: systemFormRecord.name,
+          tenant: 'system',
+          created_at: new Date(systemFormRecord.created_at).toISOString(),
+          updated_at: new Date(systemFormRecord.updated_at).toISOString(),
+        } as IFormDefinition;
+      }
+      return null;
+    } else if (formType === 'tenant') {
+      if (!tenant) {
+        throw new Error("Tenant ID is required for formType 'tenant' in getLatestVersion");
+      }
+      const result = await knex(this.TABLE_NAME)
+        .where({ tenant, form_id: formId })
+         // Tenant forms use 'version' field, assuming it's sortable to find latest.
+        .orderBy('version', 'desc')
+        .first();
+      return result ? { ...result, created_at: new Date(result.created_at).toISOString(), updated_at: new Date(result.updated_at).toISOString()} as IFormDefinition : null;
+    } else {
+      throw new Error(`Invalid formType: ${formType}`);
+    }
   }
 
   /**

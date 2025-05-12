@@ -41,17 +41,41 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       }
       
       // Get task definition to find the form schema
-      const taskDefinition = await trx('workflow_task_definitions')
-        .where({
-          task_definition_id: task.task_definition_id,
-          tenant
-        })
-        .first();
-      
-      if (!taskDefinition) {
-        throw new Error(`Task definition ${task.task_definition_id} not found`);
+      let taskDefinition: any; // Define with a broader type or a specific combined type if available
+
+      if (task.task_definition_type === 'system') {
+        if (!task.system_task_definition_task_type) {
+          throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
+        }
+        taskDefinition = await trx('system_workflow_task_definitions')
+          .where({
+            task_type: task.system_task_definition_task_type,
+          })
+          .first();
+      } else { // 'tenant'
+        if (!task.tenant_task_definition_id) {
+          throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
+        }
+        taskDefinition = await trx('workflow_task_definitions')
+          .where({
+            task_definition_id: task.tenant_task_definition_id,
+            tenant
+          })
+          .first();
       }
       
+      if (!taskDefinition) {
+        const idUsed = task.task_definition_type === 'system' ? task.system_task_definition_task_type : task.tenant_task_definition_id;
+        throw new Error(`Task definition ${idUsed} (type: ${task.task_definition_type}) not found`);
+      }
+      
+      // The form_id to use for FormRegistry lookup comes from the resolved taskDefinition
+      const formIdForRegistry = taskDefinition.form_id;
+      // If system_workflow_task_definitions.form_id refers to system_workflow_form_definitions.name
+      // and workflow_task_definitions.form_id refers to workflow_form_definitions.definition_id (UUID)
+      // then formRegistry.getForm needs to handle this.
+      // For now, we assume taskDefinition.form_id is the correct identifier for formRegistry.
+
       // Get form registry
       const formRegistry = getFormRegistry();
       
@@ -59,7 +83,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       const validationResult = await formRegistry.validateFormData(
         trx,
         tenant,
-        taskDefinition.form_id,
+        formIdForRegistry, // Use the resolved formId
         formData
       );
       
@@ -270,21 +294,42 @@ export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
     }
     
     // Get task definition
-    const taskDefinition = await knex('workflow_task_definitions')
-      .where({
-        task_definition_id: task.task_definition_id,
-        tenant
-      })
-      .first();
-    
-    if (!taskDefinition) {
-      throw new Error(`Task definition ${task.task_definition_id} not found`);
+    let taskDefinition: any; // Define with a broader type
+
+    if (task.task_definition_type === 'system') {
+      if (!task.system_task_definition_task_type) {
+        throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
+      }
+      taskDefinition = await knex('system_workflow_task_definitions')
+        .where({
+          task_type: task.system_task_definition_task_type,
+        })
+        .first();
+    } else { // 'tenant'
+      if (!task.tenant_task_definition_id) {
+        throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
+      }
+      taskDefinition = await knex('workflow_task_definitions')
+        .where({
+          task_definition_id: task.tenant_task_definition_id,
+          tenant
+        })
+        .first();
     }
     
-    // Get form schema
+    if (!taskDefinition) {
+      const idUsed = task.task_definition_type === 'system' ? task.system_task_definition_task_type : task.tenant_task_definition_id;
+      throw new Error(`Task definition ${idUsed} (type: ${task.task_definition_type}) not found`);
+    }
+    
+    // Get form schema using the form_id from the fetched task definition
     const formRegistry = getFormRegistry();
+    // Assuming taskDefinition.form_id correctly points to either a system form name or a tenant form UUID
+    // and formRegistry.getForm can resolve this.
     const form = await formRegistry.getForm(knex, tenant, taskDefinition.form_id);
     
+    console.log('[taskInboxAction] Form:', form);
+
     // Return task details
     return {
       taskId: task.task_id,

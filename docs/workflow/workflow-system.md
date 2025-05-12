@@ -103,6 +103,12 @@ The workflow system uses several database tables to store its data:
 5.  **workflow_action_dependencies**: Stores dependencies between actions
 6.  **workflow_sync_points**: Manages synchronization points for parallel execution
 7.  **workflow_event_processing**: Tracks the processing status of events in a distributed setup
+8.  **system_workflow_task_definitions**: Stores definitions for system-wide, reusable task types (e.g., common error handling tasks). These definitions are not tenant-specific and are identified by their `task_type` string. They link to form definitions (often system forms).
+9.  **workflow_task_definitions**: Stores definitions for task types that are specific to a tenant. These are identified by a UUID (`task_definition_id`) and are scoped to a `tenant`.
+10. **workflow_tasks**: Stores instances of human tasks. It links to its definition using:
+    - `task_definition_type` ('system' or 'tenant'): Indicates whether the task uses a system or tenant-specific definition.
+    - `tenant_task_definition_id` (UUID): Foreign key to `workflow_task_definitions.task_definition_id` if type is 'tenant'.
+    - `system_task_definition_task_type` (TEXT): Foreign key to `system_workflow_task_definitions.task_type` if type is 'system'.
 
 ## 3. TypeScript-Based Workflows
 
