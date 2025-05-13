@@ -43,7 +43,7 @@ export async function getAllTemplates(): Promise<TemplateData[]> {
       // Get all published templates
       const templates = await knex('workflow_templates')
         .where({
-          tenant_id: tenant,
+          tenant: tenant,
           status: 'published'
         })
         .orderBy('name', 'asc');
@@ -86,7 +86,7 @@ export async function getTemplate(id: string): Promise<TemplateData> {
       // Get template
       const template = await knex('workflow_templates')
         .where({
-          tenant_id: tenant,
+          tenant: tenant,
           template_id: id
         })
         .first();
@@ -133,7 +133,7 @@ export async function getTemplatesByCategory(category: string): Promise<Template
       // Get templates by category
       const templates = await knex('workflow_templates')
         .where({
-          tenant_id: tenant,
+          tenant: tenant,
           status: 'published',
           category
         })
@@ -176,7 +176,7 @@ export async function getAllTemplateCategories(): Promise<{ category_id: string;
       // Get all categories
       const categories = await knex('workflow_template_categories')
         .where({
-          tenant_id: tenant
+          tenant: tenant
         })
         .orderBy('display_order', 'asc')
         .select('category_id', 'name', 'description');
@@ -220,7 +220,7 @@ export async function createWorkflowFromTemplate(
       // Get the template
       const template = await knex('workflow_templates')
         .where({
-          tenant_id: tenant,
+          tenant: tenant,
           template_id: templateId
         })
         .first();
@@ -232,7 +232,7 @@ export async function createWorkflowFromTemplate(
       // Create the registration
       const [registration] = await knex('workflow_registrations')
         .insert({
-          tenant_id: tenant,
+          tenant: tenant,
           name,
           description: description || template.description,
           category: template.category,
@@ -251,7 +251,7 @@ export async function createWorkflowFromTemplate(
       // Create the initial version
       await knex('workflow_registration_versions')
         .insert({
-          tenant_id: tenant,
+          tenant: tenant,
           registration_id: registration.registration_id,
           version: '1.0.0',
           is_current: true,

@@ -155,7 +155,7 @@ async function adaptToWasmViewModel(
   if (tenant) {
     const { knex } = await createTenantKnex(); // Get knex instance again if needed
     const tenantCompanyLink = await knex('tenant_companies')
-      .where({ tenant_id: tenant, is_default: true })
+      .where({ tenant: tenant, is_default: true })
       .select('company_id')
       .first();
 

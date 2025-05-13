@@ -459,11 +459,11 @@ export class WorkflowWorker {
         const registration = await db('workflow_registrations as wr')
           .join('workflow_registration_versions as wrv', function() {
             this.on('wrv.registration_id', '=', 'wr.registration_id')
-                .andOn('wrv.tenant_id', '=', 'wr.tenant_id');
+                .andOn('wrv.tenant', '=', 'wr.tenant');
           })
           .where({
             'wr.registration_id': workflowId,
-            'wr.tenant_id': tenant,
+            'wr.tenant': tenant,
             'wrv.version_id': versionId
           })
           .select(
@@ -556,7 +556,7 @@ export class WorkflowWorker {
       const attachments = await db('workflow_event_attachments as wea')
         .where({
           'wea.event_type': eventType,
-          'wea.tenant_id': tenant,
+          'wea.tenant': tenant,
           'wea.is_active': true
         })
         .select('wea.workflow_id as workflow_id');
@@ -700,7 +700,7 @@ export class WorkflowWorker {
 
       const registrationTable = isSystemManaged ? 'system_workflow_registrations' : 'workflow_registrations';
       const versionTable = isSystemManaged ? 'system_workflow_registration_versions' : 'workflow_registration_versions';
-      const tenantFilter = isSystemManaged ? {} : { 'wr.tenant_id': tenant };
+      const tenantFilter = isSystemManaged ? {} : { 'wr.tenant': tenant };
 
       // Query the appropriate tables based on isSystemManaged
       const registration = await db(`${registrationTable} as wr`)
@@ -708,8 +708,8 @@ export class WorkflowWorker {
           this.on('wrv.registration_id', '=', 'wr.registration_id');
           // No tenant join needed for system tables or version table here
           // if (!isSystemManaged) {
-          //   // Only join on tenant_id for tenant workflows - Redundant due to where clause?
-          //   // this.andOn('wrv.tenant_id', '=', 'wr.tenant_id');
+          //   // Only join on tenant for tenant workflows - Redundant due to where clause?
+          //   // this.andOn('wrv.tenant', '=', 'wr.tenant');
           // }
           this.andOn('wrv.is_current', '=', db.raw('true'));
         })

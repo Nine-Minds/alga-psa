@@ -14,7 +14,7 @@ export interface ITimePeriodSettings extends TenantEntity {
   effective_to?: ISO8601String;
   created_at: ISO8601String;
   updated_at: ISO8601String;
-  tenant_id: string;
+  tenant: string;
   // Fields applicable based on frequency_unit
   // For 'month' and 'week':
   start_day?: number; // For 'week': 1-7 (Mon-Sun), for 'month': 1-31

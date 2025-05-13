@@ -84,7 +84,7 @@ export async function registerSystemWorkflowFormDefinitionAction(
       default_values: JSON.stringify(params.defaultValues),
       created_by: userId,
       updated_by: userId,
-      tenant_id: null,
+      tenant: null,
       form_type: 'system'
     }).returning('form_id');
 

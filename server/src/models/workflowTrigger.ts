@@ -21,7 +21,11 @@ export class WorkflowTriggerModel {
     data: ICreateWorkflowTrigger
   ): Promise<IWorkflowTrigger> {
     const [trigger] = await knex('workflow_triggers')
-      .insert(data)
+      .insert({
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .returning('*');
     
     return trigger;
@@ -43,7 +47,7 @@ export class WorkflowTriggerModel {
     const trigger = await knex('workflow_triggers')
       .where({
         trigger_id: triggerId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .first();
     
@@ -70,7 +74,7 @@ export class WorkflowTriggerModel {
     const { eventType, limit = 100, offset = 0 } = options;
     
     const query = knex('workflow_triggers')
-      .where('tenant_id', tenantId);
+      .where('tenant', tenantId);
     
     if (eventType !== undefined) {
       query.where('event_type', eventType);
@@ -102,7 +106,7 @@ export class WorkflowTriggerModel {
     const [trigger] = await knex('workflow_triggers')
       .where({
         trigger_id: triggerId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .update({
         ...data,
@@ -129,7 +133,7 @@ export class WorkflowTriggerModel {
     const result = await knex('workflow_triggers')
       .where({
         trigger_id: triggerId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .delete();
     

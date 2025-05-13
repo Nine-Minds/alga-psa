@@ -68,7 +68,7 @@ export async function createWorkflowTrigger(params: ICreateWorkflowTrigger): Pro
   const { knex } = await createTenantKnex();
   
   // Verify that the event type exists in the event catalog
-  const eventCatalogEntry = await EventCatalogModel.getByEventType(knex, params.event_type, params.tenant_id);
+  const eventCatalogEntry = await EventCatalogModel.getByEventType(knex, params.event_type, params.tenant);
   
   if (!eventCatalogEntry) {
     throw new Error(`Event type "${params.event_type}" not found in the event catalog`);

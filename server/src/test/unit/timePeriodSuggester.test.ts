@@ -18,7 +18,7 @@ const createTestSettings = (
   effective_from: Temporal.PlainDate.from('2024-01-01').toString(),
   created_at: Temporal.Now.plainDateTimeISO().toString(),
   updated_at: Temporal.Now.plainDateTimeISO().toString(),
-  tenant_id: 'test-tenant-id'
+  tenant: 'test-tenant-id'
 });
 
 describe('TimePeriodSuggester', () => {

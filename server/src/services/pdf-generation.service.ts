@@ -117,7 +117,7 @@ export class PDFGenerationService {
     let tenantCompanyInfo = null;
     const { knex } = await createTenantKnex();
     const tenantCompanyLink = await knex('tenant_companies')
-      .where({ tenant_id: this.tenant, is_default: true })
+      .where({ tenant: this.tenant, is_default: true })
       .select('company_id')
       .first();
 

@@ -110,7 +110,7 @@ export async function getTenantDefaultStatuses(tenantId: string): Promise<Defaul
   try {
     const {knex: db} = await createTenantKnex();
     const result = await db('tenant_settings')
-      .where({ tenant_id: tenantId })
+      .where({ tenant: tenantId })
       .select('default_project_statuses')
       .first();
 

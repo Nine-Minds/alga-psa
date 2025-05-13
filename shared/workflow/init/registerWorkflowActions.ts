@@ -539,7 +539,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const mapping = await knex('tenant_external_entity_mappings')
           .select('external_entity_id')
           .where({
-            tenant_id: context.tenant,
+            tenant: context.tenant,
             alga_entity_id: params.algaProductId,
             alga_entity_type: 'service', // Assuming this mapping type
             integration_type: 'quickbooks_online',
@@ -609,8 +609,8 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             .join('workflow_registration_versions as ver', function() {
               this.on('reg.registration_id', '=', 'ver.registration_id');
               this.andOn('ver.is_current', '=', knex.raw('?', [true]));
-              this.andOn('reg.tenant_id', '=', knex.raw('?', [context.tenant]));
-              this.andOn('ver.tenant_id', '=', knex.raw('?', [context.tenant]));
+              this.andOn('reg.tenant', '=', knex.raw('?', [context.tenant]));
+              this.andOn('ver.tenant', '=', knex.raw('?', [context.tenant]));
             })
             .where('reg.name', params.name)
             .select('ver.version_id', 'reg.registration_id')
@@ -1027,7 +1027,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
 
         const mappingData = {
-          tenant_id: context.tenant,
+          tenant: context.tenant,
           integration_type: 'quickbooks_online',
           alga_entity_type: 'company', // Assuming 'company' is the Alga entity type mapping to QBO Customer
           alga_entity_id: params.companyId,
@@ -1041,7 +1041,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         // Perform an upsert operation
         // The conflict target should be the unique key identifying a mapping
         // Adjust conflict target columns as per your actual table schema's unique constraints for a mapping
-        const conflictTarget = ['tenant_id', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
+        const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
         
         const [updatedMapping] = await knex('tenant_external_entity_mappings')
           .insert(mappingData)
@@ -1090,7 +1090,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const mapping = await knex('tenant_external_entity_mappings')
           .select('external_entity_id', 'metadata', 'sync_status')
           .where({
-            tenant_id: context.tenant,
+            tenant: context.tenant,
             alga_entity_id: params.algaEntityId,
             alga_entity_type: 'company', // Assuming we're mapping companies for now
             integration_type: params.externalSystemName,

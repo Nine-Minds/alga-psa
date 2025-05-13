@@ -179,7 +179,7 @@ export async function fetchServicesForTimeEntry(workItemType?: string): Promise<
     .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
     .leftJoin('service_types as tst', function() {
       this.on('sc.custom_service_type_id', '=', 'tst.id')
-          .andOn('sc.tenant', '=', 'tst.tenant_id');
+          .andOn('sc.tenant', '=', 'tst.tenant');
     })
     .where({ 'sc.tenant': tenant })
     .select(

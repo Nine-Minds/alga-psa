@@ -50,7 +50,7 @@ interface QboItem {
 // Use the actual type structure from the action file
 interface ExternalEntityMapping {
   id: string; // UUID
-  tenant_id: string; // UUID
+  tenant: string; // UUID
   integration_type: string; // VARCHAR(50)
   alga_entity_type: string; // VARCHAR(50)
   alga_entity_id: string; // VARCHAR(255)

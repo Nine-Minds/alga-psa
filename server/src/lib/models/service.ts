@@ -116,7 +116,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant_id', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -169,7 +169,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant_id', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -275,7 +275,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant_id', '=', db.raw('?', [effectiveTenant]));
+              .andOn('ct.tenant', '=', db.raw('?', [effectiveTenant]));
         })
         .select(
           'sc.service_id',
@@ -361,7 +361,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant_id', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',
@@ -404,15 +404,30 @@ const Service = {
     }
 
     try {
-      const deletedCount = await db<IService>('service_catalog')
-        .where({
-          service_id,
-          tenant
-        })
-        .del();
+      // Use a transaction to ensure both operations succeed or fail together
+      return await db.transaction(async (trx) => {
+        const updatedDetails = await trx('invoice_item_details')
+          .where({
+            service_id,
+            tenant
+          })
+          .update({
+            service_id: null
+          });
 
-      log.info(`[Service.delete] Deleted service ${service_id} for tenant ${tenant}. Affected rows: ${deletedCount}`);
-      return deletedCount > 0;
+        log.info(`[Service.delete] Updated ${updatedDetails} invoice_item_details records for service ${service_id}`);
+
+        // Then delete the service
+        const deletedCount = await trx('service_catalog')
+          .where({
+            service_id,
+            tenant
+          })
+          .del();
+
+        log.info(`[Service.delete] Deleted service ${service_id} for tenant ${tenant}. Affected rows: ${deletedCount}`);
+        return deletedCount > 0;
+      });
     } catch (error) {
       log.error(`[Service.delete] Error deleting service ${service_id}:`, error);
       throw error;
@@ -438,7 +453,7 @@ const Service = {
         .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
         .leftJoin('service_types as ct', function() {
           this.on('sc.custom_service_type_id', '=', 'ct.id')
-              .andOn('ct.tenant_id', '=', db.raw('?', [tenant]));
+              .andOn('ct.tenant', '=', db.raw('?', [tenant]));
         })
         .select(
           'sc.service_id',

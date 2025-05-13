@@ -18,25 +18,25 @@ export const ServiceTypeModel = {
   async findAll(tenantOverride?: string): Promise<IServiceType[]> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
-    return knex(TABLE_NAME).where({ tenant_id: tenant }).select('*');
+    return knex(TABLE_NAME).where({ tenant: tenant }).select('*');
   },
 
   async findActive(tenantOverride?: string): Promise<IServiceType[]> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
-    return knex(TABLE_NAME).where({ tenant_id: tenant, is_active: true }).select('*');
+    return knex(TABLE_NAME).where({ tenant: tenant, is_active: true }).select('*');
   },
 
   async findById(id: string, tenantOverride?: string): Promise<IServiceType | undefined> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
-    return knex(TABLE_NAME).where({ id, tenant_id: tenant }).first();
+    return knex(TABLE_NAME).where({ id, tenant: tenant }).first();
   },
 
   async findByName(name: string, tenantOverride?: string): Promise<IServiceType | undefined> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
-    return knex(TABLE_NAME).where({ name, tenant_id: tenant }).first();
+    return knex(TABLE_NAME).where({ name, tenant: tenant }).first();
   },
 
   async create(data: Omit<IServiceType, 'id' | 'created_at' | 'updated_at' | 'tenant'> & Partial<TenantEntity>): Promise<IServiceType> {
@@ -45,20 +45,19 @@ export const ServiceTypeModel = {
     
     const dataToInsert = {
       ...data,
-      tenant_id: tenant,
+      tenant: tenant,
     };
-    delete dataToInsert.tenant; 
 
     const [newRecord] = await knex(TABLE_NAME).insert(dataToInsert).returning('*');
     return newRecord;
   },
 
-  async update(id: string, data: Partial<Omit<IServiceType, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'tenant'>>, tenantOverride?: string): Promise<IServiceType | undefined> {
+  async update(id: string, data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>, tenantOverride?: string): Promise<IServiceType | undefined> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
     
     const [updatedRecord] = await knex(TABLE_NAME)
-      .where({ id, tenant_id: tenant })
+      .where({ id, tenant: tenant })
       .update({ ...data, updated_at: new Date() }) 
       .returning('*');
     return updatedRecord;
@@ -67,7 +66,7 @@ export const ServiceTypeModel = {
   async delete(id: string, tenantOverride?: string): Promise<boolean> {
     const { knex, tenant: tenantFromKnex } = await createTenantKnex();
     const tenant = tenantOverride ?? await getTenantContext(tenantFromKnex);
-    const deletedCount = await knex(TABLE_NAME).where({ id, tenant_id: tenant }).del();
+    const deletedCount = await knex(TABLE_NAME).where({ id, tenant: tenant }).del();
     return deletedCount > 0;
   },
 
@@ -84,7 +83,7 @@ export const ServiceTypeModel = {
 
     // 2. Fetch all active tenant-specific custom types
     const customTypes = await knex<IServiceType>(TABLE_NAME)
-      .where('tenant_id', tenant)
+      .where('tenant', tenant)
       .andWhere('is_active', true)
       .select('id', 'name', 'billing_method')
       .then(types => types.map(ct => ({ ...ct, is_standard: false })));

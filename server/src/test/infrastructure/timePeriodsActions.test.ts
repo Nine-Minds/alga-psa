@@ -50,9 +50,9 @@ describe('Time Periods Actions', () => {
 
     // Create time period settings
     timePeriodSettingsId = uuidv4();
-    const settings: Omit<ITimePeriodSettings, 'tenant'> = {
+    const settings: ITimePeriodSettings = {
       time_period_settings_id: timePeriodSettingsId,
-      tenant_id: context.tenantId,
+      tenant: context.tenantId,
       frequency: 1,
       frequency_unit: 'month',
       start_day: 1,

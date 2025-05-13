@@ -45,7 +45,7 @@ exports.seed = async function(knex) {
   // Insert categories
   for (const category of categories) {
     await knex('workflow_template_categories').insert({
-      tenant_id: tenant,
+      tenant: tenant.tenant, // Use the UUID string, not the entire tenant object
       ...category,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -552,7 +552,7 @@ async function approvalWorkflow(context): Promise<void> {
     const categoryId = categoryMap[template.category];
     
     await knex('workflow_templates').insert({
-      tenant_id: tenant.tenant,
+      tenant: tenant.tenant,
       name: template.name,
       description: template.description,
       category: template.category,

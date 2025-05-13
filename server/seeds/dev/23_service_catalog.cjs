@@ -5,7 +5,7 @@ exports.seed = async function (knex) { // Changed to async function
 
     // Fetch the relevant service_type_ids for this tenant
     const serviceTypes = await knex('service_types')
-        .where({ tenant_id: tenantId }) // Assuming tenant column is tenant_id based on ensure_tenant_service_types migration
+        .where({ tenant: tenantId }) // Assuming tenant column is tenant based on ensure_tenant_service_types migration
         .whereIn('name', ['Hourly Time', 'Fixed Price', 'Usage Based']) // Fetch only the types used in this seed
         .select('id', 'name');
 
@@ -38,7 +38,7 @@ exports.seed = async function (knex) { // Changed to async function
 
             // Prepare insert data for missing types
             const typesToInsert = standardTypesToCreate.map(stdType => ({
-                tenant_id: tenantId,
+                tenant: tenantId,
                 name: stdType.name,
                 standard_service_type_id: stdType.id,
                 is_active: true,
@@ -49,13 +49,13 @@ exports.seed = async function (knex) { // Changed to async function
             if (typesToInsert.length > 0) {
                 await knex('service_types')
                     .insert(typesToInsert)
-                    .onConflict(['tenant_id', 'name'])
+                    .onConflict(['tenant', 'name'])
                     .ignore();
                 console.log(`[SEED 23_service_catalog] Attempted to create ${typesToInsert.length} missing service types for tenant ${tenantId}.`);
 
                 // Re-fetch the service types for the tenant
                 const updatedServiceTypes = await knex('service_types')
-                    .where({ tenant_id: tenantId })
+                    .where({ tenant: tenantId })
                     .whereIn('name', requiredTypes)
                     .select('id', 'name', 'billing_method');
 

@@ -679,7 +679,7 @@ export class WorkflowWorker {
       });
       
       // Extract tenant from the payload
-      const tenant = eventData.payload?.tenantId;
+      const tenant = eventData.payload?.tenant;
       if (!tenant) {
         logger.error(`[WorkflowWorker] Event is missing tenant ID, cannot process`);
         return;
@@ -690,11 +690,11 @@ export class WorkflowWorker {
       const attachments = await dbConnection('workflow_event_attachments as wea')
         .join('event_catalog as ec', function() {
           this.on('wea.event_id', 'ec.event_id')
-              .andOn('wea.tenant_id', 'ec.tenant_id');
+              .andOn('wea.tenant', 'ec.tenant');
         })
         .where({
           'ec.event_type': eventData.eventType,
-          'wea.tenant_id': tenant,
+          'wea.tenant': tenant,
           'wea.is_active': true
         })
         .select('wea.workflow_id');
@@ -745,7 +745,7 @@ export class WorkflowWorker {
             })
             .where({
               'wr.workflow_id': workflowId,
-              'wr.tenant_id': tenant
+              'wr.tenant': tenant
             })
             .select('wr.*', 'wrv.version_id')
             .first();

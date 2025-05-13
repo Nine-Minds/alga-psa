@@ -39,7 +39,7 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
             .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
             .leftJoin('service_types as st', function() {
                 this.on('sc.custom_service_type_id', '=', 'st.id')
-                    .andOn('sc.tenant', '=', 'st.tenant_id');
+                    .andOn('sc.tenant', '=', 'st.tenant');
             })
             .select(
                 'sc.service_id',
@@ -133,7 +133,7 @@ export async function createService(
             typeId = custom_service_type_id;
             const customServiceType = await knex<IServiceType>('service_types')
                 .where('id', typeId)
-                .andWhere('tenant_id', tenant) // Match tenant
+                .andWhere('tenant', tenant) // Match tenant
                 .first();
              if (!customServiceType) {
                  throw new Error(`Custom ServiceType ID '${typeId}' not found for tenant '${tenant}'.`);
@@ -253,7 +253,7 @@ export async function createServiceType(
 
 export async function updateServiceType(
   id: string,
-  data: Partial<Omit<IServiceType, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'tenant'>>
+  data: Partial<Omit<IServiceType, 'id' | 'tenant' | 'created_at' | 'updated_at'>>
 ): Promise<IServiceType> {
   try {
       // Assuming ServiceTypeModel is imported or available

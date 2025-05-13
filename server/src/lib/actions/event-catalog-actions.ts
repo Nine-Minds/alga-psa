@@ -90,7 +90,7 @@ export async function createEventCatalogEntry(params: ICreateEventCatalogEntry):
   const { knex } = await createTenantKnex();
   
   // Check if an entry with the same event type already exists
-  const existingEntry = await EventCatalogModel.getByEventType(knex, params.event_type, params.tenant_id);
+  const existingEntry = await EventCatalogModel.getByEventType(knex, params.event_type, params.tenant);
   
   if (existingEntry) {
     throw new Error(`Event catalog entry with event type "${params.event_type}" already exists`);
@@ -188,7 +188,7 @@ export async function getEventCategories(params: {
   
   // Get distinct categories
   const results = await knex('event_catalog')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .distinct('category')
     .whereNotNull('category')
     .orderBy('category', 'asc');

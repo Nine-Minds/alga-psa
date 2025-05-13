@@ -19,7 +19,7 @@ export async function getQueueMetricsAction(): Promise<JobMetrics> {
   const { knex, tenant } = await createTenantKnex();
   
   if (!tenant) {
-    throw new Error('TENANT_ID environment variable not set');
+    throw new Error('TENANT environment variable not set');
   }
 
   // Get counts for each job status

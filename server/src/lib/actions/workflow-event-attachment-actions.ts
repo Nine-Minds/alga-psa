@@ -89,7 +89,7 @@ export async function getWorkflowEventAttachmentById(params: {
 // NOTE: ICreateWorkflowEventAttachment interface in shared types needs event_id changed to event_type
 export async function createWorkflowEventAttachment(params: ICreateWorkflowEventAttachment): Promise<IWorkflowEventAttachment> {
   const { knex } = await createTenantKnex();
-  const { workflow_id, event_type, tenant_id } = params; // Destructure event_type
+  const { workflow_id, event_type, tenant } = params; // Destructure event_type
 
   // Verify that the workflow exists
   const workflow = await getWorkflowRegistration(workflow_id);
@@ -100,7 +100,7 @@ export async function createWorkflowEventAttachment(params: ICreateWorkflowEvent
 
   // Verify that the event_type exists in either the tenant or system event catalog
   let eventName = '';
-  const tenantEvent = await EventCatalogModel.getByEventType(knex, event_type, tenant_id);
+  const tenantEvent = await EventCatalogModel.getByEventType(knex, event_type, tenant);
 
   if (tenantEvent) {
     eventName = tenantEvent.name;
@@ -123,7 +123,7 @@ export async function createWorkflowEventAttachment(params: ICreateWorkflowEvent
     knex,
     workflow_id,
     event_type,
-    tenant_id
+    tenant
   );
 
   if (existingAttachment) {
@@ -132,7 +132,7 @@ export async function createWorkflowEventAttachment(params: ICreateWorkflowEvent
       const updatedAttachment = await WorkflowEventAttachmentModel.update(
         knex,
         existingAttachment.attachment_id,
-        tenant_id,
+        tenant,
         { is_active: true }
       );
       // NOTE: Assumes WorkflowEventAttachmentModel.update returns the updated record correctly
@@ -151,7 +151,7 @@ export async function createWorkflowEventAttachment(params: ICreateWorkflowEvent
 
   // Subscribe to the event in the event bus
   // This already uses event_type, so it should be fine
-  await subscribeWorkflowToEvent(event_type, workflow_id, tenant_id);
+  await subscribeWorkflowToEvent(event_type, workflow_id, tenant);
 
   return attachment;
 }
@@ -293,7 +293,7 @@ async function subscribeWorkflowToEvent(
     // For now, assume the existing trigger logic is sufficient or will be handled separately.
     // const trigger = await knex('workflow_triggers')
     //   .where('event_type', eventType)
-    //   .where('tenant_id', tenant)
+    //   .where('tenant', tenant)
     //   .first();
     //
     // if (!trigger) {
@@ -301,7 +301,7 @@ async function subscribeWorkflowToEvent(
     //   const [newTrigger] = await knex('workflow_triggers')
     //     .insert({
     //       event_type: eventType,
-    //       tenant_id: tenant,
+    //       tenant: tenant,
     //       name: `${eventType} Trigger`,
     //       description: `Auto-generated trigger for ${eventType} events`,
     //       created_at: new Date().toISOString(),
@@ -374,7 +374,7 @@ async function unsubscribeWorkflowFromEvent(
     const otherAttachments = await knex('workflow_event_attachments')
       .where({
         event_type: eventType, // Use the event_type column directly
-        tenant_id: tenant,
+        tenant: tenant,
         is_active: true
       })
       .whereNot('workflow_id', workflowId)

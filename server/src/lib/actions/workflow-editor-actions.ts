@@ -107,7 +107,7 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
       // Create workflow registration
       const [registration] = await trx('workflow_registrations')
         .insert({
-          tenant_id: user.tenant,
+          tenant: user.tenant,
           name: validatedData.name,
           description: validatedData.description || '',
           category: 'custom',
@@ -125,7 +125,7 @@ export async function createWorkflow(data: WorkflowData): Promise<string> {
       await trx('workflow_registration_versions')
         .insert({
           registration_id: registration.registration_id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
           version: validatedData.version,
           is_current: true,
           code: validatedData.code, // Use the new code field
@@ -172,7 +172,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       const registration = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
         })
         .first();
       
@@ -189,7 +189,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       const existingVersions = await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .select('version')
         .orderBy('created_at', 'desc');
@@ -227,7 +227,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
         })
         .update({
           name: validatedData.name,
@@ -242,7 +242,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
         })
         .update({
           is_current: false,
@@ -252,7 +252,7 @@ export async function updateWorkflow(id: string, data: WorkflowData): Promise<st
       await trx('workflow_registration_versions')
         .insert({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
           version: newVersion, // Use the new version
           is_current: true,
           code: validatedData.code, // Use the new code field
@@ -290,7 +290,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
     const registration = await knex('workflow_registrations')
       .where({
         registration_id: id,
-        tenant_id: user.tenant
+        tenant: user.tenant
       })
       .first();
     
@@ -302,7 +302,7 @@ export async function getWorkflowVersions(id: string): Promise<WorkflowVersionDa
     const versions = await knex('workflow_registration_versions')
       .where({
         registration_id: id,
-        tenant_id: user.tenant
+        tenant: user.tenant
       })
       .select(
         'version_id',
@@ -351,7 +351,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
       const registration = await trx('workflow_registrations')
         .where({
           registration_id: workflowId,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .first();
       
@@ -364,7 +364,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
         .where({
           version_id: versionId,
           registration_id: workflowId,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .first();
       
@@ -376,7 +376,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
       await trx('workflow_registration_versions')
         .where({
           registration_id: workflowId,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .update({
           is_current: false
@@ -387,7 +387,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
         .where({
           version_id: versionId,
           registration_id: workflowId,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .update({
           is_current: true
@@ -397,7 +397,7 @@ export async function setActiveWorkflowVersion(workflowId: string, versionId: st
       await trx('workflow_registrations')
         .where({
           registration_id: workflowId,
-          tenant_id: user.tenant
+          tenant: user.tenant
         })
         .update({
           version: version.version,
@@ -443,7 +443,7 @@ export async function getWorkflow(id: string): Promise<WorkflowDataWithSystemFla
     const currentVersion = await knex('workflow_registration_versions')
       .where({
         registration_id: id,
-        tenant_id: user.tenant,
+        tenant: user.tenant,
         is_current: true,
       })
       .select('code')
@@ -506,10 +506,10 @@ export async function getAllWorkflows(includeInactive: boolean = false): Promise
     let tenantWorkflowsQuery = knex('workflow_registrations as wr')
       .join('workflow_registration_versions as wrv', function() {
         this.on('wrv.registration_id', '=', 'wr.registration_id')
-            .andOn('wrv.tenant_id', '=', 'wr.tenant_id')
+            .andOn('wrv.tenant', '=', 'wr.tenant')
             .andOn('wrv.is_current', '=', knex.raw('true'));
       })
-      .where('wr.tenant_id', tenant)
+      .where('wr.tenant', tenant)
       .select(
         'wr.registration_id',
         'wr.name',
@@ -636,7 +636,7 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
       await trx('workflow_registration_versions')
         .where({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
         })
         .delete();
       
@@ -644,7 +644,7 @@ export async function deleteWorkflow(id: string): Promise<boolean> {
       const deleted = await trx('workflow_registrations')
         .where({
           registration_id: id,
-          tenant_id: user.tenant,
+          tenant: user.tenant,
         })
         .delete();
       
@@ -682,7 +682,7 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
     const currentWorkflow = await knex('workflow_registrations')
       .where({
         registration_id: id,
-        tenant_id: user.tenant,
+        tenant: user.tenant,
       })
       .first();
     
@@ -695,7 +695,7 @@ export async function updateWorkflowStatus(id: string, isActive: boolean): Promi
     const updated = await knex('workflow_registrations')
       .where({
         registration_id: id,
-        tenant_id: user.tenant,
+        tenant: user.tenant,
       })
       .update({
         status: newStatus,
@@ -824,7 +824,7 @@ export async function executeWorkflowTest(
       })
       .where({
         'wr.registration_id': workflowId,
-        'wr.tenant_id': tenant
+        'wr.tenant': tenant
       })
       .select('wr.*', 'wrv.version_id')
       .first();
@@ -847,7 +847,7 @@ export async function executeWorkflowTest(
         const existingCustomEvent = await knex('event_catalog')
           .where({
             name: eventName,
-            tenant_id: tenant || ''
+            tenant: tenant || ''
           })
           .first();
           
@@ -867,7 +867,7 @@ export async function executeWorkflowTest(
               },
               required: ['tenantId']
             },
-            tenant_id: tenant || ''
+            tenant: tenant || ''
           });
         }
       }
