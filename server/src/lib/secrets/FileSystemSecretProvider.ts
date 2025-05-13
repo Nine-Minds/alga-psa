@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ISecretProvider } from './ISecretProvider';
+import { ISecretProvider } from './ISecretProvider.js';
 // import logger from 'server/src/utils/logger'; // Corrected logger import path again
 
 /**

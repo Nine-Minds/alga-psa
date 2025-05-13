@@ -15,6 +15,3 @@ services:
       - "${EXPOSE_PGBOUNCER_PORT:-6432}:6432"
     networks:
       - app-network
-    depends_on:
-      postgres:
-        condition: service_started
