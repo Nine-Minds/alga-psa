@@ -4,7 +4,8 @@ on:
   workflow_dispatch: # Allows manual triggering
   pull_request:
     branches:
-      - main
+      - '**'
+
     paths: # Trigger only if relevant files change
       - '.github/workflows/e2e-fresh-install-tests.yaml'
       - 'docker-compose.base.yaml'
