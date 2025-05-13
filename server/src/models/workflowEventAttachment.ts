@@ -22,7 +22,11 @@ export class WorkflowEventAttachmentModel {
     data: ICreateWorkflowEventAttachment
   ): Promise<IWorkflowEventAttachment> {
     const [attachment] = await knex('workflow_event_attachments')
-      .insert(data)
+      .insert({
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .returning('*');
     
     return attachment;
@@ -46,7 +50,7 @@ export class WorkflowEventAttachmentModel {
       .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         attachment_id: attachmentId,
-        tenant_id: tenantId // Filter by tenant
+        tenant: tenantId // Filter by tenant
       })
       .first();
 
@@ -92,7 +96,7 @@ export class WorkflowEventAttachmentModel {
       .where({
         workflow_id: workflowId,
         event_type: eventType, // Changed column name
-        tenant_id: tenantId // Filter by tenant
+        tenant: tenantId // Filter by tenant
       })
       .first();
 
@@ -139,7 +143,7 @@ export class WorkflowEventAttachmentModel {
       .select('*', knex.raw('false as "isSystemManaged"'))
       .where({
         workflow_id: workflowId,
-        tenant_id: tenantId
+        tenant: tenantId
       });
 
     if (isActive !== undefined) {
@@ -194,7 +198,7 @@ export class WorkflowEventAttachmentModel {
       .join('workflow_registrations as wr', 'wea.workflow_id', 'wr.registration_id') // Join with tenant workflow registrations
       .join('workflow_registration_versions as wrv', function() { // Join with tenant workflow versions
         this.on('wr.registration_id', '=', 'wrv.registration_id')
-            .andOn('wr.tenant_id', '=', 'wrv.tenant_id')
+            .andOn('wr.tenant', '=', 'wrv.tenant')
             .andOn('wrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
       })
       .select(
@@ -205,8 +209,8 @@ export class WorkflowEventAttachmentModel {
       )
       .where({
         'wea.event_type': eventType, // Changed column name, use alias
-        'wea.tenant_id': tenantId, // Use alias
-        'wr.tenant_id': tenantId // Ensure tenant registration matches tenant
+        'wea.tenant': tenantId, // Use alias
+        'wr.tenant': tenantId // Ensure tenant registration matches tenant
       });
 
     if (isActive !== undefined) {
@@ -228,7 +232,7 @@ export class WorkflowEventAttachmentModel {
       )
       .where({
         'wea.event_type': eventType, // Use alias
-        'wea.tenant_id': tenantId // Use alias (system attachments are also tenant-specific in this table)
+        'wea.tenant': tenantId // Use alias (system attachments are also tenant-specific in this table)
       });
 
     if (isActive !== undefined) {
@@ -262,7 +266,7 @@ export class WorkflowEventAttachmentModel {
     const [attachment] = await knex('workflow_event_attachments')
       .where({
         attachment_id: attachmentId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .update({
         ...data,
@@ -289,7 +293,7 @@ export class WorkflowEventAttachmentModel {
     const result = await knex('workflow_event_attachments')
       .where({
         attachment_id: attachmentId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .delete();
     
@@ -314,14 +318,14 @@ export class WorkflowEventAttachmentModel {
       .join('workflow_registrations as wr', 'wea.workflow_id', 'wr.registration_id') // Join with tenant workflow registrations
       .join('workflow_registration_versions as wrv', function() { // Join with tenant workflow versions
         this.on('wr.registration_id', '=', 'wrv.registration_id')
-            .andOn('wr.tenant_id', '=', 'wrv.tenant_id')
+            .andOn('wr.tenant', '=', 'wrv.tenant')
             .andOn('wrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
       })
       .where({
         'wea.event_type': eventType,
-        'wea.tenant_id': tenantId,
+        'wea.tenant': tenantId,
         'wea.is_active': true,
-        'wr.tenant_id': tenantId // Ensure tenant registration matches tenant
+        'wr.tenant': tenantId // Ensure tenant registration matches tenant
       })
       .select(
         'wea.workflow_id',
@@ -339,7 +343,7 @@ export class WorkflowEventAttachmentModel {
       })
       .where({
         'wea.event_type': eventType,
-        'wea.tenant_id': tenantId, // System attachments are also tenant-specific in this table
+        'wea.tenant': tenantId, // System attachments are also tenant-specific in this table
         'wea.is_active': true
       })
       .select(
@@ -376,7 +380,7 @@ export class WorkflowEventAttachmentModel {
     // Modify the query to use event_type directly from workflow_event_attachments
     const deleteQuery = knex('workflow_event_attachments as wea')
       .join('system_workflow_registrations as swr', 'wea.workflow_id', 'swr.registration_id') // Join to get workflow name from system registrations
-      .where('wea.tenant_id', tenantId) // Filter attachments by tenant
+      .where('wea.tenant', tenantId) // Filter attachments by tenant
       .where(function(this: Knex.QueryBuilder) { // Add type for 'this'
           let isFirstCondition = true;
           for (const workflowName in workflowEventMap) {

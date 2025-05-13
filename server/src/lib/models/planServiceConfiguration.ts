@@ -136,13 +136,26 @@ export default class PlanServiceConfiguration {
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    const result = await this.knex('plan_service_configuration')
-      .where({
-        config_id: configId,
-        tenant: this.tenant
-      })
-      .delete();
-    
-    return result > 0;
+    // Use a transaction to ensure both operations succeed or fail together
+    return await this.knex.transaction(async (trx) => {
+      const updatedDetails = await trx('invoice_item_details')
+        .where({
+          config_id: configId,
+          tenant: this.tenant
+        })
+        .update({
+          config_id: null
+        });
+      
+      // Then delete the configuration
+      const result = await trx('plan_service_configuration')
+        .where({
+          config_id: configId,
+          tenant: this.tenant
+        })
+        .delete();
+      
+      return result > 0;
+    });
   }
 }

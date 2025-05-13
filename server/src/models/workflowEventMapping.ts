@@ -21,7 +21,11 @@ export class WorkflowEventMappingModel {
     data: ICreateWorkflowEventMapping
   ): Promise<IWorkflowEventMapping> {
     const [mapping] = await knex('workflow_event_mappings')
-      .insert(data)
+      .insert({
+        ...data,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .returning('*');
     
     return mapping;
@@ -140,10 +144,15 @@ export class WorkflowEventMappingModel {
 
     const createdMappings = await knex.transaction(async (trx) => {
       const results = [];
+      const now = new Date().toISOString();
       
       for (const mapping of mappings) {
         const [result] = await trx('workflow_event_mappings')
-          .insert(mapping)
+          .insert({
+            ...mapping,
+            created_at: now,
+            updated_at: now
+          })
           .returning('*');
         
         results.push(result);

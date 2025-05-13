@@ -43,7 +43,7 @@ export class EventCatalogModel {
     const entry = await knex('event_catalog')
       .where({
         event_id: eventId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .first();
     
@@ -66,7 +66,7 @@ export class EventCatalogModel {
     const entry = await knex('event_catalog')
       .where({
         event_type: eventType,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .first();
     
@@ -97,11 +97,11 @@ export class EventCatalogModel {
     if (isSystemEvent === true) {
       query = knex('system_event_catalog');
     } else if (isSystemEvent === false) {
-      query = knex('event_catalog').where('tenant_id', tenantId);
+      query = knex('event_catalog').where('tenant', tenantId);
     } else {
       // If isSystemEvent is undefined, query both tables and combine
       const tenantEventsQuery = knex('event_catalog')
-        .where('tenant_id', tenantId);
+        .where('tenant', tenantId);
       
       if (category !== undefined) {
         tenantEventsQuery.where('category', category);
@@ -151,7 +151,7 @@ export class EventCatalogModel {
     const [entry] = await knex('event_catalog')
       .where({
         event_id: eventId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .update({
         ...data,
@@ -178,7 +178,7 @@ export class EventCatalogModel {
     const result = await knex('event_catalog')
       .where({
         event_id: eventId,
-        tenant_id: tenantId
+        tenant: tenantId
       })
       .delete();
     
@@ -221,7 +221,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       },
       {
         event_type: 'TICKET_UPDATED',
@@ -238,7 +238,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       },
       {
         event_type: 'TICKET_CLOSED',
@@ -265,7 +265,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       },
       {
         event_type: 'PROJECT_CREATED',
@@ -281,7 +281,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'projectId', 'userId']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       },
       {
         event_type: 'INVOICE_GENERATED',
@@ -299,7 +299,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       },
       {
         event_type: 'INVOICE_FINALIZED',
@@ -317,7 +317,7 @@ export class EventCatalogModel {
           },
           required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
         },
-        tenant_id: tenantId
+        tenant: tenantId
       }
     ];
 
