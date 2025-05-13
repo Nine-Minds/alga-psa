@@ -64,15 +64,6 @@ x-common-config: &common-config
     # ---- DEPLOY INFO  ----
     EXPOSE_SERVER_PORT: ${EXPOSE_SERVER_PORT}
 
-  develop:
-    watch:
-      - action: sync
-        path: ./src
-        target: /app/src
-        ignore:
-          - node_modules
-      - action: rebuild
-        path: package.json
   secrets:
     - postgres_password
     - db_password_server

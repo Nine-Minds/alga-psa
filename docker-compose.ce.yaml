@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   server:
     extends:
@@ -70,7 +68,6 @@ services:
         condition: service_started
       hocuspocus:
         condition: service_started
-        required: false
 
   setup:
     build:
@@ -90,8 +87,8 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: postgres
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer} # Changed to pgbouncer
+      DB_PORT: ${PGBOUNCER_PORT:-6432} # Changed to pgbouncer port
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -125,6 +122,8 @@ services:
       - app-network
     depends_on:
       postgres:
+        condition: service_started
+      pgbouncer: # Added dependency on pgbouncer
         condition: service_started
     entrypoint: ["/app/setup/entrypoint.sh"]
 
@@ -230,7 +229,7 @@ services:
   postgres:
     extends:
       file: docker-compose.base.yaml
-      service: postgres
+      service: postgres # Updated from postgres-base
     environment:
       POSTGRES_DB: server
       VERSION: ${VERSION}
@@ -247,7 +246,7 @@ services:
   redis:
     extends:
       file: docker-compose.base.yaml
-      service: redis
+      service: redis # Updated from redis-base
 
 networks:
   app-network:

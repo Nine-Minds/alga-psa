@@ -8,13 +8,16 @@ log() {
 # Function to handle errors
 handle_error() {
     local exit_code=$?
-    log "An error occurred (Exit code: $exit_code)"
-    log "Container will continue running despite the error"
-    # Don't exit, just return from the function
-    return $exit_code
+    local last_command=${BASH_COMMAND}
+    log "ERROR: Command '$last_command' failed with exit code $exit_code."
+    log "Exiting with error code: $exit_code"
+    # Exit with the captured exit code
+    exit $exit_code
 }
 
-# Set up error handling
+# Set up error handling to call handle_error on ERR
+# and also exit immediately if a command exits with a non-zero status.
+set -e
 trap 'handle_error' ERR
 
 # Function to check if postgres is ready
@@ -43,33 +46,29 @@ main() {
     wait_for_postgres
 
     log "Creating database..."
-    node /app/server/setup/create_database.js || true
+    node /app/server/setup/create_database.js
 
     log "Creating pgboss schema..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' || true
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
 
     log "Granting necessary permissions..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'GRANT ALL ON SCHEMA public TO postgres;' || true
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h postgres -U postgres -d server -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
-    NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs || true
+    NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs
 
     # Check if seeds need to be run
     if ! check_seeds_status; then
         log "Running seeds..."
-        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs || true
+        NODE_ENV=migration npx knex seed:run --knexfile /app/server/knexfile.cjs
         log "Seeds completed!"
     else
         log "Seeds have already been run, skipping..."
     fi
 
     log "Setup completed!"
-    
-    # Keep the container running indefinitely
-    log "Container will continue running..."
-    while true; do
-        sleep 3600  # Sleep for an hour
-    done
+    log "Exiting with success code: 0"
+    exit 0
 }
 
 # Execute main function

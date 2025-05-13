@@ -1,7 +1,7 @@
-import { ISecretProvider } from './ISecretProvider';
-import { FileSystemSecretProvider } from './FileSystemSecretProvider';
-import { VaultSecretProvider } from './VaultSecretProvider';
-import logger from 'server/src/utils/logger';
+import { ISecretProvider } from './ISecretProvider.js';
+import { FileSystemSecretProvider } from './FileSystemSecretProvider.js';
+import { VaultSecretProvider } from './VaultSecretProvider.js';
+import logger from 'server/src/utils/logger.js';
 
 let secretProviderInstance: ISecretProvider | null = null;
 

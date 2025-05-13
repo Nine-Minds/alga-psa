@@ -1,0 +1,444 @@
+name: E2E Fresh Install Tests
+
+on:
+  workflow_dispatch: # Allows manual triggering
+  pull_request:
+    branches:
+      - main
+    paths: # Trigger only if relevant files change
+      - '.github/workflows/e2e-fresh-install-tests.yaml'
+      - 'docker-compose.base.yaml'
+      - 'docker-compose.ce.yaml'
+      - 'server/**'
+      - 'setup/**'
+      - 'e2e-tests/**'
+
+jobs:
+  fresh-install-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30 # Set a timeout for the job
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up test environment secrets and .env
+        run: |
+          # Create secrets directory
+          mkdir -p secrets
+
+          # Create sample secrets (placeholders, real values not needed for this test if services are self-contained)
+          # Using similar placeholders as pr-checks.yaml for consistency
+          echo "placeholder-password" > secrets/postgres_password
+          echo "placeholder-password" > secrets/db_password_server
+          echo "placeholder-password" > secrets/db_password_hocuspocus
+          echo "placeholder-password" > secrets/redis_password
+          echo "placeholder-key-32-chars-long-01" > secrets/alga_auth_key
+          echo "placeholder-key-32-chars-long-02" > secrets/crypto_key
+          echo "placeholder-key-32-chars-long-03" > secrets/token_secret_key
+          echo "placeholder-key-32-chars-long-04" > secrets/nextauth_secret
+          echo "placeholder-password" > secrets/email_password
+          echo "placeholder-id" > secrets/google_oauth_client_id
+          echo "placeholder-secret" > secrets/google_oauth_client_secret
+
+          # Set permissions
+          chmod 600 secrets/*
+
+          # Copy and configure environment file
+          cp .env.example .env
+
+          # Configure required environment variables for the test
+          # Ensure APP_ENV is development to trigger credential logging
+          cat >> .env << EOL
+          APP_VERSION=1.0.0-e2e
+          APP_NAME=alga-e2e-test
+          APP_ENV=development
+          APP_HOST=0.0.0.0
+          APP_PORT=3000
+          APP_EDITION=community
+
+          # Database Configuration (will be overridden by docker-compose services but good to have)
+          DB_TYPE=postgres
+          DB_USER_ADMIN=postgres
+
+          # Logging Configuration
+          LOG_LEVEL=INFO
+          LOG_IS_FORMAT_JSON=false
+          LOG_IS_FULL_DETAILS=false
+
+          # Email Configuration (disabled for tests)
+          EMAIL_ENABLE=false
+
+          # Authentication Configuration
+          NEXTAUTH_URL=http://localhost:3000
+          NEXTAUTH_SESSION_EXPIRES=86400
+
+          # Optional Configuration
+          REQUIRE_HOCUSPOCUS=false
+          EOL
+        shell: bash
+
+      - name: Temporarily rename root docker-compose.yaml to avoid conflict in act
+        if: env.ACT
+        run: |
+          if [ -f docker-compose.yaml ]; then
+            echo "Temporarily renaming root docker-compose.yaml to docker-compose.yaml.ignored"
+            sudo mv docker-compose.yaml docker-compose.yaml.ignored
+          fi
+        shell: bash
+
+      - name: Install Docker Compose v1.29.2 via curl
+        id: install_docker_compose # Add an ID for dependent steps
+        run: |
+          COMPOSE_VERSION="v2.36.0"
+          COMPOSE_URL="https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)"
+          DEST_PATH="/usr/local/bin/docker-compose" # Standard location
+
+          echo "Downloading Docker Compose from ${COMPOSE_URL} to ${DEST_PATH}"
+          sudo rm -f "${DEST_PATH}" # Remove existing to avoid conflicts
+          # Use curl with -fS (fail silently on server errors, show client errors) and -L (follow redirects)
+          sudo curl -fSL "${COMPOSE_URL}" -o "${DEST_PATH}"
+          
+          # Verify download was successful and file is not empty and is executable
+          if [ ! -s "${DEST_PATH}" ]; then
+            echo "Error: Downloaded docker-compose is empty. URL ${COMPOSE_URL} might be incorrect or file not found."
+            exit 1
+          fi
+          if ! file "${DEST_PATH}" | grep -q "executable"; then
+            echo "Error: Downloaded file at ${DEST_PATH} is not an executable. It might be an HTML error page."
+            echo "Downloaded content (first 5 lines):"
+            sudo head -n 5 "${DEST_PATH}"
+            exit 1
+          fi
+          
+          sudo chmod +x "${DEST_PATH}"
+          echo "Docker Compose version:"
+          docker-compose --version # Verify installation
+        shell: bash
+
+      - name: Start Docker Compose services
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
+        shell: bash
+
+      - name: Wait for Setup service to complete
+        if: steps.install_docker_compose.outcome == 'success'
+        id: wait_for_setup
+        run: |
+          echo "Waiting for setup service to complete..."
+          MAX_ATTEMPTS=60 # 10 minutes (60 attempts * 10 seconds)
+          ATTEMPT_NUM=1
+          
+          # Get the container ID before the loop, it might be gone after exit
+          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test ps -q setup)
+          if [ -z "$SETUP_CONTAINER_ID" ]; then
+            echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
+            docker-compose -p alga-e2e-test logs setup
+            echo "::set-output name=status::failure"
+            exit 1
+          fi
+          echo "Monitoring Setup Container ID: $SETUP_CONTAINER_ID"
+
+          while [ $ATTEMPT_NUM -le $MAX_ATTEMPTS ]; do
+            # Check if the setup container is still running
+            if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
+              # Container has exited, check its exit code using the stored ID
+              echo "Setup container (ID: $SETUP_CONTAINER_ID) is no longer 'Up'. Checking exit code."
+              # Use the stored SETUP_CONTAINER_ID
+              if [ -z "$SETUP_CONTAINER_ID" ]; then # Should not happen if initial check passed
+                echo "Error: Lost setup container ID." # Should be redundant due to initial check
+                SETUP_EXIT_CODE="1" 
+              else
+                echo "Inspecting container ID: $SETUP_CONTAINER_ID"
+                INSPECT_OUTPUT=$(docker inspect -f '{{.State.ExitCode}} {{.State.Error}}' "$SETUP_CONTAINER_ID" 2>/dev/null)
+                echo "Inspect output: '$INSPECT_OUTPUT'"
+                SETUP_EXIT_CODE=$(echo "$INSPECT_OUTPUT" | awk '{print $1}')
+                # If SETUP_EXIT_CODE is empty or not a number, default to 1
+                if ! [[ "$SETUP_EXIT_CODE" =~ ^[0-9]+$ ]]; then
+                    echo "Failed to parse exit code from inspect output, defaulting to 1."
+                    SETUP_EXIT_CODE="1"
+                fi
+              fi
+              
+              echo "Reported Setup Exit Code: $SETUP_EXIT_CODE"
+              if [ "$SETUP_EXIT_CODE" -eq 0 ]; then
+                echo "Setup service completed successfully."
+                echo "::set-output name=status::success"
+                exit 0
+              else
+                echo "Setup service failed with exit code $SETUP_EXIT_CODE."
+                docker-compose -p alga-e2e-test logs setup
+                echo "::set-output name=status::failure"
+                exit 1
+              fi
+            fi
+
+            # Check logs for completion message as a secondary check (optional, primary is exit code)
+            if docker-compose -p alga-e2e-test logs setup | grep -q "Setup completed!"; then
+               echo "Setup completion message found in logs. Waiting a bit for container to exit."
+               sleep 5 # Give it a moment to exit gracefully
+               # Re-check exit status using the stored ID
+                if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
+                    # Use the stored SETUP_CONTAINER_ID
+                    INSPECT_OUTPUT_LOG_CHECK=$(docker inspect -f '{{.State.ExitCode}}' "$SETUP_CONTAINER_ID" 2>/dev/null)
+                    SETUP_EXIT_CODE_LOG_CHECK=$(echo "$INSPECT_OUTPUT_LOG_CHECK" | awk '{print $1}')
+                    if ! [[ "$SETUP_EXIT_CODE_LOG_CHECK" =~ ^[0-9]+$ ]]; then
+                        echo "Failed to parse exit code from inspect output (log check), defaulting to 1."
+                        SETUP_EXIT_CODE_LOG_CHECK="1"
+                    fi
+
+                    if [ "$SETUP_EXIT_CODE_LOG_CHECK" -eq 0 ]; then
+                        echo "Setup service completed successfully after log check (Exit Code: $SETUP_EXIT_CODE_LOG_CHECK)."
+                        echo "::set-output name=status::success"
+                        exit 0 # Successful exit from the script
+                    else
+                        echo "Setup service showed completion log but exited with code $SETUP_EXIT_CODE_LOG_CHECK."
+                        docker-compose -p alga-e2e-test logs setup
+                        echo "::set-output name=status::failure"
+                        exit 1 # Failed exit from the script
+                    fi
+                fi
+            fi
+
+            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Setup service still running. Waiting 10 seconds..."
+            sleep 10
+            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
+          done
+          echo "Timeout: Setup service did not complete within the allocated time."
+          docker-compose -p alga-e2e-test logs
+          echo "::set-output name=status::failure"
+          exit 1
+        shell: bash
+
+      - name: Wait for Server service to be healthy
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Waiting for server service to be healthy..."
+          MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds)
+          ATTEMPT_NUM=1
+          # Using APP_PORT from .env, default to 3000 if not found (though it should be there)
+          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
+          HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/api/health" # Assuming a health endpoint exists
+          # Fallback if /api/health is not standard, try base URL
+          # HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/"
+
+          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL; do
+            if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
+              echo "Timeout: Server service did not become healthy at $HEALTH_CHECK_URL within the allocated time."
+              docker-compose -p alga-e2e-test logs server
+              exit 1
+            fi
+            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet healthy at $HEALTH_CHECK_URL. Waiting 10 seconds..."
+            sleep 10
+            ATTEMPT_NUM=$((ATTEMPT_NUM+1))
+          done
+          echo "Server service is healthy at $HEALTH_CHECK_URL."
+        shell: bash
+
+      - name: Trigger Login Page to Generate Credentials
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Attempting to trigger login page to generate credentials in server logs..."
+          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
+          LOGIN_PAGE_URL="http://localhost:${APP_PORT_VALUE}/auth/signin"
+          # Perform a curl request to the login page. We don't need the output, just the action of hitting the page.
+          # Allow failure as the page might not return 200 immediately or might redirect,
+          # but the act of requesting it should trigger the log.
+          curl -s -o /dev/null -w "%{http_code}" "${LOGIN_PAGE_URL}" || echo "Curl to login page finished (ignore exit code here)."
+          echo "Login page triggered. Waiting a few seconds for logs to propagate..."
+          sleep 3 # Wait for server to process the request and log credentials
+        shell: bash
+
+      - name: Capture Credentials from Server Logs
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        id: capture_creds
+        run: |
+          echo "Attempting to capture credentials from server logs..."
+          # Wait a few seconds for logs to flush if needed
+          sleep 5
+          SERVER_LOGS=$(docker-compose -p alga-e2e-test logs server)
+
+          # Extract email (should be glinda@emeraldcity.oz)
+          USER_EMAIL=$(echo "$SERVER_LOGS" | grep -oP 'User Email is -> \[ \K[^ ]+' || echo "")
+          # Extract password
+          USER_PASSWORD=$(echo "$SERVER_LOGS" | grep -oP 'Password is -> \[ \K[^ ]+' || echo "")
+
+          if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
+            echo "Failed to extract credentials from server logs."
+            echo "Server Logs:"
+            echo "$SERVER_LOGS"
+            exit 1
+          fi
+
+          echo "Successfully extracted credentials."
+          echo "::set-output name=e2e_user_email::$USER_EMAIL"
+          echo "::set-output name=e2e_user_password::$USER_PASSWORD"
+          # Mask the password in logs
+          echo "::add-mask::$USER_PASSWORD"
+        shell: bash
+
+      - name: Set up Node.js
+        if: steps.wait_for_setup.outputs.status == 'success'
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18' # Or your project's Node version
+
+      - name: Create E2E test directory and package.json
+        if: steps.wait_for_setup.outputs.status == 'success'
+        run: |
+          mkdir -p e2e-tests/tests
+          cat << EOF > e2e-tests/package.json
+          {
+            "name": "alga-e2e-tests",
+            "version": "1.0.0",
+            "description": "E2E tests for Alga PSA",
+            "main": "index.js",
+            "scripts": {
+              "test": "playwright test"
+            },
+            "keywords": [],
+            "author": "",
+            "license": "ISC",
+            "devDependencies": {
+              "@playwright/test": "^1.40.0"
+            }
+          }
+          EOF
+        shell: bash
+
+      - name: Install Playwright and dependencies
+        if: steps.wait_for_setup.outputs.status == 'success'
+        working-directory: ./e2e-tests
+        run: |
+          npm install
+          npx playwright install --with-deps # Install browsers
+        shell: bash
+
+      - name: Create Playwright config file
+        if: steps.wait_for_setup.outputs.status == 'success'
+        run: |
+          cat << EOF > e2e-tests/playwright.config.ts
+          import { defineConfig, devices } from '@playwright/test';
+
+          export default defineConfig({
+            testDir: './tests',
+            fullyParallel: true,
+            forbidOnly: !!process.env.CI,
+            retries: process.env.CI ? 2 : 0,
+            workers: process.env.CI ? 1 : undefined,
+            reporter: 'html',
+            use: {
+              baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000', // Default to localhost:3000
+              trace: 'on-first-retry',
+            },
+            projects: [
+              {
+                name: 'chromium',
+                use: { ...devices['Desktop Chrome'] },
+              },
+            ],
+          });
+          EOF
+        shell: bash
+
+      - name: Create E2E login test spec
+        if: steps.wait_for_setup.outputs.status == 'success'
+        run: |
+          # Ensure APP_PORT is available for constructing the baseURL if not set via E2E_BASE_URL
+          APP_PORT_VALUE_FROM_ENV=$(grep '^APP_PORT=' ./.env | cut -d '=' -f2 | head -n 1)
+          APP_PORT_VALUE=${APP_PORT_VALUE_FROM_ENV:-3000}
+          BASE_URL="http://localhost:${APP_PORT_VALUE}"
+          echo "Resolved BASE_URL for Playwright spec: ${BASE_URL}"
+
+          cat << EOF > e2e-tests/tests/login.spec.ts
+          import { test, expect } from '@playwright/test';
+
+          test.describe('Login Functionality', () => {
+            test('should allow a user to log in and redirect to dashboard', async ({ page }) => {
+              const email = process.env.E2E_USER_EMAIL;
+              const password = process.env.E2E_USER_PASSWORD;
+              const baseUrl = process.env.E2E_BASE_URL || '${BASE_URL}'; // Use env var or default
+
+              if (!email || !password) {
+                throw new Error('E2E_USER_EMAIL or E2E_USER_PASSWORD environment variables are not set.');
+              }
+
+              // Navigate to the login page
+              await page.goto(\`\${baseUrl}/auth/signin\`);
+
+              // Fill in the email and password
+              try {
+                await page.waitForSelector('input[id="msp-email-field-input"]', { timeout: 15000 }); // Wait for email field first
+                await page.fill('input[id="msp-email-field-input"]', email);
+                await page.waitForSelector('input[id="msp-password-field-input"]', { timeout: 5000 });
+                await page.fill('input[id="msp-password-field-input"]', password);
+              } catch (e) {
+                console.error('Error filling form fields. Current page HTML:', await page.content());
+                throw e;
+              }
+
+              // Click the login button
+              try {
+                await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 5000 });
+                await page.click('button[id="msp-sign-in-button"]');
+              } catch (e) {
+                console.error('Error clicking sign-in button. Current page HTML:', await page.content());
+                throw e;
+              }
+
+              // Wait for navigation to the dashboard (or other expected page)
+              // Adjust the expected URL or path as necessary
+              await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 10000 });
+
+              // Assert that the URL is the dashboard URL
+              expect(page.url()).toBe(\`\${baseUrl}/msp/dashboard\`);
+
+              // Optional: Add more assertions, e.g., check for a welcome message or specific element
+              // await expect(page.locator('h1')).toContainText('Dashboard');
+            });
+          });
+          EOF
+        working-directory: ./
+        shell: bash
+
+
+      - name: Run Playwright E2E tests
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        working-directory: ./e2e-tests
+        run: |
+          # Pass credentials as environment variables to Playwright tests
+          # Ensure variables are properly quoted to handle special characters
+          E2E_USER_EMAIL="${{ steps.capture_creds.outputs.e2e_user_email }}" \
+          E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}" \
+          npx playwright test
+        shell: bash
+
+      - name: Upload Playwright Test Report
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: e2e-tests/playwright-report/
+          retention-days: 7
+
+      - name: Cleanup Docker Compose
+        if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
+        run: |
+          echo "Cleaning up Docker Compose environment..."
+          # Check if docker-compose command is available before trying to use it
+          if command -v docker-compose &> /dev/null; then
+            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
+          else
+            echo "docker-compose command not found, skipping cleanup."
+          fi
+        shell: bash
+
+      - name: Restore root docker-compose.yaml
+        if: always() && env.ACT
+        run: |
+          if [ -f docker-compose.yaml.ignored ]; then
+            echo "Restoring root docker-compose.yaml"
+            sudo mv docker-compose.yaml.ignored docker-compose.yaml
+          fi
+        shell: bash

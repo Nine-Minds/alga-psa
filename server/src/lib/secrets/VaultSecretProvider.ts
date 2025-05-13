@@ -1,6 +1,6 @@
 import vault from 'node-vault'; // Removed { Vault } import
-import { ISecretProvider } from './ISecretProvider';
-import logger from 'server/src/utils/logger';
+import { ISecretProvider } from './ISecretProvider.js';
+import logger from 'server/src/utils/logger.js';
 
 /**
  * A secret provider that retrieves secrets from HashiCorp Vault.
