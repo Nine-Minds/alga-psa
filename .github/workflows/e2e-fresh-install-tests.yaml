@@ -415,13 +415,13 @@ jobs:
           npx playwright test
         shell: bash
 
-      - name: Upload Playwright Test Report
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
-        uses: actions/upload-artifact@v3
-        with:
-          name: playwright-report
-          path: e2e-tests/playwright-report/
-          retention-days: 7
+      # - name: Upload Playwright Test Report
+      #   if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: playwright-report
+      #     path: e2e-tests/playwright-report/
+      #     retention-days: 7
 
       - name: Cleanup Docker Compose
         if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
