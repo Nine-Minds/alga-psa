@@ -5,26 +5,12 @@ on:
   pull_request:
     branches:
       - '**'
-
-    paths: # Trigger only if relevant files change
-      - '.github/workflows/e2e-fresh-install-tests.yaml'
-      - 'docker-compose.base.yaml'
-      - 'docker-compose.ce.yaml'
-      - 'server/**'
-      - 'setup/**'
-      - 'e2e-tests/**'
+    # paths filter removed to always trigger
 
   push:
     branches:
       - main
-
-    paths: # Trigger only if relevant files change
-      - '.github/workflows/e2e-fresh-install-tests.yaml'
-      - 'docker-compose.base.yaml'
-      - 'docker-compose.ce.yaml'
-      - 'server/**'
-      - 'setup/**'
-      - 'e2e-tests/**'
+    # paths filter removed to always trigger
 
 jobs:
   fresh-install-e2e:
@@ -34,8 +20,23 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for all branches and tags, required for tj-actions/changed-files
+
+      - name: Check for relevant file changes
+        id: changed_files_check
+        uses: tj-actions/changed-files@v42 # Using a specific version
+        with:
+          files: |
+            .github/workflows/e2e-fresh-install-tests.yaml
+            docker-compose.base.yaml
+            docker-compose.ce.yaml
+            server/**
+            setup/**
+            e2e-tests/**
 
       - name: Set up test environment secrets and .env
+        if: steps.changed_files_check.outputs.any_changed == 'true'
         run: |
           # Create secrets directory
           mkdir -p secrets
@@ -92,7 +93,7 @@ jobs:
         shell: bash
 
       - name: Temporarily rename root docker-compose.yaml to avoid conflict in act
-        if: env.ACT
+        if: env.ACT && steps.changed_files_check.outputs.any_changed == 'true'
         run: |
           if [ -f docker-compose.yaml ]; then
             echo "Temporarily renaming root docker-compose.yaml to docker-compose.yaml.ignored"
@@ -101,6 +102,7 @@ jobs:
         shell: bash
 
       - name: Install Docker Compose v1.29.2 via curl
+        if: steps.changed_files_check.outputs.any_changed == 'true'
         id: install_docker_compose # Add an ID for dependent steps
         run: |
           COMPOSE_VERSION="v2.36.0"
@@ -130,13 +132,13 @@ jobs:
         shell: bash
 
       - name: Start Docker Compose services
-        if: steps.install_docker_compose.outcome == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
         shell: bash
 
       - name: Wait for Setup service to complete
-        if: steps.install_docker_compose.outcome == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         id: wait_for_setup
         run: |
           echo "Waiting for setup service to complete..."
@@ -225,7 +227,7 @@ jobs:
         shell: bash
 
       - name: Wait for Server service to be healthy
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Waiting for server service to be healthy..."
           MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds)
@@ -250,7 +252,7 @@ jobs:
         shell: bash
 
       - name: Trigger Login Page to Generate Credentials
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Attempting to trigger login page to generate credentials in server logs..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
@@ -264,7 +266,7 @@ jobs:
         shell: bash
 
       - name: Capture Credentials from Server Logs
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         id: capture_creds
         run: |
           echo "Attempting to capture credentials from server logs..."
@@ -292,13 +294,13 @@ jobs:
         shell: bash
 
       - name: Set up Node.js
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success'
         uses: actions/setup-node@v3
         with:
           node-version: '18' # Or your project's Node version
 
       - name: Create E2E test directory and package.json
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success'
         run: |
           mkdir -p e2e-tests/tests
           cat << EOF > e2e-tests/package.json
@@ -321,7 +323,7 @@ jobs:
         shell: bash
 
       - name: Install Playwright and dependencies
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success'
         working-directory: ./e2e-tests
         run: |
           npm install
@@ -329,7 +331,7 @@ jobs:
         shell: bash
 
       - name: Create Playwright config file
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success'
         run: |
           cat << EOF > e2e-tests/playwright.config.ts
           import { defineConfig, devices } from '@playwright/test';
@@ -356,7 +358,7 @@ jobs:
         shell: bash
 
       - name: Create E2E login test spec
-        if: steps.wait_for_setup.outputs.status == 'success'
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success'
         run: |
           # Ensure APP_PORT is available for constructing the baseURL if not set via E2E_BASE_URL
           APP_PORT_VALUE_FROM_ENV=$(grep '^APP_PORT=' ./.env | cut -d '=' -f2 | head -n 1)
@@ -417,7 +419,7 @@ jobs:
 
 
       - name: Run Playwright E2E tests
-        if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
+        if: steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
         working-directory: ./e2e-tests
         run: |
           # Pass credentials as environment variables to Playwright tests
@@ -428,7 +430,7 @@ jobs:
         shell: bash
 
       # - name: Upload Playwright Test Report
-      #   if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
+      #   if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
       #   uses: actions/upload-artifact@v4
       #   with:
       #     name: playwright-report
@@ -436,7 +438,7 @@ jobs:
       #     retention-days: 7
 
       - name: Cleanup Docker Compose
-        if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
+        if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
         run: |
           echo "Cleaning up Docker Compose environment..."
           # Check if docker-compose command is available before trying to use it
@@ -448,7 +450,7 @@ jobs:
         shell: bash
 
       - name: Restore root docker-compose.yaml
-        if: always() && env.ACT
+        if: always() && env.ACT && steps.changed_files_check.outputs.any_changed == 'true'
         run: |
           if [ -f docker-compose.yaml.ignored ]; then
             echo "Restoring root docker-compose.yaml"
