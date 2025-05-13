@@ -19,7 +19,7 @@ exports.seed = async function(knex) {
   
   // Check if the InvoiceApproval registration already exists
   const existingRegistration = await knex('workflow_registrations')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .where('name', 'InvoiceApproval')
     .first();
     
@@ -30,7 +30,7 @@ exports.seed = async function(knex) {
   
   // Get the Approval Workflows template to use as a base
   const approvalTemplate = await knex('workflow_templates')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .where('name', 'Approval Workflows')
     .first();
     
@@ -198,7 +198,7 @@ async function invoiceApprovalWorkflow(context): Promise<void> {
   const registrationId = uuidv4();
   await knex('workflow_registrations').insert({
     registration_id: registrationId,
-    tenant_id: tenant,
+    tenant: tenant,
     name: 'InvoiceApproval',
     description: 'Workflow for approving and processing invoices',
     category: 'Approvals',
@@ -215,7 +215,7 @@ async function invoiceApprovalWorkflow(context): Promise<void> {
   const versionId = uuidv4();
   await knex('workflow_registration_versions').insert({
     version_id: versionId,
-    tenant_id: tenant,
+    tenant: tenant,
     registration_id: registrationId,
     version: '1.0.0',
     is_current: true,

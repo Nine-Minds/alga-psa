@@ -18,7 +18,7 @@ exports.seed = async function(knex) {
   
   // Get the InvoiceApproval workflow registration
   const registration = await knex('workflow_registrations')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .where('name', 'InvoiceApproval')
     .first();
     
@@ -29,7 +29,7 @@ exports.seed = async function(knex) {
   
   // Check if event attachments already exist for this workflow
   const existingAttachments = await knex('workflow_event_attachments')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .where('workflow_id', registration.registration_id)
     .count('attachment_id as count')
     .first();
@@ -44,7 +44,7 @@ exports.seed = async function(knex) {
   const events = await knex('event_catalog')
     .select('event_id', 'event_type')
     .whereIn('event_type', eventNames)
-    .where('tenant_id', tenant);
+    .where('tenant', tenant);
     
   if (events.length === 0) {
     console.error('No events found in the event catalog. Please run the event catalog seed first.');
@@ -59,7 +59,7 @@ exports.seed = async function(knex) {
   for (const event of events) {
     attachments.push({
       attachment_id: uuidv4(),
-      tenant_id: tenant,
+      tenant: tenant,
       workflow_id: registration.registration_id,
       event_id: event.event_id,
       is_active: true,

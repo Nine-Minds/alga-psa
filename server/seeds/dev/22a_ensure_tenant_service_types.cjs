@@ -32,13 +32,13 @@ exports.seed = async function(knex) {
       try {
         // Check if this service type already exists for this tenant
         const existingType = await knex('service_types')
-          .where({ tenant_id: tenantId, name: stdType.name })
+          .where({ tenant: tenantId, name: stdType.name })
           .first();
 
         if (!existingType) {
           // Insert if it doesn't exist
           await knex('service_types').insert({
-            tenant_id: tenantId,
+            tenant: tenantId,
             name: stdType.name,
             standard_service_type_id: stdType.id,
             is_active: true,

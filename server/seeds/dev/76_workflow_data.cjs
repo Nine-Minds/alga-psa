@@ -110,13 +110,13 @@ exports.seed = async function(knex) {
   // Check if there's a registration version for InvoiceApproval
   let invoiceApprovalVersionId = null;
   const registration = await knex('workflow_registrations')
-    .where('tenant_id', tenant)
+    .where('tenant', tenant)
     .where('name', 'InvoiceApproval')
     .first();
     
   if (registration) {
     const versionRecord = await knex('workflow_registration_versions')
-      .where('tenant_id', tenant)
+      .where('tenant', tenant)
       .where('registration_id', registration.registration_id)
       .where('is_current', true)
       .first();

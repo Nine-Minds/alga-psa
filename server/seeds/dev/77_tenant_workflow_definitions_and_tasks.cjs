@@ -17,8 +17,8 @@ exports.seed = async function(knex) {
 
   // Clean up existing data from these tables for this tenant
   // Note: The migration itself drops these tables, so this is mostly for rerunnability if needed.
-  await knex('workflow_tasks').where('tenant_id', tenantId).del();
-  await knex('workflow_task_definitions').where('tenant_id', tenantId).del();
+  await knex('workflow_tasks').where('tenant', tenantId).del();
+  await knex('workflow_task_definitions').where('tenant', tenantId).del();
 
   // --- 1. Create Tenant-Specific Workflow Task Definitions ---
   const tenantTaskDefinitions = [];
@@ -27,7 +27,7 @@ exports.seed = async function(knex) {
   const tenantQboMappingErrorHandlerId = uuidv4();
   tenantTaskDefinitions.push({
     task_definition_id: tenantQboMappingErrorHandlerId,
-    tenant_id: tenantId,
+    tenant: tenantId,
     name: 'Tenant QBO Mapping Error Handler',
     description: 'Handles QBO mapping errors for this tenant, utilizing a system-defined form.',
     form_id: 'qbo-mapping-error-form', // Name of a form in system_workflow_form_definitions
@@ -52,7 +52,7 @@ exports.seed = async function(knex) {
   // e.g., 'qbo_sync_error', 'secret_fetch_error'
   workflowTasks.push({
     task_id: uuidv4(),
-    tenant_id: tenantId,
+    tenant: tenantId,
     task_definition_type: 'system', // Indicates this task uses a system definition
     system_task_definition_task_type: 'qbo_sync_error', // FK to system_workflow_task_definitions.task_type
     tenant_task_definition_id: null, // Must be NULL for system tasks
@@ -73,7 +73,7 @@ exports.seed = async function(knex) {
   if (tenantTaskDefinitions.length > 0) {
     workflowTasks.push({
       task_id: uuidv4(),
-      tenant_id: tenantId,
+      tenant: tenantId,
       task_definition_type: 'tenant', // Indicates this task uses a tenant definition
       system_task_definition_task_type: null, // Must be NULL for tenant tasks
       tenant_task_definition_id: tenantQboMappingErrorHandlerId, // FK to workflow_task_definitions.task_definition_id
@@ -95,7 +95,7 @@ exports.seed = async function(knex) {
   // Example 3: Another system task to show variety
   workflowTasks.push({
     task_id: uuidv4(),
-    tenant_id: tenantId,
+    tenant: tenantId,
     task_definition_type: 'system',
     system_task_definition_task_type: 'secret_fetch_error', // Another system task type
     tenant_task_definition_id: null,
