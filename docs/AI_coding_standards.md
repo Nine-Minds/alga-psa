@@ -206,6 +206,34 @@ Every query should filter on the tenant column (including joins) to ensure compa
     CREATE UNIQUE INDEX my_unique_index
     ON my_table (tenant, column1, column2);
     ```
+    
+    **Tenant Column in New Tables:**
+    - Always name the column `tenant` (not `tenant_id`)
+    - Always use UUID data type for tenant columns
+    - **IMPORTANT:** Always include tenant in the primary key for all tables
+    - Set NOT NULL constraint on tenant columns
+    - Add foreign key reference to tenants table when appropriate
+    
+    Example for creating a new table with proper tenant column:
+    ```sql
+    -- Create table with tenant column
+    CREATE TABLE my_new_table (
+      entry_id uuid NOT NULL,
+      tenant uuid NOT NULL,
+      -- other columns
+      CONSTRAINT my_new_table_pkey PRIMARY KEY (entry_id, tenant),
+      CONSTRAINT my_new_table_tenant_foreign FOREIGN KEY (tenant) 
+      REFERENCES tenants(tenant)
+    );
+    ```
+    
+    For existing tables that need tenant in primary key:
+    ```sql
+    -- Modify existing table to include tenant in primary key
+    ALTER TABLE existing_table DROP CONSTRAINT existing_table_pkey;
+    ALTER TABLE existing_table ADD CONSTRAINT existing_table_pkey 
+    PRIMARY KEY (id, tenant);
+    ```
 
 4. **Tenant Context in Distributed Queries**
     - Connection-specific tenant context (`app.current_tenant`) does not propagate to all shards
