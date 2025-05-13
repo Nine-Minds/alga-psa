@@ -59,7 +59,7 @@ export default {
         )
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
-              .andOn('wr.tenant_id', '=', 'wrv.tenant_id'); // Join includes tenant
+              .andOn('wr.tenant', '=', 'wrv.tenant'); // Join includes tenant
           if (version) {
             this.andOn('wrv.version', '=', knex.raw('?', [version]));
           } else {
@@ -67,7 +67,7 @@ export default {
           }
         })
         .where('wr.registration_id', id)
-        .where('wr.tenant_id', tenant) // Filter registration by tenant
+        .where('wr.tenant', tenant) // Filter registration by tenant
         .first();
 
       if (tenantRegistration) {
@@ -167,7 +167,7 @@ export default {
         )
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
-              .andOn('wr.tenant_id', '=', 'wrv.tenant_id');
+              .andOn('wr.tenant', '=', 'wrv.tenant');
           if (version) {
             this.andOn('wrv.version', '=', knex.raw('?', [version]));
           } else {
@@ -175,7 +175,7 @@ export default {
           }
         })
         .where('wr.name', name)
-        .where('wr.tenant_id', tenant)
+        .where('wr.tenant', tenant)
         .first();
 
       if (tenantRegistration) {
@@ -274,10 +274,10 @@ export default {
         )
         .join('workflow_registration_versions as wrv', function() {
           this.on('wr.registration_id', '=', 'wrv.registration_id')
-              .andOn('wr.tenant_id', '=', 'wrv.tenant_id')
+              .andOn('wr.tenant', '=', 'wrv.tenant')
               .andOn('wrv.is_current', '=', knex.raw('?', [true])); // Join only on current version
         })
-        .where('wr.tenant_id', tenant)
+        .where('wr.tenant', tenant)
         .where('wr.status', 'active'); // Assuming 'active' status means visible
 
       // --- System Workflows ---
@@ -355,7 +355,7 @@ export default {
       return await knex.transaction(async (trx: Knex.Transaction) => {
         // Get the template
         const template = await trx('workflow_templates')
-          .where('tenant_id', tenant)
+          .where('tenant', tenant)
           .where('template_id', templateId)
           .first();
         
@@ -366,7 +366,7 @@ export default {
         // Create the registration
         const [registration] = await trx('workflow_registrations')
           .insert({
-            tenant_id: tenant,
+            tenant: tenant,
             name,
             description: description || template.description,
             category: template.category,
@@ -381,7 +381,7 @@ export default {
         // Create the initial version
         await trx('workflow_registration_versions')
           .insert({
-            tenant_id: tenant,
+            tenant: tenant,
             registration_id: registration.registration_id,
             version: '1.0.0',
             is_current: true,
