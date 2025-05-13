@@ -14,6 +14,18 @@ on:
       - 'setup/**'
       - 'e2e-tests/**'
 
+  push:
+    branches:
+      - main
+
+    paths: # Trigger only if relevant files change
+      - '.github/workflows/e2e-fresh-install-tests.yaml'
+      - 'docker-compose.base.yaml'
+      - 'docker-compose.ce.yaml'
+      - 'server/**'
+      - 'setup/**'
+      - 'e2e-tests/**'
+
 jobs:
   fresh-install-e2e:
     runs-on: ubuntu-latest
