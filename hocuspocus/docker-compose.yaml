@@ -17,13 +17,6 @@ x-common-config: &common-config
     NODE_ENV: ${APP_ENV:-production}
     HOCUSPOCUS_PORT: ${HOCUSPOCUS_PORT}
     EXPOSE_HOCUSPOCUS_PORT: ${EXPOSE_HOCUSPOCUS_PORT:-1234}
-  develop:
-    watch:
-      - action: sync
-        path: .
-        target: /app
-      - action: rebuild
-        path: package.json
 
 services:
   hocuspocus:

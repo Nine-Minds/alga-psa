@@ -1,5 +1,3 @@
-version: '3.8'
-
 x-environment: &shared-environment
   # ---- APP -------
   VERSION: ${VERSION}
@@ -95,9 +93,9 @@ secrets:
     file: ./secrets/alga_auth_key
 
 services:
-  postgres:
+  postgres: # Renamed from postgres-base
     image: ankane/pgvector:latest
-    container_name: ${APP_NAME:-sebastian}_postgres
+    #container_name: ${APP_NAME:-sebastian}_postgres
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
@@ -108,11 +106,11 @@ services:
     networks:
       - app-network
 
-  redis:
+  redis: # Renamed from redis-base
     build:
       context: .
       dockerfile: redis/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_redis
+    #container_name: ${APP_NAME:-sebastian}_redis
     environment:
       <<: *shared-environment
     ports:
@@ -133,11 +131,10 @@ services:
     networks:
       - app-network
     depends_on:
-      postgres:
+      postgres: # Corrected to match the renamed service name
         condition: service_started
 
 networks:
   app-network:
     name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
-
