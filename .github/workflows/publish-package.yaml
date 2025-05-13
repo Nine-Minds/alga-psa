@@ -6,12 +6,15 @@ permissions:
   packages: write
 
 on:
-  push:
+  workflow_run:
     branches:
       - main
+    workflows: ["E2E Fresh Install Tests"]    # must match the name: of your test workflow
+    types: [ completed ]
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

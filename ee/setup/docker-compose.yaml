@@ -75,7 +75,7 @@ services:
   postgres:
     extends:
       file: docker-compose.yaml
-      service: postgres
+      service: postgres-base
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: server

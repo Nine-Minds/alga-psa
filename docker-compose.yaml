@@ -128,7 +128,7 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_started
-      redis:
+      redis-base:
         condition: service_started
       hocuspocus:
         condition: service_started
@@ -176,7 +176,7 @@ services:
       - db_password_hocuspocus
       - redis_password
     depends_on:
-      redis:
+      redis-base:
         condition: service_started
 
   postgres:
@@ -192,7 +192,7 @@ services:
     ports:
       - "${EXPOSE_DB_PORT:-5432}:5432"
 
-  redis:
+  redis-base:
     image: 'redis:latest'
     container_name: ${APP_NAME:-sebastian}_redis
     entrypoint: ["/app/redis/entrypoint.sh"]
