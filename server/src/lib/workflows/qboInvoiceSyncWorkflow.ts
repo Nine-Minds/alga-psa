@@ -7,7 +7,7 @@ type QboInvoiceData = { Line: any[]; CustomerRef: { value: string }; };
 
 type TriggerEventPayload = { invoiceId: string; realmId?: string; tenantId?: string; eventName?: string; };
 type QboApiError = { message: string; details?: any; statusCode?: number };
-type HumanTaskDetails = { message: string; alga_invoice_id: string; tenant_id: string; realm_id: string;[key: string]: any; };
+type HumanTaskDetails = { message: string; alga_invoice_id: string; tenant: string; realm_id: string;[key: string]: any; };
 
 interface WorkflowActions {
     getInvoice: (args: { id: string; tenantId: string }) => Promise<AlgaInvoice>;
@@ -183,7 +183,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${algaCompany.company_id} in Realm ${realmId}. Error: ${mappingResult.message || 'Unknown error'}. Please investigate the mapping system or action.`,
                         alga_company_id: algaCompany.company_id,
                         alga_invoice_id: algaInvoiceId,
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         workflow_instance_id: executionId,
                     }
@@ -245,7 +245,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     contextData: {
                         message: `Could not retrieve QuickBooks authentication credentials for Realm ID ${realmId}. This may indicate that the QuickBooks connection has expired or was never properly set up. Error: ${secretResult.message}. Please check the QuickBooks connection in the integration settings.`,
                         alga_invoice_id: algaInvoiceId,
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         workflow_instance_id: executionId,
                     },
@@ -276,7 +276,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         message: `Cannot sync invoice ${algaInvoice?.invoice_id || 'Unknown'} to QuickBooks because line item (ID: ${item?.id || 'Unknown'}, Amount: ${item?.amount || 'N/A'}) does not have an associated Alga Product. Please associate a product with this line item or handle description-only lines in the invoice settings.`,
                         alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
                         alga_item_id: item?.id || 'Unknown',
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         workflow_instance_id: executionId,
                     },
@@ -304,7 +304,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         message: `Failed to look up QuickBooks item mapping for product ID ${item.service_id || 'Unknown'} in invoice #${algaInvoice?.invoice_number || 'Unknown'}. Error: ${mappingResult.message || 'Unknown error'}. Please investigate the QuickBooks integration configuration.`,
                         alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
                         alga_service_id: item.service_id,
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         workflow_instance_id: executionId,
                     },
@@ -328,7 +328,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         // Providing company_id as company_name if actual name isn't on AlgaCompany type
                         company_name: algaCompany?.company_id || 'Unknown Company', 
                         // For quickbooksSetupLink field template:
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         // Removed contextData fields: message, alga_invoice_id, workflow_instance_id
                         // as their corresponding form fields are being removed.
@@ -350,7 +350,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         message: `System error: The QuickBooks item lookup for product ID ${item.service_id || 'Unknown'} in invoice #${algaInvoice?.invoice_number || 'Unknown'} reported success but failed to return a QuickBooks item ID. This indicates a problem with the integration service. Please notify technical support.`,
                         alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
                         alga_service_id: item.service_id,
-                        tenant_id: tenant,
+                        tenant: tenant,
                         realm_id: realmId,
                         workflow_instance_id: executionId,
                     },
@@ -379,7 +379,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 contextData: {
                     message: `Invoice #${algaInvoice?.invoice_number || 'Unknown'} could not be synced to QuickBooks because none of its line items could be mapped to QuickBooks items. This usually indicates that multiple products need to be mapped in the QuickBooks integration settings. Please check the individual product mapping errors for more details.`,
                     alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
-                    tenant_id: tenant,
+                    tenant: tenant,
                     realm_id: realmId,
                     workflow_instance_id: executionId,
                 },
@@ -409,7 +409,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     message: `System error: The workflow couldn't find a QuickBooks customer ID for company ${algaCompany!.company_id} when trying to sync invoice #${algaInvoice!.invoice_number}. This indicates either a mapping issue or a system error. Please ensure the company is properly mapped to a QuickBooks customer or contact technical support.`,
                     alga_invoice_id: algaInvoice!.invoice_id,
                     alga_company_id: algaCompany!.company_id,
-                    tenant_id: tenant,
+                    tenant: tenant,
                     realm_id: realmId,
                     workflow_instance_id: executionId,
                 },
@@ -512,7 +512,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     message: `QuickBooks API error: Failed to ${existingQboInvoiceId ? 'update' : 'create'} invoice #${algaInvoice?.invoice_number || 'Unknown'} in QuickBooks. This may be due to API permissions, invalid data, or QuickBooks service issues. Error: ${error.message || 'Unknown error'}.`,
                     details: errorDetails,
                     alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
-                    tenant_id: tenant,
+                    tenant: tenant,
                     realm_id: realmId,
                     workflow_instance_id: executionId,
                 },
@@ -567,7 +567,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 message: `The QuickBooks invoice sync workflow encountered an unexpected system error while processing invoice #${algaInvoiceIdForError ?? 'Unknown'}. This may indicate a problem with the workflow configuration or the QuickBooks integration service. Please notify technical support with the workflow instance ID.`,
                 alga_invoice_id: algaInvoiceIdForError ?? 'Unknown',
                 original_trigger_event_invoice_id: triggerEventPayload?.invoiceId ?? 'Unknown',
-                tenant_id: tenant ?? 'Unknown',
+                tenant: tenant ?? 'Unknown',
                 realm_id: realmId ?? 'Unknown',
                 workflow_instance_id: executionId,
                 error: errorInfo,

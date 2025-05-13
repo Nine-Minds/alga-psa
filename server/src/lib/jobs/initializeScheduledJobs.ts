@@ -14,11 +14,11 @@ export async function initializeScheduledJobs(): Promise<void> {
     
     // Get all tenants
     const { knex } = await createTenantKnex();
-    const tenants = await knex('tenants').select('tenant_id');
+    const tenants = await knex('tenants').select('tenant');
     
     // Set up expired credits job for each tenant
     for (const tenantRecord of tenants) {
-      const tenantId = tenantRecord.tenant_id;
+      const tenantId = tenantRecord.tenant;
       
       // Schedule daily job to process expired credits (runs at 1:00 AM)
       const expiredJobId = await scheduleExpiredCreditsJob(tenantId, undefined, '0 1 * * *');

@@ -10,7 +10,7 @@ import { Knex } from 'knex'; // Import Knex type
 
 export interface ExternalEntityMapping {
   id: string; // UUID
-  tenant_id: string; // UUID
+  tenant: string; // UUID
   integration_type: string; // VARCHAR(50)
   alga_entity_type: string; // VARCHAR(50)
   alga_entity_id: string; // VARCHAR(255)
@@ -77,7 +77,7 @@ export async function getExternalEntityMappings(params: GetMappingsParams): Prom
 
   try {
     const query = knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-      .where({ tenant_id: tenantId }); // **Tenant Isolation**
+      .where({ tenant: tenantId }); // **Tenant Isolation**
 
     if (integrationType) {
       query.andWhere({ integration_type: integrationType });
@@ -126,7 +126,7 @@ export async function createExternalEntityMapping(mappingData: CreateMappingData
     const [newMapping] = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
       .insert({
         id: knex.raw('gen_random_uuid()'), // Use DB function for UUID generation
-        tenant_id: tenantId, // **Tenant Isolation**
+        tenant: tenantId, // **Tenant Isolation**
         integration_type,
         alga_entity_type,
         alga_entity_id,
@@ -134,7 +134,8 @@ export async function createExternalEntityMapping(mappingData: CreateMappingData
         external_realm_id: external_realm_id, // Handle null/undefined appropriately
         sync_status: sync_status ?? 'pending', // Default sync status
         metadata: metadata ?? null, // Knex handles JSONB serialization
-        // created_at and updated_at will use DB defaults
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .returning('*'); // Return the newly created row
 
@@ -178,14 +179,14 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
   if (updatePayload.metadata !== undefined) {
       updatePayload.metadata = updatePayload.metadata ?? null;
   }
-  // Add updated_at timestamp manually if DB doesn't handle it automatically
-  // updatePayload.updated_at = new Date().toISOString(); // Or use knex.fn.now() if preferred
+  // Add updated_at timestamp manually since DB triggers are not supported in Citus
+  updatePayload.updated_at = new Date().toISOString();
 
   try {
     const [updatedMapping] = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
       .where({
         id: mappingId,
-        tenant_id: tenantId // **Tenant Isolation**
+        tenant: tenantId // **Tenant Isolation**
       })
       .update(updatePayload)
       .returning('*'); // Return the updated row
@@ -194,7 +195,7 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
       // Attempt to find if the mapping exists at all for this tenant to give a better error
       const exists = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
                         .select('id')
-                        .where({ id: mappingId, tenant_id: tenantId })
+                        .where({ id: mappingId, tenant: tenantId })
                         .first();
       if (!exists) {
           throw new Error(`Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`);
@@ -230,7 +231,7 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
     const deletedCount = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
       .where({
         id: mappingId,
-        tenant_id: tenantId // **Tenant Isolation**
+        tenant: tenantId // **Tenant Isolation**
       })
       .del(); // Perform the delete operation
 
@@ -238,7 +239,7 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
       // Check if the mapping ID exists at all to differentiate between "not found" and other errors
        const exists = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
                         .select('id')
-                        .where({ id: mappingId, tenant_id: tenantId })
+                        .where({ id: mappingId, tenant: tenantId })
                         .first();
        if (!exists) {
            console.warn(`[External Mapping Action - Server] Mapping ID ${mappingId} not found for tenant ${tenantId}. No deletion occurred.`);
@@ -303,7 +304,7 @@ async function lookupExternalEntityIdAction(params: Record<string, any>, context
     const query = knex('tenant_external_entity_mappings')
       .select('external_entity_id')
       .where({
-        tenant_id: tenant, // Ensure tenant isolation
+        tenant: tenant, // Ensure tenant isolation
         integration_type: integration_type,
         alga_entity_type: alga_entity_type,
         alga_entity_id: alga_entity_id,

@@ -62,7 +62,7 @@ export const timePeriodSettingsSchema = tenantSchema.extend({
   effective_to: iso8601Schema.optional(),
   created_at: iso8601Schema,
   updated_at: iso8601Schema,
-  tenant_id: z.string(),
+  tenant: z.string(),
   start_day: z.number().min(1).max(31).optional(),
   end_day: z.number().min(0).max(31).optional(),
   start_month: z.number().min(1).max(12).optional(),

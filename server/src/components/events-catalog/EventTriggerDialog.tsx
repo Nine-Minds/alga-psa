@@ -129,7 +129,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       
       // Create the workflow trigger
       const triggerData: ICreateWorkflowTrigger = {
-        tenant_id: tenant || "", // Get tenant ID from server action
+        tenant: tenant || "", // Get tenant ID from server action
         name: triggerName,
         description: triggerDescription,
         event_type: event.event_type
@@ -153,7 +153,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
       const attachmentData: ICreateWorkflowEventAttachment = {
         workflow_id: selectedWorkflowId,
         event_type: event.event_type,
-        tenant_id: tenant || "", // Get tenant ID from server action
+        tenant: tenant || "", // Get tenant ID from server action
         is_active: true
       };
 

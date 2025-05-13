@@ -261,9 +261,9 @@ export class TypeScriptWorkflowRuntime {
           this.andOn('ver.is_current', '=', knex.raw('?', [true]));
           if (!isSystemManaged && tenantId) {
             // For tenant workflows, registration and version must belong to the tenant.
-            this.andOn('reg.tenant_id', '=', knex.raw('?', [tenantId]));
-            // Assuming 'workflow_registration_versions' (tenant version table) has 'tenant_id'
-            this.andOn('ver.tenant_id', '=', knex.raw('?', [tenantId]));
+            this.andOn('reg.tenant', '=', knex.raw('?', [tenantId]));
+            // Assuming 'workflow_registration_versions' (tenant version table) has 'tenant'
+            this.andOn('ver.tenant', '=', knex.raw('?', [tenantId]));
           }
         })
         .where('reg.registration_id', registrationId) // Primary filter by registrationId
@@ -350,11 +350,11 @@ export class TypeScriptWorkflowRuntime {
     if (!isSystemManaged) {
       // For tenant workflows, version and registration must belong to the tenant.
       versionQuery = versionQuery.andWhere({
-        'wrv.tenant_id': tenant,
-        'wr.tenant_id': tenant
+        'wrv.tenant': tenant,
+        'wr.tenant': tenant
       });
     }
-    // For system workflows, no tenant_id filter is applied to these tables.
+    // For system workflows, no tenant filter is applied to these tables.
 
     const versionRecord = await versionQuery
       .select(

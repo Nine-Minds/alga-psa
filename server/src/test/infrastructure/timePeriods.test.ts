@@ -79,7 +79,7 @@ describe('Time Periods Infrastructure', () => {
       effective_to: undefined,
       created_at: createTestDateISO({}),
       updated_at: createTestDateISO({}),
-      tenant_id: tenantId,
+      tenant: tenantId,
       end_day: undefined
     };
 
@@ -116,7 +116,7 @@ describe('Time Periods Infrastructure', () => {
       effective_to: undefined,
       created_at: createTestDateISO({}),
       updated_at: createTestDateISO({}),
-      tenant_id: tenantId,
+      tenant: tenantId,
       end_day: 0
     };
 
@@ -157,7 +157,7 @@ describe('Time Periods Infrastructure', () => {
         effective_to: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
         end_day: 0
       },
       {
@@ -170,7 +170,7 @@ describe('Time Periods Infrastructure', () => {
         effective_to: undefined,
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
         end_day: 0
       },
     ];
@@ -212,7 +212,7 @@ describe('Time Periods Infrastructure', () => {
       effective_to: undefined,
       created_at: createTestDateISO({}),
       updated_at: createTestDateISO({}),
-      tenant_id: tenantId,
+      tenant: tenantId,
       end_day: 0
     };
 
@@ -250,7 +250,7 @@ describe('Time Periods Infrastructure', () => {
       effective_to: undefined,
       created_at: createTestDateISO({}),
       updated_at: createTestDateISO({}),
-      tenant_id: tenantId,
+      tenant: tenantId,
       end_day: 0
     };
 
@@ -283,7 +283,7 @@ describe('Time Periods Infrastructure', () => {
         effective_from: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
       },
       {
         time_period_settings_id: uuidv4(),
@@ -295,7 +295,7 @@ describe('Time Periods Infrastructure', () => {
         effective_from: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
       },
     ];
 
@@ -351,7 +351,7 @@ describe('Time Periods Infrastructure', () => {
         effective_to: undefined,
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
         end_day: undefined
       }];
 
@@ -383,7 +383,7 @@ describe('Time Periods Infrastructure', () => {
         effective_to: undefined,
         created_at: createTestDateISO({}),
         updated_at: createTestDateISO({}),
-        tenant_id: tenantId,
+        tenant: tenantId,
         end_day: undefined
       }];
 

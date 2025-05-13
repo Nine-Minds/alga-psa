@@ -62,7 +62,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
               .andOn('ver.is_current', '=', knex.raw('true'));
         })
         .where({
-          'reg.tenant_id': tenant,
+          'reg.tenant': tenant,
           'reg.name': definitionId // Assuming definitionId is the workflow name
         })
         .select(
@@ -491,7 +491,7 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
                 .andOn('ver.is_current', '=', knex.raw('true'));
           })
           .where({
-            'reg.tenant_id': tenant,
+            'reg.tenant': tenant,
             'reg.name': definitionId // Assuming definitionId is the workflow name
           })
           .select('ver.code') // Select only the code from the current version

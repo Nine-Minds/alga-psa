@@ -286,7 +286,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
       .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id') // Join standard types
       .leftJoin('service_types as tst', function() { // Join tenant-specific types
         this.on('sc.custom_service_type_id', '=', 'tst.id')
-            .andOn('sc.tenant', '=', 'tst.tenant_id'); // Corrected column name
+            .andOn('sc.tenant', '=', 'tst.tenant');
       })
       .where({
         'sc.service_id': config.service_id,

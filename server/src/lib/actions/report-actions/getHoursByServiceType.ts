@@ -105,7 +105,7 @@ export async function getHoursByServiceType(
       })
       .leftJoin<IServiceType>('service_types as st', function() { // Left join in case service type is null
         this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant_id'); // Use tenant_id for service_types
+            .andOn('sc.tenant', '=', 'st.tenant');
       });
 
     // --- Aggregation and Grouping ---

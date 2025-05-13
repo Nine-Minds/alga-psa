@@ -217,7 +217,7 @@ export async function GET(request: Request) {
       // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
       const events = await knex('system_event_catalog') // Changed table name
         .select('event_id', 'event_type')
-        // Removed tenant_id filter
+        // Removed tenant filter
         .whereIn('event_type', eventTypes);
 
       const eventIdMap = events.reduce((acc, ev) => {
@@ -244,7 +244,7 @@ export async function GET(request: Request) {
         try {
           console.log(`QBO Callback: Calling createWorkflowEventAttachment for tenant ${tenantId}, Event '${eventType}' (ID: ${eventId}) -> Workflow '${workflowName}' (ID: ${workflowId})`);
           await createWorkflowEventAttachment({
-            tenant_id: tenantId,
+            tenant: tenantId,
             event_type: eventType, // Use event_type instead of event_id
             workflow_id: workflowId, // Pass the system workflow registration_id here
             is_active: true, // Default to active

@@ -36,7 +36,7 @@ export interface IEventCatalogEntry {
   category?: string;
   payload_schema: Record<string, any>; // JSON Schema for the event payload
   // is_system_event: boolean; // Removed as per system_event_catalog introduction
-  tenant_id: string;
+  tenant: string;
   created_at: string;
   updated_at: string;
 }
@@ -51,7 +51,7 @@ export interface ICreateEventCatalogEntry {
   category?: string;
   payload_schema: Record<string, any>;
   // is_system_event?: boolean; // Removed as per system_event_catalog introduction
-  tenant_id: string;
+  tenant: string;
 }
 
 /**
@@ -70,7 +70,7 @@ export interface IUpdateEventCatalogEntry {
  */
 export interface IWorkflowTrigger {
   trigger_id: string;
-  tenant_id: string;
+  tenant: string;
   name: string;
   description?: string;
   event_type: EventType;
@@ -82,7 +82,7 @@ export interface IWorkflowTrigger {
  * Interface for creating a new workflow trigger
  */
 export interface ICreateWorkflowTrigger {
-  tenant_id: string;
+  tenant: string;
   name: string;
   description?: string;
   event_type: EventType;
@@ -138,7 +138,7 @@ export interface IWorkflowEventAttachment {
   workflow_name: string; // Added workflow name
   workflow_version: string; // Added workflow version
   event_type: string; // Changed from event_id
-  tenant_id: string;
+  tenant: string;
   is_active: boolean;
   isSystemManaged?: boolean; // Added flag for system managed workflows
   created_at: string;
@@ -151,7 +151,7 @@ export interface IWorkflowEventAttachment {
 export interface ICreateWorkflowEventAttachment {
   workflow_id: string;
   event_type: string; // Changed from event_id
-  tenant_id: string;
+  tenant: string;
   is_active?: boolean;
 }
 
@@ -173,7 +173,7 @@ export const EventCatalogEntrySchema = z.object({
   category: z.string().optional(),
   payload_schema: z.record(z.any()),
   // is_system_event: z.boolean().default(false), // Removed as per system_event_catalog introduction
-  tenant_id: z.string().uuid(),
+  tenant: z.string().uuid(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime()
 });
@@ -183,7 +183,7 @@ export const EventCatalogEntrySchema = z.object({
  */
 export const WorkflowTriggerSchema = z.object({
   trigger_id: z.string().uuid(),
-  tenant_id: z.string().uuid(),
+  tenant: z.string().uuid(),
   name: z.string().min(1),
   description: z.string().optional(),
   event_type: EventTypeEnum,
@@ -213,7 +213,7 @@ export const WorkflowEventAttachmentSchema = z.object({
   workflow_name: z.string(), // Added workflow name
   workflow_version: z.string(), // Added workflow version
   event_type: z.string(), // Changed from event_id: z.string().uuid()
-  tenant_id: z.string().uuid(),
+  tenant: z.string().uuid(),
   is_active: z.boolean().default(true),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime()

@@ -429,7 +429,7 @@ export default class Invoice {
     // --- Fetch Tenant's Default Company ---
     let tenantCompanyInfo = null;
     const tenantCompanyLink = await knex('tenant_companies')
-      .where({ tenant_id: tenant, is_default: true })
+      .where({ tenant: tenant, is_default: true })
       .select('company_id')
       .first();
 

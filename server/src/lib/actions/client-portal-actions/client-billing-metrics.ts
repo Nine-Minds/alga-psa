@@ -149,7 +149,7 @@ export async function getClientHoursByService(
       })
       .leftJoin<IServiceType>('service_types as st', function() {
         this.on('sc.custom_service_type_id', '=', 'st.id')
-            .andOn('sc.tenant', '=', 'st.tenant_id');
+            .andOn('sc.tenant', '=', 'st.tenant');
       });
 
     // --- Aggregation and Grouping ---

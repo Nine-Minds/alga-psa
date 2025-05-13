@@ -86,7 +86,7 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
     end_day_of_month: settings.end_day_of_month || END_OF_PERIOD,
     created_at: now,
     updated_at: now,
-    tenant_id: tenant,
+    tenant: tenant,
   };
 
   // Validate the business rules and check for overlaps before database insertion

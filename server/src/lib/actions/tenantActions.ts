@@ -33,7 +33,7 @@ export async function getTenantDetails(): Promise<Tenant & { companies: TenantCo
       'tc.created_at',
       'tc.updated_at'
     )
-    .where('tc.tenant_id', tenantId)
+    .where('tc.tenant', tenantId)
     .whereNull('tc.deleted_at');
 
   return {
@@ -59,7 +59,7 @@ export async function addCompanyToTenant(companyId: string): Promise<void> {
   const { knex } = await createTenantKnex();
   await knex('tenant_companies')
     .insert({
-      tenant_id: tenantId,
+      tenant: tenantId,
       company_id: companyId,
       is_default: false
     });
@@ -71,7 +71,7 @@ export async function removeCompanyFromTenant(companyId: string): Promise<void> 
 
   const { knex } = await createTenantKnex();
   await knex('tenant_companies')
-    .where('tenant_id', tenantId)
+    .where('tenant', tenantId)
     .where('company_id', companyId)
     .update({ deleted_at: knex.fn.now() });
 }
@@ -86,13 +86,13 @@ export async function setDefaultCompany(companyId: string): Promise<void> {
   await knex.transaction(async (trx: Knex.Transaction) => {
     // Clear existing default
     await trx('tenant_companies')
-      .where('tenant_id', tenantId)
+      .where('tenant', tenantId)
       .where('is_default', true)
       .update({ is_default: false });
 
     // Set new default
     await trx('tenant_companies')
-      .where('tenant_id', tenantId)
+      .where('tenant', tenantId)
       .where('company_id', companyId)
       .update({ is_default: true });
   });

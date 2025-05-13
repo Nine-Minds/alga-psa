@@ -255,7 +255,7 @@ export async function generateTimePeriods(
         period_id: uuidv4(),
         start_date: currentDate.toString(),
         end_date: periodEndDate.toString(),
-        tenant: setting.tenant_id,
+        tenant: setting.tenant,
       };
       periods.push(newPeriod);
 
