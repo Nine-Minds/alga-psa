@@ -71,11 +71,16 @@ export default function TicketingDashboardContainer({
   };
 
   // Convert channel options to the format expected by ChannelPicker
-  const channels = consolidatedData.options.channelOptions.map(option => ({
+  const channels: {
+    channel_id: string;
+    channel_name: string;
+    tenant: string;
+    is_inactive: boolean;
+  }[] = consolidatedData.options.channelOptions.map(option => ({
     channel_id: option.value,
     channel_name: option.label as string,
     tenant: '',
-    is_inactive: false
+    is_inactive: option.is_inactive || false
   }));
 
   return (

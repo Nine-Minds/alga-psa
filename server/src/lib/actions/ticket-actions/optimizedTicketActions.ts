@@ -687,7 +687,8 @@ export async function getTicketFormOptions(user: IUser) {
       .filter((channel: any) => channel.channel_id !== undefined)
       .map((channel: any) => ({
         value: channel.channel_id,
-        label: channel.channel_name || ""
+        label: channel.channel_name || "",
+        is_inactive: channel.is_inactive
       }));
 
     const agentOptions = users.map((user: any) => ({

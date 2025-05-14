@@ -217,7 +217,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
 
   return (
     <ReflectionContainer id={`contact-picker-container-${label.replace(/\s+/g, '-').toLowerCase()}`} label={label || "Contact Picker"}>
-      <div className="mb-4">
+      <div className="">
         <div
           className={`${className} ${buttonWidth === 'fit' ? 'inline-flex' : 'w-full'} relative`}
           ref={dropdownRef}
@@ -230,10 +230,15 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
             onClick={toggleDropdown}
             className={`
               inline-flex items-center justify-between
-              border border-gray-200 rounded-lg p-2
-              bg-white cursor-pointer min-h-[38px]
-              hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
-              text-sm ${buttonWidth === 'full' ? 'w-full' : ''} ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer'}
+              rounded-lg p-2 h-10
+              text-sm font-medium transition-colors
+              bg-white cursor-pointer
+              border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
+              hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+              disabled:opacity-50 disabled:pointer-events-none
+              ${buttonWidth === 'full' ? 'w-full' : ''}
+              ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
             `}
           >
             <div className="flex items-center gap-2 flex-1">
@@ -242,10 +247,10 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                   contactId={selectedContact.contact_name_id}
                   contactName={selectedContact.full_name}
                   avatarUrl={selectedContact.avatarUrl || null}
-                  size="sm"
+                  size="xs"
                 />
               )}
-              <span>{selectedContact ? selectedContact.full_name : placeholder}</span>
+              <span className={!selectedContact && disabled ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
             </div>
             <div className="flex items-center">
               <ChevronDown className={`h-4 w-4 ${disabled ? 'text-gray-400' : ''}`} />
@@ -330,7 +335,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
                            contactId={contact.contact_name_id}
                            contactName={contact.full_name}
                            avatarUrl={contact.avatarUrl || null}
-                           size="sm"
+                           size="xs"
                          />
                          <div className="flex-1">
                            <div>{contact.full_name}</div>

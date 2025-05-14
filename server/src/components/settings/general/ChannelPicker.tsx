@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Input } from '../../../components/ui/Input';
-import CustomSelect from '../../../components/ui/CustomSelect';
-import { IChannel } from '../../../interfaces';
+import * as Popover from '@radix-ui/react-popover';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { IChannel } from 'server/src/interfaces';
 import { ChevronDownIcon } from '@radix-ui/react-icons';
-import { useAutomationIdAndRegister } from '../../../types/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent, AutomationProps, FormFieldComponent } from '../../../types/ui-reflection/types';
-import { ReflectionContainer } from '../../../types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent, AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Button } from 'server/src/components/ui/Button';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
@@ -33,7 +34,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLButtonElement>(null);
 
   const mappedOptions = useMemo(() => 
     channels.map(channel => ({
@@ -134,19 +135,6 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
     });
   }, [channels, filterState, searchTerm]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (!dropdownRef.current?.contains(target) && target.nodeName !== 'SELECT') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
 
   const handleSelect = (channelId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -167,32 +155,44 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
 
   return (
     <ReflectionContainer id={`${id}-channel`} data-automation-type={dataAutomationType} label="Channel Picker">
-      <div
-        className={`${fitContent ? 'w-fit' : 'w-full'} rounded-md relative`}
-        ref={dropdownRef}
-        {...withDataAutomationId({ id: `${id}-picker` })}
-        data-automation-type={dataAutomationType}
-      >
-        <Button
-          id={`${id}-toggle`}
-          variant="outline"
-          onClick={handleToggle}
-          className="w-full justify-between"
-          label={selectedChannel?.channel_name || 'Select Channel'}
-          type="button" // Explicitly set type to prevent form submission
-        >
-          <span>{selectedChannel?.channel_name || 'Select Channel'}</span>
-          <ChevronDownIcon className="ml-2 h-4 w-4" />
-        </Button>
-
-        {isOpen && (
-          <div
-            className={`absolute z-[100] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
+      <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+        <Popover.Trigger asChild>
+          <Button
+            variant="outline"
+            onClick={handleToggle}
+            className="w-full justify-between"
+            label={selectedChannel?.channel_name || 'Select Channel'}
+            type="button"
+            ref={dropdownRef}
+            aria-expanded={isOpen}
+            aria-controls={isOpen ? `${id}-content` : undefined}
+            {...withDataAutomationId({ id: `${id}-picker` })}
+            data-automation-type={dataAutomationType}
+          >
+            <span>{selectedChannel?.channel_name || 'Select Channel'}</span>
+            <ChevronDownIcon className="ml-2 h-4 w-4" />
+          </Button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            id={`${id}-content`}
+            className={`z-[9999] bg-white border rounded-md shadow-lg ${fitContent ? 'w-max' : 'w-[350px]'}`}
+            sideOffset={5}
+            align="start"
             style={{
-              top: '100%',
-              left: 0
+              minWidth: dropdownRef.current ? `${dropdownRef.current.offsetWidth}px` : 'auto',
             }}
-            onMouseDown={(e) => e.stopPropagation()}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onEscapeKeyDown={() => setIsOpen(false)}
+            onPointerDownOutside={(event) => {
+              const target = event.target as HTMLElement;
+              if (target.closest('[data-radix-select-trigger]')) {
+                event.preventDefault();
+              } else {
+                setIsOpen(false);
+              }
+            }}
           >
             <div className="p-3 space-y-3 bg-white">
               <div className="w-full">
@@ -210,19 +210,18 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
                   placeholder="Search channels..."
                   value={searchTerm}
                   onChange={(e) => {
-                    e.stopPropagation();
                     setSearchTerm(e.target.value);
                   }}
                   label="Search Channels"
                 />
               </div>
             </div>
-            <div 
+            <div
               className="max-h-60 overflow-y-auto border-t bg-white"
               role="listbox"
               aria-label="Channels"
             >
-              {isOpen && filteredChannels.length === 0 ? (
+              {filteredChannels.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No channels found</div>
               ) : (
                 filteredChannels.map((channel): JSX.Element => (
@@ -235,7 +234,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
                     label={channel.channel_name || ''}
                     role="option"
                     aria-selected={channel.channel_id === selectedChannelId}
-                    type="button" // Explicitly set type to prevent form submission
+                    type="button"
                   >
                     {channel.channel_name || ''}
                     {channel.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
@@ -243,9 +242,9 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
                 ))
               )}
             </div>
-          </div>
-        )}
-      </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
     </ReflectionContainer>
   );
 };
