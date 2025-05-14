@@ -3,6 +3,15 @@ import * as path from 'path';
 import { ISecretProvider } from './ISecretProvider.js';
 // import logger from 'server/src/utils/logger'; // Corrected logger import path again
 
+// Calculate secrets directory path once at module load
+const DOCKER_SECRETS_PATH = '/run/secrets';
+const LOCAL_SECRETS_PATH = '../secrets';
+
+// Cache the secrets path promise
+const SECRETS_PATH_PROMISE = fs.access(DOCKER_SECRETS_PATH)
+  .then(() => DOCKER_SECRETS_PATH)
+  .catch(() => LOCAL_SECRETS_PATH);
+
 /**
  * A secret provider that reads secrets from the local filesystem.
  *
@@ -14,13 +23,21 @@ import { ISecretProvider } from './ISecretProvider.js';
  * variable, defaulting to '../secrets' relative to the server root.
  */
 export class FileSystemSecretProvider implements ISecretProvider {
-  private basePath: string;
+  private serverRoot: string;
+  private _basePath: string | undefined;
 
   constructor() {
-    const serverRoot = process.cwd(); // Gets the current working directory (app root)
-    const defaultPath = path.resolve(serverRoot, '../secrets');
-    this.basePath = process.env.SECRET_FS_BASE_PATH || defaultPath;
-    console.info(`FileSystemSecretProvider initialized with base path: ${this.basePath}`);
+    this.serverRoot = process.cwd();
+  }
+
+  async getBasePath(): Promise<string> {
+    if (!this._basePath) {
+      // Return the base path for the secret provider
+      let basePath = process.env.SECRET_FS_BASE_PATH || await SECRETS_PATH_PROMISE || path.resolve(this.serverRoot, '../secrets');
+      this._basePath = basePath;
+    }
+    console.info(`located base path: ${this._basePath}`);
+    return this._basePath;
   }
 
   /**
@@ -58,7 +75,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
         console.warn(`Potential path traversal attempt detected for app secret name: ${name}. Denying access.`);
         return undefined;
     }
-    const filePath = path.join(this.basePath, safeName);
+    const filePath = path.join(await this.getBasePath(), safeName);
     console.debug(`Attempting to read app secret: ${filePath}`);
     
     return this.readFileContent(filePath) || '';
@@ -81,7 +98,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
         return undefined;
     }
 
-    const filePath = path.join(this.basePath, 'tenants', safeTenantId, safeName);
+    const filePath = path.join(await this.getBasePath(), 'tenants', safeTenantId, safeName);
     console.debug(`Attempting to read tenant secret: ${filePath}`);
     return this.readFileContent(filePath);
   }
@@ -104,7 +121,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
       throw new Error('Invalid tenantId or secret name.'); // Throw error on invalid input
     }
 
-    const tenantDirPath = path.join(this.basePath, 'tenants', safeTenantId);
+    const tenantDirPath = path.join(await this.getBasePath(), 'tenants', safeTenantId);
     const filePath = path.join(tenantDirPath, safeName);
 
     if (value === null) {
@@ -143,7 +160,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
       throw new Error('Invalid tenantId or secret name.'); // Throw error on invalid input
     }
 
-    const filePath = path.join(this.basePath, 'tenants', safeTenantId, safeName);
+    const filePath = path.join(await this.getBasePath(), 'tenants', safeTenantId, safeName);
 
     try {
       await fs.unlink(filePath);
