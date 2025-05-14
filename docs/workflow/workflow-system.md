@@ -213,7 +213,7 @@ The `WorkflowContext` provides access to:
 
 - **actions**: Proxy object for executing registered actions
 - **data**: Data manager for storing and retrieving workflow data
-- **events**: Event manager for waiting for and emitting events
+- **events**: Event manager for waiting for and emitting events. `events.waitFor()` is particularly useful for pausing workflow execution until an external event occurs, such as the resolution of a human task (see "Interactive Error Resolution and Retries with Human Tasks" for detailed examples) or a signal from another system.
 - **logger**: Logger for workflow execution
 - **setState/getCurrentState**: Methods for managing workflow state
 
@@ -265,7 +265,119 @@ try {
   logger.error('Operation failed', error);
   await actions.handleFailure();
 }
+// For errors that are recoverable with human intervention, a more interactive pattern involves creating a human task and then using "await events.waitFor()" to pause the workflow until the task is resolved, allowing the operation to be retried. See the "Interactive Error Resolution and Retries with Human Tasks" section for a detailed example of this pattern.
 ```
+
+#### Interactive Error Resolution and Retries with Human Tasks
+
+A common and powerful pattern for handling operations that might fail due to issues requiring manual intervention (e.g., missing data, incorrect configuration, external system errors) is to:
+1. Attempt the operation.
+2. If it fails, create a human task for a user to investigate and resolve the underlying issue.
+3. Pause the workflow execution using `await context.events.waitFor('EVENT_INDICATING_TASK_RESOLUTION')` until the user signals the issue is fixed.
+4. Once the event is received, resume the workflow and retry the operation.
+
+This allows the workflow to remain in context and continue from where it left off, rather than terminating and requiring a full restart.
+
+**Conceptual Flow:**
+
+```
+loop until operation_succeeds or max_retries_reached:
+    try:
+        perform_operation()
+        operation_succeeds = true
+    catch error_requiring_human_intervention:
+        create_human_task_for_error_resolution(error_details)
+        await events.waitFor('TASK_RESOLVED_EVENT_FOR_THIS_ISSUE')
+        // Loop continues, operation will be retried
+```
+
+**Example: Processing an item that requires a valid mapping**
+
+```typescript
+async function processItemWithMappingWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, events, logger, setState, executionId } = context;
+  const itemId = data.get('itemIdToProcess');
+  let itemProcessed = false;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3; // Define a retry limit
+
+  setState('VALIDATING_ITEM_MAPPING');
+
+  while (!itemProcessed && attempts < MAX_ATTEMPTS) {
+    attempts++;
+    logger.info(`Attempt ${attempts} to process item ${itemId}.`);
+
+    try {
+      // Action that might fail if mapping is missing or invalid
+      const mappingDetails = await actions.getMappingForItem({ itemId }); 
+      if (!mappingDetails || !mappingDetails.isValid) {
+        throw new Error(`Mapping for item ${itemId} is missing or invalid.`);
+      }
+
+      // Proceed with processing using mappingDetails
+      await actions.processItemUsingMapping({ itemId, mappingDetails });
+      itemProcessed = true;
+      logger.info(`Item ${itemId} processed successfully.`);
+      setState('ITEM_PROCESSING_COMPLETE');
+
+    } catch (error: any) {
+      logger.error(`Error processing item ${itemId} on attempt ${attempts}: ${error.message}`);
+      setState(`AWAITING_MAPPING_RESOLUTION_FOR_ITEM_${itemId}_ATTEMPT_${attempts}`);
+
+      // Create a human task for the user to fix the mapping
+      const taskResult = await actions.createHumanTask({
+        taskType: 'resolve_item_mapping_error',
+        title: `Resolve Mapping for Item ${itemId} (Attempt ${attempts})`,
+        contextData: {
+          itemId: itemId,
+          errorMessage: error.message,
+          currentAttempt: attempts,
+          maxAttempts: MAX_ATTEMPTS,
+          workflowInstanceId: executionId
+        }
+      });
+
+      if (!taskResult || !taskResult.taskId) {
+        logger.error(`Failed to create human task for item ${itemId}. Halting retries for this item.`);
+        setState('CRITICAL_ERROR_TASK_CREATION_FAILED');
+        // Depending on policy, you might throw an error here or return
+        return; 
+      }
+
+      // Define the event name the workflow will wait for.
+      // This event must be emitted by the system when the human task is resolved.
+      // Using the taskId makes the event specific.
+      const expectedEventName = `ITEM_MAPPING_TASK_RESOLVED_${taskResult.taskId}`;
+      logger.info(`Task ${taskResult.taskId} created for item ${itemId}. Waiting for event: ${expectedEventName}`);
+      
+      // Pause workflow execution until the specific task resolution event is received
+      await events.waitFor(expectedEventName); 
+      
+      logger.info(`Event ${expectedEventName} received. Retrying processing for item ${itemId}.`);
+      // The loop will continue, and getMappingForItem will be re-attempted.
+    }
+  } // End while loop
+
+  if (!itemProcessed) {
+    logger.error(`Failed to process item ${itemId} after ${MAX_ATTEMPTS} attempts.`);
+    setState('ITEM_PROCESSING_FAILED_MAX_ATTEMPTS');
+    // Optionally, create a final escalation task or take other compensatory actions.
+    await actions.createHumanTask({
+        taskType: 'item_processing_escalation',
+        title: `Escalation: Item ${itemId} processing failed after max attempts.`,
+        contextData: { /* ... relevant details ... */ }
+    });
+  }
+}
+```
+
+**Key Considerations for this Pattern:**
+*   **Event Specificity**: The event name passed to `events.waitFor()` should be specific enough to ensure the workflow resumes only when the relevant human task is addressed. Incorporating the `taskId` (if returned by `createHumanTask`) into the event name or using it in the event payload for filtering is highly recommended.
+*   **Task Resolution Event Emission**: The system managing human tasks (e.g., the UI or a task service) *must* be configured to emit the correctly named event when a user completes or resolves the task.
+*   **Retry Limits**: Always include a mechanism (like a maximum attempt counter) to prevent infinite loops if an issue is repeatedly marked as resolved without an actual fix.
+*   **Idempotency of Retried Operations**: While the workflow pauses, the underlying data or system state might change. Ensure that the retried operations are idempotent or can handle being re-executed.
+*   **`setState` for Observability**: Continue to use `context.setState()` to provide clear visibility into the workflow's current status, especially when it's paused awaiting human input (e.g., `AWAITING_MAPPING_FIX_FOR_ITEM_123`).
+*   **Timeout for `events.waitFor()`**: If the `events.waitFor()` implementation supports timeouts (this should be verified in the specific runtime), it can be used to handle cases where a human task is not addressed within an expected timeframe, allowing the workflow to escalate or fail gracefully.
 
 ## 4. Core Components
 
