@@ -202,20 +202,33 @@ export class RedisStreamClient {
   public async publishEvent(event: WorkflowEventBase): Promise<string> {
     try {
       const client = await this.getClient();
-      if (!event.execution_id) {
-        throw new Error('Execution ID is required to publish an event');
-      }
+      // All events will be published to the global stream as per user request.
+      // The original event.execution_id is still part of the event payload for routing by consumers.
+      const streamName = this.getStreamName('global'); // Publish to global stream
       
-      const streamName = this.getStreamName(event.execution_id);
-      
-      // Ensure the stream and consumer group exist
+      // Ensure the stream and consumer group exist for the global stream
       await this.ensureStreamAndGroup(streamName);
 
       // Add the event to the stream
+      // Store key fields as top-level entries in the Redis message for easier routing/filtering,
+      // and the payload as a JSON string.
+      const messageFields: { [key: string]: string } = {
+        event_id: event.event_id,
+        execution_id: event.execution_id || '',
+        event_name: event.event_name,
+        event_type: event.event_type,
+        tenant: event.tenant,
+        timestamp: event.timestamp, // This is already a string from Zod schema
+        user_id: event.user_id || '',
+        from_state: event.from_state || '',
+        to_state: event.to_state || '',
+        payload_json: JSON.stringify(event.payload || {})
+      };
+      
       const messageId = await client.xAdd(
-        streamName,
+        streamName, // Use the global stream name
         '*', // Auto-generate ID
-        { event: JSON.stringify(event) },
+        messageFields,
         {
           TRIM: {
             strategy: 'MAXLEN',
@@ -803,10 +816,31 @@ export class RedisStreamClient {
       }
       
       // Add the message back to the original stream
+      // Ensure it's formatted correctly, like in publishEvent
+      const messageFields: { [key: string]: string } = {
+        event_id: originalMessage.event_id,
+        execution_id: originalMessage.execution_id || '',
+        event_name: originalMessage.event_name,
+        event_type: originalMessage.event_type,
+        tenant: originalMessage.tenant,
+        timestamp: originalMessage.timestamp, // Assuming originalMessage.timestamp is already string
+        user_id: originalMessage.user_id || '',
+        from_state: originalMessage.from_state || '',
+        to_state: originalMessage.to_state || '',
+        payload_json: JSON.stringify(originalMessage.payload || {})
+      };
+
       const messageId = await client.xAdd(
         targetStreamName,
         '*', // Auto-generate ID
-        { event: JSON.stringify(originalMessage) }
+        messageFields,
+        {
+          TRIM: { // Optional: Apply trimming similar to publishEvent if desired
+            strategy: 'MAXLEN',
+            threshold: this.config.maxStreamLength,
+            strategyModifier: '~'
+          }
+        }
       );
       
       // Delete the message from the DLQ

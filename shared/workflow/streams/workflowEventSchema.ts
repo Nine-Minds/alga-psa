@@ -89,10 +89,25 @@ export function toStreamEvent(event: IWorkflowEvent): WorkflowEventBase {
  */
 export function parseStreamEvent(message: RedisStreamMessage): WorkflowEventBase {
   try {
-    const eventJson = message.message.event;
-    const parsedEvent = JSON.parse(eventJson);
-    return WorkflowEventBaseSchema.parse(parsedEvent);
+    const rawEventData = message.message;
+
+    // Reconstruct the event object from individual fields
+    const eventForValidation = {
+      event_id: rawEventData.event_id,
+      execution_id: rawEventData.execution_id === '' ? undefined : rawEventData.execution_id,
+      event_name: rawEventData.event_name,
+      event_type: rawEventData.event_type,
+      tenant: rawEventData.tenant,
+      timestamp: rawEventData.timestamp,
+      from_state: rawEventData.from_state === '' ? undefined : rawEventData.from_state,
+      to_state: rawEventData.to_state === '' ? undefined : rawEventData.to_state,
+      user_id: rawEventData.user_id === '' ? undefined : rawEventData.user_id,
+      payload: rawEventData.payload_json ? JSON.parse(rawEventData.payload_json) : undefined,
+    };
+    
+    return WorkflowEventBaseSchema.parse(eventForValidation);
   } catch (error) {
-    throw new Error(`Failed to parse workflow event: ${error instanceof Error ? error.message : String(error)}`);
+    console.error('[parseStreamEvent] Raw message data:', message.message);
+    throw new Error(`Failed to parse workflow event from stream message: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

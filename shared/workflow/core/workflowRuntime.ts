@@ -180,36 +180,60 @@ export class TypeScriptWorkflowRuntime {
     }
     
     try {
-      // Use event sourcing to replay events and derive state
+      // Use event sourcing to replay events and derive the data portion of the state
       const replayResult = await WorkflowEventSourcing.replayEvents(knex, executionId, tenant, options);
-      let derivedState = replayResult.executionState;
+      const replayedDataState = replayResult.executionState; // Contains .data, .currentState, .events array, .isComplete
 
       // Fetch the full execution record to get workflowName and correlationId
       const executionRecord = await WorkflowExecutionModel.getById(knex, tenant, executionId);
+      const workflowName = executionRecord?.workflow_name;
+      const correlationId = executionRecord?.correlation_id;
 
-      if (executionRecord) {
-        derivedState = {
-          ...derivedState,
-          workflowName: executionRecord.workflow_name,
-          correlationId: executionRecord.correlation_id, // Ensure this is the correct property name from IWorkflowExecution
-        };
+      if (!executionRecord) {
+        logger.warn(`[TypeScriptWorkflowRuntime] Execution record not found for ${executionId} during state load.`);
+      }
+
+      // Get the existing live state if this workflow is already active in this runtime instance
+      let liveExecutionState = this.executionStates.get(executionId);
+
+      if (liveExecutionState) {
+        // Update the live state with replayed data, preserving listeners and other live properties
+        liveExecutionState.data = replayedDataState.data;
+        liveExecutionState.currentState = replayedDataState.currentState;
+        liveExecutionState.events = replayedDataState.events; // The list of historical events
+        liveExecutionState.isComplete = replayedDataState.isComplete;
+        liveExecutionState.workflowName = workflowName || liveExecutionState.workflowName;
+        liveExecutionState.correlationId = correlationId || liveExecutionState.correlationId;
+        // IMPORTANT: liveExecutionState.eventListeners is preserved because we are modifying the existing object.
+        logger.debug(`[TypeScriptWorkflowRuntime] Updated existing live state for execution ${executionId} with replayed data. Listeners preserved.`);
       } else {
-        // This case should ideally not happen if replayEvents succeeded for a valid executionId
-        logger.warn(`[TypeScriptWorkflowRuntime] Execution record not found for ${executionId} after event replay.`);
+        // No live state, create a new one from replayed data
+        // This new state will NOT have eventListeners yet; they get added when createWorkflowContext is called
+        // if this state is used to start/resume a workflow's JS execution (e.g. after a worker restart).
+        liveExecutionState = {
+          ...replayedDataState, // .data, .currentState, .events, .isComplete
+          executionId,
+          tenant,
+          workflowName,
+          correlationId,
+          // eventListeners will be added by createWorkflowContext if this state is used to start a new workflow execution.
+        };
+        this.executionStates.set(executionId, liveExecutionState); // Store the new state object
+        logger.debug(`[TypeScriptWorkflowRuntime] Created new state for execution ${executionId} from replayed data. No pre-existing listeners.`);
       }
       
-      // Store derived state in memory cache
-      this.executionStates.set(executionId, derivedState);
-      
-      // Update cache with timestamp
+      // Update the general state cache (which doesn't include live listeners)
       if (!options.debug && !options.replayUntil) {
+        const stateForCache = { ...liveExecutionState };
+        delete stateForCache.eventListeners; // Ensure listeners are not in the general cache
+
         this.stateCache.set(executionId, {
           timestamp: Date.now(),
-          state: derivedState
+          state: stateForCache 
         });
       }
       
-      return derivedState;
+      return liveExecutionState; // Return the (potentially updated) live state or new state
     } catch (error) {
       logger.error(`[TypeScriptWorkflowRuntime] Error loading execution state for ${executionId}:`, error);
       throw error;
@@ -543,8 +567,8 @@ export class TypeScriptWorkflowRuntime {
     // Get Redis stream client
     const redisStreamClient = getRedisStreamClient();
     
-    // Generate a unique event ID
-    const eventId = idempotency_key || `evt-${Date.now()}-${uuidv4()}`;
+    // Generate a unique event ID. If an idempotency_key is provided, use it. Otherwise, generate a new UUID.
+    const eventId = idempotency_key || uuidv4();
     
     // Create event
     const event = {
@@ -561,7 +585,7 @@ export class TypeScriptWorkflowRuntime {
     };
     
     // Generate a unique processing ID
-    const processingId = `proc-${Date.now()}-${uuidv4()}`;
+    const processingId = uuidv4(); // Removed "proc-" prefix and timestamp to ensure valid UUID
     
     try {
       // Use distributed transaction to persist event and publish to Redis
@@ -648,31 +672,40 @@ export class TypeScriptWorkflowRuntime {
           throw new Error(`Event ${eventId} not found`);
         }
         
-        // Load execution state using event sourcing
-        // This ensures we have the latest state derived from all events
-        const executionState = await this.loadExecutionState(knex, executionId, tenant);
+        // Load execution state. This will now return the live state if available,
+        // updated with replayed data, and crucially, preserving existing eventListeners.
+        const liveExecutionState = await this.loadExecutionState(knex, executionId, tenant);
         
-        // Store the previous state
-        const previousState = executionState.currentState;
+        // Store the previous state (from the loaded/updated live state)
+        const previousState = liveExecutionState.currentState;
         
-        // Create a workflow event for the runtime
+        // Create a workflow event object for in-memory processing (e.g., for listeners)
         const workflowEvent: WorkflowEvent = {
-          name: event.event_name,
+          name: event.event_name, // 'event' is the raw event from DB
           payload: event.payload || {},
           user_id: event.user_id,
           timestamp: event.created_at
         };
         
-        // Add event to execution state
-        executionState.events.push(workflowEvent);
+        // The 'event' (from DB) is already part of the history replayed by loadExecutionState
+        // if it was persisted before this processQueuedEvent call.
+        // If this 'event' is the one causing the current processing, its data effects
+        // should be applied to the liveExecutionState.data.
+        // The liveExecutionState.events array (historical events) is already up-to-date from loadExecutionState.
+
+        // Apply the current event's data changes to the liveExecutionState's data.
+        // Note: WorkflowEventSourcing.applyEvent should be idempotent if the event was already replayed.
+        // Or, ensure applyEvent is only for the *current* event's effect on data.
+        // For now, let's assume applyEvent updates the data based on the workflowEvent.
+        liveExecutionState.data = WorkflowEventSourcing.applyEvent(liveExecutionState.data, workflowEvent);
         
-        // Apply the event to update the state data
-        executionState.data = WorkflowEventSourcing.applyEvent(executionState.data, workflowEvent);
-        
-        // Notify event listeners
+        // Notify event listeners. This will use the liveExecutionState (fetched via this.executionStates.get)
+        // which should now correctly have its eventListeners property if the workflow was waiting.
         this.notifyEventListeners(executionId, workflowEvent);
         
-        // Update the event's to_state in the database
+        // After listeners are notified, the workflow might have resumed and changed its state.
+        // So, we use liveExecutionState.currentState (which could have been updated by the resumed workflow)
+        // as the to_state for the persisted event.
         await executeDistributedTransaction(knex, `workflow:${executionId}`, async (trx: Knex.Transaction) => {
           await trx('workflow_events')
             .where({
@@ -680,7 +713,7 @@ export class TypeScriptWorkflowRuntime {
               tenant
             })
             .update({
-              to_state: executionState.currentState
+              to_state: liveExecutionState.currentState
             });
           
           // Mark event processing as completed
@@ -691,7 +724,7 @@ export class TypeScriptWorkflowRuntime {
         return {
           success: true,
           previousState,
-          currentState: executionState.currentState,
+          currentState: liveExecutionState.currentState,
           actionsExecuted: [] // In a real implementation, we would track action executions
         };
       } catch (error) {
@@ -736,8 +769,9 @@ export class TypeScriptWorkflowRuntime {
       
       // If not in memory, load it using event sourcing
       if (!executionState) {
-        // Create a new knex instance
-        const knex = require('knex')({
+        // Dynamically import knex
+        const { default: knexFactory } = await import('knex');
+        const knex = knexFactory({
           client: 'pg',
           connection: process.env.DATABASE_URL
         });
@@ -878,6 +912,7 @@ export class TypeScriptWorkflowRuntime {
             // Register listener for future events
             const listener = (event: WorkflowEvent) => {
               if (eventNames.includes(event.name)) {
+                context.logger.debug(`[waitFor listener] Matched event: ${event.name}. Resolving promise for execution ${context.executionId}.`);
                 if (timeoutId) clearTimeout(timeoutId);
                 event.processed = true; // Mark as processed
                 // Clean up listener after processing
@@ -894,6 +929,8 @@ export class TypeScriptWorkflowRuntime {
                   }
                 });
                 resolve(event.payload);
+              } else {
+                context.logger.debug(`[waitFor listener] Received event ${event.name}, but waiting for ${eventNames.join('/')}. No match for execution ${context.executionId}.`);
               }
             };
             
@@ -907,8 +944,9 @@ export class TypeScriptWorkflowRuntime {
           });
         },
         emit: async (eventName: string, payload?: any): Promise<void> => {
-          // Create a new knex instance
-          const knex = require('knex')({
+          // Dynamically import knex
+          const { default: knexFactory } = await import('knex');
+          const knex = knexFactory({
             client: 'pg',
             connection: process.env.DATABASE_URL
           });
@@ -1104,7 +1142,7 @@ export class TypeScriptWorkflowRuntime {
       executionState.isComplete = true;
     } catch (error) {
       // Handle workflow execution error
-      console.error(`Error executing workflow ${executionState.executionId}:`, error);
+      logger.error(`Error executing workflow ${executionState.executionId}:`, error);
       executionState.error = error;
     }
   }
@@ -1114,17 +1152,26 @@ export class TypeScriptWorkflowRuntime {
    */
   private notifyEventListeners(executionId: string, event: WorkflowEvent): void {
     const executionState = this.executionStates.get(executionId);
-    if (!executionState || !executionState.eventListeners) return; // Added check for eventListeners
+    if (!executionState || !executionState.eventListeners) {
+      logger.warn(`[notifyEventListeners] No execution state or eventListeners found for ${executionId} when trying to notify for event ${event.name}`);
+      return; 
+    }
     
+    logger.debug(`[notifyEventListeners] Notifying for event: ${event.name} on execution ${executionId}. Available listeners on state: ${Array.from(executionState.eventListeners.keys()).join(', ')}`);
+
     // Get listeners for this event
     const listeners = executionState.eventListeners.get(event.name) || [];
+    if (listeners.length === 0) {
+      logger.debug(`[notifyEventListeners] No specific listeners registered for event ${event.name} on execution ${executionId}`);
+    }
     
     // Notify listeners
-    for (const listener of listeners) {
+    for (const listener of [...listeners]) { // Iterate over a copy in case listener modifies the array
       try {
+        logger.debug(`[notifyEventListeners] Calling a listener for event ${event.name} on execution ${executionId}`);
         listener(event);
       } catch (error) {
-        console.error(`Error notifying event listener:`, error);
+        logger.error(`Error notifying event listener for ${event.name} on ${executionId}:`, error);
       }
     }
   }

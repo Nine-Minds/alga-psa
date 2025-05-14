@@ -120,7 +120,15 @@ export interface WorkflowContext {
  * Parameters for the createTaskAndWaitForResult action
  */
 export interface CreateTaskAndWaitForResultParams {
-  taskType: string;
+  taskType: 'qbo_customer_mapping_lookup_error' |
+    'secret_fetch_error' |
+    'qbo_mapping_error' |
+    'qbo_item_lookup_failed' |
+    'qbo_item_lookup_internal_error' |
+    'qbo_invoice_no_items_mapped' |
+    'qbo_sync_error' |
+    'workflow_execution_error' |
+    'internal_workflow_error';
   title: string;
   description?: string;
   priority?: string;

@@ -52,9 +52,11 @@ The workflow system consists of the following major components:
 
 5.  **Workflow Context**: Provides the execution context for workflows, including access to actions, data, events, and logging.
 
-6.  **Redis Streams Integration**: Enables asynchronous event distribution across multiple servers.
+6.  **Redis Streams Integration**: Enables asynchronous event distribution. Currently, all workflow-related events are published to a single global Redis stream named `workflow:events:global`. (See Section 5 for more details on event stream usage).
 
 7.  **Worker Service**: Processes events asynchronously from Redis Streams.
+    *   **Current Architecture**: The `WorkflowWorker` currently operates as a singleton instance. This means all events from the global Redis stream are processed by this single worker. This is important for understanding how features like `context.events.waitFor` function reliably with in-memory listeners.
+    *   **Future Scalability**: Future plans for scaling may involve distributing workers, potentially by sharding streams by tenant ID (e.g., `workflow:events:tenant_hash_X`). This approach would aim to maintain worker affinity for workflow executions within a tenant, preserving the effectiveness of in-memory event listeners. If a different distribution model is adopted where affinity is not guaranteed, the in-memory listener mechanism for `context.events.waitFor` would require re-evaluation.
 
 8.  **Distributed Coordination**: Ensures reliable processing in a distributed environment.
 
@@ -102,7 +104,7 @@ The workflow system uses several database tables to store its data:
 4.  **workflow_timers**: Manages workflow timers
 5.  **workflow_action_dependencies**: Stores dependencies between actions
 6.  **workflow_sync_points**: Manages synchronization points for parallel execution
-7.  **workflow_event_processing**: Tracks the processing status of events in a distributed setup
+7.  **workflow_event_processing**: Tracks the detailed lifecycle and processing status of individual events intended for asynchronous handling. When an event is enqueued (e.g., via `runtime.enqueueEvent()`), a record is created here. Its status transitions typically from `pending` -> `published` (to Redis) -> `processing` (by a worker) -> `completed` or `failed`. This table is crucial for ensuring event processing reliability, enabling retries, and providing visibility into the asynchronous event pipeline, especially in distributed environments. It links to `workflow_events` via `event_id`.
 8.  **system_workflow_task_definitions**: Stores definitions for system-wide, reusable task types (e.g., common error handling tasks). These definitions are not tenant-specific and are identified by their `task_type` string. They link to form definitions (often system forms).
 9.  **workflow_task_definitions**: Stores definitions for task types that are specific to a tenant. These are identified by a UUID (`task_definition_id`) and are scoped to a `tenant`.
 10. **workflow_tasks**: Stores instances of human tasks. It links to its definition using:
@@ -222,7 +224,9 @@ The `WorkflowContext` provides access to:
 
 - **actions**: Proxy object for executing registered actions. This now includes a powerful composite action `createTaskAndWaitForResult` which simplifies creating a human task and pausing the workflow until it's resolved.
 - **data**: Data manager for storing and retrieving workflow data
-- **events**: Event manager for waiting for and emitting events. `events.waitFor()` is particularly useful for pausing workflow execution until an external event occurs. This is used internally by `createTaskAndWaitForResult`.
+- **events**: Event manager for waiting for and emitting events.
+  - `events.waitFor()`: Pauses workflow execution until a specified external event (or one of several specified events) occurs. It relies on in-memory listeners within the `TypeScriptWorkflowRuntime` instance processing the workflow. Given the current singleton `WorkflowWorker` architecture (see Section 2), these in-memory listeners are effective as the same worker instance that initiates the wait will process the resolving event. This mechanism is crucial for the `actions.createTaskAndWaitForResult` composite action.
+  - `events.emit()`: Asynchronously enqueues an event, which will be persisted and published to the global Redis stream for processing by the worker.
 - **logger**: Logger for workflow execution
 - **setState/getCurrentState**: Methods for managing workflow state
 
@@ -396,6 +400,19 @@ async function processItemWithMappingWorkflow(context: WorkflowContext): Promise
 *   **Idempotency**: Ensure retried operations are idempotent.
 *   **`setState` for Observability**: Continue to use `context.setState()` for visibility.
 *   **Timeout**: The `waitForEventTimeoutMilliseconds` parameter in `createTaskAndWaitForResultParams` allows specifying a timeout for how long the workflow will wait for the task resolution event. If a timeout occurs, `taskResolution.success` will be `false`, and `taskResolution.error` will indicate a timeout.
+*   **Detailed Event Flow**:
+    1.  `createTaskAndWaitForResult` internally calls the registered `actions.create_human_task` action.
+    2.  This action (or its underlying logic) creates the human task record in the database.
+    3.  `createTaskAndWaitForResult` then determines the expected resolution event name (typically `TaskEventNames.taskCompleted(taskId)`) and calls `context.events.waitFor()` with this event name, causing the workflow to pause.
+    4.  When the human task is completed (e.g., through a UI interaction that calls an API like `submitTaskForm`):
+        a.  The API endpoint handling task completion (e.g., `submitTaskForm`) is responsible for emitting the task resolution event (e.g., `TASK_COMPLETED` with the `taskId` and resolution data in its payload).
+        b.  This event is enqueued using `runtime.enqueueEvent()`.
+        c.  `enqueueEvent()` persists the event to the database (e.g., `workflow_events` table) and publishes it to the global Redis stream (`workflow:events:global`).
+        d.  The singleton `WorkflowWorker` consumes this event from the Redis stream.
+        e.  The worker invokes `runtime.processQueuedEvent()` for the consumed event.
+        f.  `processQueuedEvent()` loads the relevant workflow execution state, applies the event, and then calls `notifyEventListeners()`.
+        g.  `notifyEventListeners()` finds the specific in-memory listener registered by the earlier `context.events.waitFor()` call (within the same worker process) and resolves the associated promise.
+        h.  This resolution allows `createTaskAndWaitForResult` to resume, and it then returns the task outcome (including `resolutionData` from the event payload) to the workflow.
 
 ## 4. Core Components
 
@@ -585,15 +602,19 @@ The workflow system processes all events asynchronously through a message queue.
 
 ### Redis Streams Integration
 
-Redis Streams is used as a message queue for distributing workflow events to workers. When a workflow event is submitted, it is:
-1. Validated and persisted to the database
-2. Published to Redis Streams for asynchronous processing
-3. Processed by worker processes running across multiple servers
+Redis Streams is used as the message queue for distributing workflow events.
 
-Key features:
-- Consumer groups ensure each event is processed exactly once
-- Message acknowledgment and claiming handle worker failures
-- Proper error handling and retry mechanisms
+**Global Event Stream**: Currently, all workflow-related events—including initial trigger events, events emitted by workflows via `context.events.emit()`, and task completion events—are published to a single global Redis stream named `workflow:events:global`. The `WorkflowWorker` (currently a singleton instance) consumes events from this global stream.
+
+**Event Publication Flow**: When a workflow event is submitted (e.g., via `runtime.enqueueEvent()`):
+1. The event is validated and persisted to the database (e.g., into `workflow_events` and `workflow_event_processing` tables).
+2. It is then published as a message to the `workflow:events:global` Redis stream for asynchronous processing.
+3. Worker processes (currently one) consume messages from this stream.
+
+**Key Features Leveraged**:
+- **Consumer Groups**: Can be used to ensure each event message is processed by one consumer in a group (relevant for future multi-worker scenarios).
+- **Message Acknowledgment**: Helps in handling worker failures and ensuring events are not lost.
+- **Error Handling**: The system includes mechanisms for retrying event processing in case of transient failures.
 
 ### Two-Phase Event Processing
 
@@ -615,9 +636,10 @@ For more details, see the [Worker Service Documentation](worker-service.md).
 ### Reliable Processing
 
 To ensure reliable event processing, the system uses:
-- Redis-based locks for critical sections
-- Transaction management for data consistency
-- Error classification and recovery strategies
+- Redis-based locks for critical sections (e.g., during event processing by a worker).
+- Transaction management for data consistency (e.g., when persisting events and updating workflow state).
+- Error classification and recovery strategies for handling failures during event processing.
+- **Standardized Identifiers**: Key identifiers such as `event_id` in the `workflow_events` table and `processing_id` in the `workflow_event_processing` table are expected to be standard Universally Unique Identifiers (UUIDs). If idempotency keys are provided and used as `event_id`, they should also conform to the UUID format or be handled by a system layer that ensures compatibility with database constraints (e.g., by hashing or mapping if the underlying column type is strictly UUID). This ensures data integrity and compatibility with database functions expecting UUIDs.
 
 ## 6. Usage Examples
 

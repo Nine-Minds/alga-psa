@@ -515,24 +515,58 @@ export class WorkflowWorker {
         }
       }
       
-      // Regular event processing - find workflows attached to this event type
-      const attachedWorkflows = await this.findAttachedWorkflows(eventData.event_type, tenant);
+      // eventData is WorkflowEventBase, already parsed by RedisStreamClient's consumer handler
+      // before calling this.processGlobalEvent
+
+      // Determine if the event is for an existing execution or a trigger for a new one.
+      // Instance events typically have event_type 'workflow' and a defined execution_id.
+      if (eventData.execution_id && eventData.event_type === 'workflow') {
+        logger.info(`[WorkflowWorker] Global event ${eventData.event_id} is for existing execution ${eventData.execution_id}. Routing to processQueuedEvent.`, { eventName: eventData.event_name });
+        
+        const db = await getAdminConnection();
+        // Find the processing_id from the workflow_event_processing table.
+        // This record should have been created by TypeScriptWorkflowRuntime.enqueueEvent.
+        const processingRecord = await db('workflow_event_processing')
+          .where({
+            event_id: eventData.event_id,
+            execution_id: eventData.execution_id, // Ensure we get the right one if event_id isn't globally unique
+            tenant: eventData.tenant
+          })
+          .first();
+
+        if (processingRecord) {
+          // Call processQueuedEvent with all necessary parameters.
+          // processQueuedEvent will handle updating the processingRecord's status,
+          // loading the full execution state, applying the event, and notifying listeners.
+          await this.workflowRuntime.processQueuedEvent(db, {
+            eventId: eventData.event_id,
+            executionId: eventData.execution_id,
+            processingId: processingRecord.processing_id, // Crucial: use the ID from the DB record
+            workerId: this.workerId,
+            tenant: eventData.tenant
+          });
+          logger.info(`[WorkflowWorker] Routed event ${eventData.event_id} to processQueuedEvent for execution ${eventData.execution_id}.`);
+        } else {
+          // This case should be rare if enqueueEvent always creates a processing record.
+          // It might happen if an event is published to global stream bypassing enqueueEvent's DB operations,
+          // or if there's a race condition/delay in DB commit vs Redis publish.
+          logger.error(`[WorkflowWorker] Could not find processing record for event ${eventData.event_id} (execution: ${eventData.execution_id}) from global stream. Event may not be processed correctly by this path.`);
+          // Consider if fallback to processPendingEvents is sufficient or if specific error handling is needed.
+        }
+      } else {
+        // Event is treated as a trigger for new workflows.
+        logger.info(`[WorkflowWorker] Global event ${eventData.event_id} (type: ${eventData.event_type}, execution_id: ${eventData.execution_id || 'N/A'}) treated as a trigger for new workflows.`);
+        const attachedWorkflows = await this.findAttachedWorkflows(eventData.event_type, tenant);
       
-      if (attachedWorkflows.length === 0) {
-        logger.info(`[WorkflowWorker] No workflows attached to event type ${eventData.event_type}`);
-        return;
-      }
-      
-      // Start each attached workflow, passing the isSystemManaged flag
-      for (const attachment of attachedWorkflows) { // Iterate through objects now
-        await this.startWorkflowFromEvent(attachment.workflow_id, attachment.isSystemManaged, { // Pass isSystemManaged
-          event_id: eventData.event_id,
-          event_type: eventData.event_type,
-          event_name: eventData.event_name,
-          tenant: eventData.tenant,
-          user_id: eventData.user_id,
-          payload: eventData.payload
-        });
+        if (attachedWorkflows.length === 0) {
+          logger.info(`[WorkflowWorker] No workflows attached to event type ${eventData.event_type} for new workflow instantiation.`);
+          return;
+        }
+        
+        for (const attachment of attachedWorkflows) {
+          // Pass the full eventData object to startWorkflowFromEvent
+          await this.startWorkflowFromEvent(attachment.workflow_id, attachment.isSystemManaged, eventData);
+        }
       }
     } catch (error) {
       logger.error(`[WorkflowWorker] Error processing global event:`, error);
