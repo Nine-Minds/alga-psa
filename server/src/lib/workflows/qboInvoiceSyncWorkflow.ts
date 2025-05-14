@@ -1,4 +1,4 @@
-import { WorkflowContext } from '../../../../shared/workflow/core';
+import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '../../../../shared/workflow/core';
 
 type AlgaInvoice = { invoice_id: string; invoice_number: string; company_id: string; qbo_invoice_id?: string; qbo_sync_token?: string; };
 type AlgaInvoiceItem = { id: string; invoice_id: string; service_id?: string; amount?: number; service_name?: string; };
@@ -9,7 +9,8 @@ type TriggerEventPayload = { invoiceId: string; realmId?: string; tenantId?: str
 type QboApiError = { message: string; details?: any; statusCode?: number };
 type HumanTaskDetails = { message: string; alga_invoice_id: string; tenant: string; realm_id: string;[key: string]: any; };
 
-interface WorkflowActions {
+interface WorkflowActions extends Record<string, (params: any) => Promise<any>> {
+    createTaskAndWaitForResult: (params: CreateTaskAndWaitForResultParams) => Promise<CreateTaskAndWaitForResultReturn>;
     getInvoice: (args: { id: string; tenantId: string }) => Promise<AlgaInvoice>;
     getInvoiceItems: (args: { invoiceId: string; tenantId: string }) => Promise<{ success: boolean; items: AlgaInvoiceItem[]; message?: string; error?: any; }>;
     getCompany: (args: { id: string; tenantId: string }) => Promise<AlgaCompany>;

@@ -1,4 +1,5 @@
-import { WorkflowContext, WorkflowFunction, WorkflowEvent } from './workflowContext.js';
+import { WorkflowContext, WorkflowFunction, WorkflowEvent, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from './workflowContext.js';
+import { TaskEventNames } from '../persistence/taskInboxInterfaces.js';
 import {
   WorkflowDefinition,
   deserializeWorkflowDefinition,
@@ -824,51 +825,75 @@ export class TypeScriptWorkflowRuntime {
     
     // Store event listeners in execution state
     executionState.eventListeners = eventListeners;
-    
-    // Create action proxy
-    const actionProxy = this.createActionProxy(executionId, tenant);
-    
-    return {
+
+    // Partially define context, then create actionProxy, then complete context.
+    // This handles the circular dependency where actionProxy needs context, and context needs actionProxy.
+    const context: WorkflowContext = {
       executionId,
       tenant,
-      userId, // Include userId from the triggering event
-      
-      // Action proxy
-      actions: actionProxy,
-      
-      // Data manager
+      userId,
+      actions: {} as any, // Placeholder, will be replaced by the fully constructed proxy
       data: {
-        get: <T>(key: string): T => {
-          return executionState.data[key] as T;
-        },
-        set: <T>(key: string, value: T): void => {
-          executionState.data[key] = value;
-        }
+        get: <T>(key: string): T => executionState.data[key] as T,
+        set: <T>(key: string, value: T): void => { executionState.data[key] = value; }
       },
-      
-      // Event manager
       events: {
-        waitFor: (eventName: string | string[]): Promise<WorkflowEvent> => {
-          return new Promise((resolve) => {
+        waitFor: (eventName: string | string[], timeoutMs?: number): Promise<WorkflowEvent['payload']> => {
+          return new Promise((resolve, reject) => {
             const eventNames = Array.isArray(eventName) ? eventName : [eventName];
+            let timeoutId: NodeJS.Timeout | undefined;
+
+            if (timeoutMs) {
+              timeoutId = setTimeout(() => {
+                // Clean up listener
+                eventNames.forEach(name => {
+                  const listeners = eventListeners.get(name);
+                  if (listeners) {
+                    const index = listeners.indexOf(listener);
+                    if (index > -1) {
+                      listeners.splice(index, 1);
+                    }
+                    if (listeners.length === 0) {
+                      eventListeners.delete(name);
+                    }
+                  }
+                });
+                reject(new Error(`Timeout waiting for event(s): ${eventNames.join(', ')} after ${timeoutMs}ms`));
+              }, timeoutMs);
+            }
             
             // Check if event already exists
             const existingEvent = executionState.events.find((e: WorkflowEvent) =>
               eventNames.includes(e.name) &&
-              !e.processed
+              !e.processed // Ensure we only process events not yet processed by a waitFor
             );
             
             if (existingEvent) {
-              existingEvent.processed = true;
-              resolve(existingEvent);
+              if (timeoutId) clearTimeout(timeoutId);
+              existingEvent.processed = true; // Mark as processed
+              resolve(existingEvent.payload);
               return;
             }
             
             // Register listener for future events
             const listener = (event: WorkflowEvent) => {
               if (eventNames.includes(event.name)) {
-                event.processed = true;
-                resolve(event);
+                if (timeoutId) clearTimeout(timeoutId);
+                event.processed = true; // Mark as processed
+                // Clean up listener after processing
+                eventNames.forEach(name => {
+                  const listeners = eventListeners.get(name);
+                  if (listeners) {
+                    const index = listeners.indexOf(listener);
+                    if (index > -1) {
+                      listeners.splice(index, 1);
+                    }
+                    if (listeners.length === 0) {
+                      eventListeners.delete(name);
+                    }
+                  }
+                });
+                resolve(event.payload);
               }
             };
             
@@ -898,8 +923,6 @@ export class TypeScriptWorkflowRuntime {
           });
         }
       },
-      
-      // Logger
       logger: {
         info: (message: string, ...args: any[]): void => {
           const { workflowName, correlationId } = executionState;
@@ -922,22 +945,22 @@ export class TypeScriptWorkflowRuntime {
           console.debug(prefix, message, ...args);
         }
       },
-      
-      // State management
-      getCurrentState: (): string => {
-        return executionState.currentState;
-      },
-      setState: (state: string): void => {
-        executionState.currentState = state;
-      }
+      getCurrentState: (): string => executionState.currentState,
+      setState: (state: string): void => { executionState.currentState = state; }
     };
+    
+    // Create action proxy, passing the context being built
+    const actionProxyInstance = this.createActionProxy(executionId, tenant, context);
+    context.actions = actionProxyInstance; // Now assign the fully built actions object
+    
+    return context;
   }
   
   /**
    * Create a proxy for action execution
    */
-  private createActionProxy(executionId: string, tenant: string): Record<string, any> {
-    const proxy = {};
+  private createActionProxy(executionId: string, tenant: string, currentContext: WorkflowContext): WorkflowContext['actions'] {
+    const tempProxy: { [key: string]: any } = {}; // Start with a generic object for easier construction
     
     // Get all registered actions
     const actions = this.actionRegistry.getRegisteredActions();
@@ -974,7 +997,7 @@ export class TypeScriptWorkflowRuntime {
       };
 
       // 1. Define proxy for the exact registered name
-      Object.defineProperty(proxy, registeredName, {
+      Object.defineProperty(tempProxy, registeredName, {
         value: executeAction,
         enumerable: true
       });
@@ -983,8 +1006,8 @@ export class TypeScriptWorkflowRuntime {
       if (registeredName.includes('_')) {
         const camelCaseName = registeredName.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
         // Only add if different and not already defined (though the latter is less likely here)
-        if (camelCaseName !== registeredName && !proxy.hasOwnProperty(camelCaseName)) {
-          Object.defineProperty(proxy, camelCaseName, {
+        if (camelCaseName !== registeredName && !tempProxy.hasOwnProperty(camelCaseName)) {
+          Object.defineProperty(tempProxy, camelCaseName, {
             value: executeAction,
             enumerable: true // Typically aliases are also enumerable
           });
@@ -994,8 +1017,8 @@ export class TypeScriptWorkflowRuntime {
       else if (/[A-Z]/.test(registeredName)) {
         const snakeCaseName = registeredName.replace(/([A-Z])/g, (match) => `_${match.toLowerCase()}`).replace(/^_/, '');
         // Only add if different and not already defined
-        if (snakeCaseName !== registeredName && !proxy.hasOwnProperty(snakeCaseName)) {
-          Object.defineProperty(proxy, snakeCaseName, {
+        if (snakeCaseName !== registeredName && !tempProxy.hasOwnProperty(snakeCaseName)) {
+          Object.defineProperty(tempProxy, snakeCaseName, {
             value: executeAction,
             enumerable: true // Typically aliases are also enumerable
           });
@@ -1003,7 +1026,66 @@ export class TypeScriptWorkflowRuntime {
       }
     }
     
-    return proxy;
+    
+    // Add the custom createTaskAndWaitForResult method
+    tempProxy.createTaskAndWaitForResult = async (params: CreateTaskAndWaitForResultParams): Promise<CreateTaskAndWaitForResultReturn> => {
+      const {
+        taskType, title, description, priority, dueDate, assignTo, contextData,
+        waitForEventTimeoutMilliseconds
+      } = params;
+
+      let createResult;
+      try {
+        // Use currentContext.actions to call the registered create_human_task action
+        // IMPORTANT: currentContext.actions refers to the *same proxy object* we are building.
+        // This means create_human_task must be available on it.
+        if (!currentContext.actions.create_human_task) {
+            currentContext.logger.error(`[context.actions.createTaskAndWaitForResult] 'create_human_task' action is not available on context.actions.`);
+            return { success: false, error: "Internal configuration error: 'create_human_task' not found.", taskId: null };
+        }
+        createResult = await currentContext.actions.create_human_task({
+          taskType, title, description, priority, dueDate, assignTo, contextData,
+        });
+      } catch (e: any) {
+        currentContext.logger.error(`[context.actions.createTaskAndWaitForResult] Call to 'create_human_task' threw an error: ${e.message}`, e);
+        return { success: false, error: `Failed to create human task (exception): ${e.message}`, taskId: null };
+      }
+
+      if (!createResult || !createResult.success || !createResult.taskId) {
+        currentContext.logger.error(`[context.actions.createTaskAndWaitForResult] 'create_human_task' action failed. Params: ${JSON.stringify(params)}, Result: ${JSON.stringify(createResult)}`);
+        return { success: false, error: 'Failed to create human task (action reported failure)', details: createResult, taskId: null };
+      }
+      const taskId: string = createResult.taskId;
+
+      const eventName = TaskEventNames.taskCompleted(taskId);
+
+      try {
+        currentContext.logger.info(`[context.actions.createTaskAndWaitForResult] Workflow ${currentContext.executionId} now waiting for event: ${eventName} for task ${taskId}`);
+        
+        // Use currentContext.events.waitFor
+        const eventPayload = await currentContext.events.waitFor(
+          eventName,
+          waitForEventTimeoutMilliseconds
+        );
+
+        currentContext.logger.info(`[context.actions.createTaskAndWaitForResult] Workflow ${currentContext.executionId} received event ${eventName} for task ${taskId}.`);
+        
+        return {
+          success: true,
+          resolutionData: eventPayload,
+          taskId: taskId
+        };
+
+      } catch (error: any) {
+        currentContext.logger.error(`[context.actions.createTaskAndWaitForResult] Workflow ${currentContext.executionId} error or timeout waiting for event ${eventName} for task ${taskId}: ${error.message}`, error);
+        if (error.message.toLowerCase().includes('timeout')) {
+          return { success: false, error: 'Timeout waiting for task resolution', taskId: taskId, resolutionData: null };
+        }
+        return { success: false, error: `Error waiting for task resolution: ${error.message}`, taskId: taskId, resolutionData: null };
+      }
+    };
+    
+    return tempProxy as WorkflowContext['actions']; // Cast at the end to the full type
   }
   
   /**
@@ -1032,10 +1114,10 @@ export class TypeScriptWorkflowRuntime {
    */
   private notifyEventListeners(executionId: string, event: WorkflowEvent): void {
     const executionState = this.executionStates.get(executionId);
-    if (!executionState) return;
+    if (!executionState || !executionState.eventListeners) return; // Added check for eventListeners
     
     // Get listeners for this event
-    const listeners = executionState.eventListeners?.get(event.name) || [];
+    const listeners = executionState.eventListeners.get(event.name) || [];
     
     // Notify listeners
     for (const listener of listeners) {

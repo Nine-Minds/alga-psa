@@ -21,9 +21,10 @@ export interface WorkflowEventManager {
   /**
    * Wait for a specific event or one of multiple events
    * @param eventName Event name or array of event names to wait for
-   * @returns Promise that resolves with the event when it occurs
+   * @param timeoutMs Optional timeout in milliseconds
+   * @returns Promise that resolves with the event payload when it occurs, or rejects on timeout
    */
-  waitFor(eventName: string | string[]): Promise<WorkflowEvent>;
+  waitFor(eventName: string | string[], timeoutMs?: number): Promise<WorkflowEvent['payload']>;
   
   /**
    * Emit an event from within the workflow
@@ -77,7 +78,9 @@ export interface WorkflowContext {
    * Proxy object for executing actions
    * This is dynamically generated based on registered actions
    */
-  actions: Record<string, any>;
+  actions: Record<string, (params: any) => Promise<any>> & {
+    createTaskAndWaitForResult: (params: CreateTaskAndWaitForResultParams) => Promise<CreateTaskAndWaitForResultReturn>;
+  };
   
   /**
    * Data manager for storing and retrieving workflow data
@@ -111,6 +114,34 @@ export interface WorkflowContext {
    * Set the current state of the workflow
    */
   setState(state: string): void;
+}
+
+/**
+ * Parameters for the createTaskAndWaitForResult action
+ */
+export interface CreateTaskAndWaitForResultParams {
+  taskType: string;
+  title: string;
+  description?: string;
+  priority?: string;
+  dueDate?: string; // ISO string date
+  assignTo?: {
+    roles?: string[];
+    users?: string[];
+  };
+  contextData?: Record<string, any>;
+  waitForEventTimeoutMilliseconds?: number;
+}
+
+/**
+ * Return type for the createTaskAndWaitForResult action
+ */
+export interface CreateTaskAndWaitForResultReturn {
+  success: boolean;
+  resolutionData?: any; // Payload from the task completion event
+  taskId: string | null;
+  error?: string; // Error message if success is false
+  details?: any; // Additional error details
 }
 
 /**
