@@ -4,9 +4,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Input } from '../ui/Input';
 import CustomSelect, { SelectOption } from '../ui/CustomSelect';
 import { Button } from '../ui/Button';
-import { ICompany } from '../../interfaces/company.interfaces';
-import { ChevronDownIcon } from '@radix-ui/react-icons';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ChevronDown } from 'lucide-react';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { AutomationProps, ContainerComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -205,7 +205,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
-          className="w-full justify-between"
+          className="w-full justify-between px-2"
           label={selectedCompany ? selectedCompany.company_name : 'Select Client'}
         >
           {selectedCompany ? (
@@ -221,7 +221,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
           ) : (
             <span>Select Client</span>
           )}
-          <ChevronDownIcon className="ml-2 h-4 w-4" />
+          <ChevronDown className="ml-2 h-4 w-4" />
         </Button>
 
         {isOpen && (

@@ -78,6 +78,7 @@ export function QuickAddTicket({
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
+  const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -410,21 +411,29 @@ export function QuickAddTicket({
                     onClientTypeFilterChange={setClientTypeFilter}
                   />
 
-                  {selectedCompanyType === 'company' && contacts.length > 0 && (
-                    <ContactPicker
-                      id={`${id}-contact`}
-                      contacts={contacts}
-                      value={contactId || ''}
-                      onValueChange={(value) => {
-                        setContactId(value || null);
-                        clearErrorIfSubmitted();
-                      }}
-                      companyId={companyId}
-                      placeholder="Select Contact"
-                      disabled={!companyId || selectedCompanyType !== 'company'}
-                      buttonWidth="full"
-                    />
-                  )}
+                  <ContactPicker
+                    id={`${id}-contact`}
+                    contacts={contacts}
+                    value={contactId || ''}
+                    onValueChange={(value) => {
+                      setContactId(value || null);
+                      clearErrorIfSubmitted();
+                    }}
+                    companyId={companyId}
+                    placeholder={
+                      !companyId || selectedCompanyType !== 'company'
+                        ? "Select client first"
+                        : contacts.length === 0
+                        ? "No contacts for selected client"
+                        : "Select Contact"
+                    }
+                    disabled={
+                      !companyId ||
+                      selectedCompanyType !== 'company' ||
+                      !!(companyId && selectedCompanyType === 'company' && contacts.length === 0)
+                    }
+                    buttonWidth="full"
+                  />
 
                   <UserPicker
                     value={assignedTo}
@@ -446,8 +455,8 @@ export function QuickAddTicket({
                     channels={channels}
                     onSelect={handleChannelChange}
                     selectedChannelId={channelId}
-                    onFilterStateChange={() => {}}
-                    filterState="all"
+                    onFilterStateChange={setQuickAddChannelFilterState}
+                    filterState={quickAddChannelFilterState}
                   />
 
                   <CategoryPicker

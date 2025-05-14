@@ -8,6 +8,7 @@ export interface SelectOption {
   value: string;
   label: string | JSX.Element;
   className?: string;
+  is_inactive?: boolean;
 }
 
 export interface StyleProps {
@@ -107,11 +108,13 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
         <RadixSelect.Trigger
           className={`
             inline-flex items-center justify-between
-            border border-gray-200 rounded-lg p-2
-            bg-white cursor-pointer min-h-[38px]
-            hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
-            text-sm w-full
-            disabled:opacity-50 disabled:cursor-not-allowed
+            rounded-lg p-2 h-10
+            text-sm font-medium transition-colors w-full
+            bg-white cursor-pointer
+            border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
+            hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+            disabled:opacity-50 disabled:pointer-events-none
             ${className}
             ${customStyles?.trigger || ''}
           `}

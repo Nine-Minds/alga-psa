@@ -218,7 +218,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}
-        className={`inline-flex items-center justify-between border border-gray-200 rounded-lg p-2 bg-white cursor-pointer min-h-[38px] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm ${
+        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
       >
