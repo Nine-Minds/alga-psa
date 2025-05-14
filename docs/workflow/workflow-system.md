@@ -110,6 +110,78 @@ The workflow system uses several database tables to store its data:
     - `tenant_task_definition_id` (UUID): Foreign key to `workflow_task_definitions.task_definition_id` if type is 'tenant'.
     - `system_task_definition_task_type` (TEXT): Foreign key to `system_workflow_task_definitions.task_type` if type is 'system'.
 
+11. **system_workflow_form_definitions**: Stores definitions for system-wide, reusable UI forms. These are referenced by task definitions. Key fields include `name` (unique identifier for the form), `json_schema` (defines the data structure and properties of the form), and `ui_schema` (provides hints for rendering the form).
+12. **workflow_form_definitions**: Stores tenant-specific UI form definitions, mirroring the structure of `system_workflow_form_definitions`.
+
+### Human Task Forms and Dynamic Data Display
+
+Human tasks often require displaying dynamic information to the user based on the workflow's current context and the specifics of the task (e.g., error details, entity identifiers). The workflow system facilitates this through the interaction of form definitions (`system_workflow_form_definitions` or `workflow_form_definitions`) and the `contextData` provided when a human task is created via `actions.createHumanTask`.
+
+There are two primary ways dynamic data is presented in forms:
+
+1.  **Direct Field Population**:
+    *   The form's `json_schema` defines distinct properties corresponding to individual pieces of data (e.g., `resolutionNotes`, `retryCheckbox`).
+    *   The workflow provides values for these properties directly within the `contextData` object when creating the task. For example:
+        ```typescript
+        // In the workflow:
+        await actions.createHumanTask({
+          taskType: 'some_review_task',
+          // ... other task parameters
+          contextData: {
+            resolutionNotes: "Initial assessment complete.",
+            isUrgent: true
+          }
+        });
+        ```
+    *   The UI rendering layer then uses these values to populate the corresponding input fields (e.g., a textarea for `resolutionNotes`, a checkbox for `isUrgent`).
+
+2.  **Template String Substitution**:
+    *   This method is particularly useful for displaying formatted, read-only information composed of multiple data points, or for providing descriptive text that includes dynamic values.
+    *   In the form's `json_schema` (stored in `system_workflow_form_definitions`), a property (often read-only) can have its `default` value set to a template string. This template string includes placeholders that reference keys within the `contextData` object, using the syntax `${contextData.keyName}`.
+    *   Example `json_schema` property for a form definition:
+        ```json
+        {
+          // ... other properties ...
+          "errorReport": {
+            "type": "string",
+            "title": "Error Details",
+            "readOnly": true,
+            "default": "Workflow Instance ID: ${contextData.workflowInstanceId}\nError Code: ${contextData.errorCode}\nMessage: ${contextData.errorMessageText}\nEntity: ${contextData.entityType} (ID: ${contextData.entityId})"
+          }
+          // ...
+        }
+        ```
+    *   The workflow, when creating the human task, populates the `contextData` with the individual data elements whose keys match the placeholders in the template.
+        ```typescript
+        // In the workflow, when an error occurs:
+        await actions.createHumanTask({
+          taskType: 'qbo_sync_error', // This task type would link to the form definition above
+          title: 'QuickBooks Sync Error',
+          // ... other task parameters
+          contextData: {
+            workflowInstanceId: executionId,
+            errorCode: 'QBO-123',
+            errorMessageText: 'Customer not found in QBO.',
+            entityType: 'Customer',
+            entityId: algaCompanyId,
+            // ... any other data needed by the template or for other purposes
+          }
+        });
+        ```
+    *   The UI rendering layer is then responsible for:
+        1.  Retrieving the form definition (including the `json_schema` with the template string in the `default` value of the `errorReport` property).
+        2.  Accessing the `contextData` associated with the specific task instance.
+        3.  Performing string substitution on the template string, replacing placeholders like `${contextData.errorCode}` with their corresponding values from the `contextData` (e.g., "QBO-123").
+        4.  Displaying the resulting formatted string to the user (e.g., in a read-only textarea as specified by the `ui_schema`).
+    *   This pattern allows for flexible and descriptive presentation of dynamic information without requiring a separate form field for every individual piece of data if they are only for display. The `qbo-mapping-error-form`'s `productDetails` field is a prime example of this approach.
+
+**Key Considerations for Template Substitution:**
+*   The workflow must ensure that all keys referenced in the form's template string are present in the `contextData` it provides when creating the task.
+*   The UI component responsible for rendering the form must implement the logic to perform this substitution.
+*   This method is best suited for read-only display of information. If user input is required for these individual pieces of data, direct field population (Method 1) is more appropriate.
+
+By understanding these data flow patterns, developers can effectively design workflows that create informative and actionable human tasks.
+
 ## 3. TypeScript-Based Workflows
 
 The workflow system uses TypeScript functions for defining workflows, providing a programmatic approach with full access to TypeScript's features.

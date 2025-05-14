@@ -44,6 +44,8 @@ type WorkflowState =
 export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise<void> {
   const { actions, data, events, logger, setState, getCurrentState, tenant, executionId, userId } = context;
 
+  const ENTITY_TYPE_CUSTOMER = "Customer";
+
   // 1. Initialization & State
   setState('INITIAL');
   logger.info('QBO Customer Sync workflow started', { tenantId: tenant, executionId });
@@ -307,11 +309,17 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                      priority: 'high',
                      assignTo: userId ? { users: [userId] } : undefined,
                      contextData: {
-                         message: `Cannot update QBO Customer ${existingQboCustomerId} because the qbo_sync_token is missing in the Alga Company record. Manual intervention may be required.`,
-                         algaCompanyId: algaCompanyId,
-                         qboCustomerId: existingQboCustomerId,
+                         workflowInstanceId: executionId,
+                         errorCode: "QBO_MISSING_SYNC_TOKEN",
+                         errorMessageText: `Cannot update QBO Customer ${existingQboCustomerId} (Alga ID: ${algaCompanyId}) because the QBO sync token is missing. Manual intervention may be required.`,
+                         entityType: ENTITY_TYPE_CUSTOMER,
+                         entityId: algaCompanyId,
+                         operation: "Update QBO Customer",
                          realmId: realmId,
-                         workflow_instance_id: executionId,
+                         workflowStateAtError: getCurrentState(),
+                         // Additional context for other consumers/debugging, not directly used by the form's primary template
+                         algaCompanyNameForContext: algaCompany.name,
+                         qboCustomerIdForContext: existingQboCustomerId
                      },
                  } as HumanTaskInput);
                  return;
@@ -371,12 +379,16 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                 priority: 'high',
                                 assignTo: userId ? { users: [userId] } : undefined,
                                 contextData: {
-                                    message: `The QBO duplicate customer check failed: ${potentialDuplicatesResult.message || 'Unknown error'}. Manual review required.`,
-                                    algaCompanyId: algaCompanyId,
-                                    algaCompanyName: algaCompany.name,
+                                    workflowInstanceId: executionId,
+                                    errorCode: "QBO_DUPLICATE_CHECK_API_FAILED",
+                                    errorMessageText: potentialDuplicatesResult.message || 'Unknown error during QBO duplicate customer check.',
+                                    entityType: ENTITY_TYPE_CUSTOMER,
+                                    entityId: algaCompanyId,
+                                    operation: "Check QBO Duplicates",
                                     realmId: realmId,
-                                    errorDetails: potentialDuplicatesResult.errorDetails || potentialDuplicatesResult.message,
-                                    workflow_instance_id: executionId,
+                                    workflowStateAtError: getCurrentState(),
+                                    algaCompanyNameForContext: algaCompany.name,
+                                    rawErrorDetailsForContext: potentialDuplicatesResult.errorDetails || potentialDuplicatesResult.message,
                                 },
                             } as HumanTaskInput);
                             return; // Stop workflow execution
@@ -398,14 +410,18 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                 priority: 'medium',
                                 assignTo: userId ? { users: [userId] } : undefined,
                                 contextData: {
-                                    message: `A potential duplicate QBO customer was found based on display name or email. Please review and resolve manually.`,
-                                    algaCompanyId: algaCompanyId,
-                                    algaCompanyName: algaCompany.company_name,
-                                    mappedDisplayName: qboCustomerData.DisplayName,
-                                    mappedEmail: qboCustomerData.PrimaryEmailAddr?.Address,
-                                    potentialDuplicates: potentialDuplicatesResult.customers,
+                                    workflowInstanceId: executionId,
+                                    errorCode: "QBO_POTENTIAL_DUPLICATE_FOUND",
+                                    errorMessageText: `Potential QBO duplicate customer(s) found for DisplayName: '${qboCustomerData.DisplayName}' or Email: '${qboCustomerData.PrimaryEmailAddr?.Address}'. Manual review required.`,
+                                    entityType: ENTITY_TYPE_CUSTOMER,
+                                    entityId: algaCompanyId,
+                                    operation: "Check QBO Duplicates",
                                     realmId: realmId,
-                                    workflow_instance_id: executionId,
+                                    workflowStateAtError: getCurrentState(),
+                                    algaCompanyNameForContext: algaCompany.company_name,
+                                    mappedDisplayNameForContext: qboCustomerData.DisplayName,
+                                    mappedEmailForContext: qboCustomerData.PrimaryEmailAddr?.Address,
+                                    potentialDuplicatesFoundForContext: potentialDuplicatesResult.customers,
                                 },
                             } as HumanTaskInput);
                             return; // Stop workflow execution
@@ -424,12 +440,16 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                              priority: 'high',
                              assignTo: userId ? { users: [userId] } : undefined,
                              contextData: {
-                                 message: `The check for duplicate QBO customers failed. Error: ${dupCheckError.message}. Cannot proceed with automatic creation.`,
-                                 algaCompanyId: algaCompanyId,
-                                 algaCompanyName: algaCompany.name,
+                                 workflowInstanceId: executionId,
+                                 errorCode: "QBO_DUPLICATE_CHECK_UNEXPECTED_ERROR",
+                                 errorMessageText: dupCheckError.message || 'Unexpected error during QBO duplicate customer check.',
+                                 entityType: ENTITY_TYPE_CUSTOMER,
+                                 entityId: algaCompanyId,
+                                 operation: "Check QBO Duplicates",
                                  realmId: realmId,
-                                 errorDetails: dupCheckError,
-                                 workflow_instance_id: executionId,
+                                 workflowStateAtError: getCurrentState(),
+                                 algaCompanyNameForContext: algaCompany.name, // Ensuring consistent naming for additional context
+                                 rawErrorObjectForContext: dupCheckError, // Using "Object" to clarify it's the error object
                              },
                          } as HumanTaskInput);
                          return;
@@ -465,11 +485,16 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                  priority: 'high',
                  assignTo: userId ? { users: [userId] } : undefined,
                  contextData: {
-                     message: `The QBO API call succeeded but the response did not contain the expected Customer ID and/or SyncToken.`,
-                     algaCompanyId: algaCompanyId,
-                     qboApiResponse: qboResult, // Include response for debugging
+                     workflowInstanceId: executionId,
+                     errorCode: "QBO_INVALID_API_RESPONSE",
+                     errorMessageText: `QBO API call for customer (Alga ID: ${algaCompanyId}) succeeded but the response was missing Customer ID or SyncToken.`,
+                     entityType: ENTITY_TYPE_CUSTOMER,
+                     entityId: algaCompanyId,
+                     operation: existingQboCustomerId ? "Update QBO Customer" : "Create QBO Customer",
                      realmId: realmId,
-                     workflow_instance_id: executionId,
+                     workflowStateAtError: getCurrentState(),
+                     algaCompanyNameForContext: algaCompany.name,
+                     qboApiResponseForContext: qboResult, // Ensuring consistent naming
                  },
              } as HumanTaskInput);
              return;
@@ -516,15 +541,18 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             priority: 'high',
             assignTo: userId ? { users: [userId] } : undefined,
             contextData: {
-                message: `The QBO API call failed during customer sync. Error: ${error.message}`,
-                algaCompanyId: algaCompanyId,
-                algaCompanyName: algaCompany?.name, // May be null if fetch failed earlier, though unlikely path here
-                qboCustomerIdAttempted: existingQboCustomerId, // If update was attempted
-                mappedData: data.get('mappedQboCustomerData'), // Include data sent
-                errorDetails: data.get('qboApiError'), // Include stored error
-                realmId: currentRealmId, // Use safely retrieved realmId
-                workflowState: getCurrentState(),
-                workflow_instance_id: executionId,
+                workflowInstanceId: executionId,
+                errorCode: "QBO_API_CALL_FAILED", // Or more specific if error.code exists and is useful
+                errorMessageText: error.message,
+                entityType: ENTITY_TYPE_CUSTOMER,
+                entityId: algaCompanyId,
+                operation: getCurrentState() === 'CALLING_QBO_CREATE' ? "Create QBO Customer" : getCurrentState() === 'CALLING_QBO_UPDATE' ? "Update QBO Customer" : "QBO Customer Sync",
+                realmId: currentRealmId,
+                workflowStateAtError: getCurrentState(),
+                algaCompanyNameForContext: algaCompany?.name,
+                qboCustomerIdAttemptedForContext: existingQboCustomerId, // Will be undefined if create was attempted
+                mappedQboDataForContext: data.get('mappedQboCustomerData'), // Data that was being sent
+                rawErrorObjectForContext: data.get('qboApiError'), // The error object stored earlier
             },
         } as HumanTaskInput);
         // Workflow ends here due to error
