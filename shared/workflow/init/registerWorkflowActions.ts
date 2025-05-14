@@ -8,7 +8,7 @@ import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } f
 import logger from '@shared/core/logger.js';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 import axios from 'axios'; // For QBO API calls
-import { getSecret } from '@shared/core/getSecret.js'
+import { getSecretProviderInstance } from '@shared/core';
 
 // --- Mock Secret Retrieval ---
 
@@ -1140,9 +1140,8 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       );
 
       try {
-        // const secretProvider = getSecretProviderInstance();
-        // const secretString = await secretProvider.getTenantSecret(tenantId, currentSecretName);
-        const secretString = await getSecret(currentSecretName, '');
+        const secretProvider = getSecretProviderInstance();
+        const secretString = await secretProvider.getTenantSecret(tenantId, currentSecretName);
 
         if (secretString === null || secretString === undefined || secretString.trim() === '') {
           logger.warn(
