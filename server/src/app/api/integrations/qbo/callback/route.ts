@@ -7,8 +7,8 @@ import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
 import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
-import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
-import { getSecretProviderInstance } from '../../../../../lib/secrets';
+import { ISecretProvider } from '@shared/core/ISecretProvider';
+import { getSecretProviderInstance } from '@shared/core/secretProvider'; // Corrected import path
 import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
 import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic

@@ -1,4 +1,4 @@
-import { getSecretProviderInstance } from '../secrets'; // Import the new singleton secret provider instance
+import { getSecretProviderInstance } from '@shared/core/secretProvider';
 import logger from '@shared/core/logger.js'; // Corrected import path
 
 /**

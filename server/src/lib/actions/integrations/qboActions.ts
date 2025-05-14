@@ -3,10 +3,10 @@
 import { getCurrentUser } from '../user-actions/userActions';
 import { revalidatePath } from 'next/cache';
 import axios from 'axios'; // Import axios
-import { ISecretProvider } from 'server/src/lib/secrets'; // Assuming path - Removed getSecretProvider as it's not exported
+import { ISecretProvider } from '@shared/core'; 
 import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
 import { createTenantKnex } from '../../db';
-import { getSecretProviderInstance } from 'server/src/lib/secrets';
+import { getSecretProviderInstance } from '@shared/core';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
