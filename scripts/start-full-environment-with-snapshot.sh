@@ -191,6 +191,8 @@ services:
   # Override container names for all services to make them unique
   server:
     container_name: \${ENVIRONMENT_NAME}_server
+    ports:
+      - "\${EXPOSE_SERVER_PORT}:3000"
     
   postgres:
     container_name: \${ENVIRONMENT_NAME}_postgres
@@ -269,7 +271,7 @@ info "    http://$HOST_IP:$HOST_PORT"
 info "    No password required - authentication disabled for convenience"
 
 info "🌐 Application server is available at:"
-info "    http://$HOST_IP:${EXPOSE_SERVER_PORT:-3000}"
+info "    http://$HOST_IP:$EXPOSE_SERVER_PORT"
 
 info ""
 info "Environment configuration:"
