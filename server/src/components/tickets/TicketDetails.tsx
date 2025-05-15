@@ -42,7 +42,7 @@ import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions"
 import CompanyDetails from "server/src/components/companies/CompanyDetails";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
-import TechnicianDispatchDashboard from "server/src/components/technician-dispatch/TechnicianDispatchDashboard";
+import AgentScheduleDrawer from "server/src/components/tickets/AgentScheduleDrawer";
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -294,14 +294,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleAgentClick = (userId: string) => {
-        openDrawer(
-            <TechnicianDispatchDashboard
-                filterWorkItemId={ticket.ticket_id}
-                filterWorkItemType="ticket"
-            />
-        );
-    };
+  const handleAgentClick = (userId: string) => {
+    openDrawer(
+      <AgentScheduleDrawer
+        agentId={userId}
+      />
+    );
+  };
 
     const handleAddAgent = async (userId: string) => {
         try {
