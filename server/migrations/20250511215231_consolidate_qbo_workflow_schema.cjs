@@ -42,6 +42,7 @@ exports.up = async function(knex) {
     });
     console.log('Recreated system_workflow_form_definitions table.');
 
+    // Define all form schemas as named objects
     // Enhanced qbo-mapping-error-form schema (from original qbo-item-mapping-missing-form)
     const enhancedQboMappingErrorFormSchema = {
       json_schema: {
@@ -50,7 +51,6 @@ exports.up = async function(knex) {
           "instructions": { "type": "string", "title": "Action Required", "description": "Please follow these steps to resolve the missing product mapping:", "readOnly": true },
           "quickbooksSetupLink": { "type": "string", "title": "QuickBooks Integration Setup", "format": "uri", "description": "Click here to open the QuickBooks integration setup page" },
           "productDetails": { "type": "string", "title": "Product Details", "description": "Create a mapping for this product in QuickBooks", "readOnly": true },
-          "mappingCreated": { "type": "boolean", "title": "I've Created the Mapping", "description": "Check this box once you have created the mapping in QuickBooks" }
         },
         "required": []
       },
@@ -58,26 +58,49 @@ exports.up = async function(knex) {
         "instructions": { "ui:widget": "AlertWidget", "ui:options": { "alertType": "info" } },
         "quickbooksSetupLink": { "ui:widget": "ButtonLinkWidget", "ui:options": { "buttonText": "Go to QuickBooks Integration Setup", "target": "_blank" } },
         "productDetails": { "ui:widget": "HighlightWidget" },
-        "mappingCreated": { "ui:widget": "checkbox", "ui:options": { "inline": true } },
-        "ui:order": ["instructions", "productDetails", "quickbooksSetupLink", "mappingCreated"]
+        "ui:order": ["instructions", "productDetails", "quickbooksSetupLink"]
       },
       default_values: {
         "instructions": "Action Required: Please create a mapping in QuickBooks for product '${contextData.service_name}' from company '${contextData.company_name}'. This mapping is required before the invoice can be synced.",
         "quickbooksSetupLink": "/settings/integrations/quickbooks/${contextData.tenant_id}/${contextData.realm_id}/mappings",
         "productDetails": "Product: ${contextData.service_name} (ID: ${contextData.alga_service_id})\nCompany: ${contextData.company_name} (ID: ${contextData.alga_company_id})\n\nThis product needs to be mapped to a corresponding QuickBooks item. Please go to the QuickBooks Integration Setup page using the button below and create this mapping.",
-        "mappingCreated": false
       }
     };
+
+    const genericNeedsAttentionForm = {
+      json_schema: {
+        type: "object",
+        properties: {
+          message: { type: "string", title: "Message", readOnly: true },
+          alertType: {
+            type: "string",
+            title: "Alert Type",
+            enum: ["info", "warning", "error", "success"],
+            default: "error"
+          }
+        },
+        required: ["message"]
+      },
+      ui_schema: {
+        message: {
+          "ui:widget": "AlertWidget",
+          "ui:options": {
+            "alertType": "error"
+          }
+        },
+        alertType: {
+          "ui:widget": "hidden"
+        }
+      },
+      default_values: {
+        message: "An issue needs your attention. \n\n${contextData.message}",
+        alertType: "error"
+      }
+    }
+
     const formsToInsert = [
-      { name: 'qbo-customer-mapping-lookup-error-form', description: 'Form for QBO customer mapping lookup errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, entityId: { type: "string", title: "Entity ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, createMapping: { type: "boolean", title: "Create Mapping" }, algaCompanyId: { type: "string", title: "Alga Company ID", readOnly: true } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'secret-fetch-error-form', description: 'Form for secret fetch errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, errorStackTrace: { type: "string", title: "Error Stack Trace", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, restartWorkflow: { type: "boolean", title: "Restart Workflow" } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, errorStackTrace: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
       { name: 'qbo-mapping-error-form', description: 'Generic form for QBO mapping errors (customer or item).', ...enhancedQboMappingErrorFormSchema },
-      { name: 'qbo-item-lookup-failed-form', description: 'Form for QBO item lookup failed errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, algaServiceId: { type: "string", title: "Alga Service ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, retryLookup: { type: "boolean", title: "Retry Lookup" }, algaItemId: { type: "string", title: "Alga Item ID", readOnly: true } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'qbo-item-lookup-internal-error-form', description: 'Form for QBO item lookup internal errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, algaServiceId: { type: "string", title: "Alga Service ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, retryLookup: { type: "boolean", title: "Retry Lookup" }, algaItemId: { type: "string", title: "Alga Item ID", readOnly: true } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'qbo-invoice-no-items-mapped-form', description: 'Form for QBO invoice no items mapped errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, entityId: { type: "string", title: "Entity ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, createMapping: { type: "boolean", title: "Create Mapping" } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'qbo-sync-error-form', description: 'Form for QBO sync errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, errorCode: { type: "string", title: "Error Code", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, qboInvoiceId: { type: "string", title: "QBO Invoice ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, retryOperation: { type: "boolean", title: "Retry Operation" } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'workflow-execution-error-form', description: 'Form for workflow execution errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, errorStackTrace: { type: "string", title: "Error Stack Trace", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, restartWorkflow: { type: "boolean", title: "Restart Workflow" } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, errorStackTrace: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
-      { name: 'internal-workflow-error-form', description: 'Form for internal workflow errors.', json_schema: { type: "object", properties: { errorMessage: { type: "string", title: "Error Message", readOnly: true }, errorStackTrace: { type: "string", title: "Error Stack Trace", readOnly: true }, workflowInstanceId: { type: "string", title: "Workflow Instance ID", readOnly: true }, algaInvoiceId: { type: "string", title: "Alga Invoice ID", readOnly: true }, resolutionStatus: { type: "string", title: "Resolution Status", enum: ["resolved", "escalated", "deferred"] }, resolutionNotes: { type: "string", title: "Resolution Notes" }, restartWorkflow: { type: "boolean", title: "Restart Workflow" } }, required: ["errorMessage", "workflowInstanceId", "resolutionStatus"] }, ui_schema: { errorMessage: { "ui:widget": "textarea" }, errorStackTrace: { "ui:widget": "textarea" }, resolutionNotes: { "ui:widget": "textarea" } }, default_values: {} },
+      { name: 'generic-workflow-error-form', description: 'Form for internal workflow errors.', ...genericNeedsAttentionForm },
     ];
     for (const form of formsToInsert) {
       await trx('system_workflow_form_definitions').insert({ ...form, version: '1.0', status: 'ACTIVE', created_by: null, created_at: new Date(),updated_at: new Date() });
@@ -100,15 +123,8 @@ exports.up = async function(knex) {
     console.log('Recreated system_workflow_task_definitions table.');
 
     const tasksToInsert = [
-      { task_type: 'qbo_customer_mapping_lookup_error', name: 'Handle QBO Customer Mapping Lookup Error', description: 'Form for QBO customer mapping lookup errors.', form_id: 'qbo-customer-mapping-lookup-error-form' },
-      { task_type: 'secret_fetch_error', name: 'Handle Secret Fetch Error', description: 'Form for secret fetch errors.', form_id: 'secret-fetch-error-form' },
       { task_type: 'qbo_mapping_error', name: 'Handle QBO Mapping Error', description: 'Generic form for QBO mapping errors (customer or item).', form_id: 'qbo-mapping-error-form' },
-      { task_type: 'qbo_item_lookup_failed', name: 'Handle QBO Item Lookup Failed', description: 'Form for QBO item lookup failed errors.', form_id: 'qbo-item-lookup-failed-form' },
-      { task_type: 'qbo_item_lookup_internal_error', name: 'Handle QBO Item Lookup Internal Error', description: 'Form for QBO item lookup internal errors.', form_id: 'qbo-item-lookup-internal-error-form' },
-      { task_type: 'qbo_invoice_no_items_mapped', name: 'Handle QBO Invoice No Items Mapped', description: 'Form for QBO invoice no items mapped errors.', form_id: 'qbo-invoice-no-items-mapped-form' },
-      { task_type: 'qbo_sync_error', name: 'Handle QBO Sync Error', description: 'Form for QBO sync errors.', form_id: 'qbo-sync-error-form' },
-      { task_type: 'workflow_execution_error', name: 'Handle Workflow Execution Error', description: 'Form for workflow execution errors.', form_id: 'workflow-execution-error-form' },
-      { task_type: 'internal_workflow_error', name: 'Handle Internal Workflow Error', description: 'Form for internal workflow errors.', form_id: 'internal-workflow-error-form' },
+      { task_type: 'workflow_error', name: 'Handle Workflow Error', description: 'Form for workflow errors.', form_id: 'generic-workflow-error-form' },
     ];
     for (const task of tasksToInsert) {
       await trx('system_workflow_task_definitions').insert({ ...task, form_type: 'system', created_by: null, created_at: new Date(), updated_at: new Date() });

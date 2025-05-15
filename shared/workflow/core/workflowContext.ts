@@ -1,5 +1,15 @@
 
 /**
+ * Standard workflow states enum
+ */
+export enum WorkflowState {
+  RUNNING = 'RUNNING', // Workflow is actively processing
+  ERROR = 'ERROR',     // Workflow has encountered an error
+  COMPLETE = 'COMPLETE', // Workflow has completed successfully
+  FAILED = 'FAILED'    // Workflow has permanently failed
+}
+
+/**
  * Interface for workflow data management
  */
 export interface WorkflowDataManager {
@@ -108,27 +118,20 @@ export interface WorkflowContext {
   /**
    * Get the current state of the workflow
    */
-  getCurrentState(): string;
+  getCurrentState(): WorkflowState | string;
   
   /**
    * Set the current state of the workflow
    */
-  setState(state: string): void;
+  setState(state: WorkflowState | string): void;
 }
 
 /**
  * Parameters for the createTaskAndWaitForResult action
  */
 export interface CreateTaskAndWaitForResultParams {
-  taskType: 'qbo_customer_mapping_lookup_error' |
-    'secret_fetch_error' |
-    'qbo_mapping_error' |
-    'qbo_item_lookup_failed' |
-    'qbo_item_lookup_internal_error' |
-    'qbo_invoice_no_items_mapped' |
-    'qbo_sync_error' |
-    'workflow_execution_error' |
-    'internal_workflow_error';
+  taskType: 'qbo_mapping_error' |
+    'workflow_error';
   title: string;
   description?: string;
   priority?: string;

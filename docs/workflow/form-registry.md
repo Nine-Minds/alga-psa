@@ -419,7 +419,6 @@ This migration:
    - `qbo-mapping-error-form-specialized`
    - `qbo-item-lookup-failed-form`
    - `qbo-item-mapping-missing-form`
-   - `qbo-item-lookup-internal-error-form`
    - `qbo-invoice-no-items-mapped-form`
    - `qbo-sync-error-form`
    - `workflow-execution-error-form`

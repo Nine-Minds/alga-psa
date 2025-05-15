@@ -8,3 +8,4 @@ export type { ActionExecutionContext, ActionExecutionFunction } from './actionRe
 export type { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from './workflowRuntime.js';
 export type { WorkflowFunction } from './workflowContext.js';
 export type { ActionRegistry } from './actionRegistry.js';
+export { WorkflowState } from './workflowContext.js';

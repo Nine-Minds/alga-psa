@@ -497,13 +497,12 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const company = await knex('companies')
-          .select('*')
-          .where({ company_id: params.id, tenant: context.tenant }) // Corrected column name
+          .select('*') // This will fetch address and billing_email if they exist
+          .where({ company_id: params.id, tenant: context.tenant })
           .first();
           
         if (!company) {
           logger.warn(`[ACTION] get_company: Company not found for id: ${params.id}, tenant: ${context.tenant}`);
-          // Throw error if not found, consistent with get_invoice
           const err = new Error(`Company with id ${params.id} not found for tenant ${context.tenant}.`);
           (err as any).status = 404;
           throw err;
@@ -512,7 +511,6 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] get_company: Successfully fetched company id: ${params.id}`);
         logger.info(`[ACTION] get_company: Company details from DB: ${JSON.stringify(company)}`);
 
-        // Return the raw database object directly
         return company;
       } catch (error: any) {
         logger.error(`[ACTION] get_company: Error fetching company id: ${params.id}, tenant: ${context.tenant}`, error);
