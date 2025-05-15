@@ -731,7 +731,7 @@ export async function getAllDocuments(
 // Create document associations
 export async function createDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
+  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
   document_ids: string[]
 ): Promise<{ success: boolean }> {
   try {
@@ -764,7 +764,7 @@ export async function createDocumentAssociations(
 // Remove document associations
 export async function removeDocumentAssociations(
   entity_id: string,
-  entity_type: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset',
+  entity_type: 'ticket' | 'company' | 'contact' | 'asset',
   document_ids?: string[]
 ) {
   try {
@@ -799,7 +799,6 @@ export async function uploadDocument(
     companyId?: string;
     ticketId?: string;
     contactNameId?: string;
-    scheduleId?: string;
     assetId?: string;
   }
 ) {
@@ -874,15 +873,6 @@ export async function uploadDocument(
         document_id: documentWithId.document_id,
         entity_id: options.contactNameId,
         entity_type: 'contact',
-        tenant
-      });
-    }
-
-    if (options.scheduleId) {
-      associations.push({
-        document_id: documentWithId.document_id,
-        entity_id: options.scheduleId,
-        entity_type: 'schedule',
         tenant
       });
     }

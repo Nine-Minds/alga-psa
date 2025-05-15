@@ -11,7 +11,7 @@ export async function createContentDocument(
     userId: string,
     initialContent: string = '',
     entityId?: string,
-    entityType?: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset'
+    entityType?: 'ticket' | 'company' | 'contact' | 'asset'
 ): Promise<{ document_id: string }> {
     try {
         const { knex, tenant } = await createTenantKnex();

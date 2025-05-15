@@ -2,7 +2,7 @@
 import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
-import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions'; // Added getCurrentUserPermissions
+import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export type ScheduleActionResult<T> =

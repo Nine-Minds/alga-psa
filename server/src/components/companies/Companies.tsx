@@ -243,7 +243,6 @@ const Companies: React.FC = () => {
       'document': 'documents',
       'invoice': 'invoices',
       'interaction': 'interactions',
-      'schedule': 'schedules',
       'location': 'locations',
       'service_usage': 'service usage records',
       'bucket_usage': 'bucket usage records',

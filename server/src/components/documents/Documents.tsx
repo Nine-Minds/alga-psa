@@ -51,7 +51,7 @@ interface DocumentsProps {
   userId: string;
   searchTermFromParent?: string;
   entityId?: string;
-  entityType?: 'ticket' | 'company' | 'contact' | 'schedule' | 'asset';
+  entityType?: 'ticket' | 'company' | 'contact' | 'asset';
   isLoading?: boolean;
   onDocumentCreated?: () => Promise<void>;
   isInDrawer?: boolean;

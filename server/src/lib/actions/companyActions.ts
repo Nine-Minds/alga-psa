@@ -346,17 +346,6 @@ export async function deleteCompany(companyId: string): Promise<{
       counts['interaction'] = Number(interactionCount.count);
     }
 
-    // Check for schedules
-    const scheduleCount = await db('schedules')
-      .where({ company_id: companyId, tenant })
-      .count('schedule_id as count')
-      .first();
-    console.log('Schedule count result:', scheduleCount);
-    if (scheduleCount && Number(scheduleCount.count) > 0) {
-      dependencies.push('schedule');
-      counts['schedule'] = Number(scheduleCount.count);
-    }
-
     // Check for locations
     const locationCount = await db('company_locations')
       .join('companies', 'companies.company_id', 'company_locations.company_id')
@@ -417,7 +406,6 @@ export async function deleteCompany(companyId: string): Promise<{
         'document': 'documents',
         'invoice': 'invoices',
         'interaction': 'interactions',
-        'schedule': 'schedules',
         'location': 'locations',
         'service_usage': 'service usage records',
         'bucket_usage': 'bucket usage records',
