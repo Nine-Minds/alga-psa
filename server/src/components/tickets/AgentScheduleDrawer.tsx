@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
+import { Calendar, momentLocalizer, View, CalendarProps, EventProps as BigCalendarEventProps } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import moment from 'moment';
@@ -16,13 +16,28 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { CalendarStyleProvider } from '../schedule/CalendarStyleProvider';
 import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { getEventColors } from 'server/src/components/technician-dispatch/utils';
+import EntryPopup from 'server/src/components/schedule/EntryPopup';
 
 const localizer = momentLocalizer(moment);
-const DnDCalendar = withDragAndDrop(Calendar);
+const DnDCalendar = withDragAndDrop(Calendar as React.ComponentType<CalendarProps<IScheduleEntry>>);
 
-// Custom CSS to hide the technician sidebar and adjust the calendar display
+// Define color schemes for different work item types
+const workItemColors: Record<WorkItemType, string> = {
+  ticket: 'rgb(var(--color-primary-200))',
+  project_task: 'rgb(var(--color-secondary-100))',
+  non_billable_category: 'rgb(var(--color-accent-100))',
+  ad_hoc: 'rgb(var(--color-border-200))'
+};
+
+const workItemHoverColors: Record<WorkItemType, string> = {
+  ticket: 'rgb(var(--color-primary-300))',
+  project_task: 'rgb(var(--color-secondary-200))',
+  non_billable_category: 'rgb(var(--color-accent-200))',
+  ad_hoc: 'rgb(var(--color-border-300))'
+};
+
+// Custom CSS to adjust the calendar display
 const customCalendarStyle = `
   <style>
     /* Make the calendar title more prominent */
@@ -39,13 +54,6 @@ const customCalendarStyle = `
     /* Hide the technician sidebar if it exists */
     .w-64.flex-shrink-0.bg-white {
       display: none !important;
-    }
-    
-    /* Adjust calendar event styling */
-    .rbc-event {
-      background-color: rgb(var(--color-primary-200)) !important;
-      border-radius: 4px !important;
-      padding: 2px 5px !important;
     }
     
     /* Calendar container */
@@ -68,10 +76,15 @@ const customCalendarStyle = `
       min-height: 80px !important;
     }
     
-    /* Make sure events in month view are visible */
-    .rbc-month-view .rbc-event {
-      padding: 2px 5px !important;
-      margin: 1px 0 !important;
+    /* Hide the default event label to prevent duplicate time display */
+    .rbc-event-label {
+      display: none !important;
+    }
+    
+    /* Ensure events fill their container properly */
+    .rbc-event-content {
+      width: 100% !important;
+      height: 100% !important;
     }
   </style>
 `;
@@ -88,16 +101,17 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [date, setDate] = useState(new Date());
-  const [view, setView] = useState<'day' | 'week' | 'month'>('day');
+  const [view, setView] = useState<View>('day');
   const [agentName, setAgentName] = useState<string>('');
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const { openDrawer, closeDrawer } = useDrawer();
-  
-  // Event component for the calendar
-  const EventComponent = ({ event }: { event: any }) => {
-    const scheduleEvent = event as IScheduleEntry;
+  const [selectedScheduleEntry, setSelectedScheduleEntry] = useState<IScheduleEntry | null>(null);
+  const [currentAgentDetails, setCurrentAgentDetails] = useState<IUserWithRoles | null>(null);
+
+  // Event component for different calendar views
+  const EventComponent = ({ event }: BigCalendarEventProps<IScheduleEntry>) => {
+    const scheduleEvent = event;
     const isHovered = hoveredEventId === scheduleEvent.entry_id;
-    const isTicketOrTask = scheduleEvent.work_item_type === 'ticket' || scheduleEvent.work_item_type === 'project_task';
     
     // Format date and time for tooltip
     const startMoment = new Date(scheduleEvent.scheduled_start);
@@ -108,59 +122,55 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     // Construct detailed tooltip
     const tooltipTitle = `${scheduleEvent.title}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
     
-    // Handle click on event
-    const handleEventClick = () => {
-      if (isTicketOrTask && scheduleEvent.work_item_id) {
-        // Open drawer with work item details
-        const workItem = {
-          work_item_id: scheduleEvent.work_item_id,
-          type: scheduleEvent.work_item_type,
-          name: scheduleEvent.title,
-          title: scheduleEvent.title,
-          description: scheduleEvent.notes || '',
-          startTime: new Date(scheduleEvent.scheduled_start),
-          endTime: new Date(scheduleEvent.scheduled_end),
-          scheduled_start: new Date(scheduleEvent.scheduled_start).toISOString(),
-          scheduled_end: new Date(scheduleEvent.scheduled_end).toISOString(),
-          users: scheduleEvent.assigned_user_ids.map(id => ({ user_id: id })),
-          is_billable: true
-        } as IExtendedWorkItem;
-        
-        openDrawer(
-          <div className="h-full">
-            <WorkItemDrawer
-              workItem={workItem}
-              onClose={closeDrawer}
-              onTaskUpdate={async () => {}}
-              onScheduleUpdate={async () => {}}
-            />
-          </div>
-        );
+    // Get base and hover colors based on work item type
+    const baseColor = workItemColors[scheduleEvent.work_item_type as WorkItemType] || workItemColors.ad_hoc;
+    const hoverColor = workItemHoverColors[scheduleEvent.work_item_type as WorkItemType] || workItemHoverColors.ad_hoc;
+    
+    // Handle click directly in the component to ensure it captures all events
+    const handleClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      
+      // Call our handler directly
+      if (session?.user?.id) {
+        handleCalendarEventSelect(scheduleEvent);
       }
     };
     
-    // Get colors based on work item type
-    const { bg, hover, text } = getEventColors(scheduleEvent.work_item_type || 'ad_hoc', true, false);
+    // For month view, use a more compact display
+    if (view === 'month') {
+      return (
+        <div
+          className="h-full w-full rounded text-xs cursor-pointer"
+          style={{
+            backgroundColor: isHovered ? hoverColor : baseColor,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            padding: '1px 3px',
+            transition: 'background-color 0.2s'
+          }}
+          onClick={handleClick}
+          onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
+          onMouseLeave={() => setHoveredEventId(null)}
+          title={tooltipTitle}
+        >
+          <div className="font-semibold truncate text-[10px]">{scheduleEvent.title}</div>
+        </div>
+      );
+    }
     
+    // For day and week views
     return (
-      <div 
-        className={`h-full w-full p-1 rounded text-xs cursor-pointer ${text}`}
+      <div
+        className="h-full w-full p-1 rounded text-xs cursor-pointer"
         style={{
-          backgroundColor: isHovered 
-            ? hover.includes('primary') ? 'rgb(var(--color-primary-300))' 
-            : hover.includes('secondary') ? 'rgb(var(--color-secondary-200))' 
-            : hover.includes('accent') ? 'rgb(var(--color-accent-200))' 
-            : 'rgb(var(--color-border-300))'
-            : bg.includes('primary') ? 'rgb(var(--color-primary-200))' 
-            : bg.includes('secondary') ? 'rgb(var(--color-secondary-100))' 
-            : bg.includes('accent') ? 'rgb(var(--color-accent-100))' 
-            : 'rgb(var(--color-border-200))',
+          backgroundColor: isHovered ? hoverColor : baseColor,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
           transition: 'background-color 0.2s'
         }}
-        onClick={handleEventClick}
+        onClick={handleClick}
         onMouseEnter={() => setHoveredEventId(scheduleEvent.entry_id)}
         onMouseLeave={() => setHoveredEventId(null)}
         title={tooltipTitle}
@@ -169,6 +179,88 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
         <div className="text-xs opacity-80 truncate">{formattedTime}</div>
       </div>
     );
+  };
+
+  // Handler for when a calendar event is selected
+  const handleCalendarEventSelect = (scheduleEvent: IScheduleEntry) => {
+    console.log('Event selected:', scheduleEvent.title, scheduleEvent.work_item_type);
+    
+    if (session?.user?.id) {
+      setSelectedScheduleEntry(scheduleEvent);
+      openDrawer(
+        <EntryPopup
+          event={scheduleEvent}
+          onClose={closeDrawer}
+          onSave={(entryData) => {
+            console.log('AgentScheduleDrawer: EntryPopup save:', entryData);
+            closeDrawer();
+            // Re-fetch events
+            const fetchEntries = async () => {
+                let startDate = new Date(date);
+                let endDate = new Date(date);
+                if (view === 'day') {
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                } else if (view === 'week') {
+                    startDate.setDate(date.getDate() - date.getDay());
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    endDate.setHours(23, 59, 59, 999);
+                } else if (view === 'month') {
+                    startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                }
+                const result = await getScheduleEntries(startDate, endDate, [agentId]);
+                if (result.success && result.entries) {
+                    setEvents(result.entries);
+                } else {
+                    setError(result.error || 'Failed to re-fetch schedule entries after save');
+                }
+            };
+            fetchEntries();
+          }}
+          onDelete={(entryId, deleteType) => {
+            console.log('AgentScheduleDrawer: EntryPopup delete:', entryId, deleteType);
+            closeDrawer();
+             const fetchEntries = async () => {
+                let startDate = new Date(date);
+                let endDate = new Date(date);
+                if (view === 'day') {
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                } else if (view === 'week') {
+                    startDate.setDate(date.getDate() - date.getDay());
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    endDate.setHours(23, 59, 59, 999);
+                } else if (view === 'month') {
+                    startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                    endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                }
+                const result = await getScheduleEntries(startDate, endDate, [agentId]);
+                if (result.success && result.entries) {
+                    setEvents(result.entries);
+                } else {
+                    setError(result.error || 'Failed to re-fetch schedule entries after delete');
+                }
+            };
+            fetchEntries();
+          }}
+          canAssignMultipleAgents={false}
+          users={currentAgentDetails ? [currentAgentDetails] : []}
+          currentUserId={session.user.id}
+          canModifySchedule={false}
+          focusedTechnicianId={agentId}
+          canAssignOthers={false}
+          isInDrawer={true}
+          viewOnly={true}
+        />
+      );
+    }
   };
 
   // Fetch agent details and schedule entries
@@ -183,13 +275,19 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           const userData = await findUserById(agentId);
           if (userData) {
             setAgentName(`Schedule of ${userData.first_name} ${userData.last_name}`);
+            setCurrentAgentDetails({
+              ...userData,
+              roles: (userData as IUserWithRoles).roles || [],
+            });
           } else {
             console.error('User not found');
             setAgentName('Agent Schedule');
+            setCurrentAgentDetails(null);
           }
         } catch (error) {
           console.error('Failed to fetch agent details:', error);
           setAgentName('Agent Schedule');
+          setCurrentAgentDetails(null);
         }
         
         // Calculate date range based on current view
@@ -222,6 +320,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
       } catch (err) {
         console.error('Error fetching agent data:', err);
         setError('An error occurred while fetching the agent data');
+        setCurrentAgentDetails(null);
       } finally {
         setIsLoading(false);
       }
@@ -260,7 +359,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
   };
 
   // Handle view change
-  const handleViewChange = (newView: 'day' | 'week' | 'month') => {
+  const handleViewChange = (newView: View) => {
     setView(newView);
   };
 
@@ -274,7 +373,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
             onClick={goToPrev}
             className="px-3 py-1 bg-white border border-gray-300 rounded-l-md hover:bg-gray-100"
           >
-            Back
+            {'< Prev'}
           </button>
           <button 
             type="button" 
@@ -288,7 +387,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
             onClick={goToNext}
             className="px-3 py-1 bg-white border border-gray-300 rounded-r-md hover:bg-gray-100"
           >
-            Next
+            {'Next >'}
           </button>
         </span>
         <span className="rbc-toolbar-label">{agentName || 'Agent Schedule'}</span>
@@ -376,35 +475,28 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
             // This is handled by our custom toolbar buttons
             console.log('Calendar navigation:', action);
           }}
-          onView={(newView) => setView(newView as 'day' | 'week' | 'month')}
+          onView={(newView) => setView(newView as View)}
+          onSelectEvent={handleCalendarEventSelect}
+          selectable={false}
           components={{
             toolbar: CustomToolbar,
             event: EventComponent
           }}
-          eventPropGetter={(event: any) => {
-            const { bg } = getEventColors(event.work_item_type || 'ad_hoc', true, false);
-            // Convert Tailwind class to actual color
-            let backgroundColor = 'rgb(var(--color-border-200))';
-            if (bg.includes('primary')) {
-              backgroundColor = 'rgb(var(--color-primary-200))';
-            } else if (bg.includes('secondary')) {
-              backgroundColor = 'rgb(var(--color-secondary-100))';
-            } else if (bg.includes('accent')) {
-              backgroundColor = 'rgb(var(--color-accent-100))';
-            }
-            
+          eventPropGetter={(event: IScheduleEntry) => {
             return {
               style: {
-                backgroundColor,
+                backgroundColor: 'transparent',
                 borderRadius: '4px',
                 color: 'rgb(var(--color-text-900))',
                 border: 'none',
-                transition: 'background-color 0.2s'
+                padding: 0,
+                margin: 0
               }
             };
           }}
-          draggableAccessor={() => false} // Disable dragging
-          resizableAccessor={() => false} // Disable resizing
+          draggableAccessor={() => false}
+          resizableAccessor={() => false}
+          onSelectSlot={() => {}}
         />
       </div>
     </div>

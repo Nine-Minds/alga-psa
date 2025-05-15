@@ -42,12 +42,13 @@ interface EntryPopupProps {
   canModifySchedule: boolean;
   focusedTechnicianId: string | null;
   canAssignOthers: boolean; // Derived from user_schedule:update permission in parent
+  viewOnly?: boolean;
 }
 
-const EntryPopup: React.FC<EntryPopupProps> = ({ 
-  event, 
-  slot, 
-  onClose, 
+const EntryPopup: React.FC<EntryPopupProps> = ({
+  event,
+  slot,
+  onClose,
   onSave,
   onDelete,
   canAssignMultipleAgents,
@@ -59,7 +60,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // Destructure new props
   canModifySchedule,
   focusedTechnicianId,
-  canAssignOthers
+  canAssignOthers,
+  viewOnly = false
 }) => {
   const [entryData, setEntryData] = useState<Omit<IScheduleEntry, 'tenant'>>(() => {
     if (event) {
@@ -110,9 +112,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const isEditing = !!event;
     const isCurrentUserSoleAssignee = isEditing && event.assigned_user_ids?.length === 1 && event.assigned_user_ids[0] === currentUserId;
     // User can edit fields if: not editing (i.e., creating new), OR has modify permission, OR is the sole assignee of the entry being edited.
-    const canEditFields = !isEditing || canModifySchedule || isCurrentUserSoleAssignee;
+    const canEditFields = viewOnly ? false : (!isEditing || canModifySchedule || isCurrentUserSoleAssignee);
     // User can modify assignment if they have the specific permission (passed as canAssignOthers)
-    const canModifyAssignment = canAssignOthers;
+    const canModifyAssignment = viewOnly ? false : canAssignOthers;
   
     // Fetch available work items when dialog opens
   useEffect(() => {
@@ -372,13 +374,13 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     >
       <div className="shrink-0 pb-4 border-b flex justify-between items-center">
         <h2 className="text-xl font-bold">
-          {event ? 'Edit Entry' : 'New Entry'}
+          {viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
         </h2>
         <div className="flex gap-2">
           {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task') && event.work_item_id && (
             <OpenDrawerButton event={event} />
           )}
-          {event && onDelete && (
+          {event && onDelete && !viewOnly && (
             <Button
               id="delete-entry-btn"
               onClick={() => setShowDeleteDialog(true)}
@@ -393,10 +395,23 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       <div className="flex-1 overflow-y-auto space-y-4 p-1">
         <div className="min-w-0">
           <div className="relative">
-            <SelectedWorkItem
-              workItem={selectedWorkItem}
-              onEdit={() => setIsEditingWorkItem(true)}
-            />
+            {viewOnly ? (
+              <div className="flex justify-between items-center p-2">
+                {selectedWorkItem ? (
+                  <div>
+                    <div className="font-medium">{selectedWorkItem.name}</div>
+                    <div className="text-sm text-gray-500 capitalize">{selectedWorkItem.type.replace('_', ' ')}</div>
+                  </div>
+                ) : (
+                  <span className="font-bold text-black">Ad-hoc entry (no work item)</span>
+                )}
+              </div>
+            ) : (
+              <SelectedWorkItem
+                workItem={selectedWorkItem}
+                onEdit={() => setIsEditingWorkItem(true)}
+              />
+            )}
             <AddWorkItemDialog
               isOpen={isEditingWorkItem}
               onClose={() => setIsEditingWorkItem(false)}
@@ -612,23 +627,32 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
             Cancel
           </Button>
         )}
-        <Button
-          id="save-entry-btn"
-          onClick={handleSave}
-          // Disable save only if editing AND user lacks permission to edit these fields
-          disabled={isEditing && !canEditFields}
-        >
-          Save
-        </Button>
+        {viewOnly ? (
+          <Button
+            id="close-entry-btn"
+            onClick={onClose}
+          >
+            Close
+          </Button>
+        ) : (
+          <Button
+            id="save-entry-btn"
+            onClick={handleSave}
+            // Disable save only if editing AND user lacks permission to edit these fields
+            disabled={isEditing && !canEditFields}
+          >
+            Save
+          </Button>
+        )}
       </div>
     </div>
   );
 
   // Provide the context value to child components
   const contextValue: EntryPopupProps = {
-    event, 
-    slot, 
-    onClose, 
+    event,
+    slot,
+    onClose,
     onSave,
     onDelete,
     canAssignMultipleAgents,
@@ -639,7 +663,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     error,
     canModifySchedule,
     focusedTechnicianId,
-    canAssignOthers
+    canAssignOthers,
+    viewOnly
   };
 
   return isInDrawer ? (

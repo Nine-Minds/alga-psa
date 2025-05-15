@@ -94,16 +94,17 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   
   // Initialize currentUser state from props if available
   useEffect(() => {
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      // Fallback to fetching user if not provided in props
+    // Only fetch user if not already provided in props
+    if (!user) {
       const fetchUser = async () => {
         try {
+          setIsLoading(true);
           const fetchedUser = await getCurrentUser();
           setCurrentUser(fetchedUser);
         } catch (error) {
           console.error('Error fetching current user:', error);
+        } finally {
+          setIsLoading(false);
         }
       };
       
