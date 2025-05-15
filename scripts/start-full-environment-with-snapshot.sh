@@ -165,7 +165,6 @@ services:
       dockerfile: Dockerfile
     container_name: \${ENVIRONMENT_NAME}_dev-workstation
     environment:
-      PASSWORD: \${DEV_WORKSTATION_PASSWORD}
       DISABLE_TELEMETRY: "true"
     ports:
       # Expose code-server on a random host port
