@@ -156,7 +156,7 @@ OVERRIDE_FILE="docker-compose.snapshot-${TIMESTAMP}.yaml"
 cat > "$OVERRIDE_FILE" << EOF
 version: '3.8'
 
-name: \${ENVIRONMENT_NAME}
+# Using docker compose -p instead of name: key for better isolation
 
 services:
   dev-workstation:
@@ -227,7 +227,7 @@ volumes:
 
 networks:
   app-network:
-    name: \${ENVIRONMENT_NAME}_network
+    name: app-network
 EOF
 
 info "Created docker-compose override file: $OVERRIDE_FILE"
@@ -242,9 +242,9 @@ if [ "$EDITION" == "enterprise" ]; then
   info "Including Enterprise Edition components"
 fi
 
-# Start the services
-info "Starting services with: docker compose $COMPOSE_FILES --env-file $SNAPSHOT_ENV_FILE up -d"
-docker compose $COMPOSE_FILES --env-file "$SNAPSHOT_ENV_FILE" up -d
+# Start the services with a project-specific name
+info "Starting services with: docker compose -p $ENVIRONMENT_NAME $COMPOSE_FILES --env-file $SNAPSHOT_ENV_FILE up -d"
+docker compose -p "$ENVIRONMENT_NAME" $COMPOSE_FILES --env-file "$SNAPSHOT_ENV_FILE" up -d
 
 # Get the container ID and port mapping
 DEV_CONTAINER_ID=$(docker ps --filter "name=${ENVIRONMENT_NAME}_dev-workstation" --format "{{.ID}}")
