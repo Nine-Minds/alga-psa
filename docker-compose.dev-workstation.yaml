@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  dev-workstation:
+    build:
+      context: ./tools/dev-workstation/dev-container
+      dockerfile: Dockerfile
+    container_name: ${APP_NAME:-sebastian}_dev-workstation
+    environment:
+      # Inherit shared environment variables
+      <<: *shared-environment
+      # Dev workstation specific variables
+      PASSWORD: ${DEV_WORKSTATION_PASSWORD:-password}
+      DISABLE_TELEMETRY: "true"
+    ports:
+      - "${DEV_WORKSTATION_PORT:-8080}:8080"
+    volumes:
+      # Mount the project directory
+      - type: bind
+        source: .
+        target: /home/coder/project
+      # Optional: Configure persistent extensions directory
+      - type: volume
+        source: code-server-extensions
+        target: /home/coder/.local/share/code-server/extensions
+    networks:
+      - app-network
+    # Depend on the server and database to ensure they're running
+    depends_on:
+      server:
+        condition: service_started
+      postgres:
+        condition: service_started
+    command: [
+      "--auth", "password",
+      "--port", "8080",
+      "--bind-addr", "0.0.0.0:8080"
+    ]
+
+volumes:
+  code-server-extensions:
+    name: ${APP_NAME:-sebastian}_code-server-extensions
+
+# Networks are inherited from the base compose file
