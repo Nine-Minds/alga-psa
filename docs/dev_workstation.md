@@ -139,13 +139,33 @@ If you're using the snapshot approach with `create-snapshot-workstation.sh`:
 
 You can customize the dev workstation by modifying the Dockerfile at `tools/dev-workstation/dev-container/Dockerfile`.
 
-### Multiple Dev Workstations
+### Multiple Dev Environments
 
-You can run multiple dev workstations simultaneously by setting different container names and ports:
+You can run multiple isolated environments simultaneously by using the environment name parameter:
 
 ```bash
-docker compose -f docker-compose.dev-workstation.yaml --env-file server/.env up -d --scale dev-workstation=2
+# Start multiple complete environments with different names
+ENVIRONMENT_NAME=project-feature1 ./scripts/start-full-environment-with-snapshot.sh
+ENVIRONMENT_NAME=project-feature2 ./scripts/start-full-environment-with-snapshot.sh
 ```
+
+Each environment will:
+- Use a unique name for all its containers
+- Use randomly assigned ports to avoid conflicts 
+- Run completely isolated from other environments
+- Have its own network, database, and other services
+
+### Multiple Dev Workstations
+
+For standalone workstations, you can specify unique names:
+
+```bash
+# Start multiple workstation instances with different names
+WORKSTATION_NAME=ws-feature1 ./scripts/create-snapshot-workstation.sh
+WORKSTATION_NAME=ws-feature2 ./scripts/create-snapshot-workstation.sh
+```
+
+If you don't specify a name, one will be auto-generated for you. The scripts are designed to avoid conflicts, so you can run many instances concurrently.
 
 ## Troubleshooting
 

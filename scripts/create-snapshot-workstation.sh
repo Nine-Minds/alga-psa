@@ -26,9 +26,15 @@ fi
 
 # Build timestamp and paths
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+# Generate a short random ID for this workstation
+WORKSTATION_ID=$(openssl rand -hex 4)
 SRC_DIR=$(pwd)
 SNAPSHOT_BASE="${HOME}/snapshots"
 SNAPSHOT_TARGET="${SNAPSHOT_BASE}/alga-psa-snap-${TIMESTAMP}"
+
+# Workstation name - can be specified or auto-generated
+WORKSTATION_NAME=${WORKSTATION_NAME:-"alga-ws-${WORKSTATION_ID}"}
+info "Workstation name: $WORKSTATION_NAME"
 
 # Create snapshots directory if it doesn't exist
 if [ "$USE_SNAPSHOT" = true ]; then
@@ -64,7 +70,7 @@ if [ -z "$DEV_WORKSTATION_PASSWORD" ]; then
 fi
 
 # Run the code-server container with a randomly assigned port
-CONTAINER_NAME="code-server-${TIMESTAMP}"
+CONTAINER_NAME="${WORKSTATION_NAME}"
 info "Starting code-server container: $CONTAINER_NAME"
 
 docker run -d \
@@ -106,5 +112,11 @@ else
 fi
 
 info ""
+info "Workstation details:"
+info "  - Workstation name: $WORKSTATION_NAME"
+info "  - Running on port: $HOST_PORT"
+info ""
 info "To stop the workstation container:"
 info "    docker stop $CONTAINER_NAME"
+info ""
+info "This workstation is running alongside any other existing workstations"

@@ -33,9 +33,15 @@ fi
 
 # Build timestamp and paths
 TIMESTAMP=$(date +"%Y%m%d%H%M%S")
+# Generate a short random ID for this environment
+ENVIRONMENT_ID=$(openssl rand -hex 4)
 SRC_DIR=$(pwd)
 SNAPSHOT_BASE="${HOME}/snapshots"
 SNAPSHOT_TARGET="${SNAPSHOT_BASE}/alga-psa-snap-${TIMESTAMP}"
+
+# Environment name - can be specified or auto-generated
+ENVIRONMENT_NAME=${ENVIRONMENT_NAME:-"alga-env-${ENVIRONMENT_ID}"}
+info "Environment name: $ENVIRONMENT_NAME"
 
 # Create snapshots directory if it doesn't exist and we're using snapshots
 if [ "$USE_SNAPSHOT" = true ]; then
@@ -130,6 +136,13 @@ cat >> "$SNAPSHOT_ENV_FILE" << EOF
 SNAPSHOT_PATH=${MOUNT_PATH}
 DEV_WORKSTATION_PASSWORD=${DEV_WORKSTATION_PASSWORD}
 CONTAINER_WORKDIR=/home/coder/project
+ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
+
+# Unique port assignments for each service
+EXPOSE_DB_PORT=$(( 5432 + RANDOM % 100 ))
+EXPOSE_REDIS_PORT=$(( 6379 + RANDOM % 100 ))
+EXPOSE_SERVER_PORT=$(( 3000 + RANDOM % 100 ))
+EXPOSE_HOCUSPOCUS_PORT=$(( 1234 + RANDOM % 100 ))
 EOF
 
 info "Created environment file with snapshot settings: $SNAPSHOT_ENV_FILE"
@@ -141,12 +154,14 @@ OVERRIDE_FILE="docker-compose.snapshot-${TIMESTAMP}.yaml"
 cat > "$OVERRIDE_FILE" << EOF
 version: '3.8'
 
+name: \${ENVIRONMENT_NAME}
+
 services:
   dev-workstation:
     build:
       context: ./tools/dev-workstation/dev-container
       dockerfile: Dockerfile
-    container_name: ${APP_NAME:-sebastian}_dev-workstation
+    container_name: \${ENVIRONMENT_NAME}_dev-workstation
     environment:
       PASSWORD: \${DEV_WORKSTATION_PASSWORD}
       DISABLE_TELEMETRY: "true"
@@ -160,7 +175,7 @@ services:
         target: \${CONTAINER_WORKDIR}
       # Configure persistent extensions directory
       - type: volume
-        source: code-server-extensions
+        source: \${ENVIRONMENT_NAME}_extensions
         target: /home/coder/.local/share/code-server/extensions
     networks:
       - app-network
@@ -174,10 +189,33 @@ services:
       "--port", "8080",
       "--bind-addr", "0.0.0.0:8080"
     ]
+  
+  # Override container names for all services to make them unique
+  server:
+    container_name: \${ENVIRONMENT_NAME}_server
+    
+  postgres:
+    container_name: \${ENVIRONMENT_NAME}_postgres
+    
+  redis:
+    container_name: \${ENVIRONMENT_NAME}_redis
+    
+  pgbouncer:
+    container_name: \${ENVIRONMENT_NAME}_pgbouncer
+    
+  hocuspocus:
+    container_name: \${ENVIRONMENT_NAME}_hocuspocus
+    
+  setup:
+    container_name: \${ENVIRONMENT_NAME}_setup
 
 volumes:
-  code-server-extensions:
-    name: \${APP_NAME:-sebastian}_code-server-extensions
+  \${ENVIRONMENT_NAME}_extensions:
+    name: \${ENVIRONMENT_NAME}_extensions
+
+networks:
+  app-network:
+    name: \${ENVIRONMENT_NAME}_network
 EOF
 
 info "Created docker-compose override file: $OVERRIDE_FILE"
@@ -197,7 +235,7 @@ info "Starting services with: docker compose $COMPOSE_FILES --env-file $SNAPSHOT
 docker compose $COMPOSE_FILES --env-file "$SNAPSHOT_ENV_FILE" up -d
 
 # Get the container ID and port mapping
-DEV_CONTAINER_ID=$(docker ps --filter "name=${APP_NAME:-sebastian}_dev-workstation" --format "{{.ID}}")
+DEV_CONTAINER_ID=$(docker ps --filter "name=${ENVIRONMENT_NAME}_dev-workstation" --format "{{.ID}}")
 
 # Get host port - let Docker assign a random port
 if [ -z "$DEV_WORKSTATION_PORT" ]; then
@@ -236,8 +274,15 @@ info "    http://$HOST_IP:${EXPOSE_SERVER_PORT:-3000}"
 
 info ""
 info "Environment configuration:"
+info "  - Environment name: $ENVIRONMENT_NAME"
 info "  - Docker Compose files: $COMPOSE_FILES"
 info "  - Environment file: $SNAPSHOT_ENV_FILE"
 info ""
 info "To stop this environment:"
-info "    docker compose $COMPOSE_FILES --env-file $SNAPSHOT_ENV_FILE down"
+info "    docker compose -p $ENVIRONMENT_NAME down"
+info ""
+info "To view logs for this environment:"
+info "    docker logs ${ENVIRONMENT_NAME}_server"
+info "    docker logs ${ENVIRONMENT_NAME}_dev-workstation"
+info ""
+info "Environment $ENVIRONMENT_NAME is running alongside any other existing environments"
