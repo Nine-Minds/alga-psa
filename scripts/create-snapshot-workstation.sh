@@ -63,17 +63,14 @@ if [ -z "$DEV_WORKSTATION_PASSWORD" ]; then
   info "Generated random password for dev workstation: $DEV_WORKSTATION_PASSWORD"
 fi
 
-# Set the port for the code-server
-DEV_WORKSTATION_PORT=${DEV_WORKSTATION_PORT:-8080}
-
-# Run the code-server container
+# Run the code-server container with a randomly assigned port
 CONTAINER_NAME="code-server-${TIMESTAMP}"
 info "Starting code-server container: $CONTAINER_NAME"
 
 docker run -d \
   --name "$CONTAINER_NAME" \
   --rm \
-  -p ${DEV_WORKSTATION_PORT}:8080 \
+  -p 8080 \
   -e "PASSWORD=$DEV_WORKSTATION_PASSWORD" \
   -v "${MOUNT_PATH}:/home/coder/project" \
   -v "code-server-extensions:/home/coder/.local/share/code-server/extensions" \
@@ -81,12 +78,23 @@ docker run -d \
   --auth password \
   --bind-addr 0.0.0.0:8080
 
-# Get the container IP
-HOST_IP=$(hostname -I | awk '{print $1}')
+# Get the container ID and port mapping
+HOST_PORT=$(docker port $CONTAINER_NAME 8080 | cut -d':' -f2)
+info "Random port assigned by Docker: $HOST_PORT"
+
+# Try to get tailscale IP if available
+if command -v tailscale &> /dev/null && tailscale status &> /dev/null; then
+  HOST_IP=$(tailscale ip -4)
+  info "Using Tailscale IP: $HOST_IP"
+else
+  # Fallback to regular IP
+  HOST_IP=$(hostname -I | awk '{print $1}')
+  info "Using local network IP: $HOST_IP"
+fi
 
 info "✅ Dev workstation started successfully"
 info "🔌 VS Code is available at:"
-info "    http://$HOST_IP:$DEV_WORKSTATION_PORT"
+info "    http://$HOST_IP:$HOST_PORT"
 info "    Password: $DEV_WORKSTATION_PASSWORD"
 
 if [ "$USE_SNAPSHOT" = true ]; then

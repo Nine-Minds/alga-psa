@@ -151,7 +151,8 @@ services:
       PASSWORD: \${DEV_WORKSTATION_PASSWORD}
       DISABLE_TELEMETRY: "true"
     ports:
-      - "\${DEV_WORKSTATION_PORT:-8080}:8080"
+      # Expose code-server on a random host port
+      - "8080"
     volumes:
       # Mount the snapshot or direct path
       - type: bind
@@ -195,9 +196,26 @@ fi
 info "Starting services with: docker compose $COMPOSE_FILES --env-file $SNAPSHOT_ENV_FILE up -d"
 docker compose $COMPOSE_FILES --env-file "$SNAPSHOT_ENV_FILE" up -d
 
-# Get the container ID and IP
-HOST_IP=$(hostname -I | awk '{print $1}')
-DEV_WORKSTATION_PORT=${DEV_WORKSTATION_PORT:-8080}
+# Get the container ID and port mapping
+DEV_CONTAINER_ID=$(docker ps --filter "name=${APP_NAME:-sebastian}_dev-workstation" --format "{{.ID}}")
+
+# Get host port - let Docker assign a random port
+if [ -z "$DEV_WORKSTATION_PORT" ]; then
+  HOST_PORT=$(docker port $DEV_CONTAINER_ID 8080 | cut -d':' -f2)
+  info "Random port assigned by Docker: $HOST_PORT"
+else
+  HOST_PORT=$DEV_WORKSTATION_PORT
+fi
+
+# Try to get tailscale IP if available
+if command -v tailscale &> /dev/null && tailscale status &> /dev/null; then
+  HOST_IP=$(tailscale ip -4)
+  info "Using Tailscale IP: $HOST_IP"
+else
+  # Fallback to regular IP
+  HOST_IP=$(hostname -I | awk '{print $1}')
+  info "Using local network IP: $HOST_IP"
+fi
 
 section "✅ Environment started successfully"
 
@@ -210,7 +228,7 @@ else
 fi
 
 info "🔌 VS Code dev workstation is available at:"
-info "    http://$HOST_IP:$DEV_WORKSTATION_PORT"
+info "    http://$HOST_IP:$HOST_PORT"
 info "    Password: $DEV_WORKSTATION_PASSWORD"
 
 info "🌐 Application server is available at:"
