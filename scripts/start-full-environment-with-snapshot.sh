@@ -175,7 +175,7 @@ services:
         target: \${CONTAINER_WORKDIR}
       # Configure persistent extensions directory
       - type: volume
-        source: \${ENVIRONMENT_NAME}_extensions
+        source: code-server-extensions
         target: /home/coder/.local/share/code-server/extensions
     networks:
       - app-network
@@ -210,7 +210,7 @@ services:
     container_name: \${ENVIRONMENT_NAME}_setup
 
 volumes:
-  \${ENVIRONMENT_NAME}_extensions:
+  code-server-extensions:
     name: \${ENVIRONMENT_NAME}_extensions
 
 networks:
