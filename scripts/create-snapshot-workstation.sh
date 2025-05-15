@@ -63,11 +63,8 @@ if [ "$USE_SNAPSHOT" = false ]; then
   info "Using direct mount from: $MOUNT_PATH"
 fi
 
-# Generate a random password for the dev workstation if not set
-if [ -z "$DEV_WORKSTATION_PASSWORD" ]; then
-  export DEV_WORKSTATION_PASSWORD="alga-dev-$(openssl rand -hex 4)"
-  info "Generated random password for dev workstation: $DEV_WORKSTATION_PASSWORD"
-fi
+# No longer need a password for the dev workstation
+# Authentication disabled for convenience in secure environments
 
 # Run the code-server container with a randomly assigned port
 CONTAINER_NAME="${WORKSTATION_NAME}"
@@ -77,11 +74,11 @@ docker run -d \
   --name "$CONTAINER_NAME" \
   --rm \
   -p 8080 \
-  -e "PASSWORD=$DEV_WORKSTATION_PASSWORD" \
+  -e "DISABLE_TELEMETRY=true" \
   -v "${MOUNT_PATH}:/home/coder/project" \
   -v "code-server-extensions:/home/coder/.local/share/code-server/extensions" \
   $(docker build -q ./tools/dev-workstation/dev-container) \
-  --auth password \
+  --auth none \
   --bind-addr 0.0.0.0:8080
 
 # Get the container ID and port mapping
@@ -101,7 +98,7 @@ fi
 info "✅ Dev workstation started successfully"
 info "🔌 VS Code is available at:"
 info "    http://$HOST_IP:$HOST_PORT"
-info "    Password: $DEV_WORKSTATION_PASSWORD"
+info "    No password required - authentication disabled for convenience"
 
 if [ "$USE_SNAPSHOT" = true ]; then
   info "📸 Using btrfs snapshot at: $SNAPSHOT_TARGET"

@@ -118,11 +118,8 @@ done
 chmod 600 secrets/*
 info "Set permissions on secret files"
 
-# Generate a random password for the dev workstation if not set
-if [ -z "$DEV_WORKSTATION_PASSWORD" ]; then
-  export DEV_WORKSTATION_PASSWORD="alga-dev-$(openssl rand -hex 4)"
-  info "Generated random password for dev workstation: $DEV_WORKSTATION_PASSWORD"
-fi
+# No longer need a password for the dev workstation
+# Authentication disabled for convenience in secure environments
 
 # Custom environment file for snapshot setup
 section "Creating specialized environment file for snapshot setup"
@@ -134,7 +131,6 @@ cat >> "$SNAPSHOT_ENV_FILE" << EOF
 
 # Snapshot-specific settings
 SNAPSHOT_PATH=${MOUNT_PATH}
-DEV_WORKSTATION_PASSWORD=${DEV_WORKSTATION_PASSWORD}
 CONTAINER_WORKDIR=/home/coder/project
 ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
 PGBOUNCER_HOST=${ENVIRONMENT_NAME}_pgbouncer
@@ -154,6 +150,7 @@ section "Creating docker-compose override for snapshot"
 OVERRIDE_FILE="docker-compose.snapshot-${TIMESTAMP}.yaml"
 
 cat > "$OVERRIDE_FILE" << EOF
+
 version: '3.8'
 
 # Using docker compose -p instead of name: key for better isolation
@@ -186,7 +183,7 @@ services:
       postgres:
         condition: service_started
     command: [
-      "--auth", "password",
+      "--auth", "none",
       "--port", "8080",
       "--bind-addr", "0.0.0.0:8080"
     ]
@@ -269,7 +266,7 @@ fi
 
 info "🔌 VS Code dev workstation is available at:"
 info "    http://$HOST_IP:$HOST_PORT"
-info "    Password: $DEV_WORKSTATION_PASSWORD"
+info "    No password required - authentication disabled for convenience"
 
 info "🌐 Application server is available at:"
 info "    http://$HOST_IP:${EXPOSE_SERVER_PORT:-3000}"

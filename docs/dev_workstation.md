@@ -78,13 +78,7 @@ The dev workstation port is configurable through the `DEV_WORKSTATION_PORT` envi
 
 ### Authentication
 
-The dev workstation requires password authentication by default. You can set the password using:
-
-```bash
-export DEV_WORKSTATION_PASSWORD="your-secure-password"
-```
-
-If not set, a random password will be generated and displayed when starting the environment.
+The dev workstation runs without authentication for convenience in secure environments. No password is required to access the VS Code interface - you can directly access it through the provided URL.
 
 ## Configuration
 
@@ -94,8 +88,7 @@ The following environment variables can be set to configure the dev workstation:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DEV_WORKSTATION_PORT` | The port to expose the dev workstation on | `8080` |
-| `DEV_WORKSTATION_PASSWORD` | The password for accessing the workstation | Random generated |
+| `DEV_WORKSTATION_PORT` | The port to expose the dev workstation on | Random port assigned by Docker |
 
 ### Persistent Extensions
 
