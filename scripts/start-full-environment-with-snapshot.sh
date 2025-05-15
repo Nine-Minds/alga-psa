@@ -138,6 +138,7 @@ DEV_WORKSTATION_PASSWORD=${DEV_WORKSTATION_PASSWORD}
 CONTAINER_WORKDIR=/home/coder/project
 ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
 PGBOUNCER_HOST=${ENVIRONMENT_NAME}_pgbouncer
+EXPOSE_PGBOUNCER_PORT=0  # Disable external port exposure for pgbouncer
 
 # Unique port assignments for each service
 EXPOSE_DB_PORT=$(( 5432 + RANDOM % 100 ))
@@ -203,6 +204,7 @@ services:
     
   pgbouncer:
     container_name: \${ENVIRONMENT_NAME}_pgbouncer
+    ports: []  # Override the ports from the base configuration to prevent external exposure
     
   hocuspocus:
     container_name: \${ENVIRONMENT_NAME}_hocuspocus
