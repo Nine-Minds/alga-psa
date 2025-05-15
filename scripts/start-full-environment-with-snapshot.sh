@@ -139,7 +139,7 @@ EXPOSE_PGBOUNCER_PORT=0  # Disable external port exposure for pgbouncer
 # Unique port assignments for each service
 EXPOSE_DB_PORT=$(( 5432 + RANDOM % 100 ))
 EXPOSE_REDIS_PORT=$(( 6379 + RANDOM % 100 ))
-EXPOSE_SERVER_PORT=$(( 3000 + RANDOM % 100 ))
+EXPOSE_WORKSTATION_SERVER_PORT=$(( 3100 + RANDOM % 100 ))
 EXPOSE_HOCUSPOCUS_PORT=$(( 1234 + RANDOM % 100 ))
 EOF
 
@@ -166,6 +166,7 @@ services:
     ports:
       # Expose code-server on a random host port
       - "8080"
+      - "3000"
     volumes:
       # Mount the snapshot or direct path
       - type: bind
@@ -254,10 +255,19 @@ if [ -z "$DEV_WORKSTATION_PORT" ]; then
       HOST_PORT=8080
       info "Using default fallback port: $HOST_PORT (note: actual port may differ)"
     fi
+
+    APP_PORT=$(docker port $DEV_CONTAINER_ID 3000 | cut -d':' -f2)
+    if [ -n "$APP_PORT" ]; then
+      info "Random port assigned to VS Code: $APP_PORT"
+    else
+      warn "Could not determine VS Code port, container may still be starting"
+      APP_PORT=3000
+      info "Using default fallback port: $APP_PORT (note: actual port may differ)"
+    fi    
   else
     warn "VS Code container not found, service may still be starting"
-    HOST_PORT=8080
-    info "Using default fallback port: $HOST_PORT (note: actual port may differ)"
+    APP_PORT=8080
+    info "Using default fallback port: $APP_PORT (note: actual port may differ)"
   fi
 else
   HOST_PORT=$DEV_WORKSTATION_PORT
@@ -300,7 +310,7 @@ else
 fi
 
 info "🔌 VS Code dev workstation is available at:"
-info "    http://$HOST_IP:$HOST_PORT"
+info "    http://$HOST_IP:$APP_PORT"
 info "    No password required - authentication disabled for convenience"
 
 info "🌐 Application server is available at:"
