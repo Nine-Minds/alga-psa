@@ -137,12 +137,14 @@ SNAPSHOT_PATH=${MOUNT_PATH}
 DEV_WORKSTATION_PASSWORD=${DEV_WORKSTATION_PASSWORD}
 CONTAINER_WORKDIR=/home/coder/project
 ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
+PGBOUNCER_HOST=${ENVIRONMENT_NAME}_pgbouncer
 
 # Unique port assignments for each service
 EXPOSE_DB_PORT=$(( 5432 + RANDOM % 100 ))
 EXPOSE_REDIS_PORT=$(( 6379 + RANDOM % 100 ))
 EXPOSE_SERVER_PORT=$(( 3000 + RANDOM % 100 ))
 EXPOSE_HOCUSPOCUS_PORT=$(( 1234 + RANDOM % 100 ))
+PGBOUNCER_PORT=$(( 6432 + RANDOM % 100 ))
 EOF
 
 info "Created environment file with snapshot settings: $SNAPSHOT_ENV_FILE"
@@ -193,6 +195,9 @@ services:
   # Override container names for all services to make them unique
   server:
     container_name: \${ENVIRONMENT_NAME}_server
+    environment:
+      PGBOUNCER_PORT: \${PGBOUNCER_PORT}
+      DB_PORT: \${PGBOUNCER_PORT}
     
   postgres:
     container_name: \${ENVIRONMENT_NAME}_postgres
@@ -202,9 +207,16 @@ services:
     
   pgbouncer:
     container_name: \${ENVIRONMENT_NAME}_pgbouncer
+    environment:
+      PGBOUNCER_PORT: \${PGBOUNCER_PORT}
+    ports:
+      - "\${PGBOUNCER_PORT}:6432"
     
   hocuspocus:
     container_name: \${ENVIRONMENT_NAME}_hocuspocus
+    environment:
+      PGBOUNCER_PORT: \${PGBOUNCER_PORT}
+      DB_PORT: \${PGBOUNCER_PORT}
     
   setup:
     container_name: \${ENVIRONMENT_NAME}_setup
