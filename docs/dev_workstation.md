@@ -4,11 +4,14 @@ This document explains how to use the integrated development workstation with Al
 
 ## Overview
 
-The development workstation provides a VS Code environment in the browser that is pre-configured with the tools needed for working with Alga PSA. This makes it easy to:
+The development workstation provides a VS Code environment in the browser that is pre-configured with the tools needed for working with Alga PSA. Each environment creates a self-contained Docker Compose project with unique container names and randomly assigned ports to prevent conflicts between multiple instances. All services—including the application server, VS Code workstation, database, and Redis—use randomized ports to avoid collisions on the host machine.
+
+This makes it easy to:
 
 - Set up new developer environments quickly
 - Ensure consistent tooling across all developers
 - Enable remote development without local setup
+- Run multiple isolated environments concurrently
 - Provide a complete development environment to new team members
 
 ## Getting Started

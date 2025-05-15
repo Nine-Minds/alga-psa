@@ -11,13 +11,17 @@ RUN apt-get update \
     && apt-get install -y curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Add NodeSource repository and install Node.js LTS (18.x)
-RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
-    && apt-get install -y nodejs \
-    && rm -rf /var/lib/apt/lists/*
-
-# 5. (Optional) Verify versions
-RUN node -v && npm -v
+# Download and install nvm:
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+# in lieu of restarting the shell
+RUN \. "$HOME/.nvm/nvm.sh"
+# Download and install Node.js:
+RUN nvm install 22
+# Verify the Node.js version:
+RUN node -v # Should print "v22.15.1".
+RUN nvm current # Should print "v22.15.1".
+# Verify npm version:
+RUN npm -v # Should print "10.9.2".
 
 RUN npm install -g @anthropic-ai/claude-code
 

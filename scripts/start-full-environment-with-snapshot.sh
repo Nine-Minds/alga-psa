@@ -235,15 +235,48 @@ fi
 info "Starting services with: docker compose -p $ENVIRONMENT_NAME $COMPOSE_FILES --env-file $SNAPSHOT_ENV_FILE up -d"
 docker compose -p "$ENVIRONMENT_NAME" $COMPOSE_FILES --env-file "$SNAPSHOT_ENV_FILE" up -d
 
-# Get the container ID and port mapping
-DEV_CONTAINER_ID=$(docker ps --filter "name=${ENVIRONMENT_NAME}_dev-workstation" --format "{{.ID}}")
+# Give services a moment to start up (especially important for port mapping)
+info "Waiting for services to fully start..."
+sleep 3
 
-# Get host port - let Docker assign a random port
+# Get the container IDs and port mappings
+DEV_CONTAINER_ID=$(docker ps --filter "name=${ENVIRONMENT_NAME}_dev-workstation" --format "{{.ID}}")
+SERVER_CONTAINER_ID=$(docker ps --filter "name=${ENVIRONMENT_NAME}_server" --format "{{.ID}}")
+
+# Get host port for dev workstation - let Docker assign a random port
 if [ -z "$DEV_WORKSTATION_PORT" ]; then
-  HOST_PORT=$(docker port $DEV_CONTAINER_ID 8080 | cut -d':' -f2)
-  info "Random port assigned by Docker: $HOST_PORT"
+  if [ -n "$DEV_CONTAINER_ID" ]; then
+    HOST_PORT=$(docker port $DEV_CONTAINER_ID 8080 | cut -d':' -f2)
+    if [ -n "$HOST_PORT" ]; then
+      info "Random port assigned to VS Code: $HOST_PORT"
+    else
+      warn "Could not determine VS Code port, container may still be starting"
+      HOST_PORT=8080
+      info "Using default fallback port: $HOST_PORT (note: actual port may differ)"
+    fi
+  else
+    warn "VS Code container not found, service may still be starting"
+    HOST_PORT=8080
+    info "Using default fallback port: $HOST_PORT (note: actual port may differ)"
+  fi
 else
   HOST_PORT=$DEV_WORKSTATION_PORT
+fi
+
+# Get host port for server
+if [ -n "$SERVER_CONTAINER_ID" ]; then
+  SERVER_PORT=$(docker port $SERVER_CONTAINER_ID 3000 | cut -d':' -f2)
+  if [ -n "$SERVER_PORT" ]; then
+    info "Random port assigned to server: $SERVER_PORT"
+  else
+    warn "Could not determine server port, service may still be starting"
+    SERVER_PORT=$EXPOSE_SERVER_PORT
+    info "Using configured port: $SERVER_PORT"
+  fi
+else
+  warn "Server container not found, service may still be starting"
+  SERVER_PORT=$EXPOSE_SERVER_PORT
+  info "Using configured port: $SERVER_PORT"
 fi
 
 # Try to get tailscale IP if available
@@ -271,7 +304,7 @@ info "    http://$HOST_IP:$HOST_PORT"
 info "    No password required - authentication disabled for convenience"
 
 info "🌐 Application server is available at:"
-info "    http://$HOST_IP:$EXPOSE_SERVER_PORT"
+info "    http://$HOST_IP:$SERVER_PORT"
 
 info ""
 info "Environment configuration:"
