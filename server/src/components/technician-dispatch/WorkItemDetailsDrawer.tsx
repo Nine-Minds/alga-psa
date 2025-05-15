@@ -10,7 +10,7 @@ import { getWorkItemById } from 'server/src/lib/actions/workItemActions';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { getScheduleEntries } from 'server/src/lib/actions/scheduleActions';
 import { toast } from 'react-hot-toast';
-import TicketDetails from 'server/src/components/tickets/TicketDetails';
+import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import TaskEdit from 'server/src/components/projects/TaskEdit';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
 import { useTenant } from 'server/src/components/TenantProvider';

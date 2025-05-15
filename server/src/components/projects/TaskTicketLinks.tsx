@@ -12,7 +12,7 @@ import { getTicketsForList } from 'server/src/lib/actions/ticket-actions/ticketA
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
-import TicketDetails from 'server/src/components/tickets/TicketDetails';
+import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { ITicketListItem, ITicket, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IProjectTicketLinkWithDetails } from 'server/src/interfaces/project.interfaces';
 import { Button } from 'server/src/components/ui/Button';

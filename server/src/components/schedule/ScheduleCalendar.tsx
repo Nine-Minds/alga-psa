@@ -49,6 +49,19 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
+  
+  // Add useEffect for auto-scrolling to working hours
+  useEffect(() => {
+    if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
+      // Find the time slots container
+      const timeSlotContainer = calendarRef.current.querySelector('.rbc-time-content');
+      if (timeSlotContainer) {
+        const scrollToPosition = 8 * 4 * 15;
+        timeSlotContainer.scrollTop = scrollToPosition;
+        setHasScrolled(true);
+      }
+    }
+  }, [view, hasScrolled, events]);
 
   const handleDeleteClick = (event: IScheduleEntry, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -731,52 +744,60 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
         <div className="flex-grow relative" ref={calendarRef}>
           {isLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center z-10">Loading...</div>}
           {error && <div className="absolute inset-0 bg-red-100 text-red-700 flex items-center justify-center z-10 p-4">{error}</div>}
-          <DnDCalendar
-            localizer={localizer}
-            events={events}
-            startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-            endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-            eventPropGetter={(event: object) => ({
-              style: {
-                backgroundColor: 'transparent',
-                border: 'none',
-                borderRadius: '0px',
-                padding: '0px',
-                boxShadow: 'none',
-                color: 'inherit',
-              }
-            })}
-            style={{ height: '100%' }}
-            view={view}
-            date={date}
-            onView={(newView) => setView(newView)}
-            onNavigate={handleNavigate}
-            selectable
-            onSelectSlot={handleSelectSlot}
-            onSelectEvent={handleSelectEvent}
-            resizableAccessor={(event: object) => {
-              const scheduleEvent = event as IScheduleEntry;
-              return focusedTechnicianId !== null &&
-                    scheduleEvent?.assigned_user_ids &&
-                    scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-            }}
-            draggableAccessor={(event: object) => {
-              const scheduleEvent = event as IScheduleEntry;
-              return focusedTechnicianId !== null &&
-                    scheduleEvent?.assigned_user_ids &&
-                    scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-            }}
-            onEventResize={handleEventResize}
-            onEventDrop={handleEventDrop}
-            step={15}
-            timeslots={4}
-            components={{
-              toolbar: CustomToolbar,
-              event: EventComponent
-            }}
-            defaultView="week"
-            views={['month', 'week', 'day']}
-          />
+          {/* Create a date object for 8 AM to auto-scroll to working hours */}
+          {(() => {
+            const scrollToTime = new Date();
+            scrollToTime.setHours(8, 0, 0, 0);
+            return (
+              <DnDCalendar
+                localizer={localizer}
+                events={events}
+                startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
+                endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
+                eventPropGetter={(event: object) => ({
+                  style: {
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    borderRadius: '0px',
+                    padding: '0px',
+                    boxShadow: 'none',
+                    color: 'inherit',
+                  }
+                })}
+                style={{ height: '100%' }}
+                view={view}
+                date={date}
+                scrollToTime={scrollToTime}
+                onView={(newView) => setView(newView)}
+                onNavigate={handleNavigate}
+                selectable
+                onSelectSlot={handleSelectSlot}
+                onSelectEvent={handleSelectEvent}
+                resizableAccessor={(event: object) => {
+                  const scheduleEvent = event as IScheduleEntry;
+                  return focusedTechnicianId !== null &&
+                        scheduleEvent?.assigned_user_ids &&
+                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                }}
+                draggableAccessor={(event: object) => {
+                  const scheduleEvent = event as IScheduleEntry;
+                  return focusedTechnicianId !== null &&
+                        scheduleEvent?.assigned_user_ids &&
+                        scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                }}
+                onEventResize={handleEventResize}
+                onEventDrop={handleEventDrop}
+                step={15}
+                timeslots={4}
+                components={{
+                  toolbar: CustomToolbar,
+                  event: EventComponent
+                }}
+                defaultView="week"
+                views={['month', 'week', 'day']}
+              />
+            );
+          })()}
         </div>
       </div>
       <Dialog

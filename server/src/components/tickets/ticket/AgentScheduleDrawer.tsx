@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Calendar, momentLocalizer, View, CalendarProps, EventProps as BigCalendarEventProps } from 'react-big-calendar';
 import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
@@ -13,7 +13,8 @@ import { getScheduleEntries } from 'server/src/lib/actions/scheduleActions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { CalendarStyleProvider } from '../schedule/CalendarStyleProvider';
+import { CalendarStyleProvider } from 'server/src/components/schedule/CalendarStyleProvider';
+import { AgentScheduleDrawerStyles } from './AgentScheduleDrawerStyles';
 import { WorkItemType, IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { getEventColors } from 'server/src/components/technician-dispatch/utils';
@@ -37,57 +38,6 @@ const workItemHoverColors: Record<WorkItemType, string> = {
   ad_hoc: 'rgb(var(--color-border-300))'
 };
 
-// Custom CSS to adjust the calendar display
-const customCalendarStyle = `
-  <style>
-    /* Make the calendar title more prominent */
-    .rbc-toolbar-label {
-      font-size: 1.25rem !important;
-      font-weight: 600 !important;
-    }
-    
-    /* Ensure the calendar takes full width */
-    .flex-grow.relative {
-      width: 100% !important;
-    }
-    
-    /* Hide the technician sidebar if it exists */
-    .w-64.flex-shrink-0.bg-white {
-      display: none !important;
-    }
-    
-    /* Calendar container */
-    .rbc-calendar {
-      height: 100% !important;
-    }
-    
-    /* Month view specific styles */
-    .rbc-month-view {
-      height: 100% !important;
-    }
-    
-    .rbc-month-row {
-      min-height: 100px !important;
-    }
-    
-    /* Ensure month cells are visible */
-    .rbc-month-view .rbc-month-row .rbc-row-content {
-      height: auto !important;
-      min-height: 80px !important;
-    }
-    
-    /* Hide the default event label to prevent duplicate time display */
-    .rbc-event-label {
-      display: none !important;
-    }
-    
-    /* Ensure events fill their container properly */
-    .rbc-event-content {
-      width: 100% !important;
-      height: 100% !important;
-    }
-  </style>
-`;
 
 interface AgentScheduleDrawerProps {
   agentId: string;
@@ -107,6 +57,35 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
   const { openDrawer, closeDrawer } = useDrawer();
   const [selectedScheduleEntry, setSelectedScheduleEntry] = useState<IScheduleEntry | null>(null);
   const [currentAgentDetails, setCurrentAgentDetails] = useState<IUserWithRoles | null>(null);
+  const [hasScrolled, setHasScrolled] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [previousView, setPreviousView] = useState<View>('day');
+
+  // Add useEffect for auto-scrolling to working hours
+  useEffect(() => {
+    if (!hasScrolled && calendarRef.current && (view === 'day' || view === 'week')) {
+      // Wait for the calendar to fully render
+      setTimeout(() => {
+        // Find the time slots container
+        const timeSlotContainer = calendarRef.current?.querySelector('.rbc-time-content');
+        if (timeSlotContainer) {
+          // Calculate scroll position based on the actual height of time slots
+          const timeSlots = timeSlotContainer.querySelectorAll('.rbc-timeslot-group');
+          if (timeSlots.length > 0) {
+            // Get the height of a single time slot
+            const slotHeight = timeSlots[0].clientHeight;
+            // Scroll to 8 AM (8 slots from the top)
+            timeSlotContainer.scrollTop = 8 * slotHeight;
+            console.log('Auto-scrolled to 8 AM, position:', 8 * slotHeight);
+          } else {
+            // Fallback to a fixed value if we can't determine the slot height
+            timeSlotContainer.scrollTop = 320; // Approximate height for 8 hours
+          }
+          setHasScrolled(true);
+        }
+      }, 500); // Longer delay to ensure the calendar is fully rendered
+    }
+  }, [view, hasScrolled, events]);
 
   // Event component for different calendar views
   const EventComponent = ({ event }: BigCalendarEventProps<IScheduleEntry>) => {
@@ -181,19 +160,56 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     );
   };
 
+  // Entry details skeleton component
+  const EntryDetailsSkeleton = () => (
+    <div className="h-full w-full p-4 animate-pulse">
+      <div className="h-8 w-3/4 bg-gray-200 rounded mb-4"></div>
+      <div className="h-6 w-1/2 bg-gray-200 rounded mb-2"></div>
+      <div className="h-6 w-1/3 bg-gray-200 rounded mb-4"></div>
+      
+      <div className="h-px w-full bg-gray-200 my-4"></div>
+      
+      <div className="h-6 w-1/4 bg-gray-200 rounded mb-2"></div>
+      <div className="h-24 w-full bg-gray-200 rounded mb-4"></div>
+      
+      <div className="h-6 w-1/4 bg-gray-200 rounded mb-2"></div>
+      <div className="h-12 w-full bg-gray-200 rounded mb-4"></div>
+      
+      <div className="h-px w-full bg-gray-200 my-4"></div>
+      
+      <div className="flex justify-end space-x-2 mt-4">
+        <div className="h-8 w-20 bg-gray-200 rounded"></div>
+        <div className="h-8 w-20 bg-gray-200 rounded"></div>
+      </div>
+    </div>
+  );
+
   // Handler for when a calendar event is selected
   const handleCalendarEventSelect = (scheduleEvent: IScheduleEntry) => {
     console.log('Event selected:', scheduleEvent.title, scheduleEvent.work_item_type);
     
     if (session?.user?.id) {
       setSelectedScheduleEntry(scheduleEvent);
+      
+      // Store the current view before navigating to details
+      const currentView = view;
+      setPreviousView(currentView);
+      
+      // Open the entry popup directly without showing skeleton first
       openDrawer(
         <EntryPopup
           event={scheduleEvent}
-          onClose={closeDrawer}
+          onClose={() => {
+            // Restore the previous view immediately when closing
+            setView(currentView);
+            closeDrawer();
+          }}
           onSave={(entryData) => {
             console.log('AgentScheduleDrawer: EntryPopup save:', entryData);
+            
+            // Restore view and close drawer
             closeDrawer();
+            
             // Re-fetch events
             const fetchEntries = async () => {
                 let startDate = new Date(date);
@@ -223,8 +239,11 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           }}
           onDelete={(entryId, deleteType) => {
             console.log('AgentScheduleDrawer: EntryPopup delete:', entryId, deleteType);
+            
+            // Restore view and close drawer
             closeDrawer();
-             const fetchEntries = async () => {
+            
+            const fetchEntries = async () => {
                 let startDate = new Date(date);
                 let endDate = new Date(date);
                 if (view === 'day') {
@@ -262,6 +281,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
       );
     }
   };
+  
 
   // Fetch agent details and schedule entries
   useEffect(() => {
@@ -329,12 +349,19 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     fetchAgentDetails();
   }, [agentId, date, view]);
 
-  // Navigation functions
+  // Navigation functions with loading state
   const goToToday = () => {
+    // Show loading state before changing date
+    setIsLoading(true);
+    setHasScrolled(false);
     setDate(new Date());
   };
   
   const goToPrev = () => {
+    // Show loading state before changing date
+    setIsLoading(true);
+    setHasScrolled(false);
+    
     const newDate = new Date(date);
     if (view === 'day') {
       newDate.setDate(date.getDate() - 1);
@@ -347,6 +374,10 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
   };
   
   const goToNext = () => {
+    // Show loading state before changing date
+    setIsLoading(true);
+    setHasScrolled(false);
+    
     const newDate = new Date(date);
     if (view === 'day') {
       newDate.setDate(date.getDate() + 1);
@@ -360,7 +391,12 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
 
   // Handle view change
   const handleViewChange = (newView: View) => {
+    // Show loading state before changing view
+    setIsLoading(true);
+    setHasScrolled(false);
     setView(newView);
+    // Also update the previous view so it's preserved if we navigate away
+    setPreviousView(newView);
   };
 
   // Custom toolbar to show the agent's name as the title
@@ -390,12 +426,19 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
             {'Next >'}
           </button>
         </span>
-        <span className="rbc-toolbar-label">{agentName || 'Agent Schedule'}</span>
+        <span className="rbc-toolbar-label">
+          <div>{agentName || 'Agent Schedule'}</div>
+          {view === 'day' && (
+            <div className="text-sm font-normal">
+              {date.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          )}
+        </span>
         <span className="rbc-btn-group">
           <button 
             type="button" 
             onClick={() => {
-              setView('month');
+              handleViewChange('month');
               onView('month');
             }}
             className={`px-3 py-1 border border-gray-300 rounded-l-md ${view === 'month' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100'}`}
@@ -405,7 +448,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           <button 
             type="button" 
             onClick={() => {
-              setView('week');
+              handleViewChange('week');
               onView('week');
             }}
             className={`px-3 py-1 border-t border-b border-gray-300 ${view === 'week' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100'}`}
@@ -415,7 +458,7 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           <button 
             type="button" 
             onClick={() => {
-              setView('day');
+              handleViewChange('day');
               onView('day');
             }}
             className={`px-3 py-1 border border-gray-300 rounded-r-md ${view === 'day' ? 'bg-blue-500 text-white' : 'bg-white hover:bg-gray-100'}`}
@@ -427,20 +470,74 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     );
   };
 
-  function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-    const sizeClass = size === "sm" ? "h-4 w-4" : size === "md" ? "h-8 w-8" : "h-12 w-12";
-    return (
-      <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Spinner size="lg" />
+// Simple skeleton loader component for the calendar
+function CalendarSkeleton() {
+  return (
+    <div className="h-full w-full animate-pulse">
+      {/* Toolbar skeleton */}
+      <div className="flex justify-between items-center p-4 mb-4">
+        <div className="flex space-x-2">
+          <div className="h-8 w-20 bg-gray-200 rounded"></div>
+          <div className="h-8 w-16 bg-gray-200 rounded"></div>
+          <div className="h-8 w-20 bg-gray-200 rounded"></div>
+        </div>
+        <div className="h-8 w-48 bg-gray-200 rounded"></div>
+        <div className="flex space-x-2">
+          <div className="h-8 w-20 bg-gray-200 rounded"></div>
+          <div className="h-8 w-16 bg-gray-200 rounded"></div>
+          <div className="h-8 w-16 bg-gray-200 rounded"></div>
+        </div>
       </div>
-    );
-  }
+      
+      {/* Calendar content skeleton */}
+      <div className="border rounded bg-white h-[calc(100%-60px)]">
+        {/* Calendar header */}
+        <div className="border-b p-2">
+          <div className="flex">
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="flex-1 p-1">
+                <div className="h-6 bg-gray-200 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Calendar body */}
+        <div className="h-[calc(100%-40px)] overflow-auto">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex border-b">
+              <div className="w-16 p-2 border-r">
+                <div className="h-4 w-12 bg-gray-200 rounded"></div>
+              </div>
+              <div className="flex-1 p-2">
+                <div className="h-8 bg-gray-200 rounded mb-2"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const sizeClass = size === "sm" ? "h-4 w-4" : size === "md" ? "h-8 w-8" : "h-12 w-12";
+  return (
+    <div className={`animate-spin rounded-full border-2 border-gray-300 border-t-blue-600 ${sizeClass}`}></div>
+  );
+}
+
+if (isLoading) {
+  return (
+    <div className="flex flex-col h-full">
+      <AgentScheduleDrawerStyles />
+      <CalendarStyleProvider />
+      <div className="h-full p-4">
+        <CalendarSkeleton />
+      </div>
+    </div>
+  );
+}
 
   if (error) {
     return (
@@ -453,14 +550,18 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     );
   }
 
+  // Create a date object for 8 AM to auto-scroll to working hours
+  const scrollToTime = new Date();
+  scrollToTime.setHours(8, 0, 0, 0);
+
   return (
     <div className="flex flex-col h-full">
       {/* Inject custom CSS */}
-      <div dangerouslySetInnerHTML={{ __html: customCalendarStyle }} />
+      <AgentScheduleDrawerStyles />
       <CalendarStyleProvider />
       
-      {/* Calendar component */}
-      <div className="h-full p-4">
+      {/* Calendar component with fixed header and scrollable content */}
+      <div className="h-full flex flex-col" ref={calendarRef}>
         <DnDCalendar
           localizer={localizer}
           events={events}
@@ -471,11 +572,12 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           views={['month', 'week', 'day']}
           view={view}
           date={date}
+          scrollToTime={scrollToTime} // Auto-scroll to 8 AM
           onNavigate={(action) => {
             // This is handled by our custom toolbar buttons
             console.log('Calendar navigation:', action);
           }}
-          onView={(newView) => setView(newView as View)}
+          onView={(newView) => handleViewChange(newView as View)}
           onSelectEvent={handleCalendarEventSelect}
           selectable={false}
           components={{

@@ -3,7 +3,7 @@ import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions
 import TicketDetailsContainer from './TicketDetailsContainer';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Suspense } from 'react';
-import { TicketDetailsSkeleton } from 'server/src/components/tickets/TicketDetailsSkeleton';
+import { TicketDetailsSkeleton } from 'server/src/components/tickets/ticket/TicketDetailsSkeleton';
 
 interface TicketDetailsPageProps {
   params: {
