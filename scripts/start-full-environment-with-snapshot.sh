@@ -139,7 +139,7 @@ EXPOSE_PGBOUNCER_PORT=0  # Disable external port exposure for pgbouncer
 # Unique port assignments for each service
 EXPOSE_DB_PORT=$(( 5432 + RANDOM % 100 ))
 EXPOSE_REDIS_PORT=$(( 6379 + RANDOM % 100 ))
-EXPOSE_WORKSTATION_SERVER_PORT=$(( 3100 + RANDOM % 100 ))
+EXPOSE_SERVER_PORT=$(( 3000 + RANDOM % 100 ))
 EXPOSE_HOCUSPOCUS_PORT=$(( 1234 + RANDOM % 100 ))
 EOF
 

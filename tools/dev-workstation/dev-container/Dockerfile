@@ -1,7 +1,7 @@
 ## Extend the official code-server image and install Node.js LTS
 
 # 1. Base image
-FROM codercom/code-server:latest
+FROM gitpod/openvscode-server:latest
 
 # 2. Switch to root to install packages
 USER root
@@ -27,11 +27,6 @@ RUN node -v && npm -v
 RUN npm install -g @anthropic-ai/claude-code
 
 # 8. Switch back to the 'coder' user
-USER coder
-
-# 7. Default work directory is already /home/coder/project
-#    Expose any additional ports if needed
-
-# 8. Entry point is inherited from the base image
+USER openvscode-server
 
 # End of Dockerfile
