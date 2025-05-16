@@ -6,7 +6,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { ChevronDown, X } from 'lucide-react';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Card } from 'server/src/components/ui/Card';
-import TicketDocumentsSection from 'server/src/components/tickets/TicketDocumentsSection';
+import TicketDocumentsSection from 'server/src/components/tickets/ticket/TicketDocumentsSection';
 import { 
   getClientTicketDetails, 
   addClientTicketComment,
@@ -18,7 +18,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import TicketConversation from 'server/src/components/tickets/TicketConversation';
+import TicketConversation from 'server/src/components/tickets/ticket/TicketConversation';
 import { DEFAULT_BLOCK } from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';

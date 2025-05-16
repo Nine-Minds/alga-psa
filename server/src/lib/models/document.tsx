@@ -229,40 +229,6 @@ const Document = {
             logger.error(`Error getting documents with contact_name_id ${contact_name_id}:`, error);
             throw error;
         }
-    },
-
-    getByScheduleId: async (schedule_id: string): Promise<IDocument[]> => {
-        try {
-            const {knex: db, tenant} = await createTenantKnex();
-            
-            if (!tenant) {
-                throw new Error('Tenant context is required for getting documents by schedule');
-            }
-
-            return await db<IDocument>('documents')
-                .select(
-                    'documents.*',
-                    'users.first_name',
-                    'users.last_name',
-                    db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
-                )
-                .join('document_associations', function() {
-                    this.on('documents.document_id', '=', 'document_associations.document_id')
-                        .andOn('documents.tenant', '=', 'document_associations.tenant');
-                })
-                .leftJoin('users', function() {
-                    this.on('documents.created_by', '=', 'users.user_id')
-                        .andOn('users.tenant', '=', db.raw('?', [tenant]));
-                })
-                .where({
-                    'documents.tenant': tenant,
-                    'document_associations.entity_id': schedule_id,
-                    'document_associations.entity_type': 'schedule'
-                });
-        } catch (error) {
-            logger.error(`Error getting documents with schedule_id ${schedule_id}:`, error);
-            throw error;
-        }
     }
 };
 

@@ -15,7 +15,7 @@ import { getTaskDetails } from "server/src/lib/actions/workflow-actions/taskInbo
 import { getScheduleEntries } from "server/src/lib/actions/scheduleActions";
 import { getCurrentUser, getAllUsers } from "server/src/lib/actions/user-actions/userActions";
 import { getTimeEntryById, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
-import TicketDetails from "server/src/components/tickets/TicketDetails";
+import TicketDetails from "server/src/components/tickets/ticket/TicketDetails";
 import TaskEdit from "server/src/components/projects/TaskEdit";
 import EntryPopup from "server/src/components/schedule/EntryPopup";
 import { TaskForm } from "server/src/components/workflow/TaskForm";

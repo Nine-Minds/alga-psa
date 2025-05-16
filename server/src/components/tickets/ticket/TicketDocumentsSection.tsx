@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import Documents from '../documents/Documents';
-import { IDocument } from '../../interfaces/document.interface';
-import { getDocumentByTicketId } from '../../lib/actions/document-actions/documentActions';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import Documents from 'server/src/components/documents/Documents';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { getDocumentByTicketId } from 'server/src/lib/actions/document-actions/documentActions';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface TicketDocumentsSectionProps {
   id?: string;

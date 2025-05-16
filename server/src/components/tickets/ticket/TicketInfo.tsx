@@ -1,17 +1,17 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import RichTextViewer from '../editor/RichTextViewer';
-import TextEditor from '../editor/TextEditor';
+import RichTextViewer from 'server/src/components/editor/RichTextViewer';
+import TextEditor from 'server/src/components/editor/TextEditor';
 import { PartialBlock } from '@blocknote/core';
-import { ITicket, IComment, ITicketCategory } from '../../interfaces';
-import { IUserWithRoles } from '../../interfaces/auth.interfaces';
+import { ITicket, IComment, ITicketCategory } from 'server/src/interfaces';
+import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import CustomSelect from '../ui/CustomSelect';
-import UserPicker from '../ui/UserPicker';
-import { CategoryPicker } from './CategoryPicker';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
+import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories } from '../../lib/actions/ticketCategoryActions';
+import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 

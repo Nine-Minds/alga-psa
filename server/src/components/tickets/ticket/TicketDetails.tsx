@@ -19,10 +19,10 @@ import {
     ITicketResource,
     ITicketCategory
 } from "server/src/interfaces";
-import TicketInfo from "server/src/components/tickets/TicketInfo";
-import TicketProperties from "server/src/components/tickets/TicketProperties";
-import TicketDocumentsSection from "server/src/components/tickets/TicketDocumentsSection";
-import TicketConversation from "server/src/components/tickets/TicketConversation";
+import TicketInfo from "server/src/components/tickets/ticket/TicketInfo";
+import TicketProperties from "server/src/components/tickets/ticket/TicketProperties";
+import TicketDocumentsSection from "server/src/components/tickets/ticket/TicketDocumentsSection";
+import TicketConversation from "server/src/components/tickets/ticket/TicketConversation";
 import AssociatedAssets from "server/src/components/assets/AssociatedAssets";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
@@ -42,7 +42,7 @@ import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions"
 import CompanyDetails from "server/src/components/companies/CompanyDetails";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
-import TechnicianDispatchDashboard from "server/src/components/technician-dispatch/TechnicianDispatchDashboard";
+import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
 import { WorkItemType } from "server/src/interfaces/workItem.interfaces";
 import { ReflectionContainer } from "server/src/types/ui-reflection/ReflectionContainer";
 import TimeEntryDialog from "server/src/components/time-management/time-entry/time-sheet/TimeEntryDialog";
@@ -294,14 +294,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleAgentClick = (userId: string) => {
-        openDrawer(
-            <TechnicianDispatchDashboard
-                filterWorkItemId={ticket.ticket_id}
-                filterWorkItemType="ticket"
-            />
-        );
-    };
+  const handleAgentClick = (userId: string) => {
+    openDrawer(
+      <AgentScheduleDrawer
+        agentId={userId}
+      />
+    );
+  };
 
     const handleAddAgent = async (userId: string) => {
         try {

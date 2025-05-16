@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { ITicketCategory } from '../../interfaces/ticket.interfaces';
-import TreeSelect, { TreeSelectOption, TreeSelectPath } from '../ui/TreeSelect';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import TreeSelect, { TreeSelectOption, TreeSelectPath } from 'server/src/components/ui/TreeSelect';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface CategoryPickerProps {
   id?: string; // Made required since it's needed for reflection registration

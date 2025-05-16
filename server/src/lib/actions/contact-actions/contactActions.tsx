@@ -131,19 +131,6 @@ export async function deleteContact(contactId: string) {
       counts['document'] = Number(documentCount.count);
     }
 
-    // Check for schedules
-    const scheduleCount = await db('schedules')
-      .where({
-        contact_name_id: contactId,
-        tenant
-      })
-      .count('* as count')
-      .first();
-    if (scheduleCount && Number(scheduleCount.count) > 0) {
-      dependencies.push('schedule');
-      counts['schedule'] = Number(scheduleCount.count);
-    }
-
     // If there are dependencies, throw a detailed error
     if (dependencies.length > 0) {
       const dependencyList = dependencies.map(dep => `${counts[dep]} ${dep}${counts[dep] > 1 ? 's' : ''}`).join(', ');

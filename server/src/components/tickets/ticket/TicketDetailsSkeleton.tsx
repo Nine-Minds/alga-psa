@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Skeleton } from '../ui/Skeleton';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 export function TicketDetailsSkeleton() {
   return (

@@ -2,8 +2,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
-import TextEditor from '../editor/TextEditor';
-import RichTextViewer from '../editor/RichTextViewer';
+import TextEditor from '../../editor/TextEditor';
+import RichTextViewer from '../../editor/RichTextViewer';
 import { Pencil, Trash, Lock, CheckCircle } from 'lucide-react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
