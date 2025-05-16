@@ -14,6 +14,7 @@ import { ActivitiesTableFilters, ActivitiesTableFiltersRef } from './filters/Act
 import { useActivityDrawer } from './ActivityDrawerProvider';
 import { useActivitiesCache } from 'server/src/hooks/useActivitiesCache';
 import { ScheduleActivity } from 'server/src/interfaces/activity.interfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface ActivitiesDataTableSectionProps {
   title?: string;
@@ -202,10 +203,7 @@ export function ActivitiesDataTableSection({
         />
         {isLoading ? (
           <div className="flex justify-center items-center h-40">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-2"></div>
-              <p className="text-gray-500">Loading activities...</p>
-            </div>
+            <LoadingIndicator text="Loading activities..." spinnerProps={{ size: "sm" }} layout="stacked" />
           </div>
         ) : error ? (
           <div className="flex justify-center items-center h-40">

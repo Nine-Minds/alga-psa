@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { retryWorkflowActionAction } from 'server/src/lib/actions/workflow-actions';
-import { RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertTriangle, RefreshCw } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface WorkflowActionsListProps {
   actionResults: IWorkflowActionResult[];
@@ -146,8 +147,14 @@ export default function WorkflowActionsList({ actionResults, executionId }: Work
                   onClick={() => handleRetry(action.result_id)}
                   disabled={isRetrying[action.result_id]}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRetrying[action.result_id] ? 'animate-spin' : ''}`} />
-                  Retry
+                  {isRetrying[action.result_id] ? (
+                    <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Retry" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry
+                    </>
+                  )}
                 </Button>
               )}
             </div>

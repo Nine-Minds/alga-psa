@@ -13,16 +13,17 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { 
   Search, 
-  Filter, 
-  Download, 
-  RefreshCw, 
-  AlertCircle, 
-  Info, 
+  Filter,
+  Download,
+  AlertCircle,
+  Info,
+  RefreshCw,
   CheckCircle, 
   XCircle,
   Clock
 } from 'lucide-react';
 import { IWorkflowEvent, IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface LogEntry {
   id: string;
@@ -258,8 +259,14 @@ export default function WorkflowExecutionLogs({
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
+            {isRefreshing ? (
+              <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refresh" />
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </>
+            )}
           </Button>
           
           <DropdownMenu>

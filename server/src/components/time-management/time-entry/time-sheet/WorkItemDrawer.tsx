@@ -11,6 +11,7 @@ import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import TaskEdit from 'server/src/components/projects/TaskEdit';
 import EntryPopup from 'server/src/components/schedule/EntryPopup';
 import { useTenant } from 'server/src/components/TenantProvider';
+import Spinner from 'server/src/components/ui/Spinner';
 
 interface WorkItemDrawerProps {
     workItem: IExtendedWorkItem;
@@ -232,7 +233,7 @@ export function WorkItemDrawer({
         <div className="min-w-auto h-full bg-white">
             {isLoading ? (
                 <div className="flex items-center justify-center h-full">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+                    <Spinner size="sm" />
                 </div>
             ) : content}
         </div>

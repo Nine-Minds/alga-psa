@@ -11,11 +11,12 @@ import {
 } from 'server/src/lib/actions/workflow-actions';
 import { 
   PauseCircle, 
-  PlayCircle, 
-  XCircle, 
-  RefreshCw, 
-  ArrowLeft 
+  PlayCircle,
+  XCircle,
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 interface WorkflowControlsProps {
   execution: IWorkflowExecution;
@@ -67,8 +68,13 @@ export default function WorkflowControls({ execution }: WorkflowControlsProps) {
         }}
         disabled={isLoading['refresh']}
       >
-        <RefreshCw className={`h-4 w-4 mr-2 ${isLoading['refresh'] ? 'animate-spin' : ''}`} />
-        {isLoading['refresh'] ? 'Refreshing...' : 'Refresh'}
+        {isLoading['refresh'] ? (
+          <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refreshing..." />
+        ) : (
+          <>
+            <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+          </>
+        )}
       </Button>
 
       {execution.status === 'active' && (

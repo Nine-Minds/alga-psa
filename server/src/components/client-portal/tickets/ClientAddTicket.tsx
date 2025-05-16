@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import Spinner from 'server/src/components/ui/Spinner';
 import { AlertCircle } from 'lucide-react';
 import { createClientTicket } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
@@ -122,7 +123,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
         </DialogHeader>
         {isLoading ? (
           <div className="flex items-center justify-center p-6">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500" />
+            <Spinner size="sm" />
           </div>
         ) : (
           <>

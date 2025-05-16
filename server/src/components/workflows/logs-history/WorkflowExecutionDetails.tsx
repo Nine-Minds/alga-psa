@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from 'server/src/components/
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Button } from 'server/src/components/ui/Button';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { IWorkflowExecution } from '@shared/workflow/persistence/workflowInterfaces';
 import { getWorkflowExecutionDetails } from 'server/src/lib/actions/workflow-actions';
 import WorkflowEventTimeline from 'server/src/components/workflows/WorkflowEventTimeline';
@@ -167,8 +168,14 @@ export function WorkflowExecutionDetails({ executionId, onBack }: WorkflowExecut
           disabled={refreshing}
           id="refresh-workflow-details-button"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh'}
+          {refreshing ? (
+            <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refreshing..." />
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </>
+          )}
         </Button>
       </div>
 

@@ -4,7 +4,8 @@ import React, { useState, useEffect, useTransition } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../../ui/Card'; // Use relative path
 import { Button } from '../../ui/Button'; // Use relative path
 import { Alert, AlertDescription } from '../../ui/Alert'; // Use relative path (Removed AlertTitle)
-import { Loader2, CheckCircle, XCircle, AlertCircle, Link, Unlink } from 'lucide-react'; // Icons
+import { CheckCircle, XCircle, AlertCircle, Link, Unlink } from 'lucide-react'; // Icons
+import LoadingIndicator from '../../ui/LoadingIndicator'; // Use relative path
 import { getQboConnectionStatus, disconnectQbo, QboConnectionStatus } from '../../../lib/actions/integrations/qboActions'; // Use relative path
 import QboDisconnectConfirmModal from './QboDisconnectConfirmModal'; // Import confirmation modal (will be created next)
 import { QboMappingManager } from '../../integrations/qbo/QboMappingManager'; // Import the mapping manager
@@ -131,7 +132,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
   // Render Status Indicator (Task 80)
   const renderStatusIndicator = () => {
     if (isLoading || !statusInfo) {
-      return <div className="flex items-center space-x-2"><Loader2 className="h-4 w-4 animate-spin" /><span>Loading status...</span></div>;
+      return <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Loading status..." />;
     }
 
     switch (statusInfo.status) {
@@ -173,7 +174,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
   const renderActionButtons = () => {
     if (isLoading || !statusInfo) {
       // Added ID to disabled button
-      return <Button disabled id="qbo-loading-button"><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Please wait...</Button>;
+      return <Button disabled id="qbo-loading-button"><LoadingIndicator spinnerProps={{ size: 'xs' }} text="Please wait..." /></Button>;
     }
 
     switch (statusInfo.status) {
@@ -185,8 +186,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
             disabled={isDisconnecting}
             id="qbo-disconnect-button" // Added ID
           >
-            {isDisconnecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Unlink className="mr-2 h-4 w-4" />}
-            Disconnect
+            {isDisconnecting ? <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Disconnect" /> : <><Unlink className="mr-2 h-4 w-4" /> Disconnect</>}
           </Button>
         );
       case 'Not Connected':

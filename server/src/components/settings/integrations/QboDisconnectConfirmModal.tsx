@@ -11,7 +11,8 @@ import {
   // Removed DialogClose import
 } from '../../ui/Dialog'; // Use relative path
 import { Button } from '../../ui/Button'; // Use relative path
-import { Loader2, AlertTriangle } from 'lucide-react'; // Icons
+import { AlertTriangle } from 'lucide-react'; // Icons
+import LoadingIndicator from '../../ui/LoadingIndicator'; // Use relative path
 
 interface QboDisconnectConfirmModalProps {
   isOpen: boolean;
@@ -62,9 +63,10 @@ const QboDisconnectConfirmModal: React.FC<QboDisconnectConfirmModalProps> = ({
             id="qbo-disconnect-confirm-button" // Added ID
           >
             {isDisconnecting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Confirm Disconnect
+              <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Confirm Disconnect" className="mr-2" />
+            ) : (
+              'Confirm Disconnect'
+            )}
           </Button>
         </DialogFooter>
       {/* Removed closing DialogContent tag */}

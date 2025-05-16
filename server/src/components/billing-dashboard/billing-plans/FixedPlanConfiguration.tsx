@@ -10,6 +10,8 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import Spinner from 'server/src/components/ui/Spinner';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
   getBillingPlanById,
@@ -173,7 +175,7 @@ export function FixedPlanConfiguration({
   })) : [];
 
   if (loading && !plan) {
-    return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
   if (error) {
@@ -270,8 +272,7 @@ export function FixedPlanConfiguration({
 
           <div className="flex justify-end pt-4">
             <Button id="save-fixed-config-button" onClick={handleSave} disabled={saving || Object.keys(validationErrors).length > 0}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save Configuration
+              {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save Configuration" /> : "Save Configuration"}
             </Button>
           </div>
         </CardContent>

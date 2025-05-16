@@ -5,6 +5,7 @@ import { Filter, XCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Input } from 'server/src/components/ui/Input';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import Spinner from 'server/src/components/ui/Spinner';
 import { IWorkItem, IExtendedWorkItem, WorkItemWithStatus, WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
@@ -374,7 +375,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
             </svg>
             {isSearching && (
               <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[rgb(var(--color-primary-500))]"></div>
+                <Spinner size="xs" />
               </div>
             )}
           </div>

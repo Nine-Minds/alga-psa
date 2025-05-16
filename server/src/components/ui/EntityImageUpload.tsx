@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useState, useRef, useTransition } from 'react';
 import { toast } from 'react-hot-toast';
 import { Pen, Loader2, Trash2, Upload } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
@@ -263,8 +264,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 className="w-fit"
                 data-automation-id={`upload-${entityType}-image-button`}
               >
-                {isPendingUpload ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                Upload {entityType === 'company' ? 'Logo' : 'Avatar'}
+                {isPendingUpload ? <LoadingIndicator spinnerProps={{ size: "xs" }} text={`Uploading ${entityType === 'company' ? 'Logo' : 'Avatar'}...`} className="mr-2" /> : <><Upload className="mr-2 h-4 w-4" /> Upload {entityType === 'company' ? 'Logo' : 'Avatar'}</>}
               </Button>
               
               <input

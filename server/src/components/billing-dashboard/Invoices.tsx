@@ -4,6 +4,7 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { MoreVertical } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -692,8 +693,7 @@ const Invoices: React.FC = () => {
             <h3 className="text-xl font-semibold mb-4">Invoice Preview</h3>
             {isPreviewLoading ? (
               <div className="flex items-center justify-center h-64 border rounded-md bg-gray-50">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <span className="ml-2 text-gray-600">Loading Preview...</span>
+                <LoadingIndicator text="Loading Preview..." spinnerProps={{ size:"sm" }} />
               </div>
             ) : detailedInvoiceData && selectedTemplate ? (
               // Only render if we have the detailed data and the selected template object

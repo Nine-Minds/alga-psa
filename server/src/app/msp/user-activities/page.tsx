@@ -1,6 +1,7 @@
 "use client";
 
 import { UserActivitiesDashboard } from 'server/src/components/user-activities/UserActivitiesDashboard';
+import Spinner from 'server/src/components/ui/Spinner';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { useEffect, useState } from 'react';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -30,9 +31,7 @@ export default function UserActivitiesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
+      <Spinner size="lg" className="h-screen" />
     );
   }
 
