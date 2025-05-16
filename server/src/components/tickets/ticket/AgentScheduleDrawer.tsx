@@ -98,8 +98,17 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     const formattedDate = startMoment.toLocaleDateString();
     const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-    // Construct detailed tooltip
-    const tooltipTitle = `${scheduleEvent.title}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+    // Check if this is a private event that the user doesn't own
+    const isPrivateEvent = scheduleEvent.is_private;
+    const isCreator = session?.user?.id === agentId &&
+                     scheduleEvent.assigned_user_ids?.length === 1 &&
+                     scheduleEvent.assigned_user_ids[0] === session?.user?.id;
+    const isPrivateNonOwner = isPrivateEvent && !isCreator;
+    
+    // Construct detailed tooltip - show limited info for private events
+    const tooltipTitle = isPrivateNonOwner
+      ? `Busy\nDate: ${formattedDate}\nTime: ${formattedTime}`
+      : `${scheduleEvent.title}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
     
     // Get base and hover colors based on work item type
     const baseColor = workItemColors[scheduleEvent.work_item_type as WorkItemType] || workItemColors.ad_hoc;
@@ -133,7 +142,9 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
           onMouseLeave={() => setHoveredEventId(null)}
           title={tooltipTitle}
         >
-          <div className="font-semibold truncate text-[10px]">{scheduleEvent.title}</div>
+          <div className="font-semibold truncate text-[10px]">
+            {isPrivateNonOwner ? "Busy" : scheduleEvent.title}
+          </div>
         </div>
       );
     }
@@ -154,7 +165,9 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
         onMouseLeave={() => setHoveredEventId(null)}
         title={tooltipTitle}
       >
-        <div className="font-semibold truncate">{scheduleEvent.title}</div>
+        <div className="font-semibold truncate">
+          {isPrivateNonOwner ? "Busy" : scheduleEvent.title}
+        </div>
         <div className="text-xs opacity-80 truncate">{formattedTime}</div>
       </div>
     );
@@ -189,6 +202,13 @@ const AgentScheduleDrawer: React.FC<AgentScheduleDrawerProps> = ({
     console.log('Event selected:', scheduleEvent.title, scheduleEvent.work_item_type);
     
     if (session?.user?.id) {
+      // Check if this is a private event that the user doesn't own
+      const isPrivateEvent = scheduleEvent.is_private;
+      const isCreator = session?.user?.id === agentId &&
+                       scheduleEvent.assigned_user_ids?.length === 1 &&
+                       scheduleEvent.assigned_user_ids[0] === session?.user?.id;
+      const isPrivateNonOwner = isPrivateEvent && !isCreator;
+      
       setSelectedScheduleEntry(scheduleEvent);
       
       // Store the current view before navigating to details

@@ -416,8 +416,21 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
 
   const draggableAccessor = useCallback((event: object) => {
     const scheduleEvent = event as IScheduleEntry;
-    return primaryTechnicianId !== null && 
-           scheduleEvent?.assigned_user_ids && 
+    
+    // Check if the event is private and the user is not the creator
+    const isPrivateEvent = scheduleEvent.is_private;
+    const isCreator = primaryTechnicianId !== null &&
+                     scheduleEvent?.assigned_user_ids &&
+                     scheduleEvent.assigned_user_ids.length === 1 &&
+                     scheduleEvent.assigned_user_ids[0] === primaryTechnicianId;
+    
+    // If the event is private and the user is not the creator, it cannot be dragged
+    if (isPrivateEvent && !isCreator) {
+      return false;
+    }
+    
+    return primaryTechnicianId !== null &&
+           scheduleEvent?.assigned_user_ids &&
            scheduleEvent.assigned_user_ids.includes(primaryTechnicianId);
   }, [primaryTechnicianId]);
 

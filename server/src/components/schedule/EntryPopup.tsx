@@ -70,6 +70,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         scheduled_start: new Date(event.scheduled_start),
         scheduled_end: new Date(event.scheduled_end),
         assigned_user_ids: event.assigned_user_ids,
+        is_private: event.is_private || false,
       };
     } else if (slot) {
       return {
@@ -85,6 +86,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         work_item_type: 'ad_hoc',
         // Default to focused technician if available, otherwise current user
         assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
+        is_private: false,
       };
     } else {
       return {
@@ -100,6 +102,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         work_item_type: 'ad_hoc',
         // Default to focused technician if available, otherwise current user
         assigned_user_ids: focusedTechnicianId ? [focusedTechnicianId] : [currentUserId],
+        is_private: false,
       };
     }
   });
@@ -111,10 +114,23 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     // Determine mode and permissions
     const isEditing = !!event;
     const isCurrentUserSoleAssignee = isEditing && event.assigned_user_ids?.length === 1 && event.assigned_user_ids[0] === currentUserId;
-    // User can edit fields if: not editing (i.e., creating new), OR has modify permission, OR is the sole assignee of the entry being edited.
-    const canEditFields = viewOnly ? false : (!isEditing || canModifySchedule || isCurrentUserSoleAssignee);
+    const isPrivateEvent = isEditing && event.is_private;
+    
+    const canEditFields = viewOnly ? false : (
+      !isEditing ||
+      (canModifySchedule && (!isPrivateEvent || isCurrentUserSoleAssignee)) ||
+      isCurrentUserSoleAssignee
+    );
+    
     // User can modify assignment if they have the specific permission (passed as canAssignOthers)
-    const canModifyAssignment = viewOnly ? false : canAssignOthers;
+    // AND the entry is not private OR they are the creator
+    const canModifyAssignment = viewOnly ? false : (
+      canAssignOthers && (!isPrivateEvent || isCurrentUserSoleAssignee)
+    );
+    
+    // Add a message to display when a user can't edit a private event
+    const privateEventMessage = isPrivateEvent && !isCurrentUserSoleAssignee ?
+      "This is a private entry. Only the creator can view or edit details." : null;
   
     // Fetch available work items when dialog opens
   useEffect(() => {
@@ -280,10 +296,16 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   };
 
   const handleAssignedUsersChange = (userIds: string[]) => {
-    setEntryData(prev => ({
-      ...prev,
-      assigned_user_ids: userIds,
-    }));
+    setEntryData(prev => {
+      // If the selected user is not the current user, set is_private to false
+      const isPrivate = userIds.length === 1 && userIds[0] === currentUserId ? prev.is_private : false;
+      
+      return {
+        ...prev,
+        assigned_user_ids: userIds,
+        is_private: isPrivate
+      };
+    });
   };
 
   const [showRecurrenceDialog, setShowRecurrenceDialog] = useState(false);
@@ -380,7 +402,8 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           {event && event.work_item_type && (event.work_item_type === 'ticket' || event.work_item_type === 'project_task') && event.work_item_id && (
             <OpenDrawerButton event={event} />
           )}
-          {event && onDelete && !viewOnly && (
+          {/* Only show delete button if not a private event or user is creator */}
+          {event && onDelete && !viewOnly && (!event.is_private || isCurrentUserSoleAssignee) && (
             <Button
               id="delete-entry-btn"
               onClick={() => setShowDeleteDialog(true)}
@@ -393,6 +416,23 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         </div>
       </div>
       <div className="flex-1 overflow-y-auto space-y-4 p-1">
+        {/* Display message for private events */}
+        {privateEventMessage && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-yellow-700">
+                  {privateEventMessage}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="min-w-0">
           <div className="relative">
             {viewOnly ? (
@@ -436,20 +476,39 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
-          {canAssignMultipleAgents && (
-            <div>
-              <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
-                Assigned Users
-              </label>
-            <UserPicker
-              value={entryData.assigned_user_ids?.[0] || currentUserId}
-              onValueChange={(userId) => handleAssignedUsersChange([userId])}
-              users={users}
-              // Disable if loading OR if user lacks permission to assign others
-              disabled={loading || !canModifyAssignment}
-            />
-            </div>
-          )}
+          <div className="flex gap-4 items-start">
+            {canAssignMultipleAgents && (
+              <div className="flex-1">
+                <label htmlFor="assigned_users" className="block text-sm font-medium text-gray-700 mb-1">
+                  Assigned Users
+                </label>
+                <UserPicker
+                  value={entryData.assigned_user_ids?.[0] || currentUserId}
+                  onValueChange={(userId) => handleAssignedUsersChange([userId])}
+                  users={users}
+                  // Disable if loading OR if user lacks permission to assign others
+                  disabled={loading || !canModifyAssignment}
+                />
+              </div>
+            )}
+            {/* Only show private switch if the selected user is the current user */}
+            {entryData.assigned_user_ids?.length === 1 && entryData.assigned_user_ids[0] === currentUserId && (
+              <div className="flex-1 flex items-end">
+                <Switch
+                  id="is-private"
+                  checked={entryData.is_private || false}
+                  onCheckedChange={(checked) => {
+                    setEntryData(prev => ({
+                      ...prev,
+                      is_private: checked
+                    }));
+                  }}
+                  label="Private entry (not visible to other users)"
+                  disabled={!canEditFields}
+                />
+              </div>
+            )}
+          </div>
           <div className="flex gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">Start</label>

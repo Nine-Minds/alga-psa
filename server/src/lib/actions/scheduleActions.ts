@@ -43,6 +43,7 @@ export async function getScheduleEntries(
     // Check if user has broader view/update permission
     const canUpdate = userPermissions.includes('user_schedule:update');
 
+    // First filter by technician IDs or user permissions
     if (canUpdate) {
       // User has update permission: Can view all, filter by technicianIds if provided
       filteredEntries = technicianIds && technicianIds.length > 0
@@ -56,6 +57,20 @@ export async function getScheduleEntries(
         entry.assigned_user_ids.includes(currentUser.user_id)
       );
     }
+
+    // Then filter private entries - these are only visible to assigned users regardless of permissions
+    filteredEntries = filteredEntries.map(entry => {
+      if (entry.is_private && !entry.assigned_user_ids.includes(currentUser.user_id)) {
+        return {
+          ...entry,
+          title: "Busy",
+          notes: "",
+          work_item_id: null,
+          work_item_type: "ad_hoc"
+        };
+      }
+      return entry;
+    });
 
     return { success: true, entries: filteredEntries };
   } catch (error) {
@@ -157,15 +172,24 @@ export async function updateScheduleEntry(
 
     // --- Permission Check ---
     let canEditThisEntry = false;
+    
+    // Check if the entry is private
+    const isPrivateEntry = existingEntry.is_private;
+    const isOwnEntry =
+      existingEntry.assigned_user_ids.length === 1 &&
+      existingEntry.assigned_user_ids[0] === currentUser.user_id;
+    
+    // If the entry is private, only the creator can edit it
+    if (isPrivateEntry && !isOwnEntry) {
+      return { success: false, error: 'Permission denied to edit a private schedule entry.' };
+    }
+    
     if (canUpdateGlobally) {
-      canEditThisEntry = true; // Global update permission allows editing any entry
+      // Global update permission allows editing any non-private entry
+      canEditThisEntry = true;
     } else {
       // User might only have 'user_schedule:read' (implicitly checked by reaching here)
-      // Check if the existing entry is solely assigned to the current user
-      const isOwnEntry =
-        existingEntry.assigned_user_ids.length === 1 &&
-        existingEntry.assigned_user_ids[0] === currentUser.user_id;
-
+      
       // Check if the update attempts to change assignment *away* from solely the current user
       // If assigned_user_ids is not part of the update, assignment doesn't change.
       // If it is part of the update, it must contain *only* the current user's ID.
@@ -228,15 +252,27 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
 
     // --- Permission Check ---
     let canDeleteThisEntry = false;
+    
+    // Check if the entry is private
+    const isPrivateEntry = existingEntry.is_private;
+    const isOwnEntry =
+      existingEntry.assigned_user_ids.length === 1 &&
+      existingEntry.assigned_user_ids[0] === currentUser.user_id;
+    
+    // If the entry is private, only the creator can delete it
+    if (isPrivateEntry && !isOwnEntry) {
+      return {
+        success: false,
+        error: 'This is a private entry. Only the creator can delete it.',
+        isPrivateError: true
+      };
+    }
+    
     if (canUpdateGlobally) {
-      canDeleteThisEntry = true; // Global update permission allows deleting any entry
+      // Global update permission allows deleting any non-private entry
+      canDeleteThisEntry = true;
     } else {
       // User might only have 'user_schedule:read'
-      // Check if the existing entry is solely assigned to the current user
-      const isOwnEntry =
-        existingEntry.assigned_user_ids.length === 1 &&
-        existingEntry.assigned_user_ids[0] === currentUser.user_id;
-
       if (isOwnEntry) {
         canDeleteThisEntry = true; // Allowed to delete own entry
       }
@@ -292,13 +328,27 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
         entry_id: entryId,
         tenant
       })
-      .first();
+      .select('user_id');
+
+    const assignedUserIds = assignees.map(a => a.user_id);
 
     // Combine entry with assigned users
     const scheduleEntry: IScheduleEntry = {
       ...entry,
-      assigned_user_ids: assignees?.assigned_user_ids || []
+      assigned_user_ids: assignedUserIds || []
     };
+
+    // Check if entry is private and user is not assigned to it
+    if (scheduleEntry.is_private && !assignedUserIds.includes(user.id)) {
+      // Return limited information for private entries
+      return {
+        ...scheduleEntry,
+        title: "Busy",
+        notes: "",
+        work_item_id: null,
+        work_item_type: "ad_hoc"
+      };
+    }
 
     return scheduleEntry;
   } catch (error) {

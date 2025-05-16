@@ -155,7 +155,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
             disabled={disabled}
             aria-label={label || placeholder}
             className={`
-              flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
+              flex h-10 w-full min-w-[200px] rounded-md border border-gray-300 bg-white px-3 py-2 text-sm
               file:border-0 file:bg-transparent file:text-sm file:font-medium 
               placeholder:text-gray-500
               hover:border-gray-400
@@ -164,7 +164,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
           >
-            <span className="flex-1 text-left">{displayValue}</span>
+            <span className="flex-1 text-left truncate">{displayValue}</span>
             <div className="flex gap-2">
               <Clock className="h-4 w-4 opacity-50" />
             </div>
