@@ -293,6 +293,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             algaEntityId: algaCompanyId,
             externalSystemName: 'quickbooks_online',
             externalRealmId: realmId,
+            algaEntityType: 'company', // Explicitly specify entity type for clarity
         });
 
         if (mappingResult && mappingResult.success && mappingResult.found && mappingResult.mapping) {
@@ -360,7 +361,12 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                      // Potentially, task resolution provides the new sync token
                      // qboSyncToken = taskResolution.resolutionData?.newSyncToken || qboSyncToken;
                      // Re-fetch mapping to get latest sync token if task implies external update
-                     const updatedMappingResult = await actions.get_external_entity_mapping({ algaEntityId: algaCompanyId, externalSystemName: 'quickbooks_online', externalRealmId: realmId });
+                     const updatedMappingResult = await actions.get_external_entity_mapping({ 
+                         algaEntityId: algaCompanyId, 
+                         externalSystemName: 'quickbooks_online', 
+                         externalRealmId: realmId,
+                         algaEntityType: 'company' // Explicitly specify entity type for clarity
+                     });
                      if (updatedMappingResult && updatedMappingResult.success && updatedMappingResult.found && updatedMappingResult.mapping) {
                         qboSyncToken = updatedMappingResult.mapping.syncToken;
                      }

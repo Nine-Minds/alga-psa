@@ -1073,13 +1073,16 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     'get_external_entity_mapping',
     'Retrieves an external entity mapping for an Alga entity, system, and realm.',
     [
-      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID).' },
-      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'QBO\').' },
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID, invoice ID).' },
+      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'quickbooks_online\').' },
       { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system (e.g., QBO realmId).' },
+      { name: 'algaEntityType', type: 'string', required: false, description: 'The type of Alga entity (e.g., "invoice", "company"). Defaults to "company" if not specified.' }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
+      const entityType = params.algaEntityType || 'company'; // Default to 'company' for backward compatibility
+      
+      logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
       try {
         const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -1090,7 +1093,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           .where({
             tenant: context.tenant,
             alga_entity_id: params.algaEntityId,
-            alga_entity_type: 'company', // Assuming we're mapping companies for now
+            alga_entity_type: entityType,
             integration_type: params.externalSystemName,
             external_realm_id: params.externalRealmId,
           })
@@ -1115,6 +1118,82 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       } catch (error: any) {
         logger.error(`${logPrefix} get_external_entity_mapping: Error retrieving mapping for algaEntityId: ${params.algaEntityId}, tenant: ${context.tenant}`, error);
         return { success: false, found: false, message: error.message, error };
+      }
+    }
+  );
+  
+  // Create or update an external entity mapping
+  actionRegistry.registerSimpleAction(
+    'create_or_update_external_entity_mapping',
+    'Create or update an external entity mapping for an Alga entity and external system',
+    [
+      { name: 'algaEntityType', type: 'string', required: true, description: 'The type of Alga entity (e.g., "invoice", "company").' },
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity.' },
+      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., "quickbooks_online").' },
+      { name: 'externalEntityId', type: 'string', required: true, description: 'The ID of the entity in the external system.' },
+      { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system.' },
+      { name: 'metadata', type: 'object', required: false, description: 'Additional metadata for the mapping (e.g., syncToken).' },
+      { name: 'tenantId', type: 'string', required: false, description: 'The tenant ID (defaults to context.tenant).' }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
+      logger.info(`${logPrefix} create_or_update_external_entity_mapping called for algaEntityType: ${params.algaEntityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalEntityId: ${params.externalEntityId}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
+      
+      // Validate required parameters to avoid database errors
+      if (!params.externalEntityId) {
+        const errorMsg = `Missing required parameter: externalEntityId cannot be null or empty`;
+        logger.error(`${logPrefix} create_or_update_external_entity_mapping: ${errorMsg}`);
+        return { success: false, message: errorMsg };
+      }
+
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+
+        // Create timestamp for both created_at and updated_at
+        const now = new Date();
+        
+        // Include all required fields
+        const mappingData = {
+          tenant: context.tenant,
+          integration_type: params.externalSystemName,
+          alga_entity_type: params.algaEntityType,
+          alga_entity_id: params.algaEntityId,
+          external_entity_id: params.externalEntityId, // Required
+          external_realm_id: params.externalRealmId,
+          sync_status: 'SYNCED',
+          metadata: params.metadata || {},
+          created_at: now,
+          updated_at: now,
+        };
+
+        // Perform an upsert operation
+        const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
+        
+        const [updatedMapping] = await knex('tenant_external_entity_mappings')
+          .insert(mappingData)
+          .onConflict(conflictTarget)
+          .merge({
+            external_entity_id: params.externalEntityId, // Make sure this is explicitly included
+            external_realm_id: params.externalRealmId,  // Include this as well, though it's nullable
+            sync_status: 'SYNCED',
+            metadata: params.metadata || {},
+            updated_at: now,
+            last_synced_at: now // Update the last_synced_at timestamp
+          })
+          .returning('*');
+
+        if (!updatedMapping) {
+          logger.warn(`${logPrefix} create_or_update_external_entity_mapping: Mapping not created or updated for algaEntityId: ${params.algaEntityId}, externalEntityId: ${params.externalEntityId}`);
+          return { success: false, message: 'Mapping not created or updated.' };
+        }
+
+        logger.info(`${logPrefix} create_or_update_external_entity_mapping: Successfully created/updated mapping for entity ${params.algaEntityId} with external ID ${params.externalEntityId}`);
+        return { success: true, id: updatedMapping.id };
+
+      } catch (error: any) {
+        logger.error(`${logPrefix} create_or_update_external_entity_mapping: Error creating/updating mapping for entity ${params.algaEntityId}, tenant: ${context.tenant}`, error);
+        return { success: false, message: error.message, error };
       }
     }
   );

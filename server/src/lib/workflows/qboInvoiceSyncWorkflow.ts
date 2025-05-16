@@ -9,10 +9,11 @@ const WorkflowState = {
   FAILED: 'FAILED'
 };
 
-type AlgaInvoice = { invoice_id: string; invoice_number: string; company_id: string; qbo_invoice_id?: string; qbo_sync_token?: string; };
+type AlgaInvoice = { invoice_id: string; invoice_number: string; company_id: string; };
 type AlgaInvoiceItem = { id: string; invoice_id: string; service_id?: string; amount?: number; service_name?: string; };
 type AlgaCompany = { company_id: string; qbo_customer_id?: string; qbo_term_id?: string; };
 type QboInvoiceData = { Line: any[]; CustomerRef: { value: string }; DocNumber: string; };
+type QboMappingInfo = { externalEntityId: string; metadata?: { syncToken?: string; }; };
 
 type TriggerEventPayload = { invoiceId: string; realmId?: string; tenantId?: string; eventName?: string; };
 type QboApiError = { message: string; details?: any; statusCode?: number; code?: string };
@@ -30,19 +31,34 @@ interface WorkflowActions extends Record<string, (params: any) => Promise<any>> 
     lookupQboItemId: (args: { algaProductId: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; found: boolean; qboItemId?: string; message?: string; }>;
     create_human_task: (args: { taskType: string; title: string; description?: string; priority?: string; dueDate?: string; assignTo?: { roles?: string[]; users?: string[] }; contextData?: any; }) => Promise<{ success: boolean; taskId: string }>;
     triggerWorkflow: (args: { name: string; input: any; tenantId: string; }) => Promise<void>;
-    updateQboInvoice: (args: { qboInvoiceData: QboInvoiceData; qboSyncToken: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ Id: string; SyncToken: string }>;
-    createQboInvoice: (args: { qboInvoiceData: QboInvoiceData; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ Id: string; SyncToken: string }>;
+    updateQboInvoice: (args: { qboInvoiceData: QboInvoiceData; qboSyncToken: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; qboResponse: any; Id?: string; SyncToken?: string; message?: string }>;
+    createQboInvoice: (args: { qboInvoiceData: QboInvoiceData; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; qboResponse: any; Id?: string; SyncToken?: string; message?: string }>;
+    // Kept for backward compatibility - we're now using create_or_update_external_entity_mapping
     updateInvoiceQboDetails: (args: { invoiceId: string; qboInvoiceId?: string | null; qboSyncToken?: string | null; tenantId: string }) => Promise<void>;
     get_secret: (args: { secretName: string; scopeIdentifier: string; tenantId: string; }) => Promise<{ success: boolean; secret?: any; message?: string }>;
     get_external_entity_mapping: (args: {
         algaEntityId: string;
         externalSystemName: 'quickbooks_online';
         externalRealmId: string;
+        algaEntityType?: string; // Optional parameter, defaults to 'company' if not specified
         tenantId: string;
     }) => Promise<{
         success: boolean;
         found: boolean;
         mapping?: { externalEntityId: string;[key: string]: any };
+        message?: string;
+    }>;
+    create_or_update_external_entity_mapping: (args: {
+        algaEntityType: string;
+        algaEntityId: string;
+        externalSystemName: string;
+        externalEntityId: string;
+        externalRealmId: string;
+        metadata?: any;
+        tenantId: string;
+    }) => Promise<{
+        success: boolean;
+        id?: string;
         message?: string;
     }>;
 }
@@ -593,24 +609,58 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             algaInvoiceId: string;
         }
     ): Promise<{ success: boolean; result?: { Id: string; SyncToken: string } }> {
+        // Declare outside try block so it's available in catch
+        let existingQboInvoiceId: string | undefined;
+        let existingSyncToken: string | undefined;
+        
         try {
             let qboResult: { Id: string; SyncToken: string };
             
+            // Check if there's an existing QBO invoice mapping
+            ctx.setState(WorkflowState.RUNNING);
+            const mappingResult = await ctx.actions.get_external_entity_mapping({
+                algaEntityId: algaInvoice.invoice_id,
+                externalSystemName: 'quickbooks_online',
+                externalRealmId: realmId,
+                algaEntityType: 'invoice', // Specify entity type to avoid default of 'company'
+                tenantId: ctx.tenant
+            });
+            
+            if (mappingResult.success && mappingResult.found && mappingResult.mapping) {
+                existingQboInvoiceId = mappingResult.mapping.externalEntityId;
+                existingSyncToken = mappingResult.mapping.metadata?.syncToken;
+                ctx.logger.info(`Found existing QBO invoice mapping`, { 
+                    qbo_invoice_id: existingQboInvoiceId,
+                    sync_token: existingSyncToken, 
+                    executionId: ctx.executionId 
+                });
+            }
+            
             // Determine if we're creating or updating
-            if (algaInvoice.qbo_invoice_id && algaInvoice.qbo_sync_token) {
+            if (existingQboInvoiceId && existingSyncToken) {
                 ctx.setState(WorkflowState.RUNNING);
                 ctx.logger.info(`Calling QBO API to update existing invoice`, { 
-                    qbo_invoice_id: algaInvoice.qbo_invoice_id, 
+                    qbo_invoice_id: existingQboInvoiceId, 
                     executionId: ctx.executionId 
                 });
                 
-                qboResult = await ctx.actions.updateQboInvoice({
+                const updateResult = await ctx.actions.updateQboInvoice({
                     qboInvoiceData: qboInvoiceData,
-                    qboSyncToken: algaInvoice.qbo_sync_token,
+                    qboSyncToken: existingSyncToken,
                     tenantId: ctx.tenant,
                     realmId: realmId,
                     qboCredentials
                 });
+                
+                if (!updateResult.success || !updateResult.qboResponse) {
+                    throw new Error(`Failed to update QBO invoice: ${updateResult.message || 'Unknown error'}`);
+                }
+                
+                // Set qboResult to the structure expected by the rest of the function
+                qboResult = {
+                    Id: updateResult.Id || updateResult.qboResponse.Id,
+                    SyncToken: updateResult.SyncToken || updateResult.qboResponse.SyncToken
+                };
                 
                 ctx.logger.info('Successfully updated invoice in QBO.', { 
                     qbo_invoice_id: qboResult.Id, 
@@ -620,12 +670,22 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 ctx.setState(WorkflowState.RUNNING);
                 ctx.logger.info(`Calling QBO API to create new invoice`, { executionId: ctx.executionId });
                 
-                qboResult = await ctx.actions.createQboInvoice({
+                const createResult = await ctx.actions.createQboInvoice({
                     qboInvoiceData: qboInvoiceData,
                     tenantId: ctx.tenant,
                     realmId: realmId,
                     qboCredentials
                 });
+                
+                if (!createResult.success || !createResult.qboResponse) {
+                    throw new Error(`Failed to create QBO invoice: ${createResult.message || 'Unknown error'}`);
+                }
+                
+                // Set qboResult to the structure expected by the rest of the function
+                qboResult = {
+                    Id: createResult.Id || createResult.qboResponse.Id,
+                    SyncToken: createResult.SyncToken || createResult.qboResponse.SyncToken
+                };
                 
                 ctx.logger.info('Successfully created invoice in QBO.', { 
                     qbo_invoice_id: qboResult.Id, 
@@ -633,20 +693,49 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 });
             }
             
-            // Update Alga invoice with QBO details
+            // Store QBO invoice mapping
             ctx.setState(WorkflowState.RUNNING);
             if (!algaInvoice.invoice_id) {
                 throw new Error('Critical: algaInvoice.invoice_id is undefined when trying to update Alga with QBO details');
             }
             
-            await ctx.actions.updateInvoiceQboDetails({
-                invoiceId: algaInvoice.invoice_id,
-                qboInvoiceId: qboResult.Id,
-                qboSyncToken: qboResult.SyncToken,
+            // Validate that we have the required QBO invoice details
+            if (!qboResult.Id) {
+                throw new Error('Critical: QBO invoice ID is undefined after successful creation/update');
+            }
+            
+            if (!qboResult.SyncToken) {
+                ctx.logger.warn(`QBO SyncToken is missing after successful operation, defaulting to "0"`, {
+                    qbo_invoice_id: qboResult.Id,
+                    executionId: ctx.executionId
+                });
+                qboResult.SyncToken = "0"; // Default sync token if missing
+            }
+            
+            ctx.logger.info(`Storing QBO invoice mapping with ID: ${qboResult.Id} and SyncToken: ${qboResult.SyncToken}`, {
+                alga_invoice_id: algaInvoice.invoice_id,
+                executionId: ctx.executionId
+            });
+            
+            const mappingUpdateResult = await ctx.actions.create_or_update_external_entity_mapping({
+                algaEntityType: 'invoice',
+                algaEntityId: algaInvoice.invoice_id,
+                externalSystemName: 'quickbooks_online',
+                externalEntityId: qboResult.Id,
+                externalRealmId: realmId,
+                metadata: { syncToken: qboResult.SyncToken },
                 tenantId: ctx.tenant
             });
             
-            ctx.logger.info('Successfully updated Alga invoice with QBO IDs.', { 
+            if (!mappingUpdateResult.success) {
+                ctx.logger.error('Failed to update external entity mapping.', { 
+                    error: mappingUpdateResult.message, 
+                    executionId: ctx.executionId 
+                });
+                throw new Error(`Failed to update external entity mapping: ${mappingUpdateResult.message}`);
+            }
+            
+            ctx.logger.info('Successfully saved QBO invoice mapping.', { 
                 invoiceId: algaInvoice.invoice_id, 
                 qboInvoiceId: qboResult.Id, 
                 executionId: ctx.executionId 
@@ -657,7 +746,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         } catch (error: any) {
             const taskResult = await handleQboApiError(ctx, {
                 error,
-                operation: algaInvoice.qbo_invoice_id ? 'update the existing invoice' : 'create a new invoice',
+                operation: existingQboInvoiceId ? 'update the existing invoice' : 'create a new invoice',
                 algaInvoiceId,
                 invoiceNumber: algaInvoice.invoice_number,
                 realmId
@@ -677,6 +766,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             return { success: false };
         }
     }
+    
 
     // Create helper context for utility functions
     const helperContext: WorkflowHelperContext = {
@@ -962,6 +1052,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 algaEntityId: currentAlgaCompany.company_id,
                 externalSystemName: 'quickbooks_online',
                 externalRealmId: realmId!, // realmId is validated at the start of the workflow
+                algaEntityType: 'company', // Explicitly specify entity type for clarity
                 tenantId: tenant,
             });
 

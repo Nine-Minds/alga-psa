@@ -262,7 +262,7 @@ const WorkflowTaskModel = {
         updates.claimed_by = userId;
       } else if (status === WorkflowTaskStatus.COMPLETED) {
         updates.completed_at = now;
-        updates.completed_by = userId;
+        // updates.completed_by = userId;
       }
       
       const result = await knex('workflow_tasks')
@@ -328,7 +328,7 @@ const WorkflowTaskModel = {
           status: WorkflowTaskStatus.COMPLETED,
           response_data: responseData,
           completed_at: now,
-          completed_by: userId,
+          // completed_by: userId,
           updated_at: now
         });
       

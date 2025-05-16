@@ -48,7 +48,7 @@ export class TaskInboxService {
       // 1. Attempt to find tenantTaskDef
       const tenantTaskDef = await knex('workflow_task_definitions')
         .where({
-          task_type: params.taskType,
+          form_id: params.taskType,
           tenant: tenant, // Current tenant
         })
         .first();

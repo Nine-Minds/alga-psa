@@ -121,7 +121,7 @@ await events.emit('ProcessingStarted', { requestId: triggerEvent.payload.id });
 
 ### Data Management
 
-Store and retrieve data within the workflow context.
+Store and retrieve data within the workflow context. The workflow data manager persists data across workflow execution sessions as part of the event sourcing system.
 
 ```typescript
 // Store data
@@ -130,6 +130,8 @@ data.set('requestData', { id: '123', amount: 500 });
 // Retrieve data with type safety
 const requestData = data.get<{ id: string, amount: number }>('requestData');
 ```
+
+For detailed guidelines on when to use the workflow data manager versus local variables, see [State Management Guidelines](state-management-guidelines.md).
 
 ### Action Execution
 
