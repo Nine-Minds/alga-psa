@@ -13,9 +13,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
-import { MoreVertical, RefreshCw, Filter } from 'lucide-react';
-import { 
-  pauseWorkflowExecutionAction, 
+import { MoreVertical, Filter, RefreshCw } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import {
+  pauseWorkflowExecutionAction,
   resumeWorkflowExecutionAction,
   cancelWorkflowExecutionAction 
 } from 'server/src/lib/actions/workflow-actions';
@@ -248,8 +249,14 @@ export default function WorkflowExecutionsTable({
             onClick={fetchData}
             disabled={isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
+            {isLoading ? (
+              <LoadingIndicator spinnerProps={{ size: 'xs' }} text="Refresh" />
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </>
+            )}
           </Button>
           
           {/* Filter dropdown - can be expanded with more filter options */}

@@ -4,7 +4,8 @@ import { useState, useRef } from 'react';
 import { Button } from '../ui/Button';
 import { uploadDocument } from '../../lib/actions/document-actions/documentActions';
 import { IDocument } from '../../interfaces/document.interface';
-import { Upload, X, Loader2, FileUp } from 'lucide-react';
+import { Upload, X, FileUp } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ContainerComponent, ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
@@ -154,7 +155,7 @@ export default function DocumentUpload({
                         </div>
                         {isUploading && (
                             <div className="flex justify-center">
-                                <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
+                                <Spinner size="sm" />
                             </div>
                         )}
                         {error && (

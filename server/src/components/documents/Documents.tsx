@@ -5,6 +5,7 @@ import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
 import DocumentUpload from './DocumentUpload';
+import Spinner from 'server/src/components/ui/Spinner';
 import DocumentSelector from './DocumentSelector';
 import DocumentsPagination from './DocumentsPagination';
 import { DocumentsGridSkeleton } from './DocumentsPageSkeleton';
@@ -515,7 +516,7 @@ const Documents = ({
                 <div className="h-full w-full">
                   {isLoadingContent ? (
                     <div className="flex justify-center items-center h-full">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                      <Spinner size="sm" />
                     </div>
                   ) : isCreatingNew || (selectedDocument && isEditModeInDrawer) ? (
                     <TextEditor

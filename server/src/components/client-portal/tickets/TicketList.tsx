@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
+import Spinner from 'server/src/components/ui/Spinner';
 import { format } from 'date-fns';
 import { getClientTickets, updateTicketStatus } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
@@ -306,7 +307,7 @@ export function TicketList() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        <Spinner size="sm" />
       </div>
     );
   }

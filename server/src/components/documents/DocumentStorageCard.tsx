@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
+import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
@@ -206,7 +207,7 @@ export default function DocumentStorageCard({
                     {/* Preview Content */}
                     {isLoading ? (
                         <div className="mt-4 flex justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#6941C6]"></div>
+                            <Spinner size="sm" />
                         </div>
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">

@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, Loader2, Trash2, Info, ChevronDown } from 'lucide-react';
+import { AlertCircle, Trash2, Info, ChevronDown } from 'lucide-react';
 import { Button, ButtonProps } from 'server/src/components/ui/Button'; // Import ButtonProps
+import Spinner from 'server/src/components/ui/Spinner';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
@@ -411,7 +413,7 @@ export function HourlyPlanConfiguration({
   ];
 
   if (loading && !plan) {
-    return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
   if (error) {
@@ -602,8 +604,7 @@ export function HourlyPlanConfiguration({
                     // Disable save if saving, no changes, or plan-wide errors exist. Service errors handled by action.
                     disabled={saving || !hasUnsavedChanges || Object.values(planValidationErrors).some(e => e)}
                 >
-                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Save Configuration
+                {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save Configuration" /> : "Save Configuration"}
                 </Button>
             </div>
 

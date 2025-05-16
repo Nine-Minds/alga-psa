@@ -4,8 +4,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, Loader2, ChevronDown } from 'lucide-react';
+import { AlertCircle, ChevronDown } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
+import Spinner from 'server/src/components/ui/Spinner';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
 import GenericPlanServicesList from './GenericPlanServicesList';
 import { IService, IBillingPlan } from 'server/src/interfaces/billing.interfaces'; // Added IBillingPlan
@@ -274,7 +276,7 @@ export function BucketPlanConfiguration({
 
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
   if (error && !loading) {
@@ -333,8 +335,7 @@ export function BucketPlanConfiguration({
              <div className="mt-6 flex justify-end">
                 {/* Added id and data-testid */}
                 <Button id="save-all-bucket-configs-button" data-testid="save-all-bucket-configs-button" onClick={handleSave} disabled={saving}>
-                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Save All Configurations
+                  {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save All Configurations" /> : "Save All Configurations"}
                 </Button>
               </div>
           )}

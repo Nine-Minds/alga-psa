@@ -4,8 +4,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
+import Spinner from 'server/src/components/ui/Spinner';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion'; // Import Radix Accordion
 import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 
@@ -386,7 +388,7 @@ export function UsagePlanConfiguration({
 
   // --- Rendering ---
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    return <div className="flex justify-center items-center p-8"><Spinner size="sm" /></div>;
   }
 
   if (error) {
@@ -490,8 +492,7 @@ export function UsagePlanConfiguration({
           {/* Save Button */}
           <div className="flex justify-end pt-4">
             <Button id="save-all-service-configs-button" onClick={handleSave} disabled={saving || loading}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Save All Configurations
+              {saving ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Save All Configurations" /> : "Save All Configurations"}
             </Button>
           </div>
         </CardContent>

@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
-import { Search, X, Check, Loader2 } from 'lucide-react';
+import { Search, X, Check } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Input } from 'server/src/components/ui/Input';
 import DocumentStorageCard from './DocumentStorageCard';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -210,7 +212,7 @@ export default function DocumentSelector({
                         {/* Loading State */}
                         {isLoading ? (
                             <div className="flex justify-center py-8">
-                                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+                                <Spinner size="sm" />
                             </div>
                         ) : (
                             <>
@@ -276,8 +278,7 @@ export default function DocumentSelector({
                                     >
                                         {isSaving ? (
                                             <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Saving...
+                                                <LoadingIndicator text="Saving..." spinnerProps={{ size: "xs" }} />
                                             </>
                                         ) : (
                                             singleSelect ? 'Select Document' : 'Associate Selected'

@@ -11,6 +11,7 @@ import { getEventCatalogEntries, getEventCatalogEntryByEventType } from 'server/
 import { IEventCatalogEntry } from '@shared/workflow/types/eventCatalog';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import *  as workflowEditorActions from 'server/src/lib/actions/workflow-editor-actions';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 // JSON Editor component
 const JsonEditor = ({ value, onChange, error, height = '200px' }: {
@@ -278,10 +279,7 @@ export default function TestWorkflowModal({ isOpen, onClose, workflowCode, workf
           <div className="space-y-2">
             <Label htmlFor="event-name">Event Type</Label>
             {isLoadingCatalog ? (
-              <div className="flex items-center space-x-2 py-2">
-                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                <span className="text-sm text-gray-500">Loading event types...</span>
-              </div>
+              <LoadingIndicator text="Loading event types..." spinnerProps={{ size: "xs" }} />
             ) : (
               <CustomSelect
                 id="event-name"
