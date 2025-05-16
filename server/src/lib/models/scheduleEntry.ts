@@ -265,7 +265,8 @@ class ScheduleEntry {
         recurrence_pattern: (entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
           ? JSON.stringify(entry.recurrence_pattern)
           : null,
-        is_recurring: !!(entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0)
+        is_recurring: !!(entry.recurrence_pattern && typeof entry.recurrence_pattern === 'object' && Object.keys(entry.recurrence_pattern).length > 0),
+        is_private: entry.is_private || false
       };
 
       console.log('Creating schedule entry:', entryData);
@@ -748,6 +749,7 @@ class ScheduleEntry {
       if (entry.status !== undefined) updateData.status = entry.status;
       if (entry.work_item_id !== undefined) updateData.work_item_id = entry.work_item_id;
       if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
+      if (entry.is_private !== undefined) updateData.is_private = entry.is_private;
       if (entry.recurrence_pattern !== undefined) {
         // Only stringify if it's a valid recurrence pattern object
         if (entry.work_item_type !== undefined) updateData.work_item_type = entry.work_item_type;
@@ -810,6 +812,7 @@ class ScheduleEntry {
           scheduled_end: entry.scheduled_end || originalEntry.scheduled_end,
           is_recurring: true,
           original_entry_id: masterEntryId,
+          is_private: entry.is_private !== undefined ? entry.is_private : originalEntry.is_private,
           // Use provided assigned users or inherit from master
           assigned_user_ids: entry.assigned_user_ids || assignedUserIds[masterEntryId] || []
         };

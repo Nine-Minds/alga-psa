@@ -37,6 +37,7 @@ export interface IScheduleEntry extends TenantEntity {
   is_recurring?: boolean;
   original_entry_id?: string;
   updateType?: IEditScope;
+  is_private?: boolean;
 }
 
 export interface IResource extends TenantEntity {

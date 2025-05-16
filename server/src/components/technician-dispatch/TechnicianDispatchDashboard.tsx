@@ -23,6 +23,7 @@ import { DropEvent } from 'server/src/interfaces/event.interfaces';
 import { addDays, addWeeks, addMonths, startOfDay, subDays, subWeeks, subMonths, endOfDay, startOfWeek, endOfWeek } from 'date-fns';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
+import EntryPopup from 'server/src/components/schedule/EntryPopup';
 
 enableMapSet();
 
@@ -454,7 +455,11 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
         setEvents((prevEvents) => prevEvents.filter(event => event.entry_id !== eventId));
         setError(null);
       } else {
-        setError('Failed to delete schedule entry');
+        if (result.isPrivateError) {
+          toast.error(result.error || 'This is a private entry. Only the creator can delete it.');
+        } else {
+          setError('Failed to delete schedule entry');
+        }
       }
     } catch (err) {
       console.error('Error deleting schedule entry:', err);
@@ -656,6 +661,43 @@ const TechnicianDispatchDashboard: React.FC<TechnicianDispatchDashboardProps> = 
 
   const handleEventClick = useCallback(async (event: Omit<IScheduleEntry, 'tenant'>) => {
     try {
+      // Check if this is a private event that the user doesn't own
+      const isPrivateEvent = event.is_private;
+      const isCreator = event.assigned_user_ids?.length === 1 && 
+                       event.assigned_user_ids[0] === session?.user?.id;
+      const isPrivateNonOwner = isPrivateEvent && !isCreator;
+      
+      // If this is a private event and the user is not the creator, show the entry popup in view-only mode with "Busy" title
+      if (isPrivateNonOwner) {
+        // Create a modified version of the event with "Busy" title for non-owners
+        const privateEvent = {
+          ...event,
+          title: "Busy",
+          notes: ""
+        };
+        
+        // Get all users for the EntryPopup component
+        const allUsers = await getAllUsers();
+        
+        // Open the entry popup in view-only mode
+        openDrawer(
+          <EntryPopup
+            event={privateEvent}
+            onClose={closeDrawer}
+            onSave={async () => {}} // No-op since it's view-only
+            canAssignMultipleAgents={true}
+            users={allUsers}
+            currentUserId={session?.user?.id || ""}
+            canModifySchedule={false}
+            focusedTechnicianId={null}
+            canAssignOthers={false}
+            viewOnly={true}
+            isInDrawer={true}
+          />
+        );
+        return;
+      }
+      
       let workItemId = event.work_item_id || event.entry_id;
       
       if (workItemId.includes('_')) {

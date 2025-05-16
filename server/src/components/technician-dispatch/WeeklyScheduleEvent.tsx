@@ -137,8 +137,15 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   const formattedDate = startMoment.toLocaleDateString();
   const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-  // Construct detailed tooltip
-  const tooltipTitle = `${event.title}\nAssigned to: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+  // Check if this is a private event that the user doesn't own
+  const isPrivateEvent = event.is_private;
+  const isCreator = isPrimary && event.assigned_user_ids?.length === 1;
+  const isPrivateNonOwner = isPrivateEvent && !isCreator;
+  
+  // Construct detailed tooltip - show limited info for private events
+  const tooltipTitle = isPrivateNonOwner
+    ? `Busy\nDate: ${formattedDate}\nTime: ${formattedTime}`
+    : `${event.title}\nAssigned to: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
 
   return (
     <div
@@ -164,8 +171,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       }}
       tabIndex={-1}
     >
-      {/* Top resize handle */}
-      {onResizeStart && (
+      {/* Top resize handle - only show if not a private event or user is creator */}
+      {onResizeStart && !isPrivateNonOwner && (
         <div
           className="absolute top-0 left-0 right-0 h-1 bg-[rgb(var(--color-border-300))] cursor-ns-resize rounded-t resize-handle"
           style={{ zIndex: 150 }}
@@ -176,8 +183,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
       
-      {/* Bottom resize handle */}
-      {onResizeStart && (
+      {/* Bottom resize handle - only show if not a private event or user is creator */}
+      {onResizeStart && !isPrivateNonOwner && (
         <div
           className="absolute bottom-0 left-0 right-0 h-1 bg-[rgb(var(--color-border-300))] cursor-ns-resize rounded-b resize-handle"
           style={{ zIndex: 150 }}
@@ -187,10 +194,10 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           }}
         ></div>
       )}
-      {/* Buttons container */}
+      {/* Buttons container - only show if not a private event or user is creator */}
       <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 200 }}>
-          {/* Show individual buttons if not narrow */}
-          {!isNarrow && (
+          {/* Show individual buttons if not narrow and not a private event or user is creator */}
+          {!isNarrow && !isPrivateNonOwner && (
             <div className="flex gap-1">
               <Button
                 id={`view-details-${event.entry_id}`}
@@ -218,8 +225,8 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
             </div>
           )}
 
-          {/* Show dropdown menu if narrow */}
-          {isNarrow && (
+          {/* Show dropdown menu if narrow and not a private event or user is creator */}
+          {isNarrow && !isPrivateNonOwner && (
             <div>
               <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild>
@@ -274,8 +281,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           )}
         </div>
 
-      <div className="font-semibold truncate">{event.title?.split(':')[0] || 'Untitled'}</div>
-      <div className="truncate text-xs">{event.title?.split(':').slice(1).join(':').trim() || ''}</div>
+      {/* Event content - show limited info for private events */}
+      <div className="font-semibold truncate">
+        {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+      </div>
+      <div className="truncate text-xs">
+        {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
+      </div>
 
       {/* Confirmation Dialog for Delete */}
       <ConfirmationDialog
