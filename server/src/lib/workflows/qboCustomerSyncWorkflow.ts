@@ -1,4 +1,12 @@
-import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn, WorkflowState } from '../../../../shared/workflow/core';
+import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '../../../../shared/workflow/core';
+
+// Define WorkflowState as a simple object instead of an enum for better portability during transpilation
+const WorkflowState = {
+  RUNNING: 'RUNNING',
+  ERROR: 'ERROR',
+  COMPLETE: 'COMPLETE',
+  FAILED: 'FAILED'
+};
 // TODO: Import specific types for Alga Company, QBO Customer, Human Task, etc.
 // import { AlgaCompany } from '...';
 // import { QboCustomer } from '...';

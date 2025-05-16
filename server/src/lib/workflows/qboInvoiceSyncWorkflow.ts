@@ -1,5 +1,13 @@
 import { error } from 'console';
-import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn, WorkflowState } from '../../../../shared/workflow/core';
+import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '../../../../shared/workflow/core';
+
+// Define WorkflowState as a const to ensure it's available
+const WorkflowState = {
+  RUNNING: 'RUNNING',
+  ERROR: 'ERROR',
+  COMPLETE: 'COMPLETE',
+  FAILED: 'FAILED'
+};
 
 type AlgaInvoice = { invoice_id: string; invoice_number: string; company_id: string; qbo_invoice_id?: string; qbo_sync_token?: string; };
 type AlgaInvoiceItem = { id: string; invoice_id: string; service_id?: string; amount?: number; service_name?: string; };
@@ -45,7 +53,7 @@ interface WorkflowActions extends Record<string, (params: any) => Promise<any>> 
 interface WorkflowHelperContext {
     actions: WorkflowActions;
     logger: WorkflowLogger;
-    setState: (state: WorkflowState | string) => void;
+    setState: (state: typeof WorkflowState[keyof typeof WorkflowState] | string) => void;
     tenant: string;
     executionId: string;
     userId?: string;
@@ -62,610 +70,613 @@ interface WorkflowLogger {
 }
 
 /**
- * Helper to extract QBO API error details consistently
- */
-function formatQboApiError(error: any): QboApiError {
-    const qboError = error?.response?.data?.Fault?.Error?.[0];
-    return {
-        message: qboError?.Message ?? error?.message ?? 'Unknown QBO API error',
-        code: qboError?.code ?? error?.response?.status ?? 'UNKNOWN_STATUS_CODE',
-        details: qboError?.Detail ?? error?.response?.data ?? error,
-        statusCode: error?.response?.status
-    };
-}
-
-/**
- * Helper to create or update a QBO invoice
- */
-async function createOrUpdateQboInvoice(
-    ctx: WorkflowHelperContext,
-    {
-        qboInvoiceData,
-        realmId,
-        qboCredentials,
-        algaInvoice,
-        algaInvoiceId
-    }: {
-        qboInvoiceData: QboInvoiceData;
-        realmId: string;
-        qboCredentials: any;
-        algaInvoice: AlgaInvoice;
-        algaInvoiceId: string;
-    }
-): Promise<{ success: boolean; result?: { Id: string; SyncToken: string } }> {
-    try {
-        let qboResult: { Id: string; SyncToken: string };
-        
-        // Determine if we're creating or updating
-        if (algaInvoice.qbo_invoice_id && algaInvoice.qbo_sync_token) {
-            ctx.setState(WorkflowState.RUNNING);
-            ctx.logger.info(`Calling QBO API to update existing invoice`, { 
-                qbo_invoice_id: algaInvoice.qbo_invoice_id, 
-                executionId: ctx.executionId 
-            });
-            
-            qboResult = await ctx.actions.updateQboInvoice({
-                qboInvoiceData: qboInvoiceData,
-                qboSyncToken: algaInvoice.qbo_sync_token,
-                tenantId: ctx.tenant,
-                realmId: realmId,
-                qboCredentials
-            });
-            
-            ctx.logger.info('Successfully updated invoice in QBO.', { 
-                qbo_invoice_id: qboResult.Id, 
-                executionId: ctx.executionId 
-            });
-        } else {
-            ctx.setState(WorkflowState.RUNNING);
-            ctx.logger.info(`Calling QBO API to create new invoice`, { executionId: ctx.executionId });
-            
-            qboResult = await ctx.actions.createQboInvoice({
-                qboInvoiceData: qboInvoiceData,
-                tenantId: ctx.tenant,
-                realmId: realmId,
-                qboCredentials
-            });
-            
-            ctx.logger.info('Successfully created invoice in QBO.', { 
-                qbo_invoice_id: qboResult.Id, 
-                executionId: ctx.executionId 
-            });
-        }
-        
-        // Update Alga invoice with QBO details
-        ctx.setState(WorkflowState.RUNNING);
-        if (!algaInvoice.invoice_id) {
-            throw new Error('Critical: algaInvoice.invoice_id is undefined when trying to update Alga with QBO details');
-        }
-        
-        await ctx.actions.updateInvoiceQboDetails({
-            invoiceId: algaInvoice.invoice_id,
-            qboInvoiceId: qboResult.Id,
-            qboSyncToken: qboResult.SyncToken,
-            tenantId: ctx.tenant
-        });
-        
-        ctx.logger.info('Successfully updated Alga invoice with QBO IDs.', { 
-            invoiceId: algaInvoice.invoice_id, 
-            qboInvoiceId: qboResult.Id, 
-            executionId: ctx.executionId 
-        });
-        
-        return { success: true, result: qboResult };
-        
-    } catch (error: any) {
-        const taskResult = await handleQboApiError(ctx, {
-            error,
-            operation: algaInvoice.qbo_invoice_id ? 'update the existing invoice' : 'create a new invoice',
-            algaInvoiceId,
-            invoiceNumber: algaInvoice.invoice_number,
-            realmId
-        });
-        
-        if (taskResult.userFixedTheProblem) {
-            // User fixed the problem, recursively retry the operation
-            return createOrUpdateQboInvoice(ctx, {
-                qboInvoiceData,
-                realmId,
-                qboCredentials,
-                algaInvoice,
-                algaInvoiceId
-            });
-        }
-        
-        return { success: false };
-    }
-}
-
-/**
- * Helper to create and wait for a human task with consistent error handling
- */
-async function createAndWaitForHumanTask(
-    actions: WorkflowActions,
-    {
-        taskType,
-        title,
-        description,
-        priority = 'medium',
-        userId,
-        contextData
-    }: {
-        taskType: 'workflow_error' | 'qbo_mapping_error';
-        title: string;
-        description: string;
-        priority?: string;
-        userId?: string;
-        contextData: Record<string, any>;
-    }
-): Promise<TaskResolutionResult> {
-    const taskResult = await actions.createTaskAndWaitForResult({
-        taskType,
-        title,
-        description,
-        priority,
-        assignTo: userId ? { users: [userId] } : undefined,
-        contextData
-    });
-
-    return {
-        success: taskResult.success,
-        taskId: taskResult.taskId,
-        resolutionData: taskResult.resolutionData,
-        userFixedTheProblem: !!(taskResult.success && taskResult.resolutionData?.userFixedTheProblem)
-    };
-}
-
-/**
- * Helper to create a human task for QBO credentials error
- */
-async function handleQboCredentialsError(
-    ctx: WorkflowHelperContext,
-    {
-        realmId,
-        algaInvoiceId,
-        errorMessage
-    }: {
-        realmId: string;
-        algaInvoiceId: string;
-        errorMessage?: string;
-    }
-): Promise<TaskResolutionResult> {
-    ctx.logger.error('Failed to fetch QBO credentials.', { message: errorMessage, realmId, executionId: ctx.executionId });
-    ctx.setState(WorkflowState.ERROR);
-    
-    return await createAndWaitForHumanTask(ctx.actions, {
-        taskType: 'workflow_error',
-        title: `Resolve QuickBooks Auth: Invoice ${algaInvoiceId}`,
-        description: `The system could not retrieve QuickBooks credentials for Realm ID ${realmId} to sync invoice ${algaInvoiceId}. Error: ${errorMessage || 'Unknown error'}. Please check the QuickBooks connection and confirm resolution.`,
-        priority: 'high',
-        userId: ctx.userId,
-        contextData: {
-            message: `Could not retrieve QuickBooks authentication credentials for Realm ID ${realmId}. Error: ${errorMessage || 'Unknown error'}. Please check the QuickBooks connection. If resolved, submit this task.`,
-            alga_invoice_id: algaInvoiceId,
-            tenant: ctx.tenant,
-            realm_id: realmId,
-            workflow_instance_id: ctx.executionId
-        }
-    });
-}
-
-/**
- * Helper to fetch and validate QBO credentials
- */
-async function fetchQboCredentials(
-    ctx: WorkflowHelperContext, 
-    realmId: string,
-    algaInvoiceId: string
-): Promise<{ success: boolean; credentials?: any }> {
-    // Check for cached credentials
-    const cachedCredentials = ctx.data.get('qboCredentials');
-    if (cachedCredentials) {
-        ctx.logger.info('QBO credentials found in workflow data.', { executionId: ctx.executionId });
-        return { success: true, credentials: cachedCredentials };
-    }
-
-    // Fetch credentials
-    ctx.setState(WorkflowState.RUNNING);
-    ctx.logger.info(`Fetching QBO credentials using get_secret action.`, { realmId, executionId: ctx.executionId });
-    
-    const secretResult = await ctx.actions.get_secret({
-        secretName: 'qbo_credentials',
-        scopeIdentifier: realmId,
-        tenantId: ctx.tenant,
-    });
-
-    if (secretResult.success && secretResult.secret) {
-        const credentials = secretResult.secret;
-        ctx.data.set('qboCredentials', credentials);
-        ctx.logger.info('Successfully fetched and stored QBO credentials.', { executionId: ctx.executionId });
-        return { success: true, credentials };
-    }
-    
-    // Handle error with task
-    const taskResult = await handleQboCredentialsError(ctx, {
-        realmId,
-        algaInvoiceId,
-        errorMessage: secretResult.message
-    });
-    
-    if (taskResult.userFixedTheProblem) {
-        // Try fetching the credentials again
-        const retrySecretResult = await ctx.actions.get_secret({
-            secretName: 'qbo_credentials',
-            scopeIdentifier: realmId,
-            tenantId: ctx.tenant,
-        });
-        
-        if (retrySecretResult.success && retrySecretResult.secret) {
-            const credentials = retrySecretResult.secret;
-            ctx.data.set('qboCredentials', credentials);
-            ctx.logger.info('Successfully fetched and stored QBO credentials after user resolution.', { executionId: ctx.executionId });
-            return { success: true, credentials };
-        }
-    }
-    
-    // If we get here, either the user didn't fix the problem or the retry failed
-    return { success: false };
-}
-
-/**
- * Helper to handle QBO customer mapping errors
- */
-async function handleQboCustomerMappingError(
-    ctx: WorkflowHelperContext,
-    {
-        companyId,
-        realmId,
-        algaInvoiceId,
-        invoiceNumber,
-        errorMessage
-    }: {
-        companyId: string;
-        realmId: string;
-        algaInvoiceId: string;
-        invoiceNumber?: string;
-        errorMessage?: string;
-    }
-): Promise<TaskResolutionResult> {
-    ctx.logger.error('get_external_entity_mapping action failed.', { company_id: companyId, error: errorMessage, executionId: ctx.executionId });
-    ctx.setState(WorkflowState.ERROR);
-    
-    return await createAndWaitForHumanTask(ctx.actions, {
-        taskType: 'workflow_error',
-        title: `Resolve Customer Mapping Lookup: Invoice #${invoiceNumber || algaInvoiceId}`,
-        description: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId} in Realm ${realmId}. Error: ${errorMessage || 'Unknown error'}. Please investigate and confirm resolution.`,
-        priority: 'high',
-        userId: ctx.userId,
-        contextData: {
-            message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId}. Error: ${errorMessage}. Please investigate.`,
-            alga_invoice_id: algaInvoiceId,
-            company_id: companyId,
-            tenant: ctx.tenant,
-            realm_id: realmId,
-            workflow_instance_id: ctx.executionId
-        }
-    });
-}
-
-/**
- * Helper to handle missing QBO item mapping errors
- */
-async function handleQboItemMappingError(
-    ctx: WorkflowHelperContext,
-    {
-        serviceId,
-        serviceName,
-        itemId,
-        algaInvoiceId,
-        invoiceNumber,
-        companyId,
-        realmId
-    }: {
-        serviceId: string;
-        serviceName?: string;
-        itemId: string;
-        algaInvoiceId: string;
-        invoiceNumber?: string;
-        companyId?: string;
-        realmId: string;
-    }
-): Promise<TaskResolutionResult> {
-    ctx.logger.warn(`QBO Item ID not found for service_id ${serviceId}.`, { executionId: ctx.executionId });
-    ctx.setState(WorkflowState.ERROR);
-    
-    return await createAndWaitForHumanTask(ctx.actions, {
-        taskType: 'qbo_mapping_error',
-        title: `Product Not Mapped: Invoice ${invoiceNumber || 'Unknown'} (Item ID: ${itemId})`,
-        description: `Product '${serviceName || 'Unknown Product'}' (ID: ${serviceId}) is not mapped to a QuickBooks item. Please map it.`,
-        priority: 'medium',
-        userId: ctx.userId,
-        contextData: {
-            alga_service_id: serviceId,
-            service_name: serviceName || 'Unknown Product',
-            alga_company_id: companyId,
-            company_name: companyId || 'Unknown Company',
-            alga_invoice_id: algaInvoiceId,
-            tenant: ctx.tenant,
-            realm_id: realmId,
-            workflow_instance_id: ctx.executionId,
-            userFixedTheProblem: false
-        }
-    });
-}
-
-/**
- * Helper to handle QBO API errors
- */
-async function handleQboApiError(
-    ctx: WorkflowHelperContext,
-    {
-        error,
-        operation,
-        algaInvoiceId,
-        invoiceNumber,
-        entityId,
-        realmId
-    }: {
-        error: any;
-        operation: string;
-        algaInvoiceId: string;
-        invoiceNumber?: string;
-        entityId?: string;
-        realmId: string;
-    }
-): Promise<TaskResolutionResult> {
-    const qboError = formatQboApiError(error);
-    
-    ctx.logger.error(`QBO API ${operation} failed.`, { 
-        error: qboError.message, 
-        errorCode: qboError.code, 
-        details: qboError.details, 
-        entityId,
-        executionId: ctx.executionId 
-    });
-    
-    ctx.setState(WorkflowState.ERROR);
-    ctx.data.set('qboApiError', qboError);
-    
-    return await createAndWaitForHumanTask(ctx.actions, {
-        taskType: 'workflow_error',
-        title: `QuickBooks API Error - Invoice #${invoiceNumber || algaInvoiceId}`,
-        description: `The system failed to ${operation} in QuickBooks. Error: ${qboError.message}. Please investigate and confirm resolution.`,
-        priority: 'high',
-        userId: ctx.userId,
-        contextData: {
-            message: `QuickBooks API error: Failed to ${operation} invoice #${invoiceNumber || algaInvoiceId}. Error: ${qboError.message}.`,
-            alga_invoice_id: algaInvoiceId,
-            error_code: qboError.code,
-            error_details: qboError.details,
-            tenant: ctx.tenant,
-            realm_id: realmId,
-            workflow_instance_id: ctx.executionId
-        }
-    });
-}
-
-/**
- * Helper to handle missing service ID in invoice item
- */
-async function handleMissingServiceIdError(
-    ctx: WorkflowHelperContext,
-    {
-        item,
-        algaInvoice,
-        algaInvoiceId,
-    }: {
-        item: AlgaInvoiceItem;
-        algaInvoice: AlgaInvoice;
-        algaInvoiceId: string;
-    }
-): Promise<TaskResolutionResult> {
-    ctx.logger.warn(`Item ${item.id} is missing service_id. Creating human task.`, { executionId: ctx.executionId });
-    ctx.setState(WorkflowState.ERROR);
-    
-    return await createAndWaitForHumanTask(ctx.actions, {
-        taskType: 'workflow_error',
-        title: `Item Missing Product/Service: Invoice #${algaInvoice?.invoice_number || 'Unknown'} (Item ID: ${item.id})`,
-        description: `Line item (ID: ${item.id}) on invoice #${algaInvoice?.invoice_number || 'Unknown'} is missing a product/service association. Please associate a product/service with this item or confirm if it should be skipped.`,
-        priority: 'medium',
-        userId: ctx.userId,
-        contextData: {
-            message: `Line item (ID: ${item.id}, Amount: ${item.amount || 'N/A'}) on invoice ${algaInvoice?.invoice_id || 'Unknown'} does not have an associated Alga Product/Service. Please associate one. If resolved, submit this task indicating the issue is fixed.`,
-            alga_invoice_id: algaInvoiceId,
-            item_id: item.id,
-            tenant: ctx.tenant,
-            workflow_instance_id: ctx.executionId
-        }
-    });
-}
-
-/**
- * Process an invoice item for QBO synchronization
- */
-async function processInvoiceItem(
-    ctx: WorkflowHelperContext,
-    {
-        item,
-        algaInvoice,
-        algaInvoiceId,
-        realmId,
-        qboCredentials,
-        qboInvoiceLines
-    }: {
-        item: AlgaInvoiceItem;
-        algaInvoice: AlgaInvoice;
-        algaInvoiceId: string;
-        realmId: string;
-        qboCredentials: any;
-        qboInvoiceLines: any[];
-    }
-): Promise<{ success: boolean; itemAdded: boolean }> {
-    let currentItemServiceId = item.service_id;
-    let attempts = 0;
-    const MAX_ATTEMPTS = 2;
-
-    // If no service ID, handle the error
-    if (!currentItemServiceId) {
-        const taskResult = await handleMissingServiceIdError(ctx, { item, algaInvoice, algaInvoiceId });
-        
-        if (taskResult.userFixedTheProblem) {
-            // Re-fetch item data to get updated service_id
-            const refreshedItemsResult = await ctx.actions.getInvoiceItems({ 
-                invoiceId: algaInvoiceId, 
-                tenantId: ctx.tenant 
-            });
-            
-            if (refreshedItemsResult.success) {
-                const refreshedItem = refreshedItemsResult.items.find(i => i.id === item.id);
-                if (refreshedItem?.service_id) {
-                    item.service_id = refreshedItem.service_id;
-                    currentItemServiceId = refreshedItem.service_id;
-                    ctx.logger.info(`Refreshed item ${item.id} and found service_id: ${currentItemServiceId}`, { executionId: ctx.executionId });
-                } else {
-                    ctx.logger.warn(`Item ${item.id} still missing service_id after task resolution and item refresh.`, { executionId: ctx.executionId });
-                    return { success: false, itemAdded: false };
-                }
-            } else {
-                ctx.logger.warn(`Failed to refresh invoice items after task for item ${item.id}.`, { executionId: ctx.executionId });
-                return { success: false, itemAdded: false };
-            }
-        } else {
-            // User did not fix the issue or task failed
-            return { success: false, itemAdded: false };
-        }
-    }
-
-    // Now that we have a service ID (either initially or after resolution), look up the QBO item ID
-    while (attempts < MAX_ATTEMPTS) {
-        attempts++;
-        ctx.setState(WorkflowState.RUNNING);
-        ctx.logger.info(`Processing item ${item.id}, attempt ${attempts}`, { executionId: ctx.executionId });
-
-        try {
-            // Verify item has a service ID
-            if (!currentItemServiceId) {
-                ctx.logger.error(`Item ${item.id} has no service_id at attempt ${attempts}`, { executionId: ctx.executionId });
-                return { success: false, itemAdded: false };
-            }
-
-            // Look up QBO item ID
-            const mappingResult = await ctx.actions.lookupQboItemId({ 
-                algaProductId: currentItemServiceId, 
-                tenantId: ctx.tenant, 
-                realmId, 
-                qboCredentials 
-            });
-
-            // Handle mapping lookup errors
-            if (!mappingResult.success) {
-                ctx.logger.error(`QBO Item lookup action failed for service_id ${currentItemServiceId}.`, { 
-                    error: mappingResult.message, 
-                    executionId: ctx.executionId 
-                });
-                
-                const taskResLookupFailed = await handleQboApiError(ctx, {
-                    error: { message: mappingResult.message },
-                    operation: `lookup product mapping for ID ${currentItemServiceId}`,
-                    algaInvoiceId,
-                    invoiceNumber: algaInvoice?.invoice_number,
-                    entityId: item.id,
-                    realmId
-                });
-                
-                if (taskResLookupFailed.userFixedTheProblem) {
-                    continue; // Retry the lookup
-                } else {
-                    return { success: false, itemAdded: false };
-                }
-            }
-
-            // Handle case where no mapping was found
-            if (!mappingResult.found) {
-                const taskResNotFound = await handleQboItemMappingError(ctx, {
-                    serviceId: currentItemServiceId,
-                    serviceName: item.service_name,
-                    itemId: item.id,
-                    algaInvoiceId,
-                    invoiceNumber: algaInvoice?.invoice_number,
-                    companyId: algaInvoice?.company_id,
-                    realmId
-                });
-                
-                if (taskResNotFound.userFixedTheProblem) {
-                    continue; // Retry the mapping lookup
-                } else {
-                    return { success: false, itemAdded: false };
-                }
-            }
-
-            // Verify we have the QBO item ID
-            const qboItemId = mappingResult.qboItemId;
-            if (!qboItemId) {
-                ctx.logger.error(`QBO Item ID missing after successful lookup for service_id ${currentItemServiceId}.`, { executionId: ctx.executionId });
-                
-                const taskResInternalError = await createAndWaitForHumanTask(ctx.actions, {
-                    taskType: 'workflow_error',
-                    title: `System Error: QBO Item Lookup - Invoice #${algaInvoice?.invoice_number || 'Unknown'} (Item ID: ${item.id})`,
-                    description: `System error: Lookup for product ID ${currentItemServiceId} succeeded but no QBO Item ID returned. Please contact support.`,
-                    priority: 'high',
-                    userId: ctx.userId,
-                    contextData: {
-                        message: `System error: QuickBooks item lookup for product ID ${currentItemServiceId} (Invoice #${algaInvoice?.invoice_number || 'Unknown'}) reported success but no QBO item ID. This needs investigation. If issue is understood and resolved, submit task.`,
-                    }
-                });
-                
-                if (taskResInternalError.userFixedTheProblem) {
-                    continue; // Retry the mapping lookup
-                } else {
-                    return { success: false, itemAdded: false };
-                }
-            }
-
-            // Add the item to the QBO invoice lines
-            qboInvoiceLines.push({
-                Amount: item.amount ?? 0,
-                DetailType: "SalesItemLineDetail",
-                SalesItemLineDetail: { ItemRef: { value: qboItemId } },
-            });
-            
-            ctx.logger.info(`Item ${item.id} (service_id: ${currentItemServiceId}) successfully processed and added to QBO lines.`, { executionId: ctx.executionId });
-            return { success: true, itemAdded: true };
-
-        } catch (itemError: any) {
-            ctx.logger.error(`Unhandled error during mapping for item ${item.id} (service_id: ${currentItemServiceId}).`, { 
-                error: itemError.message, 
-                executionId: ctx.executionId 
-            });
-            
-            if (attempts >= MAX_ATTEMPTS) {
-                await createAndWaitForHumanTask(ctx.actions, {
-                    taskType: 'workflow_error',
-                    title: `Unrecoverable Mapping Error - Item ${item.id} on Invoice #${algaInvoice?.invoice_number || 'Unknown'}`,
-                    priority: 'high',
-                    description: `Item ${item.id} could not be mapped after ${MAX_ATTEMPTS} attempts. Error: ${itemError.message}. Manual intervention required.`,
-                    userId: ctx.userId,
-                    contextData: { 
-                        message: `Item ${item.id} could not be mapped after ${MAX_ATTEMPTS} attempts. Error: ${itemError.message}. Manual intervention required.`, 
-                        alga_item_id: item.id, 
-                        alga_invoice_id: algaInvoice?.invoice_id 
-                    }
-                });
-                return { success: false, itemAdded: false };
-            }
-        }
-    }
-    
-    return { success: false, itemAdded: false };
-}
-
-/**
  * Workflow to synchronize an Alga PSA Invoice with QuickBooks Online.
  * Triggered by INVOICE_CREATED or INVOICE_UPDATED events.
  */
 export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<void> {
     const { actions, data, events, logger, input, setState, getCurrentState, tenant, executionId, userId } = context;
     const typedActions = actions as WorkflowActions;
+
+    // Define all helper functions inside the main workflow function
+    // This ensures they're included in the serialized function
+
+    /**
+     * Helper to extract QBO API error details consistently
+     */
+    function formatQboApiError(error: any): QboApiError {
+        const qboError = error?.response?.data?.Fault?.Error?.[0];
+        return {
+            message: qboError?.Message ?? error?.message ?? 'Unknown QBO API error',
+            code: qboError?.code ?? error?.response?.status ?? 'UNKNOWN_STATUS_CODE',
+            details: qboError?.Detail ?? error?.response?.data ?? error,
+            statusCode: error?.response?.status
+        };
+    }
+
+    /**
+     * Helper to create and wait for a human task with consistent error handling
+     */
+    async function createAndWaitForHumanTask(
+        actions: WorkflowActions,
+        {
+            taskType,
+            title,
+            description,
+            priority = 'medium',
+            userId,
+            contextData
+        }: {
+            taskType: 'workflow_error' | 'qbo_mapping_error';
+            title: string;
+            description: string;
+            priority?: string;
+            userId?: string;
+            contextData: Record<string, any>;
+        }
+    ): Promise<TaskResolutionResult> {
+        const taskResult = await actions.createTaskAndWaitForResult({
+            taskType,
+            title,
+            description,
+            priority,
+            assignTo: userId ? { users: [userId] } : undefined,
+            contextData
+        });
+
+        return {
+            success: taskResult.success,
+            taskId: taskResult.taskId,
+            resolutionData: taskResult.resolutionData,
+            userFixedTheProblem: !!(taskResult.success && taskResult.resolutionData?.userFixedTheProblem)
+        };
+    }
+
+    /**
+     * Helper to create a human task for QBO credentials error
+     */
+    async function handleQboCredentialsError(
+        ctx: WorkflowHelperContext,
+        {
+            realmId,
+            algaInvoiceId,
+            errorMessage
+        }: {
+            realmId: string;
+            algaInvoiceId: string;
+            errorMessage?: string;
+        }
+    ): Promise<TaskResolutionResult> {
+        ctx.logger.error('Failed to fetch QBO credentials.', { message: errorMessage, realmId, executionId: ctx.executionId });
+        ctx.setState(WorkflowState.ERROR);
+        
+        return await createAndWaitForHumanTask(ctx.actions, {
+            taskType: 'workflow_error',
+            title: `Resolve QuickBooks Auth: Invoice ${algaInvoiceId}`,
+            description: `The system could not retrieve QuickBooks credentials for Realm ID ${realmId} to sync invoice ${algaInvoiceId}. Error: ${errorMessage || 'Unknown error'}. Please check the QuickBooks connection and confirm resolution.`,
+            priority: 'high',
+            userId: ctx.userId,
+            contextData: {
+                message: `Could not retrieve QuickBooks authentication credentials for Realm ID ${realmId}. Error: ${errorMessage || 'Unknown error'}. Please check the QuickBooks connection. If resolved, submit this task.`,
+                alga_invoice_id: algaInvoiceId,
+                tenant: ctx.tenant,
+                realm_id: realmId,
+                workflow_instance_id: ctx.executionId
+            }
+        });
+    }
+
+    /**
+     * Helper to fetch and validate QBO credentials
+     */
+    async function fetchQboCredentials(
+        ctx: WorkflowHelperContext, 
+        realmId: string,
+        algaInvoiceId: string
+    ): Promise<{ success: boolean; credentials?: any }> {
+        // Check for cached credentials
+        const cachedCredentials = ctx.data.get('qboCredentials');
+        if (cachedCredentials) {
+            ctx.logger.info('QBO credentials found in workflow data.', { executionId: ctx.executionId });
+            return { success: true, credentials: cachedCredentials };
+        }
+
+        // Fetch credentials
+        ctx.setState(WorkflowState.RUNNING);
+        ctx.logger.info(`Fetching QBO credentials using get_secret action.`, { realmId, executionId: ctx.executionId });
+        
+        const secretResult = await ctx.actions.get_secret({
+            secretName: 'qbo_credentials',
+            scopeIdentifier: realmId,
+            tenantId: ctx.tenant,
+        });
+
+        if (secretResult.success && secretResult.secret) {
+            const credentials = secretResult.secret;
+            ctx.data.set('qboCredentials', credentials);
+            ctx.logger.info('Successfully fetched and stored QBO credentials.', { executionId: ctx.executionId });
+            return { success: true, credentials };
+        }
+        
+        // Handle error with task
+        const taskResult = await handleQboCredentialsError(ctx, {
+            realmId,
+            algaInvoiceId,
+            errorMessage: secretResult.message
+        });
+        
+        if (taskResult.userFixedTheProblem) {
+            // Try fetching the credentials again
+            const retrySecretResult = await ctx.actions.get_secret({
+                secretName: 'qbo_credentials',
+                scopeIdentifier: realmId,
+                tenantId: ctx.tenant,
+            });
+            
+            if (retrySecretResult.success && retrySecretResult.secret) {
+                const credentials = retrySecretResult.secret;
+                ctx.data.set('qboCredentials', credentials);
+                ctx.logger.info('Successfully fetched and stored QBO credentials after user resolution.', { executionId: ctx.executionId });
+                return { success: true, credentials };
+            }
+        }
+        
+        // If we get here, either the user didn't fix the problem or the retry failed
+        return { success: false };
+    }
+
+    /**
+     * Helper to handle QBO customer mapping errors
+     */
+    async function handleQboCustomerMappingError(
+        ctx: WorkflowHelperContext,
+        {
+            companyId,
+            realmId,
+            algaInvoiceId,
+            invoiceNumber,
+            errorMessage
+        }: {
+            companyId: string;
+            realmId: string;
+            algaInvoiceId: string;
+            invoiceNumber?: string;
+            errorMessage?: string;
+        }
+    ): Promise<TaskResolutionResult> {
+        ctx.logger.error('get_external_entity_mapping action failed.', { company_id: companyId, error: errorMessage, executionId: ctx.executionId });
+        ctx.setState(WorkflowState.ERROR);
+        
+        return await createAndWaitForHumanTask(ctx.actions, {
+            taskType: 'workflow_error',
+            title: `Resolve Customer Mapping Lookup: Invoice #${invoiceNumber || algaInvoiceId}`,
+            description: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId} in Realm ${realmId}. Error: ${errorMessage || 'Unknown error'}. Please investigate and confirm resolution.`,
+            priority: 'high',
+            userId: ctx.userId,
+            contextData: {
+                message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId}. Error: ${errorMessage}. Please investigate.`,
+                alga_invoice_id: algaInvoiceId,
+                company_id: companyId,
+                tenant: ctx.tenant,
+                realm_id: realmId,
+                workflow_instance_id: ctx.executionId
+            }
+        });
+    }
+
+    /**
+     * Helper to handle missing QBO item mapping errors
+     */
+    async function handleQboItemMappingError(
+        ctx: WorkflowHelperContext,
+        {
+            serviceId,
+            serviceName,
+            itemId,
+            algaInvoiceId,
+            invoiceNumber,
+            companyId,
+            realmId
+        }: {
+            serviceId: string;
+            serviceName?: string;
+            itemId: string;
+            algaInvoiceId: string;
+            invoiceNumber?: string;
+            companyId?: string;
+            realmId: string;
+        }
+    ): Promise<TaskResolutionResult> {
+        ctx.logger.warn(`QBO Item ID not found for service_id ${serviceId}.`, { executionId: ctx.executionId });
+        ctx.setState(WorkflowState.ERROR);
+        
+        return await createAndWaitForHumanTask(ctx.actions, {
+            taskType: 'qbo_mapping_error',
+            title: `Product Not Mapped: Invoice ${invoiceNumber || 'Unknown'} (Item ID: ${itemId})`,
+            description: `Product '${serviceName || 'Unknown Product'}' (ID: ${serviceId}) is not mapped to a QuickBooks item. Please map it.`,
+            priority: 'medium',
+            userId: ctx.userId,
+            contextData: {
+                alga_service_id: serviceId,
+                service_name: serviceName || 'Unknown Product',
+                alga_company_id: companyId,
+                company_name: companyId || 'Unknown Company',
+                alga_invoice_id: algaInvoiceId,
+                tenant: ctx.tenant,
+                realm_id: realmId,
+                workflow_instance_id: ctx.executionId,
+                userFixedTheProblem: false
+            }
+        });
+    }
+
+    /**
+     * Helper to handle QBO API errors
+     */
+    async function handleQboApiError(
+        ctx: WorkflowHelperContext,
+        {
+            error,
+            operation,
+            algaInvoiceId,
+            invoiceNumber,
+            entityId,
+            realmId
+        }: {
+            error: any;
+            operation: string;
+            algaInvoiceId: string;
+            invoiceNumber?: string;
+            entityId?: string;
+            realmId: string;
+        }
+    ): Promise<TaskResolutionResult> {
+        const qboError = formatQboApiError(error);
+        
+        ctx.logger.error(`QBO API ${operation} failed.`, { 
+            error: qboError.message, 
+            errorCode: qboError.code, 
+            details: qboError.details, 
+            entityId,
+            executionId: ctx.executionId 
+        });
+        
+        ctx.setState(WorkflowState.ERROR);
+        ctx.data.set('qboApiError', qboError);
+        
+        return await createAndWaitForHumanTask(ctx.actions, {
+            taskType: 'workflow_error',
+            title: `QuickBooks API Error - Invoice #${invoiceNumber || algaInvoiceId}`,
+            description: `The system failed to ${operation} in QuickBooks. Error: ${qboError.message}. Please investigate and confirm resolution.`,
+            priority: 'high',
+            userId: ctx.userId,
+            contextData: {
+                message: `QuickBooks API error: Failed to ${operation} invoice #${invoiceNumber || algaInvoiceId}. Error: ${qboError.message}.`,
+                alga_invoice_id: algaInvoiceId,
+                error_code: qboError.code,
+                error_details: qboError.details,
+                tenant: ctx.tenant,
+                realm_id: realmId,
+                workflow_instance_id: ctx.executionId
+            }
+        });
+    }
+
+    /**
+     * Helper to handle missing service ID in invoice item
+     */
+    async function handleMissingServiceIdError(
+        ctx: WorkflowHelperContext,
+        {
+            item,
+            algaInvoice,
+            algaInvoiceId,
+        }: {
+            item: AlgaInvoiceItem;
+            algaInvoice: AlgaInvoice;
+            algaInvoiceId: string;
+        }
+    ): Promise<TaskResolutionResult> {
+        ctx.logger.warn(`Item ${item.id} is missing service_id. Creating human task.`, { executionId: ctx.executionId });
+        ctx.setState(WorkflowState.ERROR);
+        
+        return await createAndWaitForHumanTask(ctx.actions, {
+            taskType: 'workflow_error',
+            title: `Item Missing Product/Service: Invoice #${algaInvoice?.invoice_number || 'Unknown'} (Item ID: ${item.id})`,
+            description: `Line item (ID: ${item.id}) on invoice #${algaInvoice?.invoice_number || 'Unknown'} is missing a product/service association. Please associate a product/service with this item or confirm if it should be skipped.`,
+            priority: 'medium',
+            userId: ctx.userId,
+            contextData: {
+                message: `Line item (ID: ${item.id}, Amount: ${item.amount || 'N/A'}) on invoice ${algaInvoice?.invoice_id || 'Unknown'} does not have an associated Alga Product/Service. Please associate one. If resolved, submit this task indicating the issue is fixed.`,
+                alga_invoice_id: algaInvoiceId,
+                item_id: item.id,
+                tenant: ctx.tenant,
+                workflow_instance_id: ctx.executionId
+            }
+        });
+    }
+
+    /**
+     * Process an invoice item for QBO synchronization
+     */
+    async function processInvoiceItem(
+        ctx: WorkflowHelperContext,
+        {
+            item,
+            algaInvoice,
+            algaInvoiceId,
+            realmId,
+            qboCredentials,
+            qboInvoiceLines
+        }: {
+            item: AlgaInvoiceItem;
+            algaInvoice: AlgaInvoice;
+            algaInvoiceId: string;
+            realmId: string;
+            qboCredentials: any;
+            qboInvoiceLines: any[];
+        }
+    ): Promise<{ success: boolean; itemAdded: boolean }> {
+        let currentItemServiceId = item.service_id;
+        let attempts = 0;
+        const MAX_ATTEMPTS = 2;
+
+        // If no service ID, handle the error
+        if (!currentItemServiceId) {
+            const taskResult = await handleMissingServiceIdError(ctx, { item, algaInvoice, algaInvoiceId });
+            
+            if (taskResult.userFixedTheProblem) {
+                // Re-fetch item data to get updated service_id
+                const refreshedItemsResult = await ctx.actions.getInvoiceItems({ 
+                    invoiceId: algaInvoiceId, 
+                    tenantId: ctx.tenant 
+                });
+                
+                if (refreshedItemsResult.success) {
+                    const refreshedItem = refreshedItemsResult.items.find(i => i.id === item.id);
+                    if (refreshedItem?.service_id) {
+                        item.service_id = refreshedItem.service_id;
+                        currentItemServiceId = refreshedItem.service_id;
+                        ctx.logger.info(`Refreshed item ${item.id} and found service_id: ${currentItemServiceId}`, { executionId: ctx.executionId });
+                    } else {
+                        ctx.logger.warn(`Item ${item.id} still missing service_id after task resolution and item refresh.`, { executionId: ctx.executionId });
+                        return { success: false, itemAdded: false };
+                    }
+                } else {
+                    ctx.logger.warn(`Failed to refresh invoice items after task for item ${item.id}.`, { executionId: ctx.executionId });
+                    return { success: false, itemAdded: false };
+                }
+            } else {
+                // User did not fix the issue or task failed
+                return { success: false, itemAdded: false };
+            }
+        }
+
+        // Now that we have a service ID (either initially or after resolution), look up the QBO item ID
+        while (attempts < MAX_ATTEMPTS) {
+            attempts++;
+            ctx.setState(WorkflowState.RUNNING);
+            ctx.logger.info(`Processing item ${item.id}, attempt ${attempts}`, { executionId: ctx.executionId });
+
+            try {
+                // Verify item has a service ID
+                if (!currentItemServiceId) {
+                    ctx.logger.error(`Item ${item.id} has no service_id at attempt ${attempts}`, { executionId: ctx.executionId });
+                    return { success: false, itemAdded: false };
+                }
+
+                // Look up QBO item ID
+                const mappingResult = await ctx.actions.lookupQboItemId({ 
+                    algaProductId: currentItemServiceId, 
+                    tenantId: ctx.tenant, 
+                    realmId, 
+                    qboCredentials 
+                });
+
+                // Handle mapping lookup errors
+                if (!mappingResult.success) {
+                    ctx.logger.error(`QBO Item lookup action failed for service_id ${currentItemServiceId}.`, { 
+                        error: mappingResult.message, 
+                        executionId: ctx.executionId 
+                    });
+                    
+                    const taskResLookupFailed = await handleQboApiError(ctx, {
+                        error: { message: mappingResult.message },
+                        operation: `lookup product mapping for ID ${currentItemServiceId}`,
+                        algaInvoiceId,
+                        invoiceNumber: algaInvoice?.invoice_number,
+                        entityId: item.id,
+                        realmId
+                    });
+                    
+                    if (taskResLookupFailed.userFixedTheProblem) {
+                        continue; // Retry the lookup
+                    } else {
+                        return { success: false, itemAdded: false };
+                    }
+                }
+
+                // Handle case where no mapping was found
+                if (!mappingResult.found) {
+                    const taskResNotFound = await handleQboItemMappingError(ctx, {
+                        serviceId: currentItemServiceId,
+                        serviceName: item.service_name,
+                        itemId: item.id,
+                        algaInvoiceId,
+                        invoiceNumber: algaInvoice?.invoice_number,
+                        companyId: algaInvoice?.company_id,
+                        realmId
+                    });
+                    
+                    if (taskResNotFound.userFixedTheProblem) {
+                        continue; // Retry the mapping lookup
+                    } else {
+                        return { success: false, itemAdded: false };
+                    }
+                }
+
+                // Verify we have the QBO item ID
+                const qboItemId = mappingResult.qboItemId;
+                if (!qboItemId) {
+                    ctx.logger.error(`QBO Item ID missing after successful lookup for service_id ${currentItemServiceId}.`, { executionId: ctx.executionId });
+                    
+                    const taskResInternalError = await createAndWaitForHumanTask(ctx.actions, {
+                        taskType: 'workflow_error',
+                        title: `System Error: QBO Item Lookup - Invoice #${algaInvoice?.invoice_number || 'Unknown'} (Item ID: ${item.id})`,
+                        description: `System error: Lookup for product ID ${currentItemServiceId} succeeded but no QBO Item ID returned. Please contact support.`,
+                        priority: 'high',
+                        userId: ctx.userId,
+                        contextData: {
+                            message: `System error: QuickBooks item lookup for product ID ${currentItemServiceId} (Invoice #${algaInvoice?.invoice_number || 'Unknown'}) reported success but no QBO item ID. This needs investigation. If issue is understood and resolved, submit task.`,
+                        }
+                    });
+                    
+                    if (taskResInternalError.userFixedTheProblem) {
+                        continue; // Retry the mapping lookup
+                    } else {
+                        return { success: false, itemAdded: false };
+                    }
+                }
+
+                // Add the item to the QBO invoice lines
+                qboInvoiceLines.push({
+                    Amount: item.amount ?? 0,
+                    DetailType: "SalesItemLineDetail",
+                    SalesItemLineDetail: { ItemRef: { value: qboItemId } },
+                });
+                
+                ctx.logger.info(`Item ${item.id} (service_id: ${currentItemServiceId}) successfully processed and added to QBO lines.`, { executionId: ctx.executionId });
+                return { success: true, itemAdded: true };
+
+            } catch (itemError: any) {
+                ctx.logger.error(`Unhandled error during mapping for item ${item.id} (service_id: ${currentItemServiceId}).`, { 
+                    error: itemError.message, 
+                    executionId: ctx.executionId 
+                });
+                
+                if (attempts >= MAX_ATTEMPTS) {
+                    await createAndWaitForHumanTask(ctx.actions, {
+                        taskType: 'workflow_error',
+                        title: `Unrecoverable Mapping Error - Item ${item.id} on Invoice #${algaInvoice?.invoice_number || 'Unknown'}`,
+                        priority: 'high',
+                        description: `Item ${item.id} could not be mapped after ${MAX_ATTEMPTS} attempts. Error: ${itemError.message}. Manual intervention required.`,
+                        userId: ctx.userId,
+                        contextData: { 
+                            message: `Item ${item.id} could not be mapped after ${MAX_ATTEMPTS} attempts. Error: ${itemError.message}. Manual intervention required.`, 
+                            alga_item_id: item.id, 
+                            alga_invoice_id: algaInvoice?.invoice_id 
+                        }
+                    });
+                    return { success: false, itemAdded: false };
+                }
+            }
+        }
+        
+        return { success: false, itemAdded: false };
+    }
+
+    /**
+     * Helper to create or update a QBO invoice
+     */
+    async function createOrUpdateQboInvoice(
+        ctx: WorkflowHelperContext,
+        {
+            qboInvoiceData,
+            realmId,
+            qboCredentials,
+            algaInvoice,
+            algaInvoiceId
+        }: {
+            qboInvoiceData: QboInvoiceData;
+            realmId: string;
+            qboCredentials: any;
+            algaInvoice: AlgaInvoice;
+            algaInvoiceId: string;
+        }
+    ): Promise<{ success: boolean; result?: { Id: string; SyncToken: string } }> {
+        try {
+            let qboResult: { Id: string; SyncToken: string };
+            
+            // Determine if we're creating or updating
+            if (algaInvoice.qbo_invoice_id && algaInvoice.qbo_sync_token) {
+                ctx.setState(WorkflowState.RUNNING);
+                ctx.logger.info(`Calling QBO API to update existing invoice`, { 
+                    qbo_invoice_id: algaInvoice.qbo_invoice_id, 
+                    executionId: ctx.executionId 
+                });
+                
+                qboResult = await ctx.actions.updateQboInvoice({
+                    qboInvoiceData: qboInvoiceData,
+                    qboSyncToken: algaInvoice.qbo_sync_token,
+                    tenantId: ctx.tenant,
+                    realmId: realmId,
+                    qboCredentials
+                });
+                
+                ctx.logger.info('Successfully updated invoice in QBO.', { 
+                    qbo_invoice_id: qboResult.Id, 
+                    executionId: ctx.executionId 
+                });
+            } else {
+                ctx.setState(WorkflowState.RUNNING);
+                ctx.logger.info(`Calling QBO API to create new invoice`, { executionId: ctx.executionId });
+                
+                qboResult = await ctx.actions.createQboInvoice({
+                    qboInvoiceData: qboInvoiceData,
+                    tenantId: ctx.tenant,
+                    realmId: realmId,
+                    qboCredentials
+                });
+                
+                ctx.logger.info('Successfully created invoice in QBO.', { 
+                    qbo_invoice_id: qboResult.Id, 
+                    executionId: ctx.executionId 
+                });
+            }
+            
+            // Update Alga invoice with QBO details
+            ctx.setState(WorkflowState.RUNNING);
+            if (!algaInvoice.invoice_id) {
+                throw new Error('Critical: algaInvoice.invoice_id is undefined when trying to update Alga with QBO details');
+            }
+            
+            await ctx.actions.updateInvoiceQboDetails({
+                invoiceId: algaInvoice.invoice_id,
+                qboInvoiceId: qboResult.Id,
+                qboSyncToken: qboResult.SyncToken,
+                tenantId: ctx.tenant
+            });
+            
+            ctx.logger.info('Successfully updated Alga invoice with QBO IDs.', { 
+                invoiceId: algaInvoice.invoice_id, 
+                qboInvoiceId: qboResult.Id, 
+                executionId: ctx.executionId 
+            });
+            
+            return { success: true, result: qboResult };
+            
+        } catch (error: any) {
+            const taskResult = await handleQboApiError(ctx, {
+                error,
+                operation: algaInvoice.qbo_invoice_id ? 'update the existing invoice' : 'create a new invoice',
+                algaInvoiceId,
+                invoiceNumber: algaInvoice.invoice_number,
+                realmId
+            });
+            
+            if (taskResult.userFixedTheProblem) {
+                // User fixed the problem, recursively retry the operation
+                return createOrUpdateQboInvoice(ctx, {
+                    qboInvoiceData,
+                    realmId,
+                    qboCredentials,
+                    algaInvoice,
+                    algaInvoiceId
+                });
+            }
+            
+            return { success: false };
+        }
+    }
 
     // Create helper context for utility functions
     const helperContext: WorkflowHelperContext = {
