@@ -1364,4 +1364,5 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 function registerTaskInboxActions(actionRegistry: ActionRegistry): void {
   const taskInboxService = getTaskInboxService();
   taskInboxService.registerTaskActions(actionRegistry);
+  logger.info('[WorkflowInit] Task inbox actions registered, including inline form support');
 }
