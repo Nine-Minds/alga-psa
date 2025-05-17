@@ -20,6 +20,8 @@ The system supports inline forms with the following components:
 3. A `createInlineTaskAndWaitForResult` composite action that creates a task and waits for its completion
 4. A cleanup job that removes temporary forms periodically
 
+When a task is created using an inline form, the system dynamically generates temporary, tenant-specific entries in the `workflow_form_definitions`, `workflow_form_schemas`, and `workflow_task_definitions` tables. The task instance in `workflow_tasks` then links to these temporary definitions. This allows the Task Inbox to discover and render the form using its standard mechanisms, as if it were a pre-registered form, while still allowing for ad-hoc form creation within workflows.
+
 ## Example Usage
 
 ### Basic Example: Creating a Task with Inline Form

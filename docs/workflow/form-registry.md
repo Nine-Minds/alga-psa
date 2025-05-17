@@ -278,6 +278,8 @@ const taskResult = await context.actions.createHumanTask({
 });
 ```
 
+It's important to note that while the Task Inbox primarily interacts with forms pre-registered in the Form Registry (as described above), it also supports tasks whose forms are defined "inline" at the point of task creation within a workflow. In such cases, the system dynamically creates temporary, tenant-specific form definitions and task definitions. The task instance then links to these temporary definitions, allowing the Task Inbox to retrieve and render the form schemas using the same underlying mechanisms. These temporary definitions are typically flagged (e.g., `is_temporary: true`) and are subject to periodic cleanup. For more details on inline forms, see `docs/workflow/inline-form-example.md`.
+
 ### Linking Tasks to Forms via Task Definitions
 
 The system now uses a structured approach to link a running workflow task (`workflow_tasks` table) to its corresponding form definition. This involves separate tables for system-level and tenant-specific task definitions.

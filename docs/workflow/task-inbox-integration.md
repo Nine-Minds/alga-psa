@@ -231,8 +231,8 @@ Dynamic form generation based on JSON Schema:
 - Uses React JSONSchema Form (RJSF)
 - Custom widgets for specialized inputs
 - Validation based on schema
-- Conditional display logic
-- File attachment handling
+    - Conditional display logic
+    - File attachment handling
 
 ### 5. Database Schema
 
@@ -320,6 +320,31 @@ CREATE TABLE workflow_task_history (
 ```
 
 ## Implementation Strategy
+
+### Handling Tasks with Inline Forms
+
+While the primary mechanism described above involves tasks linked to pre-registered form definitions via `taskType`, the system also supports tasks created with "inline forms." Inline forms are defined directly within the workflow code at the point of task creation (e.g., using actions like `create_task_with_inline_form` or `createInlineTaskAndWaitForResult`).
+
+Here's how these are integrated into the Task Inbox:
+
+1.  **Dynamic Definition Creation**: When a task is initiated with an inline form:
+    *   The system dynamically creates a temporary, tenant-specific form definition in the `workflow_form_definitions` table. This definition is flagged (e.g., `is_temporary: true`).
+    *   The JSON and UI schemas provided inline are stored in `workflow_form_schemas`, linked to this temporary form definition.
+    *   A corresponding temporary, tenant-specific task definition is created in `workflow_task_definitions`. This task definition links to the temporary form ID and specifies `form_type: 'tenant'`.
+
+2.  **Task Instance Linking**: The actual task instance created in `workflow_tasks` is then linked to this temporary tenant-specific task definition using:
+    *   `task_definition_type: 'tenant'`
+    *   `tenant_task_definition_id`: The ID of the dynamically created temporary task definition.
+
+3.  **Schema Retrieval by Task Inbox**: Because the task instance points to a standard (though temporary) tenant-specific task definition, the Task Inbox can retrieve its form schema using the same logic as for pre-registered forms:
+    *   The inbox identifies the `task_definition_type` as 'tenant'.
+    *   It uses `tenant_task_definition_id` to fetch the temporary task definition.
+    *   This definition provides the `form_id` (of the temporary form) and `form_type` ('tenant').
+    *   The Form Registry service (or similar logic) then retrieves the schemas from `workflow_form_definitions` and `workflow_form_schemas`.
+
+4.  **Lifecycle and Cleanup**: These temporary definitions are typically cleaned up by a background job, as detailed in the inline forms documentation (see `docs/workflow/inline-form-example.md`).
+
+This approach allows workflows to flexibly define ad-hoc forms while ensuring the Task Inbox can consistently render and manage them without requiring separate logic for inline versus pre-registered forms at the retrieval stage.
 
 ### Phase 1: Core Infrastructure
 
