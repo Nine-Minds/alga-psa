@@ -201,6 +201,247 @@ export class TaskInboxService {
       throw error;
     }
   }
+
+  /**
+   * Creates a task with an inline form definition
+   * 
+   * @param knex Knex instance
+   * @param tenant Tenant ID
+   * @param executionId Workflow execution ID
+   * @param params Task and form parameters
+   * @param userId User ID of the creator
+   * @returns The created task ID
+   */
+  async createTaskWithInlineForm(
+    knex: Knex,
+    tenant: string,
+    executionId: string,
+    params: {
+      title: string;
+      description?: string;
+      priority?: string;
+      dueDate?: string | Date;
+      assignTo?: {
+        roles?: string[] | string;
+        users?: string[] | string;
+      };
+      contextData?: Record<string, any>;
+      form: {
+        jsonSchema: Record<string, any>;
+        uiSchema?: Record<string, any>;
+        defaultValues?: Record<string, any>;
+      };
+      formCategory?: string;
+    },
+    userId?: string
+  ): Promise<string> {
+    try {
+      // Start a transaction to ensure atomicity
+      return knex.transaction(async (trx) => {
+        // Generate a unique form ID
+        const formId = uuidv4();
+        const tempTaskType = `inline_task_${formId}`;
+
+        // Create the temporary form in the tenant's workflow_form_definitions table
+        await trx('workflow_form_definitions').insert({
+          form_id: formId,
+          tenant: tenant,
+          name: `Inline Form - ${params.title}`,
+          description: `Inline form for task: ${params.title}`,
+          version: '1.0',
+          status: 'active',
+          category: params.formCategory || 'inline_forms',
+          is_temporary: true,
+          created_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        // Add the form schema
+        await trx('workflow_form_schemas').insert({
+          schema_id: uuidv4(),
+          form_id: formId,
+          tenant: tenant,
+          json_schema: params.form.jsonSchema,
+          ui_schema: params.form.uiSchema || {},
+          default_values: params.form.defaultValues || {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        // Create a task definition in the tenant's task definitions table
+        const taskDefinitionId = uuidv4();
+        await trx('workflow_task_definitions').insert({
+          task_definition_id: taskDefinitionId,
+          tenant: tenant,
+          name: tempTaskType,
+          description: `Auto-generated task definition for inline form`,
+          form_id: formId,
+          form_type: 'tenant',
+          default_priority: params.priority || 'medium',
+          created_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        // Process the assignTo parameter to ensure proper array format
+        let assignedRoles = undefined;
+        let assignedUsers = undefined;
+
+        if (params.assignTo?.roles) {
+          if (typeof params.assignTo.roles === 'string') {
+            assignedRoles = [params.assignTo.roles];
+          } else if (Array.isArray(params.assignTo.roles)) {
+            assignedRoles = params.assignTo.roles;
+          }
+        }
+
+        if (params.assignTo?.users) {
+          if (typeof params.assignTo.users === 'string') {
+            assignedUsers = [params.assignTo.users];
+          } else if (Array.isArray(params.assignTo.users)) {
+            assignedUsers = params.assignTo.users;
+          }
+        }
+
+        // Generate task ID
+        const taskId = uuidv4();
+
+        // Insert the task with references to the tenant task definition
+        await trx('workflow_tasks').insert({
+          task_id: taskId,
+          tenant: tenant,
+          execution_id: executionId,
+          task_definition_type: 'tenant',
+          system_task_definition_task_type: null,
+          tenant_task_definition_id: taskDefinitionId,
+          title: params.title,
+          description: params.description,
+          status: WorkflowTaskStatus.PENDING,
+          priority: params.priority || 'medium',
+          due_date: params.dueDate ? new Date(params.dueDate).toISOString() : null,
+          context_data: params.contextData ? JSON.stringify(params.contextData) : null,
+          assigned_roles: assignedRoles ? JSON.stringify(assignedRoles) : null,
+          assigned_users: assignedUsers ? JSON.stringify(assignedUsers) : null,
+          created_by: userId,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+
+        // Add task history entry
+        await WorkflowTaskModel.addTaskHistory(trx, tenant, {
+          task_id: taskId,
+          tenant: tenant,
+          action: 'create',
+          from_status: null,
+          to_status: WorkflowTaskStatus.PENDING,
+          user_id: userId
+        });
+
+        // Create the task created event
+        await trx('workflow_events').insert({
+          event_id: uuidv4(),
+          execution_id: executionId,
+          event_name: TaskEventNames.taskCreated(taskId),
+          event_type: 'task_created',
+          tenant: tenant,
+          from_state: '',
+          to_state: WorkflowTaskStatus.PENDING,
+          user_id: userId,
+          payload: {
+            taskId: taskId,
+            title: params.title,
+            description: params.description,
+            priority: params.priority || 'medium',
+            dueDate: params.dueDate,
+            assignedRoles: assignedRoles,
+            assignedUsers: assignedUsers,
+            contextData: params.contextData
+          },
+          created_at: new Date().toISOString()
+        });
+
+        return taskId;
+      });
+    } catch (error) {
+      console.error('Error creating task with inline form:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up temporary forms for a specific tenant
+   * 
+   * @param knex Knex instance 
+   * @param tenant Tenant ID
+   * @returns Number of forms deleted
+   */
+  async cleanupTemporaryForms(knex: Knex, tenant: string): Promise<number> {
+    try {
+      // First get the IDs of all temporary forms for this tenant
+      const tempForms = await knex('workflow_form_definitions')
+        .where({ tenant: tenant, is_temporary: true })
+        .select('form_id');
+
+      if (tempForms.length === 0) {
+        return 0;
+      }
+
+      const formIds = tempForms.map(f => f.form_id);
+
+      // Delete task definitions that reference these forms
+      await knex('workflow_task_definitions')
+        .where({ tenant: tenant })
+        .whereIn('form_id', formIds)
+        .delete();
+
+      // Delete schemas
+      await knex('workflow_form_schemas')
+        .where({ tenant: tenant })
+        .whereIn('form_id', formIds)
+        .delete();
+
+      // Then delete the forms themselves
+      const deletedCount = await knex('workflow_form_definitions')
+        .where({ tenant: tenant, is_temporary: true })
+        .delete();
+
+      console.log(`Cleaned up ${deletedCount} temporary forms for tenant ${tenant}`);
+      return deletedCount;
+    } catch (error) {
+      console.error(`Error cleaning up temporary forms for tenant ${tenant}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Clean up temporary forms for all tenants
+   * 
+   * @param knex Knex instance
+   * @returns Total number of forms deleted
+   */
+  async cleanupAllTemporaryForms(knex: Knex): Promise<number> {
+    try {
+      // Get distinct tenants that have temporary forms
+      const tenants = await knex('workflow_form_definitions')
+        .where({ is_temporary: true })
+        .distinct('tenant')
+        .pluck('tenant');
+
+      let totalDeleted = 0;
+
+      // Clean up for each tenant
+      for (const tenant of tenants) {
+        const deleted = await this.cleanupTemporaryForms(knex, tenant);
+        totalDeleted += deleted;
+      }
+
+      return totalDeleted;
+    } catch (error) {
+      console.error('Error cleaning up temporary forms for all tenants:', error);
+      throw error;
+    }
+  }
   
   /**
    * Register a task creation action with the workflow engine
@@ -303,6 +544,178 @@ export class TaskInboxService {
           };
         } catch (error) {
           console.error('Error executing create_human_task action:', error);
+          throw error;
+        }
+      }
+    );
+
+    // Register create_task_with_inline_form action
+    actionRegistry.registerSimpleAction(
+      'create_task_with_inline_form',
+      'Create a human task with an inline form definition',
+      [
+        { name: 'title', type: 'string', required: true },
+        { name: 'description', type: 'string', required: false },
+        { name: 'priority', type: 'string', required: false },
+        { name: 'dueDate', type: 'string', required: false },
+        { name: 'assignTo', type: 'object', required: false },
+        { name: 'contextData', type: 'object', required: false },
+        { name: 'form', type: 'object', required: true },
+        { name: 'formCategory', type: 'string', required: false }
+      ],
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
+        try {
+          const taskInboxService = new TaskInboxService();
+          
+          // Get database connection
+          const { getAdminConnection } = await import('@shared/db/admin.js');
+          const knex = await getAdminConnection();
+          
+          // Validate form parameter
+          if (!params.form || !params.form.jsonSchema) {
+            throw new Error('Form parameter must include jsonSchema');
+          }
+          
+          // Create the task with inline form
+          const taskId = await taskInboxService.createTaskWithInlineForm(
+            knex,
+            context.tenant,
+            context.executionId,
+            {
+              title: params.title,
+              description: params.description,
+              priority: params.priority,
+              dueDate: params.dueDate,
+              assignTo: params.assignTo,
+              contextData: params.contextData,
+              form: {
+                jsonSchema: params.form.jsonSchema,
+                uiSchema: params.form.uiSchema,
+                defaultValues: params.form.defaultValues
+              },
+              formCategory: params.formCategory
+            },
+            context.userId
+          );
+          
+          return {
+            success: true,
+            taskId
+          };
+        } catch (error) {
+          console.error('Error executing create_task_with_inline_form action:', error);
+          throw error;
+        }
+      }
+    );
+
+    // Register the composite action for creating a task with inline form and waiting for result
+    actionRegistry.registerCustomAction(
+      'createInlineTaskAndWaitForResult',
+      'Create a human task with an inline form definition and wait for its completion',
+      async (params: {
+        title: string;
+        description?: string;
+        priority?: string;
+        dueDate?: string;
+        assignTo?: {
+          roles?: string[] | string;
+          users?: string[] | string;
+        };
+        contextData?: Record<string, any>;
+        form: {
+          jsonSchema: Record<string, any>;
+          uiSchema?: Record<string, any>;
+          defaultValues?: Record<string, any>;
+        };
+        formCategory?: string;
+        waitForEventTimeoutMilliseconds?: number;
+      }, context: ActionExecutionContext) => {
+        try {
+          // Step 1: Create the task with inline form
+          const createTaskResult = await context.actions.create_task_with_inline_form({
+            title: params.title,
+            description: params.description,
+            priority: params.priority,
+            dueDate: params.dueDate,
+            assignTo: params.assignTo,
+            contextData: params.contextData,
+            form: params.form,
+            formCategory: params.formCategory
+          });
+
+          if (!createTaskResult.success || !createTaskResult.taskId) {
+            return {
+              success: false,
+              taskId: null,
+              error: 'Failed to create task with inline form',
+              details: createTaskResult
+            };
+          }
+
+          const taskId = createTaskResult.taskId;
+
+          // Step 2: Wait for the task completion event
+          try {
+            const taskCompletedEventName = TaskEventNames.taskCompleted(taskId);
+            const waitOptions = params.waitForEventTimeoutMilliseconds
+              ? { timeoutMilliseconds: params.waitForEventTimeoutMilliseconds }
+              : undefined;
+
+            const completionEvent = await context.events.waitFor(taskCompletedEventName, waitOptions);
+
+            return {
+              success: true,
+              taskId,
+              resolutionData: completionEvent.payload.formData
+            };
+          } catch (waitError) {
+            // Handle timeout or other waitFor errors
+            return {
+              success: false,
+              taskId,
+              error: waitError instanceof Error ? waitError.message : 'Unknown error waiting for task completion',
+              details: waitError
+            };
+          }
+        } catch (error) {
+          return {
+            success: false,
+            taskId: null,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            details: error
+          };
+        }
+      }
+    );
+
+    // Register cleanup_temporary_forms action
+    actionRegistry.registerSimpleAction(
+      'cleanup_temporary_forms',
+      'Clean up temporary forms for a tenant',
+      [
+        { name: 'tenant', type: 'string', required: true }
+      ],
+      async (params: Record<string, any>, context: ActionExecutionContext) => {
+        try {
+          const taskInboxService = new TaskInboxService();
+          
+          // Get database connection
+          const { getAdminConnection } = await import('@shared/db/admin.js');
+          const knex = await getAdminConnection();
+          
+          // Clean up temporary forms
+          const deletedCount = await taskInboxService.cleanupTemporaryForms(
+            knex,
+            params.tenant
+          );
+          
+          return {
+            success: true,
+            deletedCount
+          };
+        } catch (error) {
+          console.error('Error executing cleanup_temporary_forms action:', error);
           throw error;
         }
       }
