@@ -1,65 +1,176 @@
+import P from 'parsimmon';
+
+// --- Parsimmon Parsers (to be implemented in server/src/utils/templateUtils.ts) ---
+
+// Forward declarations for recursive parsers
+// Note: Parsimmon types P.Parser<any> for flexibility, consider more specific types if possible.
+const Expression: P.Parser<any> = P.lazy((): P.Parser<any> => P.alt(OrExpressionParser, TermParser));
+const TermParser: P.Parser<any> = P.lazy((): P.Parser<any> => P.alt(DateMethodCallParser, DateConstructorParser, VariableParser, StringLiteralParser));
+
+const StringLiteralParser = P.alt(
+    P.regexp(/'((?:\\.|[^'])*)'/s, 1),
+    P.regexp(/"((?:\\.|[^"])*)"/s, 1)
+).map(value => ({ type: 'LiteralString', value }));
+
+const VariableParser = P.regexp(/[a-zA-Z_][a-zA-Z0-9_.]*/).map(name => ({ type: 'Variable', name }));
+
+const DateConstructorParser = P.seqMap(
+    P.string('new').then(P.whitespace), P.string('Date').then(P.optWhitespace), P.string('(').then(P.optWhitespace),
+    P.alt(VariableParser, StringLiteralParser),
+    P.optWhitespace.then(P.string(')')),
+    (_newDateStrAndWs, _dateStrAndWs, _openParenAndWs, arg, _closeParenAndWs) => ({ type: 'DateConstructor', argument: arg })
+);
+
+const DateMethodCallParser = P.seqMap(
+    P.alt(DateConstructorParser, VariableParser),
+    P.string('.'),
+    P.alt(P.string('toLocaleDateString'), P.string('toLocaleString')),
+    P.string('(').then(P.optWhitespace).then(P.string(')')),
+    (obj, _dot, methodName, _parens) => ({
+        type: 'MethodCall',
+        object: obj,
+        methodName: methodName as 'toLocaleDateString' | 'toLocaleString',
+        arguments: []
+    })
+);
+
+const OrExpressionParser = P.seqMap(
+    TermParser,
+    P.optWhitespace.then(P.string('||')).then(P.optWhitespace),
+    Expression,
+    (left, _op, right) => ({ type: 'Or', left, right })
+);
+
+const ExpressionContentParser = Expression;
+
+const TemplateExpressionParser = ExpressionContentParser.wrap(P.string('${'), P.string('}'))
+    .map(expr => ({ type: 'TemplateExpression', expression: expr }));
+
+// Robust LiteralTextParser to handle '$' not followed by '{'
+const NonDollarChar = P.regexp(/[^$]/);
+const DollarNotFollowedByBrace = P.string('$').notFollowedBy(P.string('{'));
+
+const LiteralTextParser = P.alt(
+    DollarNotFollowedByBrace,
+    NonDollarChar
+).atLeast(1).tie().map(text => ({ type: 'LiteralText', value: text }));
+
+const MainTemplateParser = P.alt(TemplateExpressionParser, LiteralTextParser).many();
+
+
+// --- AST Node Evaluator (to be implemented in server/src/utils/templateUtils.ts) ---
+
+function safeGet(obj: any, path: string): any {
+    if (!path) return undefined;
+    const parts = path.split('.');
+    let current = obj;
+    for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+            current = current[part];
+        } else {
+            return undefined;
+        }
+    }
+    return current;
+}
+
+function evaluateAstNode(node: any, contextData: Record<string, any>): any {
+    if (!node) return undefined;
+
+    switch (node.type) {
+        case 'LiteralString':
+            return node.value;
+        case 'Variable':
+            const varPath = node.name.startsWith('contextData.') ? node.name.substring('contextData.'.length) : node.name;
+            return safeGet(contextData, varPath);
+        case 'Or':
+            const leftValue = evaluateAstNode(node.left, contextData);
+            if (leftValue) {
+                return leftValue;
+            }
+            return evaluateAstNode(node.right, contextData);
+        case 'DateConstructor':
+            const dateArgValue = evaluateAstNode(node.argument, contextData);
+            if (dateArgValue === undefined || dateArgValue === null || dateArgValue === '') {
+                console.warn("Templating: Invalid or missing argument for new Date():", dateArgValue);
+                return new Date(NaN); // Return an Invalid Date object
+            }
+            try {
+                return new Date(dateArgValue);
+            } catch (e) {
+                console.error("Templating: Error creating Date from argument:", dateArgValue, e);
+                return new Date(NaN); // Return an Invalid Date object
+            }
+        case 'MethodCall':
+            const objectValue = evaluateAstNode(node.object, contextData);
+            if (!(objectValue instanceof Date) || isNaN(objectValue.getTime())) {
+                console.warn(`Templating: Cannot call method '${node.methodName}' on invalid or non-Date object:`, objectValue);
+                return undefined;
+            }
+            if (node.methodName === 'toLocaleDateString') {
+                return objectValue.toLocaleDateString();
+            } else if (node.methodName === 'toLocaleString') {
+                return objectValue.toLocaleString();
+            }
+            console.warn(`Templating: Unsupported method call: ${node.methodName} on Date object.`);
+            return undefined;
+        default:
+            console.warn('Templating: Unknown AST node type during evaluation:', node.type, node);
+            return undefined;
+    }
+}
+
+function evaluateParsedTemplate(parsedNodes: any[], contextData: Record<string, any>): string {
+    return parsedNodes.map(node => {
+        if (node.type === 'TemplateExpression') {
+            const evaluated = evaluateAstNode(node.expression, contextData);
+            return (evaluated === undefined || evaluated === null) ? '' : String(evaluated);
+        } else if (node.type === 'LiteralText') {
+            return node.value;
+        }
+        console.warn('Templating: Unknown node type in parsed template array:', node.type, node);
+        return '';
+    }).join('');
+}
+
+// --- Updated processTemplateVariables (in server/src/utils/templateUtils.ts) ---
 export const processTemplateVariables = (value: any, contextData: Record<string, any> | undefined | null): any => {
-console.log('[processTemplateVariables] Input value:', value);
-  console.log('[processTemplateVariables] Input contextData:', contextData);
-  if (!contextData || typeof contextData !== 'object') {
-    // If contextData is not a valid object, return the original value
-    // or handle as an error, depending on desired behavior.
-    // For now, returning original value to prevent crashes if contextData is missing.
     if (typeof value === 'string') {
-        // Still attempt to replace contextData.X if it's literally in the string
-        // but there's no contextData object to provide values.
-        // This might leave unresolved ${contextData.key} if contextData is null/undefined.
-        // Consider if this is the desired behavior or if it should throw an error
-        // or return the string as is without attempting replacement.
-        let processedString = value;
-        // Regex to match ${contextData.anything} or ${anything}
-        const placeholderRegex = /\$\{contextData\.([^}]+)\}|\$\{([^}]+)\}/g;
-        processedString = processedString.replace(placeholderRegex, (match, contextKey, directKey) => {
-            const keyToLookup = contextKey || directKey;
-            // Since contextData is not valid here, we can't look up the key.
-            // Return the original placeholder or an empty string.
-            // Returning original placeholder to make it clear it wasn't resolved.
-            return match;
-        });
-        return processedString;
+        if (!value.includes('${')) { // Optimization: if no template literal start, return as is.
+            return value;
+        }
+        const currentContextData = contextData || {}; // Ensure contextData is an object
+
+        try {
+            const parseResult = MainTemplateParser.parse(value);
+            if (parseResult.status) { // status is true on success
+                return evaluateParsedTemplate(parseResult.value, currentContextData);
+            } else {
+                // Log parsing errors for diagnostics
+                console.warn('Templating: Parsing failed for string:', value, P.formatError(value, parseResult));
+                return value; // Fallback to original string on parsing error
+            }
+        } catch (e) {
+            // Catch any other unexpected errors during parsing or evaluation
+            console.error('Templating: Error processing template string:', value, e);
+            return value; // Fallback to original value on any other error
+        }
     }
-    return value;
-  }
 
-  if (typeof value === 'string') {
-    let processedString = value;
-    Object.keys(contextData).forEach(key => {
-      // Escape special characters in the key for regex
-      const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const placeholder1 = new RegExp(`\\$\\{contextData\\.${escapedKey}\\}`, 'g');
-      const placeholder2 = new RegExp(`\\$\\{${escapedKey}\\}`, 'g');
-      const replacementValue = String(contextData[key] ?? '');
-
-      processedString = processedString.replace(placeholder1, replacementValue);
-      processedString = processedString.replace(placeholder2, replacementValue);
-    });
-    // A second pass for any generic ${contextData.foo.bar} or ${foo.bar} where foo.bar might not be a direct key
-    // This is more complex and might require a more sophisticated parsing if nested properties in strings are common.
-    // The current Object.keys(contextData) approach only handles direct keys.
-    // For simplicity, we'll stick to direct key replacement as per the original ButtonLinkWidget logic.
-console.log('[processTemplateVariables] Processed string:', processedString);
-    return processedString;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(item => processTemplateVariables(item, contextData));
-  }
-
-  if (typeof value === 'object' && value !== null) {
-    const processedObject: Record<string, any> = {};
-    for (const key in value) {
-      if (Object.prototype.hasOwnProperty.call(value, key)) {
-        processedObject[key] = processTemplateVariables(value[key], contextData);
-      }
+    if (Array.isArray(value)) {
+        return value.map(item => processTemplateVariables(item, contextData));
     }
-console.log('[processTemplateVariables] Processed object:', processedObject);
-    return processedObject;
-  }
 
-  return value;
+    if (typeof value === 'object' && value !== null) {
+        const processedObject: Record<string, any> = {};
+        for (const key in value) {
+            // Ensure it's an own property, not from prototype chain
+            if (Object.prototype.hasOwnProperty.call(value, key)) {
+                processedObject[key] = processTemplateVariables(value[key], contextData);
+            }
+        }
+        return processedObject;
+    }
+
+    return value; // Return value as is if not string, array, or object
 };

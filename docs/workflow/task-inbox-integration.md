@@ -234,6 +234,18 @@ Dynamic form generation based on JSON Schema:
     - Conditional display logic
     - File attachment handling
 
+##### Dynamic Content and Templating in Forms
+
+To support dynamic information within forms (e.g., pre-filling fields with context-specific default values or displaying dynamic instructional text), the system utilizes a templating mechanism. This is particularly relevant for how `defaultValues` in form schemas or `default` properties of individual schema fields are processed.
+
+The templating engine has been enhanced to use Parsimmon for parsing and safely evaluating a limited set of JavaScript-like expressions within `${...}` syntax. This allows for more sophisticated dynamic content, such as:
+*   Accessing `contextData` variables (e.g., `${contextData.userName}`).
+*   Using logical OR for fallbacks (e.g., `${contextData.optionalValue || 'Default Text'}`).
+*   Formatting dates (e.g., `${new Date(contextData.eventTime).toLocaleString()}`).
+
+This capability is leveraged by the Form Renderer when preparing forms for display, using the `contextData` associated with the task instance. The implementation ensures that only whitelisted expressions and operations are permitted, maintaining security even with user-influenced template expressions.
+
+For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
 ### 5. Database Schema
 
 ```sql

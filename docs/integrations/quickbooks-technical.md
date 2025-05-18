@@ -19,6 +19,7 @@ The QuickBooks Online (QBO) integration is built upon the Alga PSA's existing **
         *   These actions encapsulate QBO API logic, data mapping, error handling, and tenant-scoped locking/throttling.
     *   **Action Registry:** Where custom workflow actions are registered to be available in the Automation Hub.
 4.  **Workflow Runtime & Workers:** Asynchronous background services that pick up workflow tasks from Redis Streams and execute the corresponding TypeScript functions and actions.
+    *   **Human Task Enhancements (Task Inbox):** The platform's Task Inbox has been enhanced to support direct rendering of **inline forms**. When a workflow (like QBO conflict resolution) creates a human task using `actions.createInlineTaskAndWaitForResult` and provides a JSON schema, the Task Inbox can render this form directly, allowing for richer, more contextual user interaction within the task itself.
 5.  **Database:** Stores configuration, mappings, and synchronization state.
     *   `tenant_external_entity_mappings`: Central table for storing links between Alga entities and external system entities (see Section 3).
     *   Existing tables (`invoices`, `companies`) may be augmented with columns like `qbo_invoice_id`, `qbo_customer_id`, `qbo_sync_token` (though the primary mapping mechanism is the `tenant_external_entity_mappings` table).
@@ -49,11 +50,39 @@ The QuickBooks Online (QBO) integration is built upon the Alga PSA's existing **
 7.  On failure:
     *   The action logs the error (tagged with `tenantId`/`realmId`).
     *   Retries may occur based on error type.
-    *   Persistent errors may trigger a Human Task via `createHumanTask` for manual intervention, pausing the workflow.
+    *   Persistent errors may trigger a Human Task for manual intervention. For specific, complex scenarios like company duplicate detection during QBO synchronization (detailed further in "Company Synchronization Specifics & Conflict Resolution"), the workflow leverages an **inline form task** (typically via `actions.createInlineTaskAndWaitForResult`). This presents rich contextual data and specific resolution options directly to the user, pausing the main workflow until resolution.
 
 **Source of Truth:**
 
 *   Initially, Alga PSA acts as the primary source of truth, pushing data *to* QBO. Bi-directional sync is not implemented in the initial version due to complexity.
+
+### Company Synchronization Specifics & Conflict Resolution
+
+The `qboCustomerSyncWorkflow.ts` (located in `server/src/lib/workflows/`) handles the synchronization of Alga PSA `Company` entities to QuickBooks Online `Customer` entities. A key enhancement in this workflow is the interactive handling of potential duplicate customers found in QBO during the creation of a new customer.
+
+**Conflict Detection and Inline Form Invocation:**
+1.  When attempting to create a new QBO customer, the workflow first checks for potential duplicates in QBO based on display name or email using the `actions.get_qbo_customer_by_display_or_email` action.
+2.  If potential duplicates are found (using `actions.get_qbo_customer_by_display_or_email`), the workflow invokes a specialized **inline form task** via the `actions.createInlineTaskAndWaitForResult` action. This replaces previous generic error tasking for this scenario.
+3.  This inline form is designed to provide the user with comprehensive information to make an informed decision. It displays:
+    *   Details of the Alga company being synced.
+    *   Details of the potential QuickBooks duplicate(s).
+    *   Contextual information about the sync job.
+4.  The form utilizes a `RichTextViewerWidget` (registered in `server/src/lib/workflow/forms/customWidgets.tsx`) for an enhanced display of this information, rendering formatted text (e.g., bolding) from Markdown. For the Alga company's address, which is stored as a single string in the Alga system, the workflow prepares hardcoded, delineated address parts (street, city, etc.) specifically for the form's `contextData`, while also displaying the original full address string for user reference.
+
+**User Resolution Options and Workflow Processing:**
+The inline form presents the user with two primary resolution options:
+*   **"Link Alga company to this existing QuickBooks company":**
+    *   If selected, the user chooses one of the potential QB duplicates (or an explicitly searched one, if the form supports it).
+    *   The workflow receives the `quickbooks_company_id_linked` from the form.
+    *   It then sets this ID as the `existingQboCustomerId` and explicitly clears any existing `qboSyncToken`. This action ensures that when the workflow transitions to the "UPDATE PATH" for the selected QBO customer, it will re-fetch the customer's latest details, including the current `SyncToken`, before attempting an update, thus preventing sync token errors.
+*   **"Create this Alga company as a new company in QuickBooks":**
+    *   If selected, the workflow proceeds with the original "CREATE PATH", creating a new customer record in QBO based on the Alga company's data.
+
+**Task Cancellation:**
+*   If the user cancels the inline form task (e.g., by closing the modal), the `createInlineTaskAndWaitForResult` action returns a status indicating cancellation.
+*   The `qboCustomerSyncWorkflow` then logs this event and typically emits a failure event, allowing the calling process or system to handle the unresolved conflict appropriately (e.g., manual follow-up or retry at a later time).
+
+This inline form mechanism significantly improves the user experience for resolving common data conflicts during QBO synchronization by providing all necessary information and actions directly within the resolution task.
 
 ## 3. Key Storage & Mappings
 

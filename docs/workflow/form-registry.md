@@ -85,6 +85,17 @@ The Form Registry uses three main tables:
    - created_at: TIMESTAMPTZ, NOT NULL, default CURRENT_TIMESTAMP
    - updated_at: TIMESTAMPTZ, NOT NULL, default CURRENT_TIMESTAMP
 
+### Enhanced Templating for `default_values` and Schemas
+
+The `default_values` field in both `workflow_form_schemas` and `system_workflow_form_definitions`, as well as other string properties within `json_schema` or `ui_schema` (e.g., `title`, `description`, or `default` values for specific properties), can utilize an enhanced templating mechanism. This system uses Parsimmon to parse and evaluate a controlled, limited set of JavaScript-like expressions within the `${...}` syntax, using `contextData` provided at runtime.
+
+**Supported expressions include:**
+*   Variable access (e.g., `${contextData.someKey}`)
+*   String literals (e.g., `'default text'`)
+*   Logical OR (e.g., `${contextData.optionalValue || 'fallback'}`)
+*   Date formatting (e.g., `${new Date(contextData.timestamp).toLocaleDateString()}`)
+
+This allows for more dynamic and context-aware form schemas and default data. For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
 ## Usage Examples
 
 ### Registering a Form

@@ -75,7 +75,7 @@ export function ActivitiesDataTableSection({
         // If types array is empty, explicitly request all activity types
         types: filters.types && filters.types.length > 0
           ? filters.types
-          : Object.values(ActivityType).filter(type => type !== ActivityType.WORKFLOW_TASK)
+          : Object.values(ActivityType) // Removed filter excluding WORKFLOW_TASK
       };
 
       console.log(`Loading activities page ${currentPage} with filters:`, effectiveFilters);

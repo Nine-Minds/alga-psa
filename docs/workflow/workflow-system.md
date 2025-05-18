@@ -181,6 +181,21 @@ There are two primary ways dynamic data is presented in forms:
 *   The workflow must ensure that all keys referenced in the form's template string are present in the `contextData` it provides when creating the task.
 *   The UI component responsible for rendering the form must implement the logic to perform this substitution.
 *   This method is best suited for read-only display of information. If user input is required for these individual pieces of data, direct field population (Method 1) is more appropriate.
+#### Enhanced Templating for Dynamic Content
+
+To provide more flexibility while maintaining security for user-influenced template strings (e.g., in form `default` values or dynamic UI text), the templating mechanism described above is being enhanced. This enhancement will utilize the existing Parsimmon dependency to parse and evaluate a controlled, limited set of JavaScript-like expressions within the `${...}` syntax.
+
+**Key features of the enhanced templating:**
+*   **Parser:** Implemented using Parsimmon.
+*   **Supported Expressions (Initial Scope):**
+    *   Variable access: `variableName` or `contextData.variableName`
+    *   String literals: `'some string'`
+    *   Logical OR: `expression1 || expression2`
+    *   Date formatting: `new Date(variableOrString).toLocaleDateString()` and `new Date(variableOrString).toLocaleString()`
+*   **Security:** The custom parser and evaluator are designed to be secure by only allowing the explicitly defined expressions and operations, preventing arbitrary code execution.
+*   **Integration:** This will affect how `default` values in JSON schemas and other templated strings are processed by `server/src/utils/templateUtils.ts`, impacting components like `DynamicForm.tsx` and `ActivityDetailViewerDrawer.tsx`.
+
+For a detailed technical design of this Parsimmon-based templating engine, please refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
 
 By understanding these data flow patterns, developers can effectively design workflows that create informative and actionable human tasks.
 

@@ -51,6 +51,7 @@
     "@radix-ui/react-switch": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/themes": "^3.1.3",
+    "@rjsf/shadcn": "^6.0.0-beta.8",
     "@syncedstore/core": "^0.6.0",
     "@tailwindcss/forms": "^0.5.7",
     "@tanstack/react-table": "^8.20.5",

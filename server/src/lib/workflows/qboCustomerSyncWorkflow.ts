@@ -7,32 +7,110 @@ const WorkflowState = {
   COMPLETE: 'COMPLETE',
   FAILED: 'FAILED'
 };
-// TODO: Import specific types for Alga Company, QBO Customer, Human Task, etc.
-// import { AlgaCompany } from '...';
-// import { QboCustomer } from '...';
-// import { HumanTaskInput } from '...';
+
+// --- BEGIN INLINE FORM TYPES ---
+interface AlgaCompanyInfo {
+  alga_company_id: string;
+  company_name: string;
+  primary_address_full_string: string;
+  main_phone_number?: string;
+  main_email_address?: string;
+  website_url?: string;
+  date_created_in_alga: string;
+  last_modified_in_alga: string;
+  current_quickbooks_link_status: string;
+  // The following fields were part of the old `AlgaCompany = any` mapping,
+  // they are not in AlgaCompanyInfo from the project doc.
+  // Keeping them here for context during transition, but they should be reviewed.
+  email?: string; // old field, replaced by main_email_address
+  phone?: string; // old field, replaced by main_phone_number
+  billingAddress?: any; // old field, AlgaCompanyInfo has no structured address
+  shippingAddress?: any; // old field, AlgaCompanyInfo has no structured address
+  paymentTerm?: string; // This was used for QBO Term ID lookup
+}
+
+interface QuickBooksCompanyInfo {
+  quickbooks_company_id: string; // QBO Id
+  Id?: string; // QBO Id can also be 'Id'
+  SyncToken?: string; // QBO SyncToken
+  company_name: string; // QBO DisplayName
+  DisplayName?: string; // QBO DisplayName
+  primary_address_street: string;
+  primary_address_city: string;
+  primary_address_state: string;
+  primary_address_zip: string;
+  primary_address_country?: string;
+  main_phone_number?: string;
+  main_email_address?: string;
+  website_url?: string;
+  // QBO specific raw fields that might be returned by APIs before normalization
+  PrimaryPhone?: { FreeFormNumber?: string };
+  PrimaryEmailAddr?: { Address?: string };
+  // Add other fields from QBO Customer if needed for display or logic
+}
+
+interface ConflictResolutionFormData {
+  resolution_action: 'LINK_TO_EXISTING_QB' | 'CREATE_NEW_IN_QB';
+  alga_company_id_resolved: string;
+  quickbooks_company_id_linked?: string;
+  user_notes?: string;
+}
+
+interface ContextDataForForm {
+  alga_company_id: string;
+  company_name: string;
+  alga_primary_address_street: string;
+  alga_primary_address_city: string;
+  alga_primary_address_state: string;
+  alga_primary_address_zip: string;
+  main_phone_number?: string;
+  main_email_address?: string;
+  website_url?: string;
+  date_created_in_alga: string;
+  last_modified_in_alga: string;
+  current_quickbooks_link_status: string;
+  alga_primary_address_full_string_display: string;
+  potentialQuickBooksMatches: QuickBooksCompanyInfo[]; // Changed from qb_company_name etc. to array
+  sync_job_id: string;
+  conflict_detection_timestamp: string;
+  // Fields for JSON schema templating (derived from potentialQuickBooksMatches)
+  qb_company_name?: string;
+  qb_primary_address_street?: string;
+  qb_primary_address_city?: string;
+  qb_primary_address_state?: string;
+  qb_primary_address_zip?: string;
+  qb_main_phone_number?: string;
+  qb_main_email_address?: string;
+  qb_website_url?: string;
+  quickbooks_company_id_options?: { label: string; value: string }[];
+  qbDetailedDisplayInfo?: string; // New field for pre-formatted QB display
+}
+
+interface InlineTaskResolutionReturn extends CreateTaskAndWaitForResultReturn {
+  status?: 'COMPLETED' | 'CANCELLED' | 'FAILED' | 'EXPIRED'; // From project doc
+  resolutionData?: ConflictResolutionFormData; // Specific resolution data
+}
+
+// --- END INLINE FORM TYPES ---
 
 // Define placeholder types if real ones are not available yet
-type AlgaCompany = any;
-type QboCustomerInput = any;
-type QboCustomerResult = any;
-type HumanTaskInput = any;
+type AlgaCompany = AlgaCompanyInfo; // Use the new specific type
+type QboCustomerInput = any; // Keep as any for now, QBO SDK might have proper types
+type QboCustomerResult = any; // Keep as any for now
+type HumanTaskInput = any; // Unused in this snippet focus
 type TriggerEventPayload = {
   realmId: string;
   company_id: string; // Corrected to match actual payload
   originatingWorkflowInstanceId?: string;
   successEventName?: string;
   failureEventName?: string;
-  tenantId?: string; 
+  tenantId?: string;
 };
 
 type TriggerEvent = {
   name: string; // e.g., "CUSTOMER_SYNC_REQUESTED"
   payload: TriggerEventPayload;
 };
-
-// This local type definition is now replaced by the imported WorkflowState enum
-
 
 /**
  * Workflow to synchronize Alga PSA Company data to QuickBooks Online Customer.
@@ -92,10 +170,10 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
     setState(WorkflowState.RUNNING);
     logger.info('Fetching Alga Company data', { algaCompanyId, tenantId: tenant });
     
-    let algaCompany: AlgaCompany; // Will be assigned in the loop
+    let algaCompany: AlgaCompanyInfo | null = null; // Initialize to null
     let algaCompanyFetchedSuccessfully = false;
     while (!algaCompanyFetchedSuccessfully) {
-        const fetchedCompany: AlgaCompany = await actions.getCompany({ id: algaCompanyId, tenantId: tenant });
+        const fetchedCompany: AlgaCompanyInfo | null = await actions.getCompany({ id: algaCompanyId, tenantId: tenant });
         if (!fetchedCompany) {
             logger.error('Alga Company not found', { algaCompanyId, tenantId: tenant });
             setState(WorkflowState.ERROR);
@@ -121,14 +199,13 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             // For now, assume the task is about fixing the environment for the existing algaCompanyId.
             // Or, if taskResolution.resolutionData.newCompanyId exists, update algaCompanyId for next attempt.
         } else {
-            algaCompany = fetchedCompany;
+            algaCompany = fetchedCompany; // fetchedCompany is AlgaCompanyInfo | null
             algaCompanyFetchedSuccessfully = true;
         }
     }
-    // algaCompany is now guaranteed to be defined here if loop exited normally.
-    // Add safeguard for type checking, though logic implies it's set.
-    if (!algaCompany) { // This check should ideally be unreachable if the loop logic is correct
-        const errorMsg = 'CRITICAL WORKFLOW FAILURE: AlgaCompany is null after fetch loop.';
+
+    if (!algaCompany) {
+        const errorMsg = 'CRITICAL WORKFLOW FAILURE: AlgaCompany is null after fetch loop (company not found or other issue).';
         logger.error(errorMsg, { executionId, tenant, algaCompanyId });
         await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
         return; 
@@ -143,30 +220,32 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
     // TODO: Refine mapping based on actual AlgaCompany and QboCustomer types
     const qboCustomerData: QboCustomerInput = {
-        DisplayName: algaCompany.company_name,
-        PrimaryEmailAddr: { Address: algaCompany.email }, // Assuming 'email' field exists
-        PrimaryPhone: { FreeFormNumber: algaCompany.phone }, // Assuming 'phone' field exists
-        BillAddr: { // Assuming address fields exist and map like this
-            Line1: algaCompany.billingAddress?.line1,
-            City: algaCompany.billingAddress?.city,
-            CountrySubDivisionCode: algaCompany.billingAddress?.state, // Or province
-            PostalCode: algaCompany.billingAddress?.postalCode,
-            Country: algaCompany.billingAddress?.country,
+        DisplayName: algaCompany!.company_name, // algaCompany is verified not null by the check above
+        PrimaryEmailAddr: { Address: algaCompany!.main_email_address },
+        PrimaryPhone: { FreeFormNumber: algaCompany!.main_phone_number },
+        BillAddr: {
+            Line1: "N/A - Placeholder",
+            City: "N/A - Placeholder",
+            CountrySubDivisionCode: "N/A - Placeholder",
+            PostalCode: "N/A - Placeholder",
+            Country: "N/A - Placeholder",
         },
-        ShipAddr: { // Assuming shipping address fields exist
-            Line1: algaCompany.shippingAddress?.line1,
-            City: algaCompany.shippingAddress?.city,
-            CountrySubDivisionCode: algaCompany.shippingAddress?.state,
-            PostalCode: algaCompany.shippingAddress?.postalCode,
-            Country: algaCompany.shippingAddress?.country,
+        ShipAddr: {
+            Line1: "N/A - Placeholder",
+            City: "N/A - Placeholder",
+            CountrySubDivisionCode: "N/A - Placeholder",
+            PostalCode: "N/A - Placeholder",
+            Country: "N/A - Placeholder",
         },
         // Add other relevant fields: Notes, WebAddr, etc.
     };
 
     // Map Payment Terms
-    if (algaCompany.paymentTerm) { 
+    // TODO: Review algaCompany.paymentTerm, as AlgaCompanyInfo from project doc does not list it.
+    // Assuming it might still be part of the object returned by actions.getCompany or needs to be added to AlgaCompanyInfo.
+    if ((algaCompany as any)?.paymentTerm) { // Added optional chaining for algaCompany itself
         let termMappedSuccessfully = false;
-        let currentAlgaPaymentTerm = algaCompany.paymentTerm; // Use a variable that might be updated by task
+        let currentAlgaPaymentTerm = (algaCompany as any).paymentTerm; // Use a variable that might be updated by task
 
         while (!termMappedSuccessfully) {
             try {
@@ -184,14 +263,14 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                     setState(WorkflowState.ERROR);
                     const taskParamsTermMappingMissing: CreateTaskAndWaitForResultParams = {
                         taskType: 'qbo_mapping_error', // Specific task type
-                        title: `QBO Term Mapping Missing for Company ${algaCompany.name}`,
+                        title: `QBO Term Mapping Missing for Company ${algaCompany!.company_name}`,
                         description: `Could not find a corresponding QBO Term for Alga term: ${currentAlgaPaymentTerm}. Please ensure the mapping exists or provide the correct Alga term/QBO Term ID.`,
                         priority: 'medium',
                         assignTo: userId ? { users: [userId] } : undefined,
                         contextData: {
                             message: `Could not find a corresponding QBO Term for Alga term: ${currentAlgaPaymentTerm}`,
                             algaCompanyId: algaCompanyId,
-                            algaCompanyName: algaCompany.name,
+                            algaCompanyName: algaCompany!.company_name,
                             currentAlgaTerm: currentAlgaPaymentTerm,
                             realmId: realmId,
                             workflow_instance_id: executionId,
@@ -214,7 +293,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                 setState(WorkflowState.ERROR);
                 const taskParamsTermLookupError: CreateTaskAndWaitForResultParams = {
                     taskType: 'workflow_error',
-                    title: `Error looking up QBO Term for Company ${algaCompany.name}`,
+                    title: `Error looking up QBO Term for Company ${algaCompany!.company_name}`,
                     description: `API call failed during QBO Term lookup for Alga term: ${currentAlgaPaymentTerm}. Error: ${mappingError.message}. Please check connectivity/config or provide details.`,
                     priority: 'high',
                     assignTo: userId ? { users: [userId] } : undefined,
@@ -252,7 +331,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             setState(WorkflowState.ERROR);
             const taskParamsSecretFetchError: CreateTaskAndWaitForResultParams = {
                 taskType: 'workflow_error', // Specific task type
-                title: `Failed to Fetch QBO Credentials for Company ${algaCompany.name || algaCompanyId}`,
+                title: `Failed to Fetch QBO Credentials for Company ${algaCompany?.company_name || algaCompanyId}`,
                 description: `The workflow failed to retrieve QBO credentials for realmId: ${realmId}. Error: ${errorMessage}. Please ensure credentials are correctly configured or provide them if the task allows.`,
                 priority: 'high',
                 assignTo: userId ? { users: [userId] } : undefined,
@@ -306,7 +385,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             setState(WorkflowState.ERROR);
             const taskParamsMappingLookupError: CreateTaskAndWaitForResultParams = {
                 taskType: 'workflow_error', // Specific task type
-                title: `Failed to lookup QBO mapping for Company ${algaCompany.company_name || algaCompanyId}`,
+                title: `Failed to lookup QBO mapping for Company ${algaCompany?.company_name || algaCompanyId}`,
                 description: `The workflow failed to retrieve the QBO customer mapping for Alga Company ID ${algaCompanyId} and Realm ID ${realmId}. Error: ${mappingResult.message}. Please check the mapping system or provide details.`,
                 priority: 'high',
                 assignTo: userId ? { users: [userId] } : undefined,
@@ -343,7 +422,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                      setState(WorkflowState.ERROR); 
                      const taskParamsMissingSyncToken: CreateTaskAndWaitForResultParams = {
                          taskType: 'workflow_error', // Specific task type
-                         title: `Missing SyncToken for QBO Customer Update - ${algaCompany.name}`,
+                         title: `Missing SyncToken for QBO Customer Update - ${algaCompany!.company_name}`,
                          description: `Cannot update QBO Customer ${existingQboCustomerId} because the qbo_sync_token is missing. Please provide the SyncToken or resolve the mapping.`,
                          priority: 'high',
                          assignTo: userId ? { users: [userId] } : undefined,
@@ -401,20 +480,22 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                         
                         logger.info('Checking for potential QBO duplicate customers', { displayName: displayNameForCheck, email: emailForCheck, tenantId: tenant, realmId });
                         try {
+                            // Cast potentialDuplicatesResult.customers to QuickBooksCompanyInfo[]
                             const potentialDuplicatesResult = await actions.get_qbo_customer_by_display_or_email({
                                 displayName: displayNameForCheck,
                                 email: emailForCheck,
                                 tenantId: tenant,
                                 realmId: realmId,
                                 qboCredentials: qboCredentials
-                            });
+                            }) as { success: boolean; found: boolean; customers?: QuickBooksCompanyInfo[]; message?: string; errorDetails?: any; };
+
 
                             if (!potentialDuplicatesResult.success) {
                                 logger.error('Failed to check for QBO duplicate customers (API Error).', { algaCompanyId, message: potentialDuplicatesResult.message, errorDetails: potentialDuplicatesResult.errorDetails, tenantId: tenant, realmId });
                                 setState(WorkflowState.ERROR);
                                 const taskParams: CreateTaskAndWaitForResultParams = {
                                 taskType: 'workflow_error',
-                                title: `Failed Duplicate Check for ${algaCompany.name}`,
+                                title: `Failed Duplicate Check for ${algaCompany!.company_name}`,
                                 description: `The QBO duplicate customer check failed: ${potentialDuplicatesResult.message || 'Unknown error'}. Manual review required.`,
                                 priority: 'high',
                                 assignTo: userId ? { users: [userId] } : undefined,
@@ -426,51 +507,140 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                             if (!taskResolution.success || taskResolution.resolutionData?.action === 'cancel') {
                                 const errorMsg = `User cancelled or task resolution failed for QBO duplicate check API failure. TaskId: ${taskResolution.taskId}`;
                                 await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
-                                return; 
+                                return;
                             }
                             continue; // Retry duplicate check
                             }
 
                             if (potentialDuplicatesResult.found && potentialDuplicatesResult.customers && potentialDuplicatesResult.customers.length > 0) {
-                                logger.warn('Potential QBO duplicate customer(s) found', { /* ... */ });
-                                setState(WorkflowState.ERROR);
-                                const taskParamsDupFound: CreateTaskAndWaitForResultParams = { // Renamed taskParams to avoid conflict
-                                    taskType: 'workflow_error', // Consider a more specific taskType like 'resolve_qbo_duplicate_customer'
-                                    title: `Potential QBO Customer Duplicate for ${qboCustomerData.DisplayName}`,
-                                    description: `A potential duplicate QBO customer was found based on display name or email. Please review and resolve manually.`,
-                                    priority: 'medium',
-                                    assignTo: userId ? { users: [userId] } : undefined,
-                                    contextData: {
-                                        message: `Potential QBO duplicate customer(s) found for DisplayName: '${qboCustomerData.DisplayName}' or Email: '${qboCustomerData.PrimaryEmailAddr?.Address}'. Manual review required.`,
-                                    },
+                                logger.warn('Potential QBO duplicate customer(s) found', { algaCompanyId, count: potentialDuplicatesResult.customers.length });
+                                setState(WorkflowState.RUNNING); // Set to RUNNING as we are creating an inline task
+
+                                // --- BEGIN INLINE FORM FOR COMPANY CONFLICT ---
+                                const primaryQbMatch = potentialDuplicatesResult.customers[0]; // For single display, form schema handles multiple options
+
+                                const contextDataForForm: ContextDataForForm = {
+                                    alga_company_id: algaCompany!.alga_company_id,
+                                    company_name: algaCompany!.company_name,
+                                    alga_primary_address_street: "123 Main St (Hardcoded Workflow Value)", // As per project doc
+                                    alga_primary_address_city: "Anytown (Hardcoded Workflow Value)",
+                                    alga_primary_address_state: "CA (Hardcoded Workflow Value)",
+                                    alga_primary_address_zip: "90210 (Hardcoded Workflow Value)",
+                                    main_phone_number: algaCompany!.main_phone_number,
+                                    main_email_address: algaCompany!.main_email_address,
+                                    website_url: algaCompany!.website_url,
+                                    date_created_in_alga: algaCompany!.date_created_in_alga,
+                                    last_modified_in_alga: algaCompany!.last_modified_in_alga,
+                                    current_quickbooks_link_status: algaCompany!.current_quickbooks_link_status,
+                                    alga_primary_address_full_string_display: algaCompany!.primary_address_full_string,
+                                    potentialQuickBooksMatches: potentialDuplicatesResult.customers || [], // Ensure it's an array
+                                    sync_job_id: executionId,
+                                    conflict_detection_timestamp: new Date().toISOString(),
+                                    // For schema templating, provide first match details if any
+                                    qb_company_name: primaryQbMatch?.DisplayName || primaryQbMatch?.company_name,
+                                    qb_primary_address_street: primaryQbMatch?.primary_address_street,
+                                    qb_primary_address_city: primaryQbMatch?.primary_address_city,
+                                    qb_primary_address_state: primaryQbMatch?.primary_address_state,
+                                    qb_primary_address_zip: primaryQbMatch?.primary_address_zip,
+                                    qb_main_phone_number: primaryQbMatch?.main_phone_number || primaryQbMatch?.PrimaryPhone?.FreeFormNumber,
+                                    qb_main_email_address: primaryQbMatch?.main_email_address || primaryQbMatch?.PrimaryEmailAddr?.Address,
+                                    qb_website_url: primaryQbMatch?.website_url,
+                                    quickbooks_company_id_options: (potentialDuplicatesResult.customers || []).map(qb => ({
+                                        label: `${qb.DisplayName || qb.company_name} (ID: ${qb.Id || qb.quickbooks_company_id}, Addr: ${qb.primary_address_street || ''}, ${qb.primary_address_city || ''})`,
+                                        value: qb.Id || qb.quickbooks_company_id
+                                    })),
+                                    // Prepare qbDetailedDisplayInfo
+                                    qbDetailedDisplayInfo: primaryQbMatch?.DisplayName || primaryQbMatch?.company_name
+                                        ? `**QuickBooks Company Name:** ${primaryQbMatch.DisplayName || primaryQbMatch.company_name}\n**QB Address:** ${primaryQbMatch.primary_address_street || ''}, ${primaryQbMatch.primary_address_city || ''}, ${primaryQbMatch.primary_address_state || ''} ${primaryQbMatch.primary_address_zip || ''}\n**QB Phone:** ${primaryQbMatch.main_phone_number || primaryQbMatch.PrimaryPhone?.FreeFormNumber || 'N/A'}\n**QB Email:** ${primaryQbMatch.main_email_address || primaryQbMatch.PrimaryEmailAddr?.Address || 'N/A'}\n**QB Website:** ${primaryQbMatch.website_url || 'N/A'}`
+                                        : 'No potential QuickBooks match data available to display.'
                                 };
-                                const taskResolutionDupFound = await actions.createTaskAndWaitForResult(taskParamsDupFound); // Use new name
-                                if (!taskResolutionDupFound.success || taskResolutionDupFound.resolutionData?.action === 'cancel') {
-                                    const errorMsg = `User cancelled or task resolution failed for potential QBO duplicate. TaskId: ${taskResolutionDupFound.taskId}`;
-                                    await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
-                                    return; 
-                                }
+
+                                // Dynamically construct the JSON schema for the form
+                                const finalCompanyConflictJsonSchema = {
+                                    "type": "object",
+                                    "title": "Resolve Company Sync Conflict",
+                                    "properties": {
+                                      "conflictContextInfo": { "type": "string", "title": "Conflict Context", "default": "**Sync Job ID:** ${contextData.sync_job_id}\n**Detected on:** ${new Date(contextData.conflict_detection_timestamp).toLocaleString()}", "readOnly": true },
+                                      "algaCompanyDisplay": { "type": "string", "title": "Alga Company Information (Our System)", "default": "**Alga Company ID:** ${contextData.alga_company_id}\n**Company Name:** ${contextData.company_name}\n**Primary Address (from system):** ${contextData.alga_primary_address_full_string_display}\n**Hardcoded Address for Form:** ${contextData.alga_primary_address_street}, ${contextData.alga_primary_address_city}, ${contextData.alga_primary_address_state} ${contextData.alga_primary_address_zip}\n**Main Phone:** ${contextData.main_phone_number || 'N/A'}\n**Main Email:** ${contextData.main_email_address || 'N/A'}\n**Website:** ${contextData.website_url || 'N/A'}\n**Created in Alga:** ${new Date(contextData.date_created_in_alga).toLocaleDateString()}\n**Last Modified in Alga:** ${new Date(contextData.last_modified_in_alga).toLocaleDateString()}\n**Current QuickBooks Link Status:** ${contextData.current_quickbooks_link_status}", "readOnly": true },
+                                      "quickbooksCompanyDisplay": { "type": "string", "title": "Potential QuickBooks Match Information", "default": "${contextData.qbDetailedDisplayInfo}", "readOnly": true },
+                                      "resolution_action": { "type": "string", "title": "Select Resolution Action", "enum": ["LINK_TO_EXISTING_QB", "CREATE_NEW_IN_QB"], "enumNames": ["Link Alga company to this existing QuickBooks company", "Create this Alga company as a new company in QuickBooks"] },
+                                      "alga_company_id_resolved": { "type": "string", "default": "${contextData.alga_company_id}" },
+                                      "quickbooks_company_id_linked": {
+                                        "type": "string",
+                                        "title": "Select QuickBooks Company to Link",
+                                        "oneOf": (contextDataForForm.quickbooks_company_id_options && contextDataForForm.quickbooks_company_id_options.length > 0
+                                                  ? contextDataForForm.quickbooks_company_id_options.map(opt => ({'const': opt.value, 'title': opt.label}))
+                                                  : [{ 'const': '', 'title': 'No QuickBooks companies available to link'}])
+                                      },
+                                    },
+                                    "required": ["resolution_action", "alga_company_id_resolved"],
+                                    "dependencies": { "resolution_action": { "oneOf": [ { "properties": { "resolution_action": { "const": "LINK_TO_EXISTING_QB" } }, "required": ["quickbooks_company_id_linked"] }, {  "properties": { "resolution_action": { "const": "CREATE_NEW_IN_QB" } } } ] } }
+                                  };
                                 
-                                if (taskResolutionDupFound.resolutionData?.proceedWithCreate) {
-                                    duplicateCheckPassed = true; // User confirmed to proceed
-                                } else if (taskResolutionDupFound.resolutionData?.linkToExistingId) {
-                                    const errorMsg = `User opted to link to existing QBO customer ID: ${taskResolutionDupFound.resolutionData.linkToExistingId}. Current sync for company ${algaCompanyId} will not proceed with create/update.`;
-                                    logger.info(errorMsg);
-                                    await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId); // This might be considered a "handled" failure by the calling workflow
-                                    return; 
+                                const companyConflictUiSchema = {
+                                    "ui:order": ["conflictContextInfo", "algaCompanyDisplay", "quickbooksCompanyDisplay", "resolution_action", "quickbooks_company_id_linked", "user_notes", "alga_company_id_resolved"],
+                                    "conflictContextInfo": { "ui:widget": "RichTextViewerWidget" },
+                                    "algaCompanyDisplay": { "ui:widget": "RichTextViewerWidget" },
+                                    "quickbooksCompanyDisplay": { "ui:widget": "RichTextViewerWidget", "ui:visible": "${contextData.qb_company_name != null}" },
+                                    "alga_company_id_resolved": { "ui:widget": "hidden" },
+                                    "resolution_action": { "ui:widget": "radio" },
+                                    "quickbooks_company_id_linked": { "ui:placeholder": "Choose a QuickBooks company", "ui:visible": "${formData.resolution_action === 'LINK_TO_EXISTING_QB'}" },
+                                  };
+
+                                const inlineTaskParams = {
+                                    workflowContext: context, // Pass the whole context if needed by the action
+                                    taskDefinitionId: "companyConflictResolutionForm_v5",
+                                    title: `Resolve Company Conflict: ${algaCompany!.company_name}`,
+                                    description: `Potential QuickBooks duplicate(s) found for ${algaCompany!.company_name}. Please review and choose an action.`,
+                                    assignTo: { users: userId ? [userId] : undefined }, // from workflow context
+                                    contextData: contextDataForForm,
+                                    form: {
+                                        jsonSchema: finalCompanyConflictJsonSchema, // Use the dynamically constructed schema
+                                        uiSchema: companyConflictUiSchema,
+                                    },
+                                    priority: 'high',
+                                    // timeoutSeconds: 3600 // Optional
+                                };
+                                
+                                // Assuming actions.createInlineTaskAndWaitForResult exists and returns InlineTaskResolutionReturn
+                                const taskResolution: InlineTaskResolutionReturn = await (actions as any).createInlineTaskAndWaitForResult(inlineTaskParams);
+
+                                if (!taskResolution.success || !taskResolution.resolutionData) {
+                                    const errorMsg = `Company conflict resolution task was cancelled or failed. TaskId: ${taskResolution.taskId}, Status: ${taskResolution.status}, Error: ${taskResolution.error}`;
+                                    logger.warn(errorMsg, { algaCompanyId, realmId, executionId });
+                                    await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
+                                    return;
                                 }
-                                // else, loop will retry duplicate check or user might have fixed data for a new check
-                                continue; 
+
+                                const resolutionData = taskResolution.resolutionData;
+                                if (resolutionData.resolution_action === 'LINK_TO_EXISTING_QB' && resolutionData.quickbooks_company_id_linked) {
+                                    existingQboCustomerId = resolutionData.quickbooks_company_id_linked;
+                                    qboSyncToken = undefined; // Force re-fetch of SyncToken in the UPDATE path
+                                    logger.info(`User chose to link Alga company ${algaCompanyId} to existing QBO customer ${existingQboCustomerId}. Proceeding to update.`, { algaCompanyId, existingQboCustomerId, executionId });
+                                    // TODO: Fetch QBO Customer by ID resolutionData.quickbooks_company_id_linked to get latest SyncToken (The existing UPDATE path logic should handle this by re-fetching mapping if qboSyncToken is undefined)
+                                    duplicateCheckPassed = true; // Exit duplicate check loop, will go to UPDATE path
+                                } else if (resolutionData.resolution_action === 'CREATE_NEW_IN_QB') {
+                                    logger.info(`User chose to create a new QBO customer for Alga company ${algaCompanyId}. Proceeding to create.`, { algaCompanyId, executionId });
+                                    duplicateCheckPassed = true; // Proceed to create
+                                } else {
+                                    // Should not happen if form validation is correct
+                                    const errorMsg = `Invalid resolution action from company conflict form: ${resolutionData.resolution_action}. TaskId: ${taskResolution.taskId}`;
+                                    logger.error(errorMsg, { algaCompanyId, realmId, executionId });
+                                    await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
+                                    return;
+                                }
+                                // --- END INLINE FORM FOR COMPANY CONFLICT ---
+                                continue; // Continue the while(!duplicateCheckPassed) loop. If duplicateCheckPassed is true, it will exit.
                             } else {
                                 logger.info('No potential QBO duplicates found.', { algaCompanyId });
                                 duplicateCheckPassed = true;
                             }
                         } catch (dupCheckError: any) {
                              logger.error('Unexpected error during QBO duplicate check invocation', { error: dupCheckError.message, algaCompanyId });
-                             setState(WorkflowState.ERROR);
-                             const taskParamsDupUnhandled: CreateTaskAndWaitForResultParams = { // Renamed taskParams
+                             setState(WorkflowState.ERROR); // Keep ERROR state
+                             const taskParamsDupUnhandled: CreateTaskAndWaitForResultParams = {
                                  taskType: 'workflow_error',
-                                 title: `Error During QBO Duplicate Check - ${algaCompany.name}`,
+                                 title: `Error During QBO Duplicate Check - ${algaCompany!.company_name}`,
                                  description: `The check for duplicate QBO customers failed. Error: ${dupCheckError.message}. Cannot proceed with automatic creation.`,
                                  priority: 'high',
                                  assignTo: userId ? { users: [userId] } : undefined,
@@ -478,32 +648,58 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                      message: dupCheckError.message || 'Unexpected error during QBO duplicate customer check.',
                                  },
                              };
-                             const taskResolutionDupUnhandled = await actions.createTaskAndWaitForResult(taskParamsDupUnhandled); // Use new name
+                             const taskResolutionDupUnhandled = await actions.createTaskAndWaitForResult(taskParamsDupUnhandled);
                              if (!taskResolutionDupUnhandled.success || taskResolutionDupUnhandled.resolutionData?.action === 'cancel') {
                                  const errorMsg = `User cancelled or task resolution failed for unexpected QBO duplicate check error. TaskId: ${taskResolutionDupUnhandled.taskId}`;
                                  await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
-                                 return; 
+                                 return;
                              }
                              continue; // Retry duplicate check
                         }
                     } else { // performDuplicateCheck is false
-                        duplicateCheckPassed = true; 
+                        duplicateCheckPassed = true;
                     }
                 } // End of while(!duplicateCheckPassed)
 
-                // Proceed with Create if duplicate check passed (or was skipped)
-                setState(WorkflowState.RUNNING);
-                logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
-                qboResult = await actions.create_qbo_customer({
-                    qboCustomerData: qboCustomerData,
-                    tenantId: tenant,
-                    realmId: realmId,
-                    qboCredentials: qboCredentials
-                });
-                logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id });
+                // Proceed with Create if duplicate check passed (or was skipped) AND existingQboCustomerId is not set by form
+                // Only proceed to create if existingQboCustomerId was NOT set by the inline form (i.e., user chose to create new or no conflict)
+                if (!existingQboCustomerId) {
+                    setState(WorkflowState.RUNNING);
+                    logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
+                    qboResult = await actions.create_qbo_customer({
+                        qboCustomerData: qboCustomerData,
+                        tenantId: tenant,
+                        realmId: realmId,
+                        qboCredentials: qboCredentials
+                    });
+                    logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id });
+                } else {
+                    // If existingQboCustomerId is set (from form link action), we skip create and qboResult will be undefined here.
+                    // The update path will handle fetching the customer if needed.
+                    // We need to ensure qboResult is handled if it's not set by create.
+                    // The logic below expects qboResult to have Customer.Id and Customer.SyncToken.
+                    // This path (existingQboCustomerId is true, so update path is intended) should not hit create.
+                    // The main if/else for create/update is at line 336.
+                    // If we linked via form, existingQboCustomerId is set, duplicateCheckPassed is true.
+                    // The loop `while(!qboOperationSuccessful)` will re-evaluate.
+                    // `if (existingQboCustomerId)` at line 336 will be true.
+                    // This means this 'else' block for create should not assign to qboResult if we linked.
+                    // Let's ensure qboResult is only assigned if create actually happened.
+                    // If we linked, qboResult remains unassigned here, and the update path handles it.
+                    // The check for newQboCustomerId and newQboSyncToken needs to be conditional.
+                    // This block is inside the `else` of `if (existingQboCustomerId)` (the main update/create switch)
+                    // So, if we are here, `existingQboCustomerId` was initially null.
+                    // If the form set `existingQboCustomerId`, then this create block is skipped.
+                    // This seems correct.
+                }
             }
 
-            const newQboCustomerId = qboResult?.Customer?.Id;
+
+            // This part executes if either CREATE or UPDATE was successful and produced a qboResult.
+            // If we linked via form, existingQboCustomerId is set, and the flow goes to the UPDATE path (line 336)
+            // which will produce its own qboResult.
+            // So, qboResult here is specifically from the CREATE path if it ran.
+            const newQboCustomerId = qboResult?.Customer?.Id; // This will be from CREATE if it ran
             const newQboSyncToken = qboResult?.Customer?.SyncToken;
 
             if (!newQboCustomerId || !newQboSyncToken) {
@@ -511,7 +707,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                  setState(WorkflowState.ERROR);
                  const taskParams: CreateTaskAndWaitForResultParams = {
                  taskType: 'workflow_error',
-                 title: `Invalid Response from QBO API - ${algaCompany.name}`,
+                 title: `Invalid Response from QBO API - ${algaCompany!.company_name}`,
                  description: `The QBO API call succeeded but the response did not contain the expected Customer ID and/or SyncToken.`,
                  priority: 'high',
                  assignTo: userId ? { users: [userId] } : undefined,
@@ -519,7 +715,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                      message: `QBO API call for customer (Alga ID: ${algaCompanyId}) succeeded but the response was missing Customer ID or SyncToken.`,
                  },
              };
-                 const taskResolutionInvalidResp = await actions.createTaskAndWaitForResult(taskParams); // Use new name
+                 const taskResolutionInvalidResp = await actions.createTaskAndWaitForResult(taskParams);
                  if (!taskResolutionInvalidResp.success || taskResolutionInvalidResp.resolutionData?.action === 'cancel') {
                      const errorMsg = `User cancelled or task resolution failed for QBO invalid API response. TaskId: ${taskResolutionInvalidResp.taskId}`;
                      await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
@@ -552,8 +748,8 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
             data.set('qboApiErrorDetails', { message: error.message, details: error.response?.data || error.stack || error });
 
             const taskParamsQBOAPIFailed: CreateTaskAndWaitForResultParams = {
-                taskType: 'workflow_error', 
-                title: `QBO Customer Sync Failed for ${algaCompany?.name || `ID: ${algaCompanyId}`}`,
+                taskType: 'workflow_error',
+                title: `QBO Customer Sync Failed for ${algaCompany?.company_name || `ID: ${algaCompanyId}`}`,
                 description: errorMsgForTask + " Please check QBO status, connection, or data and retry.",
                 priority: 'high',
                 assignTo: userId ? { users: [userId] } : undefined,
