@@ -20,7 +20,7 @@ import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import r
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@shared/workflow/streams/eventBusSchema'; // For type safety
 import { EventSubmissionOptions } from '../../../../shared/workflow/core/workflowRuntime.js'; // Import type directly via relative path
-import { getSecretProviderInstance } from 'server/src/lib/secrets';
+import { getSecretProviderInstance } from '@shared/core';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {

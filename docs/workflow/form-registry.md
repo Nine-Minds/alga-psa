@@ -85,6 +85,17 @@ The Form Registry uses three main tables:
    - created_at: TIMESTAMPTZ, NOT NULL, default CURRENT_TIMESTAMP
    - updated_at: TIMESTAMPTZ, NOT NULL, default CURRENT_TIMESTAMP
 
+### Enhanced Templating for `default_values` and Schemas
+
+The `default_values` field in both `workflow_form_schemas` and `system_workflow_form_definitions`, as well as other string properties within `json_schema` or `ui_schema` (e.g., `title`, `description`, or `default` values for specific properties), can utilize an enhanced templating mechanism. This system uses Parsimmon to parse and evaluate a controlled, limited set of JavaScript-like expressions within the `${...}` syntax, using `contextData` provided at runtime.
+
+**Supported expressions include:**
+*   Variable access (e.g., `${contextData.someKey}`)
+*   String literals (e.g., `'default text'`)
+*   Logical OR (e.g., `${contextData.optionalValue || 'fallback'}`)
+*   Date formatting (e.g., `${new Date(contextData.timestamp).toLocaleDateString()}`)
+
+This allows for more dynamic and context-aware form schemas and default data. For a detailed technical design of this Parsimmon-based templating engine, refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
 ## Usage Examples
 
 ### Registering a Form
@@ -278,6 +289,8 @@ const taskResult = await context.actions.createHumanTask({
 });
 ```
 
+It's important to note that while the Task Inbox primarily interacts with forms pre-registered in the Form Registry (as described above), it also supports tasks whose forms are defined "inline" at the point of task creation within a workflow. In such cases, the system dynamically creates temporary, tenant-specific form definitions and task definitions. The task instance then links to these temporary definitions, allowing the Task Inbox to retrieve and render the form schemas using the same underlying mechanisms. These temporary definitions are typically flagged (e.g., `is_temporary: true`) and are subject to periodic cleanup. For more details on inline forms, see `docs/workflow/inline-form-example.md`.
+
 ### Linking Tasks to Forms via Task Definitions
 
 The system now uses a structured approach to link a running workflow task (`workflow_tasks` table) to its corresponding form definition. This involves separate tables for system-level and tenant-specific task definitions.
@@ -419,7 +432,6 @@ This migration:
    - `qbo-mapping-error-form-specialized`
    - `qbo-item-lookup-failed-form`
    - `qbo-item-mapping-missing-form`
-   - `qbo-item-lookup-internal-error-form`
    - `qbo-invoice-no-items-mapped-form`
    - `qbo-sync-error-form`
    - `workflow-execution-error-form`

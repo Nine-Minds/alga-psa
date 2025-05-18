@@ -3,13 +3,15 @@ import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
 import { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { customWidgets } from '../../lib/workflow/forms/customWidgets';
-import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplate';
+// import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplate'; // Removed
+// import { CustomTitleField } from '../../lib/workflow/forms/CustomTitleField'; // Removed
 import { Action, actionHandlerRegistry, ActionHandlerContext } from '../../lib/workflow/forms/actionHandlerRegistry';
+// Assuming a hypothetical shadcn theme package and import. User will need to verify/install.
 import { ActionButtonGroup } from './ActionButtonGroup';
 import { applyConditionalLogic } from '../../lib/workflow/forms/conditionalLogic';
 import { processTemplateVariables } from '../../utils/templateUtils';
 
-// Create a themed form with default theme
+// Create a themed form with Shadcn theme
 const ThemedForm = withTheme({});
 
 interface DynamicFormProps {
@@ -196,7 +198,7 @@ console.log('[DynamicForm] Received contextData:', contextData);
         onSubmit={handleSubmit}
         validator={validator}
         widgets={customWidgets}
-        templates={{ FieldTemplate: CustomFieldTemplate }}
+        // templates and fields props removed as they should be provided by the shadcnTheme
       >
         <ActionButtonGroup
           actions={formActions}

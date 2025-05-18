@@ -156,7 +156,6 @@ The QBO Invoice Sync Workflow forms are registered as System Forms through a ded
    - `qbo-mapping-error-form-specialized`
    - `qbo-item-lookup-failed-form`
    - `qbo-item-mapping-missing-form`
-   - `qbo-item-lookup-internal-error-form`
    - `qbo-invoice-no-items-mapped-form`
    - `qbo-sync-error-form`
    - `workflow-execution-error-form`
@@ -180,7 +179,7 @@ When creating a human task that requires a form, you can reference a System Form
 
 ```typescript
 await typedActions.createHumanTask({
-  taskType: 'qbo_customer_mapping_lookup_error', // The form is determined by the task definition associated with this taskType
+  taskType: 'qbo_mapping_error', // The form is determined by the task definition associated with this taskType
   title: `Failed QBO Customer Mapping Lookup for Company ID: ${algaCompany.company_id}`,
   details: {
     // Task details...

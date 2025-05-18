@@ -120,23 +120,14 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
         }
       );
       
-      // 3. Create workflow event
-      const eventId = uuidv4(); // Use plain UUID without prefix
-      const event = {
-        event_id: eventId,
-        execution_id: task.execution_id,
-        event_name: TaskEventNames.taskCompleted(taskId),
-        event_type: 'task_completed',
-        tenant,
-        from_state: task.status,
-        to_state: WorkflowTaskStatus.COMPLETED,
-        user_id: userId,
-        payload: finalFormData,
-        created_at: new Date().toISOString()
-      };
+      // 3. Generate a clean eventId for this task completion.
+      // This eventId will be used as the idempotency_key for enqueueEvent,
+      // making enqueueEvent the sole persister of this event.
+      const taskCompletionEventId = uuidv4();
       
-      await trx('workflow_events').insert(event);
-      
+      // The direct insert into workflow_events is removed from here.
+      // WorkflowRuntime.enqueueEvent will handle the event persistence.
+
       // 4. Publish event to workflow engine
       // Get action registry and workflow runtime
       const actionRegistry = getActionRegistry();
@@ -144,15 +135,20 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
       
       try {
         // First, try to load the execution state to ensure it's in memory
+        // Note: Depending on implementation, loadExecutionState might not be strictly necessary
+        // before enqueueEvent if enqueueEvent can robustly handle non-cached states.
+        // However, it's often good practice to ensure the state is loaded or can be loaded.
         await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
         
-        // Then enqueue event for asynchronous processing
+        // Then enqueue event for asynchronous processing, passing the generated
+        // eventId as the idempotency_key.
         await workflowRuntime.enqueueEvent(trx, {
           execution_id: task.execution_id,
           event_name: TaskEventNames.taskCompleted(taskId),
           payload: finalFormData,
           user_id: userId,
-          tenant
+          tenant,
+          idempotency_key: taskCompletionEventId // Pass the generated clean UUID
         });
       } catch (error) {
         console.error('Error enqueueing workflow event:', error);

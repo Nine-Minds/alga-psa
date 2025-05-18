@@ -31,7 +31,6 @@ The `up` function will perform the following steps within a transaction:
     *   `qbo-mapping-error-form-specialized` (extends `baseQboMappingErrorForm` - clarify if this name is final or if it's the same as the base)
     *   `qbo-item-lookup-failed-form` (extends `baseQboLookupErrorForm`)
     *   `qbo-item-mapping-missing-form` (extends `baseQboMappingErrorForm`)
-    *   `qbo-item-lookup-internal-error-form` (extends `baseQboLookupErrorForm`)
     *   `qbo-invoice-no-items-mapped-form` (extends `baseQboMappingErrorForm`)
     *   `qbo-sync-error-form` (extends `baseQboApiErrorForm`)
     *   `workflow-execution-error-form` (extends `baseWorkflowErrorForm`)
@@ -52,7 +51,7 @@ The `up` function will perform the following steps within a transaction:
 4.  **Create/Update `system_workflow_task_definitions`**:
     For each of the 10 specialized forms registered:
     *   Insert/update a record in `system_workflow_task_definitions`.
-    *   `task_type`: The corresponding workflow task type string (e.g., 'qbo_customer_mapping_lookup_error').
+    *   `task_type`: The corresponding workflow task type string (e.g., 'qbo_sync_error').
     *   `name`: A descriptive name for the task definition.
     *   `description`: From the form definition.
     *   `form_id`: The `name` of the specialized system form just registered.

@@ -10,6 +10,7 @@ import { IUserWithRoles } from '../../../interfaces/auth.interfaces';
 import AlertWidget from '../../../components/ui/widgets/AlertWidget';
 import HighlightWidget from '../../../components/ui/widgets/HighlightWidget';
 import ButtonLinkWidget from '../../../components/ui/widgets/ButtonLinkWidget';
+import RichTextViewerWidget from '../../../components/ui/widgets/RichTextViewerWidget';
 
 // Company Picker Widget
 export const CompanyPickerWidget = (props: WidgetProps) => {
@@ -132,5 +133,6 @@ export const customWidgets = {
   AlertWidget,
   ButtonLinkWidget,
   HighlightWidget,
+  RichTextViewerWidget,
   // Add all other custom widgets
 };

@@ -361,10 +361,24 @@ export class EventBus {
       // Log the object just before stringifying
       console.log(`[DEBUG EventBus.publish] workflowEvent object BEFORE stringify:`, JSON.stringify(workflowEvent, null, 2));
 
+      // Construct the message fields for XADD in the flat format
+      const messageFields: { [key: string]: string } = {
+        event_id: workflowEvent.event_id,
+        execution_id: workflowEvent.execution_id || '',
+        event_name: workflowEvent.event_name,
+        event_type: workflowEvent.event_type,
+        tenant: workflowEvent.tenant,
+        timestamp: workflowEvent.timestamp, // Already a string from Zod schema
+        user_id: workflowEvent.user_id || '',
+        from_state: workflowEvent.from_state || '',
+        to_state: workflowEvent.to_state || '',
+        payload_json: JSON.stringify(workflowEvent.payload || {})
+      };
+
       await client.xAdd(
         globalStream,
         '*',
-        { event: JSON.stringify(workflowEvent) },
+        messageFields, // Use the flat messageFields object
         {
           TRIM: {
             strategy: 'MAXLEN',

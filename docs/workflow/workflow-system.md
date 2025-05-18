@@ -52,9 +52,11 @@ The workflow system consists of the following major components:
 
 5.  **Workflow Context**: Provides the execution context for workflows, including access to actions, data, events, and logging.
 
-6.  **Redis Streams Integration**: Enables asynchronous event distribution across multiple servers.
+6.  **Redis Streams Integration**: Enables asynchronous event distribution. Currently, all workflow-related events are published to a single global Redis stream named `workflow:events:global`. (See Section 5 for more details on event stream usage).
 
 7.  **Worker Service**: Processes events asynchronously from Redis Streams.
+    *   **Current Architecture**: The `WorkflowWorker` currently operates as a singleton instance. This means all events from the global Redis stream are processed by this single worker. This is important for understanding how features like `context.events.waitFor` function reliably with in-memory listeners.
+    *   **Future Scalability**: Future plans for scaling may involve distributing workers, potentially by sharding streams by tenant ID (e.g., `workflow:events:tenant_hash_X`). This approach would aim to maintain worker affinity for workflow executions within a tenant, preserving the effectiveness of in-memory event listeners. If a different distribution model is adopted where affinity is not guaranteed, the in-memory listener mechanism for `context.events.waitFor` would require re-evaluation.
 
 8.  **Distributed Coordination**: Ensures reliable processing in a distributed environment.
 
@@ -102,13 +104,100 @@ The workflow system uses several database tables to store its data:
 4.  **workflow_timers**: Manages workflow timers
 5.  **workflow_action_dependencies**: Stores dependencies between actions
 6.  **workflow_sync_points**: Manages synchronization points for parallel execution
-7.  **workflow_event_processing**: Tracks the processing status of events in a distributed setup
+7.  **workflow_event_processing**: Tracks the detailed lifecycle and processing status of individual events intended for asynchronous handling. When an event is enqueued (e.g., via `runtime.enqueueEvent()`), a record is created here. Its status transitions typically from `pending` -> `published` (to Redis) -> `processing` (by a worker) -> `completed` or `failed`. This table is crucial for ensuring event processing reliability, enabling retries, and providing visibility into the asynchronous event pipeline, especially in distributed environments. It links to `workflow_events` via `event_id`.
 8.  **system_workflow_task_definitions**: Stores definitions for system-wide, reusable task types (e.g., common error handling tasks). These definitions are not tenant-specific and are identified by their `task_type` string. They link to form definitions (often system forms).
 9.  **workflow_task_definitions**: Stores definitions for task types that are specific to a tenant. These are identified by a UUID (`task_definition_id`) and are scoped to a `tenant`.
 10. **workflow_tasks**: Stores instances of human tasks. It links to its definition using:
     - `task_definition_type` ('system' or 'tenant'): Indicates whether the task uses a system or tenant-specific definition.
     - `tenant_task_definition_id` (UUID): Foreign key to `workflow_task_definitions.task_definition_id` if type is 'tenant'.
     - `system_task_definition_task_type` (TEXT): Foreign key to `system_workflow_task_definitions.task_type` if type is 'system'.
+
+11. **system_workflow_form_definitions**: Stores definitions for system-wide, reusable UI forms. These are referenced by task definitions. Key fields include `name` (unique identifier for the form), `json_schema` (defines the data structure and properties of the form), and `ui_schema` (provides hints for rendering the form).
+12. **workflow_form_definitions**: Stores tenant-specific UI form definitions, mirroring the structure of `system_workflow_form_definitions`.
+
+### Human Task Forms and Dynamic Data Display
+
+Human tasks often require displaying dynamic information to the user based on the workflow's current context and the specifics of the task (e.g., error details, entity identifiers). The workflow system facilitates this through the interaction of form definitions (`system_workflow_form_definitions` or `workflow_form_definitions`) and the `contextData` provided when a human task is created via `actions.createHumanTask`.
+
+There are two primary ways dynamic data is presented in forms:
+
+1.  **Direct Field Population**:
+    *   The form's `json_schema` defines distinct properties corresponding to individual pieces of data (e.g., `resolutionNotes`, `retryCheckbox`).
+    *   The workflow provides values for these properties directly within the `contextData` object when creating the task. For example:
+        ```typescript
+        // In the workflow:
+        await actions.createHumanTask({
+          taskType: 'some_review_task',
+          // ... other task parameters
+          contextData: {
+            resolutionNotes: "Initial assessment complete.",
+            isUrgent: true
+          }
+        });
+        ```
+    *   The UI rendering layer then uses these values to populate the corresponding input fields (e.g., a textarea for `resolutionNotes`, a checkbox for `isUrgent`).
+
+2.  **Template String Substitution**:
+    *   This method is particularly useful for displaying formatted, read-only information composed of multiple data points, or for providing descriptive text that includes dynamic values.
+    *   In the form's `json_schema` (stored in `system_workflow_form_definitions`), a property (often read-only) can have its `default` value set to a template string. This template string includes placeholders that reference keys within the `contextData` object, using the syntax `${contextData.keyName}`.
+    *   Example `json_schema` property for a form definition:
+        ```json
+        {
+          // ... other properties ...
+          "errorReport": {
+            "type": "string",
+            "title": "Error Details",
+            "readOnly": true,
+            "default": "Workflow Instance ID: ${contextData.workflowInstanceId}\nError Code: ${contextData.errorCode}\nMessage: ${contextData.errorMessageText}\nEntity: ${contextData.entityType} (ID: ${contextData.entityId})"
+          }
+          // ...
+        }
+        ```
+    *   The workflow, when creating the human task, populates the `contextData` with the individual data elements whose keys match the placeholders in the template.
+        ```typescript
+        // In the workflow, when an error occurs:
+        await actions.createHumanTask({
+          taskType: 'qbo_sync_error', // This task type would link to the form definition above
+          title: 'QuickBooks Sync Error',
+          // ... other task parameters
+          contextData: {
+            workflowInstanceId: executionId,
+            errorCode: 'QBO-123',
+            errorMessageText: 'Customer not found in QBO.',
+            entityType: 'Customer',
+            entityId: algaCompanyId,
+            // ... any other data needed by the template or for other purposes
+          }
+        });
+        ```
+    *   The UI rendering layer is then responsible for:
+        1.  Retrieving the form definition (including the `json_schema` with the template string in the `default` value of the `errorReport` property).
+        2.  Accessing the `contextData` associated with the specific task instance.
+        3.  Performing string substitution on the template string, replacing placeholders like `${contextData.errorCode}` with their corresponding values from the `contextData` (e.g., "QBO-123").
+        4.  Displaying the resulting formatted string to the user (e.g., in a read-only textarea as specified by the `ui_schema`).
+    *   This pattern allows for flexible and descriptive presentation of dynamic information without requiring a separate form field for every individual piece of data if they are only for display. The `qbo-mapping-error-form`'s `productDetails` field is a prime example of this approach.
+
+**Key Considerations for Template Substitution:**
+*   The workflow must ensure that all keys referenced in the form's template string are present in the `contextData` it provides when creating the task.
+*   The UI component responsible for rendering the form must implement the logic to perform this substitution.
+*   This method is best suited for read-only display of information. If user input is required for these individual pieces of data, direct field population (Method 1) is more appropriate.
+#### Enhanced Templating for Dynamic Content
+
+To provide more flexibility while maintaining security for user-influenced template strings (e.g., in form `default` values or dynamic UI text), the templating mechanism described above is being enhanced. This enhancement will utilize the existing Parsimmon dependency to parse and evaluate a controlled, limited set of JavaScript-like expressions within the `${...}` syntax.
+
+**Key features of the enhanced templating:**
+*   **Parser:** Implemented using Parsimmon.
+*   **Supported Expressions (Initial Scope):**
+    *   Variable access: `variableName` or `contextData.variableName`
+    *   String literals: `'some string'`
+    *   Logical OR: `expression1 || expression2`
+    *   Date formatting: `new Date(variableOrString).toLocaleDateString()` and `new Date(variableOrString).toLocaleString()`
+*   **Security:** The custom parser and evaluator are designed to be secure by only allowing the explicitly defined expressions and operations, preventing arbitrary code execution.
+*   **Integration:** This will affect how `default` values in JSON schemas and other templated strings are processed by `server/src/utils/templateUtils.ts`, impacting components like `DynamicForm.tsx` and `ActivityDetailViewerDrawer.tsx`.
+
+For a detailed technical design of this Parsimmon-based templating engine, please refer to "[`docs/technical/parsimmon_templating_engine.md`](docs/technical/parsimmon_templating_engine.md:1)".
+
+By understanding these data flow patterns, developers can effectively design workflows that create informative and actionable human tasks.
 
 ## 3. TypeScript-Based Workflows
 
@@ -126,8 +215,17 @@ async function workflow(context: WorkflowContext): Promise<void> {
   // Wait for events
   const startEvent = await events.waitFor('Start');
   
-  // Execute actions
-  await actions.doSomething({ param1: 'value1' });
+  // Execute actions, including the new composite action
+  // await actions.doSomething({ param1: 'value1' });
+  // Example of the new action:
+  // const taskOutcome = await actions.createTaskAndWaitForResult({
+  //   taskType: 'user_review',
+  //   title: 'Review Item',
+  //   contextData: { itemId: '123' }
+  // });
+  // if (taskOutcome.success) {
+  //   logger.info(`Task resolved with: ${JSON.stringify(taskOutcome.resolutionData)}`);
+  // }
   
   // Update state
   context.setState('completed');
@@ -139,9 +237,11 @@ async function workflow(context: WorkflowContext): Promise<void> {
 
 The `WorkflowContext` provides access to:
 
-- **actions**: Proxy object for executing registered actions
+- **actions**: Proxy object for executing registered actions. This now includes a powerful composite action `createTaskAndWaitForResult` which simplifies creating a human task and pausing the workflow until it's resolved.
 - **data**: Data manager for storing and retrieving workflow data
-- **events**: Event manager for waiting for and emitting events
+- **events**: Event manager for waiting for and emitting events.
+  - `events.waitFor()`: Pauses workflow execution until a specified external event (or one of several specified events) occurs. It relies on in-memory listeners within the `TypeScriptWorkflowRuntime` instance processing the workflow. Given the current singleton `WorkflowWorker` architecture (see Section 2), these in-memory listeners are effective as the same worker instance that initiates the wait will process the resolving event. This mechanism is crucial for the `actions.createTaskAndWaitForResult` composite action.
+  - `events.emit()`: Asynchronously enqueues an event, which will be persisted and published to the global Redis stream for processing by the worker.
 - **logger**: Logger for workflow execution
 - **setState/getCurrentState**: Methods for managing workflow state
 
@@ -193,7 +293,141 @@ try {
   logger.error('Operation failed', error);
   await actions.handleFailure();
 }
+// For errors that are recoverable with human intervention, a more interactive pattern involves creating a human task and then pausing the workflow until the task is resolved, allowing the operation to be retried. The `actions.createTaskAndWaitForResult` method greatly simplifies this. See the "Interactive Error Resolution and Retries with Human Tasks" section for a detailed example.
 ```
+
+#### Interactive Error Resolution and Retries with Human Tasks
+
+A common and powerful pattern for handling operations that might fail due to issues requiring manual intervention (e.g., missing data, incorrect configuration, external system errors) is to:
+1. Attempt the operation.
+2. If it fails, use `actions.createTaskAndWaitForResult` to create a human task and automatically pause the workflow. This action encapsulates creating the task, determining the correct event to wait for (typically `TaskEventNames.taskCompleted(taskId)`), and then calling `context.events.waitFor()`.
+3. The workflow resumes when `createTaskAndWaitForResult` returns, providing the outcome of the human task (e.g., data submitted by the user, or a timeout indication).
+4. Based on the task's outcome, the workflow can retry the operation or take other actions.
+
+This allows the workflow to remain in context and continue from where it left off, rather than terminating and requiring a full restart.
+
+**Conceptual Flow (Simplified with `createTaskAndWaitForResult`):**
+
+```
+loop until operation_succeeds or max_retries_reached:
+    try:
+        perform_operation()
+        operation_succeeds = true
+    catch error_requiring_human_intervention:
+        task_outcome = await actions.createTaskAndWaitForResult(
+            taskType: 'resolve_error_X',
+            title: 'Resolve Error for Operation Y',
+            contextData: { error_details, relevant_ids },
+            waitForEventTimeoutMilliseconds: 3_600_000 // Optional: 1 hour timeout
+        )
+        if task_outcome.success and task_outcome.resolutionData?.userFixedTheProblem:
+            // Loop continues, operation will be retried
+            logger.info("User indicated problem resolved. Retrying operation.")
+        else:
+            logger.warn("Task did not result in a successful resolution. Aborting retry.")
+            // Handle non-resolution (e.g., log, escalate, break loop)
+            break
+```
+
+**Example: Processing an item that requires a valid mapping (using `createTaskAndWaitForResult`)**
+
+```typescript
+async function processItemWithMappingWorkflow(context: WorkflowContext): Promise<void> {
+  const { actions, data, logger, setState, executionId } = context; // `events` is not directly needed here
+  const itemId = data.get('itemIdToProcess');
+  let itemProcessed = false;
+  let attempts = 0;
+  const MAX_ATTEMPTS = 3; // Define a retry limit
+
+  setState('VALIDATING_ITEM_MAPPING');
+
+  while (!itemProcessed && attempts < MAX_ATTEMPTS) {
+    attempts++;
+    logger.info(`Attempt ${attempts} to process item ${itemId}.`);
+
+    try {
+      // Action that might fail if mapping is missing or invalid
+      const mappingDetails = await actions.getMappingForItem({ itemId }); 
+      if (!mappingDetails || !mappingDetails.isValid) {
+        throw new Error(`Mapping for item ${itemId} is missing or invalid.`);
+      }
+
+      // Proceed with processing using mappingDetails
+      await actions.processItemUsingMapping({ itemId, mappingDetails });
+      itemProcessed = true;
+      logger.info(`Item ${itemId} processed successfully.`);
+      setState('ITEM_PROCESSING_COMPLETE');
+
+    } catch (error: any) {
+      logger.error(`Error processing item ${itemId} on attempt ${attempts}: ${error.message}`);
+      setState(`AWAITING_MAPPING_RESOLUTION_FOR_ITEM_${itemId}_ATTEMPT_${attempts}`);
+
+      // Use the new composite action to create a task and wait for its resolution
+      const taskResolution = await actions.createTaskAndWaitForResult({
+        taskType: 'resolve_item_mapping_error', // Links to a pre-defined task and form
+        title: `Resolve Mapping for Item ${itemId} (Attempt ${attempts})`,
+        description: `Error: ${error.message}. Please review and correct the mapping for item ID: ${itemId}.`,
+        contextData: { // Data for the form and task context
+          itemId: itemId,
+          errorMessage: error.message,
+          currentAttempt: attempts,
+          maxAttempts: MAX_ATTEMPTS,
+          workflowInstanceId: executionId
+        },
+        // Optional: Timeout for waiting for the task resolution event
+        // waitForEventTimeoutMilliseconds: 60 * 60 * 1000 // 1 hour
+      });
+
+      if (taskResolution.success) {
+        // Task was completed, event was received.
+        // The payload of the event (taskResolution.resolutionData) might contain user input.
+        logger.info(`Task ${taskResolution.taskId} for item ${itemId} resolved. Resolution data: ${JSON.stringify(taskResolution.resolutionData)}. Retrying processing.`);
+        // The loop will continue, and getMappingForItem will be re-attempted.
+      } else {
+        // Task creation might have failed, or waitFor event might have timed out or errored.
+        logger.error(`Failed to get resolution for task for item ${itemId}. Error: ${taskResolution.error}. Details: ${JSON.stringify(taskResolution.details)}. Halting retries for this item.`);
+        setState('CRITICAL_ERROR_TASK_RESOLUTION_FAILED');
+        // Depending on policy, you might throw an error here or return
+        return; 
+      }
+    }
+  } // End while loop
+
+  if (!itemProcessed) {
+    logger.error(`Failed to process item ${itemId} after ${MAX_ATTEMPTS} attempts.`);
+    setState('ITEM_PROCESSING_FAILED_MAX_ATTEMPTS');
+    // Optionally, create a final escalation task or take other compensatory actions.
+    // Can still use createHumanTask directly if no waiting is needed, or createTaskAndWaitForResult if it is.
+    await actions.createHumanTask({ 
+        taskType: 'item_processing_escalation',
+        title: `Escalation: Item ${itemId} processing failed after max attempts.`,
+        contextData: { itemId, attempts, workflowInstanceId: executionId }
+    });
+  }
+}
+```
+
+**Key Considerations for `actions.createTaskAndWaitForResult`:**
+*   **Simplicity**: This action significantly simplifies the workflow code by encapsulating the `createHumanTask` call, event name construction (it uses `TaskEventNames.taskCompleted(taskId)` internally), and the `events.waitFor()` call.
+*   **Return Value**: The action returns an object (`CreateTaskAndWaitForResultReturn`) indicating `success` (boolean), the `taskId` (string | null), `resolutionData` (any, the payload of the task completion event), and an optional `error` message or `details` object.
+*   **Task Resolution Event**: The system relies on an event named according to `TaskEventNames.taskCompleted(taskId)` being emitted when the human task is resolved. This is a standard convention.
+*   **Retry Limits**: Always include a mechanism (like a maximum attempt counter) to prevent infinite loops.
+*   **Idempotency**: Ensure retried operations are idempotent.
+*   **`setState` for Observability**: Continue to use `context.setState()` for visibility.
+*   **Timeout**: The `waitForEventTimeoutMilliseconds` parameter in `createTaskAndWaitForResultParams` allows specifying a timeout for how long the workflow will wait for the task resolution event. If a timeout occurs, `taskResolution.success` will be `false`, and `taskResolution.error` will indicate a timeout.
+*   **Detailed Event Flow**:
+    1.  `createTaskAndWaitForResult` internally calls the registered `actions.create_human_task` action.
+    2.  This action (or its underlying logic) creates the human task record in the database.
+    3.  `createTaskAndWaitForResult` then determines the expected resolution event name (typically `TaskEventNames.taskCompleted(taskId)`) and calls `context.events.waitFor()` with this event name, causing the workflow to pause.
+    4.  When the human task is completed (e.g., through a UI interaction that calls an API like `submitTaskForm`):
+        a.  The API endpoint handling task completion (e.g., `submitTaskForm`) is responsible for emitting the task resolution event (e.g., `TASK_COMPLETED` with the `taskId` and resolution data in its payload).
+        b.  This event is enqueued using `runtime.enqueueEvent()`.
+        c.  `enqueueEvent()` persists the event to the database (e.g., `workflow_events` table) and publishes it to the global Redis stream (`workflow:events:global`).
+        d.  The singleton `WorkflowWorker` consumes this event from the Redis stream.
+        e.  The worker invokes `runtime.processQueuedEvent()` for the consumed event.
+        f.  `processQueuedEvent()` loads the relevant workflow execution state, applies the event, and then calls `notifyEventListeners()`.
+        g.  `notifyEventListeners()` finds the specific in-memory listener registered by the earlier `context.events.waitFor()` call (within the same worker process) and resolves the associated promise.
+        h.  This resolution allows `createTaskAndWaitForResult` to resume, and it then returns the task outcome (including `resolutionData` from the event payload) to the workflow.
 
 ## 4. Core Components
 
@@ -383,15 +617,19 @@ The workflow system processes all events asynchronously through a message queue.
 
 ### Redis Streams Integration
 
-Redis Streams is used as a message queue for distributing workflow events to workers. When a workflow event is submitted, it is:
-1. Validated and persisted to the database
-2. Published to Redis Streams for asynchronous processing
-3. Processed by worker processes running across multiple servers
+Redis Streams is used as the message queue for distributing workflow events.
 
-Key features:
-- Consumer groups ensure each event is processed exactly once
-- Message acknowledgment and claiming handle worker failures
-- Proper error handling and retry mechanisms
+**Global Event Stream**: Currently, all workflow-related events—including initial trigger events, events emitted by workflows via `context.events.emit()`, and task completion events—are published to a single global Redis stream named `workflow:events:global`. The `WorkflowWorker` (currently a singleton instance) consumes events from this global stream.
+
+**Event Publication Flow**: When a workflow event is submitted (e.g., via `runtime.enqueueEvent()`):
+1. The event is validated and persisted to the database (e.g., into `workflow_events` and `workflow_event_processing` tables).
+2. It is then published as a message to the `workflow:events:global` Redis stream for asynchronous processing.
+3. Worker processes (currently one) consume messages from this stream.
+
+**Key Features Leveraged**:
+- **Consumer Groups**: Can be used to ensure each event message is processed by one consumer in a group (relevant for future multi-worker scenarios).
+- **Message Acknowledgment**: Helps in handling worker failures and ensuring events are not lost.
+- **Error Handling**: The system includes mechanisms for retrying event processing in case of transient failures.
 
 ### Two-Phase Event Processing
 
@@ -413,9 +651,10 @@ For more details, see the [Worker Service Documentation](worker-service.md).
 ### Reliable Processing
 
 To ensure reliable event processing, the system uses:
-- Redis-based locks for critical sections
-- Transaction management for data consistency
-- Error classification and recovery strategies
+- Redis-based locks for critical sections (e.g., during event processing by a worker).
+- Transaction management for data consistency (e.g., when persisting events and updating workflow state).
+- Error classification and recovery strategies for handling failures during event processing.
+- **Standardized Identifiers**: Key identifiers such as `event_id` in the `workflow_events` table and `processing_id` in the `workflow_event_processing` table are expected to be standard Universally Unique Identifiers (UUIDs). If idempotency keys are provided and used as `event_id`, they should also conform to the UUID format or be handled by a system layer that ensures compatibility with database constraints (e.g., by hashing or mapping if the underlying column type is strictly UUID). This ensures data integrity and compatibility with database functions expecting UUIDs.
 
 ## 6. Usage Examples
 

@@ -3,8 +3,8 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'; // Keep only one import
 import crypto from 'crypto';
 // --- Import Actual Implementations ---
-import { ISecretProvider } from '../../../../../lib/secrets/ISecretProvider';
-import { getSecretProviderInstance } from '../../../../../lib/secrets';
+import { ISecretProvider } from '@shared/core/ISecretProvider'; // Import the interface
+import { getSecretProviderInstance } from '@shared/core/secretProvider';
 import { createTenantKnex } from '../../../../../lib/db'; // Import createTenantKnex
 // TODO: Import the actual CSRF token storage mechanism
 // import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed

@@ -8,7 +8,7 @@ import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } f
 import logger from '@shared/core/logger.js';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 import axios from 'axios'; // For QBO API calls
-import { getSecret } from '@shared/core/getSecret.js'
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 // --- Mock Secret Retrieval ---
 
@@ -22,6 +22,49 @@ interface QboCredentials {
   realmId: string; // Already a param in actions, but good to have in a credentials object
   accessTokenExpiresAt: string; // ISO string
   // refreshTokenExpiresAt?: string; // ISO string, optional
+}
+
+// --- QBO Customer Specific Types ---
+interface QuickBooksCompanyInfo {
+  Id: string;
+  SyncToken: string;
+  DisplayName?: string;
+  PrimaryNameValue?: string; // For individual customers
+  GivenName?: string;
+  MiddleName?: string;
+  FamilyName?: string;
+  Suffix?: string;
+  FullyQualifiedName?: string;
+  CompanyName?: string;
+  PrimaryEmailAddr?: {
+    Address?: string;
+  };
+  PrimaryPhone?: {
+    FreeFormNumber?: string;
+  };
+  BillAddr?: {
+    Id?: string;
+    Line1?: string;
+    Line2?: string;
+    Line3?: string;
+    Line4?: string;
+    Line5?: string;
+    City?: string;
+    Country?: string;
+    CountrySubDivisionCode?: string; // State
+    PostalCode?: string;
+    Lat?: string;
+    Long?: string;
+  };
+  // Add other fields as necessary based on typical QBO Customer structure
+}
+
+interface QboCustomerByIdResult {
+  success: boolean;
+  customer?: QuickBooksCompanyInfo;
+  message?: string;
+  errorDetails?: any;
+  qboRawResponse?: any;
 }
 
 /**
@@ -497,13 +540,12 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const company = await knex('companies')
-          .select('*')
-          .where({ company_id: params.id, tenant: context.tenant }) // Corrected column name
+          .select('*') // This will fetch address and billing_email if they exist
+          .where({ company_id: params.id, tenant: context.tenant })
           .first();
           
         if (!company) {
           logger.warn(`[ACTION] get_company: Company not found for id: ${params.id}, tenant: ${context.tenant}`);
-          // Throw error if not found, consistent with get_invoice
           const err = new Error(`Company with id ${params.id} not found for tenant ${context.tenant}.`);
           (err as any).status = 404;
           throw err;
@@ -512,7 +554,6 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] get_company: Successfully fetched company id: ${params.id}`);
         logger.info(`[ACTION] get_company: Company details from DB: ${JSON.stringify(company)}`);
 
-        // Return the raw database object directly
         return company;
       } catch (error: any) {
         logger.error(`[ACTION] get_company: Error fetching company id: ${params.id}, tenant: ${context.tenant}`, error);
@@ -1008,6 +1049,105 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
+  // Get QBO Customer by ID
+  actionRegistry.registerSimpleAction(
+    'get_qbo_customer_by_id',
+    'Get a QBO Customer by its ID.',
+    [
+      { name: 'qboCustomerId', type: 'string', required: true, description: 'The ID of the QBO customer to fetch.' },
+      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
+      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
+      // tenantId will be implicitly available via ActionExecutionContext
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext): Promise<QboCustomerByIdResult> => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})] get_qbo_customer_by_id:`;
+      logger.info(`${logPrefix} Called for QBO Customer ID: ${params.qboCustomerId}, Realm ID: ${params.realmId}, Tenant: ${context.tenant}`);
+
+      try {
+        const qboCredentials = params.qboCredentials as QboCredentials;
+
+        if (!qboCredentials) {
+          logger.error(`${logPrefix} QBO credentials not provided. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO credentials not provided.' };
+        }
+
+        const { accessToken, accessTokenExpiresAt } = qboCredentials;
+
+        if (!accessToken || !accessTokenExpiresAt) {
+          logger.error(`${logPrefix} Missing QBO accessToken or accessTokenExpiresAt in provided credentials. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing).' };
+        }
+
+        if (new Date(accessTokenExpiresAt) < new Date()) {
+          logger.warn(`${logPrefix} QBO access token expired (using provided credentials). RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
+        }
+
+        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer/${params.qboCustomerId}?minorversion=69`;
+        logger.debug(`${logPrefix} Querying QBO: ${apiUrl}`);
+
+        const response = await axios.get(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+          timeout: 15000, // Standard timeout for GET requests
+        });
+
+        const qboCustomer = response.data?.Customer;
+
+        if (qboCustomer && qboCustomer.Id) {
+          logger.info(`${logPrefix} Successfully fetched QBO Customer ${qboCustomer.Id}. RealmId: ${params.realmId}`);
+          return {
+            success: true,
+            customer: qboCustomer as QuickBooksCompanyInfo,
+            qboRawResponse: response.data,
+          };
+        } else {
+          // This case handles if QBO API returns 200 OK but no Customer object, or Customer object is malformed.
+          logger.warn(`${logPrefix} QBO API call successful but customer data is missing or malformed. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}. Response: ${JSON.stringify(response.data)}`);
+          return {
+            success: false,
+            message: 'QBO API call successful, but customer data is missing or malformed in the response.',
+            qboRawResponse: response.data,
+            errorDetails: response.data, // Provide the raw response as error details
+          };
+        }
+      } catch (error: any) {
+        logger.error(`${logPrefix} Error fetching QBO Customer by ID ${params.qboCustomerId}, RealmId: ${params.realmId}, Tenant: ${context.tenant}`, error.response?.data || error.message || error);
+        const faultError = error.response?.data?.Fault?.Error?.[0];
+        let errorMessage = 'An unexpected error occurred while fetching QBO customer.';
+        if (faultError) {
+          errorMessage = `QBO API Error: ${faultError.Message || 'Unknown QBO Error'}. Detail: ${faultError.Detail || 'No additional details.'} Code: ${faultError.code || 'N/A'}`;
+        } else if (axios.isAxiosError(error) && error.message) {
+            errorMessage = `Network/Request Error: ${error.message}`;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        // Specifically check for "Object Not Found" type errors from QBO.
+        // QBO error code for "Object Not Found" is often 6240 in the detail.
+        // Also check if the status code is 404, which QBO might return for a non-existent resource.
+        if (error.response?.status === 404 || faultError?.Detail?.includes("Object Not Found") || faultError?.code === "6240" || (error.response?.status === 400 && faultError?.Message?.toLowerCase().includes("not found"))) {
+            logger.info(`${logPrefix} QBO Customer ID ${params.qboCustomerId} not found in Realm ID ${params.realmId}. Status: ${error.response?.status}`);
+            return { 
+                success: false, 
+                message: `QBO Customer with ID ${params.qboCustomerId} not found. Detail: ${faultError?.Detail || 'Not found.'}`, 
+                errorDetails: error.response?.data || error.toString(),
+                qboRawResponse: error.response?.data
+            };
+        }
+
+        return { 
+            success: false, 
+            message: errorMessage, 
+            errorDetails: error.response?.data || error.toString(),
+            qboRawResponse: error.response?.data
+        };
+      }
+    }
+  );
+
   // Update Alga company QBO mapping details
   actionRegistry.registerSimpleAction(
     'update_company_qbo_details',
@@ -1075,13 +1215,16 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     'get_external_entity_mapping',
     'Retrieves an external entity mapping for an Alga entity, system, and realm.',
     [
-      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID).' },
-      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'QBO\').' },
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID, invoice ID).' },
+      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'quickbooks_online\').' },
       { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system (e.g., QBO realmId).' },
+      { name: 'algaEntityType', type: 'string', required: false, description: 'The type of Alga entity (e.g., "invoice", "company"). Defaults to "company" if not specified.' }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
+      const entityType = params.algaEntityType || 'company'; // Default to 'company' for backward compatibility
+      
+      logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
       try {
         const { getAdminConnection } = await import('@shared/db/admin.js');
@@ -1092,7 +1235,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           .where({
             tenant: context.tenant,
             alga_entity_id: params.algaEntityId,
-            alga_entity_type: 'company', // Assuming we're mapping companies for now
+            alga_entity_type: entityType,
             integration_type: params.externalSystemName,
             external_realm_id: params.externalRealmId,
           })
@@ -1120,6 +1263,82 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
+  
+  // Create or update an external entity mapping
+  actionRegistry.registerSimpleAction(
+    'create_or_update_external_entity_mapping',
+    'Create or update an external entity mapping for an Alga entity and external system',
+    [
+      { name: 'algaEntityType', type: 'string', required: true, description: 'The type of Alga entity (e.g., "invoice", "company").' },
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity.' },
+      { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., "quickbooks_online").' },
+      { name: 'externalEntityId', type: 'string', required: true, description: 'The ID of the entity in the external system.' },
+      { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system.' },
+      { name: 'metadata', type: 'object', required: false, description: 'Additional metadata for the mapping (e.g., syncToken).' },
+      { name: 'tenantId', type: 'string', required: false, description: 'The tenant ID (defaults to context.tenant).' }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
+      logger.info(`${logPrefix} create_or_update_external_entity_mapping called for algaEntityType: ${params.algaEntityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalEntityId: ${params.externalEntityId}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
+      
+      // Validate required parameters to avoid database errors
+      if (!params.externalEntityId) {
+        const errorMsg = `Missing required parameter: externalEntityId cannot be null or empty`;
+        logger.error(`${logPrefix} create_or_update_external_entity_mapping: ${errorMsg}`);
+        return { success: false, message: errorMsg };
+      }
+
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+
+        // Create timestamp for both created_at and updated_at
+        const now = new Date();
+        
+        // Include all required fields
+        const mappingData = {
+          tenant: context.tenant,
+          integration_type: params.externalSystemName,
+          alga_entity_type: params.algaEntityType,
+          alga_entity_id: params.algaEntityId,
+          external_entity_id: params.externalEntityId, // Required
+          external_realm_id: params.externalRealmId,
+          sync_status: 'SYNCED',
+          metadata: params.metadata || {},
+          created_at: now,
+          updated_at: now,
+        };
+
+        // Perform an upsert operation
+        const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
+        
+        const [updatedMapping] = await knex('tenant_external_entity_mappings')
+          .insert(mappingData)
+          .onConflict(conflictTarget)
+          .merge({
+            external_entity_id: params.externalEntityId, // Make sure this is explicitly included
+            external_realm_id: params.externalRealmId,  // Include this as well, though it's nullable
+            sync_status: 'SYNCED',
+            metadata: params.metadata || {},
+            updated_at: now,
+            last_synced_at: now // Update the last_synced_at timestamp
+          })
+          .returning('*');
+
+        if (!updatedMapping) {
+          logger.warn(`${logPrefix} create_or_update_external_entity_mapping: Mapping not created or updated for algaEntityId: ${params.algaEntityId}, externalEntityId: ${params.externalEntityId}`);
+          return { success: false, message: 'Mapping not created or updated.' };
+        }
+
+        logger.info(`${logPrefix} create_or_update_external_entity_mapping: Successfully created/updated mapping for entity ${params.algaEntityId} with external ID ${params.externalEntityId}`);
+        return { success: true, id: updatedMapping.id };
+
+      } catch (error: any) {
+        logger.error(`${logPrefix} create_or_update_external_entity_mapping: Error creating/updating mapping for entity ${params.algaEntityId}, tenant: ${context.tenant}`, error);
+        return { success: false, message: error.message, error };
+      }
+    }
+  );
 
   // Get Secret action
   actionRegistry.registerSimpleAction(
@@ -1140,9 +1359,8 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       );
 
       try {
-        // const secretProvider = getSecretProviderInstance();
-        // const secretString = await secretProvider.getTenantSecret(tenantId, currentSecretName);
-        const secretString = await getSecret(currentSecretName, '');
+        const secretProvider = getSecretProviderInstance();
+        const secretString = await secretProvider.getTenantSecret(tenantId, currentSecretName);
 
         if (secretString === null || secretString === undefined || secretString.trim() === '') {
           logger.warn(
@@ -1288,4 +1506,5 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 function registerTaskInboxActions(actionRegistry: ActionRegistry): void {
   const taskInboxService = getTaskInboxService();
   taskInboxService.registerTaskActions(actionRegistry);
+  logger.info('[WorkflowInit] Task inbox actions registered, including inline form support');
 }

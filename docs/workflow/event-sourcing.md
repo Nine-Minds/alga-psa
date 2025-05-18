@@ -51,6 +51,8 @@ The current state of a workflow is derived by replaying all events in chronologi
 3. Applying each event to the state in sequence.
 4. The final state after applying all events represents the current state of the workflow.
 
+For guidelines on what data should be stored in workflow state versus local variables, see [State Management Guidelines](state-management-guidelines.md).
+
 ### Performance Optimization with Snapshots
 
 To improve performance, especially for long-running workflows with many events, we use snapshots:

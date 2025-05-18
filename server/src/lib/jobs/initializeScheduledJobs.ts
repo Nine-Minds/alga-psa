@@ -1,6 +1,7 @@
 import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleReconcileBucketUsageJob } from './index';
 import logger from '@shared/core/logger';
 import { createTenantKnex } from 'server/src/lib/db';
+import { registerCleanupTemporaryFormsJob } from 'server/src/services/cleanupTemporaryFormsJob';
 
 /**
  * Initialize all scheduled jobs for the application
@@ -55,6 +56,16 @@ export async function initializeScheduledJobs(): Promise<void> {
      } else {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`);
      }
+   }
+   
+   // Register temporary forms cleanup job (system-wide)
+   try {
+     const { JobScheduler } = await import('./jobScheduler');
+     const scheduler = await JobScheduler.getInstance();
+     registerCleanupTemporaryFormsJob(scheduler);
+     logger.info('Registered temporary forms cleanup job');
+   } catch (error) {
+     logger.error('Failed to register temporary forms cleanup job:', error);
    }
    
    logger.info('All scheduled jobs initialized');

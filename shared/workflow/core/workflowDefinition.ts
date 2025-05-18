@@ -118,9 +118,19 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     // Basic implementation (needs security review)
     // This approach has security implications and should be carefully reviewed
     // eslint-disable-next-line no-new-func
-    return new Function('context', `return (async function(context) {
-      ${functionBody}
-    })(context)`) as WorkflowFunction;
+    return new Function('context', `
+      // Define WorkflowState before executing function
+      var WorkflowState = {
+        RUNNING: 'RUNNING',
+        ERROR: 'ERROR',
+        COMPLETE: 'COMPLETE',
+        FAILED: 'FAILED'
+      };
+      
+      return (async function(context) {
+        ${functionBody}
+      })(context);
+    `) as WorkflowFunction;
   } catch (error) {
     logger.error('Error deserializing workflow function:', error);
     throw new Error(`Failed to deserialize workflow function: ${error instanceof Error ? error.message : String(error)}`);
