@@ -24,6 +24,49 @@ interface QboCredentials {
   // refreshTokenExpiresAt?: string; // ISO string, optional
 }
 
+// --- QBO Customer Specific Types ---
+interface QuickBooksCompanyInfo {
+  Id: string;
+  SyncToken: string;
+  DisplayName?: string;
+  PrimaryNameValue?: string; // For individual customers
+  GivenName?: string;
+  MiddleName?: string;
+  FamilyName?: string;
+  Suffix?: string;
+  FullyQualifiedName?: string;
+  CompanyName?: string;
+  PrimaryEmailAddr?: {
+    Address?: string;
+  };
+  PrimaryPhone?: {
+    FreeFormNumber?: string;
+  };
+  BillAddr?: {
+    Id?: string;
+    Line1?: string;
+    Line2?: string;
+    Line3?: string;
+    Line4?: string;
+    Line5?: string;
+    City?: string;
+    Country?: string;
+    CountrySubDivisionCode?: string; // State
+    PostalCode?: string;
+    Lat?: string;
+    Long?: string;
+  };
+  // Add other fields as necessary based on typical QBO Customer structure
+}
+
+interface QboCustomerByIdResult {
+  success: boolean;
+  customer?: QuickBooksCompanyInfo;
+  message?: string;
+  errorDetails?: any;
+  qboRawResponse?: any;
+}
+
 /**
  * Register all workflow actions with the action registry
  * @returns The action registry with all actions registered
@@ -1002,6 +1045,105 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.error(`${logPrefix} get_qbo_customer_by_display_or_email: Error looking up QBO Customer for tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
         return { success: false, found: false, customers: [], message: `QBO API Error: ${errorMessage}`, errorDetails: error.response?.data || error };
+      }
+    }
+  );
+
+  // Get QBO Customer by ID
+  actionRegistry.registerSimpleAction(
+    'get_qbo_customer_by_id',
+    'Get a QBO Customer by its ID.',
+    [
+      { name: 'qboCustomerId', type: 'string', required: true, description: 'The ID of the QBO customer to fetch.' },
+      { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
+      { name: 'qboCredentials', type: 'object', required: true, description: 'QBO credentials object including accessToken, realmId, and accessTokenExpiresAt.' },
+      // tenantId will be implicitly available via ActionExecutionContext
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext): Promise<QboCustomerByIdResult> => {
+      const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})] get_qbo_customer_by_id:`;
+      logger.info(`${logPrefix} Called for QBO Customer ID: ${params.qboCustomerId}, Realm ID: ${params.realmId}, Tenant: ${context.tenant}`);
+
+      try {
+        const qboCredentials = params.qboCredentials as QboCredentials;
+
+        if (!qboCredentials) {
+          logger.error(`${logPrefix} QBO credentials not provided. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO credentials not provided.' };
+        }
+
+        const { accessToken, accessTokenExpiresAt } = qboCredentials;
+
+        if (!accessToken || !accessTokenExpiresAt) {
+          logger.error(`${logPrefix} Missing QBO accessToken or accessTokenExpiresAt in provided credentials. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO API call requires valid credentials (accessToken or accessTokenExpiresAt missing).' };
+        }
+
+        if (new Date(accessTokenExpiresAt) < new Date()) {
+          logger.warn(`${logPrefix} QBO access token expired (using provided credentials). RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}`);
+          return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
+        }
+
+        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer/${params.qboCustomerId}?minorversion=69`;
+        logger.debug(`${logPrefix} Querying QBO: ${apiUrl}`);
+
+        const response = await axios.get(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json',
+          },
+          timeout: 15000, // Standard timeout for GET requests
+        });
+
+        const qboCustomer = response.data?.Customer;
+
+        if (qboCustomer && qboCustomer.Id) {
+          logger.info(`${logPrefix} Successfully fetched QBO Customer ${qboCustomer.Id}. RealmId: ${params.realmId}`);
+          return {
+            success: true,
+            customer: qboCustomer as QuickBooksCompanyInfo,
+            qboRawResponse: response.data,
+          };
+        } else {
+          // This case handles if QBO API returns 200 OK but no Customer object, or Customer object is malformed.
+          logger.warn(`${logPrefix} QBO API call successful but customer data is missing or malformed. RealmId: ${params.realmId}, CustomerId: ${params.qboCustomerId}. Response: ${JSON.stringify(response.data)}`);
+          return {
+            success: false,
+            message: 'QBO API call successful, but customer data is missing or malformed in the response.',
+            qboRawResponse: response.data,
+            errorDetails: response.data, // Provide the raw response as error details
+          };
+        }
+      } catch (error: any) {
+        logger.error(`${logPrefix} Error fetching QBO Customer by ID ${params.qboCustomerId}, RealmId: ${params.realmId}, Tenant: ${context.tenant}`, error.response?.data || error.message || error);
+        const faultError = error.response?.data?.Fault?.Error?.[0];
+        let errorMessage = 'An unexpected error occurred while fetching QBO customer.';
+        if (faultError) {
+          errorMessage = `QBO API Error: ${faultError.Message || 'Unknown QBO Error'}. Detail: ${faultError.Detail || 'No additional details.'} Code: ${faultError.code || 'N/A'}`;
+        } else if (axios.isAxiosError(error) && error.message) {
+            errorMessage = `Network/Request Error: ${error.message}`;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        
+        // Specifically check for "Object Not Found" type errors from QBO.
+        // QBO error code for "Object Not Found" is often 6240 in the detail.
+        // Also check if the status code is 404, which QBO might return for a non-existent resource.
+        if (error.response?.status === 404 || faultError?.Detail?.includes("Object Not Found") || faultError?.code === "6240" || (error.response?.status === 400 && faultError?.Message?.toLowerCase().includes("not found"))) {
+            logger.info(`${logPrefix} QBO Customer ID ${params.qboCustomerId} not found in Realm ID ${params.realmId}. Status: ${error.response?.status}`);
+            return { 
+                success: false, 
+                message: `QBO Customer with ID ${params.qboCustomerId} not found. Detail: ${faultError?.Detail || 'Not found.'}`, 
+                errorDetails: error.response?.data || error.toString(),
+                qboRawResponse: error.response?.data
+            };
+        }
+
+        return { 
+            success: false, 
+            message: errorMessage, 
+            errorDetails: error.response?.data || error.toString(),
+            qboRawResponse: error.response?.data
+        };
       }
     }
   );

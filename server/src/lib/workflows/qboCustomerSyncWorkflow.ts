@@ -406,11 +406,13 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
         }
     }
     
+    let userChoseToLinkAndNeedsDirectFetch = false; // Flag for direct fetch after user links
     // Main QBO operation loop (Create/Update)
     let qboOperationSuccessful = false;
     while(!qboOperationSuccessful) {
         try {
             let qboResult: QboCustomerResult;
+            let decidedToLinkViaForm = false; // Flag to indicate if user chose to link via the inline form
 
             if (existingQboCustomerId) {
                 // --- UPDATE PATH ---
@@ -418,38 +420,69 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                 logger.info('Calling QBO Update Customer API', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant, realmId });
                 
                 if (!qboSyncToken) {
-                     logger.error('Missing qboSyncToken for QBO Customer update', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant, realmId });
-                     setState(WorkflowState.ERROR); 
-                     const taskParamsMissingSyncToken: CreateTaskAndWaitForResultParams = {
-                         taskType: 'workflow_error', // Specific task type
-                         title: `Missing SyncToken for QBO Customer Update - ${algaCompany!.company_name}`,
-                         description: `Cannot update QBO Customer ${existingQboCustomerId} because the qbo_sync_token is missing. Please provide the SyncToken or resolve the mapping.`,
-                         priority: 'high',
-                         assignTo: userId ? { users: [userId] } : undefined,
-                         contextData: {
-                             message: `Cannot update QBO Customer ${existingQboCustomerId} (Alga ID: ${algaCompanyId}) because the QBO sync token is missing.`,
-                         },
-                     };
-                     const taskResolution = await actions.createTaskAndWaitForResult(taskParamsMissingSyncToken);
-                     if (!taskResolution.success || taskResolution.resolutionData?.action === 'cancel') {
-                        const errorMsg = `User cancelled or task resolution failed for missing QBO SyncToken. TaskId: ${taskResolution.taskId}`;
-                        logger.warn(errorMsg, { error: taskResolution.error });
-                        await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
-                        return; 
-                     }
-                     // Potentially, task resolution provides the new sync token
-                     // qboSyncToken = taskResolution.resolutionData?.newSyncToken || qboSyncToken;
-                     // Re-fetch mapping to get latest sync token if task implies external update
-                     const updatedMappingResult = await actions.get_external_entity_mapping({ 
-                         algaEntityId: algaCompanyId, 
-                         externalSystemName: 'quickbooks_online', 
-                         externalRealmId: realmId,
-                         algaEntityType: 'company' // Explicitly specify entity type for clarity
-                     });
-                     if (updatedMappingResult && updatedMappingResult.success && updatedMappingResult.found && updatedMappingResult.mapping) {
-                        qboSyncToken = updatedMappingResult.mapping.syncToken;
-                     }
-                     continue; // Retry the update operation with potentially new sync token
+                    // Check if user chose to link and a direct fetch is needed
+                    if (userChoseToLinkAndNeedsDirectFetch) {
+                        try {
+                            logger.info('Attempting direct QBO customer fetch due to user link choice.', { qboCustomerId: existingQboCustomerId, realmId, tenantId: tenant });
+                            const qboCustomerDetailsResult = await actions.get_qbo_customer_by_id({
+                                qboCustomerId: existingQboCustomerId!, // existingQboCustomerId is confirmed to be non-null in this path
+                                realmId: realmId,
+                                qboCredentials: qboCredentials,
+                                // tenantId is implicitly passed by context to actions
+                            });
+
+                            if (qboCustomerDetailsResult && qboCustomerDetailsResult.success && qboCustomerDetailsResult.customer?.SyncToken) {
+                                qboSyncToken = qboCustomerDetailsResult.customer.SyncToken;
+                                logger.info('Successfully fetched SyncToken via direct QBO customer fetch.', { qboCustomerId: existingQboCustomerId, newSyncToken: qboSyncToken });
+                                // Optional: If qboCustomerDetailsResult.customer contains other relevant fields,
+                                // we should consider merging them into qboCustomerData carefully,
+                                // ensuring Alga-sourced data intended for the update is prioritized.
+                                // For now, primarily focus on getting the SyncToken.
+                            } else {
+                                logger.warn('Failed to fetch QBO customer details or SyncToken directly after user link choice. Will proceed to standard missing SyncToken logic.', { qboCustomerId: existingQboCustomerId, resultMessage: qboCustomerDetailsResult?.message, success: qboCustomerDetailsResult?.success });
+                            }
+                        } catch (directFetchError: any) {
+                            logger.error('Error during direct fetch of QBO customer after user link choice.', { qboCustomerId: existingQboCustomerId, error: directFetchError.message });
+                            // Let it fall through to the standard missing SyncToken logic
+                        }
+                        userChoseToLinkAndNeedsDirectFetch = false; // Reset the flag after this attempt, regardless of outcome.
+                    }
+
+                    // If SyncToken is still missing after the potential direct fetch, proceed with existing error handling
+                    if (!qboSyncToken) {
+                         logger.error('Missing qboSyncToken for QBO Customer update (after direct fetch attempt if applicable).', { algaCompanyId, qboCustomerId: existingQboCustomerId, tenantId: tenant, realmId });
+                         setState(WorkflowState.ERROR);
+                         const taskParamsMissingSyncToken: CreateTaskAndWaitForResultParams = {
+                             taskType: 'workflow_error', // Specific task type
+                             title: `Missing SyncToken for QBO Customer Update - ${algaCompany!.company_name}`,
+                             description: `SyncToken for linked QBO customer ${existingQboCustomerId} could not be obtained automatically after user choice. Please verify and provide.`, // Adjusted description
+                             priority: 'high',
+                             assignTo: userId ? { users: [userId] } : undefined,
+                             contextData: {
+                                 message: `Cannot update QBO Customer ${existingQboCustomerId} (Alga ID: ${algaCompanyId}) because the QBO sync token is missing (after direct fetch attempt if user linked).`, // Adjusted message
+                             },
+                         };
+                         const taskResolution = await actions.createTaskAndWaitForResult(taskParamsMissingSyncToken);
+                         if (!taskResolution.success || taskResolution.resolutionData?.action === 'cancel') {
+                            const errorMsg = `User cancelled or task resolution failed for missing QBO SyncToken. TaskId: ${taskResolution.taskId}`;
+                            logger.warn(errorMsg, { error: taskResolution.error });
+                            await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
+                            return;
+                         }
+                         // Potentially, task resolution provides the new sync token
+                         // qboSyncToken = taskResolution.resolutionData?.newSyncToken || qboSyncToken;
+                         // Re-fetch mapping to get latest sync token if task implies external update
+                         const updatedMappingResult = await actions.get_external_entity_mapping({
+                             algaEntityId: algaCompanyId,
+                             externalSystemName: 'quickbooks_online',
+                             externalRealmId: realmId,
+                             algaEntityType: 'company' // Explicitly specify entity type for clarity
+                         });
+                         if (updatedMappingResult && updatedMappingResult.success && updatedMappingResult.found && updatedMappingResult.mapping) {
+                            qboSyncToken = updatedMappingResult.mapping.syncToken;
+                         }
+                         continue; // Retry the update operation with potentially new sync token
+                    }
                 }
 
                 qboResult = await actions.update_qbo_customer({ 
@@ -464,6 +497,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
 
             } else {
                 // --- CREATE PATH ---
+                // decidedToLinkViaForm is now declared at a higher scope
                 let duplicateCheckPassed = false;
                 while(!duplicateCheckPassed) {
                     const performDuplicateCheck = true; 
@@ -563,7 +597,20 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                       "conflictContextInfo": { "type": "string", "title": "Conflict Context", "default": "**Sync Job ID:** ${contextData.sync_job_id}\n**Detected on:** ${new Date(contextData.conflict_detection_timestamp).toLocaleString()}", "readOnly": true },
                                       "algaCompanyDisplay": { "type": "string", "title": "Alga Company Information (Our System)", "default": "**Alga Company ID:** ${contextData.alga_company_id}\n**Company Name:** ${contextData.company_name}\n**Primary Address (from system):** ${contextData.alga_primary_address_full_string_display}\n**Hardcoded Address for Form:** ${contextData.alga_primary_address_street}, ${contextData.alga_primary_address_city}, ${contextData.alga_primary_address_state} ${contextData.alga_primary_address_zip}\n**Main Phone:** ${contextData.main_phone_number || 'N/A'}\n**Main Email:** ${contextData.main_email_address || 'N/A'}\n**Website:** ${contextData.website_url || 'N/A'}\n**Created in Alga:** ${new Date(contextData.date_created_in_alga).toLocaleDateString()}\n**Last Modified in Alga:** ${new Date(contextData.last_modified_in_alga).toLocaleDateString()}\n**Current QuickBooks Link Status:** ${contextData.current_quickbooks_link_status}", "readOnly": true },
                                       "quickbooksCompanyDisplay": { "type": "string", "title": "Potential QuickBooks Match Information", "default": "${contextData.qbDetailedDisplayInfo}", "readOnly": true },
-                                      "resolution_action": { "type": "string", "title": "Select Resolution Action", "enum": ["LINK_TO_EXISTING_QB", "CREATE_NEW_IN_QB"], "enumNames": ["Link Alga company to this existing QuickBooks company", "Create this Alga company as a new company in QuickBooks"] },
+                                      "resolution_action": {
+                                        "type": "string",
+                                        "title": "Select Resolution Action",
+                                        "oneOf": [
+                                          {
+                                            "const": "LINK_TO_EXISTING_QB",
+                                            "title": "Link Alga company to this existing QuickBooks company"
+                                          },
+                                          {
+                                            "const": "CREATE_NEW_IN_QB",
+                                            "title": "Create this Alga company as a new company in QuickBooks"
+                                          }
+                                        ]
+                                      },
                                       "alga_company_id_resolved": { "type": "string", "default": "${contextData.alga_company_id}" },
                                       "quickbooks_company_id_linked": {
                                         "type": "string",
@@ -613,12 +660,14 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                 }
 
                                 const resolutionData = taskResolution.resolutionData;
+                                console.log('Task resolution data:', resolutionData);
                                 if (resolutionData.resolution_action === 'LINK_TO_EXISTING_QB' && resolutionData.quickbooks_company_id_linked) {
                                     existingQboCustomerId = resolutionData.quickbooks_company_id_linked;
                                     qboSyncToken = undefined; // Force re-fetch of SyncToken in the UPDATE path
+                                    userChoseToLinkAndNeedsDirectFetch = true;
+                                    decidedToLinkViaForm = true; // Set flag
                                     logger.info(`User chose to link Alga company ${algaCompanyId} to existing QBO customer ${existingQboCustomerId}. Proceeding to update.`, { algaCompanyId, existingQboCustomerId, executionId });
-                                    // TODO: Fetch QBO Customer by ID resolutionData.quickbooks_company_id_linked to get latest SyncToken (The existing UPDATE path logic should handle this by re-fetching mapping if qboSyncToken is undefined)
-                                    duplicateCheckPassed = true; // Exit duplicate check loop, will go to UPDATE path
+                                    duplicateCheckPassed = true; // Exit duplicate check loop
                                 } else if (resolutionData.resolution_action === 'CREATE_NEW_IN_QB') {
                                     logger.info(`User chose to create a new QBO customer for Alga company ${algaCompanyId}. Proceeding to create.`, { algaCompanyId, executionId });
                                     duplicateCheckPassed = true; // Proceed to create
@@ -661,84 +710,88 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                     }
                 } // End of while(!duplicateCheckPassed)
 
-                // Proceed with Create if duplicate check passed (or was skipped) AND existingQboCustomerId is not set by form
-                // Only proceed to create if existingQboCustomerId was NOT set by the inline form (i.e., user chose to create new or no conflict)
-                if (!existingQboCustomerId) {
-                    setState(WorkflowState.RUNNING);
-                    logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
-                    qboResult = await actions.create_qbo_customer({
-                        qboCustomerData: qboCustomerData,
-                        tenantId: tenant,
-                        realmId: realmId,
-                        qboCredentials: qboCredentials
-                    });
-                    logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id });
-                } else {
-                    // If existingQboCustomerId is set (from form link action), we skip create and qboResult will be undefined here.
-                    // The update path will handle fetching the customer if needed.
-                    // We need to ensure qboResult is handled if it's not set by create.
-                    // The logic below expects qboResult to have Customer.Id and Customer.SyncToken.
-                    // This path (existingQboCustomerId is true, so update path is intended) should not hit create.
-                    // The main if/else for create/update is at line 336.
-                    // If we linked via form, existingQboCustomerId is set, duplicateCheckPassed is true.
-                    // The loop `while(!qboOperationSuccessful)` will re-evaluate.
-                    // `if (existingQboCustomerId)` at line 336 will be true.
-                    // This means this 'else' block for create should not assign to qboResult if we linked.
-                    // Let's ensure qboResult is only assigned if create actually happened.
-                    // If we linked, qboResult remains unassigned here, and the update path handles it.
-                    // The check for newQboCustomerId and newQboSyncToken needs to be conditional.
-                    // This block is inside the `else` of `if (existingQboCustomerId)` (the main update/create switch)
-                    // So, if we are here, `existingQboCustomerId` was initially null.
-                    // If the form set `existingQboCustomerId`, then this create block is skipped.
-                    // This seems correct.
+                // After duplicate check loop, if user decided to link via form,
+                // existingQboCustomerId is now set. We should 'continue' the main qboOperationSuccessful loop
+                // to go through the UPDATE PATH.
+                if (decidedToLinkViaForm) {
+                    logger.info('User linked via form, re-evaluating main QBO operation loop for UPDATE.', { existingQboCustomerId });
+                    continue; // Restart the while(!qboOperationSuccessful) loop
                 }
+
+                // Only proceed to create if existingQboCustomerId was NOT set by the inline form
+                // (i.e., user chose to create new, or no conflict was found, or duplicate check was skipped)
+                // AND existingQboCustomerId was not set from the initial mapping check.
+                // The `decidedToLinkViaForm` check above handles the case where it was set by the form.
+                // So, if we reach here, `existingQboCustomerId` is truly null (or was never set by form to link).
+                
+                // This 'else' corresponds to the `if (existingQboCustomerId)` at the start of the try block (line 416)
+                // It means we are on the "CREATE" path because no existingQboCustomerId was found initially.
+                setState(WorkflowState.RUNNING);
+                logger.info('Calling QBO Create Customer API', { algaCompanyId, tenantId: tenant, realmId });
+                qboResult = await actions.create_qbo_customer({
+                    qboCustomerData: qboCustomerData,
+                    tenantId: tenant,
+                    realmId: realmId,
+                    qboCredentials: qboCredentials
+                });
+                logger.info('QBO Create Customer API call successful', { algaCompanyId, newQboCustomerId: qboResult?.Customer?.Id });
+            } // End of if/else for UPDATE/CREATE main paths
+
+
+            // This part executes if either CREATE or UPDATE was successful IN THIS ITERATION and produced a qboResult.
+            // If we `continue`d above due to `decidedToLinkViaForm`, qboResult would be undefined here,
+            // and this block should effectively be skipped for this iteration.
+            // The `qboResult` check handles this.
+            if (qboResult) { // Only process if qboResult is defined (i.e., an operation was performed in this iteration)
+                const newQboCustomerId = qboResult.Customer?.Id;
+                const newQboSyncToken = qboResult.Customer?.SyncToken;
+
+                if (!newQboCustomerId || !newQboSyncToken) {
+                    logger.error('QBO API result missing Customer ID or SyncToken', { qboResult, algaCompanyId });
+                    setState(WorkflowState.ERROR);
+                    const taskParams: CreateTaskAndWaitForResultParams = {
+                        taskType: 'workflow_error',
+                        title: `Invalid Response from QBO API - ${algaCompany!.company_name}`,
+                        description: `The QBO API call succeeded but the response did not contain the expected Customer ID and/or SyncToken.`,
+                        priority: 'high',
+                        assignTo: userId ? { users: [userId] } : undefined,
+                        contextData: {
+                            message: `QBO API call for customer (Alga ID: ${algaCompanyId}) succeeded but the response was missing Customer ID or SyncToken.`,
+                        },
+                    };
+                    const taskResolutionInvalidResp = await actions.createTaskAndWaitForResult(taskParams);
+                    if (!taskResolutionInvalidResp.success || taskResolutionInvalidResp.resolutionData?.action === 'cancel') {
+                        const errorMsg = `User cancelled or task resolution failed for QBO invalid API response. TaskId: ${taskResolutionInvalidResp.taskId}`;
+                        await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
+                        return;
+                    }
+                    continue; // Retry QBO operation
+                }
+
+                data.set('qboResult', qboResult);
+
+                // Update Alga Company Record
+                setState(WorkflowState.RUNNING);
+                await actions.update_company_qbo_details({
+                    companyId: algaCompanyId,
+                    qboCustomerId: newQboCustomerId,
+                    qboSyncToken: newQboSyncToken,
+                    realmId: realmId
+                });
+                logger.info('Alga Company updated successfully', { algaCompanyId, qboCustomerId: newQboCustomerId });
+                
+                qboOperationSuccessful = true; // Exit main QBO operation loop
+            } else if (!existingQboCustomerId && !decidedToLinkViaForm) {
+                // This case should ideally not be reached if create path was intended and failed to produce qboResult before this check.
+                // However, as a safeguard if qboResult is unexpectedly undefined after an intended create.
+                logger.error('qboResult is undefined after create path and not due to form link. This indicates an issue.', { algaCompanyId });
+                // Potentially throw or create a task here if this state is considered an unrecoverable error for the create path.
+                // For now, let it retry the QBO operation.
+                continue;
             }
-
-
-            // This part executes if either CREATE or UPDATE was successful and produced a qboResult.
-            // If we linked via form, existingQboCustomerId is set, and the flow goes to the UPDATE path (line 336)
-            // which will produce its own qboResult.
-            // So, qboResult here is specifically from the CREATE path if it ran.
-            const newQboCustomerId = qboResult?.Customer?.Id; // This will be from CREATE if it ran
-            const newQboSyncToken = qboResult?.Customer?.SyncToken;
-
-            if (!newQboCustomerId || !newQboSyncToken) {
-                 logger.error('QBO API result missing Customer ID or SyncToken', { qboResult, algaCompanyId });
-                 setState(WorkflowState.ERROR);
-                 const taskParams: CreateTaskAndWaitForResultParams = {
-                 taskType: 'workflow_error',
-                 title: `Invalid Response from QBO API - ${algaCompany!.company_name}`,
-                 description: `The QBO API call succeeded but the response did not contain the expected Customer ID and/or SyncToken.`,
-                 priority: 'high',
-                 assignTo: userId ? { users: [userId] } : undefined,
-                 contextData: {
-                     message: `QBO API call for customer (Alga ID: ${algaCompanyId}) succeeded but the response was missing Customer ID or SyncToken.`,
-                 },
-             };
-                 const taskResolutionInvalidResp = await actions.createTaskAndWaitForResult(taskParams);
-                 if (!taskResolutionInvalidResp.success || taskResolutionInvalidResp.resolutionData?.action === 'cancel') {
-                     const errorMsg = `User cancelled or task resolution failed for QBO invalid API response. TaskId: ${taskResolutionInvalidResp.taskId}`;
-                     await emitFailureEventIfNeeded(errorMsg, algaCompanyId, realmId);
-                     return; 
-                 }
-                 continue; // Retry QBO operation
-            }
-
-            data.set('qboResult', qboResult);
-
-            // Update Alga Company Record
-            setState(WorkflowState.RUNNING);
-            // This part should ideally also be in a retry loop if it can fail and be user-corrected
-            // For now, assuming it's robust or errors are caught by the outer try-catch
-            await actions.update_company_qbo_details({
-                companyId: algaCompanyId,
-                qboCustomerId: newQboCustomerId,
-                qboSyncToken: newQboSyncToken,
-                realmId: realmId
-            });
-            logger.info('Alga Company updated successfully', { algaCompanyId, qboCustomerId: newQboCustomerId });
-            
-            qboOperationSuccessful = true; // Exit main QBO operation loop
+            // If decidedToLinkViaForm was true, we would have `continue`d the outer loop already,
+            // and qboResult would be undefined, so the `if (qboResult)` block above is skipped.
+            // The next iteration will then handle the UPDATE.
 
         } catch (error: any) {
             const currentRealmIdForError = triggerEvent?.payload?.realmId || realmId || 'UNKNOWN_REALM';
