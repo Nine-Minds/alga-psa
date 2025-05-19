@@ -2,6 +2,8 @@ import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCredits
 import logger from '@shared/core/logger';
 import { createTenantKnex } from 'server/src/lib/db';
 import { registerCleanupTemporaryFormsJob } from 'server/src/services/cleanupTemporaryFormsJob';
+import { JobService } from 'server/src/services/job.service';
+import { StorageService } from 'server/src/lib/storage/StorageService';
 
 /**
  * Initialize all scheduled jobs for the application
@@ -61,7 +63,9 @@ export async function initializeScheduledJobs(): Promise<void> {
    // Register temporary forms cleanup job (system-wide)
    try {
      const { JobScheduler } = await import('./jobScheduler');
-     const scheduler = await JobScheduler.getInstance();
+     const jobService = await JobService.create();
+     const storageService = new StorageService();
+     const scheduler = await JobScheduler.getInstance(jobService, storageService);
      registerCleanupTemporaryFormsJob(scheduler);
      logger.info('Registered temporary forms cleanup job');
    } catch (error) {
