@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';

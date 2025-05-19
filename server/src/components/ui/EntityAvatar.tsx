@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
 import { cn } from 'server/src/lib/utils';
-import { Loader2 } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 
 export type EntityAvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | number;
 export type ImageLoadingStatus = 'idle' | 'loading' | 'loaded' | 'error';
@@ -137,7 +137,7 @@ export const EntityAvatar: React.FC<EntityAvatarProps> = ({
           {/* Loading shimmer effect */}
           {showShimmer && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-100 animate-pulse rounded-full overflow-hidden">
-              <Loader2 className="h-1/3 w-1/3 text-gray-400 animate-spin opacity-70" />
+              <Spinner size="xs" className="opacity-70" />
             </div>
           )}
           
