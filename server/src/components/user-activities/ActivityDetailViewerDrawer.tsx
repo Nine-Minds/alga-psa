@@ -8,7 +8,8 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { useActivitiesCache } from "server/src/hooks/useActivitiesCache";
 import { getConsolidatedTicketData } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { useTenant } from "server/src/components/TenantProvider";
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import Spinner from 'server/src/components/ui/Spinner';
 import { getTicketById } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTaskWithDetails } from "server/src/lib/actions/project-actions/projectTaskActions";
 import { getTaskDetails } from "server/src/lib/actions/workflow-actions/taskInboxActions";
@@ -381,7 +382,7 @@ export function ActivityDetailViewerDrawer({
     if (isLoading) {
       return (
         <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <Spinner size="sm" />
         </div>
       );
     }

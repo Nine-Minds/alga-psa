@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction';
 import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
@@ -45,7 +46,7 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
   }, [fetchPlanType]);
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><Loader2 className="h-8 w-8 animate-spin" /> Loading Plan...</div>;
+    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Plan..." /></div>;
   }
 
   if (error) {

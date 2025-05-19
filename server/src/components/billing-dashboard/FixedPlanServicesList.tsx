@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical, Loader2, HelpCircle } from 'lucide-react'; // Added Loader2, HelpCircle
+import { Plus, MoreVertical, HelpCircle } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,

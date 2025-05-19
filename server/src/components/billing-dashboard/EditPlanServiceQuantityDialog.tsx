@@ -9,7 +9,7 @@ import {
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
-import { Loader2 } from 'lucide-react'; // For loading spinner
+import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 
 export interface EditPlanServiceQuantityDialogProps {
   isOpen: boolean;
@@ -159,8 +159,7 @@ export function EditPlanServiceQuantityDialog({
           >
             {isSaving ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
+                <LoadingIndicator spinnerProps={{ size: "xs" }} text="Saving..." className="mr-2" />
               </>
             ) : (
               'Save Quantity'
