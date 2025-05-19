@@ -70,6 +70,11 @@ export async function deleteUser(userId: string): Promise<void> {
     }
 
     await db.transaction(async (trx) => {
+      // Set completed_by to NULL in workflow_tasks where the user is the completer
+      await trx('workflow_tasks')
+        .where({ completed_by: userId, tenant: tenant || undefined })
+        .update({ completed_by: null });
+
       // Delete user roles
       await trx('user_roles').where({ user_id: userId, tenant: tenant || undefined }).del();
 
