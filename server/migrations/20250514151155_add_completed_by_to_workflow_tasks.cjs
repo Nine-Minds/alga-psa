@@ -13,7 +13,7 @@ exports.up = async function(knex) {
     table.foreign(['tenant', 'completed_by'])
       .references(['tenant', 'user_id'])
       .inTable('users')
-      .onDelete('SET NULL') // If the user is deleted, set completed_by to NULL
+      // onDelete('SET NULL')  This logic will be handled in application code instead
   });
 };
 
