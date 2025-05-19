@@ -26,9 +26,9 @@ get_secret() {
 
 # Function to print version banner
 print_version_banner() {
-    version="0.7.0"
+    version="0.8.0"
     commit="a0b778e"
-    date="04-01-2025"
+    date="05-20-2025"
     author="NineMinds"
 
     # Function to print colored text
