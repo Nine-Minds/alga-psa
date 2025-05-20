@@ -11,7 +11,6 @@ import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketF
 import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
 import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { TicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';

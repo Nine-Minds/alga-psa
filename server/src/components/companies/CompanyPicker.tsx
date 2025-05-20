@@ -46,9 +46,10 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   );
 
   const filteredCompanies = useMemo(() => {
-    return companies.filter(company => {
-      const matchesSearch = company.company_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesState =
+    return companies
+      .filter(company => {
+        const matchesSearch = company.company_name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesState =
         filterState === 'all' ? true :
           filterState === 'active' ? !company.is_inactive :
             filterState === 'inactive' ? company.is_inactive :
@@ -60,7 +61,8 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
               true;
 
       return matchesSearch && matchesState && matchesClientType;
-    });
+    })
+    .sort((a, b) => a.company_name.localeCompare(b.company_name));
   }, [companies, filterState, clientTypeFilter, searchTerm]);
 
   useEffect(() => {
