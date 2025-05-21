@@ -20,7 +20,7 @@ spec:
       containers:
         - name: seed
           image: "{{ .Values.server.image.name }}:{{ .Values.server.image.tag }}"
-          command: ["npx", "knex", "seed:run", "--knexfile", "/app/knexfile.js", "--env", "development"]
+          command: ["npx", "knex", "seed:run", "--knexfile", "/app/server/knexfile.cjs", "--env", "development"]
           env:
             {{- if .Values.db.enabled }}
             - name: DB_HOST
@@ -38,15 +38,35 @@ spec:
                   key: DB_PASSWORD_SUPERUSER
             {{- else }}
             - name: DB_HOST
-              value: "{{ .Values.config.db.host }}.{{ .Values.namespace }}.svc.cluster.local"
+              value: "{{ .Values.config.db.host }}"
             - name: DB_USER_SERVER
               value: "{{ .Values.config.db.user }}"
             - name: DB_PORT
               value: "{{ .Values.config.db.port }}"
             - name: DB_NAME_SERVER
               value: "{{ .Values.config.db.server_database }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and (hasKey .Values.config.db "server_password_admin_secret") .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+                  {{- if hasKey .Values.config.db.server_password_admin_secret "namespace" }}
+                  namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+                  {{- end }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
             - name: DB_PASSWORD_SERVER
-              value: "{{ .Values.config.db.password }}"
+              {{- if and (hasKey .Values.config.db "server_password_secret") .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_secret.key | quote }}
+                  namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_password | quote }}
+              {{- end }}
             {{- end }}
             # Add any other necessary environment variables
 {{- end }}
