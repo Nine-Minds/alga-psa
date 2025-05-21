@@ -661,7 +661,9 @@ export async function uploadCompanyLogo(
       companyId,
       file,
       currentUser.user_id,
-      tenant
+      tenant,
+      undefined,
+      true
     );
 
     if (!result.success) {

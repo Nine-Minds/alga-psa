@@ -24,14 +24,16 @@ export async function getEntityImageUrl(
   try {
     const { knex } = await createTenantKnex();
     
-    // Find the document association for the entity
-    const association = await knex('document_associations')
+    let query = knex('document_associations')
       .where({
         entity_id: entityId,
         entity_type: entityType,
         tenant
-      })
-      .first();
+      });
+
+    query = query.andWhere('is_entity_logo', true);
+
+    const association = await query.first();
     
     // If no association found, return null
     if (!association?.document_id) {

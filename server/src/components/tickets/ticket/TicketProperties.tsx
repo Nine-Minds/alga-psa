@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule } from 'server/src/interfaces';
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, ICompany } from 'server/src/interfaces'; // Added ICompany
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { Button } from 'server/src/components/ui/Button';
@@ -41,7 +41,7 @@ interface TicketPropertiesProps {
   userId: string;
   tenant: string;
   contacts: any[];
-  companies: any[];
+  companies: ICompany[];
   companyFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
   onStart: () => void;
@@ -106,6 +106,22 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
+
+  const uniqueCompaniesForPicker = React.useMemo(() => {
+    if (!companies) return [];
+    const seen = new Set<string>();
+    return companies.filter(company => {
+      // Ensure company and company_id are valid before processing
+      if (!company || typeof company.company_id === 'undefined') {
+        return false;
+      }
+      if (seen.has(company.company_id)) {
+        return false;
+      }
+      seen.add(company.company_id);
+      return true;
+    });
+  }, [companies]);
 
   // Fetch scheduled hours from schedule entries
   useEffect(() => {
@@ -381,7 +397,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     <div className="w-full">
                       <CompanyPicker
                         {...withDataAutomationId({ id: `${id}-company-picker` })}
-                        companies={companies}
+                        companies={uniqueCompaniesForPicker}
                         onSelect={setSelectedCompanyId}
                         selectedCompanyId={selectedCompanyId || company?.company_id || ''}
                         filterState={companyFilterState}

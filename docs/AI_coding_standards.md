@@ -263,6 +263,11 @@ Every query should filter on the tenant column (including joins) to ensure compa
       VALUES (gen_random_uuid(), 'tenant_value', ...);   
     ```
 
+## Foreign Key Constraints
+
+- Foreign keys from reference tables to distributed tables are not supported.
+- `ON DELETE SET NULL` is not supported and should be handled at the application level.
+
 ## Tenants
 We use row level security and store the tenant in the `tenants` table.
 Most tables require the tenant to be specified in the `tenant` column when inserting.

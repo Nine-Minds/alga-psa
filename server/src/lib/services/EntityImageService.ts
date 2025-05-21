@@ -1,4 +1,3 @@
-
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { deleteDocument, getDocumentTypeId } from 'server/src/lib/actions/document-actions/documentActions';
 import { getEntityImageUrl } from 'server/src/lib/utils/avatarUtils';
@@ -24,7 +23,8 @@ export async function uploadEntityImage(
   file: File,
   userId: string,
   tenant: string,
-  contextName?: string // Optional context name override
+  contextName?: string,
+  isLogoUpload?: boolean
 ): Promise<UploadResult> {
   const { knex } = await createTenantKnex();
   
@@ -32,7 +32,6 @@ export async function uploadEntityImage(
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     const context = contextName || `${entityType}_image`;
 
-    // Upload file using StorageService with isImageAvatar flag for consistent processing
     const externalFileRecord = await StorageService.uploadFile(
       tenant,
       fileBuffer,
@@ -41,7 +40,7 @@ export async function uploadEntityImage(
         mime_type: file.type,
         uploaded_by_id: userId,
         metadata: { context, entityId, entityType },
-        isImageAvatar: true // Enable image processing for all entity types
+        isImageAvatar: true 
       }
     );
 
@@ -49,7 +48,6 @@ export async function uploadEntityImage(
       throw new Error('File storage failed');
     }
 
-    // Create document record
     const { typeId, isShared } = await getDocumentTypeId(file.type);
     const newDocumentId = uuidv4();
 
@@ -73,7 +71,6 @@ export async function uploadEntityImage(
     });
 
     if (!createdDocument?.document_id) {
-      // Clean up the uploaded file if document creation fails
       try {
         await StorageService.deleteFile(externalFileRecord.file_id, userId);
       } catch (deleteError) {
@@ -90,67 +87,32 @@ export async function uploadEntityImage(
       }
       throw new Error('Failed to create document record');
     }
-
-    // Update document association using transaction
-    let oldDocumentIdToDelete: string | null = null;
     
     await knex.transaction(async (trx) => {
-      // Find existing association
-      const existingAssociation = await trx('document_associations')
-        .select('association_id', 'document_id')
-        .where({
-          entity_id: entityId,
-          entity_type: entityType,
-          tenant
-        })
-        .first();
-
-      if (existingAssociation?.document_id) {
-        oldDocumentIdToDelete = existingAssociation.document_id;
-        
-        // Delete only the association within the transaction
+      if (isLogoUpload) {
+        // Step 1: Unconditionally unmark any existing logo for this entity.
         await trx('document_associations')
           .where({
             entity_id: entityId,
             entity_type: entityType,
-            tenant,
-            document_id: oldDocumentIdToDelete
+            tenant: tenant,
+            is_entity_logo: true,
           })
-          .delete();
+          .update({ is_entity_logo: false });
       }
 
-      // Create new association
-      await DocumentAssociation.create({
+      // Step 2: Create the new association, marking it as the logo if applicable.
+      await trx('document_associations').insert({
         document_id: createdDocument.document_id,
         entity_id: entityId,
         entity_type: entityType,
-        tenant
+        tenant,
+        is_entity_logo: isLogoUpload || false,
       });
     });
 
-    // Delete old document after transaction completes
-    if (oldDocumentIdToDelete) {
-      try {
-        await deleteDocument(oldDocumentIdToDelete, userId);
-      } catch (deleteError) {
-        console.error(`[EntityImageService] Failed to delete old document during image replacement:`, {
-          operation: 'deleteOldDocument',
-          oldDocumentId: oldDocumentIdToDelete,
-          newDocumentId: createdDocument.document_id,
-          entityType,
-          entityId,
-          tenant,
-          userId,
-          errorMessage: deleteError instanceof Error ? deleteError.message : 'Unknown error',
-          errorStack: deleteError instanceof Error ? deleteError.stack : undefined,
-          errorName: deleteError instanceof Error ? deleteError.name : undefined
-        });
-        // Continue since the main operation succeeded
-      }
-    }
 
-    // Get the new image URL
-    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant);
+    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant); 
     
     return { success: true, imageUrl };
   } catch (error) {
@@ -171,39 +133,62 @@ export async function uploadEntityImage(
 }
 
 /**
- * Generic function to delete an image for any entity type
+ * Generic function to delete an image for an entity type.
+ * Note: This function might need refinement to specify *which* document to delete if multiple are associated,
+ * e.g., by passing a document_id or association_id.
+ * If deleting a logo, it should target the association with is_entity_logo = true.
  */
 export async function deleteEntityImage(
   entityType: EntityType,
   entityId: string,
   userId: string,
-  tenant: string
+  tenant: string,
+  documentIdToDelete?: string
 ): Promise<{ success: boolean; message?: string }> {
   const { knex } = await createTenantKnex();
   
   try {
-    // Find the association to get the document_id
-    const association = await knex('document_associations')
-      .select('association_id', 'document_id')
-      .where({
-        entity_id: entityId,
-        entity_type: entityType,
-        tenant
-      })
-      .first();
+    let associationToDelete;
 
-    if (!association?.document_id) {
-      // No image to delete
-      return { success: true, message: `No ${entityType} image found to delete.` };
+    if (documentIdToDelete) {
+      associationToDelete = await knex('document_associations')
+        .select('association_id', 'document_id')
+        .where({
+          document_id: documentIdToDelete,
+          entity_id: entityId, // Ensure it's for the correct entity
+          entity_type: entityType, // and type
+          tenant: tenant
+        })
+        .first();
+    } else {
+      // If no specific document_id is provided, this might delete an unintended document.
+      // Consider if this fallback is desired or if documentIdToDelete should be mandatory.
+      // For deleting a logo specifically without knowing its ID, query for is_entity_logo: true.
+      console.warn(`[EntityImageService] deleteEntityImage called without specific documentIdToDelete for ${entityType} ${entityId}. This might be ambiguous.`);
+      associationToDelete = await knex('document_associations')
+        .select('association_id', 'document_id')
+        .where({
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant: tenant
+          // Add .andWhere('is_entity_logo', true) if the intent is to delete the current logo by default
+        })
+        .first(); // Fallback to first found, could be non-deterministic for multiple images
     }
 
-    // Call the generic deleteDocument action
-    const deleteResult = await deleteDocument(association.document_id, userId);
+    if (!associationToDelete?.document_id) {
+      return { success: true, message: `No ${entityType} image (or specified document) found to delete.` };
+    }
+
+    // deleteDocument action should handle deleting the document record and its file storage,
+    // and also its associations.
+    const deleteResult = await deleteDocument(associationToDelete.document_id, userId); 
     
     if (!deleteResult.success) {
+      // deleteDocument should throw on error, but to be safe:
       return { 
         success: false, 
-        message: `Failed to delete ${entityType} image document.` // deleteDocument throws on error, no message property on success
+        message: `Failed to delete ${entityType} image document.` 
       };
     }
 
@@ -213,6 +198,7 @@ export async function deleteEntityImage(
       operation: 'deleteEntityImage',
       entityType,
       entityId,
+      documentIdToDelete,
       tenant,
       userId,
       errorMessage: error instanceof Error ? error.message : 'Unknown error',
