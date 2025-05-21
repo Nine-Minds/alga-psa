@@ -614,10 +614,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                 <label htmlFor="endDate" className="block text-sm font-medium text-gray-700">
                   End Date
                 </label>
-                <input
+                <Input
                   type="date"
                   id="endDate"
-                  value={format(recurrencePattern.endDate, 'yyyy-MM-dd')}
+                  value={recurrencePattern.endDate ? format(recurrencePattern.endDate, 'yyyy-MM-dd') : ''}
                   onChange={(e) => setRecurrencePattern(prev => {
                     if (prev === null) return null;
                     return { ...prev, endDate: new Date(e.target.value) };

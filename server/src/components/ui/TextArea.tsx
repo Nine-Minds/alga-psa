@@ -98,7 +98,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
     };
 
     return (
-      <div className="mb-4">
+      <div className="mb-4 px-0.5">
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {label}

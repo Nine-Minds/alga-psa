@@ -16,6 +16,7 @@ import { CompanyPicker } from '../companies/CompanyPicker';
 import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src/lib/actions/user-actions/userActions';
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
+import { Input } from 'server/src/components/ui/Input';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
@@ -351,7 +352,7 @@ const Companies: React.FC = () => {
       <div className="flex justify-end mb-4 flex-wrap gap-6">
         {/* Search */}
         <div className="relative">
-          <input
+          <Input
             type="text"
             placeholder="Search clients"
             className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"

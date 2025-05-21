@@ -240,7 +240,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
                 Start Date
               </label>
-              <input
+              <Input
                 type="date"
                 id="start_date"
                 name="start_date"
@@ -254,7 +254,7 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
                 End Date
               </label>
-              <input
+              <Input
                 type="date"
                 id="end_date"
                 name="end_date"
@@ -298,7 +298,6 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
               min="0"
               step="0.25" // Allow quarter-hour increments
               placeholder="Enter budgeted hours"
-              className="mb-0"
             />
           </div>
 

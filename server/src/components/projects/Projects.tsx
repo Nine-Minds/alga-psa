@@ -17,6 +17,7 @@ import { Search, MoreVertical, Pen, Trash2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
+import { Input } from 'server/src/components/ui/Input';
 
 interface ProjectsProps {
   initialProjects: IProject[];
@@ -221,10 +222,10 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         <h1 className="text-2xl font-bold">Projects</h1>
         <div className="flex items-center space-x-4">
           <div className="relative">
-            <input
+            <Input
               type="text"
               placeholder="Search projects"
-              className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+              className="pl-10 pr-4 py-2 w-64"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

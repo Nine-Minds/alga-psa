@@ -403,7 +403,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div className="flex items-center">
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.network_device.supports_poe || false}
               onChange={(e) => handleTypeSpecificChange('network_device', 'supports_poe', e.target.checked)}
@@ -497,7 +497,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div className="flex items-center">
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.server.is_virtual || false}
               onChange={(e) => handleTypeSpecificChange('server', 'is_virtual', e.target.checked)}
@@ -594,7 +594,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div className="flex items-center">
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.mobile_device.is_supervised || false}
               onChange={(e) => handleTypeSpecificChange('mobile_device', 'is_supervised', e.target.checked)}
@@ -646,7 +646,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         </div>
         <div className="flex items-center space-x-6">
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.printer.is_network_printer || false}
               onChange={(e) => handleTypeSpecificChange('printer', 'is_network_printer', e.target.checked)}
@@ -655,7 +655,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             <span>Network Printer</span>
           </label>
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.printer.supports_color || false}
               onChange={(e) => handleTypeSpecificChange('printer', 'supports_color', e.target.checked)}
@@ -664,7 +664,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
             <span>Color Support</span>
           </label>
           <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <input
+            <Input
               type="checkbox"
               checked={formData.printer.supports_duplex || false}
               onChange={(e) => handleTypeSpecificChange('printer', 'supports_duplex', e.target.checked)}

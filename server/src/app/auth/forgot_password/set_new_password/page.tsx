@@ -1,18 +1,15 @@
 "use client";
-import React, { useState, FormEvent, useEffect, Suspense  } from 'react'; // React imports
-
+import React, { useState, FormEvent, useEffect, Suspense  } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link'; // Next.js specific imports
+import Link from 'next/link';
 import Image from 'next/image';
-
 import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
-import * as Form from '@radix-ui/react-form'; // Third-party library imports
+import * as Form from '@radix-ui/react-form';
 import * as Label from '@radix-ui/react-label';
-
-
-import { setNewPassword } from 'server/src/lib/actions/useRegister'; // Local imports
+import { setNewPassword } from 'server/src/lib/actions/useRegister';
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import Alert from 'server/src/components/auth/Alert';
+import { Input } from 'server/src/components/ui/Input';
 
 
 type FormData = {
@@ -157,7 +154,7 @@ const SetNewPasswordContent: React.FC = () => {
               </Label.Root>
               <div className="relative">
                 <Form.Control asChild>
-                  <input
+                  <Input
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
@@ -188,7 +185,7 @@ const SetNewPasswordContent: React.FC = () => {
               </Label.Root>
               <div className="relative">
                 <Form.Control asChild>
-                  <input
+                  <Input
                     id="confirmPassword"
                     name="confirmPassword"
                     type={showPassword ? "text" : "password"}

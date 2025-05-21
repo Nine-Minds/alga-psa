@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Popup from './Popup';
 import { Template } from '../../services/flow/types/workflowTypes';
+import { Input } from 'server/src/components/ui/Input';
 
 interface ComboBoxFieldSelectorProps {
   value?: Template;
@@ -110,7 +111,7 @@ const ComboBoxFieldSelector: React.FC<ComboBoxFieldSelectorProps> = ({
           ))}
         </select>
         <div style={styles.inputContainer}>
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={selectedOption ? selectedOption : value?.template || ''}

@@ -12,12 +12,15 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   required?: boolean;
   /** Additional class names */
   className?: string;
+  /** Additional class names for the container div */
+  containerClassName?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
   ({ 
     label, 
-    className, 
+    className,
+    containerClassName, 
     preserveCursor = true, 
     id, 
     required, 
@@ -87,7 +90,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
     };
 
     return (
-      <div className="mb-4">
+      <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
         {label && (
           <label className="block text-sm font-medium text-gray-700 mb-1">
             {label}

@@ -119,7 +119,7 @@ const UserManagement = (): JSX.Element => {
         <div className="flex justify-between mb-4">
           <div className="flex gap-6">
             <div className="relative">
-              <input
+              <Input
                 type="text"
                 placeholder="Search users"
                 value={searchTerm}

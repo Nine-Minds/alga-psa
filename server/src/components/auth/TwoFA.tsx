@@ -3,6 +3,7 @@ import { LockClosedIcon } from '@radix-ui/react-icons';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { Input } from 'server/src/components/ui/Input';
 
 interface TwoFactorInputProps {
   isOpen: boolean;
@@ -100,7 +101,7 @@ const TwoFactorInput: React.FC<TwoFactorInputProps> = ({ isOpen, onClose, onComp
             </p>
             <div className="flex justify-between mb-4">
               {code.map((digit, index): JSX.Element => (
-                <input
+                <Input
                   key={index}
                   ref={el => {
                     inputRefs.current[index] = el

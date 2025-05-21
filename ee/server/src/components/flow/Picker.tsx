@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PickerProps, PickerOption } from '../../services/flow/types/nodes';
 import styles from './Picker.module.css';
+import { Input } from 'server/src/components/ui/Input';
 
 const Picker: React.FC<PickerProps> = ({ label, value, options, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,7 +36,7 @@ const Picker: React.FC<PickerProps> = ({ label, value, options, onChange }) => {
       </div>
       {isOpen && (
         <div className={styles.pickerDropdown}>
-          <input
+          <Input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

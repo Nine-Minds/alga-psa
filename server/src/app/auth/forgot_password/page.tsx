@@ -1,14 +1,12 @@
 "use client";
 import React, { useState, FormEvent } from 'react'; 
-
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link'; 
-
 import * as Label from '@radix-ui/react-label';
 import * as Form from '@radix-ui/react-form';
-
 import { recoverPassword } from 'server/src/lib/actions/useRegister';
+import { Input } from 'server/src/components/ui/Input';
 
 
 type FormData = {
@@ -60,7 +58,7 @@ const ForgotPassword: React.FC = () => {
                 Email
               </Label.Root>
               <Form.Control asChild>
-                <input
+                <Input
                   id="email"
                   name="email"
                   type="email"
