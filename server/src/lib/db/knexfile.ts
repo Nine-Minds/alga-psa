@@ -84,7 +84,7 @@ const baseConfig: Record<string, CustomKnexConfig> = {
       max: 30,
       idleTimeoutMillis: 500,
       reapIntervalMillis: 300,
-      createTimeoutMillis: 30000,
+      createTimeoutMillis: 3000,
       destroyTimeoutMillis: 300
     }
   }

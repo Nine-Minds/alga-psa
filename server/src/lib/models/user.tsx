@@ -211,7 +211,9 @@ const User = {
   },
 
   getUserRoles: async (user_id: string): Promise<IRole[]> => {
-    const {knex: db, tenant} = await createTenantKnex();
+    const {tenant: tenant} = await createTenantKnex();
+
+    const db = await getAdminConnection();
     try {
       const query = db<IRole>('roles')
         .join('user_roles', function() {
@@ -220,8 +222,9 @@ const User = {
         })
         .where('user_roles.user_id', user_id)
         .where('roles.tenant', tenant);
-      
-      const roles = await query.select('roles.*');
+
+      const roles = await query.select('*');
+
       return roles;
     } catch (error) {
       logger.error(`Error getting roles for user with id ${user_id}:`, error);
@@ -231,8 +234,9 @@ const User = {
 
   getUserRolesWithPermissions: async (user_id: string): Promise<IRoleWithPermissions[]> => {
     const {knex: db, tenant} = await createTenantKnex();
+    const dbAdmin = await getAdminConnection();
     try {
-      let query = db<IRole>('roles')
+      let query = dbAdmin<IRole>('roles')
         .join('user_roles', function() {
           this.on('roles.role_id', '=', 'user_roles.role_id')
               .andOn('roles.tenant', '=', 'user_roles.tenant')

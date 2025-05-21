@@ -667,7 +667,7 @@ export async function fetchWorkflowTaskActivities(
       )
       .leftJoin("workflow_executions as we", function() {
         this.on(db.raw("wt.execution_id::text = we.execution_id::text"))
-            .andOn(db.raw("wt.tenant::text = we.tenant::text"));
+            .andOn(db.raw("wt.tenant = we.tenant"));
       })
       .where("wt.tenant", tenant)
       .modify(function(queryBuilder) {

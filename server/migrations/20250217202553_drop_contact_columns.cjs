@@ -13,6 +13,9 @@ exports.up = async function(knex) {
         ) as contact_name_id_exists;
     `);
 
+    // Drop the dependent view before dropping the column
+    await trx.raw('DROP VIEW IF EXISTS v_ticket_comments;');
+
     const { contact_id_exists, contact_name_id_exists } = columnsExist.rows[0];
 
     if (contact_id_exists || contact_name_id_exists) {
