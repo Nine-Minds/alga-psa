@@ -1,7 +1,7 @@
 import { useState, FormEvent, useEffect, useMemo } from 'react';
 import { withTheme } from '@rjsf/core';
 import validator from '@rjsf/validator-ajv8';
-import { RJSFSchema, UiSchema } from '@rjsf/utils';
+import { RJSFSchema, UiSchema, ValidatorType } from '@rjsf/utils';
 import { customWidgets } from '../../lib/workflow/forms/customWidgets';
 // import { CustomFieldTemplate } from '../../lib/workflow/forms/customFieldTemplate'; // Removed
 // import { CustomTitleField } from '../../lib/workflow/forms/CustomTitleField'; // Removed
@@ -196,7 +196,7 @@ console.log('[DynamicForm] Received contextData:', contextData);
           }
         }}
         onSubmit={handleSubmit}
-        validator={validator}
+        validator={validator as ValidatorType<any, RJSFSchema, any>}
         widgets={customWidgets}
         // templates and fields props removed as they should be provided by the shadcnTheme
       >
