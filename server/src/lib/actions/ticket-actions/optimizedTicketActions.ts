@@ -439,6 +439,19 @@ export async function getTicketsForListWithCursor(
 
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
+
+    // Explicitly clear "$undefined" string values for ID filters
+    // to prevent them from being used as literal filter values if they bypass Zod.
+    if (validatedFilters.channelId === '$undefined') {
+      validatedFilters.channelId = undefined;
+    }
+    if (validatedFilters.categoryId === '$undefined') {
+      validatedFilters.categoryId = undefined;
+    }
+    if (validatedFilters.companyId === '$undefined') {
+      validatedFilters.companyId = undefined;
+    }
+    
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
@@ -484,14 +497,20 @@ export async function getTicketsForListWithCursor(
 
     // Apply cursor-based pagination
     if (cursor) {
-      const [timestamp, id] = cursor.split('_');
-      query = query.where(function() {
-        this.where('t.entered_at', '<', timestamp)
-            .orWhere(function() {
-              this.where('t.entered_at', '=', timestamp)
-                  .andWhere('t.ticket_id', '<', id);
-            });
-      });
+      try {
+        const [timestamp, id] = cursor.split('_');
+        
+        // Use a raw query to avoid timezone issues
+        // This uses the timestamp directly without timezone conversion
+        query = query.whereRaw(`
+          (t.entered_at < ? OR 
+           (t.entered_at = ? AND t.ticket_id < ?))
+        `, [timestamp, timestamp, id]);
+        
+      } catch (error) {
+        console.error('Error parsing cursor:', error);
+        // If there's an error parsing the cursor, just ignore it and return results from the beginning
+      }
     }
 
     // Apply filters
@@ -553,7 +572,25 @@ export async function getTicketsForListWithCursor(
     let nextCursor = null;
     if (hasNextPage && results.length > 0) {
       const lastTicket = results[results.length - 1];
-      nextCursor = `${lastTicket.entered_at}_${lastTicket.ticket_id}`;
+      
+      // Convert the timestamp to UTC/GMT format
+      let timestampStr;
+      if (lastTicket.entered_at instanceof Date) {
+        timestampStr = lastTicket.entered_at.toISOString();
+      } else if (typeof lastTicket.entered_at === 'string') {
+        // Ensure the string is parsed as UTC. If it doesn't have 'Z', append it.
+        const dateString = lastTicket.entered_at.endsWith('Z') 
+          ? lastTicket.entered_at 
+          : `${lastTicket.entered_at}Z`;
+        const date = new Date(dateString);
+        timestampStr = date.toISOString();
+      } else {
+        // Fallback to current time if entered_at is null or invalid
+        console.warn(`Ticket ${lastTicket.ticket_id} has invalid entered_at: ${lastTicket.entered_at}. Falling back to current time for cursor.`);
+        timestampStr = new Date().toISOString();
+      }
+      
+      nextCursor = `${timestampStr}_${lastTicket.ticket_id}`;
     }
 
     // Transform and validate the data
@@ -671,13 +708,7 @@ export async function getTicketFormOptions(user: IUser) {
       }))
     ];
 
-    const channelOptions = channels
-      .filter((channel: any) => channel.channel_id !== undefined)
-      .map((channel: any) => ({
-        value: channel.channel_id,
-        label: channel.channel_name || "",
-        is_inactive: channel.is_inactive
-      }));
+    const channelOptions: IChannel[] = channels.filter((channel: IChannel) => channel.channel_id !== undefined);
 
     const agentOptions = users.map((user: any) => ({
       value: user.user_id,
@@ -1027,7 +1058,7 @@ export async function getConsolidatedTicketListData(
 export async function loadMoreTickets(
   user: IUser,
   filters: ITicketListFilters,
-  cursor: string,
+  cursor?: string,
   limit: number = 50
 ) {
   if (!await hasPermission(user, 'ticket', 'read')) {
