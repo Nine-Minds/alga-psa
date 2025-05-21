@@ -17,6 +17,7 @@ import { validateData } from 'server/src/lib/utils/validation';
 import { getEventBus } from '../../../lib/eventBus';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import { getCompanyLogoUrl, getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -199,22 +200,19 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       }, {} as Record<string, string>);
     }
 
-    // Process the full companies list to add logoUrl
-    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData: any) => {
+    // Process the full companies list to add logoUrl using getCompanyLogoUrl
+    const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
       let logoUrl: string | null = null;
-      const fileId = companyData.document_id ? fileIdMap[companyData.document_id] : null;
-
-      if (fileId) {
-        try {
-          logoUrl = await getImageUrl(fileId);
-        } catch (imgError) {
-          console.error(`Error fetching image URL for fileId ${fileId}:`, imgError);
-          logoUrl = null;
-        }
+      try {
+        logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
+      } catch (imgError) {
+        console.error(`Error fetching logo URL for company ${companyData.company_id} in list (in getConsolidatedTicketData):`, imgError);
+        logoUrl = null; 
       }
       const { document_id, ...companyResult } = companyData;
       return {
         ...companyResult,
+        properties: companyData.properties || {},
         logoUrl,
       };
     }));
@@ -256,16 +254,16 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           .orderBy('full_name', 'asc')
       ]);
       
-      if (company && company.file_id) {
+      if (company) {
         try {
-          company.logoUrl = await getImageUrl(company.file_id);
+          company.logoUrl = await getCompanyLogoUrl(company.company_id, tenant);
         } catch (imgError) {
-          console.error(`Error fetching image URL for company ${company.company_id} fileId ${company.file_id}:`, imgError);
+          console.error(`Error fetching logo URL for company ${company.company_id}:`, imgError);
           company.logoUrl = null;
         }
-        delete company.file_id;
-      } else if (company) {
-        company.logoUrl = null;
+        if ('file_id' in company) {
+            delete company.file_id;
+        }
       }
     }
 
@@ -300,15 +298,14 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     // Process user data for userMap, including avatar URLs
     const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
       let avatarUrl: string | null = null;
-      if (user.avatar_file_id) {
-        try {
-          avatarUrl = await getImageUrl(user.avatar_file_id);
-        } catch (imgError) {
-          console.error(`Error fetching avatar URL for user ${user.user_id} fileId ${user.avatar_file_id}:`, imgError);
-          avatarUrl = null; // Ensure fallback if URL generation fails
-        }
+      try {
+        avatarUrl = await getUserAvatarUrl(user.user_id, tenant);
+      } catch (imgError) {
+        console.error(`Error fetching avatar URL for user ${user.user_id}:`, imgError);
+        avatarUrl = null;
       }
-      // Remove the temporary avatar_file_id before returning
+      
+      // Remove the temporary avatar_file_id if it exists from the old join logic
       const { avatar_file_id, ...userData } = user;
       return {
         ...userData,
@@ -645,17 +642,8 @@ export async function getTicketFormOptions(user: IUser) {
         .where({ tenant })
         .orderBy('category_name', 'asc'),
       
-      // Fetch companies using a separate query to include logo logic
       db('companies as c')
-        .select(
-          'c.*',
-          'da.document_id'
-        )
-        .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'c.company_id')
-              .andOn('da.tenant', '=', 'c.tenant')
-              .andOnVal('da.entity_type', '=', 'company');
-        })
+        .select('c.*')
         .where({ 'c.tenant': tenant })
         .orderBy('c.company_name', 'asc'),
 
@@ -697,47 +685,21 @@ export async function getTicketFormOptions(user: IUser) {
     }));
 
     // --- Add Logo URL Processing ---
-    const companiesData = companies; // Rename for clarity
-    const documentIds = companiesData
-      .map(c => c.document_id)
-      .filter((id): id is string => !!id);
+    const companiesData = companies; 
 
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await db('documents')
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds)
-        .andWhere({ tenant });
-
-      fileIdMap = fileRecords.reduce((acc, record) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
-
-    // Import getImageUrl if not already imported at the top
-    const { getImageUrl } = await import('server/src/lib/actions/document-actions/documentActions');
-
-    // Process companies to add logoUrl
+    // Process companies to add logoUrl using getCompanyLogoUrl
     const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
       let logoUrl: string | null = null;
-      const fileId = companyData.document_id ? fileIdMap[companyData.document_id] : null;
-
-      if (fileId) {
-        try {
-          logoUrl = await getImageUrl(fileId);
-        } catch (imgError) {
-          console.error(`Error fetching image URL for fileId ${fileId}:`, imgError);
-          logoUrl = null; // Ensure fallback if URL generation fails
-        }
+      try {
+        logoUrl = await getCompanyLogoUrl(companyData.company_id, tenant);
+      } catch (imgError) {
+        console.error(`Error fetching logo URL for company ${companyData.company_id} in list:`, imgError);
+        logoUrl = null; 
       }
-      // Remove the temporary document_id before returning
-      const { document_id, ...company } = companyData;
+      
       return {
-        ...company,
-        properties: company.properties || {}, // Ensure properties object exists
+        ...companyData,
+        properties: companyData.properties || {}, 
         logoUrl,
       };
     }));

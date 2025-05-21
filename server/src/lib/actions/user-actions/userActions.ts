@@ -668,7 +668,8 @@ export async function uploadUserAvatar(
       file,
       currentUser.user_id,
       tenant,
-      'user_avatar' // Optional context name
+      'user_avatar',
+      true
     );
 
     if (!uploadResult.success) {

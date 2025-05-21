@@ -17,6 +17,7 @@ export interface IDocumentAssociationInput {
     entity_type: 'user' | 'ticket' | 'company' | 'contact' | 'asset';
     tenant: string;
     notes?: string;
+    is_entity_logo?: boolean;
 }
 
 // Asset-specific document associations

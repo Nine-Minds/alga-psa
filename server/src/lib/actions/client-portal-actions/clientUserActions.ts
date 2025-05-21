@@ -263,7 +263,8 @@ export async function uploadContactAvatar(
       file,
       currentUser.user_id,
       tenant,
-      'contact_avatar' // Optional context override if needed
+      'contact_avatar',
+      true
     );
 
     if (!uploadResult.success) {
