@@ -265,7 +265,7 @@ export function UserManagementSettings() {
       <CardContent className="pt-6">
         <div className="flex justify-between mb-4">
           <div className="relative">
-            <input
+            <Input
               type="text"
               placeholder="Search users"
               value={searchTerm}

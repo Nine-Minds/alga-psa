@@ -6,6 +6,7 @@ import { ITeam, IUser, IRole, IUserWithRoles } from 'server/src/interfaces/auth.
 import UserPicker from 'server/src/components/ui/UserPicker';
 import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { Input } from 'server/src/components/ui/Input';
 
 interface TeamDetailsProps {
   teamId: string;
@@ -204,7 +205,7 @@ const TeamDetails: React.FC<TeamDetailsProps> = ({ teamId, onUpdate }): JSX.Elem
       <div>
         <label className="block text-sm font-medium text-text-700 mb-1">Team Name</label>
         <div className="flex gap-2">
-          <input
+          <Input
             type="text"
             value={teamName}
             onChange={handleTeamNameChange}

@@ -80,7 +80,7 @@ const TextDetailItem: React.FC<{
   return (
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
-      <input
+      <Input
         type="text"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}

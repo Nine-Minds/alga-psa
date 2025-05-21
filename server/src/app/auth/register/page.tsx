@@ -5,14 +5,12 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
-
-
 import { EyeOpenIcon, EyeClosedIcon, CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
 import * as Label from '@radix-ui/react-label';
-
 import { AlertProps, TPasswordCriteria } from 'server/src/interfaces';
 import { registerUser } from 'server/src/lib/actions/useRegister';
 import Alert from 'server/src/components/auth/Alert';
+import { Input } from 'server/src/components/ui/Input';
 
 
 
@@ -188,7 +186,7 @@ export default function Register() {
                 <Label.Root className="block text-sm font-medium text-gray-700">
                   Company name
                 </Label.Root>
-                <input
+                <Input
                   type="text"
                   name="companyName"
                   value={formData.companyName}
@@ -202,7 +200,7 @@ export default function Register() {
                 <Label.Root className="block text-sm font-medium text-gray-700">
                   User Name
                 </Label.Root>
-                <input
+                <Input
                   type="text"
                   name="userName"
                   value={formData.userName}
@@ -216,7 +214,7 @@ export default function Register() {
                 <Label.Root className="block text-sm font-medium text-gray-700">
                   Email
                 </Label.Root>
-                <input
+                <Input
                   type="email"
                   name="email"
                   value={formData.email}
@@ -232,7 +230,7 @@ export default function Register() {
                   Password
                 </Label.Root>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showPassword ? "text" : "password"}
                     name="password"
                     value={formData.password}

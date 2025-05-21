@@ -5,6 +5,7 @@ import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { ITeam, IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { Input } from 'server/src/components/ui/Input';
 
 interface TeamListProps {
   teams: ITeam[];
@@ -87,7 +88,7 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
         </button>
       ) : (
         <div className="mb-4">
-          <input
+          <Input
             type="text"
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}

@@ -14,6 +14,7 @@ import styles from './TicketDetails.module.css';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { Input } from 'server/src/components/ui/Input';
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration
@@ -192,7 +193,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           <div className="flex items-center gap-2 mb-4">
             {isEditingTitle ? (
               <div className="flex items-center gap-2 flex-1">
-                <input
+                <Input
 
                   type="text"
                   value={titleValue}
@@ -200,6 +201,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
                   className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  containerClassName="mb-2"
                 />
                 <button
 

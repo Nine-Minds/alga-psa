@@ -251,7 +251,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       title: 'Quantity',
       dataIndex: 'quantity',
       render: (value, record) => (
-        <input
+        <Input
           type="number"
           value={value?.toString() || ''}
           onChange={(e) => handleUpdatePlanService(record.service_id, Number(e.target.value), record.custom_rate)}
@@ -283,7 +283,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       title: 'Custom Rate',
       dataIndex: 'custom_rate',
       render: (value, record) => (
-        <input
+        <Input
           type="number"
           value={value?.toString() || ''}
           onChange={(e) => {

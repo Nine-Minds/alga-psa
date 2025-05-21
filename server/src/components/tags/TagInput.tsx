@@ -4,6 +4,7 @@ import { generateEntityColor } from '../../utils/colorUtils';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { Input } from 'server/src/components/ui/Input';
 
 interface TagInputProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -94,7 +95,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         </button>
       ) : (
         <div ref={containerRef} className={`relative flex items-center gap-1 ${className}`}>
-          <input
+          <Input
             ref={inputRef}
             type="text"
             value={inputValue}
