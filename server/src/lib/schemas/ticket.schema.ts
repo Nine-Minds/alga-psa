@@ -91,11 +91,11 @@ export const ticketListItemSchema = baseTicketSchema.extend({
 });
 
 export const ticketListFiltersSchema = z.object({
-    channelId: z.string().uuid().nullish(),  // Changed to nullish to handle undefined/null
+    channelId: z.string().uuid().nullish(),
     statusId: z.string().optional(),
     priorityId: z.string().optional(),
-    categoryId: z.string().optional(),
-    companyId: z.string().uuid().nullish(),  // Added company filter
+    categoryId: z.string().nullish(),
+    companyId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),
     channelFilterState: z.enum(['active', 'inactive', 'all']),
     showOpenOnly: z.boolean().optional()

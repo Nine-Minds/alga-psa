@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import Link from 'next/link';
-import { ITicket, ITicketListItem, ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -19,30 +20,39 @@ import { MoreVertical, XCircle, Clock, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from '../../hooks/useIntervalTracking';
-import { IntervalManagementDrawer } from '../time-management/interval-tracking/IntervalManagementDrawer';
-import { saveTimeEntry } from '../../lib/actions/timeEntryActions';
+import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
+import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
+import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
-  // Add props for pre-fetched options
-  initialChannels: {
-    channel_id: string;
-    channel_name: string;
-    tenant: string;
-    is_inactive: boolean;
-  }[];
+  initialChannels: IChannel[];
   initialStatuses: SelectOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
   initialCompanies: ICompany[];
   nextCursor: string | null;
-  onLoadMore: (cursor: string, filters?: any) => Promise<void>;
+  onLoadMore: () => Promise<void>;
+  onFiltersChanged: (filters: Partial<ITicketListFilters>) => void;
+  initialFilterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
-  user?: IUser; // Pass the user prop directly from container
+  user?: IUser;
 }
+
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+  return debouncedValue;
+};
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -54,6 +64,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialCompanies,
   nextCursor,
   onLoadMore,
+  onFiltersChanged,
+  initialFilterValues,
   isLoadingMore,
   user
 }) => {
@@ -62,29 +74,57 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
-  // Initialize currentUser directly from props if available to prevent any flashing
   const [currentUser, setCurrentUser] = useState<any>(user || null);
 
-  // Initialize state with pre-fetched data
   const [channels] = useState<IChannel[]>(initialChannels);
   const [companies] = useState<ICompany[]>(initialCompanies);
   const [categories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
-  const [filteredTickets, setFilteredTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [selectedChannel, setSelectedChannel] = useState<string>('');
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(initialFilterValues.channelId || null);
+  const [selectedCompany, setSelectedCompany] = useState<string | null>(initialFilterValues.companyId === undefined ? null : initialFilterValues.companyId); // Keep previous fix for company
+  const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId || 'open');
+  const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId || 'all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []);
+  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery || '');
+  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.channelFilterState || 'active');
+  
   const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('open');
-  const [selectedPriority, setSelectedPriority] = useState<string>('all');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingSelf, setIsLoadingSelf] = useState(false);
+
+  useEffect(() => {
+    setTickets(initialTickets);
+  }, [initialTickets]);
+
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  useEffect(() => {
+    const currentFilters: Partial<ITicketListFilters> = {
+      channelId: selectedChannel === null ? undefined : selectedChannel,
+      statusId: selectedStatus,
+      priorityId: selectedPriority,
+      categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
+      companyId: selectedCompany || undefined,
+      searchQuery: debouncedSearchQuery,
+      channelFilterState: channelFilterState,
+      showOpenOnly: selectedStatus === 'open',
+    };
+    onFiltersChanged(currentFilters);
+  }, [
+    selectedChannel, 
+    selectedStatus, 
+    selectedPriority, 
+    selectedCategories, 
+    selectedCompany, 
+    debouncedSearchQuery, 
+    channelFilterState,
+    onFiltersChanged
+  ]);
 
   const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
     setTicketToDelete(ticketId);
@@ -98,13 +138,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (!user) {
       const fetchUser = async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingSelf(true);
           const fetchedUser = await getCurrentUser();
           setCurrentUser(fetchedUser);
         } catch (error) {
           console.error('Error fetching current user:', error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingSelf(false);
         }
       };
       
@@ -125,10 +165,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       }
 
       await deleteTicket(ticketToDelete, currentUser);
-      // We would normally call fetchTickets here, but we're now using props
-      // Instead, we'll just remove the deleted ticket from the state
       setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-      setFilteredTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
       setTicketToDelete(null);
       setTicketToDeleteName(null);
       setDeleteError(null);
@@ -243,150 +280,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Add id to each ticket for DataTable keys
   const ticketsWithIds = useMemo(() =>
-    filteredTickets.map((ticket): any => ({
+    tickets.map((ticket): any => ({
       ...ticket,
-      id: ticket.ticket_id
-    }))
-    , [filteredTickets]);
-// Apply all filters to tickets
-useEffect(() => {
-  let filtered = [...tickets];
+      id: ticket.ticket_id 
+    })), [tickets]);
 
-  // Filter by channel
-  if (selectedChannel) {
-    filtered = filtered.filter(ticket => ticket.channel_id === selectedChannel);
-  } else if (channelFilterState !== 'all') {
-    // Filter by channel state (active/inactive)
-    const activeChannels = channels
-      .filter(channel => channelFilterState === 'active' ? !channel.is_inactive : channel.is_inactive)
-      .map(channel => channel.channel_id);
-    
-    filtered = filtered.filter(ticket => activeChannels.includes(ticket.channel_id || ''));
-  }
-
-  // Filter by company
-  if (selectedCompany) {
-    filtered = filtered.filter(ticket => ticket.company_id === selectedCompany);
-  } else if (companyFilterState !== 'all') {
-    // This would require company active state information which isn't in the ticket data
-    // We would need to fetch this separately or have it in the initial data
-  }
-
-  // Filter by client type
-  if (clientTypeFilter !== 'all') {
-    // This would require additional data about whether the company is a company or individual
-    // We would need to fetch this separately or have it in the initial data
-  }
-
-  // Filter by status
-  if (selectedStatus === 'open') {
-    // Filter to only show open tickets
-    filtered = filtered.filter(ticket => {
-      const status = statusOptions.find(s => s.value === ticket.status_id);
-      return status && !status.className?.includes('bg-gray-200'); // Assuming closed statuses have this class
-    });
-  } else if (selectedStatus !== 'all') {
-    filtered = filtered.filter(ticket => ticket.status_id === selectedStatus);
-  }
-
-  // Filter by priority
-  if (selectedPriority !== 'all') {
-    filtered = filtered.filter(ticket => ticket.priority_id === selectedPriority);
-  }
-
-  // Filter by search query
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase();
-    filtered = filtered.filter(ticket =>
-      ticket.title.toLowerCase().includes(query) ||
-      ticket.ticket_number.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by categories
-  if (selectedCategories.length > 0) {
-    filtered = filtered.filter(ticket => {
-      // Handle "No Category" selection
-      if (selectedCategories.includes('no-category')) {
-        return !ticket.category_id && !ticket.subcategory_id;
-      }
-
-      for (const selectedCategoryId of selectedCategories) {
-        const selectedCategory = categories.find(c => c.category_id === selectedCategoryId);
-        if (!selectedCategory) continue;
-
-        if (selectedCategory.parent_category) {
-          // If selected category is a subcategory, match only that specific subcategory
-          return ticket.subcategory_id === selectedCategoryId;
-        } else {
-          // If selected category is a parent, match either:
-          // 1. The parent category_id directly
-          // 2. Any subcategory that belongs to this parent
-          if (ticket.category_id === selectedCategoryId) return true;
-          if (ticket.subcategory_id) {
-            const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
-            return ticketSubcategory?.parent_category === selectedCategoryId;
-          }
-        }
-      }
-      return false;
-    });
-  }
-
-  // Apply excluded categories
-  if (excludedCategories.length > 0) {
-    filtered = filtered.filter(ticket => {
-      // Handle "No Category" exclusion
-      if (!ticket.category_id && !ticket.subcategory_id) {
-        return !excludedCategories.includes('no-category');
-      }
-
-      // Check if any excluded category matches this ticket
-      for (const excludedId of excludedCategories) {
-        const excludedCategory = categories.find(c => c.category_id === excludedId);
-        if (!excludedCategory) continue;
-
-        // If excluding a subcategory, only exclude tickets with that exact subcategory_id
-        if (excludedCategory.parent_category) {
-          if (ticket.subcategory_id === excludedId) {
-            return false;
-          }
-        } else {
-          // If excluding a parent category, exclude tickets with:
-          // 1. The parent category_id directly
-          // 2. Any subcategory belonging to this parent
-          if (ticket.category_id === excludedId) {
-            return false;
-          }
-          if (ticket.subcategory_id) {
-            const ticketSubcategory = categories.find(c => c.category_id === ticket.subcategory_id);
-            if (ticketSubcategory?.parent_category === excludedId) {
-              return false;
-            }
-          }
-        }
-      }
-      return true;
-    });
-  }
-
-  setFilteredTickets(filtered);
-}, [
-  tickets,
-  selectedChannel,
-  channelFilterState,
-  selectedCompany,
-  companyFilterState,
-  clientTypeFilter,
-  selectedStatus,
-  selectedPriority,
-  searchQuery,
-  selectedCategories,
-  excludedCategories,
-  categories,
-  statusOptions,
-  channels
-]);
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Add the new ticket to the local state
@@ -442,16 +340,15 @@ useEffect(() => {
 
   const handleChannelSelect = useCallback((channelId: string) => {
     setSelectedChannel(channelId);
-    setChannelFilterState('all');
   }, []);
 
-  const handleCategorySelect = useCallback((categoryIds: string[], excludedIds: string[]) => {
-    setSelectedCategories(categoryIds);
-    setExcludedCategories(excludedIds);
+  const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
+    setSelectedCategories(newSelectedCategories);
+    setExcludedCategories(newExcludedCategories);
   }, []);
-
+  
   const handleCompanySelect = useCallback((companyId: string | null) => {
-    setSelectedCompany(companyId || '');
+    setSelectedCompany(companyId);
   }, []);
 
   const handleCompanyFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
@@ -463,17 +360,38 @@ useEffect(() => {
   }, []);
 
   const handleResetFilters = useCallback(() => {
-    setSelectedChannel('');
-    setSelectedCompany(null);
-    setSelectedStatus('open');
-    setSelectedPriority('all');
-    setSelectedCategories([]);
+    // Define the true default/reset states
+    const defaultChannel: string | null = null;
+    const defaultCompany: string | null = null;
+    const defaultStatus: string = 'open';
+    const defaultPriority: string = 'all';
+    const defaultCategories: string[] = [];
+    const defaultSearchQuery: string = '';
+    const defaultChannelFilterState: 'active' | 'inactive' | 'all' = 'active';
+
+    setSelectedChannel(defaultChannel);
+    setSelectedCompany(defaultCompany);
+    setSelectedStatus(defaultStatus);
+    setSelectedPriority(defaultPriority);
+    setSelectedCategories(defaultCategories);
     setExcludedCategories([]);
-    setSearchQuery('');
-    setChannelFilterState('active');
-    setCompanyFilterState('active');
+    setSearchQuery(defaultSearchQuery);
+    setChannelFilterState(defaultChannelFilterState);
+    
+    setCompanyFilterState('active'); 
     setClientTypeFilter('all');
-  }, []);
+
+    onFiltersChanged({
+      channelId: defaultChannel === null ? undefined : defaultChannel,
+      companyId: defaultCompany === null ? undefined : defaultCompany,
+      statusId: defaultStatus,
+      priorityId: defaultPriority,
+      categoryId: defaultCategories.length > 0 ? defaultCategories[0] : undefined,
+      searchQuery: defaultSearchQuery,
+      channelFilterState: defaultChannelFilterState,
+      showOpenOnly: defaultStatus === 'open',
+    });
+  }, [onFiltersChanged]);
 
   return (
     <ReflectionContainer id={id} label="Ticketing Dashboard">
@@ -547,12 +465,13 @@ useEffect(() => {
               allowEmpty={true}
               className="text-sm min-w-[200px]"
             />
-            <input
-              type="text"
+            <Input
+              id={`${id}-search-tickets-input`}
               placeholder="Search tickets..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] border rounded px-3 py-2 text-sm min-w-[200px]"
+              className="h-[38px] min-w-[200px] text-sm" // Applied to the <input> element itself
+              containerClassName="" // Applied to the wrapping <div>, removes default mb-4
             />
             <Button
               variant="outline"
@@ -568,9 +487,10 @@ useEffect(() => {
         <h2 className="text-xl font-semibold mt-6 mb-2">
           Tickets
         </h2>
-        {isLoading ? (
+        {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
+        {isLoadingMore ? ( 
           <div className="flex justify-center items-center h-32">
-            <span>Loading...</span>
+            <span>Loading tickets...</span>
           </div>
         ) : (
           <>
@@ -585,15 +505,7 @@ useEffect(() => {
               <div className="flex justify-center mt-4">
                 <Button
                   id="load-more-button"
-                  onClick={() => onLoadMore(nextCursor, {
-                    channelId: selectedChannel,
-                    statusId: selectedStatus,
-                    priorityId: selectedPriority,
-                    categoryId: selectedCategories.length === 1 ? selectedCategories[0] : null,
-                    companyId: selectedCompany,
-                    searchQuery: searchQuery,
-                    channelFilterState: channelFilterState
-                  })}
+                  onClick={onLoadMore}
                   disabled={isLoadingMore}
                   variant="outline"
                 >
