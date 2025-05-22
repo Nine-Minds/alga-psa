@@ -7,6 +7,7 @@ import { ISecretProvider } from '@shared/core';
 import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
 import { createTenantKnex } from '../../db';
 import { getSecretProviderInstance } from '@shared/core';
+import { QboClientService } from '../../qbo/qboClientService';
 
 // Corrected QboCredentials interface (using ISO strings for dates)
 interface QboCredentials {
@@ -114,6 +115,7 @@ export interface QboTerm { // Exporting for use in components
 /**
  * Fetches a list of Items (Products/Services) from QuickBooks Online
  * for the current tenant's connected realm.
+ * Uses QboClientService which automatically handles token refresh.
  */
 export async function getQboItems(): Promise<QboItem[]> {
   const user = await getCurrentUser();
@@ -137,67 +139,51 @@ export async function getQboItems(): Promise<QboItem[]> {
       return [];
     }
 
-    let validRealmId: string | null = null;
-    let validAccessToken: string | null = null;
-
+    // Try each realm until we find one that works
     for (const realmId in allCredentials) {
       const creds = allCredentials[realmId];
-      if (creds && creds.accessToken && creds.accessTokenExpiresAt && creds.realmId === realmId) {
-        if (new Date(creds.accessTokenExpiresAt) > new Date()) { // Check if token is not expired
-          validRealmId = creds.realmId;
-          validAccessToken = creds.accessToken;
-          break; // Found a valid realm
-        } else {
-          console.warn(`[QBO Action] Access token expired for tenant ${tenantId}, realm ${realmId}.`);
-        }
+      if (!creds || !creds.accessToken || !creds.refreshToken || !creds.realmId) {
+        console.warn(`[QBO Action] Invalid credentials structure for tenant ${tenantId}, realm ${realmId}`);
+        continue;
+      }
+
+      try {
+        console.log(`[QBO Action] Fetching Items for tenant ${tenantId}, realm ${realmId}`);
+        const qboClient = await QboClientService.create(tenantId, realmId);
+        
+        const qboItems = await qboClient.query<any>('SELECT Id, Name FROM Item MAXRESULTS 1000');
+
+        const mappedItems: QboItem[] = qboItems.map((item: any) => ({
+          id: item.Id,
+          name: item.Name,
+        }));
+
+        console.log(`[QBO Action] Found ${mappedItems.length} QBO Items for tenant ${tenantId}, realm ${realmId}.`);
+        return mappedItems;
+
+      } catch (clientError: any) {
+        console.warn(`[QBO Action] Failed to fetch Items for tenant ${tenantId}, realm ${realmId}:`, clientError.message);
+        continue; // Try next realm
       }
     }
 
-    if (!validRealmId || !validAccessToken) {
-      console.log(`[QBO Action] No valid (non-expired) QBO credentials found for tenant ${tenantId} across all realms. Cannot fetch Items.`);
-      // TODO: Consider if refresh logic should be attempted for any realm here
-      return [];
-    }
-
-    console.log(`[QBO Action] Fetching Items for tenant ${tenantId}, realm ${validRealmId}`);
-
-    const query = 'SELECT Id, Name FROM Item MAXRESULTS 1000';
-    const queryUrl = `${QBO_BASE_URL}/v3/company/${validRealmId}/query?query=${encodeURIComponent(query)}`;
-
-    const response = await axios.get(queryUrl, {
-        headers: {
-            'Authorization': `Bearer ${validAccessToken}`,
-            'Accept': 'application/json',
-        },
-        timeout: 15000, // Longer timeout for queries
-    });
-
-    const qboItems = response.data?.QueryResponse?.Item || [];
-
-    const mappedItems: QboItem[] = qboItems.map((item: any) => ({
-      id: item.Id,
-      name: item.Name,
-    }));
-
-    console.log(`[QBO Action] Found ${mappedItems.length} QBO Items for tenant ${tenantId}, realm ${validRealmId}.`);
-    return mappedItems;
+    console.log(`[QBO Action] No working connections found for tenant ${tenantId} across all realms. Cannot fetch Items.`);
+    return [];
 
   } catch (error: any) {
-    console.error(`[QBO Action] Error fetching QBO Items for tenant ${tenantId}:`, error.response?.data || error.message);
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-        console.warn(`[QBO Action] QBO API returned 401 for Item query (Tenant: ${tenantId}). Token may need refresh.`);
-    }
+    console.error(`[QBO Action] Error fetching QBO Items for tenant ${tenantId}:`, error.message);
     return [];
   }
 }
 
 /**
  * Server Action to fetch the current QuickBooks Online connection status for the tenant.
+ * Uses QboClientService which automatically handles token refresh.
  * Corresponds to Task 82.
  */
 export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
   const secretProvider = getSecretProviderInstance();
-  const { tenant: tenantId } = await createTenantKnex(); // knex might not be needed if not used directly
+  const { tenant: tenantId } = await createTenantKnex();
 
   if (!tenantId) {
     console.error('QBO Status Action: Tenant ID not found.');
@@ -217,74 +203,75 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
       return { status: 'Not Connected', connected: false };
     }
 
-    let firstValidRealmId: string | null = null;
-    let firstValidAccessToken: string | null = null;
-    let firstValidRealmCredentials: QboCredentials | null = null;
+    // Try each realm until we find one that works
+    for (const realmId in allCredentials) {
+      const creds = allCredentials[realmId];
+      if (!creds || !creds.accessToken || !creds.refreshToken || !creds.realmId) {
+        console.warn(`QBO Status Action: Invalid credentials structure for tenant ${tenantId}, realm ${realmId}`);
+        continue;
+      }
 
-    for (const realmIdKey in allCredentials) {
-      const creds = allCredentials[realmIdKey];
-      if (creds && creds.accessToken && creds.realmId === realmIdKey && creds.accessTokenExpiresAt) {
-        // Check if token is valid (not expired, give a 5 min buffer for near expiry)
-        const isTokenPotentiallyValid = new Date(creds.accessTokenExpiresAt) > new Date(Date.now() + 5 * 60 * 1000);
-        if (isTokenPotentiallyValid) {
-          firstValidRealmId = creds.realmId;
-          firstValidAccessToken = creds.accessToken;
-          firstValidRealmCredentials = creds;
-          break; // Found the first valid realm
-        } else {
-            console.warn(`QBO Status Action: Access token expired or nearing expiry for tenant ${tenantId}, realm ${creds.realmId}.`);
+      try {
+        // QboClientService.create() will automatically refresh tokens if needed
+        console.log(`QBO Status Action: Attempting to create client for tenant ${tenantId}, realm ${realmId}`);
+        const qboClient = await QboClientService.create(tenantId, realmId);
+        
+        // Try to fetch company info using the client (this will use refreshed tokens)
+        const companyInfoResult = await qboClient.query<any>(`SELECT CompanyName FROM CompanyInfo`);
+        const companyName = companyInfoResult?.[0]?.CompanyName || 'Unknown Company';
+
+        console.log(`QBO Status Action: Successfully connected for tenant ${tenantId}, Realm: ${realmId}, Company: ${companyName}`);
+        return {
+          status: 'Connected',
+          companyName: companyName,
+          realmId: realmId,
+          connected: true,
+        };
+
+      } catch (clientError: any) {
+        console.warn(`QBO Status Action: Failed to create/test client for tenant ${tenantId}, realm ${realmId}:`, clientError.message);
+        
+        // Check if this is an authentication error (refresh token expired)
+        if (clientError.code === 'QBO_AUTH_ERROR' || clientError.message?.includes('Please re-authenticate')) {
+          console.log(`QBO Status Action: Authentication failed for realm ${realmId}, checking other realms...`);
+          continue; // Try next realm
         }
+        
+        // For other errors, continue to try other realms
+        continue;
       }
     }
 
-    if (!firstValidRealmId || !firstValidAccessToken || !firstValidRealmCredentials) {
-      console.log(`QBO Status Action: No active (non-expired) connection found for tenant ${tenantId} across all realms.`);
-      // Attempt to find any realmId even if expired for error reporting
-      const anyRealmId = Object.keys(allCredentials).length > 0 ? allCredentials[Object.keys(allCredentials)[0]].realmId : undefined;
-      return {
-        status: 'Error',
-        errorMessage: 'Connection expired or invalid. Please reconnect.',
-        realmId: anyRealmId, // Report first realmId found, even if expired
-        connected: false
-      };
-    }
-
-    // Attempt to fetch company name to verify connection is active for the first valid realm
-    const companyName = await getQboCompanyName(firstValidAccessToken, firstValidRealmId);
-
-    if (companyName !== null) {
-      console.log(`QBO Status Action: Connected for tenant ${tenantId}, Realm: ${firstValidRealmId}, Company: ${companyName}`);
-      return {
-        status: 'Connected',
-        companyName: companyName,
-        realmId: firstValidRealmId,
-        connected: true,
-      };
-    } else {
-      console.error(`QBO Status Action: Failed to fetch company info for tenant ${tenantId} (Realm: ${firstValidRealmId}). Token might be invalid or API unavailable.`);
-      return {
-        status: 'Error',
-        errorMessage: 'Failed to verify connection with QuickBooks. Please try reconnecting.',
-        realmId: firstValidRealmId,
-        connected: false,
-      };
-    }
+    // If we get here, no realms worked
+    const firstRealmId = Object.keys(allCredentials)[0];
+    const firstRealm = allCredentials[firstRealmId];
+    
+    console.log(`QBO Status Action: No working connections found for tenant ${tenantId} across ${Object.keys(allCredentials).length} realm(s)`);
+    
+    return {
+      status: 'Error',
+      errorMessage: 'Connection expired or invalid. Please reconnect.',
+      realmId: firstRealm?.realmId,
+      connected: false
+    };
 
   } catch (error: any) {
-    console.error(`QBO Status Action: Error fetching status for tenant ${tenantId || 'UNKNOWN'}`, error);
-    // Try to extract a realmId from the error or secret if possible, for better error context
+    console.error(`QBO Status Action: Error checking status for tenant ${tenantId}:`, error);
+    
+    // Try to extract a realmId for error context
     let realmIdOnError: string | undefined = undefined;
     if (tenantId) {
-        try {
-            const secretOnError = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
-            if (secretOnError) {
-                const parsedSecretOnError = JSON.parse(secretOnError) as Record<string, QboCredentials>;
-                if (typeof parsedSecretOnError === 'object' && parsedSecretOnError !== null && Object.keys(parsedSecretOnError).length > 0) {
-                    realmIdOnError = parsedSecretOnError[Object.keys(parsedSecretOnError)[0]].realmId;
-                }
-            }
-        } catch (e) { /* Ignore secondary error during error handling */ }
+      try {
+        const secretOnError = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+        if (secretOnError) {
+          const parsedSecretOnError = JSON.parse(secretOnError) as Record<string, QboCredentials>;
+          if (typeof parsedSecretOnError === 'object' && parsedSecretOnError !== null && Object.keys(parsedSecretOnError).length > 0) {
+            realmIdOnError = parsedSecretOnError[Object.keys(parsedSecretOnError)[0]].realmId;
+          }
+        }
+      } catch (e) { /* Ignore secondary error during error handling */ }
     }
+    
     return {
       status: 'Error',
       errorMessage: error.message || 'An unexpected error occurred while checking the connection status.',
