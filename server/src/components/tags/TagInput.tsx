@@ -72,25 +72,17 @@ export const TagInput: React.FC<TagInputProps> = ({
   }, [isEditing]);
 
   const handleSave = async (tagText: string = inputValue.trim()) => {
-    console.log('TagInput.handleSave called with:', tagText);
-    console.log('TagInput.handleSave - isSaving:', isSaving);
-    console.log('TagInput.handleSave - tagText exists:', !!tagText);
-    
     if (tagText && !isSaving) {
       setIsSaving(true);
-      console.log('TagInput.handleSave - calling onAddTag with:', tagText);
       try {
         await onAddTag(tagText);
-        console.log('TagInput.handleSave - onAddTag completed successfully');
         setInputValue('');
         setIsEditing(false);
       } catch (error) {
-        console.error('TagInput.handleSave - error in onAddTag:', error);
+        console.error('Error adding tag:', error);
       } finally {
         setIsSaving(false);
       }
-    } else {
-      console.log('TagInput.handleSave - skipped because tagText is empty or isSaving is true');
     }
   };
 
@@ -180,7 +172,6 @@ export const TagInput: React.FC<TagInputProps> = ({
                   key={index}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 flex items-center border-b border-gray-100 last:border-b-0 transition-colors"
                   onClick={(e) => {
-                    console.log('TagInput suggestion clicked:', suggestion);
                     e.preventDefault();
                     e.stopPropagation();
                     handleSave(suggestion);

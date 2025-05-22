@@ -107,7 +107,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        console.log('Contacts - Fetching tags for contacts:', contacts.map(c => c.contact_name_id));
         
         const [contactTags, allTags] = await Promise.all([
           findTagsByEntityIds(
@@ -116,9 +115,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           ),
           findAllTagsByType('contact')
         ]);
-
-        console.log('Contacts - Retrieved contactTags:', contactTags);
-        console.log('Contacts - Retrieved allTags:', allTags);
 
         const newContactTags: Record<string, ITag[]> = {};
         contactTags.forEach(tag => {
@@ -131,7 +127,6 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         contactTagsRef.current = newContactTags;
         setAllUniqueTags(allTags);
         
-        console.log('Contacts - Set allUniqueTags:', allTags);
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
