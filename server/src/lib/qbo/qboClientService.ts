@@ -1,13 +1,13 @@
-// Define QuickBooksInstance based on the .d.ts file
-import QuickBooks, { QuickBooksInstance } from 'node-quickbooks';
 import axios from 'axios';
-import {
-  getTenantQboCredentials,
-  storeTenantQboCredentials,
-  getAppSecret,
-} from '../actions/qbo/qboUtils';
+import { getSecretProviderInstance } from '@shared/core';
 import { QboTenantCredentials } from '../actions/qbo/types'; // Correct path for type
 import { AppError } from '../errors'; // Re-applying the seemingly correct path for AppError
+
+// Define QuickBooksInstance type locally
+interface QuickBooksInstance {
+  query: (query: string, callback: (err: any, result: any) => void) => void;
+  [key: string]: any;
+}
 
 // Simple console logger
 const logger = {
@@ -19,6 +19,78 @@ const logger = {
 
 const QBO_TOKEN_ENDPOINT = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 const TOKEN_EXPIRY_BUFFER_SECONDS = 300; // Refresh token 5 minutes before expiry
+const QBO_CREDENTIALS_SECRET_NAME = 'qbo_credentials';
+
+// Helper functions using proper secret provider
+async function getTenantQboCredentials(tenantId: string, realmId: string): Promise<QboTenantCredentials | null> {
+  const secretProvider = getSecretProviderInstance();
+  const secret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+  if (!secret) {
+    logger.warn(`QBO credentials secret not found for tenant ${tenantId}`);
+    return null;
+  }
+  
+  try {
+    const allCredentials = JSON.parse(secret) as Record<string, QboTenantCredentials>;
+    if (typeof allCredentials !== 'object' || allCredentials === null) {
+      logger.warn(`Invalid QBO credentials structure: not an object for tenant ${tenantId}`);
+      return null;
+    }
+    
+    const credentials = allCredentials[realmId];
+    if (credentials && credentials.accessToken && credentials.refreshToken && credentials.realmId === realmId && credentials.accessTokenExpiresAt && credentials.refreshTokenExpiresAt) {
+      return credentials;
+    }
+    
+    logger.warn(`Invalid or missing QBO credentials for tenant ${tenantId}, realm ${realmId}`);
+    return null;
+  } catch (error) {
+    logger.error(`Error parsing QBO credentials for tenant ${tenantId}, realm ${realmId}:`, error);
+    return null;
+  }
+}
+
+async function storeTenantQboCredentials(tenantId: string, credentials: QboTenantCredentials): Promise<void> {
+  const secretProvider = getSecretProviderInstance();
+  
+  // Get existing credentials to preserve other realms
+  let allCredentials: Record<string, QboTenantCredentials> = {};
+  try {
+    const existingSecret = await secretProvider.getTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME);
+    if (existingSecret) {
+      allCredentials = JSON.parse(existingSecret);
+    }
+  } catch (error) {
+    logger.warn(`Could not parse existing credentials for tenant ${tenantId}, starting fresh:`, error);
+  }
+  
+  // Update credentials for this realm
+  allCredentials[credentials.realmId] = credentials;
+  
+  // Store updated credentials
+  await secretProvider.setTenantSecret(tenantId, QBO_CREDENTIALS_SECRET_NAME, JSON.stringify(allCredentials));
+  logger.info(`Stored QBO credentials for tenant ${tenantId}, realm ${credentials.realmId}`);
+}
+
+async function getAppSecret(secretName: 'qbo'): Promise<{ clientId: string; clientSecret: string } | null> {
+  const secretProvider = getSecretProviderInstance();
+  try {
+    const clientId = await secretProvider.getAppSecret('qbo_client_id');
+    const clientSecret = await secretProvider.getAppSecret('qbo_client_secret');
+    
+    if (clientId && clientSecret) {
+      return { 
+        clientId: typeof clientId === 'string' ? clientId : String(clientId),
+        clientSecret: typeof clientSecret === 'string' ? clientSecret : String(clientSecret)
+      };
+    }
+    logger.error('QBO Client ID or Secret not found in app secrets');
+    return null;
+  } catch (error) {
+    logger.error('Error retrieving QBO app secrets:', error);
+    return null;
+  }
+}
 
 export class QboClientService {
   private qbo: QuickBooksInstance | null = null; // Use the instance type
@@ -87,6 +159,11 @@ export class QboClientService {
     // Determine environment (sandbox/production) - this might come from config or credentials
     const environment = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'; // Example logic
 
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, environment }, 'Initializing QBO client');
+    
+    // Dynamically import node-quickbooks to handle ES module compatibility
+    const QuickBooks = (await import('node-quickbooks')).default;
+    
     this.qbo = new QuickBooks(
       qboAppSecrets.clientId,
       qboAppSecrets.clientSecret,
@@ -99,6 +176,8 @@ export class QboClientService {
       '2.0', // oauth version
       this.credentials.refreshToken
     );
+    
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo.query, qboInstance: this.qbo }, 'QBO client initialized');
   }
 
   private isTokenExpired(): boolean {
@@ -167,35 +246,40 @@ export class QboClientService {
       // This should ideally not happen if create() is used correctly
       throw new AppError('QBO_CLIENT_NOT_INITIALIZED', 'QBO client has not been initialized.');
     }
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, hasQueryMethod: typeof this.qbo.query, clientMethods: Object.getOwnPropertyNames(this.qbo) }, 'Getting QBO client');
     return this.qbo;
   }
 
   // --- API Methods ---
 
   /**
-   * Executes a QBO query.
+   * Executes a QBO query using the appropriate method based on the query type.
    * @param selectQuery The QBO SQL-like query string (e.g., "SELECT Id, Name FROM Item")
    * @returns Promise resolving to an array of entities
    */
   public async query<T>(selectQuery: string): Promise<T[]> {
     const client = this.getClient();
-    // node-quickbooks handles pagination internally if query contains 'MAXRESULTS'
-    // Ensure MAXRESULTS is included if needed, QBO defaults to 100, max 1000.
+    
+    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, query: selectQuery }, 'Executing QBO query');
+
+    // Handle special cases for company info
+    if (selectQuery.toUpperCase().includes('COMPANYINFO')) {
+      return this.getCompanyInfo<T>();
+    }
+
+    // For other queries, use the findItems method which is available in node-quickbooks
     const queryWithMaxResults = selectQuery.toUpperCase().includes('MAXRESULTS')
       ? selectQuery
       : `${selectQuery} MAXRESULTS 1000`;
 
-    logger.debug({ tenantId: this.tenantId, realmId: this.realmId, query: queryWithMaxResults }, 'Executing QBO query');
-
     return new Promise((resolve, reject) => {
-      client.query(queryWithMaxResults, (err: any, result: any) => {
+      // Use findItems for general queries
+      (client as any).findItems(queryWithMaxResults, (err: any, result: any) => {
         if (err) {
           logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err, query: queryWithMaxResults }, 'QBO query failed');
           reject(this.mapQboError(err, 'query'));
         } else {
           // The actual entities are usually nested under a key matching the entity type (e.g., result.QueryResponse.Item)
-          // We need to extract the relevant array. node-quickbooks tries to simplify this.
-          // Check if result.QueryResponse exists and has properties.
           const responseData = result?.QueryResponse;
           if (responseData && typeof responseData === 'object') {
              // Find the key that holds the array of results (e.g., 'Item', 'Customer')
@@ -209,6 +293,31 @@ export class QboClientService {
           } else {
              // If QueryResponse is missing or not an object, assume no results
              resolve([]);
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Gets company information using the specific QBO method.
+   */
+  private async getCompanyInfo<T>(): Promise<T[]> {
+    const client = this.getClient();
+    
+    return new Promise((resolve, reject) => {
+      // Use getCompanyInfo method for company information
+      (client as any).getCompanyInfo(this.realmId, (err: any, result: any) => {
+        if (err) {
+          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err }, 'QBO getCompanyInfo failed');
+          reject(this.mapQboError(err, 'getCompanyInfo'));
+        } else {
+          // Company info usually returns a single object, but we return as array for consistency
+          const companyInfo = result?.CompanyInfo || result;
+          if (companyInfo) {
+            resolve([companyInfo] as T[]);
+          } else {
+            resolve([]);
           }
         }
       });
