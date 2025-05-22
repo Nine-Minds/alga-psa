@@ -27,8 +27,11 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import CompanyAssets from './CompanyAssets';
+import CompanyTickets from './CompanyTickets';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
-import { ITicket } from 'server/src/interfaces';
+import { ITicket, ITicketCategory } from 'server/src/interfaces';
+import { IChannel } from 'server/src/interfaces/channel.interface';
+import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -38,6 +41,7 @@ import { getDocument, getImageUrl } from 'server/src/lib/actions/document-action
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
 import { useToast } from 'server/src/hooks/use-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
+import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 
 
 const SwitchDetailItem: React.FC<{
@@ -120,6 +124,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
   const [noteDocument, setNoteDocument] = useState<IDocument | null>(null);
+  const [ticketFormOptions, setTicketFormOptions] = useState<{
+    statusOptions: SelectOption[];
+    priorityOptions: SelectOption[];
+    channelOptions: IChannel[];
+    categories: ITicketCategory[];
+  } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -187,7 +197,29 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
     fetchUser();
     fetchAllUsers();
-  }, []);
+  }, [internalUsers.length]);
+
+  // Separate useEffect for ticket form options
+  useEffect(() => {
+    const fetchTicketFormOptions = async () => {
+      if (!currentUser) return;
+      try {
+        const options = await getTicketFormOptions(currentUser);
+        setTicketFormOptions({
+          statusOptions: options.statusOptions,
+          priorityOptions: options.priorityOptions,
+          channelOptions: options.channelOptions,
+          categories: options.categories
+        });
+      } catch (error) {
+        console.error('Error fetching ticket form options:', error);
+      }
+    };
+
+    if (currentUser) {
+      fetchTicketFormOptions();
+    }
+  }, [currentUser]);
 
   // Load note content and document metadata when component mounts
   useEffect(() => {
@@ -441,6 +473,26 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               Add Ticket
             </Button>
           </Flex>
+        </div>
+      )
+    },
+    {
+      label: "Tickets",
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {ticketFormOptions ? (
+            <CompanyTickets 
+              companyId={company.company_id}
+              initialChannels={ticketFormOptions.channelOptions}
+              initialStatuses={ticketFormOptions.statusOptions}
+              initialPriorities={ticketFormOptions.priorityOptions}
+              initialCategories={ticketFormOptions.categories}
+            />
+          ) : (
+            <div className="flex justify-center items-center h-32">
+              <span>Loading ticket filters...</span>
+            </div>
+          )}
         </div>
       )
     },
