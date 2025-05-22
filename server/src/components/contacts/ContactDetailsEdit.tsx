@@ -79,21 +79,40 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   const handleSave = async () => {
     try {
       setError(null);
+      
+      // Validate required fields
+      if (!contact.full_name?.trim()) {
+        setError('Full name is required');
+        return;
+      }
+      if (!contact.email?.trim()) {
+        setError('Email address is required');
+        return;
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(contact.email.trim())) {
+        setError('Please enter a valid email address');
+        return;
+      }
+      
       const updatedContact = await updateContact(contact);
       onSave(updatedContact);
     } catch (err) {
       console.error('Error updating contact:', err);
       if (err instanceof Error) {
-        // Handle specific error types
+        // Handle specific error types with more detailed messages
         if (err.message.includes('VALIDATION_ERROR:')) {
           setError(err.message.replace('VALIDATION_ERROR:', 'Please fix the following:'));
         } else if (err.message.includes('EMAIL_EXISTS:')) {
-          setError(err.message.replace('EMAIL_EXISTS:', ''));
+          setError('Email already exists: A contact with this email address already exists in the system');
         } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-          setError(err.message.replace('FOREIGN_KEY_ERROR:', ''));
+          setError(err.message.replace('FOREIGN_KEY_ERROR:', 'Invalid reference:'));
         } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setError('An unexpected error occurred. Please try again or contact support.');
+          setError(err.message.replace('SYSTEM_ERROR:', 'System error:'));
         } else {
+          console.log('Unhandled error:', err.message);
           setError('An error occurred while saving. Please try again.');
         }
       } else {

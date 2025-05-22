@@ -33,4 +33,6 @@ export interface DataTableProps<T> {
   editableConfig?: EditableConfig;
   /** Custom class name for table rows */
   rowClassName?: (record: T) => string;
+  /** Initial sorting configuration */
+  initialSorting?: { id: string; desc: boolean }[];
 }
