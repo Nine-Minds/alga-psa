@@ -23,7 +23,7 @@ export async function getEntityImageUrl(
 ): Promise<string | null> {
   try {
     const { knex } = await createTenantKnex();
-    
+
     let query = knex('document_associations')
       .where({
         entity_id: entityId,

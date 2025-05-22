@@ -9,7 +9,7 @@ import { getAllContacts, getContactsByCompany, getAllCompanies, exportContactsTo
 import { findTagsByEntityIds, createTag, deleteTag, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
-import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2 } from 'lucide-react';
+import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -46,6 +46,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isFiltered, setIsFiltered] = useState(false);
   const { openDrawer } = useDrawer();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
@@ -106,6 +107,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        
         const [contactTags, allTags] = await Promise.all([
           findTagsByEntityIds(
             contacts.map((contact: IContact): string => contact.contact_name_id),
@@ -124,6 +126,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
 
         contactTagsRef.current = newContactTags;
         setAllUniqueTags(allTags);
+        
       } catch (error) {
         console.error('Error fetching tags:', error);
       }
@@ -223,12 +226,16 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         initialContact={contact}
         companies={companies}
         onSave={(updatedContact) => {
-          setContacts(prevContacts =>
-            prevContacts.map((c): IContact =>
+          // Update the contact in the list with the new data
+          setContacts(prevContacts => {
+            const updatedContacts = prevContacts.map((c): IContact =>
               c.contact_name_id === updatedContact.contact_name_id ? updatedContact : c
-            )
-          );
-          handleViewDetails(updatedContact);
+            );
+            return updatedContacts;
+          });
+          
+          // After updating the list, view the contact details
+          setTimeout(() => handleViewDetails(updatedContact), 0);
         }}
         onCancel={() => handleViewDetails(contact)}
       />
@@ -262,14 +269,15 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           const message = err.message.replace('VALIDATION_ERROR:', '').trim();
           if (message.includes('associated records:')) {
             setDeleteError(
-              `${message}\n\nTo maintain data integrity, you can edit the contact and set its status to inactive instead.`
+              `Cannot delete contact\n${message}\n\nTo maintain data integrity, you can edit the contact and set its status to inactive instead.`
             );
           } else {
             setDeleteError(message);
           }
         } else if (err.message.includes('SYSTEM_ERROR:')) {
-          setDeleteError('An unexpected error occurred. Please try again or contact support.');
+          setDeleteError(err.message.replace('SYSTEM_ERROR:', 'System error:'));
         } else {
+          console.log('Unhandled delete error:', err.message);
           setDeleteError('An error occurred while deleting the contact. Please try again.');
         }
       } else {
@@ -461,7 +469,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
 
   const filteredContacts = useMemo(() => {
     return contacts.filter(contact => {
-      const matchesSearch = contact.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch = contact.full_name.toLowerCase().includes(searchTermLower) || 
+                          (contact.email && contact.email.toLowerCase().includes(searchTermLower));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);
@@ -519,28 +529,55 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                   placeholder="Search contacts"
                   className="w-64"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setIsFiltered(e.target.value !== '' || selectedTags.length > 0 || filterStatus !== 'active');
+                  }}
                 />
 
                 <TagFilter
                   allTags={allUniqueTags}
                   selectedTags={selectedTags}
                   onTagSelect={(tag) => {
-                    setSelectedTags(prev =>
-                      prev.includes(tag)
+                    setSelectedTags(prev => {
+                      const newTags = prev.includes(tag)
                         ? prev.filter(t => t !== tag)
-                        : [...prev, tag]
-                    );
+                        : [...prev, tag];
+                      setIsFiltered(searchTerm !== '' || newTags.length > 0 || filterStatus !== 'active');
+                      return newTags;
+                    });
                   }}
                 />
 
                 <CustomSelect
                   id='filter-status'
                   value={filterStatus}
-                  onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
+                  onValueChange={(value) => {
+                    const newStatus = value as 'all' | 'active' | 'inactive';
+                    setFilterStatus(newStatus);
+                    setIsFiltered(searchTerm !== '' || selectedTags.length > 0 || newStatus !== 'active');
+                  }}
                   options={statusOptions}
                   className="min-w-[180px]"
                 />
+                
+                {isFiltered && (
+                  <Button
+                    id="reset-filters-button"
+                    variant="outline"
+                    size="sm"
+                    className="whitespace-nowrap flex items-center gap-2 ml-auto"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedTags([]);
+                      setFilterStatus('active');
+                      setIsFiltered(false);
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Reset Filters
+                  </Button>
+                )}
               </div>
               <DropdownMenu.Root>
                 <DropdownMenu.Trigger>

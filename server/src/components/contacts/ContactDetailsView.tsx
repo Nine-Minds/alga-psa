@@ -1,28 +1,29 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { IContact } from '../../interfaces/contact.interfaces';
+import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { QuickAddInteraction } from '../interactions/QuickAddInteraction';
-import { Button } from '../ui/Button';
+import { QuickAddInteraction } from 'server/src/components/interactions/QuickAddInteraction';
+import { Button } from 'server/src/components/ui/Button';
 import { Pen, Plus, ArrowLeft } from 'lucide-react';
-import { useDrawer } from '../../context/DrawerContext';
-import ContactDetailsEdit from './ContactDetailsEdit';
-import { findTagsByEntityIds, findAllTagsByType } from '../../lib/actions/tagActions';
-import { ITag } from '../../interfaces/tag.interfaces';
-import { ICompany } from '../../interfaces/company.interfaces';
-import CompanyDetails from '../companies/CompanyDetails';
-import InteractionsFeed from '../interactions/InteractionsFeed';
-import { IInteraction } from '../../interfaces/interaction.interfaces';
-import { TagList } from '../tags';
-import { getCompanyById } from '../../lib/actions/companyActions';
-import Documents from '../documents/Documents';
-import { IDocument } from '../../interfaces/document.interface';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
+import { useDrawer } from 'server/src/context/DrawerContext';
+import ContactDetailsEdit from 'server/src/components/contacts/ContactDetailsEdit';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { ICompany } from 'server/src/interfaces/company.interfaces';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
+import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
+import { TagList } from 'server/src/components/tags';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import Documents from 'server/src/components/documents/Documents';
+import { IDocument } from 'server/src/interfaces/document.interface';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
-import { getContactAvatarUrl } from '../../lib/utils/avatarUtils';
+import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -113,6 +114,26 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   useEffect(() => {
     setDocuments(initialDocuments);
   }, [initialDocuments]);
+  
+  // Function to refresh documents when new ones are created
+  const handleDocumentCreated = async () => {
+    try {
+      if (onDocumentCreated) {
+        await onDocumentCreated();
+      } else {
+        // If no callback is provided, fetch documents directly
+        const refreshedDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+        // Handle both array and paginated response formats
+        const documentsList = Array.isArray(refreshedDocuments)
+          ? refreshedDocuments
+          : refreshedDocuments.documents || [];
+        setDocuments(documentsList);
+      }
+    } catch (err) {
+      console.error('Error refreshing documents:', err);
+      setError('Failed to refresh documents. Please try again.');
+    }
+  };
 
   const formatDateForDisplay = (dateString: string | null | undefined): string => {
     if (!dateString) return 'Not set';
@@ -300,7 +321,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               userId={userId}
               entityId={contact.contact_name_id}
               entityType="contact"
-              onDocumentCreated={onDocumentCreated}
+              onDocumentCreated={handleDocumentCreated}
               isInDrawer={isInDrawer}
             />
           </div>
