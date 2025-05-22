@@ -25,13 +25,25 @@ type TaskResolutionResult = { success: boolean; userFixedTheProblem: boolean; ta
  */
 interface WorkflowActions extends Record<string, (params: any) => Promise<any>> {
     createTaskAndWaitForResult: (params: CreateTaskAndWaitForResultParams) => Promise<CreateTaskAndWaitForResultReturn>;
+    createInlineTaskAndWaitForResult: (params: {
+        title: string;
+        description?: string;
+        priority?: string;
+        assignTo?: { roles?: string[]; users?: string[] };
+        contextData?: any;
+        form: {
+            jsonSchema: any;
+            uiSchema?: any;
+        };
+        waitForEventTimeoutMilliseconds?: number;
+    }) => Promise<CreateTaskAndWaitForResultReturn>;
     getInvoice: (args: { id: string; tenantId: string }) => Promise<AlgaInvoice>;
     getInvoiceItems: (args: { invoiceId: string; tenantId: string }) => Promise<{ success: boolean; items: AlgaInvoiceItem[]; message?: string; error?: any; }>;
     getCompany: (args: { id: string; tenantId: string }) => Promise<AlgaCompany>;
     lookupQboItemId: (args: { algaProductId: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; found: boolean; qboItemId?: string; message?: string; }>;
     create_human_task: (args: { taskType: string; title: string; description?: string; priority?: string; dueDate?: string; assignTo?: { roles?: string[]; users?: string[] }; contextData?: any; }) => Promise<{ success: boolean; taskId: string }>;
     triggerWorkflow: (args: { name: string; input: any; tenantId: string; }) => Promise<void>;
-    updateQboInvoice: (args: { qboInvoiceData: QboInvoiceData; qboSyncToken: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; qboResponse: any; Id?: string; SyncToken?: string; message?: string }>;
+    updateQboInvoice: (args: { qboInvoiceId: string; qboInvoiceData: QboInvoiceData; qboSyncToken: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; qboResponse: any; Id?: string; SyncToken?: string; message?: string }>;
     createQboInvoice: (args: { qboInvoiceData: QboInvoiceData; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; qboResponse: any; Id?: string; SyncToken?: string; message?: string }>;
     // Kept for backward compatibility - we're now using create_or_update_external_entity_mapping
     updateInvoiceQboDetails: (args: { invoiceId: string; qboInvoiceId?: string | null; qboSyncToken?: string | null; tenantId: string }) => Promise<void>;
@@ -240,44 +252,6 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         return { success: false };
     }
 
-    /**
-     * Helper to handle QBO customer mapping errors
-     */
-    async function handleQboCustomerMappingError(
-        ctx: WorkflowHelperContext,
-        {
-            companyId,
-            realmId,
-            algaInvoiceId,
-            invoiceNumber,
-            errorMessage
-        }: {
-            companyId: string;
-            realmId: string;
-            algaInvoiceId: string;
-            invoiceNumber?: string;
-            errorMessage?: string;
-        }
-    ): Promise<TaskResolutionResult> {
-        ctx.logger.error('get_external_entity_mapping action failed.', { company_id: companyId, error: errorMessage, executionId: ctx.executionId });
-        ctx.setState(WorkflowState.ERROR);
-        
-        return await createAndWaitForHumanTask(ctx.actions, {
-            taskType: 'workflow_error',
-            title: `Resolve Customer Mapping Lookup: Invoice #${invoiceNumber || algaInvoiceId}`,
-            description: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId} in Realm ${realmId}. Error: ${errorMessage || 'Unknown error'}. Please investigate and confirm resolution.`,
-            priority: 'high',
-            userId: ctx.userId,
-            contextData: {
-                message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${companyId}. Error: ${errorMessage}. Please investigate.`,
-                alga_invoice_id: algaInvoiceId,
-                company_id: companyId,
-                tenant: ctx.tenant,
-                realm_id: realmId,
-                workflow_instance_id: ctx.executionId
-            }
-        });
-    }
 
     /**
      * Helper to handle missing QBO item mapping errors
@@ -645,6 +619,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 });
                 
                 const updateResult = await ctx.actions.updateQboInvoice({
+                    qboInvoiceId: existingQboInvoiceId,
                     qboInvoiceData: qboInvoiceData,
                     qboSyncToken: existingSyncToken,
                     tenantId: ctx.tenant,
@@ -779,8 +754,6 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         userId
     };
     
-    // Constants for retry attempts
-    const MAX_CUSTOMER_PROCESSING_ATTEMPTS = 3;
     const currentState = getCurrentState();
 
     logger.info(`QBO Invoice Sync workflow starting/resuming. Instance ID: ${executionId}. Current state: ${currentState ?? 'INITIAL'}`);
@@ -794,10 +767,24 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         executionId
     });
 
-    const triggerEventPayload = data.get<TriggerEventPayload>('eventPayload');
+    // Get the trigger event from data context (set by workflow system)
+    let triggerEvent = data.get<{ name: string; payload: TriggerEventPayload }>('triggerEvent');
+    
+    // Fallback: if not in data context, try to get from input and store it
+    if (!triggerEvent && input?.triggerEvent) {
+        triggerEvent = input.triggerEvent as { name: string; payload: TriggerEventPayload };
+        data.set('triggerEvent', triggerEvent);
+    }
+    
+    const triggerEventPayload = triggerEvent?.payload;
     const realmId = triggerEventPayload?.realmId;
     const algaInvoiceId = triggerEventPayload?.invoiceId;
     const triggerEventName = triggerEventPayload?.eventName;
+    
+    // Store the payload in workflow data for later use if needed
+    if (triggerEventPayload) {
+        data.set('eventPayload', triggerEventPayload);
+    }
 
     if (!tenant || !realmId || !algaInvoiceId) {
         logger.error('Missing critical context: tenant, realmId, or invoiceId from input payload.', { tenant, realmIdFromPayload: realmId, invoiceIdFromPayload: algaInvoiceId, retrievedEventPayload: triggerEventPayload, contextInput: input, executionId });
@@ -1196,7 +1183,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         setState(WorkflowState.RUNNING);
         const qboInvoiceLines: any[] = [];
         const itemsToIterate = Array.isArray(retrievedInvoiceItemsArray) ? retrievedInvoiceItemsArray : [];
-        let allItemsProcessedSuccessfully = true;
+        const failedItems: Array<{item: AlgaInvoiceItem, reason: string, canRetry: boolean}> = [];
         
         // Process each invoice item using our helper function
         for (const item of itemsToIterate) {
@@ -1209,53 +1196,229 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 qboInvoiceLines
             });
             
-            // Track if any items failed to process successfully
+            // If item failed, record the failure with context
             if (!itemResult.success) {
-                allItemsProcessedSuccessfully = false;
+                let failureReason = 'Unknown mapping error';
+                let canRetry = true;
+                
+                if (!item.service_id) {
+                    failureReason = 'Missing product/service association';
+                    canRetry = false; // Can't retry until product is associated
+                } else {
+                    failureReason = `Product/service '${item.service_name || item.service_id}' not mapped to QuickBooks`;
+                    canRetry = true; // Can retry after mapping is created
+                }
+                
+                failedItems.push({
+                    item,
+                    reason: failureReason,
+                    canRetry
+                });
+                
+                logger.warn(`Item failed to process: ${failureReason}`, {
+                    item_id: item.id,
+                    service_id: item.service_id,
+                    service_name: item.service_name,
+                    canRetry,
+                    executionId
+                });
             }
         }
         
-        // Check if we have any successful items
-        if (qboInvoiceLines.length === 0 && itemsToIterate.length > 0) {
-            logger.warn('No line items were successfully mapped to QBO items.', { executionId });
+        // Handle failed items with an inline form if there are any failures
+        if (failedItems.length > 0) {
+            const isPartialFailure = qboInvoiceLines.length > 0;
+            
+            // Create dynamic form properties for each failed item
+            const formProperties: any = {};
+            const uiSchema: any = {};
+            
+            // Add summary information
+            formProperties.summaryInfo = {
+                type: 'string',
+                title: 'Mapping Issues Summary',
+                readOnly: true,
+                default: isPartialFailure 
+                    ? `Invoice #${algaInvoice?.invoice_number || 'Unknown'} was partially synced to QuickBooks. ${qboInvoiceLines.length} of ${itemsToIterate.length} items were successfully mapped, but ${failedItems.length} items failed and need attention.`
+                    : `Invoice #${algaInvoice?.invoice_number || 'Unknown'} could not be synced to QuickBooks because none of its ${failedItems.length} line items could be mapped.`
+            };
+            
+            uiSchema.summaryInfo = {
+                'ui:widget': 'textarea',
+                'ui:options': { rows: 3 }
+            };
+            
+            // Add a section for each failed item
+            failedItems.forEach((failedItem, index) => {
+                const itemKey = `item_${index}`;
+                const item = failedItem.item;
+                
+                // Item details (read-only)
+                formProperties[`${itemKey}_details`] = {
+                    type: 'string',
+                    title: `Item ${index + 1} Details`,
+                    readOnly: true,
+                    default: `Item ID: ${item.id}\nProduct/Service: ${item.service_name || item.service_id || 'Not assigned'}\nAmount: $${item.amount || '0.00'}\nIssue: ${failedItem.reason}`
+                };
+                
+                uiSchema[`${itemKey}_details`] = {
+                    'ui:widget': 'textarea',
+                    'ui:options': { rows: 4 }
+                };
+                
+                // Action selection for this item
+                formProperties[`${itemKey}_action`] = {
+                    type: 'string',
+                    title: `Action for Item ${index + 1}`,
+                    enum: failedItem.canRetry 
+                        ? ['skip', 'retry_after_mapping', 'manual_review']
+                        : ['skip', 'assign_product', 'manual_review'],
+                    enumNames: failedItem.canRetry
+                        ? ['Skip this item (exclude from invoice)', 'I have mapped the product - retry', 'Flag for manual review']
+                        : ['Skip this item (exclude from invoice)', 'I will assign a product first', 'Flag for manual review'],
+                    default: 'manual_review'
+                };
+                
+                // Notes field for additional context
+                formProperties[`${itemKey}_notes`] = {
+                    type: 'string',
+                    title: `Notes for Item ${index + 1}`,
+                    description: 'Optional notes about this item or the resolution'
+                };
+                
+                uiSchema[`${itemKey}_notes`] = {
+                    'ui:widget': 'textarea',
+                    'ui:options': { rows: 2 }
+                };
+            });
+            
+            // Global action
+            formProperties.globalAction = {
+                type: 'string',
+                title: 'Overall Resolution',
+                enum: ['resolve_individually', 'skip_all_failed', 'abort_sync'],
+                enumNames: [
+                    'Resolve each item individually as specified above',
+                    'Skip all failed items and continue with successful ones',
+                    'Abort the entire sync operation'
+                ],
+                default: 'resolve_individually'
+            };
+            
+            const title = isPartialFailure 
+                ? `Partial Mapping Issues - Invoice #${algaInvoice?.invoice_number || 'Unknown'}`
+                : `Mapping Issues - Invoice #${algaInvoice?.invoice_number || 'Unknown'}`;
+            
             setState(WorkflowState.ERROR);
             
-            await createAndWaitForHumanTask(typedActions, {
-                taskType: 'workflow_error',
-                title: `No Products Could Be Mapped - Invoice #${algaInvoice?.invoice_number || 'Unknown'}`,
-                description: `Invoice #${algaInvoice?.invoice_number || 'Unknown'} could not be synced because none of its line items could be mapped to QuickBooks items.`,
-                priority: 'high',
-                userId: context.userId,
+            const taskResult = await typedActions.createInlineTaskAndWaitForResult({
+                title,
+                description: `Review and resolve QuickBooks mapping issues for invoice line items`,
+                priority: isPartialFailure ? 'medium' : 'high',
+                assignTo: userId ? { users: [userId] } : { roles: ['admin', 'billing'] },
                 contextData: {
-                    message: `Invoice #${algaInvoice?.invoice_number || 'Unknown'} could not be synced to QuickBooks because none of its line items could be mapped to QuickBooks items. This usually indicates that multiple products need to be mapped in the QuickBooks integration settings. Please check the individual product mapping errors for more details.`,
                     alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
+                    invoice_number: algaInvoice?.invoice_number || 'Unknown',
                     tenant: tenant,
                     realm_id: realmId,
-                    workflow_instance_id: executionId
-                }
+                    workflow_instance_id: executionId,
+                    is_partial_failure: isPartialFailure,
+                    successful_items_count: qboInvoiceLines.length,
+                    failed_items_count: failedItems.length,
+                    total_items_count: itemsToIterate.length
+                },
+                form: {
+                    jsonSchema: {
+                        type: 'object',
+                        properties: formProperties,
+                        required: ['globalAction']
+                    },
+                    uiSchema
+                },
+                waitForEventTimeoutMilliseconds: 3600000 // 1 hour timeout
             });
-            return;
-        } else if (!allItemsProcessedSuccessfully && qboInvoiceLines.length > 0) {
-            // Some items processed successfully, but not all
-            logger.warn(`Some line items failed to map for invoice #${algaInvoice?.invoice_number || 'Unknown'}. Proceeding with successfully mapped items.`, { executionId });
             
-            await createAndWaitForHumanTask(typedActions, {
-                taskType: 'workflow_error',
-                title: `Partial Item Mapping - Invoice #${algaInvoice?.invoice_number || 'Unknown'}`,
-                description: `Invoice #${algaInvoice?.invoice_number || 'Unknown'} was synced to QuickBooks, but some line items could not be mapped and were excluded. Please review.`,
-                priority: 'medium',
-                userId: context.userId,
-                contextData: {
-                    message: `Invoice #${algaInvoice?.invoice_number || 'Unknown'} was synced to QuickBooks, but one or more line items could not be mapped after attempts and were excluded. Please review the individual item mapping errors for details. The invoice in QuickBooks may be incomplete.`,
-                    alga_invoice_id: algaInvoice?.invoice_id || 'Unknown',
-                    successfully_mapped_items_count: qboInvoiceLines.length,
-                    total_items_attempted: itemsToIterate.length,
-                    tenant: tenant,
-                    realm_id: realmId,
-                    workflow_instance_id: executionId
+            if (taskResult.success && taskResult.resolutionData) {
+                const resolution = taskResult.resolutionData;
+                logger.info('Received resolution for mapping issues', { 
+                    globalAction: resolution.globalAction,
+                    executionId 
+                });
+                
+                // Handle the global action
+                if (resolution.globalAction === 'abort_sync') {
+                    logger.info('User chose to abort sync operation', { executionId });
+                    setState(WorkflowState.ERROR);
+                    return;
+                } else if (resolution.globalAction === 'skip_all_failed') {
+                    if (!isPartialFailure) {
+                        logger.warn('User chose to skip all failed items, but no items succeeded', { executionId });
+                        setState(WorkflowState.ERROR);
+                        return;
+                    }
+                    logger.info('User chose to skip all failed items and continue with successful ones', { 
+                        successfulCount: qboInvoiceLines.length,
+                        executionId 
+                    });
+                    // Continue with existing successful items
+                } else {
+                    // resolve_individually - process each item's action
+                    const itemsToRetry: AlgaInvoiceItem[] = [];
+                    
+                    for (let i = 0; i < failedItems.length; i++) {
+                        const itemAction = resolution[`item_${i}_action`];
+                        const itemNotes = resolution[`item_${i}_notes`];
+                        const failedItem = failedItems[i];
+                        
+                        logger.info(`Item ${failedItem.item.id} action: ${itemAction}`, { 
+                            notes: itemNotes,
+                            executionId 
+                        });
+                        
+                        if (itemAction === 'retry_after_mapping' || itemAction === 'assign_product') {
+                            itemsToRetry.push(failedItem.item);
+                        }
+                        // 'skip' and 'manual_review' items are simply excluded
+                    }
+                    
+                    // Retry failed items that user indicated should be retried
+                    if (itemsToRetry.length > 0) {
+                        logger.info(`Retrying ${itemsToRetry.length} items after user resolution`, { executionId });
+                        
+                        for (const item of itemsToRetry) {
+                            const retryResult = await processInvoiceItem(helperContext, {
+                                item,
+                                algaInvoice,
+                                algaInvoiceId,
+                                realmId: realmId!,
+                                qboCredentials,
+                                qboInvoiceLines
+                            });
+                            
+                            if (retryResult.success) {
+                                logger.info(`Item ${item.id} successfully processed on retry`, { executionId });
+                            } else {
+                                logger.warn(`Item ${item.id} still failed on retry`, { executionId });
+                            }
+                        }
+                    }
                 }
-            });
-            // Continue with the workflow since we have at least some items mapped
+            } else {
+                // Task failed or timed out
+                logger.error('Mapping resolution task failed or timed out', { 
+                    error: taskResult.error,
+                    executionId 
+                });
+                setState(WorkflowState.ERROR);
+                return;
+            }
+            
+            // Re-check if we have any items after resolution
+            if (qboInvoiceLines.length === 0) {
+                logger.warn('No items available for sync after resolution', { executionId });
+                setState(WorkflowState.ERROR);
+                return;
+            }
         }
 
 
