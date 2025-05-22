@@ -28,6 +28,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
 }) => {
   const [tags, setTags] = useState<ITag[]>(initialTags);
 
+  // Debug logging
+  console.log('TagManager - entityId:', entityId);
+  console.log('TagManager - entityType:', entityType);
+  console.log('TagManager - existingTags:', existingTags);
+
   useEffect(() => {
     setTags(initialTags);
   }, [initialTags]);

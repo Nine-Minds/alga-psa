@@ -135,11 +135,15 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     } catch (err) {
       console.error('Error adding contact:', err);
       if (err instanceof Error) {
-        // Preserve the original error message without stripping prefixes
-        if (err.message.includes('VALIDATION_ERROR:') ||
-            err.message.includes('EMAIL_EXISTS:') ||
-            err.message.includes('FOREIGN_KEY_ERROR:') ||
-            err.message.includes('SYSTEM_ERROR:')) {
+        // Preserve the original error message for display
+        if (err.message.includes('VALIDATION_ERROR:')) {
+          setError(err.message);
+        } else if (err.message.includes('EMAIL_EXISTS:')) {
+          // Special handling for email exists errors
+          setError('EMAIL_EXISTS: A contact with this email address already exists in the system');
+        } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
+          setError(err.message);
+        } else if (err.message.includes('SYSTEM_ERROR:')) {
           setError(err.message);
         } else {
           // For unhandled errors, use a generic message
@@ -169,16 +173,16 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             <h4 className="font-semibold mb-2">Error creating contact:</h4>
             <div className="text-sm">
               {error.split('\n').map((line, index) => {
-                // Remove error type prefixes for display
+                // Format error messages for display
                 let displayMessage = line;
                 if (line.includes('VALIDATION_ERROR:')) {
                   displayMessage = line.replace('VALIDATION_ERROR:', 'Please fix the following:');
                 } else if (line.includes('EMAIL_EXISTS:')) {
-                  displayMessage = line.replace('EMAIL_EXISTS:', '');
+                  displayMessage = line.replace('EMAIL_EXISTS:', 'Email already exists:');
                 } else if (line.includes('FOREIGN_KEY_ERROR:')) {
-                  displayMessage = line.replace('FOREIGN_KEY_ERROR:', '');
+                  displayMessage = line.replace('FOREIGN_KEY_ERROR:', 'Invalid reference:');
                 } else if (line.includes('SYSTEM_ERROR:')) {
-                  displayMessage = 'An unexpected error occurred. Please try again or contact support.';
+                  displayMessage = line.replace('SYSTEM_ERROR:', 'System error:');
                 }
                 return <p key={index} className="mb-1">{displayMessage}</p>;
               })}
@@ -218,6 +222,19 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               />
             </div>
             <div>
+              <Label>Company (Optional)</Label>
+              <CompanyPicker
+                id="quick-add-contact-company"
+                companies={companies}
+                onSelect={handleCompanySelect}
+                selectedCompanyId={companyId}
+                filterState={filterState}
+                onFilterStateChange={setFilterState}
+                clientTypeFilter={clientTypeFilter}
+                onClientTypeFilterChange={setClientTypeFilter}
+              />
+            </div>
+            <div>
               <Label htmlFor="role">Role</Label>
               <Input
                 id="quick-add-contact-role"
@@ -233,19 +250,6 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add any additional notes about the contact..."
-              />
-            </div>
-            <div>
-              <Label>Company (Optional)</Label>
-              <CompanyPicker
-                id="quick-add-contact-company"
-                companies={companies}
-                onSelect={handleCompanySelect}
-                selectedCompanyId={companyId}
-                filterState={filterState}
-                onFilterStateChange={setFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
               />
             </div>
             <div className="flex items-center py-2">

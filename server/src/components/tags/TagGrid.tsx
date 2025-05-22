@@ -1,5 +1,6 @@
 import React from 'react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
+import { Button } from 'server/src/components/ui/Button';
 
 interface TagGridProps {
   tags: string[];
@@ -16,23 +17,26 @@ export const TagGrid: React.FC<TagGridProps> = ({
 }) => {
   return (
     <div className={`grid grid-cols-3 gap-2 p-2 max-h-60 overflow-y-auto ${className}`}>
-      {tags.map((tag):JSX.Element => {
+      {tags.map((tag, index):JSX.Element => {
         const isSelected = selectedTags.includes(tag);
         const colors = generateEntityColor(tag);
         return (
-          <button
+          <Button
             key={tag}
+            id={`tag-${index}`}
+            label={tag}
             onClick={() => onTagSelect(tag)}
             className={`p-2 rounded-md text-sm text-center transition-colors ${
-              isSelected ? 'ring-2 ring-primary-500' : ''
+              isSelected ? 'ring-2 ring-primary-500 px-1' : ''
             }`}
             style={{
               backgroundColor: colors.background,
               color: colors.text,
             }}
+            variant="ghost"
           >
             {tag}
-          </button>
+          </Button>
         );
       })}
       {tags.length === 0 && (

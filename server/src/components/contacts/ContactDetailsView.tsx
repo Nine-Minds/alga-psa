@@ -113,6 +113,26 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   useEffect(() => {
     setDocuments(initialDocuments);
   }, [initialDocuments]);
+  
+  // Function to refresh documents when new ones are created
+  const handleDocumentCreated = async () => {
+    try {
+      if (onDocumentCreated) {
+        await onDocumentCreated();
+      } else {
+        // If no callback is provided, fetch documents directly
+        const refreshedDocuments = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+        // Handle both array and paginated response formats
+        const documentsList = Array.isArray(refreshedDocuments)
+          ? refreshedDocuments
+          : refreshedDocuments.documents || [];
+        setDocuments(documentsList);
+      }
+    } catch (err) {
+      console.error('Error refreshing documents:', err);
+      setError('Failed to refresh documents. Please try again.');
+    }
+  };
 
   const formatDateForDisplay = (dateString: string | null | undefined): string => {
     if (!dateString) return 'Not set';
@@ -300,7 +320,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               userId={userId}
               entityId={contact.contact_name_id}
               entityType="contact"
-              onDocumentCreated={onDocumentCreated}
+              onDocumentCreated={handleDocumentCreated}
               isInDrawer={isInDrawer}
             />
           </div>
