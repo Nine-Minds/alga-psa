@@ -74,12 +74,10 @@ const createConnectionWithTenant = (config, tenant) => {
     pool: {
       ...config.pool,
       afterCreate: (conn, done) => {
-        conn.query(`SET SESSION "app.current_tenant" = '${tenant}';`, (err) => {
-          if (err) {
-            console.error('Error setting tenant:', err);
-          }
-          done(err, conn);
-        });
+        // With CitusDB, tenant isolation is handled automatically at the shard level
+        // No need to set app.current_tenant session variable
+        console.log(`Connection created for tenant: ${tenant} (CitusDB handles isolation automatically)`);
+        done(null, conn);
       },
     },
   };

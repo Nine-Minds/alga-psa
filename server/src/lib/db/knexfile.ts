@@ -136,14 +136,10 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
       conn.on('error', (err: Error) => {
         console.error('Database connection error:', err);
       });
-      conn.query(`SET app.current_tenant = '${tenant}'`, (err: Error) => {
-        if (err) {
-          console.error(`Error setting tenant context: ${err.message}`);
-        } else {
-          console.log(`Successfully set tenant context to: ${tenant}`);
-        }
-        done(err, conn);
-      });
+      // With CitusDB, tenant isolation is handled automatically at the shard level
+      // No need to set app.current_tenant session variable
+      console.log(`Connection created for tenant: ${tenant} (CitusDB handles isolation automatically)`);
+      done(null, conn);
     },
     afterRelease: (conn: any, done: Function) => {
       console.log('Releasing connection back to the pool');

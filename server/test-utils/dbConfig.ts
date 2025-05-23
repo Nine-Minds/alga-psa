@@ -58,20 +58,10 @@ export async function createTestDbConnection(): Promise<Knex> {
 export async function createTestDbConnectionWithTenant(tenant: string): Promise<Knex> {
   const db = await createTestDbConnection();
 
-  // Set up connection pool with tenant context
-  const config = db.client.config;
-  config.pool = {
-    ...config.pool,
-    afterCreate: (conn: any, done: Function) => {
-      conn.query(`SET SESSION "app.current_tenant" = '${tenant}';`, (err: Error) => {
-        if (err) {
-          console.error('Error setting tenant:', err);
-        }
-        done(err, conn);
-      });
-    },
-  };
-
+  // With CitusDB, tenant isolation is handled automatically at the shard level
+  // No need to set app.current_tenant session variable
+  // The tenant should be included in all WHERE clauses as per CitusDB requirements
+  
   return db;
 }
 

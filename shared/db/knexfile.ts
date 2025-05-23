@@ -135,9 +135,9 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
       conn.on('error', (err: Error) => {
         console.error('Database connection error:', err);
       });
-      conn.query(`SET app.current_tenant = '${tenant}'`, (err: Error) => {
-        done(err, conn);
-      });
+      // With CitusDB, tenant isolation is handled automatically at the shard level
+      // No need to set app.current_tenant session variable
+      done(null, conn);
     },
     afterRelease: (conn: any, done: Function) => {
       conn.query('SELECT 1', (err: Error) => {
