@@ -9,9 +9,8 @@ import { useActivityDrawer } from "server/src/components/user-activities/Activit
 import { useRouter } from 'next/navigation';
 import { Card } from "server/src/components/ui/Card";
 import { Badge } from "server/src/components/ui/Badge";
-import { Button } from "server/src/components/ui/Button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "server/src/components/ui/DropdownMenu";
-import { MoreVertical, Repeat } from 'lucide-react';
+import { ActivityActionMenu } from "server/src/components/user-activities/ActivityActionMenu";
+import { Repeat } from 'lucide-react';
 
 // Format date to a readable format
 const formatDate = (dateString?: string) => {
@@ -27,19 +26,12 @@ const formatDate = (dateString?: string) => {
 interface ActivityCardProps {
   activity: Activity;
   onViewDetails: (activity: Activity) => void;
+  onActionComplete?: () => void;
   renderExtra?: () => React.ReactNode;
 }
 
-// Helper function to determine if an action should be shown
-const shouldShowAction = (actionId: string, activityType: ActivityType) => {
-  // For 'edit' action, only show for tickets and workflow tasks
-  if (actionId === 'edit') {
-    return activityType === ActivityType.TICKET || activityType === ActivityType.WORKFLOW_TASK;
-  }
-  return true;
-};
 
-export function ActivityCard({ activity, onViewDetails, renderExtra }: ActivityCardProps) {
+export function ActivityCard({ activity, onViewDetails, onActionComplete, renderExtra }: ActivityCardProps) {
   const { openActivityDrawer } = useActivityDrawer();
   // Color mapping based on activity type
   const typeColorMap = {
@@ -58,40 +50,6 @@ export function ActivityCard({ activity, onViewDetails, renderExtra }: ActivityC
   };
 
   const router = useRouter();
-  
-  const handleActionClick = (e: React.MouseEvent, actionId: string, activity: Activity) => {
-    e.stopPropagation();
-    
-    // Handle action click based on actionId
-    switch (actionId) {
-      case 'view':
-        // Open drawer for view action
-        openActivityDrawer(activity);
-        break;
-      case 'edit':
-        // Navigate directly to appropriate page for edit action
-        switch (activity.type) {
-          case ActivityType.SCHEDULE:
-            router.push(`/msp/schedule/entries/${activity.id}`);
-            break;
-          case ActivityType.PROJECT_TASK:
-            router.push(`/msp/projects/tasks/${activity.id}`);
-            break;
-          case ActivityType.TICKET:
-            router.push(`/msp/tickets/${activity.id}`);
-            break;
-          case ActivityType.TIME_ENTRY:
-            router.push(`/msp/time-management/entries/${activity.id}`);
-            break;
-          case ActivityType.WORKFLOW_TASK:
-            router.push(`/msp/workflow/tasks/${activity.id}`);
-            break;
-        }
-        break;
-      default:
-        console.log(`Action ${actionId} clicked for activity ${activity.id}`);
-    }
-  };
 
   return (
     <div
@@ -110,36 +68,13 @@ export function ActivityCard({ activity, onViewDetails, renderExtra }: ActivityC
         </div>
         <div className="flex items-center gap-2">
           {priorityIndicator[activity.priority]}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                id={`${activity.type}-actions-menu-${activity.id}`}
-                variant="ghost"
-                className="h-8 w-8 p-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              {activity.actions
-                .filter(action => shouldShowAction(action.id, activity.type))
-                .map(action => (
-                  <DropdownMenuItem
-                    key={action.id}
-                    id={`${action.id}-${activity.type}-menu-item-${activity.id}`}
-                    onClick={(e) => handleActionClick(e, action.id, activity)}
-                    disabled={action.disabled}
-                  >
-                    {action.id === 'edit' ? 'Go to page' : action.label}
-                    {action.disabledReason && action.disabled && (
-                      <span className="text-xs text-gray-400 ml-2">{action.disabledReason}</span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <ActivityActionMenu 
+              activity={activity}
+              onActionComplete={onActionComplete}
+              onViewDetails={onViewDetails}
+            />
+          </div>
         </div>
       </div>
       
@@ -180,13 +115,14 @@ export function ActivityCard({ activity, onViewDetails, renderExtra }: ActivityC
 
 // Specialized activity card components
 
-export function ScheduleCard({ activity, onViewDetails }: { activity: Activity; onViewDetails: (activity: Activity) => void }) {
+export function ScheduleCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
   const { openActivityDrawer } = useActivityDrawer();
   
   return (
     <ActivityCard
       activity={activity}
       onViewDetails={onViewDetails}
+      onActionComplete={onActionComplete}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -200,7 +136,7 @@ export function ScheduleCard({ activity, onViewDetails }: { activity: Activity; 
   );
 }
 
-export function ProjectTaskCard({ activity, onViewDetails }: { activity: Activity; onViewDetails: (activity: Activity) => void }) {
+export function ProjectTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
   const { openActivityDrawer } = useActivityDrawer();
   const projectTask = activity as any; // Type assertion for project-specific fields
   
@@ -208,6 +144,7 @@ export function ProjectTaskCard({ activity, onViewDetails }: { activity: Activit
     <ActivityCard
       activity={activity}
       onViewDetails={onViewDetails}
+      onActionComplete={onActionComplete}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -224,7 +161,7 @@ export function ProjectTaskCard({ activity, onViewDetails }: { activity: Activit
   );
 }
 
-export function TicketCard({ activity, onViewDetails }: { activity: Activity; onViewDetails: (activity: Activity) => void }) {
+export function TicketCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
   const { openActivityDrawer } = useActivityDrawer();
   const ticket = activity as any; // Type assertion for ticket-specific fields
   
@@ -232,6 +169,7 @@ export function TicketCard({ activity, onViewDetails }: { activity: Activity; on
     <ActivityCard
       activity={activity}
       onViewDetails={onViewDetails}
+      onActionComplete={onActionComplete}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -246,7 +184,7 @@ export function TicketCard({ activity, onViewDetails }: { activity: Activity; on
   );
 }
 
-export function TimeEntryCard({ activity, onViewDetails }: { activity: Activity; onViewDetails: (activity: Activity) => void }) {
+export function TimeEntryCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
   const { openActivityDrawer } = useActivityDrawer();
   const timeEntry = activity as any; // Type assertion for time entry-specific fields
   
@@ -254,6 +192,7 @@ export function TimeEntryCard({ activity, onViewDetails }: { activity: Activity;
     <ActivityCard
       activity={activity}
       onViewDetails={onViewDetails}
+      onActionComplete={onActionComplete}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
@@ -272,7 +211,7 @@ export function TimeEntryCard({ activity, onViewDetails }: { activity: Activity;
   );
 }
 
-export function WorkflowTaskCard({ activity, onViewDetails }: { activity: Activity; onViewDetails: (activity: Activity) => void }) {
+export function WorkflowTaskCard({ activity, onViewDetails, onActionComplete }: { activity: Activity; onViewDetails: (activity: Activity) => void; onActionComplete?: () => void }) {
   const { openActivityDrawer } = useActivityDrawer();
   const workflowTask = activity as any; // Type assertion for workflow task-specific fields
   
@@ -280,6 +219,7 @@ export function WorkflowTaskCard({ activity, onViewDetails }: { activity: Activi
     <ActivityCard
       activity={activity}
       onViewDetails={onViewDetails}
+      onActionComplete={onActionComplete}
       renderExtra={() => (
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">

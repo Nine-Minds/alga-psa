@@ -208,6 +208,7 @@ export function WorkflowTasksSection({ limit = 5, onViewAll }: WorkflowTasksSect
                 key={activity.id}
                 activity={activity}
                 onViewDetails={() => openActivityDrawer(activity)}
+                onActionComplete={() => loadActivities(workflowFilters)}
               />
             ))}
           </div>
