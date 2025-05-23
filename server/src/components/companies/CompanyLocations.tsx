@@ -9,13 +9,16 @@ import {
   deleteCompanyLocation,
   setDefaultCompanyLocation 
 } from '../../lib/actions/companyLocationActions';
+import { getActiveTaxRegions } from '../../lib/actions/taxSettingsActions';
+import { ITaxRegion } from '../../interfaces/tax.interfaces';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
 import { TextArea } from '../ui/TextArea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/Dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Switch } from '../ui/Switch';
+import CustomSelect from '../ui/CustomSelect';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
@@ -34,7 +37,7 @@ interface LocationFormData {
   postal_code: string;
   country_code: string;
   country_name: string;
-  region_code: string;
+  region_code: string | null;
   phone: string;
   fax: string;
   email: string;
@@ -54,7 +57,7 @@ const initialFormData: LocationFormData = {
   postal_code: '',
   country_code: 'US',
   country_name: 'United States',
-  region_code: '',
+  region_code: null,
   phone: '',
   fax: '',
   email: '',
@@ -70,11 +73,27 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [editingLocation, setEditingLocation] = useState<ICompanyLocation | null>(null);
   const [formData, setFormData] = useState<LocationFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
+  const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     loadLocations();
+    loadTaxRegions();
   }, [companyId]);
+
+  const loadTaxRegions = async () => {
+    try {
+      const regions = await getActiveTaxRegions();
+      setTaxRegions(regions);
+    } catch (error) {
+      console.error('Error loading tax regions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load tax regions',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const loadLocations = async () => {
     try {
@@ -111,7 +130,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       postal_code: location.postal_code || '',
       country_code: location.country_code,
       country_name: location.country_name,
-      region_code: location.region_code || '',
+      region_code: location.region_code || null,
       phone: location.phone || '',
       fax: location.fax || '',
       email: location.email || '',
@@ -126,14 +145,22 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const handleSaveLocation = async () => {
     setIsLoading(true);
     try {
+      // Prepare the data, converting empty strings to null for region_code
+      const locationData = {
+        ...formData,
+        region_code: formData.region_code && formData.region_code.trim() !== '' ? formData.region_code : null,
+        company_id: companyId
+      };
+
       if (editingLocation) {
-        await updateCompanyLocation(editingLocation.location_id, formData);
+        const { company_id, ...updateData } = locationData;
+        await updateCompanyLocation(editingLocation.location_id, updateData);
         toast({
           title: 'Success',
           description: 'Location updated successfully',
         });
       } else {
-        await createCompanyLocation(companyId, { ...formData, company_id: companyId });
+        await createCompanyLocation(companyId, locationData);
         toast({
           title: 'Success',
           description: 'Location created successfully',
@@ -208,6 +235,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     return parts.join(', ');
   };
 
+  // Read-only mode - show default location or "No locations"
   if (!isEditing) {
     const defaultLocation = locations.find(loc => loc.is_default);
     if (defaultLocation) {
@@ -223,197 +251,221 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     return <span className="text-gray-400 text-sm">No locations</span>;
   }
 
+  // Editing mode - show full management interface
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium">Locations</h3>
-        <Dialog isOpen={isDialogOpen} onClose={() => setIsDialogOpen(false)}>
-          <DialogTrigger asChild>
-            <Button 
-              id="add-company-location-button"
-              onClick={handleAddLocation} 
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Location
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingLocation ? 'Edit Location' : 'Add New Location'}
-              </DialogTitle>
-            </DialogHeader>
+        <Button 
+          id="add-company-location-button"
+          onClick={handleAddLocation} 
+          size="sm"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Location
+        </Button>
+      </div>
+      
+      {/* Location Form Dialog */}
+      <Dialog 
+        isOpen={isDialogOpen} 
+        onClose={() => setIsDialogOpen(false)}
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingLocation ? 'Edit Location' : 'Add New Location'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={(e) => { e.preventDefault(); handleSaveLocation(); }} className="space-y-4" noValidate>
+            <div>
+              <Label htmlFor="location-name-input">Location Name</Label>
+              <Input
+                id="location-name-input"
+                value={formData.location_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, location_name: e.target.value }))}
+                placeholder="e.g., Main Office, Warehouse"
+              />
+            </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <Label htmlFor="location-name-input">Location Name</Label>
-                <Input
-                  id="location-name-input"
-                  value={formData.location_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, location_name: e.target.value }))}
-                  placeholder="e.g., Main Office, Warehouse"
+            <div>
+              <Label htmlFor="address-line1-input">Address Line 1 *</Label>
+              <Input
+                id="address-line1-input"
+                value={formData.address_line1}
+                onChange={(e) => setFormData(prev => ({ ...prev, address_line1: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="address-line2-input">Address Line 2</Label>
+              <Input
+                id="address-line2-input"
+                value={formData.address_line2}
+                onChange={(e) => setFormData(prev => ({ ...prev, address_line2: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="address-line3-input">Address Line 3</Label>
+              <Input
+                id="address-line3-input"
+                value={formData.address_line3}
+                onChange={(e) => setFormData(prev => ({ ...prev, address_line3: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="city-input">City *</Label>
+              <Input
+                id="city-input"
+                value={formData.city}
+                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="state-province-input">State/Province</Label>
+              <Input
+                id="state-province-input"
+                value={formData.state_province}
+                onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="postal-code-input">Postal Code</Label>
+              <Input
+                id="postal-code-input"
+                value={formData.postal_code}
+                onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="country-code-input">Country Code *</Label>
+              <Input
+                id="country-code-input"
+                value={formData.country_code}
+                onChange={(e) => setFormData(prev => ({ ...prev, country_code: e.target.value }))}
+                placeholder="US"
+                maxLength={2}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="country-name-input">Country Name *</Label>
+              <Input
+                id="country-name-input"
+                value={formData.country_name}
+                onChange={(e) => setFormData(prev => ({ ...prev, country_name: e.target.value }))}
+                required
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="tax-region-select">Tax Region</Label>
+              <CustomSelect
+                id="tax-region-select"
+                value={formData.region_code || 'none'}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, region_code: value === 'none' ? null : value }))}
+                options={[
+                  { value: 'none', label: 'Select a tax region...' },
+                  ...taxRegions.map(region => ({
+                    value: region.region_code,
+                    label: region.region_name
+                  }))
+                ]}
+                placeholder="Select a tax region..."
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="phone-input">Phone</Label>
+              <Input
+                id="phone-input"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="email-input">Email</Label>
+              <Input
+                id="email-input"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="notes-input">Notes</Label>
+              <TextArea
+                id="notes-input"
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-default-switch"
+                  checked={formData.is_default}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_default: checked }))}
                 />
+                <Label htmlFor="is-default-switch">Default Location</Label>
               </div>
               
-              <div className="col-span-2">
-                <Label htmlFor="address-line1-input">Address Line 1 *</Label>
-                <Input
-                  id="address-line1-input"
-                  value={formData.address_line1}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address_line1: e.target.value }))}
-                  required
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-billing-address-switch"
+                  checked={formData.is_billing_address}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_billing_address: checked }))}
                 />
+                <Label htmlFor="is-billing-address-switch">Billing Address</Label>
               </div>
               
-              <div>
-                <Label htmlFor="address-line2-input">Address Line 2</Label>
-                <Input
-                  id="address-line2-input"
-                  value={formData.address_line2}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address_line2: e.target.value }))}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is-shipping-address-switch"
+                  checked={formData.is_shipping_address}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_shipping_address: checked }))}
                 />
-              </div>
-              
-              <div>
-                <Label htmlFor="address-line3-input">Address Line 3</Label>
-                <Input
-                  id="address-line3-input"
-                  value={formData.address_line3}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address_line3: e.target.value }))}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="city-input">City *</Label>
-                <Input
-                  id="city-input"
-                  value={formData.city}
-                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="state-province-input">State/Province</Label>
-                <Input
-                  id="state-province-input"
-                  value={formData.state_province}
-                  onChange={(e) => setFormData(prev => ({ ...prev, state_province: e.target.value }))}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="postal-code-input">Postal Code</Label>
-                <Input
-                  id="postal-code-input"
-                  value={formData.postal_code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, postal_code: e.target.value }))}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="country-code-input">Country Code *</Label>
-                <Input
-                  id="country-code-input"
-                  value={formData.country_code}
-                  onChange={(e) => setFormData(prev => ({ ...prev, country_code: e.target.value }))}
-                  placeholder="US"
-                  maxLength={2}
-                  required
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="country-name-input">Country Name *</Label>
-                <Input
-                  id="country-name-input"
-                  value={formData.country_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, country_name: e.target.value }))}
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="phone-input">Phone</Label>
-                <Input
-                  id="phone-input"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="email-input">Email</Label>
-                <Input
-                  id="email-input"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="notes-input">Notes</Label>
-                <TextArea
-                  id="notes-input"
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  rows={3}
-                />
-              </div>
-              
-              <div className="col-span-2 space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is-default-switch"
-                    checked={formData.is_default}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_default: checked }))}
-                  />
-                  <Label htmlFor="is-default-switch">Default Location</Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is-billing-address-switch"
-                    checked={formData.is_billing_address}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_billing_address: checked }))}
-                  />
-                  <Label htmlFor="is-billing-address-switch">Billing Address</Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="is-shipping-address-switch"
-                    checked={formData.is_shipping_address}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_shipping_address: checked }))}
-                  />
-                  <Label htmlFor="is-shipping-address-switch">Shipping Address</Label>
-                </div>
+                <Label htmlFor="is-shipping-address-switch">Shipping Address</Label>
               </div>
             </div>
             
-            <div className="flex justify-end space-x-2 mt-6">
+            <DialogFooter>
               <Button 
                 id="cancel-location-button"
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isLoading}
+                type="button"
               >
                 Cancel
               </Button>
               <Button 
                 id="save-location-button"
-                onClick={handleSaveLocation}
+                type="submit"
                 disabled={isLoading || !formData.address_line1 || !formData.city || !formData.country_name}
               >
                 {isLoading ? 'Saving...' : 'Save Location'}
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
       
+      {/* Locations List */}
       <div className="space-y-3">
         {locations.map((location) => (
           <Card key={location.location_id} className="relative">

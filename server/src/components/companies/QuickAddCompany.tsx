@@ -20,7 +20,7 @@ import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { createCompany } from 'server/src/lib/actions/companyActions';
 import toast from 'react-hot-toast';
 
-type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
+type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
 
 interface QuickAddCompanyProps {
   open: boolean;
@@ -41,7 +41,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     phone_no: '',
     email: '',
     url: '',
-    address: '',
     notes: '',
     is_inactive: false,
     is_tax_exempt: false,
@@ -128,7 +127,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
           updatedState.properties = {};
         }
         updatedState.properties.website = value as string;
-      } else {
+      } else if (field !== 'address') { // Exclude address field
         (updatedState as any)[field] = value;
       }
       return updatedState;
@@ -217,16 +216,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <p className="text-xs text-gray-500 mt-1">
                 Updates both URL and Website property
               </p>
-            </div>
-
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => handleChange('address', e.target.value)}
-                disabled={isSubmitting}
-              />
             </div>
 
             <div>
