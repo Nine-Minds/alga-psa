@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput } from 'server/src/interfaces/document-association.interface';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -19,16 +21,18 @@ export async function associateDocumentWithAsset(input: IDocumentAssociationInpu
         }
 
         // Create association in the standard document_associations table
-        const [association] = await knex('document_associations')
-            .insert({
-                tenant,
-                entity_id: input.entity_id,
-                entity_type: 'asset',
-                document_id: input.document_id,
-                created_by: currentUser.user_id,
-                notes: input.notes
-            })
-            .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'created_by', 'entered_at']);
+        const [association] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('document_associations')
+                .insert({
+                    tenant,
+                    entity_id: input.entity_id,
+                    entity_type: 'asset',
+                    document_id: input.document_id,
+                    created_by: currentUser.user_id,
+                    notes: input.notes
+                })
+                .returning(['association_id', 'tenant', 'entity_id', 'entity_type', 'document_id', 'created_by', 'entered_at']);
+        });
 
         revalidatePath(`/assets/${input.entity_id}`);
         return association;
@@ -42,19 +46,21 @@ export async function removeDocumentFromAsset(tenant: string, association_id: st
     const { knex } = await createTenantKnex();
 
     try {
-        // First get the entity_id for revalidation
-        const association = await knex('document_associations')
-            .where({ tenant, association_id })
-            .first();
-
-        if (association) {
-            // Then delete the association
-            await knex('document_associations')
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            // First get the entity_id for revalidation
+            const association = await trx('document_associations')
                 .where({ tenant, association_id })
-                .delete();
+                .first();
 
-            revalidatePath(`/assets/${association.entity_id}`);
-        }
+            if (association) {
+                // Then delete the association
+                await trx('document_associations')
+                    .where({ tenant, association_id })
+                    .delete();
+
+                revalidatePath(`/assets/${association.entity_id}`);
+            }
+        });
     } catch (error) {
         console.error('Error removing document from asset:', error);
         throw new Error('Failed to remove document from asset');
@@ -65,16 +71,17 @@ export async function getAssetDocuments(tenant: string, asset_id: string): Promi
     const { knex } = await createTenantKnex();
 
     try {
-        return knex('document_associations as da')
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('document_associations as da')
             .select(
                 'documents.*',
                 'da.association_id',
                 'da.notes',
-                knex.raw(`
+                trx.raw(`
                     COALESCE(dt.type_name, sdt.type_name) as type_name,
                     COALESCE(dt.icon, sdt.icon) as type_icon
                 `),
-                knex.raw(`
+                trx.raw(`
                     CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name
                 `)
             )
@@ -97,6 +104,7 @@ export async function getAssetDocuments(tenant: string, asset_id: string): Promi
                 'da.entity_type': 'asset'
             })
             .orderBy('documents.entered_at', 'desc');
+        });
     } catch (error) {
         console.error('Error getting asset documents:', error);
         throw new Error('Failed to get asset documents');

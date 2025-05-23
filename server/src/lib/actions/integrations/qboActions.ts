@@ -6,6 +6,8 @@ import axios from 'axios'; // Import axios
 import { ISecretProvider } from '@shared/core'; 
 import { WorkflowEventAttachmentModel } from 'server/src/models/workflowEventAttachment';
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getSecretProviderInstance } from '@shared/core';
 import { QboClientService } from '../../qbo/qboClientService';
 
@@ -313,12 +315,14 @@ export async function disconnectQbo(): Promise<{ success: boolean; error?: strin
             'Customer Sync': ['COMPANY_CREATED', 'COMPANY_UPDATED'],
         };
 
-        // Call the static method on the model
-        const deletedCount = await WorkflowEventAttachmentModel.deleteSystemWorkflowAttachmentsForTenant(
-            knex,
-            tenantId,
-            qboWorkflowEventMap
-        );
+        // Call the static method on the model wrapped in withTransaction
+        const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await WorkflowEventAttachmentModel.deleteSystemWorkflowAttachmentsForTenant(
+                trx,
+                tenantId!,
+                qboWorkflowEventMap
+            );
+        });
 
         console.log(`QBO Disconnect Action: Model deleted ${deletedCount} QBO sync workflow event attachments for tenant ${tenantId}`);
 

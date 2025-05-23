@@ -2,6 +2,8 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 /**
  * Entity types that can have associated images
@@ -24,50 +26,52 @@ export async function getEntityImageUrl(
   try {
     const { knex } = await createTenantKnex();
 
-    let query = knex('document_associations')
-      .where({
-        entity_id: entityId,
-        entity_type: entityType,
-        tenant
-      });
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      let query = trx('document_associations')
+        .where({
+          entity_id: entityId,
+          entity_type: entityType,
+          tenant
+        });
 
-    query = query.andWhere('is_entity_logo', true);
+      query = query.andWhere('is_entity_logo', true);
 
-    const association = await query.first();
-    
-    // If no association found, return null
-    if (!association?.document_id) {
-      console.log(`No document association found for ${entityType} ${entityId}`);
+      const association = await query.first();
+      
+      // If no association found, return null
+      if (!association?.document_id) {
+        console.log(`No document association found for ${entityType} ${entityId}`);
+        return null;
+      }
+      
+      // Get the file_id from the documents table
+      const documentRecord = await trx('documents')
+        .select('file_id')
+        .where({
+          document_id: association.document_id,
+          tenant
+        })
+        .first();
+      
+      // If no document record or no file_id, return null
+      if (!documentRecord?.file_id) {
+        console.log(`No file_id found for document ${association.document_id}`);
+        return null;
+      }
+      
+      // Use the existing getImageUrl function to get the URL
+      const imageUrl = await getImageUrl(documentRecord.file_id);
+      
+      if (imageUrl) {
+        const timestamp = Date.now();
+        const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
+        console.log(`Generated image URL for ${entityType} ${entityId}: ${urlWithTimestamp}`);
+        return urlWithTimestamp;
+      }
+      
+      console.log(`No image URL generated for ${entityType} ${entityId}`);
       return null;
-    }
-    
-    // Get the file_id from the documents table
-    const documentRecord = await knex('documents')
-      .select('file_id')
-      .where({
-        document_id: association.document_id,
-        tenant
-      })
-      .first();
-    
-    // If no document record or no file_id, return null
-    if (!documentRecord?.file_id) {
-      console.log(`No file_id found for document ${association.document_id}`);
-      return null;
-    }
-    
-    // Use the existing getImageUrl function to get the URL
-    const imageUrl = await getImageUrl(documentRecord.file_id);
-    
-    if (imageUrl) {
-      const timestamp = Date.now();
-      const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
-      console.log(`Generated image URL for ${entityType} ${entityId}: ${urlWithTimestamp}`);
-      return urlWithTimestamp;
-    }
-    
-    console.log(`No image URL generated for ${entityType} ${entityId}`);
-    return null;
+    });
   } catch (error) {
     console.error(`[AvatarUtils] Failed to retrieve image URL for ${entityType} (ID: ${entityId}):`, {
       operation: 'getEntityImageUrl',

@@ -1,5 +1,6 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { Knex } from 'knex';
 import { exec } from 'child_process';
 import fs from 'fs/promises';
@@ -19,23 +20,25 @@ import { v4 as uuidv4 } from 'uuid';
 export async function getInvoiceTemplate(templateId: string): Promise<IInvoiceTemplate | null> {
     const { knex, tenant } = await createTenantKnex();
     // Select specific columns, excluding wasmBinary
-    const template = await knex('invoice_templates')
-        .select(
-            'template_id',
-            'tenant',
-            'name',
-            'version',
-            'is_default',
-            'created_at',
-            'updated_at',
-            'assemblyScriptSource'
-            // Explicitly exclude 'wasmBinary'
-        )
-        .where({
-            template_id: templateId,
-            tenant
-        })
-        .first() as Omit<IInvoiceTemplate, 'wasmBinary'> | undefined; // Adjust return type hint
+    const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoice_templates')
+          .select(
+              'template_id',
+              'tenant',
+              'name',
+              'version',
+              'is_default',
+              'created_at',
+              'updated_at',
+              'assemblyScriptSource'
+              // Explicitly exclude 'wasmBinary'
+          )
+          .where({
+              template_id: templateId,
+              tenant
+          })
+          .first() as Omit<IInvoiceTemplate, 'wasmBinary'> | undefined; // Adjust return type hint
+    });
 
     // No parsing needed here anymore as we are moving away from DSL
     return template || null;
@@ -54,7 +57,7 @@ export async function getInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
 export async function setDefaultTemplate(templateId: string): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
 
-    await knex.transaction(async (trx) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
         // First, unset any existing default template
         await trx('invoice_templates')
             .where({
@@ -75,12 +78,14 @@ export async function setDefaultTemplate(templateId: string): Promise<void> {
 
 export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
     const { knex, tenant } = await createTenantKnex();
-    const template = await knex('invoice_templates')
-        .where({
-            is_default: true,
-            tenant
-        })
-        .first();
+    const template = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoice_templates')
+          .where({
+              is_default: true,
+              tenant
+          })
+          .first();
+    });
 
     if (template) {
         template.parsed = template.dsl ? parseInvoiceTemplate(template.dsl) : null;
@@ -91,12 +96,14 @@ export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
 
 export async function setCompanyTemplate(companyId: string, templateId: string | null): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
-    await knex('companies')
-        .where({
-            company_id: companyId,
-            tenant
-        })
-        .update({ invoice_template_id: templateId });
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+          .where({
+              company_id: companyId,
+              tenant
+          })
+          .update({ invoice_template_id: templateId });
+    });
 }
 
 // Note: This function handles saving tenant-specific invoice templates, including compilation.
@@ -525,12 +532,14 @@ export async function compileAndSaveTemplate(
         };
 
         // Try updating first
-        const updatedCount = await knex('invoice_templates')
+        const updatedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('invoice_templates')
             .where({
                 template_id: templateId,
                 tenant: tenant
             })
             .update(payload);
+        });
 
         let savedTemplate: IInvoiceTemplate | null = null;
 
@@ -553,9 +562,11 @@ export async function compileAndSaveTemplate(
                 }
             });
 
-            const insertResult = await knex('invoice_templates')
+            const insertResult = await withTransaction(knex, async (trx: Knex.Transaction) => {
+              return await trx('invoice_templates')
                 .insert(insertPayload)
                 .returning('*');
+            });
 
             if (!insertResult || insertResult.length === 0) {
                 throw new Error('Failed to insert new template metadata into the database.');
@@ -565,12 +576,14 @@ export async function compileAndSaveTemplate(
         } else {
              console.log(`Successfully updated template ${templateId} for tenant ${tenant}.`);
              // Fetch the updated template to return the full object
-             savedTemplate = await knex('invoice_templates')
+             savedTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+               return await trx('invoice_templates')
                 .where({
                     template_id: templateId,
                     tenant: tenant
                 })
                 .first();
+             });
 
              if (!savedTemplate) {
                  // This shouldn't happen if updatedCount > 0, but handle defensively
@@ -606,13 +619,15 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
     }
 
     // 1. Try fetching from tenant-specific templates
-    let template = await knex('invoice_templates')
+    let template = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoice_templates')
         .select('wasmBinary')
         .where({
             template_id: templateId,
             tenant: tenant // Filter by tenant
         })
         .first();
+    });
     
     // Log raw result from tenant query
     console.log(`[getCompiledWasm] Raw result from tenant query for ${templateId}:`, template);
@@ -622,11 +637,13 @@ export async function getCompiledWasm(templateId: string): Promise<Buffer> {
     // 2. If not found in tenant templates, try standard templates
     let standardTemplate;
     if (!template) {
-        standardTemplate = await knex('standard_invoice_templates')
+        standardTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('standard_invoice_templates')
             // Select the binary column for standard templates
             .select('wasmBinary')
             .where({ template_id: templateId }) // No tenant filter here
             .first();
+        });
             
         // Log raw result from standard query
         console.log(`[getCompiledWasm] Raw result from standard query for ${templateId}:`, standardTemplate);
@@ -738,12 +755,14 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
 
     try {
         // 1. Check if the template is assigned to any company within the tenant
-        const companyUsingTemplate = await knex('companies')
+        const companyUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('companies')
             .where({
                 invoice_template_id: templateId,
                 tenant: tenant
             })
             .first();
+        });
 
         if (companyUsingTemplate) {
             return {
@@ -753,12 +772,14 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
         }
 
         // Check if the template is referenced by any conditional display rules within the tenant
-        const ruleUsingTemplate = await knex('conditional_display_rules')
+        const ruleUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('conditional_display_rules')
             .where({
                 template_id: templateId,
                 tenant: tenant
             })
             .first();
+        });
 
         if (ruleUsingTemplate) {
             return {
@@ -769,12 +790,14 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
 
         // 2. Attempt to delete the template from the tenant's invoice_templates table
         // Standard templates are not in this table for a specific tenant, so they won't be deleted.
-        const deletedCount = await knex('invoice_templates')
+        const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('invoice_templates')
             .where({
                 template_id: templateId,
                 tenant: tenant
             })
             .del();
+        });
 
         // 3. Check if any rows were actually deleted
         if (deletedCount > 0) {
@@ -919,9 +942,11 @@ export async function compileStandardTemplate(
             updated_at: knex.fn.now() // Update the timestamp
         };
 
-        const updatedCount = await knex('standard_invoice_templates')
+        const updatedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('standard_invoice_templates')
             .where({ standard_invoice_template_code: standard_invoice_template_code })
             .update(updatePayload);
+        });
 
         if (updatedCount === 0) {
             // This indicates the standard template code wasn't found in the DB, which is unexpected here.

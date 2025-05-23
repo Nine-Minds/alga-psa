@@ -2,6 +2,8 @@
 
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import User from 'server/src/lib/models/user';
@@ -108,31 +110,35 @@ export async function initiateRegistration(
     // Create pending registration
     const registrationId = uuid();
     const hashedPassword = await hashPassword(password);
-
-    await adminDb('pending_registrations').insert({
-      tenant: result.tenant,
-      registration_id: registrationId,
-      email: email.toLowerCase(),
-      hashed_password: hashedPassword,
-      first_name: firstName,
-      last_name: lastName,
-      company_id: result.companyId,
-      status: 'PENDING_VERIFICATION',
-      expires_at: getExpirationTime(),
-      created_at: new Date().toISOString()
-    });
-
-    // Generate verification token
     const token = generateToken();
-    const [verificationToken] = await adminDb('verification_tokens').insert({
-      tenant: result.tenant,
-      token_id: uuid(),
-      registration_id: registrationId,
-      company_id: result.companyId,
-      token,
-      expires_at: getExpirationTime(),
-      created_at: new Date().toISOString()
-    }).returning('*');
+
+    const verificationToken = await withTransaction(adminDb, async (trx: Knex.Transaction) => {
+      await trx('pending_registrations').insert({
+        tenant: result.tenant,
+        registration_id: registrationId,
+        email: email.toLowerCase(),
+        hashed_password: hashedPassword,
+        first_name: firstName,
+        last_name: lastName,
+        company_id: result.companyId,
+        status: 'PENDING_VERIFICATION',
+        expires_at: getExpirationTime(),
+        created_at: new Date().toISOString()
+      });
+
+      // Generate verification token
+      const [verificationToken] = await trx('verification_tokens').insert({
+        tenant: result.tenant,
+        token_id: uuid(),
+        registration_id: registrationId,
+        company_id: result.companyId,
+        token,
+        expires_at: getExpirationTime(),
+        created_at: new Date().toISOString()
+      }).returning('*');
+
+      return verificationToken;
+    });
 
     // Check email sending rate limit
     const emailLimitResult = await checkEmailLimit(email);
@@ -154,7 +160,7 @@ export async function initiateRegistration(
       });
     } catch (error) {
       // If email fails to send, clean up the registration and token
-      await adminDb.transaction(async (trx) => {
+      await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       await trx('verification_tokens')
         .where({ token_id: verificationToken.token_id })
         .delete();
@@ -195,14 +201,29 @@ export async function verifyRegistrationToken(token: string): Promise<IVerificat
       };
     }
 
-    // Get token record
-    const verificationToken = await adminDb('verification_tokens')
-      .where({ 
-        token,
-        used_at: null 
-      })
-      .where('expires_at', '>', new Date().toISOString())
-      .first();
+    // Get token and registration records
+    const { verificationToken, registration } = await withTransaction(adminDb, async (trx: Knex.Transaction) => {
+      const verificationToken = await trx('verification_tokens')
+        .where({ 
+          token,
+          used_at: null 
+        })
+        .where('expires_at', '>', new Date().toISOString())
+        .first();
+
+      if (!verificationToken) {
+        return { verificationToken: null, registration: null };
+      }
+
+      const registration = await trx('pending_registrations')
+        .where({ 
+          registration_id: verificationToken.registration_id,
+          status: 'PENDING_VERIFICATION'
+        })
+        .first();
+
+      return { verificationToken, registration };
+    });
 
     if (!verificationToken) {
       return { 
@@ -210,14 +231,6 @@ export async function verifyRegistrationToken(token: string): Promise<IVerificat
         error: 'Invalid or expired verification token' 
       };
     }
-
-    // Get registration record
-    const registration = await adminDb('pending_registrations')
-      .where({ 
-        registration_id: verificationToken.registration_id,
-        status: 'PENDING_VERIFICATION'
-      })
-      .first();
 
     if (!registration) {
       return { 
@@ -227,7 +240,7 @@ export async function verifyRegistrationToken(token: string): Promise<IVerificat
     }
 
     // Update token and registration status
-    await adminDb.transaction(async (trx) => {
+    await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       await trx('verification_tokens')
         .where({ token_id: verificationToken.token_id })
         .update({ 
@@ -265,23 +278,19 @@ export async function completeRegistration(registrationId: string): Promise<IReg
   const adminDb = await getAdminConnection();
   
   try {
-    // Get verified registration
-    const registration = await adminDb('pending_registrations')
-      .where({ 
-        registration_id: registrationId,
-        status: 'VERIFIED'
-      })
-      .first();
-
-    if (!registration) {
-      return { 
-        success: false, 
-        error: 'Registration not found or not verified' 
-      };
-    }
-
     // Wrap all operations in a transaction
-    await adminDb.transaction(async (trx) => {
+    await withTransaction(adminDb, async (trx: Knex.Transaction) => {
+      // Get verified registration
+      const registration = await trx('pending_registrations')
+        .where({ 
+          registration_id: registrationId,
+          status: 'VERIFIED'
+        })
+        .first();
+
+      if (!registration) {
+        throw new Error('Registration not found or not verified');
+      }
       // Create contact first
       const [contact] = await trx('contacts')
         .insert({
@@ -363,28 +372,30 @@ export async function getUserCompanyIdForRegistration(userId: string): Promise<s
     const user = await User.getForRegistration(userId);
     if (!user) return null;
 
-    // First try to get company ID from contact if user is contact-based
-    if (user.contact_id) {
-      const contact = await adminDb('contacts')
-        .where('contact_name_id', user.contact_id)
+    return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
+      // First try to get company ID from contact if user is contact-based
+      if (user.contact_id) {
+        const contact = await trx('contacts')
+          .where('contact_name_id', user.contact_id)
+          .select('company_id')
+          .first();
+
+        if (contact?.company_id) {
+          return contact.company_id;
+        }
+      }
+
+      // If no contact or no company found, try to get company from user's email domain
+      const emailDomain = user.email.split('@')[1];
+      if (!emailDomain) return null;
+
+      const emailSetting = await trx('company_email_settings')
+        .where('email_suffix', emailDomain)
         .select('company_id')
         .first();
 
-      if (contact?.company_id) {
-        return contact.company_id;
-      }
-    }
-
-    // If no contact or no company found, try to get company from user's email domain
-    const emailDomain = user.email.split('@')[1];
-    if (!emailDomain) return null;
-
-    const emailSetting = await adminDb('company_email_settings')
-      .where('email_suffix', emailDomain)
-      .select('company_id')
-      .first();
-
-    return emailSetting?.company_id || null;
+      return emailSetting?.company_id || null;
+    });
   } catch (error) {
     console.error('Error getting user company ID for registration:', error);
     throw new Error('Failed to get user company ID for registration');
@@ -399,72 +410,74 @@ async function registerContactUser(
   const adminDb = await getAdminConnection();
   
   try {
-    // Get contact details and tenant
-    const contact = await adminDb('contacts')
-      .join('companies', 'contacts.company_id', 'companies.company_id')
-      .where({ 'contacts.email': email })
-      .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.full_name', 'companies.tenant')
-      .first();
+    return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
+      // Get contact details and tenant
+      const contact = await trx('contacts')
+        .join('companies', 'contacts.company_id', 'companies.company_id')
+        .where({ 'contacts.email': email })
+        .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.full_name', 'companies.tenant')
+        .first();
 
-    if (!contact) {
-      return { success: false, error: 'Contact not found' };
-    }
+      if (!contact) {
+        return { success: false, error: 'Contact not found' };
+      }
 
-    if (contact.is_inactive) {
-      return { success: false, error: 'Contact is inactive' };
-    }
+      if (contact.is_inactive) {
+        return { success: false, error: 'Contact is inactive' };
+      }
 
-    // Check if user already exists
-    const existingUser = await adminDb('users')
-      .where({ email })
-      .first();
+      // Check if user already exists
+      const existingUser = await trx('users')
+        .where({ email })
+        .first();
 
-    if (existingUser) {
-      return { success: false, error: 'User already exists' };
-    }
+      if (existingUser) {
+        return { success: false, error: 'User already exists' };
+      }
 
-    // Split full name
-    const nameParts = contact.full_name.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+      // Split full name
+      const nameParts = contact.full_name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Create user
-    const hashedPassword = await hashPassword(password);
-    const [user] = await adminDb('users')
-      .insert({
-        email,
-        username: email,
-        first_name: firstName,
-        last_name: lastName,
-        hashed_password: hashedPassword,
+      // Create user
+      const hashedPassword = await hashPassword(password);
+      const [user] = await trx('users')
+        .insert({
+          email,
+          username: email,
+          first_name: firstName,
+          last_name: lastName,
+          hashed_password: hashedPassword,
+          tenant: contact.tenant,
+          user_type: 'client',
+          contact_id: contact.contact_name_id,
+          is_inactive: false,
+          created_at: new Date().toISOString()
+        })
+        .returning('*');
+
+      // Get client role
+      const clientRole = await trx('roles')
+        .where({ 
+          tenant: contact.tenant,
+          role_name: 'client' 
+        })
+        .first();
+
+      if (!clientRole) {
+        throw new Error('Client role not found');
+      }
+
+      // Assign role
+      await trx('user_roles').insert({
         tenant: contact.tenant,
-        user_type: 'client',
-        contact_id: contact.contact_name_id,
-        is_inactive: false,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
+        user_id: user.user_id,
+        role_id: clientRole.role_id
+      });
 
-    // Get client role
-    const clientRole = await adminDb('roles')
-      .where({ 
-        tenant: contact.tenant,
-        role_name: 'client' 
-      })
-      .first();
-
-    if (!clientRole) {
-      throw new Error('Client role not found');
-    }
-
-    // Assign role
-    await adminDb('user_roles').insert({
-      tenant: contact.tenant,
-      user_id: user.user_id,
-      role_id: clientRole.role_id
+      return { success: true };
     });
-
-    return { success: true };
   } catch (error) {
     console.error('Contact registration error:', error);
     return { 

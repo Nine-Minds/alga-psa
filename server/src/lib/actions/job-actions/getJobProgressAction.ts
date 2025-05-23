@@ -3,6 +3,8 @@
 import { getCurrentUser } from '../user-actions/userActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 
 import { JobStatus } from 'server/src/types/job.d';
 import type { JobHeader, JobDetail } from 'server/src/services/job.service';
@@ -34,28 +36,32 @@ export async function getJobProgressAction(jobId: string): Promise<JobProgressDa
       throw new Error('No tenant found');
     }
 
-    const [header] = await adminConnection('jobs as j')
-      .select(
-        'j.job_id as id',
-        'j.type as name',
-        'j.status',
-        'j.created_at as createdOn'
-      )
-      .where('j.job_id', jobId)
-      .andWhere('j.tenant', tenant);
+    const { header, details } = await withTransaction(adminConnection, async (trx: Knex.Transaction) => {
+      const [headerResult] = await trx('jobs as j')
+        .select(
+          'j.job_id as id',
+          'j.type as name',
+          'j.status',
+          'j.created_at as createdOn'
+        )
+        .where('j.job_id', jobId)
+        .andWhere('j.tenant', tenant);
 
-    const details = await adminConnection('job_details as jd')
-      .select(
-        'jd.detail_id as id',
-        'jd.step_name as stepName',
-        'jd.status',
-        'jd.processed_at as processedAt',
-        'jd.retry_count as retryCount',
-        'jd.result'
-      )
-      .where('jd.job_id', jobId)
-      .andWhere('jd.tenant', tenant)
-      .orderBy('jd.processed_at', 'asc');
+      const detailsResult = await trx('job_details as jd')
+        .select(
+          'jd.detail_id as id',
+          'jd.step_name as stepName',
+          'jd.status',
+          'jd.processed_at as processedAt',
+          'jd.retry_count as retryCount',
+          'jd.result'
+        )
+        .where('jd.job_id', jobId)
+        .andWhere('jd.tenant', tenant)
+        .orderBy('jd.processed_at', 'asc');
+
+      return { header: headerResult, details: detailsResult };
+    });
 
     console.log('Job query result:', { header, details }); // Debug log
 

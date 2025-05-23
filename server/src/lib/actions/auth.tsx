@@ -5,6 +5,8 @@ import { verifyPassword } from 'server/src/utils/encryption/encryption';
 import logger from "server/src/utils/logger";
 
 import { IUser } from 'server/src/interfaces/auth.interfaces';
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 
 export async function authenticateUser( email: string, password: string): Promise<IUser | null> {

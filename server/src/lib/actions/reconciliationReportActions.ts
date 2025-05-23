@@ -2,6 +2,9 @@
 
 import CreditReconciliationReport from 'server/src/lib/models/creditReconciliationReport';
 import { ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
+import { withTransaction } from '@shared/db';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 // Mock function for getting company by ID - in a real implementation, this would be imported from a company model
 async function getCompanyById(companyId: string) {
   // This is a placeholder - in a real implementation, you would fetch the company from the database
@@ -35,16 +38,18 @@ export async function fetchReconciliationReports({
   page?: number;
   pageSize?: number;
 }) {
-  try {
-    // Fetch reports with pagination and filtering
-    const result = await CreditReconciliationReport.listReports({
-      companyId,
-      status,
-      startDate,
-      endDate,
-      page,
-      pageSize
-    });
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Fetch reports with pagination and filtering
+      const result = await CreditReconciliationReport.listReports({
+        companyId,
+        status,
+        startDate,
+        endDate,
+        page,
+        pageSize
+      });
 
     // Fetch company names for each report
     const reportsWithCompanyNames = await Promise.all(
@@ -57,14 +62,15 @@ export async function fetchReconciliationReports({
       })
     );
 
-    return {
-      ...result,
-      reports: reportsWithCompanyNames
-    };
-  } catch (error) {
-    console.error('Error fetching reconciliation reports:', error);
-    throw error;
-  }
+      return {
+        ...result,
+        reports: reportsWithCompanyNames
+      };
+    } catch (error) {
+      console.error('Error fetching reconciliation reports:', error);
+      throw error;
+    }
+  });
 }
 
 /**
@@ -72,19 +78,22 @@ export async function fetchReconciliationReports({
  * @returns Array of company objects with id and name
  */
 export async function fetchCompaniesForDropdown() {
-  try {
-    // This is a placeholder - in a real implementation, you would fetch companies from the database
-    // For now, we'll return a mock list
-    return [
-      { id: 'company1', name: 'Acme Inc' },
-      { id: 'company2', name: 'Globex Corp' },
-      { id: 'company3', name: 'Initech' },
-      { id: 'company4', name: 'Umbrella Corp' }
-    ];
-  } catch (error) {
-    console.error('Error fetching companies for dropdown:', error);
-    throw error;
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // This is a placeholder - in a real implementation, you would fetch companies from the database
+      // For now, we'll return a mock list
+      return [
+        { id: 'company1', name: 'Acme Inc' },
+        { id: 'company2', name: 'Globex Corp' },
+        { id: 'company3', name: 'Initech' },
+        { id: 'company4', name: 'Umbrella Corp' }
+      ];
+    } catch (error) {
+      console.error('Error fetching companies for dropdown:', error);
+      throw error;
+    }
+  });
 }
 
 /**
@@ -92,24 +101,27 @@ export async function fetchCompaniesForDropdown() {
  * @returns Object containing summary statistics
  */
 export async function fetchReconciliationStats() {
-  try {
-    // Get total counts by status
-    const openCount = await CreditReconciliationReport.countByStatus('open');
-    const inReviewCount = await CreditReconciliationReport.countByStatus('in_review');
-    const resolvedCount = await CreditReconciliationReport.countByStatus('resolved');
-    
-    // Get total discrepancy amount
-    const totalAmount = await CreditReconciliationReport.getTotalDiscrepancyAmount();
-    
-    return {
-      totalDiscrepancies: openCount + inReviewCount + resolvedCount,
-      totalAmount,
-      openCount,
-      inReviewCount,
-      resolvedCount
-    };
-  } catch (error) {
-    console.error('Error fetching reconciliation stats:', error);
-    throw error;
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Get total counts by status
+      const openCount = await CreditReconciliationReport.countByStatus('open');
+      const inReviewCount = await CreditReconciliationReport.countByStatus('in_review');
+      const resolvedCount = await CreditReconciliationReport.countByStatus('resolved');
+      
+      // Get total discrepancy amount
+      const totalAmount = await CreditReconciliationReport.getTotalDiscrepancyAmount();
+      
+      return {
+        totalDiscrepancies: openCount + inReviewCount + resolvedCount,
+        totalAmount,
+        openCount,
+        inReviewCount,
+        resolvedCount
+      };
+    } catch (error) {
+      console.error('Error fetching reconciliation stats:', error);
+      throw error;
+    }
+  });
 }

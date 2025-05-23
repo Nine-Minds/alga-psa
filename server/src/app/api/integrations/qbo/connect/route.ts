@@ -6,6 +6,8 @@ import crypto from 'crypto';
 import { ISecretProvider } from '@shared/core/ISecretProvider'; // Import the interface
 import { getSecretProviderInstance } from '@shared/core/secretProvider';
 import { createTenantKnex } from '../../../../../lib/db'; // Import createTenantKnex
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 // TODO: Import the actual CSRF token storage mechanism
 // import { storeCsrfToken } from '../../../../../lib/auth/csrf'; // Hypothetical path removed
 

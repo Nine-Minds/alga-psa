@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '@shared/db';
 import { IUsageRecord } from '../../../interfaces/usage.interfaces';
 import { IService } from '../../../interfaces/billing.interfaces';
 import { Knex } from 'knex'; // Import Knex type
@@ -52,33 +53,35 @@ export async function getUsageDataMetrics(
   console.log(`Fetching usage metrics for company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
   try {
-    const query = knex<IUsageRecord>('usage_tracking as ut')
-      .join<IService>('service_catalog as sc', function() {
-        this.on('ut.service_id', '=', 'sc.service_id')
-            .andOn('ut.tenant', '=', 'sc.tenant');
-      })
-      .where('ut.company_id', companyId)
-      .andWhere('ut.tenant', tenant)
-      .andWhere('ut.usage_date', '>=', startDate)
-      .andWhere('ut.usage_date', '<=', endDate)
-      .select(
-        'ut.service_id',
-        'sc.service_name',
-        'sc.unit_of_measure',
-        knex.raw('SUM(ut.quantity) as total_quantity')
-      )
-      .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
-      .orderBy('sc.service_name');
+    const results: UsageMetricResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const query = trx<IUsageRecord>('usage_tracking as ut')
+        .join<IService>('service_catalog as sc', function() {
+          this.on('ut.service_id', '=', 'sc.service_id')
+              .andOn('ut.tenant', '=', 'sc.tenant');
+        })
+        .where('ut.company_id', companyId)
+        .andWhere('ut.tenant', tenant)
+        .andWhere('ut.usage_date', '>=', startDate)
+        .andWhere('ut.usage_date', '<=', endDate)
+        .select(
+          'ut.service_id',
+          'sc.service_name',
+          'sc.unit_of_measure',
+          trx.raw('SUM(ut.quantity) as total_quantity')
+        )
+        .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
+        .orderBy('sc.service_name');
 
-    const rawResults: any[] = await query;
+      const rawResults: any[] = await query;
 
-    // Map results, ensuring total_quantity is a number
-    const results: UsageMetricResult[] = rawResults.map(row => ({
-      service_id: row.service_id,
-      service_name: row.service_name,
-      unit_of_measure: row.unit_of_measure,
-      total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
-    }));
+      // Map results, ensuring total_quantity is a number
+      return rawResults.map(row => ({
+        service_id: row.service_id,
+        service_name: row.service_name,
+        unit_of_measure: row.unit_of_measure,
+        total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
+      }));
+    });
 
     console.log(`Found ${results.length} usage metric groupings for company ${companyId}`);
     return results;

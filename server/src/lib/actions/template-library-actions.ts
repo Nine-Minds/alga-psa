@@ -1,9 +1,11 @@
 'use server';
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import { getCurrentUser } from "./user-actions/userActions";
 import logger from "@shared/core/logger.js";
 import { z } from "zod";
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 // Zod schema for template data
 const TemplateSchema = z.object({
@@ -36,12 +38,10 @@ export async function getAllTemplates(): Promise<TemplateData[]> {
       throw new Error("User not authenticated");
     }
     
-    // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
-    try {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get all published templates
-      const templates = await knex('workflow_templates')
+      const templates = await trx('workflow_templates')
         .where({
           tenant: tenant,
           status: 'published'
@@ -56,9 +56,7 @@ export async function getAllTemplates(): Promise<TemplateData[]> {
         default_parameters: template.default_parameters ? template.default_parameters : null,
         ui_metadata: template.ui_metadata ? template.ui_metadata : null,
       }));
-    } finally {
-      // Connection will be released automatically
-    }
+    });
   } catch (error) {
     logger.error("Error getting all templates:", error);
     throw error;
@@ -79,12 +77,10 @@ export async function getTemplate(id: string): Promise<TemplateData> {
       throw new Error("User not authenticated");
     }
     
-    // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
-    try {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get template
-      const template = await knex('workflow_templates')
+      const template = await trx('workflow_templates')
         .where({
           tenant: tenant,
           template_id: id
@@ -103,9 +99,7 @@ export async function getTemplate(id: string): Promise<TemplateData> {
         default_parameters: template.default_parameters ? JSON.parse(template.default_parameters) : null,
         ui_metadata: template.ui_metadata ? JSON.parse(template.ui_metadata) : null,
       };
-    } finally {
-      // Connection will be released automatically
-    }
+    });
   } catch (error) {
     logger.error(`Error getting template ${id}:`, error);
     throw error;
@@ -126,12 +120,10 @@ export async function getTemplatesByCategory(category: string): Promise<Template
       throw new Error("User not authenticated");
     }
     
-    // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
-    try {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get templates by category
-      const templates = await knex('workflow_templates')
+      const templates = await trx('workflow_templates')
         .where({
           tenant: tenant,
           status: 'published',
@@ -139,7 +131,7 @@ export async function getTemplatesByCategory(category: string): Promise<Template
         })
         .orderBy('name', 'asc');
       
-      return templates.map(template => ({
+      return templates.map((template: any) => ({
         ...template,
         tags: template.tags ? template.tags : [],
         definition: JSON.parse(template.definition),
@@ -147,9 +139,7 @@ export async function getTemplatesByCategory(category: string): Promise<Template
         default_parameters: template.default_parameters ? JSON.parse(template.default_parameters) : null,
         ui_metadata: template.ui_metadata ? JSON.parse(template.ui_metadata) : null,
       }));
-    } finally {
-      // Connection will be released automatically
-    }
+    });
   } catch (error) {
     logger.error(`Error getting templates for category ${category}:`, error);
     throw error;
@@ -169,12 +159,10 @@ export async function getAllTemplateCategories(): Promise<{ category_id: string;
       throw new Error("User not authenticated");
     }
     
-    // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
-    try {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get all categories
-      const categories = await knex('workflow_template_categories')
+      const categories = await trx('workflow_template_categories')
         .where({
           tenant: tenant
         })
@@ -182,9 +170,7 @@ export async function getAllTemplateCategories(): Promise<{ category_id: string;
         .select('category_id', 'name', 'description');
       
       return categories;
-    } finally {
-      // Connection will be released automatically
-    }
+    });
   } catch (error) {
     logger.error("Error getting all template categories:", error);
     throw error;
@@ -213,12 +199,10 @@ export async function createWorkflowFromTemplate(
       throw new Error("User not authenticated");
     }
     
-    // Create Knex instance
-    const { knex, tenant } = await createTenantKnex();
-    
-    try {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the template
-      const template = await knex('workflow_templates')
+      const template = await trx('workflow_templates')
         .where({
           tenant: tenant,
           template_id: templateId
@@ -230,7 +214,7 @@ export async function createWorkflowFromTemplate(
       }
       
       // Create the registration
-      const [registration] = await knex('workflow_registrations')
+      const [registration] = await trx('workflow_registrations')
         .insert({
           tenant: tenant,
           name,
@@ -249,7 +233,7 @@ export async function createWorkflowFromTemplate(
         .returning('registration_id');
       
       // Create the initial version
-      await knex('workflow_registration_versions')
+      await trx('workflow_registration_versions')
         .insert({
           tenant: tenant,
           registration_id: registration.registration_id,
@@ -262,9 +246,7 @@ export async function createWorkflowFromTemplate(
         });
       
       return registration.registration_id;
-    } finally {
-      // Connection will be released automatically
-    }
+    });
   } catch (error) {
     logger.error(`Error creating workflow from template ${templateId}:`, error);
     throw error;

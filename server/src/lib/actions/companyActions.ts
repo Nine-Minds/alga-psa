@@ -8,6 +8,8 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 
 
 export async function getCompanyById(companyId: string): Promise<ICompany | null> {
@@ -17,9 +19,11 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
   }
   
   // Fetch company data
-  const companyData = await knex('companies')
-    .where({ company_id: companyId, tenant })
-    .first();
+  const companyData = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ company_id: companyId, tenant })
+      .first();
+  });
 
   if (!companyData) {
     return null;
@@ -43,7 +47,7 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
   try {
     console.log('Updating company in database:', companyId, updateData);
 
-    await db.transaction(async (trx) => {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       // Build update object with explicit null handling
       const updateObject: any = {
         updated_at: new Date().toISOString()
@@ -158,14 +162,18 @@ export async function createCompany(company: Omit<ICompany, 'company_id' | 'crea
     companyData.properties.website = companyData.url;
   }
 
-  const [createdCompany] = await knex<ICompany>('companies')
-    .insert({
-      ...companyData,
-      tenant,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    })
-    .returning('*');
+  const createdCompany = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const [created] = await trx<ICompany>('companies')
+      .insert({
+        ...companyData,
+        tenant,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .returning('*');
+      
+    return created;
+  });
 
   if (!createdCompany) {
     throw new Error('Failed to create company');
@@ -184,46 +192,51 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
   }
 
   try {
-    // Start building the query
-    let baseQuery = db('companies as c')
-      .where({ 'c.tenant': tenant });
+    // Use a transaction to get all company data
+    const { companiesData, fileIdMap } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Start building the query
+      let baseQuery = trx('companies as c')
+        .where({ 'c.tenant': tenant });
 
-    if (!includeInactive) {
-      baseQuery = baseQuery.andWhere('c.is_inactive', false);
-    }
+      if (!includeInactive) {
+        baseQuery = baseQuery.andWhere('c.is_inactive', false);
+      }
 
-    // Use a subquery approach to get unique companies
-    const companiesData = await baseQuery
-      .select(
-        'c.*',
-        db.raw(
-          `(SELECT document_id 
-          FROM document_associations da 
-          WHERE da.entity_id = c.company_id 
-          AND da.entity_type = 'company'
-          AND da.tenant = '${tenant}'
-          LIMIT 1) as document_id`)
-      );
+      // Get unique companies with document associations
+      const companies = await baseQuery
+        .select(
+          'c.*',
+          trx.raw(
+            `(SELECT document_id 
+            FROM document_associations da 
+            WHERE da.entity_id = c.company_id 
+            AND da.entity_type = 'company'
+            AND da.tenant = '${tenant}'
+            LIMIT 1) as document_id`)
+        );
 
-    // Fetch file_ids for logos
-    const documentIds = companiesData
-      .map(c => c.document_id)
-      .filter((id): id is string => !!id); // Filter out null/undefined IDs
+      // Fetch file_ids for logos
+      const documentIds = companies
+        .map(c => c.document_id)
+        .filter((id): id is string => !!id); // Filter out null/undefined IDs
 
-    let fileIdMap: Record<string, string> = {};
-    if (documentIds.length > 0) {
-      const fileRecords = await db('documents')
-        .select('document_id', 'file_id')
-        .whereIn('document_id', documentIds)
-        .andWhere({ tenant });
-      
-      fileIdMap = fileRecords.reduce((acc, record) => {
-        if (record.file_id) {
-          acc[record.document_id] = record.file_id;
-        }
-        return acc;
-      }, {} as Record<string, string>);
-    }
+      let fileIds: Record<string, string> = {};
+      if (documentIds.length > 0) {
+        const fileRecords = await trx('documents')
+          .select('document_id', 'file_id')
+          .whereIn('document_id', documentIds)
+          .andWhere({ tenant });
+        
+        fileIds = fileRecords.reduce((acc, record) => {
+          if (record.file_id) {
+            acc[record.document_id] = record.file_id;
+          }
+          return acc;
+        }, {} as Record<string, string>);
+      }
+
+      return { companiesData: companies, fileIdMap: fileIds };
+    });
 
     // Process companies to add logoUrl
     const companiesWithLogos = await Promise.all(companiesData.map(async (companyData) => {
@@ -259,9 +272,11 @@ export async function deleteCompany(companyId: string): Promise<{
     }
 
     // First verify the company exists and belongs to this tenant
-    const company = await db('companies')
-      .where({ company_id: companyId, tenant })
-      .first();
+    const company = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({ company_id: companyId, tenant })
+        .first();
+    });
     
     if (!company) {
       return {
@@ -273,126 +288,128 @@ export async function deleteCompany(companyId: string): Promise<{
     console.log('Checking dependencies for company:', companyId, 'tenant:', tenant);
 
     // Check for dependencies
-    const dependencies = [];
+    const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check for contacts
-    const contactCount = await db('contacts')
-      .where({ company_id: companyId, tenant })
-      .count('contact_name_id as count')
-      .first();
-    console.log('Contact count result:', contactCount);
-    if (contactCount && Number(contactCount.count) > 0) {
-      dependencies.push('contact');
-      counts['contact'] = Number(contactCount.count);
-    }
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check for contacts
+      const contactCount = await trx('contacts')
+        .where({ company_id: companyId, tenant })
+        .count('contact_name_id as count')
+        .first();
+      console.log('Contact count result:', contactCount);
+      if (contactCount && Number(contactCount.count) > 0) {
+        dependencies.push('contact');
+        counts['contact'] = Number(contactCount.count);
+      }
 
-    // Check for active tickets
-    const ticketCount = await db('tickets')
-      .where({ company_id: companyId, tenant, is_closed: false })
-      .count('ticket_id as count')
-      .first();
-    console.log('Ticket count result:', ticketCount);
-    if (ticketCount && Number(ticketCount.count) > 0) {
-      dependencies.push('ticket');
-      counts['ticket'] = Number(ticketCount.count);
-    }
+      // Check for active tickets
+      const ticketCount = await trx('tickets')
+        .where({ company_id: companyId, tenant, is_closed: false })
+        .count('ticket_id as count')
+        .first();
+      console.log('Ticket count result:', ticketCount);
+      if (ticketCount && Number(ticketCount.count) > 0) {
+        dependencies.push('ticket');
+        counts['ticket'] = Number(ticketCount.count);
+      }
 
-    // Check for projects
-    const projectCount = await db('projects')
-      .where({ company_id: companyId, tenant })
-      .count('project_id as count')
-      .first();
-    console.log('Project count result:', projectCount);
-    if (projectCount && Number(projectCount.count) > 0) {
-      dependencies.push('project');
-      counts['project'] = Number(projectCount.count);
-    }
+      // Check for projects
+      const projectCount = await trx('projects')
+        .where({ company_id: companyId, tenant })
+        .count('project_id as count')
+        .first();
+      console.log('Project count result:', projectCount);
+      if (projectCount && Number(projectCount.count) > 0) {
+        dependencies.push('project');
+        counts['project'] = Number(projectCount.count);
+      }
 
-    // Check for documents using document_associations table
-    const documentCount = await db('document_associations')
-      .where({ 
-        entity_id: companyId, 
-        entity_type: 'company', 
-        tenant 
-      })
-      .count('document_id as count')
-      .first();
-    console.log('Document count result:', documentCount);
-    if (documentCount && Number(documentCount.count) > 0) {
-      dependencies.push('document');
-      counts['document'] = Number(documentCount.count);
-    }
+      // Check for documents using document_associations table
+      const documentCount = await trx('document_associations')
+        .where({ 
+          entity_id: companyId, 
+          entity_type: 'company', 
+          tenant 
+        })
+        .count('document_id as count')
+        .first();
+      console.log('Document count result:', documentCount);
+      if (documentCount && Number(documentCount.count) > 0) {
+        dependencies.push('document');
+        counts['document'] = Number(documentCount.count);
+      }
 
-    // Check for invoices
-    const invoiceCount = await db('invoices')
-      .where({ company_id: companyId, tenant })
-      .count('invoice_id as count')
-      .first();
-    console.log('Invoice count result:', invoiceCount);
-    if (invoiceCount && Number(invoiceCount.count) > 0) {
-      dependencies.push('invoice');
-      counts['invoice'] = Number(invoiceCount.count);
-    }
+      // Check for invoices
+      const invoiceCount = await trx('invoices')
+        .where({ company_id: companyId, tenant })
+        .count('invoice_id as count')
+        .first();
+      console.log('Invoice count result:', invoiceCount);
+      if (invoiceCount && Number(invoiceCount.count) > 0) {
+        dependencies.push('invoice');
+        counts['invoice'] = Number(invoiceCount.count);
+      }
 
-    // Check for interactions
-    const interactionCount = await db('interactions')
-      .where({ company_id: companyId, tenant })
-      .count('interaction_id as count')
-      .first();
-    console.log('Interaction count result:', interactionCount);
-    if (interactionCount && Number(interactionCount.count) > 0) {
-      dependencies.push('interaction');
-      counts['interaction'] = Number(interactionCount.count);
-    }
+      // Check for interactions
+      const interactionCount = await trx('interactions')
+        .where({ company_id: companyId, tenant })
+        .count('interaction_id as count')
+        .first();
+      console.log('Interaction count result:', interactionCount);
+      if (interactionCount && Number(interactionCount.count) > 0) {
+        dependencies.push('interaction');
+        counts['interaction'] = Number(interactionCount.count);
+      }
 
-    // Check for locations
-    const locationCount = await db('company_locations')
-      .join('companies', 'companies.company_id', 'company_locations.company_id')
-      .where({ 
-        'company_locations.company_id': companyId,
-        'companies.tenant': tenant 
-      })
-      .count('* as count')
-      .first();
-    console.log('Location count result:', locationCount);
-    if (locationCount && Number(locationCount.count) > 0) {
-      dependencies.push('location');
-      counts['location'] = Number(locationCount.count);
-    }
+      // Check for locations
+      const locationCount = await trx('company_locations')
+        .join('companies', 'companies.company_id', 'company_locations.company_id')
+        .where({ 
+          'company_locations.company_id': companyId,
+          'companies.tenant': tenant 
+        })
+        .count('* as count')
+        .first();
+      console.log('Location count result:', locationCount);
+      if (locationCount && Number(locationCount.count) > 0) {
+        dependencies.push('location');
+        counts['location'] = Number(locationCount.count);
+      }
 
-    // Check for service usage
-    const usageCount = await db('usage_tracking')
-      .where({ company_id: companyId, tenant })
-      .count('usage_id as count')
-      .first();
-    console.log('Usage count result:', usageCount);
-    if (usageCount && Number(usageCount.count) > 0) {
-      dependencies.push('service_usage');
-      counts['service_usage'] = Number(usageCount.count);
-    }
+      // Check for service usage
+      const usageCount = await trx('usage_tracking')
+        .where({ company_id: companyId, tenant })
+        .count('usage_id as count')
+        .first();
+      console.log('Usage count result:', usageCount);
+      if (usageCount && Number(usageCount.count) > 0) {
+        dependencies.push('service_usage');
+        counts['service_usage'] = Number(usageCount.count);
+      }
 
-    // Check for billing plans
-    const billingPlanCount = await db('company_billing_plans')
-      .where({ company_id: companyId, tenant })
-      .count('company_billing_plan_id as count')
-      .first();
-    console.log('Billing plan count result:', billingPlanCount);
-    if (billingPlanCount && Number(billingPlanCount.count) > 0) {
-      dependencies.push('billing_plan');
-      counts['billing_plan'] = Number(billingPlanCount.count);
-    }
+      // Check for billing plans
+      const billingPlanCount = await trx('company_billing_plans')
+        .where({ company_id: companyId, tenant })
+        .count('company_billing_plan_id as count')
+        .first();
+      console.log('Billing plan count result:', billingPlanCount);
+      if (billingPlanCount && Number(billingPlanCount.count) > 0) {
+        dependencies.push('billing_plan');
+        counts['billing_plan'] = Number(billingPlanCount.count);
+      }
 
-    // Check for bucket usage
-    const bucketUsageCount = await db('bucket_usage')
-      .where({ company_id: companyId, tenant })
-      .count('usage_id as count')
-      .first();
-    console.log('Bucket usage count result:', bucketUsageCount);
-    if (bucketUsageCount && Number(bucketUsageCount.count) > 0) {
-      dependencies.push('bucket_usage');
-      counts['bucket_usage'] = Number(bucketUsageCount.count);
-    }
+      // Check for bucket usage
+      const bucketUsageCount = await trx('bucket_usage')
+        .where({ company_id: companyId, tenant })
+        .count('usage_id as count')
+        .first();
+      console.log('Bucket usage count result:', bucketUsageCount);
+      if (bucketUsageCount && Number(bucketUsageCount.count) > 0) {
+        dependencies.push('bucket_usage');
+        counts['bucket_usage'] = Number(bucketUsageCount.count);
+      }
+    });
 
     // We're automatically deleting tax rates and settings when deleting the company,
     // so we don't need to check them as dependencies
@@ -422,7 +439,7 @@ export async function deleteCompany(companyId: string): Promise<{
     }
 
     // If no dependencies, proceed with deletion
-    const result = await db.transaction(async (trx) => {
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Delete associated tags first
       await trx('tags')
         .where({ 
@@ -498,10 +515,12 @@ export async function checkExistingCompanies(
     throw new Error('Tenant not found');
   }
 
-  const existingCompanies = await db('companies')
-    .select('*')
-    .whereIn('company_name', companyNames)
-    .andWhere('tenant', tenant);
+  const existingCompanies = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .select('*')
+      .whereIn('company_name', companyNames)
+      .andWhere('tenant', tenant);
+  });
 
   return existingCompanies;
 }
@@ -525,7 +544,7 @@ export async function importCompaniesFromCSV(
   }
 
   // Start a transaction to ensure all operations succeed or fail together
-  await db.transaction(async (trx) => {
+  await withTransaction(db, async (trx: Knex.Transaction) => {
     for (const companyData of companiesData) {
       try {
         if (!companyData.company_name) {

@@ -3,6 +3,8 @@
 import { ApiKeyService } from '../services/apiKeyService';
 import { getCurrentUser, getUserRoles } from './user-actions/userActions';
 import { IRole } from 'server/src/interfaces/auth.interfaces';
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 /**
  * Create a new API key for the current user

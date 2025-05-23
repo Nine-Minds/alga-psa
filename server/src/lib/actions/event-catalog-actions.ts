@@ -1,5 +1,7 @@
 'use server';
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { createTenantKnex } from '../db';
 import { EventCatalogModel } from '../../models/eventCatalog';
 import {
@@ -30,11 +32,13 @@ export async function getEventCatalogEntries(params: {
   await EventCatalogModel.initializeSystemEvents(knex, tenant);
   
   // Get all event catalog entries
-  const entries = await EventCatalogModel.getAll(knex, tenant, {
-    category,
-    isSystemEvent,
-    limit,
-    offset
+  const entries = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await EventCatalogModel.getAll(trx, tenant, {
+      category,
+      isSystemEvent,
+      limit,
+      offset
+    });
   });
   
   return entries;
@@ -55,7 +59,9 @@ export async function getEventCatalogEntryById(params: {
   const { knex } = await createTenantKnex();
   
   // Get the event catalog entry
-  const entry = await EventCatalogModel.getById(knex, eventId, tenant);
+  const entry = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await EventCatalogModel.getById(trx, eventId, tenant);
+  });
   
   return entry;
 }

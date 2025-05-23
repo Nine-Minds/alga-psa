@@ -2,6 +2,8 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getServerSession } from 'next-auth';
 import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
@@ -73,36 +75,37 @@ export async function getClientHoursByService(
     throw new Error('Tenant context is required.');
   }
 
-  // Get user's company_id
-  const user = await knex('users')
-    .where({
-      user_id: session.user.id,
-      tenant
-    })
-    .first();
-
-  if (!user?.contact_id) {
-    throw new Error('User not associated with a contact');
-  }
-
-  const contact = await knex('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-      tenant
-    })
-    .first();
-
-  if (!contact?.company_id) {
-    throw new Error('Contact not associated with a company');
-  }
-
-  const companyId = contact.company_id;
-
-  console.log(`Fetching hours by service for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
-
   try {
-    // Base query for time entries within the date range and for the tenant
-    const timeEntriesQuery = knex<ITimeEntry>('time_entries')
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get user's company_id
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
+
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
+
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
+
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
+
+      const companyId = contact.company_id;
+
+      console.log(`Fetching hours by service for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+
+      // Base query for time entries within the date range and for the tenant
+      const timeEntriesQuery = trx<ITimeEntry>('time_entries')
       .where('time_entries.tenant', tenant)
       .where('time_entries.billable_duration', '>', 0)
       .where('start_time', '>=', startDate)
@@ -111,13 +114,13 @@ export async function getClientHoursByService(
     // --- Join Logic based on work_item_type ---
     // We need to join time_entries to either tickets or projects to filter by companyId
 
-    // Subquery for tickets linked to the company
-    const ticketCompanySubquery = knex<ITicket>('tickets')
+      // Subquery for tickets linked to the company
+      const ticketCompanySubquery = trx<ITicket>('tickets')
       .select('ticket_id')
       .where({ company_id: companyId, tenant: tenant });
 
-    // Subquery for project tasks linked to the company
-    const projectTaskCompanySubquery = knex<IProjectTask>('project_tasks')
+      // Subquery for project tasks linked to the company
+      const projectTaskCompanySubquery = trx<IProjectTask>('project_tasks')
       .join<IProjectPhase>('project_phases', function() {
         this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
             .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -163,25 +166,27 @@ export async function getClientHoursByService(
         knex.raw('st.name as service_type_name'), 
         knex.raw('SUM(time_entries.billable_duration) as total_duration')
       )
-      .groupBy('sc.service_id', 'sc.service_name', knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), 'st.name', groupByColumn)
-      .orderBy(groupByColumn);
+        .groupBy('sc.service_id', 'sc.service_name', trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), 'st.name', groupByColumn)
+        .orderBy(groupByColumn);
 
-    const rawResults: any[] = await timeEntriesQuery;
+      const rawResults: any[] = await timeEntriesQuery;
 
-    // Manually map and validate the structure
-    const results: ClientHoursByServiceResult[] = rawResults.map(row => ({
-      service_id: row.service_id,
-      service_name: row.service_name,
-      service_type_id: row.service_type_id,
-      service_type_name: row.service_type_name,
-      total_duration: typeof row.total_duration === 'string' ? parseInt(row.total_duration, 10) : row.total_duration,
-    }));
+      // Manually map and validate the structure
+      const results: ClientHoursByServiceResult[] = rawResults.map(row => ({
+        service_id: row.service_id,
+        service_name: row.service_name,
+        service_type_id: row.service_type_id,
+        service_type_name: row.service_type_name,
+        total_duration: typeof row.total_duration === 'string' ? parseInt(row.total_duration, 10) : row.total_duration,
+      }));
 
-    console.log(`Found ${results.length} service groupings for client company ${companyId}`);
-    return results;
+      console.log(`Found ${results.length} service groupings for client company ${companyId}`);
+      return results;
+    });
 
+    return result;
   } catch (error) {
-    console.error(`Error fetching hours by service for client company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching hours by service in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -234,69 +239,72 @@ export async function getClientUsageMetrics(
     throw new Error('Tenant context is required.');
   }
 
-  // Get user's company_id
-  const user = await knex('users')
-    .where({
-      user_id: session.user.id,
-      tenant
-    })
-    .first();
-
-  if (!user?.contact_id) {
-    throw new Error('User not associated with a contact');
-  }
-
-  const contact = await knex('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-      tenant
-    })
-    .first();
-
-  if (!contact?.company_id) {
-    throw new Error('Contact not associated with a company');
-  }
-
-  const companyId = contact.company_id;
-
-  // No permission check needed for usage metrics - all users can access
-
-  console.log(`Fetching usage metrics for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
-
   try {
-    const query = knex<IUsageRecord>('usage_tracking as ut')
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get user's company_id
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
+
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
+
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
+
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
+
+      const companyId = contact.company_id;
+
+      // No permission check needed for usage metrics - all users can access
+
+      console.log(`Fetching usage metrics for client company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+
+      const query = trx<IUsageRecord>('usage_tracking as ut')
       .join<IService>('service_catalog as sc', function() {
         this.on('ut.service_id', '=', 'sc.service_id')
             .andOn('ut.tenant', '=', 'sc.tenant');
       })
       .where('ut.company_id', companyId)
-      .andWhere('ut.tenant', tenant)
-      .andWhere(knex.raw('ut.usage_date::date'), '>=', startDate)
-      .andWhere(knex.raw('ut.usage_date::date'), '<=', endDate)
-      .select(
-        'ut.service_id',
-        'sc.service_name',
-        'sc.unit_of_measure',
-        knex.raw('SUM(ut.quantity) as total_quantity')
-      )
-      .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
-      .orderBy('sc.service_name');
+        .andWhere('ut.tenant', tenant)
+        .andWhere(trx.raw('ut.usage_date::date'), '>=', startDate)
+        .andWhere(trx.raw('ut.usage_date::date'), '<=', endDate)
+        .select(
+          'ut.service_id',
+          'sc.service_name',
+          'sc.unit_of_measure',
+          trx.raw('SUM(ut.quantity) as total_quantity')
+        )
+        .groupBy('ut.service_id', 'sc.service_name', 'sc.unit_of_measure')
+        .orderBy('sc.service_name');
 
-    const rawResults: any[] = await query;
+      const rawResults: any[] = await query;
 
-    // Map results, ensuring total_quantity is a number
-    const results: ClientUsageMetricResult[] = rawResults.map(row => ({
-      service_id: row.service_id,
-      service_name: row.service_name,
-      unit_of_measure: row.unit_of_measure,
-      total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
-    }));
+      // Map results, ensuring total_quantity is a number
+      const results: ClientUsageMetricResult[] = rawResults.map(row => ({
+        service_id: row.service_id,
+        service_name: row.service_name,
+        unit_of_measure: row.unit_of_measure,
+        total_quantity: typeof row.total_quantity === 'string' ? parseFloat(row.total_quantity) : row.total_quantity,
+      }));
 
-    console.log(`Found ${results.length} usage metric groupings for client company ${companyId}`);
-    return results;
+      console.log(`Found ${results.length} usage metric groupings for client company ${companyId}`);
+      return results;
+    });
 
+    return result;
   } catch (error) {
-    console.error(`Error fetching usage metrics for client company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching usage metrics in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -340,38 +348,39 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
     throw new Error('Tenant context is required.');
   }
 
-  // Get user's company_id
-  const user = await knex('users')
-    .where({
-      user_id: session.user.id,
-      tenant
-    })
-    .first();
-
-  if (!user?.contact_id) {
-    throw new Error('User not associated with a contact');
-  }
-
-  const contact = await knex('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-      tenant
-    })
-    .first();
-
-  if (!contact?.company_id) {
-    throw new Error('Contact not associated with a company');
-  }
-
-  const companyId = contact.company_id;
-
-  // No permission check needed for bucket usage - all users can access
-
-  const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
-  console.log(`Fetching bucket usage for client company ${companyId} in tenant ${tenant} as of ${currentDate}`);
-
   try {
-    const query = knex<ICompanyBillingPlan>('company_billing_plans as cbp')
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get user's company_id
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
+
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
+
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
+
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
+
+      const companyId = contact.company_id;
+
+      // No permission check needed for bucket usage - all users can access
+
+      const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      console.log(`Fetching bucket usage for client company ${companyId} in tenant ${tenant} as of ${currentDate}`);
+
+      const query = trx<ICompanyBillingPlan>('company_billing_plans as cbp')
       .join<IBillingPlan>('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -397,33 +406,33 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('bp.plan_id', '=', 'bu.plan_id')
             .andOn('cbp.company_id', '=', 'bu.company_id')
             .andOn('cbp.tenant', '=', 'bu.tenant')
-            .andOn('bu.period_start', '<=', knex.raw('?', [currentDate]))
-            .andOn('bu.period_end', '>', knex.raw('?', [currentDate]));
+            .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
+            .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
       .where('cbp.company_id', companyId)
       .andWhere('cbp.tenant', tenant)
       .andWhere('bp.plan_type', 'Bucket')
       .andWhere('cbp.is_active', true)
-      .andWhere('cbp.start_date', '<=', knex.raw('?', [currentDate]))
-      .andWhere(function() {
-        this.whereNull('cbp.end_date')
-            .orWhere('cbp.end_date', '>', knex.raw('?', [currentDate]));
-      })
-      .select(
-        'bp.plan_id',
-        'bp.plan_name',
-        'ps.service_id',
-        'sc.service_name',
-        'psbc.total_minutes',
-        knex.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
-        knex.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
-        'bu.period_start',
-        'bu.period_end'
-      );
-      
-    const rawResults: any[] = await query;
-      
-    const results: ClientBucketUsageResult[] = rawResults.map(row => {
+        .andWhere('cbp.start_date', '<=', trx.raw('?', [currentDate]))
+        .andWhere(function() {
+          this.whereNull('cbp.end_date')
+              .orWhere('cbp.end_date', '>', trx.raw('?', [currentDate]));
+        })
+        .select(
+          'bp.plan_id',
+          'bp.plan_name',
+          'ps.service_id',
+          'sc.service_name',
+          'psbc.total_minutes',
+          trx.raw('COALESCE(bu.minutes_used, 0) as minutes_used'),
+          trx.raw('COALESCE(bu.rolled_over_minutes, 0) as rolled_over_minutes'),
+          'bu.period_start',
+          'bu.period_end'
+        );
+        
+      const rawResults: any[] = await query;
+        
+      const results: ClientBucketUsageResult[] = rawResults.map(row => {
       const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
       const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
       const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
@@ -440,31 +449,33 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const hoursUsed = minutesUsed / 60;
       const hoursRemaining = remainingMinutes / 60;
       
-      return {
-        plan_id: row.plan_id,
-        plan_name: row.plan_name,
-        service_id: row.service_id,
-        service_name: row.service_name,
-        display_label: displayLabel,
-        total_minutes: totalMinutes,
-        minutes_used: minutesUsed,
-        rolled_over_minutes: rolledOverMinutes,
-        remaining_minutes: remainingMinutes,
-        period_start: row.period_start ? row.period_start.toISOString().split('T')[0] : undefined,
-        period_end: row.period_end ? row.period_end.toISOString().split('T')[0] : undefined,
-        percentage_used: Math.round(percentageUsed * 100) / 100, // Round to 2 decimal places
-        percentage_remaining: Math.round(percentageRemaining * 100) / 100,
-        hours_total: Math.round(hoursTotal * 100) / 100,
-        hours_used: Math.round(hoursUsed * 100) / 100,
-        hours_remaining: Math.round(hoursRemaining * 100) / 100
-      };
+        return {
+          plan_id: row.plan_id,
+          plan_name: row.plan_name,
+          service_id: row.service_id,
+          service_name: row.service_name,
+          display_label: displayLabel,
+          total_minutes: totalMinutes,
+          minutes_used: minutesUsed,
+          rolled_over_minutes: rolledOverMinutes,
+          remaining_minutes: remainingMinutes,
+          period_start: row.period_start ? row.period_start.toISOString().split('T')[0] : undefined,
+          period_end: row.period_end ? row.period_end.toISOString().split('T')[0] : undefined,
+          percentage_used: Math.round(percentageUsed * 100) / 100, // Round to 2 decimal places
+          percentage_remaining: Math.round(percentageRemaining * 100) / 100,
+          hours_total: Math.round(hoursTotal * 100) / 100,
+          hours_used: Math.round(hoursUsed * 100) / 100,
+          hours_remaining: Math.round(hoursRemaining * 100) / 100
+        };
+      });
+        
+      console.log(`Found ${results.length} active bucket plans for client company ${companyId}`);
+      return results;
     });
-      
-    console.log(`Found ${results.length} active bucket plans for client company ${companyId}`);
-    return results;
 
+    return result;
   } catch (error) {
-    console.error(`Error fetching bucket usage for client company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching bucket usage in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch bucket usage: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

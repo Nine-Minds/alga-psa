@@ -1,5 +1,6 @@
 'use server'
 import { createTenantKnex } from '../../../lib/db';
+import { withTransaction } from '../../../../../shared/db';
 import { ITimePeriod, ITimePeriodSettings } from '../../../interfaces/timeEntry.interfaces';
 import { set, getDaysInMonth } from 'date-fns';
 import { formatISO } from 'date-fns';
@@ -14,20 +15,22 @@ const END_OF_PERIOD = 0;
 export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
   const { knex: db } = await createTenantKnex();
 
-  const activeSettings = await db<ITimePeriodSettings>('time_period_settings')
-    .where({ is_active: true })
-    .orderBy('effective_from', 'desc')
-    .then(settings => settings.map((setting):ITimePeriodSettings => ({
-      ...setting,
-      effective_from: formatUtcDateNoTime(new Date(setting.effective_from)),
-      effective_to: setting.effective_to ? formatUtcDateNoTime(new Date(setting.effective_to)) : undefined,
-      created_at: formatISO(new Date(setting.created_at)),
-      updated_at: formatISO(new Date(setting.updated_at)),
-      start_month: setting.start_month || 1,
-      end_month: setting.end_month || 12,
-      start_day_of_month: setting.start_day_of_month || 1,
-      end_day_of_month: setting.end_day_of_month || END_OF_PERIOD
-    })));
+  const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await trx<ITimePeriodSettings>('time_period_settings')
+      .where({ is_active: true })
+      .orderBy('effective_from', 'desc')
+      .then(settings => settings.map((setting):ITimePeriodSettings => ({
+        ...setting,
+        effective_from: formatUtcDateNoTime(new Date(setting.effective_from)),
+        effective_to: setting.effective_to ? formatUtcDateNoTime(new Date(setting.effective_to)) : undefined,
+        created_at: formatISO(new Date(setting.created_at)),
+        updated_at: formatISO(new Date(setting.updated_at)),
+        start_month: setting.start_month || 1,
+        end_month: setting.end_month || 12,
+        start_day_of_month: setting.start_day_of_month || 1,
+        end_day_of_month: setting.end_day_of_month || END_OF_PERIOD
+      })));
+  });
 
   return validateArray(timePeriodSettingsSchema, activeSettings);
 }
@@ -44,25 +47,27 @@ export async function updateTimePeriodSettings(settings: ITimePeriodSettings): P
     updated_at: formatISO(new Date())
   });
 
-  // Validate business rules and check for overlaps
-  await validateTimePeriodSettings(validatedSettings, db, settings.time_period_settings_id);
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    // Validate business rules and check for overlaps
+    await validateTimePeriodSettings(validatedSettings, trx, settings.time_period_settings_id);
 
-  await db('time_period_settings')
-    .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
-    .update({
-      frequency: validatedSettings.frequency,
-      frequency_unit: validatedSettings.frequency_unit,
-      is_active: validatedSettings.is_active,
-      effective_from: validatedSettings.effective_from,
-      effective_to: validatedSettings.effective_to,
-      start_day: validatedSettings.start_day,
-      end_day: validatedSettings.end_day,
-      start_month: validatedSettings.start_month,
-      start_day_of_month: validatedSettings.start_day_of_month,
-      end_month: validatedSettings.end_month,
-      end_day_of_month: validatedSettings.end_day_of_month,
-      updated_at: validatedSettings.updated_at,
-    });
+    await trx('time_period_settings')
+      .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
+      .update({
+        frequency: validatedSettings.frequency,
+        frequency_unit: validatedSettings.frequency_unit,
+        is_active: validatedSettings.is_active,
+        effective_from: validatedSettings.effective_from,
+        effective_to: validatedSettings.effective_to,
+        start_day: validatedSettings.start_day,
+        end_day: validatedSettings.end_day,
+        start_month: validatedSettings.start_month,
+        start_day_of_month: validatedSettings.start_day_of_month,
+        end_month: validatedSettings.end_month,
+        end_day_of_month: validatedSettings.end_day_of_month,
+        updated_at: validatedSettings.updated_at,
+      });
+  });
 }
 
 export async function createTimePeriodSettings(settings: Partial<ITimePeriodSettings>): Promise<ITimePeriodSettings> {
@@ -89,19 +94,23 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
     tenant: tenant,
   };
 
-  // Validate the business rules and check for overlaps before database insertion
-  await validateTimePeriodSettings(newSettings, db);
+  const insertedSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
+    // Validate the business rules and check for overlaps before database insertion
+    await validateTimePeriodSettings(newSettings, trx);
 
-  // First insert into database to get the ID
-  const [insertedSetting] = await db('time_period_settings')
-    .insert({
-      ...newSettings,
-      effective_from: new Date(newSettings.effective_from),
-      effective_to: newSettings.effective_to ? new Date(newSettings.effective_to) : null,
-      created_at: new Date(newSettings.created_at),
-      updated_at: new Date(newSettings.updated_at),
-    })
-    .returning('*');
+    // First insert into database to get the ID
+    const [result] = await trx('time_period_settings')
+      .insert({
+        ...newSettings,
+        effective_from: new Date(newSettings.effective_from),
+        effective_to: newSettings.effective_to ? new Date(newSettings.effective_to) : null,
+        created_at: new Date(newSettings.created_at),
+        updated_at: new Date(newSettings.updated_at),
+      })
+      .returning('*');
+
+    return result;
+  });
 
   // Format all date fields as ISO strings before validation
   const formattedSetting = {
@@ -121,9 +130,11 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 export async function deleteTimePeriodSettings(settingId: string): Promise<void> {
   const { knex: db } = await createTenantKnex();
 
-  await db('time_period_settings')
-    .where({ time_period_settings_id: settingId })
-    .delete();
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    await trx('time_period_settings')
+      .where({ time_period_settings_id: settingId })
+      .delete();
+  });
 }
 
 function getEndOfPeriodDay(period: ITimePeriodSettings, month?: number): number {
@@ -202,7 +213,7 @@ function doPeriodsOverlap(period1: ITimePeriodSettings, period2: ITimePeriodSett
   }
 }
 
-async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>, db: Knex, excludeId?: string): Promise<void> {
+async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>, db: Knex | Knex.Transaction, excludeId?: string): Promise<void> {
   if (settings.frequency && settings.frequency <= 0) {
     throw new Error('Frequency must be a positive number');
   }

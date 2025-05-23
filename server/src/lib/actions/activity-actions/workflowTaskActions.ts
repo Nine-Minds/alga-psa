@@ -7,6 +7,8 @@ import {
 import { createTenantKnex } from "../../db";
 import { getCurrentUser } from "../user-actions/userActions";
 import { revalidatePath } from "next/cache";
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { fetchWorkflowTaskActivities } from "./activityAggregationActions";
 import { IWorkflowExecution } from "@shared/workflow/persistence/workflowInterfaces";
 
@@ -72,10 +74,12 @@ export async function fetchTaskFormSchema(
     }
 
     // Fetch the form schema from the database
-    const form = await db("workflow_forms")
-      .where("form_id", formId)
-      .where("tenant", tenant)
-      .first();
+    const form = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx("workflow_forms")
+        .where("form_id", formId)
+        .where("tenant", tenant)
+        .first();
+    });
       
     if (!form) {
       throw new Error(`Form not found: ${formId}`);
@@ -122,21 +126,25 @@ export async function fetchTaskFormData(
       throw new Error("Tenant is required");
     }
 
-    // Fetch the task to get the execution ID
-    const task = await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .first();
+    // Fetch the task and execution data
+    const { task, execution } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const task = await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .first();
+        
+      if (!task) {
+        throw new Error(`Task not found: ${taskId}`);
+      }
       
-    if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
-    }
-    
-    // Fetch the execution to get the context data
-    const execution = await db("workflow_executions")
-      .where("execution_id", task.execution_id)
-      .where("tenant", tenant)
-      .first();
+      // Fetch the execution to get the context data
+      const execution = await trx("workflow_executions")
+        .where("execution_id", task.execution_id)
+        .where("tenant", tenant)
+        .first();
+        
+      return { task, execution };
+    });
       
     if (!execution) {
       throw new Error(`Execution not found: ${task.execution_id}`);
@@ -172,33 +180,36 @@ export async function submitTaskForm(
       throw new Error("Tenant is required");
     }
 
-    // Fetch the task to get the execution ID
-    const task = await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .first();
+    // Update task and execution in a transaction
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Fetch the task to get the execution ID
+      const task = await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .first();
+        
+      if (!task) {
+        throw new Error(`Task not found: ${taskId}`);
+      }
       
-    if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
-    }
-    
-    // Update the task status to completed
-    await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .update({ 
-        status: "completed",
-        updated_at: new Date()
-      });
-      
-    // Update the execution context data with the form data
-    await db("workflow_executions")
-      .where("execution_id", task.execution_id)
-      .where("tenant", tenant)
-      .update({ 
-        context_data: formData,
-        updated_at: new Date()
-      });
+      // Update the task status to completed
+      await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .update({ 
+          status: "completed",
+          updated_at: new Date()
+        });
+        
+      // Update the execution context data with the form data
+      await trx("workflow_executions")
+        .where("execution_id", task.execution_id)
+        .where("tenant", tenant)
+        .update({ 
+          context_data: formData,
+          updated_at: new Date()
+        });
+    });
     
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
@@ -231,13 +242,15 @@ export async function cancelWorkflowTask(
     }
 
     // Update the task status to cancelled
-    await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .update({ 
-        status: "cancelled",
-        updated_at: new Date()
-      });
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .update({ 
+          status: "cancelled",
+          updated_at: new Date()
+        });
+    });
     
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
@@ -271,24 +284,27 @@ export async function reassignWorkflowTask(
       throw new Error("Tenant is required");
     }
 
-    // Fetch the task to get the current assigned users
-    const task = await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .first();
+    // Update task assignment in a transaction
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Fetch the task to get the current assigned users
+      const task = await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .first();
+        
+      if (!task) {
+        throw new Error(`Task not found: ${taskId}`);
+      }
       
-    if (!task) {
-      throw new Error(`Task not found: ${taskId}`);
-    }
-    
-    // Replace the assigned users with the new assignee
-    await db("workflow_tasks")
-      .where("task_id", taskId)
-      .where("tenant", tenant)
-      .update({ 
-        assigned_users: [newAssigneeId],
-        updated_at: new Date()
-      });
+      // Replace the assigned users with the new assignee
+      await trx("workflow_tasks")
+        .where("task_id", taskId)
+        .where("tenant", tenant)
+        .update({ 
+          assigned_users: [newAssigneeId],
+          updated_at: new Date()
+        });
+    });
     
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');

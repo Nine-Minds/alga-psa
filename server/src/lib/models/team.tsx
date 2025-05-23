@@ -1,6 +1,8 @@
 import logger from '../../utils/logger';
 import { ITeam } from '../../interfaces';
 import { createTenantKnex } from '../db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { v4 as uuid4 } from 'uuid';
 
 const Team = {
@@ -16,20 +18,23 @@ const Team = {
             }
             
             logger.info(`Creating new team in tenant ${tenant}:`, teamData);
-            const [createdTeam] = await db<ITeam>('teams')
-                .insert({
-                    ...teamData,
-                    team_id: uuid4(),
-                    tenant: tenant!
-                })
-                .returning('*');
             
-            if (!createdTeam) {
-                throw new Error(`Failed to create team in tenant ${tenant}`);
-            }
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                const [createdTeam] = await trx<ITeam>('teams')
+                    .insert({
+                        ...teamData,
+                        team_id: uuid4(),
+                        tenant: tenant!
+                    })
+                    .returning('*');
+                
+                if (!createdTeam) {
+                    throw new Error(`Failed to create team in tenant ${tenant}`);
+                }
 
-            logger.info('Team created successfully:', createdTeam);
-            return createdTeam;
+                logger.info('Team created successfully:', createdTeam);
+                return createdTeam;
+            });
         } catch (error) {
             logger.error('Error creating team:', error);
             throw error;
@@ -39,11 +44,14 @@ const Team = {
     getAll: async (): Promise<ITeam[]> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const teams = await db<ITeam>('teams')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .select('*');
-            return teams;
+            
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                const teams = await trx<ITeam>('teams')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .select('*');
+                return teams;
+            });
         } catch (error) {
             logger.error('Error getting all teams:', error);
             throw error;
@@ -53,13 +61,16 @@ const Team = {
     get: async (team_id: string): Promise<ITeam | undefined> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            const team = await db<ITeam>('teams')
-                .select('*')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('team_id', team_id)
-                .first();
-            return team;
+            
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                const team = await trx<ITeam>('teams')
+                    .select('*')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('team_id', team_id)
+                    .first();
+                return team;
+            });
         } catch (error) {
             logger.error(`Error getting team with id ${team_id}:`, error);
             throw error;
@@ -75,10 +86,13 @@ const Team = {
             }
             
             logger.info(`Inserting team in tenant ${tenant}:`, team);
-            const [team_id] = await db<ITeam>('teams')
-                .insert({...team, tenant: tenant!})
-                .returning('team_id');
-            return team_id;
+            
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                const [team_id] = await trx<ITeam>('teams')
+                    .insert({...team, tenant: tenant!})
+                    .returning('team_id');
+                return team_id;
+            });
         } catch (error) {
             logger.error('Error inserting team:', error);
             throw error;
@@ -94,11 +108,14 @@ const Team = {
             }
             
             logger.info(`Updating team ${team_id} in tenant ${tenant}`);
-            await db<ITeam>('teams')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('team_id', team_id)
-                .update(team);
+            
+            await withTransaction(db, async (trx: Knex.Transaction) => {
+                await trx<ITeam>('teams')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('team_id', team_id)
+                    .update(team);
+            });
         } catch (error) {
             logger.error(`Error updating team with id ${team_id}:`, error);
             throw error;
@@ -114,18 +131,21 @@ const Team = {
             }
             
             logger.info(`Deleting team ${team_id} and its members in tenant ${tenant}`);
-            // Delete team members first
-            await db('team_members')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('team_id', team_id)
-                .del();
-            // Then delete the team
-            await db<ITeam>('teams')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('team_id', team_id)
-                .del();
+            
+            await withTransaction(db, async (trx: Knex.Transaction) => {
+                // Delete team members first
+                await trx('team_members')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('team_id', team_id)
+                    .del();
+                // Then delete the team
+                await trx<ITeam>('teams')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('team_id', team_id)
+                    .del();
+            });
         } catch (error) {
             logger.error(`Error deleting team with id ${team_id}:`, error);
             throw error;
@@ -139,18 +159,21 @@ const Team = {
             if (!tenant) {
                 throw new Error('Tenant context is required for team member operations');
             }
-            // Check if the user is active
-            const user = await db('users')
-                .select('is_inactive')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('user_id', user_id)
-                .first();
-            if (!user || user.is_inactive) {
-                throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
-            }
+            
+            await withTransaction(db, async (trx: Knex.Transaction) => {
+                // Check if the user is active
+                const user = await trx('users')
+                    .select('is_inactive')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('user_id', user_id)
+                    .first();
+                if (!user || user.is_inactive) {
+                    throw new Error(`Cannot add inactive user to team in tenant ${tenant}`);
+                }
 
-            await db('team_members').insert({ team_id, user_id, tenant: tenant! });
+                await trx('team_members').insert({ team_id, user_id, tenant: tenant! });
+            });
         } catch (error) {
             logger.error(`Error adding user ${user_id} to team ${team_id}:`, error);
             throw error;
@@ -160,12 +183,15 @@ const Team = {
     removeMember: async (team_id: string, user_id: string): Promise<void> => {
         try {
             const {knex: db, tenant} = await createTenantKnex();
-            await db('team_members')
-                .whereNotNull('tenant')
-                .andWhere('tenant', tenant!)
-                .andWhere('team_id', team_id)
-                .andWhere('user_id', user_id)
-                .del();
+            
+            await withTransaction(db, async (trx: Knex.Transaction) => {
+                await trx('team_members')
+                    .whereNotNull('tenant')
+                    .andWhere('tenant', tenant!)
+                    .andWhere('team_id', team_id)
+                    .andWhere('user_id', user_id)
+                    .del();
+            });
         } catch (error) {
             logger.error(`Error removing user ${user_id} from team ${team_id}:`, error);
             throw error;
@@ -181,17 +207,20 @@ const Team = {
             }
             
             logger.info(`Getting members for team ${team_id} in tenant ${tenant}`);
-            const members = await db('team_members')
-                .select('team_members.user_id')
-                .join('users', function() {
-                    this.on('team_members.user_id', '=', 'users.user_id')
-                        .andOn('team_members.tenant', '=', 'users.tenant');
-                })
-                .whereNotNull('team_members.tenant')
-                .andWhere('team_members.tenant', tenant!)
-                .andWhere('team_members.team_id', team_id)
-                .andWhere('users.is_inactive', false);
-            return members.map((member): string => member.user_id);
+            
+            return await withTransaction(db, async (trx: Knex.Transaction) => {
+                const members = await trx('team_members')
+                    .select('team_members.user_id')
+                    .join('users', function() {
+                        this.on('team_members.user_id', '=', 'users.user_id')
+                            .andOn('team_members.tenant', '=', 'users.tenant');
+                    })
+                    .whereNotNull('team_members.tenant')
+                    .andWhere('team_members.tenant', tenant!)
+                    .andWhere('team_members.team_id', team_id)
+                    .andWhere('users.is_inactive', false);
+                return members.map((member): string => member.user_id);
+            });
         } catch (error) {
             logger.error(`Error getting members for team ${team_id}:`, error);
             throw error;

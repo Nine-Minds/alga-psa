@@ -3,6 +3,8 @@
 import { createTenantKnex } from "server/src/lib/db";
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';
@@ -23,9 +25,11 @@ export async function getDefaultBillingSettings(): Promise<BillingSettings> {
     throw new Error("No tenant found");
   }
 
-  const settings = await knex('default_billing_settings')
-    .where({ tenant })
-    .first();
+  const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('default_billing_settings')
+      .where({ tenant })
+      .first();
+  });
 
   if (!settings) {
     // Return default settings if none exist
@@ -58,13 +62,13 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
     throw new Error("No tenant found");
   }
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     const existingSettings = await trx('default_billing_settings')
       .where({ tenant })
       .first();
 
     if (existingSettings) {
-      await trx('default_billing_settings')
+      return await trx('default_billing_settings')
         .where({ tenant })
         .update({
           zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
@@ -75,7 +79,7 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
           updated_at: trx.fn.now()
         });
     } else {
-      await trx('default_billing_settings').insert({
+      return await trx('default_billing_settings').insert({
         tenant,
         zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
         suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,
@@ -101,12 +105,14 @@ export async function getCompanyBillingSettings(companyId: string): Promise<Bill
     throw new Error("No tenant found");
   }
 
-  const settings = await knex('company_billing_settings')
-    .where({ 
-      company_id: companyId,
-      tenant 
-    })
-    .first();
+  const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_settings')
+      .where({ 
+        company_id: companyId,
+        tenant 
+      })
+      .first();
+  });
 
   if (!settings) {
     return null;
@@ -135,16 +141,15 @@ export async function updateCompanyBillingSettings(
     throw new Error("No tenant found");
   }
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If data is null, remove the company override
     if (data === null) {
-      await trx('company_billing_settings')
+      return await trx('company_billing_settings')
         .where({ 
           company_id: companyId,
           tenant 
         })
         .delete();
-      return;
     }
 
     const existingSettings = await trx('company_billing_settings')
@@ -155,7 +160,7 @@ export async function updateCompanyBillingSettings(
       .first();
 
     if (existingSettings) {
-      await trx('company_billing_settings')
+      return await trx('company_billing_settings')
         .where({ 
           company_id: companyId,
           tenant 
@@ -169,7 +174,7 @@ export async function updateCompanyBillingSettings(
           updated_at: trx.fn.now()
         });
     } else {
-      await trx('company_billing_settings').insert({
+      return await trx('company_billing_settings').insert({
         company_id: companyId,
         tenant,
         zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,

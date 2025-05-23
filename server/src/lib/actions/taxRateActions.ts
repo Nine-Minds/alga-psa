@@ -1,9 +1,11 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import { ITaxRate, IService } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { v4 as uuid4 } from 'uuid';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 export type DeleteTaxRateResult = {
   deleted: boolean;
@@ -12,10 +14,12 @@ export type DeleteTaxRateResult = {
 
 export async function getTaxRates(): Promise<ITaxRate[]> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    return await knex('tax_rates')
-      .where({ tenant })
-      .select('*');
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('tax_rates')
+        .where({ tenant })
+        .select('*');
+    });
   } catch (error) {
     console.error('Error fetching tax rates:', error);
     throw new Error('Failed to fetch tax rates');
@@ -24,8 +28,9 @@ export async function getTaxRates(): Promise<ITaxRate[]> {
 
 export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const taxService = new TaxService();
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const taxService = new TaxService();
     
     if (!taxRateData.region_code) {
       throw new Error('Region is required');
@@ -41,10 +46,11 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
     // Generate a UUID for the tax_rate_id
     const tax_rate_id = uuid4();
 
-    const [newTaxRate] = await knex('tax_rates')
-      .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
-      .returning('*');
-    return newTaxRate;
+      const [newTaxRate] = await trx('tax_rates')
+        .insert({ ...taxRateData, tax_rate_id, tenant: tenant! })
+        .returning('*');
+      return newTaxRate;
+    });
   } catch (error: any) {
     console.error('Error adding tax rate:', error);
     throw new Error(error.message || 'Failed to add tax rate');
@@ -53,8 +59,9 @@ export async function addTaxRate(taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Pr
 
 export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const taxService = new TaxService();
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const taxService = new TaxService();
     
     if (!taxRateData.tax_rate_id) {
       throw new Error('Tax rate ID is required for updates');
@@ -62,7 +69,7 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
 
     // Validate date range before update, excluding current tax rate
     if (taxRateData.start_date || taxRateData.end_date) {
-      const existingRate = await knex('tax_rates')
+      const existingRate = await trx('tax_rates')
         .where({
           tax_rate_id: taxRateData.tax_rate_id,
           tenant
@@ -91,17 +98,18 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
       updateData.end_date = null;
     }
 
-    const [updatedTaxRate] = await knex('tax_rates')
+    const [updatedTaxRate] = await trx('tax_rates')
       .where({
         tax_rate_id: updateData.tax_rate_id,
         tenant
       })
       .update(updateData)
       .returning('*');
-    if (!updatedTaxRate) {
-      throw new Error('Tax rate not found');
-    }
-    return updatedTaxRate;
+      if (!updatedTaxRate) {
+        throw new Error('Tax rate not found');
+      }
+      return updatedTaxRate;
+    });
   } catch (error: any) {
     console.error('Error updating tax rate:', error);
     throw new Error(error.message || 'Failed to update tax rate');
@@ -110,16 +118,17 @@ export async function updateTaxRate(taxRateData: ITaxRate): Promise<ITaxRate> {
 
 export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateResult> {
   try {
-    const { knex, tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
 
-    const affectedServices = await knex('service_catalog')
+    const affectedServices = await trx('service_catalog')
       .where({ tenant, tax_rate_id: taxRateId })
       .select('service_id', 'service_name');
 
     if (affectedServices.length > 0) {
       return { deleted: false, affectedServices };
     } else {
-      const deletedCount = await knex('tax_rates')
+      const deletedCount = await trx('tax_rates')
         .where({
           tax_rate_id: taxRateId,
           tenant
@@ -129,8 +138,9 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
       if (deletedCount === 0) {
         throw new Error('Tax rate not found or already deleted.');
       }
-      return { deleted: true };
-    }
+        return { deleted: true };
+      }
+    });
   } catch (error: any) {
     console.error('Error processing tax rate deletion:', error);
     if (error.message.includes('Tax rate not found')) {
@@ -142,9 +152,8 @@ export async function deleteTaxRate(taxRateId: string): Promise<DeleteTaxRateRes
 
 export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
   try {
-    const { knex, tenant } = await createTenantKnex();
-
-    await knex.transaction(async (trx) => {
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
       await trx('service_catalog')
         .where({ tenant, tax_rate_id: taxRateId })
         .update({ tax_rate_id: null });
@@ -156,11 +165,10 @@ export async function confirmDeleteTaxRate(taxRateId: string): Promise<void> {
         })
         .del();
 
-      if (deletedCount === 0) {
-        throw new Error('Tax rate not found during confirmed deletion.');
-      }
+        if (deletedCount === 0) {
+          throw new Error('Tax rate not found during confirmed deletion.');
+        }
     });
-
   } catch (error: any) {
     console.error('Error confirming tax rate deletion:', error);
     throw new Error(error.message || 'Failed to confirm tax rate deletion.');

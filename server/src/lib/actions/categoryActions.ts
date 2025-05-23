@@ -2,6 +2,8 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 export async function getServiceCategories(): Promise<IServiceCategory[]> {
   try {
@@ -10,9 +12,11 @@ export async function getServiceCategories(): Promise<IServiceCategory[]> {
       throw new Error('Tenant not found');
     }
 
-    const categories = await db('service_categories')
-      .where({ tenant })
-      .select('category_id', 'category_name', 'description');
+    const categories = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('service_categories')
+        .where({ tenant })
+        .select('category_id', 'category_name', 'description');
+    });
 
     return categories;
   } catch (error) {
@@ -28,12 +32,14 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<I
       throw new Error('Tenant not found');
     }
 
-    const categories = await db('categories')
-      .where({
-        channel_id: channelId,
-        tenant: tenant
-      })
-      .orderBy('category_name', 'asc');
+    const categories = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('categories')
+        .where({
+          channel_id: channelId,
+          tenant: tenant
+        })
+        .orderBy('category_name', 'asc');
+    });
 
     return categories;
   } catch (error) {

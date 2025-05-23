@@ -4,6 +4,7 @@ import { createTenantKnex } from '../db';
 import { getServerSession } from 'next-auth';
 import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
 import { Knex } from 'knex';
+import { withTransaction } from '../../../../shared/db';
 
 export interface CompanyProfile {
   name: string;
@@ -142,22 +143,26 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
     if (!session.user.contactId) throw new Error('No contact associated with user');
     
     // First get the contact to find the company
-    const contact = await knex('contacts')
-      .where({ 
-        contact_name_id: session.user.contactId,
-        tenant: session.user.tenant 
-      })
-      .first();
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ 
+          contact_name_id: session.user.contactId,
+          tenant: session.user.tenant 
+        })
+        .first();
+    });
 
     if (!contact?.company_id) throw new Error('No company associated with contact');
 
     // Then get the company details
-    const company = await knex('companies')
-      .where({ 
-        company_id: contact.company_id,
-        tenant: session.user.tenant 
-      })
-      .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({ 
+          company_id: contact.company_id,
+          tenant: session.user.tenant 
+        })
+        .first();
+    });
 
     if (!company) throw new Error('Company not found');
 
@@ -172,12 +177,14 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
     // For non-client users, use the original companyId logic
     if (!session.user.companyId) throw new Error('No company associated with user');
 
-    const company = await knex('companies')
-      .where({ 
-        company_id: session.user.companyId,
-        tenant: session.user.tenant 
-      })
-      .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({ 
+          company_id: session.user.companyId,
+          tenant: session.user.tenant 
+        })
+        .first();
+    });
 
     if (!company) throw new Error('Company not found');
 
@@ -198,19 +205,21 @@ export async function updateCompanyProfile(profile: CompanyProfile): Promise<{ s
 
   const { knex } = await createTenantKnex();
   
-  await knex('companies')
-    .where({ 
-      company_id: session.user.companyId,
-      tenant: session.user.tenant
-    })
-    .update({
-      company_name: profile.name,
-      email: profile.email,
-      phone_no: profile.phone,
-      address: profile.address,
-      notes: profile.notes,
-      updated_at: new Date().toISOString()
-    });
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ 
+        company_id: session.user.companyId,
+        tenant: session.user.tenant
+      })
+      .update({
+        company_name: profile.name,
+        email: profile.email,
+        phone_no: profile.phone,
+        address: profile.address,
+        notes: profile.notes,
+        updated_at: new Date().toISOString()
+      });
+  });
 
   return { success: true };
 }
@@ -222,14 +231,16 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
 
   const { knex } = await createTenantKnex();
   
-  const methods = await knex('payment_methods')
-    .where({ 
-      company_id: session.user.companyId,
-      tenant: session.user.tenant,
-      is_deleted: false
-    })
-    .orderBy('is_default', 'desc')
-    .select('*');
+  const methods = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('payment_methods')
+      .where({ 
+        company_id: session.user.companyId,
+        tenant: session.user.tenant,
+        is_deleted: false
+      })
+      .orderBy('is_default', 'desc')
+      .select('*');
+  });
 
   return methods.map((method): PaymentMethod => ({
     id: method.payment_method_id,
@@ -253,7 +264,7 @@ export async function addPaymentMethod(data: {
   const { knex } = await createTenantKnex();
 
   // Start a transaction
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // If this is set as default, unset any existing default
     if (data.setDefault) {
       await trx('payment_methods')
@@ -270,7 +281,7 @@ export async function addPaymentMethod(data: {
     const paymentDetails = await processPaymentToken(data.token);
 
     // Add the new payment method
-    await trx('payment_methods').insert({
+    return await trx('payment_methods').insert({
       company_id: session.user.companyId,
       tenant: session.user.tenant,
       type: data.type,
@@ -292,16 +303,18 @@ export async function removePaymentMethod(id: string): Promise<{ success: boolea
 
   const { knex } = await createTenantKnex();
 
-  await knex('payment_methods')
-    .where({ 
-      payment_method_id: id,
-      company_id: session.user.companyId,
-      tenant: session.user.tenant
-    })
-    .update({ 
-      is_deleted: true,
-      updated_at: new Date().toISOString()
-    });
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('payment_methods')
+      .where({ 
+        payment_method_id: id,
+        company_id: session.user.companyId,
+        tenant: session.user.tenant
+      })
+      .update({ 
+        is_deleted: true,
+        updated_at: new Date().toISOString()
+      });
+  });
 
   return { success: true };
 }
@@ -313,7 +326,7 @@ export async function setDefaultPaymentMethod(id: string): Promise<{ success: bo
 
   const { knex } = await createTenantKnex();
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Unset any existing default
     await trx('payment_methods')
       .where({ 
@@ -324,7 +337,7 @@ export async function setDefaultPaymentMethod(id: string): Promise<{ success: bo
       .update({ is_default: false });
 
     // Set the new default
-    await trx('payment_methods')
+    return await trx('payment_methods')
       .where({ 
         payment_method_id: id,
         company_id: session.user.companyId,
@@ -362,14 +375,16 @@ export async function getInvoices(): Promise<Invoice[]> {
 
   const { knex } = await createTenantKnex();
   
-  const invoices = await knex('invoices')
-    .where({ 
-      company_id: session.user.companyId,
-      tenant: session.user.tenant
-    })
-    .orderBy('created_at', 'desc')
-    .limit(10)
-    .select('*');
+  const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({ 
+        company_id: session.user.companyId,
+        tenant: session.user.tenant
+      })
+      .orderBy('created_at', 'desc')
+      .limit(10)
+      .select('*');
+  });
 
   return invoices.map((invoice: {
     invoice_id: string;
@@ -404,14 +419,16 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
 
   const { knex } = await createTenantKnex();
   
-  const cycles = await knex('company_billing_plans')
-    .where({ 
-      company_id: session.user.companyId,
-      tenant: session.user.tenant
-    })
-    .orderBy('start_date', 'desc')
-    .limit(12)
-    .select('*');
+  const cycles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_plans')
+      .where({ 
+        company_id: session.user.companyId,
+        tenant: session.user.tenant
+      })
+      .orderBy('start_date', 'desc')
+      .limit(12)
+      .select('*');
+  });
 
   return cycles.map((cycle: {
     company_billing_plan_id: string;
@@ -435,89 +452,91 @@ export async function getActiveServices(): Promise<Service[]> {
   
   const now = new Date().toISOString();
   
-  const services = await knex('company_billing_plans as cbp')
-    .join('billing_plans as bp', function(this: Knex.JoinClause) {
-      this.on('cbp.plan_id', '=', 'bp.plan_id')
-          .andOn('cbp.tenant', '=', 'bp.tenant');
-    })
-    .join('plan_services as ps', function(this: Knex.JoinClause) {
-      this.on('bp.plan_id', '=', 'ps.plan_id')
-          .andOn('bp.tenant', '=', 'ps.tenant');
-    })
-    .join('service_catalog as sc', function(this: Knex.JoinClause) {
-      this.on('ps.service_id', '=', 'sc.service_id')
-          .andOn('ps.tenant', '=', 'sc.tenant');
-    })
-    // Removed old join to bucket_plans
-    .leftJoin('plan_service_configurations as psc', function(this: Knex.JoinClause) { // Added join for configurations
-      this.on('ps.plan_id', '=', 'psc.plan_id')
-          .andOn('ps.service_id', '=', 'psc.service_id')
-          .andOn('ps.tenant', '=', 'psc.tenant');
-    })
-    .leftJoin('plan_service_bucket_configs as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
-      this.on('psc.config_id', '=', 'psbc.config_id')
-          .andOn('psc.tenant', '=', 'psbc.tenant');
-    })
-    .where({
-      'cbp.company_id': session.user.companyId,
-      'cbp.tenant': session.user.tenant,
-      'bp.tenant': session.user.tenant,
-      'ps.tenant': session.user.tenant,
-      'sc.tenant': session.user.tenant
-    })
-    .whereIn('bp.plan_type', ['Fixed', 'Hourly', 'Usage', 'Bucket'])
-    .andWhere('cbp.start_date', '<=', now)
-    .andWhere(function(this: Knex.QueryBuilder) {
-      this.where('cbp.end_date', '>', now)
-          .orWhereNull('cbp.end_date');
-    })
-    .select(
-      'sc.service_id as id',
-      'sc.service_name as name',
-      'sc.description',
-      'sc.service_type',
-      'sc.default_rate',
-      'sc.unit_of_measure',
-      'ps.custom_rate',
-      'ps.quantity',
-      'bp.plan_type',
-      'bp.is_custom',
-      'bp.billing_frequency',
-      'bp.description as plan_description',
-      // 'bucket.total_hours', // Removed old bucket field
-      // 'bucket.overage_rate', // Removed old bucket field
-      // 'bucket.billing_period as bucket_period', // Removed old bucket field
-      'psc.config_id', // Added config_id
-      'psbc.total_hours as psbc_total_hours', // Added new bucket field
-      'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
-      'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
-      knex.raw("'active' as status"),
-      'cbp.start_date',
-      'cbp.end_date'
-    )
-    .groupBy(
-      'sc.service_id',
-      'sc.service_name',
-      'sc.description',
-      'sc.service_type',
-      'sc.default_rate',
-      'sc.unit_of_measure',
-      'ps.custom_rate',
-      'ps.quantity',
-      'bp.plan_type',
-      'bp.is_custom',
-      'bp.billing_frequency',
-      'bp.description',
-      // 'bucket.total_hours', // Removed old bucket field
-      // 'bucket.overage_rate', // Removed old bucket field
-      // 'bucket.billing_period', // Removed old bucket field
-      'psc.config_id', // Added config_id
-      'psbc.total_hours', // Added new bucket field
-      'psbc.overage_rate', // Added new bucket field
-      'psbc.allow_rollover', // Added new bucket field
-      'cbp.start_date',
-      'cbp.end_date'
-    );
+  const services = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_plans as cbp')
+      .join('billing_plans as bp', function(this: Knex.JoinClause) {
+        this.on('cbp.plan_id', '=', 'bp.plan_id')
+            .andOn('cbp.tenant', '=', 'bp.tenant');
+      })
+      .join('plan_services as ps', function(this: Knex.JoinClause) {
+        this.on('bp.plan_id', '=', 'ps.plan_id')
+            .andOn('bp.tenant', '=', 'ps.tenant');
+      })
+      .join('service_catalog as sc', function(this: Knex.JoinClause) {
+        this.on('ps.service_id', '=', 'sc.service_id')
+            .andOn('ps.tenant', '=', 'sc.tenant');
+      })
+      // Removed old join to bucket_plans
+      .leftJoin('plan_service_configurations as psc', function(this: Knex.JoinClause) { // Added join for configurations
+        this.on('ps.plan_id', '=', 'psc.plan_id')
+            .andOn('ps.service_id', '=', 'psc.service_id')
+            .andOn('ps.tenant', '=', 'psc.tenant');
+      })
+      .leftJoin('plan_service_bucket_configs as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
+        this.on('psc.config_id', '=', 'psbc.config_id')
+            .andOn('psc.tenant', '=', 'psbc.tenant');
+      })
+      .where({
+        'cbp.company_id': session.user.companyId,
+        'cbp.tenant': session.user.tenant,
+        'bp.tenant': session.user.tenant,
+        'ps.tenant': session.user.tenant,
+        'sc.tenant': session.user.tenant
+      })
+      .whereIn('bp.plan_type', ['Fixed', 'Hourly', 'Usage', 'Bucket'])
+      .andWhere('cbp.start_date', '<=', now)
+      .andWhere(function(this: Knex.QueryBuilder) {
+        this.where('cbp.end_date', '>', now)
+            .orWhereNull('cbp.end_date');
+      })
+      .select(
+        'sc.service_id as id',
+        'sc.service_name as name',
+        'sc.description',
+        'sc.service_type',
+        'sc.default_rate',
+        'sc.unit_of_measure',
+        'ps.custom_rate',
+        'ps.quantity',
+        'bp.plan_type',
+        'bp.is_custom',
+        'bp.billing_frequency',
+        'bp.description as plan_description',
+        // 'bucket.total_hours', // Removed old bucket field
+        // 'bucket.overage_rate', // Removed old bucket field
+        // 'bucket.billing_period as bucket_period', // Removed old bucket field
+        'psc.config_id', // Added config_id
+        'psbc.total_hours as psbc_total_hours', // Added new bucket field
+        'psbc.overage_rate as psbc_overage_rate', // Added new bucket field
+        'psbc.allow_rollover as psbc_allow_rollover', // Added new bucket field
+        trx.raw("'active' as status"),
+        'cbp.start_date',
+        'cbp.end_date'
+      )
+      .groupBy(
+        'sc.service_id',
+        'sc.service_name',
+        'sc.description',
+        'sc.service_type',
+        'sc.default_rate',
+        'sc.unit_of_measure',
+        'ps.custom_rate',
+        'ps.quantity',
+        'bp.plan_type',
+        'bp.is_custom',
+        'bp.billing_frequency',
+        'bp.description',
+        // 'bucket.total_hours', // Removed old bucket field
+        // 'bucket.overage_rate', // Removed old bucket field
+        // 'bucket.billing_period', // Removed old bucket field
+        'psc.config_id', // Added config_id
+        'psbc.total_hours', // Added new bucket field
+        'psbc.overage_rate', // Added new bucket field
+        'psbc.allow_rollover', // Added new bucket field
+        'cbp.start_date',
+        'cbp.end_date'
+      );
+  });
 
   return services.map((service: {
     id: string;
@@ -641,45 +660,49 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
   const { knex } = await createTenantKnex();
   
   // Get current service details
-  const currentService = await knex('company_billing_plans as cbp')
-    .join('billing_plans as bp', function(this: Knex.JoinClause) {
-      this.on('cbp.plan_id', '=', 'bp.plan_id')
-          .andOn('cbp.tenant', '=', 'bp.tenant');
-    })
-    .join('plan_services as ps', function(this: Knex.JoinClause) {
-      this.on('bp.plan_id', '=', 'ps.plan_id')
-          .andOn('bp.tenant', '=', 'ps.tenant');
-    })
-    .where({ 
-      'ps.service_id': serviceId,
-      'cbp.company_id': session.user.companyId,
-      'cbp.tenant': session.user.tenant
-    })
-    .first();
+  const currentService = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_plans as cbp')
+      .join('billing_plans as bp', function(this: Knex.JoinClause) {
+        this.on('cbp.plan_id', '=', 'bp.plan_id')
+            .andOn('cbp.tenant', '=', 'bp.tenant');
+      })
+      .join('plan_services as ps', function(this: Knex.JoinClause) {
+        this.on('bp.plan_id', '=', 'ps.plan_id')
+            .andOn('bp.tenant', '=', 'ps.tenant');
+      })
+      .where({ 
+        'ps.service_id': serviceId,
+        'cbp.company_id': session.user.companyId,
+        'cbp.tenant': session.user.tenant
+      })
+      .first();
+  });
 
   if (!currentService) throw new Error('Service not found');
 
   // Get available plans for this service
-  const plans = await knex('billing_plans as bp')
-    .join('plan_services as ps', function(this: Knex.JoinClause) {
-      this.on('bp.plan_id', '=', 'ps.plan_id')
-          .andOn('bp.tenant', '=', 'ps.tenant');
-    })
-    .join('service_catalog as sc', function(this: Knex.JoinClause) {
-      this.on('ps.service_id', '=', 'sc.service_id')
-          .andOn('ps.tenant', '=', 'sc.tenant');
-    })
-    .where({ 
-      'ps.service_id': serviceId,
-      'bp.tenant': session.user.tenant,
-      'bp.is_active': true
-    })
-    .select(
-      'bp.plan_id as id',
-      'bp.plan_name as name',
-      'bp.description',
-      'sc.default_rate'
-    );
+  const plans = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('billing_plans as bp')
+      .join('plan_services as ps', function(this: Knex.JoinClause) {
+        this.on('bp.plan_id', '=', 'ps.plan_id')
+            .andOn('bp.tenant', '=', 'ps.tenant');
+      })
+      .join('service_catalog as sc', function(this: Knex.JoinClause) {
+        this.on('ps.service_id', '=', 'sc.service_id')
+            .andOn('ps.tenant', '=', 'sc.tenant');
+      })
+      .where({ 
+        'ps.service_id': serviceId,
+        'bp.tenant': session.user.tenant,
+        'bp.is_active': true
+      })
+      .select(
+        'bp.plan_id as id',
+        'bp.plan_name as name',
+        'bp.description',
+        'sc.default_rate'
+      );
+  });
 
   return plans.map((plan): ServicePlan => ({
     id: plan.id,
@@ -701,7 +724,7 @@ export async function upgradeService(serviceId: string, planId: string): Promise
   const { knex } = await createTenantKnex();
 
   // Start a transaction
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get current service plan
     const currentPlan = await trx('company_billing_plans as cbp')
       .join('plan_services as ps', function(this: Knex.JoinClause) {
@@ -734,7 +757,7 @@ export async function upgradeService(serviceId: string, planId: string): Promise
 
     // Start new plan from the beginning of next month
     const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    await trx('company_billing_plans').insert({
+    return await trx('company_billing_plans').insert({
       company_id: session.user.companyId,
       plan_id: planId,
       tenant: session.user.tenant,

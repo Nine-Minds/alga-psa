@@ -1,24 +1,28 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 // Import ITaxRate and other necessary types
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
 // Removed duplicate import of ITaxRegion
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces'; // Added import
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
-    const { knex } = await createTenantKnex();
-    const taxSettings = await knex<ICompanyTaxSettings>('company_tax_settings')
-      .where({ company_id: companyId })
-      .first();
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const taxSettings = await trx<ICompanyTaxSettings>('company_tax_settings')
+        .where({ company_id: companyId })
+        .first();
 
     // Removed fetching of components, thresholds, holidays based on tax_rate_id (Phase 1.2)
     // These are now associated directly with tax rates/components, not the settings record.
     // Advanced rule handling might be revisited in later phases if needed here.
 
-    return taxSettings || null;
+      return taxSettings || null;
+    });
   } catch (error) {
     console.error('Error fetching company tax settings:', error);
     if (error instanceof Error) {
@@ -33,10 +37,9 @@ export async function updateCompanyTaxSettings(
   companyId: string,
   taxSettings: Omit<ICompanyTaxSettings, 'tenant'>
 ): Promise<ICompanyTaxSettings | null> {
-  const { knex, tenant } = await createTenantKnex();
-  const trx = await knex.transaction();
-
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Update only the fields remaining on company_tax_settings
     await trx<ICompanyTaxSettings>('company_tax_settings')
       .where('company_id', companyId) // Separate where clauses
@@ -48,14 +51,11 @@ export async function updateCompanyTaxSettings(
         // directly through this settings update based on tax_rate_id.
         // Their management is tied to specific tax rates/components now.
       });
-      // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
+        // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
 
-      await trx.commit();
-  
-      return await getCompanyTaxSettings(companyId);
-    } catch (error) {
-      await trx.rollback();
-      console.error('Error updating company tax settings:', error);
+        return await getCompanyTaxSettings(companyId);
+      } catch (error) {
+        console.error('Error updating company tax settings:', error);
       
       // Enhanced error messages with more specific information
       if (error instanceof Error) {
@@ -68,10 +68,11 @@ export async function updateCompanyTaxSettings(
         } else {
           throw new Error(`Failed to update company tax settings: ${error.message}`);
         }
-      } else {
-        throw new Error('Failed to update company tax settings due to an unexpected error.');
+        } else {
+          throw new Error('Failed to update company tax settings due to an unexpected error.');
+        }
       }
-    }
+  });
 }
 
 // Return the base ITaxRate type, which now includes description and region_code

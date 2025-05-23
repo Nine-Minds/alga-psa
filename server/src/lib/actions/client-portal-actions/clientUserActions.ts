@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { IUser } from 'server/src/interfaces/auth.interfaces';;
 import { revalidatePath } from 'next/cache';
@@ -19,13 +21,15 @@ export async function updateClientUser(
       throw new Error('Tenant not found');
     }
 
-    const [updatedUser] = await knex('users')
+    const [updatedUser] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('users')
       .where({ user_id: userId, tenant })
       .update({
         ...userData,
         updated_at: new Date().toISOString()
       })
       .returning('*');
+    });
 
     return updatedUser || null;
   } catch (error) {
@@ -60,9 +64,11 @@ export async function resetClientUserPassword(
     };
     updateData[passwordField] = hashedPassword;
     
-    await knex('users')
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await trx('users')
       .where({ user_id: userId, tenant })
       .update(updateData);
+    });
 
     return { success: true };
   } catch (error) {
@@ -84,9 +90,11 @@ export async function getClientUserById(userId: string): Promise<IUser | null> {
       throw new Error('Tenant not found');
     }
 
-    const user = await knex('users')
+    const user = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('users')
       .where({ user_id: userId, tenant, user_type: 'client' })
       .first();
+    });
 
     return user || null;
   } catch (error) {
@@ -119,54 +127,56 @@ export async function createClientUser({
       throw new Error('Tenant not found');
     }
 
-    // Get all roles for tenant and find client role (case-insensitive)
-    const roles = await knex('roles').where({ tenant });
-    const clientRole = roles.find(role => 
-      role.role_name && role.role_name.toLowerCase().includes('client')
-    );
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get all roles for tenant and find client role (case-insensitive)
+      const roles = await trx('roles').where({ tenant });
+      const clientRole = roles.find(role => 
+        role.role_name && role.role_name.toLowerCase().includes('client')
+      );
 
-    if (!clientRole) {
-      throw new Error(`Client role not found among ${roles.length} tenant roles`);
-    }
+      if (!clientRole) {
+        throw new Error(`Client role not found among ${roles.length} tenant roles`);
+      }
 
-    // Hash the password
-    const hashedPassword = await hashPassword(password);
+      // Hash the password
+      const hashedPassword = await hashPassword(password);
 
-    // Check if the password field exists in the users table
-    const hasPasswordField = await knex.schema.hasColumn('users', 'password');
-    const passwordField = hasPasswordField ? 'password' : 'hashed_password';
-    
-    console.log(`Using password field: ${passwordField}`);
-    
-    // Create the user with dynamic password field
-    const userData: any = {
-      tenant,
-      email,
-      username: email,
-      contact_id: contactId,
-      user_type: 'client',
-      is_inactive: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    // Add first and last name if provided
-    if (firstName) userData.first_name = firstName;
-    if (lastName) userData.last_name = lastName;
-    
-    userData[passwordField] = hashedPassword;
-    
-    const [user] = await knex('users')
-      .insert(userData)
-      .returning('*');
+      // Check if the password field exists in the users table
+      const hasPasswordField = await knex.schema.hasColumn('users', 'password');
+      const passwordField = hasPasswordField ? 'password' : 'hashed_password';
+      
+      console.log(`Using password field: ${passwordField}`);
+      
+      // Create the user with dynamic password field
+      const userData: any = {
+        tenant,
+        email,
+        username: email,
+        contact_id: contactId,
+        user_type: 'client',
+        is_inactive: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      
+      // Add first and last name if provided
+      if (firstName) userData.first_name = firstName;
+      if (lastName) userData.last_name = lastName;
+      
+      userData[passwordField] = hashedPassword;
+      
+      const [user] = await trx('users')
+        .insert(userData)
+        .returning('*');
 
-    // Assign the client role
-    await knex('user_roles')
-      .insert({
-        user_id: user.user_id,
-        role_id: clientRole.role_id,
-        tenant
-      });
+      // Assign the client role
+      await trx('user_roles')
+        .insert({
+          user_id: user.user_id,
+          role_id: clientRole.role_id,
+          tenant
+        });
+    });
 
     return { success: true };
   } catch (error) {
@@ -210,22 +220,26 @@ export async function uploadContactAvatar(
       canModify = true;
     } else {
       // Check if this contact is associated with the current user
-      const userContact = await knex('contacts')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
-        .first();
-      
-      if (userContact) {
-        // Check if there's a user with this contact_id
-        const contactUser = await knex('users')
+      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('contacts')
           .where({
-            contact_id: contactId,
-            user_id: currentUser.user_id,
+            contact_name_id: contactId,
             tenant
           })
           .first();
+      });
+      
+      if (userContact) {
+        // Check if there's a user with this contact_id
+        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('users')
+            .where({
+              contact_id: contactId,
+              user_id: currentUser.user_id,
+              tenant
+            })
+            .first();
+        });
         
         if (contactUser) {
           canModify = true;
@@ -248,9 +262,11 @@ export async function uploadContactAvatar(
   }
 
   // Verify contact exists
-  const contact = await knex('contacts')
-    .where({ contact_name_id: contactId, tenant })
-    .first();
+  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('contacts')
+      .where({ contact_name_id: contactId, tenant })
+      .first();
+  });
   if (!contact) {
     return { success: false, message: 'Contact not found' };
   }
@@ -324,22 +340,26 @@ export async function deleteContactAvatar(
       canDelete = true;
     } else {
       // Check if this contact is associated with the current user
-      const userContact = await knex('contacts')
-        .where({
-          contact_name_id: contactId,
-          tenant
-        })
-        .first();
-      
-      if (userContact) {
-        // Check if there's a user with this contact_id
-        const contactUser = await knex('users')
+      const userContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('contacts')
           .where({
-            contact_id: contactId,
-            user_id: currentUser.user_id,
+            contact_name_id: contactId,
             tenant
           })
           .first();
+      });
+      
+      if (userContact) {
+        // Check if there's a user with this contact_id
+        const contactUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('users')
+            .where({
+              contact_id: contactId,
+              user_id: currentUser.user_id,
+              tenant
+            })
+            .first();
+        });
         
         if (contactUser) {
           canDelete = true;
@@ -357,9 +377,11 @@ export async function deleteContactAvatar(
   }
 
   // Verify contact exists
-  const contact = await knex('contacts')
-    .where({ contact_name_id: contactId, tenant })
-    .first();
+  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('contacts')
+      .where({ contact_name_id: contactId, tenant })
+      .first();
+  });
   if (!contact) {
     return { success: false, message: 'Contact not found' };
   }

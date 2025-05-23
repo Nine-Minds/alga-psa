@@ -8,6 +8,8 @@ import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { 
   ticketFormSchema, 
   ticketSchema, 
@@ -271,12 +273,14 @@ export async function fetchTicketAttributes(ticketId: string, user: IUser) {
 
     const attributes = await getTicketAttributes(validatedTicketId);
 
-    const ticketExists = await db('tickets')
-      .where({
-        ticket_id: validatedTicketId,
-        tenant: tenant
-      })
-      .first();
+    const ticketExists = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('tickets')
+        .where({
+          ticket_id: validatedTicketId,
+          tenant: tenant
+        })
+        .first();
+    });
 
     if (!ticketExists) {
       throw new Error('Ticket not found or does not belong to the current tenant');
@@ -688,20 +692,19 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
       throw new Error('Tenant not found');
     }
 
-    // Verify ticket exists and belongs to tenant
-    const ticket = await db('tickets')
-      .where({
-        ticket_id: ticketId,
-        tenant: tenant
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
     // Start transaction for atomic operations
-    await db.transaction(async (trx) => {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Verify ticket exists and belongs to tenant
+      const ticket = await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant: tenant
+        })
+        .first();
+
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
       // Delete associated comments
       await trx('comments')
         .where({ 

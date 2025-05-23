@@ -1,6 +1,8 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
@@ -28,30 +30,31 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       throw new Error('Tenant not found');
     }
 
-    // Get user's company_id
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get user's company_id
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    const contact = await db('contacts')
-      .where({
-        contact_name_id: user.contact_id,
-        tenant
-      })
-      .first();
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
 
-    if (!contact?.company_id) {
-      throw new Error('Contact not associated with a company');
-    }
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
 
-    let query = db('tickets as t')
+      let query = trx('tickets as t')
       .select(
         't.ticket_id',
         't.ticket_number',
@@ -121,9 +124,12 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       query = query.where('t.status_id', status);
     }
 
-    const tickets = await query.orderBy('t.entered_at', 'desc');
+      const tickets = await query.orderBy('t.entered_at', 'desc');
 
-    return tickets.map((ticket): ITicketListItem => ({
+      return tickets;
+    });
+
+    return result.map((ticket): ITicketListItem => ({
       ...ticket,
       entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
       updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
@@ -147,32 +153,33 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
       throw new Error('Tenant not found');
     }
 
-    // Get user's company_id
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get user's company_id
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    const contact = await db('contacts')
-      .where({
-        contact_name_id: user.contact_id,
-        tenant
-      })
-      .first();
+      const contact = await trx('contacts')
+        .where({
+          contact_name_id: user.contact_id,
+          tenant
+        })
+        .first();
 
-    if (!contact?.company_id) {
-      throw new Error('Contact not associated with a company');
-    }
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
 
-    // Get ticket details with related data
-    const [ticket, conversations, documents, users] = await Promise.all([
-      db('tickets as t')
+      // Get ticket details with related data
+      const [ticket, conversations, documents, users] = await Promise.all([
+        trx('tickets as t')
         .select(
           't.*',
           's.name as status_name',
@@ -193,16 +200,16 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         })
         .first(),
       
-      // Get conversations
-      db('comments')
+        // Get conversations
+        trx('comments')
         .where({
           ticket_id: ticketId,
           tenant
         })
         .orderBy('created_at', 'asc'),
       
-      // Get documents
-      db('documents as d')
+        // Get documents
+        trx('documents as d')
         .select('d.*')
         .join('document_associations as da', function() {
           this.on('d.document_id', '=', 'da.document_id')
@@ -214,8 +221,8 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
           'd.tenant': tenant
         }),
       
-      // Get all users involved in the ticket, including avatar file_id
-      db('users as u')
+        // Get all users involved in the ticket, including avatar file_id
+        trx('users as u')
         .select(
           'u.user_id',
           'u.first_name',
@@ -243,14 +250,17 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
           'u.tenant': tenant
         })
         .distinct('u.user_id', 'u.first_name', 'u.last_name', 'u.email', 'u.user_type', 'd.file_id')
-    ]);
+      ]);
 
-    if (!ticket) {
+      return { ticket, conversations, documents, users };
+    });
+
+    if (!result.ticket) {
       throw new Error('Ticket not found');
     }
 
     // Create user map, including avatar URLs
-    const usersWithAvatars = await Promise.all(users.map(async (user: any) => {
+    const usersWithAvatars = await Promise.all(result.users.map(async (user: any) => {
       let avatarUrl: string | null = null;
       if (user.avatar_file_id) {
         try {
@@ -281,12 +291,12 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
     }), {} as Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>);
 
     return {
-      ...ticket,
-      entered_at: ticket.entered_at instanceof Date ? ticket.entered_at.toISOString() : ticket.entered_at,
-      updated_at: ticket.updated_at instanceof Date ? ticket.updated_at.toISOString() : ticket.updated_at,
-      closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
-      conversations,
-      documents,
+      ...result.ticket,
+      entered_at: result.ticket.entered_at instanceof Date ? result.ticket.entered_at.toISOString() : result.ticket.entered_at,
+      updated_at: result.ticket.updated_at instanceof Date ? result.ticket.updated_at.toISOString() : result.ticket.updated_at,
+      closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
+      conversations: result.conversations,
+      documents: result.documents,
       userMap
     };
   } catch (error) {
@@ -307,36 +317,38 @@ export async function addClientTicketComment(ticketId: string, content: string, 
       throw new Error('Tenant not found');
     }
 
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    let markdownContent = "";
-    try {
-      markdownContent = await convertBlockNoteToMarkdown(content);
-      console.log("Converted markdown content for client comment:", markdownContent);
-    } catch (e) {
-      console.error("Error converting client comment to markdown:", e);
-      markdownContent = "[Error converting content to markdown]";
-    }
+      let markdownContent = "";
+      try {
+        markdownContent = await convertBlockNoteToMarkdown(content);
+        console.log("Converted markdown content for client comment:", markdownContent);
+      } catch (e) {
+        console.error("Error converting client comment to markdown:", e);
+        markdownContent = "[Error converting content to markdown]";
+      }
 
-    await db('comments').insert({
+      await trx('comments').insert({
       tenant,
       ticket_id: ticketId,
       author_type: 'client',
       note: content,
       is_internal: isInternal,
       is_resolution: isResolution,
-      created_at: new Date().toISOString(),
-      user_id: session.user.id,
-      markdown_content: markdownContent
+        created_at: new Date().toISOString(),
+        user_id: session.user.id,
+        markdown_content: markdownContent
+      });
     });
     
     return true; // Return true to indicate success
@@ -358,52 +370,54 @@ export async function updateClientTicketComment(commentId: string, updates: Part
       throw new Error('Tenant not found');
     }
 
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
-
-    // Verify the comment belongs to this user
-    const comment = await db('comments')
-      .where({
-        comment_id: commentId,
-        tenant,
-        user_id: session.user.id
-      })
-      .first();
-
-    if (!comment) {
-      throw new Error('Comment not found or not authorized to edit');
-    }
-
-    let updatesWithMarkdown = { ...updates };
-    if (updates.note) {
-      try {
-        const markdownContent = await convertBlockNoteToMarkdown(updates.note);
-        console.log("Converted markdown content for updated client comment:", markdownContent);
-        updatesWithMarkdown.markdown_content = markdownContent;
-      } catch (e) {
-        console.error("Error converting updated client comment to markdown:", e);
-        updatesWithMarkdown.markdown_content = "[Error converting content to markdown]";
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
       }
-    }
 
-    await db('comments')
-      .where({
-        comment_id: commentId,
-        tenant
-      })
-      .update({
-        ...updatesWithMarkdown,
-        updated_at: new Date().toISOString()
-        // Removed updated_by as it doesn't exist in the comments table
-      });
+      // Verify the comment belongs to this user
+      const comment = await trx('comments')
+        .where({
+          comment_id: commentId,
+          tenant,
+          user_id: session.user.id
+        })
+        .first();
+
+      if (!comment) {
+        throw new Error('Comment not found or not authorized to edit');
+      }
+
+      let updatesWithMarkdown = { ...updates };
+      if (updates.note) {
+        try {
+          const markdownContent = await convertBlockNoteToMarkdown(updates.note);
+          console.log("Converted markdown content for updated client comment:", markdownContent);
+          updatesWithMarkdown.markdown_content = markdownContent;
+        } catch (e) {
+          console.error("Error converting updated client comment to markdown:", e);
+          updatesWithMarkdown.markdown_content = "[Error converting content to markdown]";
+        }
+      }
+
+      await trx('comments')
+        .where({
+          comment_id: commentId,
+          tenant
+        })
+        .update({
+          ...updatesWithMarkdown,
+          updated_at: new Date().toISOString()
+          // Removed updated_by as it doesn't exist in the comments table
+        });
+    });
   } catch (error) {
     console.error('Failed to update comment:', error);
     throw new Error('Failed to update comment');
@@ -422,40 +436,42 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
       throw new Error('Tenant not found');
     }
 
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    // Verify the ticket belongs to the user's company
-    const ticket = await db('tickets')
-      .where({
-        ticket_id: ticketId,
-        tenant
-      })
-      .first();
+      // Verify the ticket belongs to the user's company
+      const ticket = await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant
+        })
+        .first();
 
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
 
-    // Update the ticket status
-    await db('tickets')
-      .where({
-        ticket_id: ticketId,
-        tenant
-      })
-      .update({
-        status_id: newStatusId,
-        updated_at: new Date().toISOString(),
-        updated_by: session.user.id
-      });
+      // Update the ticket status
+      await trx('tickets')
+        .where({
+          ticket_id: ticketId,
+          tenant
+        })
+        .update({
+          status_id: newStatusId,
+          updated_at: new Date().toISOString(),
+          updated_by: session.user.id
+        });
+    });
 
   } catch (error) {
     console.error('Failed to update ticket status:', error);
@@ -475,36 +491,38 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
       throw new Error('Tenant not found');
     }
 
-    const user = await db('users')
-      .where({
-        user_id: session.user.id,
-        tenant
-      })
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const user = await trx('users')
+        .where({
+          user_id: session.user.id,
+          tenant
+        })
+        .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    // Verify the comment belongs to this user
-    const comment = await db('comments')
-      .where({
-        comment_id: commentId,
-        tenant,
-        user_id: session.user.id
-      })
-      .first();
+      // Verify the comment belongs to this user
+      const comment = await trx('comments')
+        .where({
+          comment_id: commentId,
+          tenant,
+          user_id: session.user.id
+        })
+        .first();
 
-    if (!comment) {
-      throw new Error('Comment not found or not authorized to delete');
-    }
+      if (!comment) {
+        throw new Error('Comment not found or not authorized to delete');
+      }
 
-    await db('comments')
-      .where({
-        comment_id: commentId,
-        tenant
-      })
-      .del();
+      await trx('comments')
+        .where({
+          comment_id: commentId,
+          tenant
+        })
+        .del();
+    });
   } catch (error) {
     console.error('Failed to delete comment:', error);
     throw new Error('Failed to delete comment');
@@ -523,8 +541,9 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
       throw new Error('Tenant not found');
     }
 
-    // Get default status for new tickets
-    const defaultStatus = await db('statuses')
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get default status for new tickets
+      const defaultStatus = await trx('statuses')
       .where({ 
         tenant,
         is_default: true,
@@ -532,82 +551,80 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
       })
       .first();
 
-    if (!defaultStatus) {
-      throw new Error('No default status found for tickets');
-    }
+      if (!defaultStatus) {
+        throw new Error('No default status found for tickets');
+      }
 
-    // Get default channel for tickets
-    const defaultChannel = await db('channels')
+      // Get default channel for tickets
+      const defaultChannel = await trx('channels')
       .where({ 
         tenant,
         is_default: true
       })
       .first();
 
-    if (!defaultChannel) {
-      throw new Error('No default channel found for tickets');
-    }
+      if (!defaultChannel) {
+        throw new Error('No default channel found for tickets');
+      }
 
-    // Get user's company_id
-    const user = await db('users')
+      // Get user's company_id
+      const user = await trx('users')
       .where({
         user_id: session.user.id,
         tenant
       })
       .first();
 
-    if (!user?.contact_id) {
-      throw new Error('User not associated with a contact');
-    }
+      if (!user?.contact_id) {
+        throw new Error('User not associated with a contact');
+      }
 
-    const contact = await db('contacts')
+      const contact = await trx('contacts')
       .where({
         contact_name_id: user.contact_id,
         tenant
       })
       .first();
 
-    if (!contact?.company_id) {
-      throw new Error('Contact not associated with a company');
-    }
+      if (!contact?.company_id) {
+        throw new Error('Contact not associated with a company');
+      }
 
-    // Generate ticket number
-    const numberingService = new NumberingService();
-    const ticketNumber = await numberingService.getNextTicketNumber();
+      // Generate ticket number
+      const numberingService = new NumberingService();
+      const ticketNumber = await numberingService.getNextTicketNumber();
 
-    // Validate input data
-    const validatedData = validateData(clientTicketSchema, {
-      title: data.get('title'),
-      description: data.get('description'),
-      priority_id: data.get('priority_id'),
-    });
+      // Validate input data
+      const validatedData = validateData(clientTicketSchema, {
+        title: data.get('title'),
+        description: data.get('description'),
+        priority_id: data.get('priority_id'),
+      });
 
-    const ticketData: Partial<ITicket> = {
-      title: validatedData.title,
-      ticket_number: ticketNumber,
-      status_id: defaultStatus.status_id,
-      priority_id: validatedData.priority_id,
-      channel_id: defaultChannel.channel_id,
-      company_id: contact.company_id,
-      contact_name_id: user.contact_id,
-      entered_by: session.user.id,
-      entered_at: new Date().toISOString(),
-      attributes: {
-        description: validatedData.description
-      },
-      tenant,
-      url: null,
-      category_id: null,
-      subcategory_id: null,
-      updated_by: null,
-      closed_by: null,
-      assigned_to: null,
-      updated_at: null,
-      closed_at: null,
-    };
+      const ticketData: Partial<ITicket> = {
+        title: validatedData.title,
+        ticket_number: ticketNumber,
+        status_id: defaultStatus.status_id,
+        priority_id: validatedData.priority_id,
+        channel_id: defaultChannel.channel_id,
+        company_id: contact.company_id,
+        contact_name_id: user.contact_id,
+        entered_by: session.user.id,
+        entered_at: new Date().toISOString(),
+        attributes: {
+          description: validatedData.description
+        },
+        tenant,
+        url: null,
+        category_id: null,
+        subcategory_id: null,
+        updated_by: null,
+        closed_by: null,
+        assigned_to: null,
+        updated_at: null,
+        closed_at: null,
+      };
 
-    // Create ticket and initial comment in a transaction
-    const result = await db.transaction(async (trx) => {
       // Insert the ticket
       const [newTicket] = await trx('tickets')
         .insert(ticketData)

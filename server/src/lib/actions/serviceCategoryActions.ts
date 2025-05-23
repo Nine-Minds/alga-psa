@@ -1,10 +1,12 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import { getServerSession } from "next-auth/next";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { TextNoneIcon } from '@radix-ui/react-icons';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 export async function getServiceCategories() {
   const session = await getServerSession(options);
@@ -12,16 +14,18 @@ export async function getServiceCategories() {
     throw new Error('Unauthorized');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
-    const categories = await db<IServiceCategory>('service_categories')
-      .where('tenant', tenant || '')
-      .select('*');
-    return categories;
-  } catch (error) {
-    console.error('Error fetching service categories:', error);
-    throw new Error('Failed to fetch service categories');
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const categories = await trx<IServiceCategory>('service_categories')
+        .where('tenant', tenant || '')
+        .select('*');
+      return categories;
+    } catch (error) {
+      console.error('Error fetching service categories:', error);
+      throw new Error('Failed to fetch service categories');
+    }
+  });
 }
 
 export async function createServiceCategory(categoryName: string, description?: string) {
@@ -34,10 +38,11 @@ export async function createServiceCategory(categoryName: string, description?: 
     throw new Error('Category name is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if category with same name already exists
-    const existingCategory = await db('service_categories')
+    const existingCategory = await trx('service_categories')
       .where({
         tenant,
         category_name: categoryName
@@ -52,7 +57,7 @@ export async function createServiceCategory(categoryName: string, description?: 
       throw new Error("user is not logged in");
     }
 
-    const [newCategory] = await db<IServiceCategory>('service_categories')
+    const [newCategory] = await trx<IServiceCategory>('service_categories')
       .insert({
         tenant,
         category_name: categoryName.trim(),
@@ -60,14 +65,15 @@ export async function createServiceCategory(categoryName: string, description?: 
       })
       .returning('*');
 
-    return newCategory;
-  } catch (error) {
-    console.error('Error creating service category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return newCategory;
+    } catch (error) {
+      console.error('Error creating service category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to create service category');
     }
-    throw new Error('Failed to create service category');
-  }
+  });
 }
 
 export async function deleteServiceCategory(categoryId: string) {
@@ -80,10 +86,11 @@ export async function deleteServiceCategory(categoryId: string) {
     throw new Error('Category ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if category is in use
-    const inUseCount = await db('tickets')
+    const inUseCount = await trx('tickets')
       .where({
         tenant,
         category_id: categoryId
@@ -95,20 +102,21 @@ export async function deleteServiceCategory(categoryId: string) {
       throw new Error('Cannot delete category that is in use by tickets');
     }
 
-    await db('service_categories')
+    await trx('service_categories')
       .where({
         tenant,
         category_id: categoryId
       })
       .del();
-    return true;
-  } catch (error) {
-    console.error('Error deleting service category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting service category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to delete service category');
     }
-    throw new Error('Failed to delete service category');
-  }
+  });
 }
 
 export async function updateServiceCategory(categoryId: string, categoryData: Partial<IServiceCategory>) {
@@ -125,11 +133,12 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
     throw new Error('Category name cannot be empty');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if new name conflicts with existing category
     if (categoryData.category_name) {
-      const existingCategory = await db('service_categories')
+      const existingCategory = await trx('service_categories')
         .where({
           tenant,
           category_name: categoryData.category_name
@@ -146,7 +155,7 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
       throw new Error("user is not logged in");
     }    
 
-    const [updatedCategory] = await db<IServiceCategory>('service_categories')
+    const [updatedCategory] = await trx<IServiceCategory>('service_categories')
       .where({
         tenant,
         category_id: categoryId
@@ -158,12 +167,13 @@ export async function updateServiceCategory(categoryId: string, categoryData: Pa
       throw new Error('Service category not found');
     }
 
-    return updatedCategory;
-  } catch (error) {
-    console.error('Error updating service category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return updatedCategory;
+    } catch (error) {
+      console.error('Error updating service category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update service category');
     }
-    throw new Error('Failed to update service category');
-  }
+  });
 }

@@ -1,5 +1,6 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
@@ -68,7 +69,7 @@ export async function finalizeInvoiceWithKnex(
   let invoice: any;
 
   // First transaction to update invoice status
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is not already finalized
     invoice = await trx('invoices')
       .where({
@@ -125,7 +126,7 @@ export async function finalizeInvoiceWithKnex(
 
     // Update company credit balance and record transaction in a single transaction
     // We handle this directly without using CompanyBillingPlan.updateCompanyCredit to avoid validation issues
-    await knex.transaction(async (trx) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get current credit balance
       const company = await trx('companies')
         .where({ company_id: invoice.company_id, tenant })
@@ -238,9 +239,11 @@ export async function finalizeInvoiceWithKnex(
 
     if (availableCredit > 0) {
       // Get the current invoice with updated totals
-      const updatedInvoice = await knex('invoices')
-        .where({ invoice_id: invoiceId, tenant })
-        .first();
+      const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('invoices')
+          .where({ invoice_id: invoiceId, tenant })
+          .first();
+      });
 
       if (updatedInvoice && updatedInvoice.total_amount > 0) {
         // Calculate how much credit to apply
@@ -267,7 +270,7 @@ export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
     throw new Error('No tenant found');
   }
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
     const invoice = await trx('invoices')
       .where({ invoice_id: invoiceId })
@@ -328,9 +331,11 @@ export async function updateInvoiceManualItems(
   }
 
   // Load and validate invoice
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({ invoice_id: invoiceId })
+      .first();
+  });
 
   if (!invoice) {
     throw new Error('Invoice not found');
@@ -340,9 +345,11 @@ export async function updateInvoiceManualItems(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await knex('companies')
-    .where({ company_id: invoice.company_id })
-    .first();
+  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ company_id: invoice.company_id })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
@@ -365,9 +372,11 @@ async function updateManualInvoiceItemsInternal(
   const billingEngine = new BillingEngine();
   const currentDate = Temporal.Now.plainDateISO().toString();
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({ invoice_id: invoiceId, tenant })
+      .first();
+  });
 
   if (!invoice) {
     throw new Error('Invoice not found');
@@ -377,15 +386,17 @@ async function updateManualInvoiceItemsInternal(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await knex('companies')
-    .where({ company_id: invoice.company_id, tenant })
-    .first();
+  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ company_id: invoice.company_id, tenant })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
   }
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Process removals
     if (changes.removedItemIds && changes.removedItemIds.length > 0) {
       await trx('invoice_items')
@@ -535,9 +546,11 @@ async function updateManualInvoiceItemsInternal(
   // Emit INVOICE_UPDATED event after recalculation is complete
   try {
     // Re-fetch the updated invoice details to include in the payload
-    const updatedInvoice = await knex('invoices')
-      .where({ invoice_id: invoiceId, tenant })
-      .first();
+    const updatedInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({ invoice_id: invoiceId, tenant })
+        .first();
+    });
 
     if (!updatedInvoice) {
       // This shouldn't happen if recalculate succeeded, but good to check
@@ -619,12 +632,14 @@ export async function addManualItemsToInvoice(
   }
 
   // Load and validate invoice
-  const invoice = await knex('invoices')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .first();
+  });
 
   if (!invoice) {
     throw new Error('Invoice not found');
@@ -634,12 +649,14 @@ export async function addManualItemsToInvoice(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await knex('companies')
-    .where({
-      company_id: invoice.company_id,
-      tenant
-    })
-    .first();
+  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({
+        company_id: invoice.company_id,
+        tenant
+      })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
@@ -658,9 +675,11 @@ async function addManualInvoiceItemsInternal(
 ): Promise<void> {
   const { knex } = await createTenantKnex();
 
-  const invoice = await knex('invoices')
-    .where({ invoice_id: invoiceId, tenant })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({ invoice_id: invoiceId, tenant })
+      .first();
+  });
 
   if (!invoice) {
     throw new Error('Invoice not found');
@@ -670,15 +689,17 @@ async function addManualInvoiceItemsInternal(
     throw new Error('Cannot modify a paid or cancelled invoice');
   }
 
-  const company = await knex('companies')
-    .where({ company_id: invoice.company_id, tenant })
-    .first();
+  const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ company_id: invoice.company_id, tenant })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
   }
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Use persistManualInvoiceItems for adding manual items
     await persistManualInvoiceItems(
       trx,
@@ -716,7 +737,7 @@ async function addManualInvoiceItemsInternal(
 export async function hardDeleteInvoice(invoiceId: string) {
   const { knex, tenant } = await createTenantKnex();
 
-  await knex.transaction(async (trx) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // 1. Get invoice details
     const invoice = await trx('invoices')
       .where({

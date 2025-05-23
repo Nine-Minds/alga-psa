@@ -7,6 +7,8 @@ import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/op
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
@@ -28,7 +30,7 @@ export async function addUser(userData: { firstName: string; lastName: string; e
       throw new Error("Role is required");
     }
 
-    const newUser = await db.transaction(async (trx) => {
+    const newUser = await withTransaction(db, async (trx: Knex.Transaction) => {
       const [user] = await trx('users')
         .insert({
           first_name: userData.firstName,
@@ -61,15 +63,15 @@ export async function deleteUser(userId: string): Promise<void> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
 
-    const assignedCompany = await db('companies')
-      .where({ account_manager_id: userId, tenant: tenant || undefined })
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const assignedCompany = await trx('companies')
+        .where({ account_manager_id: userId, tenant: tenant || undefined })
+        .first();
 
-    if (assignedCompany) {
-      throw new Error('Cannot delete user: Assigned as Account Manager to one or more companies. Please reassign first.');
-    }
+      if (assignedCompany) {
+        throw new Error('Cannot delete user: Assigned as Account Manager to one or more companies. Please reassign first.');
+      }
 
-    await db.transaction(async (trx) => {
       // Set completed_by to NULL in workflow_tasks where the user is the completer
       await trx('workflow_tasks')
         .where({ completed_by: userId, tenant: tenant || undefined })
@@ -171,7 +173,7 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
   try {
     const {knex: db, tenant} = await createTenantKnex();
 
-    await db.transaction(async (trx) => {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       // Delete existing roles
       await trx('user_roles')
         .where({ user_id: userId, tenant: tenant || undefined })
@@ -208,10 +210,12 @@ export async function getUserRoles(userId: string): Promise<IRole[]> {
 export async function getAllRoles(): Promise<IRole[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
-    const roles = await db('roles')
-      .where({ tenant: tenant || undefined })
-      .select('*');
-    return roles;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const roles = await trx('roles')
+        .where({ tenant: tenant || undefined })
+        .select('*');
+      return roles;
+    });
   } catch (error) {
     console.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
@@ -346,14 +350,16 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
 
     // If not a valid suffix, check contacts
     const db = await getAdminConnection();
-    const contact = await db('contacts')
-      .join('companies', function() {
-        this.on('companies.company_id', '=', 'contacts.company_id')
-            .andOn('companies.tenant', '=', 'contacts.tenant');
-      })
-      .where({ 'contacts.email': email })
-      .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
-      .first();
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .join('companies', function() {
+          this.on('companies.company_id', '=', 'contacts.company_id')
+              .andOn('companies.tenant', '=', 'contacts.tenant');
+        })
+        .where({ 'contacts.email': email })
+        .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
+        .first();
+    });
 
     if (!contact) {
       return { exists: false, isActive: false };
@@ -378,95 +384,97 @@ export async function registerClientUser(
   try {
     const db = await getAdminConnection();
 
-    // First verify the contact exists and get their tenant
-    const contact = await db('contacts')
-      .join('companies', function() {
-        this.on('companies.company_id', '=', 'contacts.company_id')
-            .andOn('companies.tenant', '=', 'contacts.tenant');
-      })
-      .where({ 'contacts.email': email })
-      .select(
-        'contacts.contact_name_id',
-        'contacts.company_id',
-        'contacts.tenant',
-        'contacts.is_inactive',
-        'contacts.full_name'
-      )
-      .first();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // First verify the contact exists and get their tenant
+      const contact = await trx('contacts')
+        .join('companies', function() {
+          this.on('companies.company_id', '=', 'contacts.company_id')
+              .andOn('companies.tenant', '=', 'contacts.tenant');
+        })
+        .where({ 'contacts.email': email })
+        .select(
+          'contacts.contact_name_id',
+          'contacts.company_id',
+          'contacts.tenant',
+          'contacts.is_inactive',
+          'contacts.full_name'
+        )
+        .first();
 
-    if (!contact) {
-      return { success: false, error: 'Contact not found' };
-    }
+      if (!contact) {
+        return { success: false, error: 'Contact not found' };
+      }
 
-    if (contact.is_inactive) {
-      return { success: false, error: 'Contact is inactive' };
-    }
+      if (contact.is_inactive) {
+        return { success: false, error: 'Contact is inactive' };
+      }
 
-    // Check if user already exists
-    const existingUser = await db('users')
-      .where({ email })
-      .first();
+      // Check if user already exists
+      const existingUser = await trx('users')
+        .where({ email })
+        .first();
 
-    if (existingUser) {
-      return { success: false, error: 'User with this email already exists' };
-    }
+      if (existingUser) {
+        return { success: false, error: 'User with this email already exists' };
+      }
 
-    // Split full name into first and last name
-    const nameParts = contact.full_name.trim().split(' ');
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
+      // Split full name into first and last name
+      const nameParts = contact.full_name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Create the user with client user type
-    console.log('Creating new user record...');
-    const hashedPassword = await hashPassword(password);
-    console.log('Password hashed successfully');
+      // Create the user with client user type
+      console.log('Creating new user record...');
+      const hashedPassword = await hashPassword(password);
+      console.log('Password hashed successfully');
 
-    const [user] = await db('users')
-      .insert({
-        email,
-        username: email,
-        first_name: firstName,
-        last_name: lastName,
-        hashed_password: hashedPassword,
-        tenant: contact.tenant,
-        user_type: 'client',
-        contact_id: contact.contact_name_id,
-        is_inactive: false,
-        created_at: new Date()
-      })
-      .returning('*');
-
-    // Get the default client role
-    const [clientRole] = await db('roles')
-      .where({ role_name: 'client', tenant: contact.tenant })
-      .returning('*');
-
-    if (!clientRole) {
-      // Create default client role if it doesn't exist
-      const [newRole] = await db('roles')
+      const [user] = await trx('users')
         .insert({
-          role_name: 'client',
-          description: 'Default client user role',
-          tenant: contact.tenant
+          email,
+          username: email,
+          first_name: firstName,
+          last_name: lastName,
+          hashed_password: hashedPassword,
+          tenant: contact.tenant,
+          user_type: 'client',
+          contact_id: contact.contact_name_id,
+          is_inactive: false,
+          created_at: new Date()
         })
         .returning('*');
 
-      // Assign the new role to the user
-      await db('user_roles').insert({
-        user_id: user.user_id,
-        role_id: newRole.role_id,
-        tenant: contact.tenant
-      });
-    } else {
-      // Assign existing client role to the user
-      await db('user_roles').insert({
-        user_id: user.user_id,
-        role_id: clientRole.role_id,
-        tenant: contact.tenant
-      });
-    }
+      // Get the default client role
+      const [clientRole] = await trx('roles')
+        .where({ role_name: 'client', tenant: contact.tenant })
+        .returning('*');
 
-    return { success: true };
+      if (!clientRole) {
+        // Create default client role if it doesn't exist
+        const [newRole] = await trx('roles')
+          .insert({
+            role_name: 'client',
+            description: 'Default client user role',
+            tenant: contact.tenant
+          })
+          .returning('*');
+
+        // Assign the new role to the user
+        await trx('user_roles').insert({
+          user_id: user.user_id,
+          role_id: newRole.role_id,
+          tenant: contact.tenant
+        });
+      } else {
+        // Assign existing client role to the user
+        await trx('user_roles').insert({
+          user_id: user.user_id,
+          role_id: clientRole.role_id,
+          tenant: contact.tenant
+        });
+      }
+
+      return { success: true };
+    });
   } catch (error) {
     console.error('Error registering client user:', error);
     return { success: false, error: 'Failed to register user' };
@@ -511,34 +519,36 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     const user = await User.get(userId); // Use User.get which includes tenant context
     if (!user) return null;
 
-    // First try to get company ID from contact if user is contact-based
-    if (user.contact_id) {
-      const contact = await db('contacts')
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // First try to get company ID from contact if user is contact-based
+      if (user.contact_id) {
+        const contact = await trx('contacts')
+          .where({
+            contact_name_id: user.contact_id,
+            tenant: tenant
+          })
+          .select('company_id')
+          .first();
+
+        if (contact?.company_id) {
+          return contact.company_id;
+        }
+      }
+
+      // If no contact or no company found, try to get company from user's email domain
+      const emailDomain = user.email.split('@')[1];
+      if (!emailDomain) return null;
+
+      const emailSetting = await trx('company_email_settings')
         .where({
-          contact_name_id: user.contact_id,
+          email_suffix: emailDomain,
           tenant: tenant
         })
         .select('company_id')
         .first();
 
-      if (contact?.company_id) {
-        return contact.company_id;
-      }
-    }
-
-    // If no contact or no company found, try to get company from user's email domain
-    const emailDomain = user.email.split('@')[1];
-    if (!emailDomain) return null;
-
-    const emailSetting = await db('company_email_settings')
-      .where({
-        email_suffix: emailDomain,
-        tenant: tenant
-      })
-      .select('company_id')
-      .first();
-
-    return emailSetting?.company_id || null;
+      return emailSetting?.company_id || null;
+    });
   } catch (error) {
     console.error('Error getting user company ID:', error);
     throw new Error('Failed to get user company ID');
@@ -557,15 +567,17 @@ export async function getUserContactId(userId: string): Promise<string | null> {
       throw new Error('Tenant not found');
     }
 
-    const user = await db('users')
-      .where({
-        user_id: userId,
-        tenant: tenant
-      })
-      .select('contact_id')
-      .first();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const user = await trx('users')
+        .where({
+          user_id: userId,
+          tenant: tenant
+        })
+        .select('contact_id')
+        .first();
 
-    return user?.contact_id || null;
+      return user?.contact_id || null;
+    });
   } catch (error) {
     console.error('Error getting user contact ID:', error);
     throw new Error('Failed to get user contact ID');
@@ -780,19 +792,21 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
     }
 
     // Get all users associated with the company
-    const users = await knex('users')
-      .join('contacts', function() {
-        this.on('users.contact_id', '=', 'contacts.contact_name_id')
-            .andOn('contacts.tenant', '=', knex.raw('?', [tenant]));
-      })
-      .where({
-        'contacts.company_id': companyId,
-        'users.tenant': tenant,
-        'users.user_type': 'client'
-      })
-      .select('users.*');
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const users = await trx('users')
+        .join('contacts', function() {
+          this.on('users.contact_id', '=', 'contacts.contact_name_id')
+              .andOn('contacts.tenant', '=', trx.raw('?', [tenant]));
+        })
+        .where({
+          'contacts.company_id': companyId,
+          'users.tenant': tenant,
+          'users.user_type': 'client'
+        })
+        .select('users.*');
 
-    return users;
+      return users;
+    });
   } catch (error) {
     console.error('Error getting client users:', error);
     throw error;

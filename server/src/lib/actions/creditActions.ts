@@ -1,5 +1,6 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { createTenantKnex } from 'server/src/lib/db';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
@@ -16,13 +17,20 @@ async function calculateNewBalance(
     trx?: Knex.Transaction
 ): Promise<number> {
     const { knex, tenant } = await createTenantKnex();
-    const queryBuilder = (trx || knex);
-
-    const [company] = await queryBuilder('companies')
-        .where({ company_id: companyId, tenant })
-        .select('credit_balance');
-
-    return company.credit_balance + changeAmount;
+    
+    if (trx) {
+        const [company] = await trx('companies')
+            .where({ company_id: companyId, tenant })
+            .select('credit_balance');
+        return company.credit_balance + changeAmount;
+    } else {
+        return await withTransaction(knex, async (transaction: Knex.Transaction) => {
+            const [company] = await transaction('companies')
+                .where({ company_id: companyId, tenant })
+                .select('credit_balance');
+            return company.credit_balance + changeAmount;
+        });
+    }
 }
 
 /**
@@ -96,7 +104,7 @@ export async function validateCreditBalance(
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 
@@ -163,19 +171,21 @@ export async function createPrepaymentInvoice(
     }
 
     // Verify company exists
-    const company = await knex('companies')
-        .where({
-            company_id: companyId,
-            tenant
-        })
-        .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('companies')
+            .where({
+                company_id: companyId,
+                tenant
+            })
+            .first();
+    });
 
     if (!company) {
         throw new Error('Company not found');
     }
     
     // Create prepayment invoice
-    return await knex.transaction(async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get company's credit expiration settings or default settings
         const companySettings = await trx('company_billing_settings')
             .where({
@@ -381,7 +391,7 @@ export async function applyCreditToInvoice(
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
     
-    await knex.transaction(async (trx) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check if the invoice already has credit applied
         const invoice = await trx('invoices')
             .where({
@@ -603,22 +613,24 @@ export async function getCreditHistory(
 ): Promise<ITransaction[]> {
     const { knex, tenant } = await createTenantKnex();
     
-    const query = knex('transactions')
-        .where({
-            company_id: companyId,
-            tenant
-        })
-        .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund'])
-        .orderBy('created_at', 'desc');
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const query = trx('transactions')
+            .where({
+                company_id: companyId,
+                tenant
+            })
+            .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund'])
+            .orderBy('created_at', 'desc');
 
-    if (startDate) {
-        query.where('created_at', '>=', startDate);
-    }
-    if (endDate) {
-        query.where('created_at', '<=', endDate);
-    }
+        if (startDate) {
+            query.where('created_at', '>=', startDate);
+        }
+        if (endDate) {
+            query.where('created_at', '<=', endDate);
+        }
 
-    return query;
+        return await query;
+    });
 }
 
 /**
@@ -647,73 +659,75 @@ export async function listCompanyCredits(
     // Calculate offset for pagination
     const offset = (page - 1) * pageSize;
 
-    // Build base query
-    const baseQuery = knex('credit_tracking')
-        .where({
-            'credit_tracking.company_id': companyId,
-            'credit_tracking.tenant': tenant
-        });
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Build base query
+        const baseQuery = trx('credit_tracking')
+            .where({
+                'credit_tracking.company_id': companyId,
+                'credit_tracking.tenant': tenant
+            });
 
-    // Filter by expiration status if needed
-    if (!includeExpired) {
-        baseQuery.where('credit_tracking.is_expired', false);
-    }
+        // Filter by expiration status if needed
+        if (!includeExpired) {
+            baseQuery.where('credit_tracking.is_expired', false);
+        }
 
-    // Get total count for pagination
-    const [{ count }] = await baseQuery.clone().count('credit_id as count');
-    const total = parseInt(count as string);
-    const totalPages = Math.ceil(total / pageSize);
+        // Get total count for pagination
+        const [{ count }] = await baseQuery.clone().count('credit_id as count');
+        const total = parseInt(count as string);
+        const totalPages = Math.ceil(total / pageSize);
 
-    // Get paginated credits with transaction details
-    const credits = await baseQuery
-        .select('credit_tracking.*')
-        .leftJoin('transactions', function() {
-            this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
-                .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
-        })
-        .select(
-            'transactions.description as transaction_description',
-            'transactions.type as transaction_type',
-            'transactions.invoice_id',
-            'transactions.created_at as transaction_date'
-        )
-        .orderBy([
-            { column: 'is_expired', order: 'asc' },
-            { column: 'expiration_date', order: 'asc', nulls: 'last' },
-            { column: 'created_at', order: 'desc' }
-        ])
-        .limit(pageSize)
-        .offset(offset);
+        // Get paginated credits with transaction details
+        const credits = await baseQuery
+            .select('credit_tracking.*')
+            .leftJoin('transactions', function() {
+                this.on('credit_tracking.transaction_id', '=', 'transactions.transaction_id')
+                    .andOn('credit_tracking.tenant', '=', 'transactions.tenant');
+            })
+            .select(
+                'transactions.description as transaction_description',
+                'transactions.type as transaction_type',
+                'transactions.invoice_id',
+                'transactions.created_at as transaction_date'
+            )
+            .orderBy([
+                { column: 'is_expired', order: 'asc' },
+                { column: 'expiration_date', order: 'asc', nulls: 'last' },
+                { column: 'created_at', order: 'desc' }
+            ])
+            .limit(pageSize)
+            .offset(offset);
 
-    // Add invoice details if available
-    const creditsWithInvoices = await Promise.all(
-        credits.map(async (credit) => {
-            if (credit.invoice_id) {
-                const invoice = await knex('invoices')
-                    .where({
-                        invoice_id: credit.invoice_id,
-                        tenant
-                    })
-                    .select('invoice_number', 'status')
-                    .first();
-                
-                return {
-                    ...credit,
-                    invoice_number: invoice?.invoice_number,
-                    invoice_status: invoice?.status
-                };
-            }
-            return credit;
-        })
-    );
+        // Add invoice details if available
+        const creditsWithInvoices = await Promise.all(
+            credits.map(async (credit) => {
+                if (credit.invoice_id) {
+                    const invoice = await trx('invoices')
+                        .where({
+                            invoice_id: credit.invoice_id,
+                            tenant
+                        })
+                        .select('invoice_number', 'status')
+                        .first();
+                    
+                    return {
+                        ...credit,
+                        invoice_number: invoice?.invoice_number,
+                        invoice_status: invoice?.status
+                    };
+                }
+                return credit;
+            })
+        );
 
-    return {
-        credits: creditsWithInvoices,
-        total,
-        page,
-        pageSize,
-        totalPages
-    };
+        return {
+            credits: creditsWithInvoices,
+            total,
+            page,
+            pageSize,
+            totalPages
+        };
+    });
 }
 
 /**
@@ -729,53 +743,55 @@ export async function getCreditDetails(creditId: string): Promise<{
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
 
-    // Get credit details
-    const credit = await knex('credit_tracking')
-        .where({
-            credit_id: creditId,
-            tenant
-        })
-        .first();
-
-    if (!credit) {
-        throw new Error(`Credit with ID ${creditId} not found`);
-    }
-
-    // Get original transaction
-    const originalTransaction = await knex('transactions')
-        .where({
-            transaction_id: credit.transaction_id,
-            tenant
-        })
-        .first();
-
-    // Get all related transactions (applications, adjustments, expirations)
-    const relatedTransactions = await knex('transactions')
-        .where({
-            related_transaction_id: credit.transaction_id,
-            tenant
-        })
-        .orderBy('created_at', 'desc');
-
-    // Combine all transactions
-    const transactions = [originalTransaction, ...relatedTransactions].filter(Boolean);
-
-    // Get invoice details if available
-    let invoice = null;
-    if (originalTransaction.invoice_id) {
-        invoice = await knex('invoices')
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Get credit details
+        const credit = await trx('credit_tracking')
             .where({
-                invoice_id: originalTransaction.invoice_id,
+                credit_id: creditId,
                 tenant
             })
             .first();
-    }
 
-    return {
-        credit,
-        transactions,
-        invoice
-    };
+        if (!credit) {
+            throw new Error(`Credit with ID ${creditId} not found`);
+        }
+
+        // Get original transaction
+        const originalTransaction = await trx('transactions')
+            .where({
+                transaction_id: credit.transaction_id,
+                tenant
+            })
+            .first();
+
+        // Get all related transactions (applications, adjustments, expirations)
+        const relatedTransactions = await trx('transactions')
+            .where({
+                related_transaction_id: credit.transaction_id,
+                tenant
+            })
+            .orderBy('created_at', 'desc');
+
+        // Combine all transactions
+        const transactions = [originalTransaction, ...relatedTransactions].filter(Boolean);
+
+        // Get invoice details if available
+        let invoice = null;
+        if (originalTransaction.invoice_id) {
+            invoice = await trx('invoices')
+                .where({
+                    invoice_id: originalTransaction.invoice_id,
+                    tenant
+                })
+                .first();
+        }
+
+        return {
+            credit,
+            transactions,
+            invoice
+        };
+    });
 }
 
 /**
@@ -793,7 +809,7 @@ export async function updateCreditExpiration(
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
 
-    return await knex.transaction(async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
         const credit = await trx('credit_tracking')
             .where({
@@ -886,7 +902,7 @@ export async function manuallyExpireCredit(
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) throw new Error('No tenant found');
 
-    return await knex.transaction(async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get credit details
         const credit = await trx('credit_tracking')
             .where({
@@ -1007,7 +1023,7 @@ export async function transferCredit(
         throw new Error('Transfer amount must be greater than zero');
     }
 
-    return await knex.transaction(async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Get source credit details
         const sourceCredit = await trx('credit_tracking')
             .where({

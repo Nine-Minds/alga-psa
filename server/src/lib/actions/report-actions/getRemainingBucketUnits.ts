@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '@shared/db';
 // Import interfaces from correct files
 import {
   ICompanyBillingPlan,
@@ -66,7 +67,8 @@ export async function getRemainingBucketUnits(
   console.log(`Fetching remaining bucket units for company ${companyId} in tenant ${tenant} as of ${currentDate}`);
 
   try {
-    const query = knex<ICompanyBillingPlan>('company_billing_plans as cbp')
+    const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const query = trx<ICompanyBillingPlan>('company_billing_plans as cbp')
       .join<IBillingPlan>('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -130,7 +132,7 @@ export async function getRemainingBucketUnits(
       
       const rawResults: any[] = await query;
       
-      const results: RemainingBucketUnitsResult[] = rawResults.map(row => {
+      return rawResults.map(row => {
         const totalMinutes = typeof row.total_minutes === 'string' ? parseFloat(row.total_minutes) : row.total_minutes;
         const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
         const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
@@ -151,9 +153,10 @@ export async function getRemainingBucketUnits(
           period_end: row.period_end ? row.period_end.toISOString().split('T')[0] : undefined,
         };
       });
+    });
       
-      console.log(`Found ${results.length} active bucket plans for company ${companyId}`);
-      return results;
+    console.log(`Found ${results.length} active bucket plans for company ${companyId}`);
+    return results;
 
   } catch (error) {
     console.error(`Error fetching remaining bucket units for company ${companyId} in tenant ${tenant}:`, error);

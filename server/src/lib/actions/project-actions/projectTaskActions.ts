@@ -10,6 +10,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from 'server/src/lib/utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
 import { omit } from 'lodash';
 import { 
     createTaskSchema, 
@@ -151,7 +152,7 @@ export async function updateTaskStatus(
     
     const {knex: db, tenant} = await createTenantKnex();
     
-    return await db.transaction(async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
             throw new Error("user not found");

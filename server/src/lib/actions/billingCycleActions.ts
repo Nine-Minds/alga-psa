@@ -10,6 +10,8 @@ import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
 import { ISO8601String } from 'server/src/types/types.d';
 import { BillingCycleCreationResult } from "../billing/createBillingCycles";
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 export async function getBillingCycle(companyId: string): Promise<BillingCycleType> {
   const session = await getServerSession(options);
@@ -18,13 +20,15 @@ export async function getBillingCycle(companyId: string): Promise<BillingCycleTy
   }
   const {knex: conn, tenant} = await createTenantKnex();
 
-  const result = await conn('companies')
-    .where({
-      company_id: companyId,
-      tenant
-    })
-    .select('billing_cycle')
-    .first();
+  const result = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({
+        company_id: companyId,
+        tenant
+      })
+      .select('billing_cycle')
+      .first();
+  });
 
   return result?.billing_cycle || 'monthly';
 }
@@ -39,15 +43,17 @@ export async function updateBillingCycle(
   }
   const {knex: conn, tenant} = await createTenantKnex();
 
-  await conn('companies')
-    .where({
-      company_id: companyId,
-      tenant
-    })
-    .update({
-      billing_cycle: billingCycle,
-      updated_at: new Date().toISOString()
-    });
+  await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({
+        company_id: companyId,
+        tenant
+      })
+      .update({
+        billing_cycle: billingCycle,
+        updated_at: new Date().toISOString()
+      });
+  });
 }
 
 export async function canCreateNextBillingCycle(companyId: string): Promise<{
@@ -62,26 +68,30 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
   const {knex: conn, tenant} = await createTenantKnex();
 
   // Get the company's current billing cycle type
-  const company = await conn('companies')
-    .where({
-      company_id: companyId,
-      tenant
-    })
-    .first();
+  const company = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({
+        company_id: companyId,
+        tenant
+      })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
   }
 
   // Get the latest billing cycle
-  const lastCycle = await conn('company_billing_cycles')
-    .where({
-      company_id: companyId,
-      is_active: true,
-      tenant
-    })
-    .orderBy('effective_date', 'desc')
-    .first();
+  const lastCycle = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        company_id: companyId,
+        is_active: true,
+        tenant
+      })
+      .orderBy('effective_date', 'desc')
+      .first();
+  });
 
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
 
@@ -114,12 +124,14 @@ export async function createNextBillingCycle(
   }
   const {knex: conn, tenant} = await createTenantKnex();
 
-  const company = await conn('companies')
-    .where({
-      company_id: companyId,
-      tenant
-    })
-    .first();
+  const company = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({
+        company_id: companyId,
+        tenant
+      })
+      .first();
+  });
 
   if (!company) {
     throw new Error('Company not found');
@@ -148,24 +160,28 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
 
   // Get the billing cycle first to ensure it exists and get company_id
-  const billingCycle = await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .first();
+  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .first();
+  });
 
   if (!billingCycle) {
     throw new Error('Billing cycle not found');
   }
 
   // Check for existing invoices
-  const invoice = await knex('invoices')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .first();
+  });
 
   if (invoice) {
     // Use the hardDeleteInvoice function to properly clean up the invoice
@@ -173,15 +189,17 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
   }
 
   // Mark billing cycle as inactive instead of deleting
-  await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .update({
-      is_active: false,
-      period_end_date: new Date().toISOString() // Set end date to now
-    });
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .update({
+        is_active: false,
+        period_end_date: new Date().toISOString() // Set end date to now
+      });
+  });
 
   // Verify future periods won't be affected
   const nextBillingDate = await getNextBillingDate(
@@ -209,24 +227,28 @@ export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
 
   // Get the billing cycle first to ensure it exists and get company_id
-  const billingCycle = await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .first();
+  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .first();
+  });
 
   if (!billingCycle) {
     throw new Error('Billing cycle not found');
   }
 
   // Check for existing invoices
-  const invoice = await knex('invoices')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .first();
+  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .first();
+  });
 
   if (invoice) {
     // Use the hardDeleteInvoice function to properly clean up the invoice
@@ -234,12 +256,14 @@ export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
   }
 
   // Delete the billing cycle record
-  const deletedCount = await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id: cycleId,
-      tenant
-    })
-    .del();
+  const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id: cycleId,
+        tenant
+      })
+      .del();
+  });
 
   if (deletedCount === 0) {
     // This might happen if the cycle was already deleted in a race condition,
@@ -262,28 +286,30 @@ export async function getInvoicedBillingCycles(): Promise<(ICompanyBillingCycle 
   const {knex: conn, tenant} = await createTenantKnex();
 
   // Get all billing cycles that have invoices
-  const invoicedCycles = await conn('company_billing_cycles as cbc')
-    .join('companies as c', function() {
-      this.on('c.company_id', '=', 'cbc.company_id')
-          .andOn('c.tenant', '=', 'cbc.tenant');
-    })
-    .join('invoices as i', function() {
-      this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-          .andOn('i.tenant', '=', 'cbc.tenant');
-    })
-    .where('cbc.tenant', tenant)
-    .whereNotNull('cbc.period_end_date')
-    .select(
-      'cbc.billing_cycle_id',
-      'cbc.company_id',
-      'c.company_name',
-      'cbc.billing_cycle',
-      'cbc.period_start_date',
-      'cbc.period_end_date',
-      'cbc.effective_date',
-      'cbc.tenant'
-    )
-    .orderBy('cbc.period_end_date', 'desc');
+  const invoicedCycles = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles as cbc')
+      .join('companies as c', function() {
+        this.on('c.company_id', '=', 'cbc.company_id')
+            .andOn('c.tenant', '=', 'cbc.tenant');
+      })
+      .join('invoices as i', function() {
+        this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+            .andOn('i.tenant', '=', 'cbc.tenant');
+      })
+      .where('cbc.tenant', tenant)
+      .whereNotNull('cbc.period_end_date')
+      .select(
+        'cbc.billing_cycle_id',
+        'cbc.company_id',
+        'c.company_name',
+        'cbc.billing_cycle',
+        'cbc.period_start_date',
+        'cbc.period_end_date',
+        'cbc.effective_date',
+        'cbc.tenant'
+      )
+      .orderBy('cbc.period_end_date', 'desc');
+  });
 
   return invoicedCycles;
 }
@@ -296,9 +322,11 @@ export async function getAllBillingCycles(): Promise<{ [companyId: string]: Bill
   const {knex: conn, tenant} = await createTenantKnex();
 
   // Get billing cycles from companies table
-  const results = await conn('companies')
-    .where({ tenant })
-    .select('company_id', 'billing_cycle');
+  const results = await withTransaction(conn, async (trx: Knex.Transaction) => {
+    return await trx('companies')
+      .where({ tenant })
+      .select('company_id', 'billing_cycle');
+  });
 
   return results.reduce((acc: { [companyId: string]: BillingCycleType }, row) => {
     acc[row.company_id] = row.billing_cycle as BillingCycleType;

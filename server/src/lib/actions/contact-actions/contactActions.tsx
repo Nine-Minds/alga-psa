@@ -4,7 +4,8 @@ import { IContact, MappableField, ImportContactResult } from 'server/src/interfa
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { createTenantKnex } from 'server/src/lib/db'; // Revert to original import
-import { Knex } from 'knex'; // Import Knex type for explicit typing
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 
@@ -21,20 +22,22 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
     }
 
     // Fetch contact with company information
-    const contact = await db('contacts')
-      .select(
-        'contacts.*',
-        'companies.company_name'
-      )
-      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-        this.on('contacts.company_id', 'companies.company_id')
-          .andOn('companies.tenant', 'contacts.tenant')
-      })
-      .where({
-        'contacts.contact_name_id': contactNameId,
-        'contacts.tenant': tenant
-      })
-      .first();
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .select(
+          'contacts.*',
+          'companies.company_name'
+        )
+        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.company_id', 'companies.company_id')
+            .andOn('companies.tenant', 'contacts.tenant')
+        })
+        .where({
+          'contacts.contact_name_id': contactNameId,
+          'contacts.tenant': tenant
+        })
+        .first();
+    });
 
     // Note: We don't throw an error if contact is not found
     // Instead return null as this is a lookup function
@@ -78,58 +81,63 @@ export async function deleteContact(contactId: string) {
     }
 
     // Verify contact exists
-    const contact = await db('contacts')
-      .where({ contact_name_id: contactId, tenant })
-      .first();
+    const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({ contact_name_id: contactId, tenant })
+        .first();
+    });
 
     if (!contact) {
       throw new Error('VALIDATION_ERROR: The contact you are trying to delete no longer exists');
     }
 
     // Check for dependencies
-    const dependencies = [];
+    const dependencies: string[] = [];
     const counts: Record<string, number> = {};
 
-    // Check for tickets
-    const ticketCount = await db('tickets')
-      .where({
-        contact_name_id: contactId,
-        is_closed: false,
-        tenant
-      })
-      .count('* as count')
-      .first();
-    if (ticketCount && Number(ticketCount.count) > 0) {
-      dependencies.push('ticket');
-      counts['ticket'] = Number(ticketCount.count);
-    }
+    // Check for dependencies
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check for tickets
+      const ticketCount = await trx('tickets')
+        .where({
+          contact_name_id: contactId,
+          is_closed: false,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (ticketCount && Number(ticketCount.count) > 0) {
+        dependencies.push('ticket');
+        counts['ticket'] = Number(ticketCount.count);
+      }
 
-    // Check for interactions
-    const interactionCount = await db('interactions')
-      .where({
-        contact_name_id: contactId,
-        tenant
-      })
-      .count('* as count')
-      .first();
-    if (interactionCount && Number(interactionCount.count) > 0) {
-      dependencies.push('interaction');
-      counts['interaction'] = Number(interactionCount.count);
-    }
+      // Check for interactions
+      const interactionCount = await trx('interactions')
+        .where({
+          contact_name_id: contactId,
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (interactionCount && Number(interactionCount.count) > 0) {
+        dependencies.push('interaction');
+        counts['interaction'] = Number(interactionCount.count);
+      }
 
-    // Check for document associations
-    const documentCount = await db('document_associations')
-      .where({
-        entity_id: contactId,
-        entity_type: 'contact',
-        tenant
-      })
-      .count('* as count')
-      .first();
-    if (documentCount && Number(documentCount.count) > 0) {
-      dependencies.push('document');
-      counts['document'] = Number(documentCount.count);
-    }
+      // Check for document associations
+      const documentCount = await trx('document_associations')
+        .where({
+          entity_id: contactId,
+          entity_type: 'contact',
+          tenant
+        })
+        .count('* as count')
+        .first();
+      if (documentCount && Number(documentCount.count) > 0) {
+        dependencies.push('document');
+        counts['document'] = Number(documentCount.count);
+      }
+    });
 
     // If there are dependencies, throw a detailed error
     if (dependencies.length > 0) {
@@ -138,7 +146,7 @@ export async function deleteContact(contactId: string) {
     }
 
     // If no dependencies, proceed with deletion
-    const result = await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       try {
         // Delete associated tags first
         await trx('tags')
@@ -205,32 +213,36 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
     }
 
     // Verify company exists
-    const company = await db('companies')
-      .where({ company_id: companyId, tenant })
-      .first();
+    const company = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({ company_id: companyId, tenant })
+        .first();
+    });
 
     if (!company) {
       throw new Error('VALIDATION_ERROR: The specified company does not exist');
     }
 
     // Fetch contacts with company information
-    const contacts = await db('contacts')
-      .select(
-        'contacts.*',
-        'companies.company_name'
-      )
-      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-        this.on('contacts.company_id', 'companies.company_id')
-          .andOn('companies.tenant', 'contacts.tenant')
-      })
-      .where('contacts.company_id', companyId)
-      .andWhere('contacts.tenant', tenant)
-      .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
-        if (status !== 'all') {
-          queryBuilder.where('contacts.is_inactive', status === 'inactive');
-        }
-      })
-      .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
+    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .select(
+          'contacts.*',
+          'companies.company_name'
+        )
+        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.company_id', 'companies.company_id')
+            .andOn('companies.tenant', 'contacts.tenant')
+        })
+        .where('contacts.company_id', companyId)
+        .andWhere('contacts.tenant', tenant)
+        .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
+          if (status !== 'all') {
+            queryBuilder.where('contacts.is_inactive', status === 'inactive');
+          }
+        })
+        .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
+    });
 
     // Fetch avatar URLs for each contact
     const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
@@ -276,12 +288,14 @@ export async function getAllCompanies(): Promise<ICompany[]> {
 
   try {
     // Fetch all companies with proper ordering
-    const companies = await db('companies')
-      .select(
-        'companies.*'
-      )
-      .where('companies.tenant', tenant)
-      .orderBy('companies.company_name', 'asc'); // Add consistent ordering
+    const companies = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .select(
+          'companies.*'
+        )
+        .where('companies.tenant', tenant)
+        .orderBy('companies.company_name', 'asc'); // Add consistent ordering
+    });
 
     // Return empty array if no companies found (don't throw error)
     return companies;
@@ -323,22 +337,24 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
     }
 
     // Fetch all contacts with company information
-    const contacts = await db('contacts')
-      .select(
-        'contacts.*',
-        'companies.company_name'
-      )
-      .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-        this.on('contacts.company_id', 'companies.company_id')
-          .andOn('companies.tenant', 'contacts.tenant')
-      })
-      .where('contacts.tenant', tenant)
-      .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
-        if (status !== 'all') {
-          queryBuilder.where('contacts.is_inactive', status === 'inactive');
-        }
-      })
-      .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
+    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .select(
+          'contacts.*',
+          'companies.company_name'
+        )
+        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.company_id', 'companies.company_id')
+            .andOn('companies.tenant', 'contacts.tenant')
+        })
+        .where('contacts.tenant', tenant)
+        .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
+          if (status !== 'all') {
+            queryBuilder.where('contacts.is_inactive', status === 'inactive');
+          }
+        })
+        .orderBy('contacts.full_name', 'asc'); // Add consistent ordering
+    });
 
     // Fetch avatar URLs for each contact
     const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
@@ -546,19 +562,23 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
 
     updateData.updated_at = new Date().toISOString();
 
-    // Verify contact exists before update
-    const existingContact = await db('contacts')
-      .where({ contact_name_id: contactData.contact_name_id, tenant })
-      .first();
+    // Verify contact exists and perform update in transaction
+    const updatedContact = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingContact = await trx('contacts')
+        .where({ contact_name_id: contactData.contact_name_id, tenant })
+        .first();
 
-    if (!existingContact) {
-      throw new Error('VALIDATION_ERROR: The contact you are trying to update no longer exists');
-    }
+      if (!existingContact) {
+        throw new Error('VALIDATION_ERROR: The contact you are trying to update no longer exists');
+      }
 
-    const [updatedContact] = await db('contacts')
-      .where({ contact_name_id: contactData.contact_name_id, tenant })
-      .update(updateData)
-      .returning('*');
+      const [updated] = await trx('contacts')
+        .where({ contact_name_id: contactData.contact_name_id, tenant })
+        .update(updateData)
+        .returning('*');
+
+      return updated;
+    });
 
     if (!updatedContact) {
       throw new Error('SYSTEM_ERROR: Failed to update contact record');
@@ -614,9 +634,11 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     }
 
     // Verify company exists
-    const company = await db('companies')
-      .where({ company_id: companyId, tenant })
-      .first();
+    const company = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({ company_id: companyId, tenant })
+        .first();
+    });
 
     if (!company) {
       throw new Error('VALIDATION_ERROR: The specified company does not exist');
@@ -694,7 +716,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     }, {});
 
     // Perform the update within a transaction
-    await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       const updated = await trx('contacts')
         .where({ company_id: companyId, tenant })
         .update({
@@ -786,7 +808,7 @@ export async function importContactsFromCSV(
     const results: ImportContactResult[] = [];
 
     // Start a transaction to ensure all operations succeed or fail together
-    await db.transaction(async (trx: Knex.Transaction) => { // Add type for 'trx'
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       for (const contactData of contactsData) {
         try {
           // Validate required fields
@@ -1026,13 +1048,15 @@ export async function getContactByEmail(email: string, companyId: string) {
       throw new Error('Tenant not found');
     }
 
-    const contact = await knex('contacts')
-      .where({
-        email,
-        company_id: companyId,
-        tenant
-      })
-      .first();
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('contacts')
+        .where({
+          email,
+          company_id: companyId,
+          tenant
+        })
+        .first();
+    });
 
     return contact;
   } catch (error) {
@@ -1063,17 +1087,21 @@ export async function createCompanyContact({
       throw new Error('Tenant not found');
     }
 
-    const [contact] = await knex('contacts')
-      .insert({
-        tenant,
-        company_id: companyId,
-        full_name: fullName,
-        email,
-        phone_number: phone,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .returning('*');
+    const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const [inserted] = await trx('contacts')
+        .insert({
+          tenant,
+          company_id: companyId,
+          full_name: fullName,
+          email,
+          phone_number: phone,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .returning('*');
+      
+      return inserted;
+    });
 
     return contact;
   } catch (error) {

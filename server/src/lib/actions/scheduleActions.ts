@@ -3,7 +3,9 @@ import ScheduleEntry from '../models/scheduleEntry';
 import { IScheduleEntry, IEditScope } from 'server/src/interfaces/schedule.interfaces';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { getCurrentUser, getCurrentUserPermissions } from './user-actions/userActions';
+import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 export type ScheduleActionResult<T> =
   | { success: true; entries: T; error?: never }
@@ -305,13 +307,11 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
       throw new Error('User not authenticated');
     }
 
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
+    const { knex: db, tenant } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
 
     // Get the schedule entry
-    const entry = await db('schedule_entries')
+    const entry = await trx('schedule_entries')
       .where({
         entry_id: entryId,
         tenant
@@ -323,7 +323,7 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
     }
 
     // Get assigned users
-    const assignees = await db('schedule_entry_assignees')
+    const assignees = await trx('schedule_entry_assignees')
       .where({
         entry_id: entryId,
         tenant
@@ -350,7 +350,8 @@ export async function getScheduleEntryById(entryId: string, user: any): Promise<
       };
     }
 
-    return scheduleEntry;
+      return scheduleEntry;
+    });
   } catch (error) {
     console.error('Error fetching schedule entry by ID:', error);
     throw new Error('Failed to fetch schedule entry');

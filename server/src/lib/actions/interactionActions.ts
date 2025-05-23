@@ -2,6 +2,8 @@
 
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import InteractionModel from 'server/src/lib/models/interactions'
 import { IInteractionType, IInteraction } from 'server/src/interfaces/interaction.interfaces'
@@ -11,7 +13,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 
 export async function addInteraction(interactionData: Omit<IInteraction, 'interaction_date'>): Promise<IInteraction> {
   try {
-    const { tenant } = await createTenantKnex();
+    const { knex: db, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
@@ -26,10 +28,12 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
       throw new Error('Either company_id or contact_name_id must be provided');
     }
 
-    const newInteraction = await InteractionModel.addInteraction({
-      ...interactionData,
-      tenant,
-      interaction_date: new Date(),
+    const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await InteractionModel.addInteraction({
+        ...interactionData,
+        tenant,
+        interaction_date: new Date(),
+      });
     });
 
     console.log('New interaction created:', newInteraction);
@@ -49,7 +53,10 @@ export async function getInteractionTypes(): Promise<IInteractionType[]> {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    return await InteractionModel.getInteractionTypes();
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await InteractionModel.getInteractionTypes();
+    });
   } catch (error) {
     console.error('Error fetching interaction types:', error)
     throw new Error('Failed to fetch interaction types')
@@ -62,7 +69,10 @@ export async function getInteractionsForEntity(entityId: string, entityType: 'co
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    return await InteractionModel.getForEntity(entityId, entityType);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await InteractionModel.getForEntity(entityId, entityType);
+    });
   } catch (error) {
     console.error(`Error fetching interactions for ${entityType}:`, error);
     throw new Error(`Failed to fetch interactions for ${entityType}`);
@@ -81,7 +91,10 @@ export async function getRecentInteractions(filters: {
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    return await InteractionModel.getRecentInteractions(filters);
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await InteractionModel.getRecentInteractions(filters);
+    });
   } catch (error) {
     console.error('Error fetching recent interactions:', error);
     throw new Error('Failed to fetch recent interactions');
@@ -94,7 +107,10 @@ export async function updateInteraction(interactionId: string, updateData: Parti
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const updatedInteraction = await InteractionModel.updateInteraction(interactionId, updateData);
+    const { knex } = await createTenantKnex();
+    const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await InteractionModel.updateInteraction(interactionId, updateData);
+    });
     revalidatePath('/msp/interactions/[id]', 'page');
     return updatedInteraction;
   } catch (error) {
@@ -109,7 +125,10 @@ export async function getInteractionById(interactionId: string): Promise<IIntera
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    const interaction = await InteractionModel.getById(interactionId);
+    const { knex } = await createTenantKnex();
+    const interaction = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await InteractionModel.getById(interactionId);
+    });
     if (!interaction) {
       throw new Error('Interaction not found');
     }

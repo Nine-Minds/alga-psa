@@ -1,6 +1,6 @@
 'use server';
 
-import { createTenantKnex } from '../../lib/db';
+import { withTransaction } from '@shared/db';
 import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -13,44 +13,42 @@ import {
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import * as planServiceConfigActions from 'server/src/lib/actions/planServiceConfigurationActions';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 /**
  * Get all services for a plan
  */
 export async function getPlanServices(planId: string): Promise<IPlanService[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const services = await trx('plan_services')
+      .where({
+        plan_id: planId,
+        tenant
+      })
+      .select('*');
 
-  const services = await knex('plan_services')
-    .where({
-      plan_id: planId,
-      tenant
-    })
-    .select('*');
-
-  return services;
+    return services;
+  });
 }
 
 /**
  * Get a specific service in a plan
  */
 export async function getPlanService(planId: string, serviceId: string): Promise<IPlanService | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    const service = await trx('plan_services')
+      .where({
+        plan_id: planId,
+        service_id: serviceId,
+        tenant
+      })
+      .first();
 
-  const service = await knex('plan_services')
-    .where({
-      plan_id: planId,
-      service_id: serviceId,
-      tenant
-    })
-    .first();
-
-  return service || null;
+    return service || null;
+  });
 }
 
 /**
@@ -64,13 +62,11 @@ export async function addServiceToPlan(
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
   typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>
 ): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get service details and join with standard_service_types to get the type's billing_method
-  const serviceWithType = await knex('service_catalog as sc')
+  const serviceWithType = await trx('service_catalog as sc')
     .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
     .where({
       'sc.service_id': serviceId,
@@ -86,7 +82,7 @@ export async function addServiceToPlan(
   const service = serviceWithType; // Keep using 'service' variable name for compatibility with validation block
 
   // Get plan details
-  const plan = await knex('billing_plans')
+  const plan = await trx('billing_plans')
     .where({
       plan_id: planId,
       tenant
@@ -145,7 +141,7 @@ export async function addServiceToPlan(
   
   // If not, add it to the plan_services table
   if (!existingPlanService) {
-    await knex('plan_services').insert({
+    await trx('plan_services').insert({
       plan_id: planId,
       service_id: serviceId,
       tenant: tenant
@@ -178,13 +174,14 @@ export async function addServiceToPlan(
         configuration_type: configurationType,
         custom_rate: customRate,
         quantity: quantity || 1,
-        tenant
+        tenant: tenant!
       },
       typeConfig || {}
     );
   }
 
-  return configId;
+    return configId;
+  });
 }
 
 /**
@@ -200,10 +197,8 @@ export async function updatePlanService(
   },
   rateTiers?: IPlanServiceRateTier[] // Add rateTiers here
 ): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
   const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
@@ -225,21 +220,20 @@ export async function updatePlanService(
     config.config_id,
     Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
     updates.typeConfig,
-    // Pass rateTiers if they exist
-    rateTiers // Pass the rateTiers variable directly
-  );
+      // Pass rateTiers if they exist
+      rateTiers // Pass the rateTiers variable directly
+    );
 
-  return true;
+    return true;
+  });
 }
 
 /**
  * Remove a service from a plan
  */
 export async function removeServiceFromPlan(planId: string, serviceId: string): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get configuration ID
   const config = await planServiceConfigActions.getConfigurationForService(planId, serviceId);
@@ -250,15 +244,16 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
   }
 
   // Remove the service from the plan_services table
-  await knex('plan_services')
+  await trx('plan_services')
     .where({
       plan_id: planId,
       service_id: serviceId,
       tenant
     })
-    .delete();
+      .delete();
 
-  return true;
+    return true;
+  });
 }
 
 /**
@@ -270,10 +265,8 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
   userTypeRates?: IUserTypeRate[]; // Add userTypeRates to the return type
 }[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Get all configurations for the plan
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
@@ -282,7 +275,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   const result = [];
   for (const config of configurations) {
     // Join service_catalog with standard_service_types to get the name
-    const service = await knex('service_catalog as sc')
+    const service = await trx('service_catalog as sc')
       .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id') // Join standard types
       .leftJoin('service_types as tst', function() { // Join tenant-specific types
         this.on('sc.custom_service_type_id', '=', 'tst.id')
@@ -292,7 +285,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
         'sc.service_id': config.service_id,
         'sc.tenant': tenant
       })
-      .select('sc.*', knex.raw('COALESCE(sst.name, tst.name) as service_type_name')) // Use COALESCE for name
+      .select('sc.*', trx.raw('COALESCE(sst.name, tst.name) as service_type_name')) // Use COALESCE for name
       .first() as IService & { service_type_name?: string }; // Cast to include the new field
 
     if (!service) {
@@ -308,7 +301,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
       // Assuming PlanServiceHourlyConfig model is accessible or we use an action
       // For simplicity, let's assume we can access the model instance via the service
       // This might need adjustment based on actual service/model structure
-      const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
+      const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
       userTypeRates = await hourlyConfigModel.getUserTypeRates(config.config_id);
     }
 
@@ -317,8 +310,9 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
       configuration: config,
       typeConfig: configDetails.typeConfig,
       userTypeRates: userTypeRates // Add the fetched rates
-    });
-  }
+      });
+    }
 
-  return result;
+    return result;
+  });
 }

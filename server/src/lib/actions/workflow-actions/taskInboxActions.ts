@@ -8,7 +8,8 @@ import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
 import WorkflowTaskModel, { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
 import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
 import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, TaskEventNames } from '@shared/workflow/persistence/taskInboxInterfaces';
-import { withTransaction } from 'server/src/lib/db/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
 
 //TODO: we need to fix withTransaction to work with passed knex instances
@@ -32,7 +33,7 @@ export async function submitTaskForm(params: TaskSubmissionParams): Promise<{ su
     const userId = currentUser?.user_id;
     
     // Use a transaction to ensure all operations succeed or fail together
-    return await withTransaction(tenant, async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Get task details
       const task = await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
       
@@ -193,22 +194,26 @@ export async function getUserTasks(params?: TaskQueryParams): Promise<TaskQueryR
     } = params || {};
     
     // Get tasks assigned to the user
-    const tasks = await WorkflowTaskModel.getTasksAssignedToUser(
-      knex,
-      tenant,
-      userId,
-      status
-    );
+    const tasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTasksAssignedToUser(
+        trx,
+        tenant,
+        userId,
+        status
+      );
+    });
     
     // Get tasks assigned to user's roles
     const userRoles = currentUser.roles || [];
     const roleIds = userRoles.map(role => role.role_id);
-    const roleTasks = await WorkflowTaskModel.getTasksAssignedToRoles(
-      knex,
-      tenant,
-      roleIds,
-      status
-    );
+    const roleTasks = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTasksAssignedToRoles(
+        trx,
+        tenant,
+        roleIds,
+        status
+      );
+    });
     
     // Combine and deduplicate tasks
     const allTasks = [...tasks];
@@ -283,7 +288,9 @@ export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
     }
     
     // Get task
-    const task = await WorkflowTaskModel.getTaskById(knex, tenant, taskId);
+    const task = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
+    });
     
     if (!task) {
       throw new Error(`Task with ID ${taskId} not found`);
@@ -296,21 +303,25 @@ export async function getTaskDetails(taskId: string): Promise<TaskDetails> {
       if (!task.system_task_definition_task_type) {
         throw new Error(`System task ${taskId} is missing system_task_definition_task_type.`);
       }
-      taskDefinition = await knex('system_workflow_task_definitions')
-        .where({
-          task_type: task.system_task_definition_task_type,
-        })
-        .first();
+      taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('system_workflow_task_definitions')
+          .where({
+            task_type: task.system_task_definition_task_type,
+          })
+          .first();
+      });
     } else { // 'tenant'
       if (!task.tenant_task_definition_id) {
         throw new Error(`Tenant task ${taskId} is missing tenant_task_definition_id.`);
       }
-      taskDefinition = await knex('workflow_task_definitions')
-        .where({
-          task_definition_id: task.tenant_task_definition_id,
-          tenant
-        })
-        .first();
+      taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('workflow_task_definitions')
+          .where({
+            task_definition_id: task.tenant_task_definition_id,
+            tenant
+          })
+          .first();
+      });
     }
     
     if (!taskDefinition) {
@@ -378,7 +389,9 @@ export async function claimTask(taskId: string): Promise<{ success: boolean }> {
     }
     
     // Get task
-    const task = await WorkflowTaskModel.getTaskById(knex, tenant, taskId);
+    const task = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
+    });
     
     if (!task) {
       throw new Error(`Task with ID ${taskId} not found`);
@@ -399,7 +412,7 @@ export async function claimTask(taskId: string): Promise<{ success: boolean }> {
     }
     
     // Use transaction to update task and add history
-    return await withTransaction(tenant, async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task status
       await WorkflowTaskModel.updateTaskStatus(
         trx,
@@ -451,7 +464,9 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
     }
     
     // Get task
-    const task = await WorkflowTaskModel.getTaskById(knex, tenant, taskId);
+    const task = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
+    });
     
     if (!task) {
       throw new Error(`Task with ID ${taskId} not found`);
@@ -467,7 +482,7 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
     }
     
     // Use transaction to update task and add history
-    return await withTransaction(tenant, async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       // Update task status
       await WorkflowTaskModel.updateTaskStatus(
         trx,

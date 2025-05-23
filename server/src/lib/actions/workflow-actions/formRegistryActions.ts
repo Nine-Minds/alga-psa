@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getFormRegistry } from '@shared/workflow/core/formRegistry';
 import { getFormValidationService } from '@shared/workflow/core/formValidationService';
 import {
@@ -72,21 +74,23 @@ export async function registerSystemWorkflowFormDefinitionAction(
 
     // Register the system form
     // System forms are stored in a separate table and are not tenant-specific
-    const [formId] = await knex('system_workflow_form_definitions').insert({
-      form_id: params.formId || formRegistry.generateFormId(),
-      name: params.name,
-      description: params.description,
-      version: params.version,
-      category: params.category,
-      status: params.status,
-      json_schema: JSON.stringify(params.jsonSchema),
-      ui_schema: JSON.stringify(params.uiSchema),
-      default_values: JSON.stringify(params.defaultValues),
-      created_by: userId,
-      updated_by: userId,
-      tenant: null,
-      form_type: 'system'
-    }).returning('form_id');
+    const [formId] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('system_workflow_form_definitions').insert({
+        form_id: params.formId || formRegistry.generateFormId(),
+        name: params.name,
+        description: params.description,
+        version: params.version,
+        category: params.category,
+        status: params.status,
+        json_schema: JSON.stringify(params.jsonSchema),
+        ui_schema: JSON.stringify(params.uiSchema),
+        default_values: JSON.stringify(params.defaultValues),
+        created_by: userId,
+        updated_by: userId,
+        tenant: null,
+        form_type: 'system'
+      }).returning('form_id');
+    });
 
     // Add tags if provided
     if (tags && tags.length > 0) {
@@ -125,10 +129,12 @@ export async function getFormAction(
     const formRegistry = getFormRegistry();
 
     // Look up the task definition to get the actual form_id and form_type
-    const taskDefinition = await knex('workflow_task_definitions')
-      .select('form_id', 'form_type')
-      .where({ task_definition_id: formId })
-      .first();
+    const taskDefinition = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('workflow_task_definitions')
+        .select('form_id', 'form_type')
+        .where({ task_definition_id: formId })
+        .first();
+    });
 
     if (!taskDefinition) {
       console.warn(`No task definition found for task_definition_id: ${formId}`);
@@ -142,17 +148,19 @@ export async function getFormAction(
 
     if (formType === 'system') {
       // Query system forms table using the retrieved actualFormId
-      const systemForm = await knex('system_workflow_form_definitions')
-        .where({ form_id: actualFormId })
-        .modify(queryBuilder => {
-          if (version) {
-            queryBuilder.where({ version });
-          } else {
-            // If no version is specified, get the latest version
-            queryBuilder.orderBy('created_at', 'desc').first();
-          }
-        })
-        .first(); // Ensure we get only one record if version is not specified
+      const systemForm = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('system_workflow_form_definitions')
+          .where({ form_id: actualFormId })
+          .modify(queryBuilder => {
+            if (version) {
+              queryBuilder.where({ version });
+            } else {
+              // If no version is specified, get the latest version
+              queryBuilder.orderBy('created_at', 'desc').first();
+            }
+          })
+          .first(); // Ensure we get only one record if version is not specified
+      });
 
       if (systemForm) {
         form = {
