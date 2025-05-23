@@ -120,7 +120,8 @@ export enum TaskEventType {
   TASK_UNCLAIMED = 'task_unclaimed',
   TASK_COMPLETED = 'task_completed',
   TASK_CANCELED = 'task_canceled',
-  TASK_EXPIRED = 'task_expired'
+  TASK_EXPIRED = 'task_expired',
+  TASK_DISMISSED = 'task_dismissed'
 }
 
 /**
@@ -156,6 +157,11 @@ export const TaskEventNames = {
    * Generate task expired event name
    */
   taskExpired: (taskId: string) => `Task:${taskId}:Expired`,
+  
+  /**
+   * Generate task dismissed event name
+   */
+  taskDismissed: (taskId: string) => `Task:${taskId}:Dismissed`,
   
   /**
    * Generate form submission event name

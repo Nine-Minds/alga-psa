@@ -737,6 +737,26 @@ export async function fetchWorkflowTaskActivities(
               .orWhere("wt.description", 'ilike', searchTerm);
           });
         }
+        
+        // Apply hidden filter if provided
+        if (filters.includeHidden !== undefined) {
+          if (filters.includeHidden) {
+            // Include all tasks (hidden and not hidden)
+            // No additional filter needed
+          } else {
+            // Only include non-hidden tasks
+            queryBuilder.where(function() {
+              this.where("wt.is_hidden", false)
+                .orWhereNull("wt.is_hidden");
+            });
+          }
+        } else {
+          // Default behavior: exclude hidden tasks
+          queryBuilder.where(function() {
+            this.where("wt.is_hidden", false)
+              .orWhereNull("wt.is_hidden");
+          });
+        }
       });
       
       console.log('Executing workflow task query:', workflowTasksQuery.toString());

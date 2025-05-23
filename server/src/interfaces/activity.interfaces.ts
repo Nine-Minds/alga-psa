@@ -164,6 +164,7 @@ export interface ActivityFilters {
   isRecurring?: boolean;
   workItemType?: string;
   executionId?: string;
+  includeHidden?: boolean;
 }
 
 /**
@@ -345,6 +346,16 @@ function generateWorkflowTaskActions(task: any): ActivityAction[] {
     if (task.can_cancel) {
       actions.push({ id: 'cancel', label: 'Cancel' });
     }
+    
+    // Add dismiss action for active tasks
+    actions.push({ id: 'dismiss', label: 'Dismiss' });
+  }
+
+  // Add hide/unhide action based on current visibility
+  if (task.is_hidden) {
+    actions.push({ id: 'unhide', label: 'Unhide' });
+  } else {
+    actions.push({ id: 'hide', label: 'Hide' });
   }
 
   return actions;
