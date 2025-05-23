@@ -562,6 +562,101 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
+  // Get company default location
+  actionRegistry.registerSimpleAction(
+    'get_company_default_location',
+    'Get the default location for a company',
+    [
+      { name: 'companyId', type: 'string', required: true },
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] get_company_default_location called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const location = await knex('company_locations')
+          .select('*')
+          .where({ 
+            company_id: params.companyId,
+            tenant: context.tenant,
+            is_default: true,
+            is_active: true 
+          })
+          .first();
+          
+        if (!location) {
+          logger.warn(`[ACTION] get_company_default_location: No default location found for company: ${params.companyId}, tenant: ${context.tenant}`);
+          return {
+            success: true,
+            found: false,
+            location: null,
+            message: `No default location found for company ${params.companyId}`
+          };
+        }
+        
+        logger.info(`[ACTION] get_company_default_location: Successfully fetched default location for company: ${params.companyId}`);
+        
+        return {
+          success: true,
+          found: true,
+          location: location
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] get_company_default_location: Error fetching default location for company: ${params.companyId}, tenant: ${context.tenant}`, error);
+        return {
+          success: false,
+          found: false,
+          message: error.message,
+          error: error
+        };
+      }
+    }
+  );
+
+  // Get all company locations
+  actionRegistry.registerSimpleAction(
+    'get_company_locations',
+    'Get all active locations for a company',
+    [
+      { name: 'companyId', type: 'string', required: true },
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      logger.info(`[ACTION] get_company_locations called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
+      try {
+        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const knex = await getAdminConnection();
+        
+        const locations = await knex('company_locations')
+          .select('*')
+          .where({ 
+            company_id: params.companyId,
+            tenant: context.tenant,
+            is_active: true 
+          })
+          .orderBy('is_default', 'desc')
+          .orderBy('location_name', 'asc');
+        
+        logger.info(`[ACTION] get_company_locations: Successfully fetched ${locations.length} locations for company: ${params.companyId}`);
+        
+        return {
+          success: true,
+          locations: locations,
+          count: locations.length
+        };
+      } catch (error: any) {
+        logger.error(`[ACTION] get_company_locations: Error fetching locations for company: ${params.companyId}, tenant: ${context.tenant}`, error);
+        return {
+          success: false,
+          locations: [],
+          count: 0,
+          message: error.message,
+          error: error
+        };
+      }
+    }
+  );
+
   // Placeholder for lookup_qbo_item_id
   actionRegistry.registerSimpleAction(
     'lookup_qbo_item_id',

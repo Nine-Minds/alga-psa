@@ -218,25 +218,51 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
     setState(WorkflowState.RUNNING);
     logger.info('Mapping Alga Company data to QBO Customer format', { algaCompanyId, tenantId: tenant });
 
+    // Fetch company location data for real address information
+    let defaultLocation: any = null;
+    try {
+        const locationResult = await actions.get_company_default_location({ companyId: algaCompanyId });
+        if (locationResult.success && locationResult.found && locationResult.location) {
+            defaultLocation = locationResult.location;
+            logger.info('Successfully fetched company default location', { algaCompanyId, locationId: defaultLocation.location_id });
+        } else {
+            logger.warn('No default location found for company', { algaCompanyId, message: locationResult.message });
+        }
+    } catch (locationError: any) {
+        logger.error('Error fetching company location', { error: locationError.message, algaCompanyId });
+        // Continue without location data rather than failing the entire workflow
+    }
+
+    // Build address objects using real location data or fallback to placeholders
+    const buildAddress = (location: any) => {
+        if (location) {
+            return {
+                Line1: location.address_line1 || '',
+                Line2: location.address_line2 || undefined,
+                Line3: location.address_line3 || undefined,
+                City: location.city || '',
+                CountrySubDivisionCode: location.state_province || '',
+                PostalCode: location.postal_code || '',
+                Country: location.country_name || location.country_code || '',
+            };
+        } else {
+            return {
+                Line1: "Address not available",
+                City: "N/A",
+                CountrySubDivisionCode: "N/A",
+                PostalCode: "N/A",
+                Country: "N/A",
+            };
+        }
+    };
+
     // TODO: Refine mapping based on actual AlgaCompany and QboCustomer types
     const qboCustomerData: QboCustomerInput = {
         DisplayName: algaCompany!.company_name, // algaCompany is verified not null by the check above
         PrimaryEmailAddr: { Address: algaCompany!.main_email_address },
         PrimaryPhone: { FreeFormNumber: algaCompany!.main_phone_number },
-        BillAddr: {
-            Line1: "N/A - Placeholder",
-            City: "N/A - Placeholder",
-            CountrySubDivisionCode: "N/A - Placeholder",
-            PostalCode: "N/A - Placeholder",
-            Country: "N/A - Placeholder",
-        },
-        ShipAddr: {
-            Line1: "N/A - Placeholder",
-            City: "N/A - Placeholder",
-            CountrySubDivisionCode: "N/A - Placeholder",
-            PostalCode: "N/A - Placeholder",
-            Country: "N/A - Placeholder",
-        },
+        BillAddr: buildAddress(defaultLocation),
+        ShipAddr: buildAddress(defaultLocation), // Using same address for both billing and shipping by default
         // Add other relevant fields: Notes, WebAddr, etc.
     };
 
@@ -556,17 +582,19 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                 const contextDataForForm: ContextDataForForm = {
                                     alga_company_id: algaCompany!.alga_company_id,
                                     company_name: algaCompany!.company_name,
-                                    alga_primary_address_street: "123 Main St (Hardcoded Workflow Value)", // As per project doc
-                                    alga_primary_address_city: "Anytown (Hardcoded Workflow Value)",
-                                    alga_primary_address_state: "CA (Hardcoded Workflow Value)",
-                                    alga_primary_address_zip: "90210 (Hardcoded Workflow Value)",
+                                    alga_primary_address_street: defaultLocation?.address_line1 || "Address not available",
+                                    alga_primary_address_city: defaultLocation?.city || "N/A",
+                                    alga_primary_address_state: defaultLocation?.state_province || "N/A",
+                                    alga_primary_address_zip: defaultLocation?.postal_code || "N/A",
                                     main_phone_number: algaCompany!.main_phone_number,
                                     main_email_address: algaCompany!.main_email_address,
                                     website_url: algaCompany!.website_url,
                                     date_created_in_alga: algaCompany!.date_created_in_alga,
                                     last_modified_in_alga: algaCompany!.last_modified_in_alga,
                                     current_quickbooks_link_status: algaCompany!.current_quickbooks_link_status,
-                                    alga_primary_address_full_string_display: algaCompany!.primary_address_full_string,
+                                    alga_primary_address_full_string_display: defaultLocation 
+                                        ? `${defaultLocation.address_line1}${defaultLocation.address_line2 ? ', ' + defaultLocation.address_line2 : ''}${defaultLocation.address_line3 ? ', ' + defaultLocation.address_line3 : ''}, ${defaultLocation.city}, ${defaultLocation.state_province || ''} ${defaultLocation.postal_code || ''}, ${defaultLocation.country_name || defaultLocation.country_code || ''}`
+                                        : algaCompany!.primary_address_full_string || "Address not available",
                                     potentialQuickBooksMatches: potentialDuplicatesResult.customers || [], // Ensure it's an array
                                     sync_job_id: executionId,
                                     conflict_detection_timestamp: new Date().toISOString(),
@@ -595,7 +623,7 @@ export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise
                                     "title": "Resolve Company Sync Conflict",
                                     "properties": {
                                       "conflictContextInfo": { "type": "string", "title": "Conflict Context", "default": "**Sync Job ID:** ${contextData.sync_job_id}\n**Detected on:** ${new Date(contextData.conflict_detection_timestamp).toLocaleString()}", "readOnly": true },
-                                      "algaCompanyDisplay": { "type": "string", "title": "Alga Company Information (Our System)", "default": "**Alga Company ID:** ${contextData.alga_company_id}\n**Company Name:** ${contextData.company_name}\n**Primary Address (from system):** ${contextData.alga_primary_address_full_string_display}\n**Hardcoded Address for Form:** ${contextData.alga_primary_address_street}, ${contextData.alga_primary_address_city}, ${contextData.alga_primary_address_state} ${contextData.alga_primary_address_zip}\n**Main Phone:** ${contextData.main_phone_number || 'N/A'}\n**Main Email:** ${contextData.main_email_address || 'N/A'}\n**Website:** ${contextData.website_url || 'N/A'}\n**Created in Alga:** ${new Date(contextData.date_created_in_alga).toLocaleDateString()}\n**Last Modified in Alga:** ${new Date(contextData.last_modified_in_alga).toLocaleDateString()}\n**Current QuickBooks Link Status:** ${contextData.current_quickbooks_link_status}", "readOnly": true },
+                                      "algaCompanyDisplay": { "type": "string", "title": "Alga Company Information (Our System)", "default": "**Alga Company ID:** ${contextData.alga_company_id}\n**Company Name:** ${contextData.company_name}\n**Primary Address:** ${contextData.alga_primary_address_full_string_display}\n**Address Details:** ${contextData.alga_primary_address_street}, ${contextData.alga_primary_address_city}, ${contextData.alga_primary_address_state} ${contextData.alga_primary_address_zip}\n**Main Phone:** ${contextData.main_phone_number || 'N/A'}\n**Main Email:** ${contextData.main_email_address || 'N/A'}\n**Website:** ${contextData.website_url || 'N/A'}\n**Created in Alga:** ${new Date(contextData.date_created_in_alga).toLocaleDateString()}\n**Last Modified in Alga:** ${new Date(contextData.last_modified_in_alga).toLocaleDateString()}\n**Current QuickBooks Link Status:** ${contextData.current_quickbooks_link_status}", "readOnly": true },
                                       "quickbooksCompanyDisplay": { "type": "string", "title": "Potential QuickBooks Match Information", "default": "${contextData.qbDetailedDisplayInfo}", "readOnly": true },
                                       "resolution_action": {
                                         "type": "string",
