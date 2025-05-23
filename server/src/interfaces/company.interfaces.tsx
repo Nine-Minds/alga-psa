@@ -55,15 +55,26 @@ export interface ICompany extends TenantEntity {
 export interface ICompanyLocation extends TenantEntity {
   location_id: string;
   company_id: string;
+  location_name?: string;
   address_line1: string;
   address_line2?: string;
+  address_line3?: string;
   city: string;
-  state?: string;
+  state_province?: string;
   postal_code?: string;
-  country: string;
-  tax_region: string;
-  created_at?: Date;
-  updated_at?: Date;
+  country_code: string;
+  country_name: string;
+  region_code?: string;
+  is_billing_address?: boolean;
+  is_shipping_address?: boolean;
+  is_default?: boolean;
+  phone?: string;
+  fax?: string;
+  email?: string;
+  notes?: string;
+  is_active?: boolean;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
 }
 
 export interface ICompanyEmailSettings extends TenantEntity {
