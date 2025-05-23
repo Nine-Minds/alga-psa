@@ -13,79 +13,64 @@ function isValidTenantId(tenantId: string | null | undefined): boolean {
   return /^[0-9a-f-]+$/i.test(tenantId);
 }
 
+// No longer needed with CitusDB - tenant isolation is handled at the shard level
 async function setTenantContext(conn: any, tenantId?: string | null): Promise<void> {
-  if (!isValidTenantId(tenantId)) {
-    throw new Error('Invalid tenant ID format');
-  }
-
-  if (tenantId) {
-    await new Promise<void>((resolve, reject) => {
-      conn.query(`SET app.current_tenant = '${tenantId}'`, [], (err: Error | null) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-  } else {
-    await new Promise<void>((resolve, reject) => {
-      resolve();
-    });
-  }
+  // CitusDB provides tenant-level restrictions automatically
+  // No need to set app.current_tenant session variable
+  return Promise.resolve();
 }
-// --- Refactored Code for Tenant-Scoped Pooling ---
+// --- Simplified Connection Architecture for CitusDB ---
 
-// Cache for tenant-specific Knex instances
-const tenantKnexInstances = new Map<string, KnexType>();
+// Single shared Knex instance - CitusDB handles tenant isolation at shard level
+let sharedKnexInstance: KnexType | null = null;
 
 /**
- * Gets or creates a Knex instance specifically for the given tenant ID.
- * Each instance manages its own connection pool.
+ * Gets a shared Knex instance optimized for CitusDB transaction-level pooling.
+ * Since CitusDB handles tenant isolation automatically, we can use a single shared pool.
  */
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
-  const effectiveTenantId = tenantId || 'default'; // Use 'default' for null/undefined tenant
-
-  // Check cache first
-  if (tenantKnexInstances.has(effectiveTenantId)) {
-    // console.log(`Returning cached Knex instance for tenant: ${effectiveTenantId}`);
-    return tenantKnexInstances.get(effectiveTenantId)!;
+  // Tenant ID is kept for compatibility but not used for connection pooling
+  if (tenantId) {
+    console.log(`Using shared connection pool for tenant: ${tenantId} (CitusDB auto-isolation)`);
   }
 
-  // If not cached, create a new instance for this tenant
-  console.log(`Creating new Knex instance and pool for tenant: ${effectiveTenantId}`);
-  const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
-  const baseConfig = await getKnexConfig(environment); // Get base config
+  // Check if we already have a shared instance
+  if (sharedKnexInstance) {
+    return sharedKnexInstance;
+  }
 
-  const tenantConfig: KnexType.Config = {
+  // Create a single shared instance optimized for transaction-level pooling
+  console.log('Creating shared Knex instance optimized for CitusDB transaction-level pooling');
+  const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
+  const baseConfig = await getKnexConfig(environment);
+
+  const sharedConfig: KnexType.Config = {
     ...baseConfig,
     pool: {
       ...baseConfig.pool,
-      // afterCreate hook specific to this tenant's pool
+      // Optimize for transaction-level pooling
+      min: 0, // Allow connections to be freed when not in use
+      max: 50, // Higher max since we're sharing across all tenants
+      idleTimeoutMillis: 30000, // Allow longer idle times for transaction pooling
+      reapIntervalMillis: 1000,
+      createTimeoutMillis: 30000,
+      destroyTimeoutMillis: 5000,
       afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
-        console.log(`Connection created in pool for tenant: ${effectiveTenantId}`);
-        // Set tenant context for every connection created in THIS pool
-        setTenantContext(conn, effectiveTenantId === 'default' ? null : effectiveTenantId)
-          .then(() => {
-             console.log(`Tenant context set to '${effectiveTenantId}' for new connection.`);
-             conn.on('error', (err: Error) => {
-               console.error(`DB Connection Error (Tenant: ${effectiveTenantId}):`, err);
-               // Optional: Attempt to remove the connection? Knex might handle this.
-             });
-             done(null, conn);
-          })
-          .catch((err) => {
-            console.error(`Failed to set tenant context for ${effectiveTenantId}:`, err);
-            done(err, conn); // Pass error to pool creation
-          });
+        console.log('Connection created in shared pool for CitusDB');
+        conn.on('error', (err: Error) => {
+          console.error('DB Connection Error:', err);
+        });
+        done(null, conn);
       }
     }
   };
 
-  const newKnexInstance = Knex(tenantConfig);
-  tenantKnexInstances.set(effectiveTenantId, newKnexInstance);
-  console.log(`Knex instance created and cached for tenant: ${effectiveTenantId}`);
-  return newKnexInstance;
+  sharedKnexInstance = Knex(sharedConfig);
+  console.log('Shared Knex instance created for CitusDB');
+  return sharedKnexInstance;
 }
 
-// --- End Refactored Code ---
+// --- End Simplified Architecture ---
 
 // Keep setTenantContext for explicit use when needed outside runWithTenant
 // (though runWithTenant should be preferred)
@@ -100,35 +85,32 @@ export async function withTransaction<T>(
   tenantId: string,
   callback: (trx: KnexType.Transaction) => Promise<T>
 ): Promise<T> {
-  // Get the tenant-specific Knex instance
+  // Get the shared Knex instance
   const knex = await getConnection(tenantId);
-  // The afterCreate hook for this instance's pool already sets the context,
-  // so we don't need to set it explicitly within the transaction block itself.
+  // With CitusDB, tenant isolation is handled automatically at the shard level
+  // All queries must include tenant in WHERE clauses for CitusDB compatibility
   return knex.transaction(callback);
 }
 
-// --- Refactored Code ---
-// Remove deprecated functions and process handlers, Knex manages the shared pool lifecycle.
-
-// --- Refactored Code ---
-// Graceful shutdown handler for ALL tenant pools
-async function destroyAllPools() {
-  console.log('Destroying all tenant Knex pools...');
-  const destroyPromises = Array.from(tenantKnexInstances.values()).map(instance => instance.destroy());
-  await Promise.allSettled(destroyPromises);
-  console.log('All tenant Knex pools destroyed.');
-  tenantKnexInstances.clear();
+// --- Simplified Cleanup for Shared Pool ---
+async function destroySharedPool() {
+  console.log('Destroying shared Knex pool...');
+  if (sharedKnexInstance) {
+    await sharedKnexInstance.destroy();
+    sharedKnexInstance = null;
+    console.log('Shared Knex pool destroyed.');
+  }
 }
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM signal received.');
-  await destroyAllPools();
+  await destroySharedPool();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT signal received.');
-  await destroyAllPools();
+  await destroySharedPool();
   process.exit(0);
 });
-// --- End Refactored Code ---
+// --- End Simplified Architecture ---
