@@ -8,6 +8,8 @@ import { getKeycloakToken } from "server/src/utils/keycloak";
 import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
 import logger from '@shared/core/logger';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import "server/src/types/next-auth";
 // import { getAdminConnection } from "server/src/lib/db/admin";
 
@@ -92,15 +94,17 @@ export const options: NextAuthOptions = {
                     let companyId = null;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
-                      const connection = await getAdminConnection();
+                        const connection = await getAdminConnection();
                         console.log('Database connection established');
 
-                        const contact = await connection('contacts')
-                            .where({
-                                contact_name_id: user.contact_id,
-                          tenant: user.tenant
-                        })
-                        .first();
+                        const contact = await withTransaction(connection, async (trx: Knex.Transaction) => {
+                            return await trx('contacts')
+                                .where({
+                                    contact_name_id: user.contact_id,
+                                    tenant: user.tenant
+                                })
+                                .first();
+                        });
 
                         console.log('Contact lookup result:', {
                             found: !!contact,
@@ -114,7 +118,7 @@ export const options: NextAuthOptions = {
                         } else {
                             console.log('No company information found for contact');
                             logger.warn(`No contact found for user ${user.email} with contact_id ${user.contact_id}`);
-                    }
+                        }
                     }
 
                     // 2FA Verification
