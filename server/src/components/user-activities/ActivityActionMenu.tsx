@@ -14,6 +14,11 @@ import {
   reassignWorkflowTask,
   submitTaskForm
 } from "server/src/lib/actions/activity-actions/workflowTaskActions";
+import {
+  dismissTask,
+  hideTask,
+  unhideTask
+} from "server/src/lib/actions/workflow-actions/taskInboxActions";
 
 interface ActivityActionMenuProps {
   activity: Activity;
@@ -42,6 +47,15 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
           break;
         case 'reassign':
           handleReassignAction();
+          break;
+        case 'dismiss':
+          await handleDismissAction();
+          break;
+        case 'hide':
+          await handleHideAction();
+          break;
+        case 'unhide':
+          await handleUnhideAction();
           break;
         default:
           console.warn(`Unknown action: ${actionId}`);
@@ -119,12 +133,50 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
     router.push(`/${activity.type}s/${activity.id}/reassign`);
   };
 
+  // Handle dismiss action - only for workflow tasks
+  const handleDismissAction = async () => {
+    if (activity.type === ActivityType.WORKFLOW_TASK) {
+      try {
+        await dismissTask(activity.id);
+      } catch (error: any) {
+        console.error(`Error dismissing task:`, error);
+        alert(`Failed to dismiss task: ${error.message}`);
+      }
+    } else {
+      console.warn('Dismiss action is only supported for workflow tasks');
+    }
+  };
+
+  // Handle hide action - only for workflow tasks
+  const handleHideAction = async () => {
+    if (activity.type === ActivityType.WORKFLOW_TASK) {
+      await hideTask(activity.id);
+    } else {
+      console.warn('Hide action is only supported for workflow tasks');
+    }
+  };
+
+  // Handle unhide action - only for workflow tasks
+  const handleUnhideAction = async () => {
+    if (activity.type === ActivityType.WORKFLOW_TASK) {
+      await unhideTask(activity.id);
+    } else {
+      console.warn('Unhide action is only supported for workflow tasks');
+    }
+  };
+
   // Helper function to determine if an action should be shown
   const shouldShowAction = (actionId: string) => {
     // For 'edit' action, only show for tickets and workflow tasks
     if (actionId === 'edit') {
       return activity.type === ActivityType.TICKET || activity.type === ActivityType.WORKFLOW_TASK;
     }
+    
+    // For workflow task specific actions, only show for workflow tasks
+    if (['dismiss', 'hide', 'unhide'].includes(actionId)) {
+      return activity.type === ActivityType.WORKFLOW_TASK;
+    }
+    
     return true;
   };
 

@@ -11,6 +11,7 @@ import { TaskSubmissionParams, TaskDetails, TaskQueryParams, TaskQueryResult, Ta
 import { withTransaction } from '../../../../../shared/db';
 import { Knex } from 'knex';
 import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { revalidatePath } from "next/cache";
 
 //TODO: we need to fix withTransaction to work with passed knex instances
 
@@ -511,5 +512,212 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
   } catch (error) {
     console.error(`Error unclaiming task ${taskId}:`, error);
     throw error;
+  }
+}
+
+/**
+ * Dismiss a task
+ * This sends a dismiss event back to the workflow
+ */
+export async function dismissTask(taskId: string): Promise<{ success: boolean }> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
+    // Get current user
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.user_id;
+    
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Get task
+    const task = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await WorkflowTaskModel.getTaskById(trx, tenant, taskId);
+    });
+    
+    if (!task) {
+      throw new Error(`Task with ID ${taskId} not found`);
+    }
+    
+    // Check if task can be dismissed (should be in pending or claimed state)
+    if (![WorkflowTaskStatus.PENDING, WorkflowTaskStatus.CLAIMED].includes(task.status)) {
+      throw new Error(`Task is in ${task.status} state and cannot be dismissed`);
+    }
+    
+    // Use transaction to update task, add history, and publish event
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Update task status to canceled
+      await WorkflowTaskModel.updateTaskStatus(
+        trx,
+        tenant,
+        taskId,
+        WorkflowTaskStatus.CANCELED,
+        userId
+      );
+      
+      // Add task history entry
+      await WorkflowTaskModel.addTaskHistory(
+        trx,
+        tenant,
+        {
+          task_id: taskId,
+          tenant,
+          action: 'dismiss',
+          from_status: task.status,
+          to_status: WorkflowTaskStatus.CANCELED,
+          user_id: userId
+        }
+      );
+      
+      // Generate event ID for dismiss event
+      const taskDismissEventId = uuidv4();
+      
+      // Publish dismiss event to workflow engine
+      const actionRegistry = getActionRegistry();
+      const workflowRuntime = getWorkflowRuntime(actionRegistry);
+      
+      try {
+        // Load execution state
+        await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
+        
+        // Enqueue dismiss event
+        await workflowRuntime.enqueueEvent(trx, {
+          execution_id: task.execution_id,
+          event_name: TaskEventNames.taskDismissed(taskId),
+          payload: { taskId, reason: 'dismissed_by_user' },
+          user_id: userId,
+          tenant,
+          idempotency_key: taskDismissEventId
+        });
+      } catch (error: any) {
+        console.error('Error enqueueing workflow dismiss event:', error);
+        throw new Error(`Failed to publish dismiss event: ${error.message}`);
+      }
+      
+      return { success: true };
+    });
+  } catch (error) {
+    console.error(`Error dismissing task ${taskId}:`, error);
+    throw error;
+  } finally {
+    // Revalidate cache to refresh UI
+    revalidatePath('/msp/user-activities');
+  }
+}
+
+/**
+ * Hide a task from the user's view
+ */
+export async function hideTask(taskId: string): Promise<{ success: boolean }> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
+    // Get current user
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.user_id;
+    
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Use transaction to update task and add history
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Update task to mark as hidden
+      await trx('workflow_tasks')
+        .where('task_id', taskId)
+        .where('tenant', tenant)
+        .update({
+          is_hidden: true,
+          hidden_at: new Date(),
+          hidden_by: userId,
+          updated_at: new Date()
+        });
+      
+      // Add task history entry
+      await WorkflowTaskModel.addTaskHistory(
+        trx,
+        tenant,
+        {
+          task_id: taskId,
+          tenant,
+          action: 'hide',
+          user_id: userId,
+          details: { hidden_by: userId }
+        }
+      );
+      
+      return { success: true };
+    });
+  } catch (error) {
+    console.error(`Error hiding task ${taskId}:`, error);
+    throw error;
+  } finally {
+    // Revalidate cache to refresh UI
+    revalidatePath('/msp/user-activities');
+  }
+}
+
+/**
+ * Unhide a task to make it visible again
+ */
+export async function unhideTask(taskId: string): Promise<{ success: boolean }> {
+  try {
+    const { knex, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+    
+    // Get current user
+    const currentUser = await getCurrentUser();
+    const userId = currentUser?.user_id;
+    
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+    
+    // Use transaction to update task and add history
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Update task to mark as not hidden
+      await trx('workflow_tasks')
+        .where('task_id', taskId)
+        .where('tenant', tenant)
+        .update({
+          is_hidden: false,
+          hidden_at: null,
+          hidden_by: null,
+          updated_at: new Date()
+        });
+      
+      // Add task history entry
+      await WorkflowTaskModel.addTaskHistory(
+        trx,
+        tenant,
+        {
+          task_id: taskId,
+          tenant,
+          action: 'unhide',
+          user_id: userId,
+          details: { unhidden_by: userId }
+        }
+      );
+      
+      return { success: true };
+    });
+  } catch (error) {
+    console.error(`Error unhiding task ${taskId}:`, error);
+    throw error;
+  } finally {
+    // Revalidate cache to refresh UI
+    revalidatePath('/msp/user-activities');
   }
 }

@@ -122,6 +122,7 @@ export function WorkflowTasksSectionFiltersDialog({
       dueDateEnd: undefined,
       executionId: 'all',
       search: undefined,
+      includeHidden: undefined,
     };
     setLocalFilters(clearedFilters);
   };
@@ -204,6 +205,16 @@ export function WorkflowTasksSectionFiltersDialog({
               label="Show Closed Tasks"
               checked={localFilters.isClosed}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, isClosed: e.target.checked }))}
+            />
+          </div>
+
+          {/* Include Hidden Tasks Filter */}
+          <div className="pt-2">
+            <Checkbox
+              id="include-hidden-workflow-tasks"
+              label="Include Hidden Tasks"
+              checked={localFilters.includeHidden}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLocalFilters(prev => ({ ...prev, includeHidden: e.target.checked }))}
             />
           </div>
         </div>
