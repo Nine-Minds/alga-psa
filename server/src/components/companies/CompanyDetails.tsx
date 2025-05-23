@@ -43,6 +43,7 @@ import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard'
 import { useToast } from 'server/src/hooks/use-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 
 
 const SwitchDetailItem: React.FC<{
@@ -131,6 +132,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     channelOptions: IChannel[];
     categories: ITicketCategory[];
   } | null>(null);
+  const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -402,63 +404,81 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          <TextDetailItem
-            label="Client Name"
-            value={editedCompany.company_name}
-            onEdit={(value) => handleFieldChange('company_name', value)}
-          />
-          <div className="space-y-1">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
-            <UserPicker
-              value={editedCompany.account_manager_id || ''}
-              onValueChange={(value) => handleFieldChange('account_manager_id', value)}
-              users={internalUsers}
-              disabled={isLoadingUsers}
-              placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
-              buttonWidth="full"
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column - Company Info */}
+            <TextDetailItem
+              label="Client Name"
+              value={editedCompany.company_name}
+              onEdit={(value) => handleFieldChange('company_name', value)}
+            />
+            <TextDetailItem
+              label="Phone"
+              value={editedCompany.phone_no || ''}
+              onEdit={(value) => handleFieldChange('phone_no', value)}
+            />
+            
+            <TextDetailItem
+              label="Industry"
+              value={editedCompany.properties?.industry || ''}
+              onEdit={(value) => handleFieldChange('properties.industry', value)}
+            />
+            <TextDetailItem
+              label="Email"
+              value={editedCompany.email || ''}
+              onEdit={(value) => handleFieldChange('email', value)}
+            />
+            
+            <div className="space-y-2">
+              <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+              <UserPicker
+                value={editedCompany.account_manager_id || ''}
+                onValueChange={(value) => handleFieldChange('account_manager_id', value)}
+                users={internalUsers}
+                disabled={isLoadingUsers}
+                placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                buttonWidth="full"
+              />
+            </div>
+            <TextDetailItem
+              label="Website"
+              value={editedCompany.properties?.website || ''}
+              onEdit={(value) => handleFieldChange('properties.website', value)}
+            />
+            
+            <TextDetailItem
+              label="Company Size"
+              value={editedCompany.properties?.company_size || ''}
+              onEdit={(value) => handleFieldChange('properties.company_size', value)}
+            />
+            <div className="flex flex-col space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Locations</span>
+                <Button
+                  id="locations-button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsLocationsDialogOpen(true)}
+                  className="text-sm"
+                >
+                  Manage Locations
+                </Button>
+              </div>
+              <CompanyLocations 
+                companyId={editedCompany.company_id} 
+                isEditing={false}
+              />
+            </div>
+            
+            <TextDetailItem
+              label="Annual Revenue"
+              value={editedCompany.properties?.annual_revenue || ''}
+              onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
+            />
+            <SwitchDetailItem
+              value={!editedCompany.is_inactive || false}
+              onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
             />
           </div>
-          <TextDetailItem
-            label="Industry"
-            value={editedCompany.properties?.industry || ''}
-            onEdit={(value) => handleFieldChange('properties.industry', value)}
-          />
-          <TextDetailItem
-            label="Phone"
-            value={editedCompany.phone_no || ''}
-            onEdit={(value) => handleFieldChange('phone_no', value)}
-          />
-          <TextDetailItem
-            label="Email"
-            value={editedCompany.email || ''}
-            onEdit={(value) => handleFieldChange('email', value)}
-          />
-          <TextDetailItem
-            label="Website"
-            value={editedCompany.properties?.website || ''}
-            onEdit={(value) => handleFieldChange('properties.website', value)}
-          />
-          <div className="flex flex-col space-y-2">
-            <span className="text-sm font-medium text-gray-700">Locations</span>
-            <CompanyLocations 
-              companyId={editedCompany.company_id} 
-              isEditing={true}
-            />
-          </div>
-          <TextDetailItem
-            label="Company Size"
-            value={editedCompany.properties?.company_size || ''}
-            onEdit={(value) => handleFieldChange('properties.company_size', value)}
-          />
-          <TextDetailItem
-            label="Annual Revenue"
-            value={editedCompany.properties?.annual_revenue || ''}
-            onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
-          />
-          <SwitchDetailItem
-            value={!editedCompany.is_inactive || false}
-            onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-          />
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
             <Button
@@ -486,6 +506,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           {ticketFormOptions ? (
             <CompanyTickets 
               companyId={company.company_id}
+              companyName={company.company_name}
               initialChannels={ticketFormOptions.channelOptions}
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
@@ -746,6 +767,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             name: editedCompany.company_name
           }}
         />
+
+        <Dialog isOpen={isLocationsDialogOpen} onClose={() => setIsLocationsDialogOpen(false)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage Locations - {editedCompany.company_name}</DialogTitle>
+            </DialogHeader>
+            <CompanyLocations 
+              companyId={editedCompany.company_id} 
+              isEditing={true}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </ReflectionContainer>
   );

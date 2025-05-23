@@ -8,7 +8,7 @@ export interface ICompany extends TenantEntity {
   credit_balance: number;
   email: string;
   url: string;
-  address: string;
+  address?: string;
   created_at: string;
   updated_at: string;
   is_inactive: boolean;
@@ -64,7 +64,7 @@ export interface ICompanyLocation extends TenantEntity {
   postal_code?: string;
   country_code: string;
   country_name: string;
-  region_code?: string;
+  region_code?: string | null;
   is_billing_address?: boolean;
   is_shipping_address?: boolean;
   is_default?: boolean;

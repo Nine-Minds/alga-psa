@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react';
-import ContactDetailsView from 'server/src/components/contacts/ContactDetailsView';
+import ContactDetails from 'server/src/components/contacts/ContactDetails';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -134,9 +134,8 @@ const ContactDetailPage = ({ params }: { params: { id: string } }) => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">{contact.full_name}</h1>
-      <ContactDetailsView 
-        initialContact={contact} 
+      <ContactDetails 
+        contact={contact} 
         companies={companies} 
         documents={documents}
         userId={currentUser.user_id}

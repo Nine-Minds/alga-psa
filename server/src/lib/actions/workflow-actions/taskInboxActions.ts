@@ -517,7 +517,7 @@ export async function unclaimTask(taskId: string): Promise<{ success: boolean }>
 
 /**
  * Dismiss a task
- * This sends a dismiss event back to the workflow
+ * This completes the task with resolution data indicating it was dismissed
  */
 export async function dismissTask(taskId: string): Promise<{ success: boolean }> {
   try {
@@ -549,14 +549,22 @@ export async function dismissTask(taskId: string): Promise<{ success: boolean }>
       throw new Error(`Task is in ${task.status} state and cannot be dismissed`);
     }
     
-    // Use transaction to update task, add history, and publish event
+    // Use transaction to complete task with dismiss resolution data
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Update task status to canceled
-      await WorkflowTaskModel.updateTaskStatus(
+      // Create dismiss resolution data
+      const dismissResolutionData = {
+        dismissed: true,
+        dismissedBy: userId,
+        dismissedAt: new Date().toISOString(),
+        reason: 'dismissed_by_user'
+      };
+      
+      // Complete task with dismiss resolution data
+      await WorkflowTaskModel.completeTask(
         trx,
         tenant,
         taskId,
-        WorkflowTaskStatus.CANCELED,
+        dismissResolutionData,
         userId
       );
       
@@ -569,15 +577,16 @@ export async function dismissTask(taskId: string): Promise<{ success: boolean }>
           tenant,
           action: 'dismiss',
           from_status: task.status,
-          to_status: WorkflowTaskStatus.CANCELED,
-          user_id: userId
+          to_status: WorkflowTaskStatus.COMPLETED,
+          user_id: userId,
+          details: { dismissed: true }
         }
       );
       
-      // Generate event ID for dismiss event
-      const taskDismissEventId = uuidv4();
+      // Generate event ID for task completion
+      const taskCompletionEventId = uuidv4();
       
-      // Publish dismiss event to workflow engine
+      // Publish task completion event to workflow engine
       const actionRegistry = getActionRegistry();
       const workflowRuntime = getWorkflowRuntime(actionRegistry);
       
@@ -585,18 +594,18 @@ export async function dismissTask(taskId: string): Promise<{ success: boolean }>
         // Load execution state
         await workflowRuntime.loadExecutionState(trx, task.execution_id, tenant);
         
-        // Enqueue dismiss event
+        // Enqueue task completed event with dismiss resolution data
         await workflowRuntime.enqueueEvent(trx, {
           execution_id: task.execution_id,
-          event_name: TaskEventNames.taskDismissed(taskId),
-          payload: { taskId, reason: 'dismissed_by_user' },
+          event_name: TaskEventNames.taskCompleted(taskId),
+          payload: dismissResolutionData,
           user_id: userId,
           tenant,
-          idempotency_key: taskDismissEventId
+          idempotency_key: taskCompletionEventId
         });
       } catch (error: any) {
-        console.error('Error enqueueing workflow dismiss event:', error);
-        throw new Error(`Failed to publish dismiss event: ${error.message}`);
+        console.error('Error enqueueing workflow completion event:', error);
+        console.log('Task marked as completed but workflow event not enqueued');
       }
       
       return { success: true };

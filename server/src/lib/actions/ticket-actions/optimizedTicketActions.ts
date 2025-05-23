@@ -453,6 +453,9 @@ export async function getTicketsForListWithCursor(
     if (validatedFilters.companyId === '$undefined') {
       validatedFilters.companyId = undefined;
     }
+    if (validatedFilters.contactId === '$undefined') {
+      validatedFilters.contactId = undefined;
+    }
     
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -549,6 +552,10 @@ export async function getTicketsForListWithCursor(
 
     if (validatedFilters.companyId) {
       query = query.where('t.company_id', validatedFilters.companyId);
+    }
+
+    if (validatedFilters.contactId) {
+      query = query.where('t.contact_name_id', validatedFilters.contactId);
     }
 
     if (validatedFilters.searchQuery) {

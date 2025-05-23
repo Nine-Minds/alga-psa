@@ -21,10 +21,13 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
 
-interface CompanyTicketsProps {
-  companyId: string;
+interface ContactTicketsProps {
+  contactId: string;
+  contactName?: string;
+  companyId?: string;
   companyName?: string;
   initialChannels?: IChannel[];
   initialStatuses?: SelectOption[];
@@ -45,8 +48,10 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
-const CompanyTickets: React.FC<CompanyTicketsProps> = ({
-  companyId,
+const ContactTickets: React.FC<ContactTicketsProps> = ({
+  contactId,
+  contactName = '',
+  companyId = '',
   companyName = '',
   initialChannels = [],
   initialStatuses = [],
@@ -96,7 +101,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       setIsLoading(true);
       
       const filters: ITicketListFilters = {
-        companyId: companyId,
+        contactId: contactId, // Filter by contact instead of company
         channelId: selectedChannel || undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
@@ -120,7 +125,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
+  }, [contactId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
 
   // Load tickets when filters change
   useEffect(() => {
@@ -207,18 +212,21 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     {
       title: 'Title',
       dataIndex: 'title',
+      render: (value: string, record: ITicketListItem) => (
+        <div className="max-w-xs truncate" title={value}>
+          {value}
+        </div>
+      ),
     },
     {
       title: 'Status',
       dataIndex: 'status_name',
+      render: (value: string) => value,
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-    },
-    {
-      title: 'Channel',
-      dataIndex: 'channel_name',
+      render: (value: string) => value,
     },
     {
       title: 'Category',
@@ -242,49 +250,59 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       },
     },
     {
+      title: 'Channel',
+      dataIndex: 'channel_name',
+      render: (value: string) => value || 'N/A',
+    },
+    {
       title: 'Created By',
       dataIndex: 'entered_by_name',
+      render: (value: string) => value || 'N/A',
     },
     {
       title: 'Actions',
       dataIndex: 'actions',
       width: '5%',
-      render: (value: string, record: ITicketListItem) => (
+      render: (value: any, record: ITicketListItem) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              id={`company-ticket-actions-${record.ticket_id}`}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <span className="sr-only">Open menu</span>
+            <Button id={`contact-ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white z-50">
-            <DropdownMenuItem
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-              onSelect={() => handleDeleteTicket(record.ticket_id as string, record.title || record.ticket_number)}
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link href={`/msp/tickets/${record.ticket_id}`}>
+                Go to ticket
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleTicketClick(record.ticket_id as string)}>
+              View details
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleDeleteTicket(record.ticket_id as string, record.ticket_number)}
+              className="text-red-600"
             >
-              <Trash2 className="mr-2 h-4 w-4" /> 
+              <Trash2 className="h-4 w-4 mr-2" />
               Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-    }
-  ], [handleTicketClick]);
+    },
+  ], [handleTicketClick, handleDeleteTicket]);
 
-  const columns = useMemo(() => createTicketColumns(initialCategories), [initialCategories, createTicketColumns]);
+  const columns = useMemo(() => createTicketColumns(initialCategories), [createTicketColumns, initialCategories]);
 
-  const ticketsWithIds = useMemo(() =>
-    tickets.map((ticket): any => ({
-      ...ticket,
-      id: ticket.ticket_id 
-    })), [tickets]);
+  const handleCategorySelect = (
+    selectedCategories: string[],
+    excludedCategories: string[]
+  ) => {
+    setSelectedCategories(selectedCategories);
+    setExcludedCategories(excludedCategories);
+  };
 
-  const handleResetFilters = useCallback(() => {
+  const resetFilters = () => {
     setSelectedChannel(null);
     setSelectedStatus('open');
     setSelectedPriority('all');
@@ -292,12 +310,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     setExcludedCategories([]);
     setSearchQuery('');
     setChannelFilterState('active');
-  }, []);
-
-  const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
-    setSelectedCategories(newSelectedCategories);
-    setExcludedCategories(newExcludedCategories);
-  }, []);
+  };
 
   const handleTicketAdded = useCallback(() => {
     // Refresh the tickets list
@@ -305,154 +318,174 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     setIsQuickAddTicketOpen(false);
   }, [loadTickets]);
 
-  const handleLoadMore = () => {
-    if (nextCursor) {
-      loadTickets(nextCursor, false);
-    }
-  };
+  const isFiltered = selectedChannel || selectedStatus !== 'open' || selectedPriority !== 'all' || 
+                    selectedCategories.length > 0 || searchQuery || channelFilterState !== 'active';
 
-  if (isLoading && tickets.length === 0) {
+  if (!currentUser) {
     return (
-      <div className="flex justify-center items-center h-32">
-        <span>Loading tickets...</span>
+      <div className="flex items-center justify-center h-32">
+        <span>Loading...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Company Tickets</h3>
-        <Button
-          id="add-company-ticket-btn"
-          onClick={() => setIsQuickAddTicketOpen(true)}
-          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
-        >
-          Add Ticket
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {initialChannels.length > 0 && (
-          <ChannelPicker
-            id="company-tickets-channel-picker"
-            channels={initialChannels}
-            onSelect={(channelId) => setSelectedChannel(channelId)}
-            selectedChannelId={selectedChannel}
-            filterState={channelFilterState}
-            onFilterStateChange={setChannelFilterState}
-          />
-        )}
-        
-        {initialStatuses.length > 0 && (
-          <CustomSelect
-            data-automation-id="company-tickets-status-select"
-            options={initialStatuses}
-            value={selectedStatus}
-            onValueChange={(value) => setSelectedStatus(value)}
-            placeholder="Select Status"
-          />
-        )}
-        
-        {initialPriorities.length > 0 && (
-          <CustomSelect
-            data-automation-id="company-tickets-priority-select"
-            options={initialPriorities}
-            value={selectedPriority}
-            onValueChange={(value) => setSelectedPriority(value)}
-            placeholder="All Priorities"
-          />
-        )}
-        
-        {initialCategories.length > 0 && (
-          <CategoryPicker
-            id="company-tickets-category-picker"
-            categories={initialCategories}
-            selectedCategories={selectedCategories}
-            excludedCategories={excludedCategories}
-            onSelect={handleCategorySelect}
-            placeholder="Filter by category"
-            multiSelect={true}
-            showExclude={true}
-            showReset={true}
-            allowEmpty={true}
-            className="text-sm min-w-[200px]"
-          />
-        )}
-        
-        <Input
-          id="company-tickets-search-input"
-          placeholder="Search tickets..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-[38px] min-w-[200px] text-sm"
-          containerClassName=""
-        />
-        
-        <Button
-          id="company-tickets-reset-filters-btn"
-          variant="outline"
-          onClick={handleResetFilters}
-          className="whitespace-nowrap flex items-center gap-2"
-        >
-          <XCircle className="h-4 w-4" />
-          Reset Filters
-        </Button>
-      </div>
-
-      {/* Tickets Table */}
-      <DataTable
-        data={ticketsWithIds}
-        columns={columns}
-      />
-
-      {/* Load More Button */}
-      {nextCursor && (
-        <div className="flex justify-center mt-4">
+    <ReflectionContainer id="contact-tickets" label="Contact Tickets">
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Contact Tickets</h3>
           <Button
-            id="company-tickets-load-more-btn"
-            onClick={handleLoadMore}
-            disabled={isLoading}
-            variant="outline"
+            id="add-contact-ticket-btn"
+            onClick={() => setIsQuickAddTicketOpen(true)}
+            className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
           >
-            {isLoading ? 'Loading...' : 'Load More Tickets'}
+            Add Ticket
           </Button>
         </div>
-      )}
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={!!ticketToDelete}
-        onClose={() => {
-          setTicketToDelete(null);
-          setTicketToDeleteName(null);
-          setDeleteError(null);
-        }}
-        onConfirm={confirmDeleteTicket}
-        title="Delete Ticket"
-        message={
-          deleteError
-            ? deleteError
-            : `Are you sure you want to delete ticket "${ticketToDeleteName || ticketToDelete}"? This action cannot be undone.`
-        }
-        confirmLabel={deleteError ? undefined : "Delete"}
-        cancelLabel={deleteError ? "Close" : "Cancel"}
-      />
+        {/* Filters */}
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <Input
+            id="contact-tickets-search-input"
+            placeholder="Search tickets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-[38px] min-w-[200px] text-sm"
+          />
+          
+          {initialChannels.length > 0 && (
+            <ChannelPicker
+              id="contact-tickets-channel-picker"
+              channels={initialChannels}
+              selectedChannelId={selectedChannel}
+              onSelect={(channelId) => setSelectedChannel(channelId)}
+              filterState={channelFilterState}
+              onFilterStateChange={setChannelFilterState}
+            />
+          )}
+          
+          {initialStatuses.length > 0 && (
+            <CustomSelect
+              id="contact-tickets-status-select"
+              options={initialStatuses}
+              value={selectedStatus}
+              onValueChange={(value) => setSelectedStatus(value)}
+              placeholder="Select Status"
+            />
+          )}
+          
+          {initialPriorities.length > 0 && (
+            <CustomSelect
+              id="contact-tickets-priority-select"
+              options={initialPriorities}
+              value={selectedPriority}
+              onValueChange={(value) => setSelectedPriority(value)}
+              placeholder="All Priorities"
+            />
+          )}
+          
+          {initialCategories.length > 0 && (
+            <CategoryPicker
+              id="contact-tickets-category-picker"
+              categories={initialCategories}
+              selectedCategories={selectedCategories}
+              excludedCategories={excludedCategories}
+              onSelect={handleCategorySelect}
+              placeholder="Filter by category"
+              multiSelect={true}
+              showExclude={true}
+              showReset={true}
+              allowEmpty={true}
+              className="text-sm min-w-[200px]"
+            />
+          )}
+          
+          <Button
+            id="contact-tickets-reset-filters-btn"
+            variant="outline"
+            onClick={resetFilters}
+            className="whitespace-nowrap flex items-center gap-2"
+          >
+            <XCircle className="h-4 w-4" />
+            Reset Filters
+          </Button>
+        </div>
 
-      {/* Quick Add Ticket Dialog */}
-      <QuickAddTicket
-        open={isQuickAddTicketOpen}
-        onOpenChange={setIsQuickAddTicketOpen}
-        onTicketAdded={handleTicketAdded}
-        prefilledCompany={{
-          id: companyId,
-          name: companyName
-        }}
-      />
-    </div>
+
+        {/* Tickets Table */}
+        {isLoading && tickets.length === 0 ? (
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
+            ))}
+          </div>
+        ) : tickets.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-600 mb-4">No tickets found for this contact</p>
+          </div>
+        ) : (
+          <>
+            <DataTable
+              id="contact-tickets-table"
+              data={tickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }))}
+              columns={columns}
+              pagination={false}
+            />
+            
+            {/* Load More Button */}
+            {nextCursor && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  id="contact-tickets-load-more-btn"
+                  onClick={() => loadTickets(nextCursor)}
+                  disabled={isLoading}
+                  variant="outline"
+                >
+                  {isLoading ? 'Loading...' : 'Load More Tickets'}
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-ticket-dialog"
+          isOpen={!!ticketToDelete}
+          onClose={() => {
+            setTicketToDelete(null);
+            setTicketToDeleteName(null);
+            setDeleteError(null);
+          }}
+          onConfirm={confirmDeleteTicket}
+          title="Delete Ticket"
+          message={
+            deleteError 
+              ? deleteError 
+              : `Are you sure you want to delete ticket "${ticketToDeleteName}"? This action cannot be undone.`
+          }
+          confirmLabel={deleteError ? undefined : "Delete"}
+          cancelLabel={deleteError ? "Close" : "Cancel"}
+        />
+
+        {/* Quick Add Ticket Dialog */}
+        <QuickAddTicket
+          open={isQuickAddTicketOpen}
+          onOpenChange={setIsQuickAddTicketOpen}
+          onTicketAdded={handleTicketAdded}
+          prefilledCompany={{
+            id: companyId,
+            name: companyName
+          }}
+          prefilledContact={{
+            id: contactId,
+            name: contactName
+          }}
+        />
+      </div>
+    </ReflectionContainer>
   );
 };
 
-export default CompanyTickets;
+export default ContactTickets;
