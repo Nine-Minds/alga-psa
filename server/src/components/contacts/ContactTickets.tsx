@@ -22,9 +22,13 @@ import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
 
 interface ContactTicketsProps {
   contactId: string;
+  contactName?: string;
+  companyId?: string;
+  companyName?: string;
   initialChannels?: IChannel[];
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
@@ -46,6 +50,9 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const ContactTickets: React.FC<ContactTicketsProps> = ({
   contactId,
+  contactName = '',
+  companyId = '',
+  companyName = '',
   initialChannels = [],
   initialStatuses = [],
   initialPriorities = [],
@@ -58,6 +65,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   
   const { openDrawer } = useDrawer();
 
@@ -304,6 +312,12 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     setChannelFilterState('active');
   };
 
+  const handleTicketAdded = useCallback(() => {
+    // Refresh the tickets list
+    loadTickets(undefined, true);
+    setIsQuickAddTicketOpen(false);
+  }, [loadTickets]);
+
   const isFiltered = selectedChannel || selectedStatus !== 'open' || selectedPriority !== 'all' || 
                     selectedCategories.length > 0 || searchQuery || channelFilterState !== 'active';
 
@@ -321,6 +335,13 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         {/* Header */}
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold">Contact Tickets</h3>
+          <Button
+            id="add-contact-ticket-btn"
+            onClick={() => setIsQuickAddTicketOpen(true)}
+            className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+          >
+            Add Ticket
+          </Button>
         </div>
 
         {/* Filters */}
@@ -347,7 +368,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           {initialStatuses.length > 0 && (
             <CustomSelect
               id="contact-tickets-status-select"
-              options={[{ value: 'open', label: 'Open' }, { value: 'all', label: 'All Statuses' }, ...initialStatuses]}
+              options={initialStatuses}
               value={selectedStatus}
               onValueChange={(value) => setSelectedStatus(value)}
               placeholder="Select Status"
@@ -446,6 +467,21 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           }
           confirmLabel={deleteError ? undefined : "Delete"}
           cancelLabel={deleteError ? "Close" : "Cancel"}
+        />
+
+        {/* Quick Add Ticket Dialog */}
+        <QuickAddTicket
+          open={isQuickAddTicketOpen}
+          onOpenChange={setIsQuickAddTicketOpen}
+          onTicketAdded={handleTicketAdded}
+          prefilledCompany={{
+            id: companyId,
+            name: companyName
+          }}
+          prefilledContact={{
+            id: contactId,
+            name: contactName
+          }}
         />
       </div>
     </ReflectionContainer>

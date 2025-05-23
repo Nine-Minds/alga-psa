@@ -21,9 +21,11 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
+import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
 
 interface CompanyTicketsProps {
   companyId: string;
+  companyName?: string;
   initialChannels?: IChannel[];
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
@@ -45,6 +47,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   companyId,
+  companyName = '',
   initialChannels = [],
   initialStatuses = [],
   initialPriorities = [],
@@ -57,6 +60,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   
   const { openDrawer } = useDrawer();
 
@@ -295,6 +299,12 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     setExcludedCategories(newExcludedCategories);
   }, []);
 
+  const handleTicketAdded = useCallback(() => {
+    // Refresh the tickets list
+    loadTickets(undefined, true);
+    setIsQuickAddTicketOpen(false);
+  }, [loadTickets]);
+
   const handleLoadMore = () => {
     if (nextCursor) {
       loadTickets(nextCursor, false);
@@ -311,6 +321,18 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Company Tickets</h3>
+        <Button
+          id="add-company-ticket-btn"
+          onClick={() => setIsQuickAddTicketOpen(true)}
+          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+        >
+          Add Ticket
+        </Button>
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
         {initialChannels.length > 0 && (
@@ -417,6 +439,17 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
         }
         confirmLabel={deleteError ? undefined : "Delete"}
         cancelLabel={deleteError ? "Close" : "Cancel"}
+      />
+
+      {/* Quick Add Ticket Dialog */}
+      <QuickAddTicket
+        open={isQuickAddTicketOpen}
+        onOpenChange={setIsQuickAddTicketOpen}
+        onTicketAdded={handleTicketAdded}
+        prefilledCompany={{
+          id: companyId,
+          name: companyName
+        }}
       />
     </div>
   );

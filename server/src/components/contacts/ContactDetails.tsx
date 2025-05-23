@@ -443,6 +443,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           {ticketFormOptions ? (
             <ContactTickets 
               contactId={editedContact.contact_name_id}
+              contactName={editedContact.full_name}
+              companyId={editedContact.company_id || ''}
+              companyName={getCompanyName(editedContact.company_id || '')}
               initialChannels={ticketFormOptions.channelOptions}
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
