@@ -43,6 +43,7 @@ import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard'
 import { useToast } from 'server/src/hooks/use-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 
 
 const SwitchDetailItem: React.FC<{
@@ -131,6 +132,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     channelOptions: IChannel[];
     categories: ITicketCategory[];
   } | null>(null);
+  const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -449,10 +451,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               onEdit={(value) => handleFieldChange('properties.company_size', value)}
             />
             <div className="flex flex-col space-y-2">
-              <span className="text-sm font-medium text-gray-700">Locations</span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Locations</span>
+                <Button
+                  id="locations-button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsLocationsDialogOpen(true)}
+                  className="text-sm"
+                >
+                  Manage Locations
+                </Button>
+              </div>
               <CompanyLocations 
                 companyId={editedCompany.company_id} 
-                isEditing={true}
+                isEditing={false}
               />
             </div>
             
@@ -754,6 +767,18 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             name: editedCompany.company_name
           }}
         />
+
+        <Dialog isOpen={isLocationsDialogOpen} onClose={() => setIsLocationsDialogOpen(false)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Manage Locations - {editedCompany.company_name}</DialogTitle>
+            </DialogHeader>
+            <CompanyLocations 
+              companyId={editedCompany.company_id} 
+              isEditing={true}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     </ReflectionContainer>
   );
