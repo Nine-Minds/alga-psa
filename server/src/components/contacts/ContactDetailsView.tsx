@@ -5,7 +5,7 @@ import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { QuickAddInteraction } from 'server/src/components/interactions/QuickAddInteraction';
 import { Button } from 'server/src/components/ui/Button';
-import { Pen, Plus, ArrowLeft } from 'lucide-react';
+import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import ContactDetailsEdit from 'server/src/components/contacts/ContactDetailsEdit';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
@@ -265,16 +265,30 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
-              <Button
-                id={`${id}-edit-button`}
-                variant="soft"
-                size="sm"
-                onClick={handleEditContact}
-                className="flex items-center"
-              >
-                <Pen className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
+              {isInDrawer && (
+                <Button
+                  id={`${id}-go-to-contact-button`}
+                  onClick={() => window.open(`/msp/contacts/${contact.contact_name_id}`, '_blank')}
+                  variant="soft"
+                  size="sm"
+                  className="flex items-center"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Go to contact
+                </Button>
+              )}
+              {!isInDrawer && (
+                <Button
+                  id={`${id}-edit-button`}
+                  variant="soft"
+                  size="sm"
+                  onClick={handleEditContact}
+                  className="flex items-center"
+                >
+                  <Pen className="h-4 w-4 mr-2" />
+                  Edit
+                </Button>
+              )}
             </div>
           </div>
         </div>

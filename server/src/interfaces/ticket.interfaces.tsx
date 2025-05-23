@@ -44,6 +44,7 @@ export interface ITicketListFilters {
   priorityId?: string;
   categoryId?: string;
   companyId?: string;
+  contactId?: string;
   searchQuery?: string;
   channelFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
