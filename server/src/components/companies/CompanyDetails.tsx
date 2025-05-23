@@ -28,6 +28,7 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import CompanyAssets from './CompanyAssets';
 import CompanyTickets from './CompanyTickets';
+import CompanyLocations from './CompanyLocations';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
 import { ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IChannel } from 'server/src/interfaces/channel.interface';
@@ -447,11 +448,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               value={editedCompany.properties?.company_size || ''}
               onEdit={(value) => handleFieldChange('properties.company_size', value)}
             />
-            <TextDetailItem
-              label="Address"
-              value={editedCompany.address || ''}
-              onEdit={(value) => handleFieldChange('address', value)}
-            />
+            <div className="flex flex-col space-y-2">
+              <span className="text-sm font-medium text-gray-700">Locations</span>
+              <CompanyLocations 
+                companyId={editedCompany.company_id} 
+                isEditing={true}
+              />
+            </div>
             
             <TextDetailItem
               label="Annual Revenue"
