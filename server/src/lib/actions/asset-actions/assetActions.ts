@@ -46,6 +46,7 @@ import {
 import { getCurrentUser } from '../user-actions/userActions';
 import { createTenantKnex } from '../../db';
 import { Knex } from 'knex';
+import { withTransaction } from '@shared/db';
 
 type AssetExtensionType = WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset;
 
@@ -474,13 +475,14 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         // Validate query parameters
         const validatedParams = validateData(assetQuerySchema, params);
 
-        // Build base query
-        const baseQuery = knex('assets')
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            // Build base query
+            const baseQuery = trx('assets')
             .where('assets.tenant', tenant)
             .leftJoin('companies', function(this: Knex.JoinClause) {
                 this.on('companies.company_id', '=', 'assets.company_id')
                     .andOn('companies.tenant', '=', 'assets.tenant')
-                    .andOn('companies.tenant', '=', knex.raw('?', [tenant]));
+                    .andOn('companies.tenant', '=', trx.raw('?', [tenant]));
             });
 
         // Apply filters
@@ -515,7 +517,7 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         const assetsWithExtensions = await Promise.all(
             assets.map(async (asset: any): Promise<Asset> => {
                 const extensionData = validatedParams.include_extension_data
-                    ? await getExtensionData(knex, tenant, asset.asset_id, asset.asset_type)
+                    ? await getExtensionData(trx, tenant, asset.asset_id, asset.asset_type)
                     : null;
 
                 return {
@@ -532,14 +534,15 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
             })
         );
 
-        const response = {
-            assets: assetsWithExtensions,
-            total: Number(count),
-            page,
-            limit
-        };
+            const response = {
+                assets: assetsWithExtensions,
+                total: Number(count),
+                page,
+                limit
+            };
 
-        return response;
+            return response;
+        });
     } catch (error) {
         console.error('Error listing assets:', error);
         throw new Error('Failed to list assets');
@@ -661,10 +664,12 @@ export async function deleteMaintenanceSchedule(schedule_id: string): Promise<vo
             throw new Error('No tenant found');
         }
 
-        const [schedule] = await knex('asset_maintenance_schedules')
-            .where({ tenant, schedule_id })
-            .delete()
-            .returning(['asset_id']);
+        const [schedule] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('asset_maintenance_schedules')
+                .where({ tenant, schedule_id })
+                .delete()
+                .returning(['asset_id']);
+        });
 
         revalidatePath('/assets');
         if (schedule) {

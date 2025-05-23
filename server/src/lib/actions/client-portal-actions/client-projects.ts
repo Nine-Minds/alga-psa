@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getCurrentUser, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
@@ -119,10 +121,12 @@ export async function getClientProjects(options: {
   query.orderBy(sortBy, sortDirection);
   
   // Execute queries
-  const [projects, countResult] = await Promise.all([
-    query,
-    countQuery.first()
-  ]);
+  const [projects, countResult] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return Promise.all([
+      query.transacting(trx),
+      countQuery.first().transacting(trx)
+    ]);
+  });
   
   return {
     projects,
@@ -152,11 +156,13 @@ export async function getProjectProgress(projectId: string): Promise<{
   }
   
   // Get project to verify access
-  const project = await knex('projects')
-    .select('company_id', 'start_date', 'end_date')
-    .where('project_id', projectId)
-    .where('tenant', tenant)
-    .first();
+  const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('projects')
+      .select('company_id', 'start_date', 'end_date')
+      .where('project_id', projectId)
+      .where('tenant', tenant)
+      .first();
+  });
   
   if (!project) {
     throw new Error('Project not found');
@@ -215,10 +221,12 @@ export async function getProjectProgress(projectId: string): Promise<{
     })
     .count('* as closed_tasks');
     
-  const [totalTasksResult, closedTasksResult] = await Promise.all([
-    tasksQuery.first(),
-    closedTasksQuery.first()
-  ]);
+  const [totalTasksResult, closedTasksResult] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return Promise.all([
+      tasksQuery.first().transacting(trx),
+      closedTasksQuery.first().transacting(trx)
+    ]);
+  });
   
   const totalTasks = parseInt(totalTasksResult?.total_tasks as string) || 0;
   const closedTasks = parseInt(closedTasksResult?.closed_tasks as string) || 0;
@@ -276,11 +284,13 @@ export async function getProjectManager(projectId: string): Promise<{
   }
   
   // Get project to verify access
-  const project = await knex('projects')
-    .select('company_id', 'assigned_to')
-    .where('project_id', projectId)
-    .where('tenant', tenant)
-    .first();
+  const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('projects')
+      .select('company_id', 'assigned_to')
+      .where('project_id', projectId)
+      .where('tenant', tenant)
+      .first();
+  });
   
   if (!project) {
     throw new Error('Project not found');
@@ -301,11 +311,13 @@ export async function getProjectManager(projectId: string): Promise<{
     };
   }
   
-  const manager = await knex('users')
-    .select('user_id', 'first_name', 'last_name', 'email', 'phone')
-    .where('user_id', project.assigned_to)
-    .where('tenant', tenant)
-    .first();
+  const manager = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('users')
+      .select('user_id', 'first_name', 'last_name', 'email', 'phone')
+      .where('user_id', project.assigned_to)
+      .where('tenant', tenant)
+      .first();
+  });
   
   if (!manager) {
     return {

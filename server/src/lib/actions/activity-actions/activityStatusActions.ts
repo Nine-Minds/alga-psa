@@ -7,6 +7,8 @@ import {
 import { createTenantKnex } from "../../db";
 import { getCurrentUser } from "../user-actions/userActions";
 import { revalidatePath } from "next/cache";
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 
 /**
  * Server action to update the status of an activity
@@ -33,83 +35,85 @@ export async function updateActivityStatus(
     }
 
     // Update the status based on the activity type
-    switch (activityType) {
-      case ActivityType.SCHEDULE:
-        await db("schedule_entries")
-          .where("entry_id", activityId)
-          .where("tenant", tenant)
-          .update({ status: newStatus, updated_at: new Date() });
-        break;
-        
-      case ActivityType.PROJECT_TASK:
-        // For project tasks, we need to get the status mapping ID
-        const statusMapping = await db("project_status_mappings")
-          .join("statuses", function() {
-            this.on("project_status_mappings.status_id", "statuses.status_id")
-                .andOn("project_status_mappings.tenant", "statuses.tenant");
-          })
-          .where("statuses.name", newStatus)
-          .where("project_status_mappings.tenant", tenant)
-          .select("project_status_mappings.project_status_mapping_id")
-          .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      switch (activityType) {
+        case ActivityType.SCHEDULE:
+          await trx("schedule_entries")
+            .where("entry_id", activityId)
+            .where("tenant", tenant)
+            .update({ status: newStatus, updated_at: new Date() });
+          break;
           
-        if (!statusMapping) {
-          throw new Error(`Status '${newStatus}' not found for project tasks`);
-        }
-        
-        await db("project_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            project_status_mapping_id: statusMapping.project_status_mapping_id,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.TICKET:
-        // For tickets, we need to get the status ID
-        const status = await db("statuses")
-          .where("name", newStatus)
-          .where("tenant", tenant)
-          .select("status_id")
-          .first();
+        case ActivityType.PROJECT_TASK:
+          // For project tasks, we need to get the status mapping ID
+          const statusMapping = await trx("project_status_mappings")
+            .join("statuses", function() {
+              this.on("project_status_mappings.status_id", "statuses.status_id")
+                  .andOn("project_status_mappings.tenant", "statuses.tenant");
+            })
+            .where("statuses.name", newStatus)
+            .where("project_status_mappings.tenant", tenant)
+            .select("project_status_mappings.project_status_mapping_id")
+            .first();
+            
+          if (!statusMapping) {
+            throw new Error(`Status '${newStatus}' not found for project tasks`);
+          }
           
-        if (!status) {
-          throw new Error(`Status '${newStatus}' not found for tickets`);
-        }
-        
-        await db("tickets")
-          .where("ticket_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            status: status.status_id,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.TIME_ENTRY:
-        await db("time_entries")
-          .where("entry_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            approval_status: newStatus,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.WORKFLOW_TASK:
-        await db("workflow_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            status: newStatus,
-            updated_at: new Date()
-          });
-        break;
-        
-      default:
-        throw new Error(`Unsupported activity type: ${activityType}`);
-    }
+          await trx("project_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              project_status_mapping_id: statusMapping.project_status_mapping_id,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.TICKET:
+          // For tickets, we need to get the status ID
+          const status = await trx("statuses")
+            .where("name", newStatus)
+            .where("tenant", tenant)
+            .select("status_id")
+            .first();
+            
+          if (!status) {
+            throw new Error(`Status '${newStatus}' not found for tickets`);
+          }
+          
+          await trx("tickets")
+            .where("ticket_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              status: status.status_id,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.TIME_ENTRY:
+          await trx("time_entries")
+            .where("entry_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              approval_status: newStatus,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.WORKFLOW_TASK:
+          await trx("workflow_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              status: newStatus,
+              updated_at: new Date()
+            });
+          break;
+          
+        default:
+          throw new Error(`Unsupported activity type: ${activityType}`);
+      }
+    });
 
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
@@ -146,43 +150,45 @@ export async function updateActivityPriority(
     }
 
     // Update the priority based on the activity type
-    switch (activityType) {
-      case ActivityType.TICKET:
-        // For tickets, we need to get the priority ID
-        const priority = await db("priorities")
-          .where("priority_name", newPriority)
-          .where("tenant", tenant)
-          .select("priority_id")
-          .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      switch (activityType) {
+        case ActivityType.TICKET:
+          // For tickets, we need to get the priority ID
+          const priority = await trx("priorities")
+            .where("priority_name", newPriority)
+            .where("tenant", tenant)
+            .select("priority_id")
+            .first();
+            
+          if (!priority) {
+            throw new Error(`Priority '${newPriority}' not found for tickets`);
+          }
           
-        if (!priority) {
-          throw new Error(`Priority '${newPriority}' not found for tickets`);
-        }
+          await trx("tickets")
+            .where("ticket_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              priority_id: priority.priority_id,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.WORKFLOW_TASK:
+          await trx("workflow_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              priority: newPriority,
+              updated_at: new Date()
+            });
+          break;
+          
+        // Add cases for other activity types as needed
         
-        await db("tickets")
-          .where("ticket_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            priority_id: priority.priority_id,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.WORKFLOW_TASK:
-        await db("workflow_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            priority: newPriority,
-            updated_at: new Date()
-          });
-        break;
-        
-      // Add cases for other activity types as needed
-      
-      default:
-        throw new Error(`Priority update not supported for activity type: ${activityType}`);
-    }
+        default:
+          throw new Error(`Priority update not supported for activity type: ${activityType}`);
+      }
+    });
 
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
@@ -219,72 +225,74 @@ export async function reassignActivity(
     }
 
     // Update the assignee based on the activity type
-    switch (activityType) {
-      case ActivityType.SCHEDULE:
-        // For schedule entries, we need to update the assigned_user_ids array
-        const scheduleEntry = await db("schedule_entries")
-          .where("entry_id", activityId)
-          .where("tenant", tenant)
-          .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      switch (activityType) {
+        case ActivityType.SCHEDULE:
+          // For schedule entries, we need to update the assigned_user_ids array
+          const scheduleEntry = await trx("schedule_entries")
+            .where("entry_id", activityId)
+            .where("tenant", tenant)
+            .first();
+            
+          if (!scheduleEntry) {
+            throw new Error(`Schedule entry not found: ${activityId}`);
+          }
           
-        if (!scheduleEntry) {
-          throw new Error(`Schedule entry not found: ${activityId}`);
-        }
-        
-        // Replace the assigned users with the new assignee
-        await db("schedule_entries")
-          .where("entry_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            assigned_user_ids: [newAssigneeId],
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.PROJECT_TASK:
-        await db("project_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            assigned_to: newAssigneeId,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.TICKET:
-        await db("tickets")
-          .where("ticket_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            assigned_to: newAssigneeId,
-            updated_at: new Date()
-          });
-        break;
-        
-      case ActivityType.WORKFLOW_TASK:
-        // For workflow tasks, we need to update the assigned_users array
-        const workflowTask = await db("workflow_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .first();
+          // Replace the assigned users with the new assignee
+          await trx("schedule_entries")
+            .where("entry_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              assigned_user_ids: [newAssigneeId],
+              updated_at: new Date()
+            });
+          break;
           
-        if (!workflowTask) {
-          throw new Error(`Workflow task not found: ${activityId}`);
-        }
-        
-        // Replace the assigned users with the new assignee
-        await db("workflow_tasks")
-          .where("task_id", activityId)
-          .where("tenant", tenant)
-          .update({ 
-            assigned_users: [newAssigneeId],
-            updated_at: new Date()
-          });
-        break;
-        
-      default:
-        throw new Error(`Reassignment not supported for activity type: ${activityType}`);
-    }
+        case ActivityType.PROJECT_TASK:
+          await trx("project_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              assigned_to: newAssigneeId,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.TICKET:
+          await trx("tickets")
+            .where("ticket_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              assigned_to: newAssigneeId,
+              updated_at: new Date()
+            });
+          break;
+          
+        case ActivityType.WORKFLOW_TASK:
+          // For workflow tasks, we need to update the assigned_users array
+          const workflowTask = await trx("workflow_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .first();
+            
+          if (!workflowTask) {
+            throw new Error(`Workflow task not found: ${activityId}`);
+          }
+          
+          // Replace the assigned users with the new assignee
+          await trx("workflow_tasks")
+            .where("task_id", activityId)
+            .where("tenant", tenant)
+            .update({ 
+              assigned_users: [newAssigneeId],
+              updated_at: new Date()
+            });
+          break;
+          
+        default:
+          throw new Error(`Reassignment not supported for activity type: ${activityType}`);
+      }
+    });
 
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');

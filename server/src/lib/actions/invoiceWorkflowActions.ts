@@ -1,3 +1,5 @@
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { v4 as uuidv4 } from 'uuid';
@@ -40,10 +42,12 @@ export async function approveInvoice(invoiceId: string, executionId?: string): P
   
   // If execution ID is not provided, look it up
   if (!executionId) {
-    const workflowExecution = await knex('workflow_executions')
+    const workflowExecution = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('workflow_executions')
       .where('context_data->invoice.id', invoiceId)
       .andWhere('tenant', currentUser.tenant)
       .first('execution_id');
+    });
     
     if (!workflowExecution) {
       throw new Error(`No workflow found for invoice ${invoiceId}`);
@@ -82,10 +86,12 @@ export async function rejectInvoice(invoiceId: string, reason: string, execution
   
   // If execution ID is not provided, look it up
   if (!executionId) {
-    const workflowExecution = await knex('workflow_executions')
+    const workflowExecution = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('workflow_executions')
       .where('context_data->invoice.id', invoiceId)
       .andWhere('tenant', currentUser.tenant)
       .first('execution_id');
+    });
     
     if (!workflowExecution) {
       throw new Error(`No workflow found for invoice ${invoiceId}`);

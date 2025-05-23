@@ -1,8 +1,10 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
   // First separate parent categories and subcategories
@@ -42,20 +44,22 @@ export async function getTicketCategories() {
     throw new Error('Unauthorized');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
-    // Get all categories ordered by name
-    const categories = await db<ITicketCategory>('categories')
-      .select('*')
-      .where('tenant', tenant!)
-      .orderBy('category_name');
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Get all categories ordered by name
+      const categories = await trx<ITicketCategory>('categories')
+        .select('*')
+        .where('tenant', tenant!)
+        .orderBy('category_name');
 
-    // Order them hierarchically
-    return orderCategoriesHierarchically(categories);
-  } catch (error) {
-    console.error('Error fetching ticket categories:', error);
-    throw new Error('Failed to fetch ticket categories');
-  }
+      // Order them hierarchically
+      return orderCategoriesHierarchically(categories);
+    } catch (error) {
+      console.error('Error fetching ticket categories:', error);
+      throw new Error('Failed to fetch ticket categories');
+    }
+  });
 }
 
 export async function createTicketCategory(categoryName: string, channelId: string, parentCategory?: string) {
@@ -72,10 +76,11 @@ export async function createTicketCategory(categoryName: string, channelId: stri
     throw new Error('Channel ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if category with same name exists in the channel
-    const existingCategory = await db('categories')
+    const existingCategory = await trx('categories')
       .where({
         tenant,
         category_name: categoryName,
@@ -91,7 +96,7 @@ export async function createTicketCategory(categoryName: string, channelId: stri
       throw new Error("user is not logged in");
     }
 
-    const [newCategory] = await db<ITicketCategory>('categories')
+    const [newCategory] = await trx<ITicketCategory>('categories')
       .insert({
         tenant,
         category_name: categoryName.trim(),
@@ -101,14 +106,15 @@ export async function createTicketCategory(categoryName: string, channelId: stri
       })
       .returning('*');
 
-    return newCategory;
-  } catch (error) {
-    console.error('Error creating ticket category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return newCategory;
+    } catch (error) {
+      console.error('Error creating ticket category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to create ticket category');
     }
-    throw new Error('Failed to create ticket category');
-  }
+  });
 }
 
 export async function deleteTicketCategory(categoryId: string) {
@@ -121,10 +127,11 @@ export async function deleteTicketCategory(categoryId: string) {
     throw new Error('Category ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if category has subcategories
-    const hasSubcategories = await db('categories')
+    const hasSubcategories = await trx('categories')
       .where({
         tenant,
         parent_category: categoryId
@@ -136,7 +143,7 @@ export async function deleteTicketCategory(categoryId: string) {
     }
 
     // Check if category is in use by tickets
-    const inUseCount = await db('tickets')
+    const inUseCount = await trx('tickets')
       .where({
         tenant,
         category_id: categoryId
@@ -152,20 +159,21 @@ export async function deleteTicketCategory(categoryId: string) {
       throw new Error('Cannot delete category that is in use by tickets');
     }
 
-    await db('categories')
+    await trx('categories')
       .where({
         tenant,
         category_id: categoryId
       })
       .del();
-    return true;
-  } catch (error) {
-    console.error('Error deleting ticket category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return true;
+    } catch (error) {
+      console.error('Error deleting ticket category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to delete ticket category');
     }
-    throw new Error('Failed to delete ticket category');
-  }
+  });
 }
 
 export async function updateTicketCategory(categoryId: string, categoryData: Partial<ITicketCategory>) {
@@ -182,15 +190,16 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
     throw new Error('Category name cannot be empty');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
     // Check if new name conflicts with existing category in the same channel
     if (categoryData.category_name) {
-      const existingCategory = await db('categories')
+      const existingCategory = await trx('categories')
         .where({
           tenant,
           category_name: categoryData.category_name,
-          channel_id: categoryData.channel_id || (await db('categories').where({ category_id: categoryId }).first()).channel_id
+          channel_id: categoryData.channel_id || (await trx('categories').where({ category_id: categoryId }).first()).channel_id
         })
         .whereNot('category_id', categoryId)
         .first();
@@ -204,7 +213,7 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
       throw new Error("user is not logged in");
     }
 
-    const [updatedCategory] = await db<ITicketCategory>('categories')
+    const [updatedCategory] = await trx<ITicketCategory>('categories')
       .where({
         tenant,
         category_id: categoryId
@@ -216,14 +225,15 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
       throw new Error('Ticket category not found');
     }
 
-    return updatedCategory;
-  } catch (error) {
-    console.error('Error updating ticket category:', error);
-    if (error instanceof Error) {
-      throw error;
+      return updatedCategory;
+    } catch (error) {
+      console.error('Error updating ticket category:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Failed to update ticket category');
     }
-    throw new Error('Failed to update ticket category');
-  }
+  });
 }
 
 export async function getTicketCategoriesByChannel(channelId: string) {
@@ -236,18 +246,20 @@ export async function getTicketCategoriesByChannel(channelId: string) {
     throw new Error('Channel ID is required');
   }
 
-  const {knex: db, tenant} = await createTenantKnex();
-  try {
-    // Get all categories for the channel ordered by name
-    const categories = await db<ITicketCategory>('categories')
-      .where('tenant', tenant!)
-      .where('channel_id', channelId)
-      .orderBy('category_name');
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Get all categories for the channel ordered by name
+      const categories = await trx<ITicketCategory>('categories')
+        .where('tenant', tenant!)
+        .where('channel_id', channelId)
+        .orderBy('category_name');
 
-    // Order them hierarchically
-    return orderCategoriesHierarchically(categories);
-  } catch (error) {
-    console.error('Error fetching ticket categories by channel:', error);
-    throw new Error('Failed to fetch ticket categories');
-  }
+      // Order them hierarchically
+      return orderCategoriesHierarchically(categories);
+    } catch (error) {
+      console.error('Error fetching ticket categories by channel:', error);
+      throw new Error('Failed to fetch ticket categories');
+    }
+  });
 }

@@ -1,5 +1,6 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ICreditReconciliationReport } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -26,7 +27,7 @@ export async function createMissingCreditTrackingEntry(
     throw new Error('Tenant context is required for creating credit tracking entry');
   }
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     try {
       // Get the report details
       const report = await CreditReconciliationReport.getById(reportId);
@@ -130,7 +131,7 @@ export async function updateCreditTrackingRemainingAmount(
     throw new Error('Tenant context is required for updating credit tracking remaining amount');
   }
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     try {
       // Get the report details
       const report = await CreditReconciliationReport.getById(reportId);
@@ -235,7 +236,7 @@ export async function applyCustomCreditAdjustment(
     throw new Error('Tenant context is required for applying credit adjustment');
   }
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     try {
       // Get the report details
       const report = await CreditReconciliationReport.getById(reportId);
@@ -366,7 +367,7 @@ export async function markReportAsResolvedNoAction(
     throw new Error('Tenant context is required for resolving reconciliation report');
   }
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     try {
       // Get the report details
       const report = await CreditReconciliationReport.getById(reportId);

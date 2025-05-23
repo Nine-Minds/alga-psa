@@ -7,6 +7,7 @@ import { Knex } from 'knex'; // Import Knex type
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import { IPlanServiceFixedConfig } from 'server/src/interfaces/planServiceConfiguration.interfaces'; // This might be removable if not used elsewhere after refactor
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
+import { withTransaction } from '../../../../shared/db';
 
 export async function getBillingPlans(): Promise<IBillingPlan[]> {
     try {
@@ -151,18 +152,22 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
                  // Fetch company IDs associated with the plan
-                 const companyPlanLinks = await knex('company_billing_plans')
-                     .select('company_id')
-                     .where({ plan_id: planId, tenant: tenant });
+                 const companyPlanLinks = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                     return await trx('company_billing_plans')
+                         .select('company_id')
+                         .where({ plan_id: planId, tenant: tenant });
+                 });
 
                  const companyIds = companyPlanLinks.map(link => link.company_id);
 
                  let companyNames: string[] = [];
                  if (companyIds.length > 0) {
-                     const companies = await knex('companies')
-                         .select('company_name')
-                         .whereIn('company_id', companyIds)
-                         .andWhere({ tenant: tenant });
+                     const companies = await withTransaction(knex, async (trx: Knex.Transaction) => {
+                         return await trx('companies')
+                             .select('company_name')
+                             .whereIn('company_id', companyIds)
+                             .andWhere({ tenant: tenant });
+                     });
                      companyNames = companies.map(c => c.company_name);
                  }
 

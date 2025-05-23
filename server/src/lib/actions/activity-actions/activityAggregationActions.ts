@@ -1,4 +1,6 @@
 import { createTenantKnex } from "../../db";
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { 
   Activity, 
   ActivityFilters, 
@@ -229,7 +231,8 @@ export async function fetchProjectActivities(
     }
 
     // Query for project tasks assigned to the user
-    const tasks = await db("project_tasks")
+    const tasks = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx("project_tasks")
       .select(
         "project_tasks.*",
         "project_phases.phase_name",
@@ -342,6 +345,7 @@ export async function fetchProjectActivities(
           });
         }
       });
+    });
 
     // Convert to activities
     // Convert to activities
@@ -402,7 +406,8 @@ export async function fetchTicketActivities(
     }
 
     // Query for tickets assigned to the user
-    const tickets = await db("tickets")
+    const tickets = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx("tickets")
       .select(
         "tickets.*",
         "companies.company_name",
@@ -500,6 +505,7 @@ export async function fetchTicketActivities(
           });
         }
       });
+    });
 
     // Convert to activities
     const activities = tickets.map((ticket: any) => {
@@ -574,7 +580,8 @@ export async function fetchTimeEntryActivities(
     }
 
     // Query for time entries created by the user
-    const timeEntries = await db("time_entries")
+    const timeEntries = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx("time_entries")
       .where("time_entries.tenant", tenant)
       .where("time_entries.user_id", userId)
       // Apply date range filter if provided
@@ -592,6 +599,7 @@ export async function fetchTimeEntryActivities(
           queryBuilder.whereIn("time_entries.approval_status", filters.status);
         }
       });
+    });
 
     // Convert to activities
     // Convert to activities
@@ -647,16 +655,18 @@ export async function fetchWorkflowTaskActivities(
       throw new Error("Tenant is required");
     }
 
-    // Get user roles for role-based task assignment
-    const userRoles = await db("user_roles")
-      .where("user_roles.tenant", tenant)
-      .where("user_roles.user_id", userId)
-      .select("role_id");
-    
-    const roleIds = userRoles.map(role => role.role_id);
+    // Execute queries in transaction
+    const { userRoles, workflowTasks } = await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get user roles for role-based task assignment
+      const userRoles = await trx("user_roles")
+        .where("user_roles.tenant", tenant)
+        .where("user_roles.user_id", userId)
+        .select("role_id");
+      
+      const roleIds = userRoles.map(role => role.role_id);
 
-    // Go back to using the knex query builder instead of raw SQL to avoid binding issues
-    const workflowTasksQuery = db("workflow_tasks as wt")
+      // Go back to using the knex query builder instead of raw SQL to avoid binding issues
+      const workflowTasksQuery = trx("workflow_tasks as wt")
       .select(
         "wt.*",
         "we.workflow_name",
@@ -728,11 +738,14 @@ export async function fetchWorkflowTaskActivities(
           });
         }
       });
-    
-    console.log('Executing workflow task query:', workflowTasksQuery.toString());
-    
-    // Execute the query
-    const workflowTasks = await workflowTasksQuery;
+      
+      console.log('Executing workflow task query:', workflowTasksQuery.toString());
+      
+      // Execute the query
+      const workflowTasks = await workflowTasksQuery;
+      
+      return { userRoles, workflowTasks };
+    });
 
     // Convert to activities
     const activities = workflowTasks.map((task: WorkflowTaskData) => {

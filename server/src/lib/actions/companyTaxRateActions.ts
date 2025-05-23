@@ -1,5 +1,7 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ICompanyTaxRateAssociation, ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Updated import
 
@@ -9,24 +11,26 @@ export type CompanyTaxRateDetails = ICompanyTaxRateAssociation & Pick<ITaxRate, 
 
 export async function getCompanyTaxRates(companyId: string): Promise<CompanyTaxRateDetails[]> {
   const { knex, tenant } = await createTenantKnex();
-  return await knex('company_tax_rates')
-    .join('tax_rates', function() {
-      this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-          .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
-    })
-    .where({
-      'company_tax_rates.company_id': companyId,
-      'company_tax_rates.tenant': tenant
-    })
-    .select(
-      'company_tax_rates.*',
-      'tax_rates.tax_percentage',
-     // 'tax_rates.name', // Removed as 'name' column does not exist on tax_rates table
-      'tax_rates.tax_type',
-      'tax_rates.country_code'
-      // Removed region_code and description as they are not in ITaxRate base definition
-      // Add them back if they are needed and present in ITaxRate
-    );
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_tax_rates')
+      .join('tax_rates', function() {
+        this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
+      })
+      .where({
+        'company_tax_rates.company_id': companyId,
+        'company_tax_rates.tenant': tenant
+      })
+      .select(
+        'company_tax_rates.*',
+        'tax_rates.tax_percentage',
+       // 'tax_rates.name', // Removed as 'name' column does not exist on tax_rates table
+        'tax_rates.tax_type',
+        'tax_rates.country_code'
+        // Removed region_code and description as they are not in ITaxRate base definition
+        // Add them back if they are needed and present in ITaxRate
+      );
+  });
 }
 
 // Phase 1: Only allow adding a single default rate per company.
@@ -37,7 +41,7 @@ export async function addCompanyTaxRate(
   const { knex, tenant } = await createTenantKnex();
   const { company_id, tax_rate_id } = companyTaxRateData; // Destructure for clarity
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // 1. Phase 1 Constraint: Check if a default rate already exists
     const existingDefault = await trx('company_tax_rates')
       .where({
@@ -105,13 +109,15 @@ export async function addCompanyTaxRate(
 
 export async function removeCompanyTaxRate(companyId: string, taxRateId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  await knex('company_tax_rates')
-    .where({ 
-      company_id: companyId,
-      tax_rate_id: taxRateId,
-      tenant
-    })
-    .del();
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_tax_rates')
+      .where({ 
+        company_id: companyId,
+        tax_rate_id: taxRateId,
+        tenant
+      })
+      .del();
+  });
 }
 
 // Phase 1: Update the default tax rate for a company
@@ -122,14 +128,16 @@ export async function updateDefaultCompanyTaxRate(
  const { knex, tenant } = await createTenantKnex();
 
  // Validate that the newTaxRateId exists for this tenant (optional but good practice)
- const newRateExists = await knex('tax_rates')
-   .where({ tax_rate_id: newTaxRateId, tenant: tenant })
-   .first();
+ const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+   return await trx('tax_rates')
+     .where({ tax_rate_id: newTaxRateId, tenant: tenant })
+     .first();
+ });
  if (!newRateExists) {
    throw new Error(`Tax rate with ID ${newTaxRateId} not found.`);
  }
 
-return await knex.transaction(async (trx) => {
+return await withTransaction(knex, async (trx: Knex.Transaction) => {
   // 1. Find the current default rate ID (if one exists)
   const currentDefaultResult = await trx('company_tax_rates')
    .select('company_tax_rates_id', 'tax_rate_id') // Corrected column name (plural rates)
@@ -220,19 +228,21 @@ export async function getCompanyDefaultTaxRegionCode(companyId: string): Promise
   }
 
   try {
-    const result = await knex('company_tax_rates as ctr')
-      .join('tax_rates as tr', function() {
-        this.on('ctr.tax_rate_id', '=', 'tr.tax_rate_id')
-            .andOn('ctr.tenant', '=', 'tr.tenant');
-      })
-      .where({
-        'ctr.company_id': companyId,
-        'ctr.tenant': tenant,
-        'ctr.is_default': true,
-      })
-      .whereNull('ctr.location_id') // Ensure it's the company-wide default
-      .select('tr.region_code')
-      .first();
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('company_tax_rates as ctr')
+        .join('tax_rates as tr', function() {
+          this.on('ctr.tax_rate_id', '=', 'tr.tax_rate_id')
+              .andOn('ctr.tenant', '=', 'tr.tenant');
+        })
+        .where({
+          'ctr.company_id': companyId,
+          'ctr.tenant': tenant,
+          'ctr.is_default': true,
+        })
+        .whereNull('ctr.location_id') // Ensure it's the company-wide default
+        .select('tr.region_code')
+        .first();
+    });
 
     if (result && result.region_code) {
       console.log(`[getCompanyDefaultTaxRegionCode] Found default region code '${result.region_code}' for company ${companyId}`);

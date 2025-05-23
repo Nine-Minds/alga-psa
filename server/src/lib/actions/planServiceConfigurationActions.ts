@@ -1,7 +1,7 @@
 'use server';
 
 import { z } from 'zod'; // Add Zod import
-import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@shared/db';
 import {
   IPlanServiceConfiguration,
   IPlanServiceFixedConfig,
@@ -15,6 +15,8 @@ import {
 import { IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 import { getBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 /**
  * Get a plan service configuration with its type-specific configuration
@@ -26,11 +28,9 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
   rateTiers?: IPlanServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
 }> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
   // Get the configuration details
   const configDetails = await configService.getConfigurationWithDetails(configId);
@@ -53,36 +53,35 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
     }
   }
   
-  return {
-    ...configDetails,
-    planFixedConfig
-  };
+    return {
+      ...configDetails,
+      planFixedConfig
+    };
+  });
 }
 
 /**
  * Get all configurations for a plan
  */
 export async function getConfigurationsForPlan(planId: string): Promise<IPlanServiceConfiguration[]> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-  return await configService.getConfigurationsForPlan(planId);
+    return await configService.getConfigurationsForPlan(planId);
+  });
 }
 
 /**
  * Get configuration for a specific service within a plan
  */
 export async function getConfigurationForService(planId: string, serviceId: string): Promise<IPlanServiceConfiguration | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-  return await configService.getConfigurationForService(planId, serviceId);
+    return await configService.getConfigurationForService(planId, serviceId);
+  });
 }
 
 /**
@@ -94,16 +93,15 @@ export async function createConfiguration(
   rateTiers?: Omit<IPlanServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at'>[],
   userTypeRates?: Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at'>[]
 ): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
   // Ensure tenant is set
-  baseConfig.tenant = tenant;
+  baseConfig.tenant = tenant!;
   
-  return await configService.createConfiguration(baseConfig, typeConfig, rateTiers, userTypeRates);
+    return await configService.createConfiguration(baseConfig, typeConfig, rateTiers, userTypeRates);
+  });
 }
 
 /**
@@ -115,26 +113,24 @@ export async function updateConfiguration(
   typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>,
   rateTiers?: IPlanServiceRateTier[] // Add rateTiers parameter
 ): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-  return await configService.updateConfiguration(configId, baseConfig, typeConfig, rateTiers); // Pass rateTiers
+    return await configService.updateConfiguration(configId, baseConfig, typeConfig, rateTiers); // Pass rateTiers
+  });
 }
 
 /**
  * Delete a plan service configuration and its type-specific configuration
  */
 export async function deleteConfiguration(configId: string): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
   
-  return await configService.deleteConfiguration(configId);
+    return await configService.deleteConfiguration(configId);
+  });
 }
 
 /**
@@ -144,16 +140,15 @@ export async function addRateTier(
   configId: string,
   tierData: Omit<IPlanServiceRateTier, 'tier_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>
 ): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
   
-  return await usageConfigModel.addRateTier({
-    ...tierData,
-    config_id: configId,
-    tenant
+    return await usageConfigModel.addRateTier({
+      ...tierData,
+      config_id: configId,
+      tenant: tenant!
+    });
   });
 }
 
@@ -164,26 +159,24 @@ export async function updateRateTier(
   tierId: string,
   tierData: Partial<Omit<IPlanServiceRateTier, 'tier_id' | 'tenant'>>
 ): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
   
-  return await usageConfigModel.updateRateTier(tierId, tierData);
+    return await usageConfigModel.updateRateTier(tierId, tierData);
+  });
 }
 
 /**
  * Delete a rate tier
  */
 export async function deleteRateTier(tierId: string): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const usageConfigModel = new (await import('server/src/lib/models/planServiceUsageConfig')).default(trx, tenant!);
   
-  return await usageConfigModel.deleteRateTier(tierId);
+    return await usageConfigModel.deleteRateTier(tierId);
+  });
 }
 
 /**
@@ -193,16 +186,15 @@ export async function addUserTypeRate(
   configId: string,
   rateData: Omit<IUserTypeRate, 'rate_id' | 'config_id' | 'created_at' | 'updated_at' | 'tenant'>
 ): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
   
-  return await hourlyConfigModel.addUserTypeRate({
-    ...rateData,
-    config_id: configId,
-    tenant
+    return await hourlyConfigModel.addUserTypeRate({
+      ...rateData,
+      config_id: configId,
+      tenant: tenant!
+    });
   });
 }
 
@@ -213,26 +205,24 @@ export async function updateUserTypeRate(
   rateId: string,
   rateData: Partial<Omit<IUserTypeRate, 'rate_id' | 'tenant'>>
 ): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
   
-  return await hourlyConfigModel.updateUserTypeRate(rateId, rateData);
+    return await hourlyConfigModel.updateUserTypeRate(rateId, rateData);
+  });
 }
 
 /**
  * Delete a user type rate
  */
 export async function deleteUserTypeRate(rateId: string): Promise<boolean> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const hourlyConfigModel = new (await import('server/src/lib/models/planServiceHourlyConfig')).default(trx, tenant!);
   
-  return await hourlyConfigModel.deleteUserTypeRate(rateId);
+    return await hourlyConfigModel.deleteUserTypeRate(rateId);
+  });
 }
 
 // --- Zod Schema for User Type Rate Input ---
@@ -262,14 +252,12 @@ export async function upsertUserTypeRatesForConfig(
   }
 
   const { configId, rates } = validationResult.data;
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // Use the service, assuming it has a method for this bulk operation
   // If not, we'd implement the transaction logic here or add the method to the service.
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
 
   try {
     // Assuming a method like this exists or will be added to the service:
@@ -279,8 +267,9 @@ export async function upsertUserTypeRatesForConfig(
     if (error instanceof Error) {
       throw error; // Re-throw specific errors
     }
-    throw new Error(`Failed to update user type rates for config ${configId}.`);
-  }
+      throw new Error(`Failed to update user type rates for config ${configId}.`);
+    }
+  });
 }
 
 // --- New Actions for Tiered Service Pricing ---
@@ -297,11 +286,9 @@ export interface IFullPlanServiceUsageConfiguration extends IPlanServiceConfigur
  * Corresponds to Phase 1 Task: Backend fetch action (`getPlanServiceConfiguration`)
  */
 export async function getPlanServiceConfiguration(planId: string, serviceId: string): Promise<IFullPlanServiceUsageConfiguration | null> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
 
   // TODO: Implement logic using configService or direct queries
   // 1. Get base config using configService.getConfigurationForService(planId, serviceId)
@@ -318,8 +305,8 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
   }
 
   try {
-    const usageConfig = await knex<IPlanServiceUsageConfig>('plan_service_usage_config')
-      .where({ config_id: baseConfig.config_id, tenant: tenant })
+    const usageConfig = await trx<IPlanServiceUsageConfig>('plan_service_usage_config')
+      .where({ config_id: baseConfig.config_id, tenant: tenant! })
       .first();
 
     if (!usageConfig) {
@@ -330,8 +317,8 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
 
     let tiers: IPlanServiceRateTier[] = [];
     if (usageConfig.enable_tiered_pricing) {
-      tiers = await knex<IPlanServiceRateTier>('plan_service_rate_tiers')
-        .where({ config_id: baseConfig.config_id, tenant: tenant })
+      tiers = await trx<IPlanServiceRateTier>('plan_service_rate_tiers')
+        .where({ config_id: baseConfig.config_id, tenant: tenant! })
         .orderBy('min_quantity', 'asc');
     }
 
@@ -347,9 +334,10 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
     return fullConfig;
 
   } catch (error) {
-    console.error("Error fetching plan service configuration details:", error);
-    throw new Error("Failed to fetch plan service configuration details.");
-  }
+      console.error("Error fetching plan service configuration details:", error);
+      throw new Error("Failed to fetch plan service configuration details.");
+    }
+  });
 }
 
 
@@ -438,11 +426,9 @@ function validatePlanServiceUsageConfigurationInput(input: IUpsertPlanServiceUsa
  * - Backend data type handling and tenant filtering
  */
 export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUsageConfigurationInput): Promise<IFullPlanServiceUsageConfiguration> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant); // May not be fully used if direct transaction is needed
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!); // May not be fully used if direct transaction is needed
 
   // --- Validation (Phase 1 Task) ---
   try {
@@ -457,8 +443,8 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
   const { planId, serviceId, tiers, ...usageConfigInput } = input;
 
   try {
-    const updatedConfig = await knex.transaction(async (trx) => {
-      const trxConfigService = new PlanServiceConfigurationService(trx, tenant); // Use transaction knex
+    const updatedConfig = await trx.transaction(async (trxInner: Knex.Transaction) => {
+      const trxConfigService = new PlanServiceConfigurationService(trxInner, tenant!); // Use transaction knex
 
       // 1. Upsert plan_service_configuration
       let baseConfig = await trxConfigService.getConfigurationForService(planId, serviceId);
@@ -467,8 +453,8 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       if (baseConfig) {
         // Update if exists (though only type is relevant here, maybe updated_at)
         configId = baseConfig.config_id;
-        await trx('plan_service_configuration')
-          .where({ config_id: configId, tenant: tenant })
+        await trxInner('plan_service_configuration')
+          .where({ config_id: configId, tenant: tenant! })
           // Ensure type is 'Usage' on update as well
           .update({ configuration_type: 'Usage', updated_at: new Date() });
       } else {
@@ -477,10 +463,10 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
           plan_id: planId,
           service_id: serviceId,
           configuration_type: 'Usage', // Explicitly set type
-          tenant: tenant,
+          tenant: tenant!,
           custom_rate: undefined, // Use undefined instead of null
         };
-        const insertedIds = await trx('plan_service_configuration')
+        const insertedIds = await trxInner('plan_service_configuration')
           .insert(newBaseConfig)
           .returning('config_id');
         configId = insertedIds[0].config_id;
@@ -490,14 +476,14 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       const usageConfigPayload = {
         ...usageConfigInput,
         config_id: configId,
-        tenant: tenant,
+        tenant: tenant!,
         // Ensure numeric types are handled correctly
         base_rate: usageConfigInput.base_rate !== undefined && usageConfigInput.base_rate !== null ? Number(usageConfigInput.base_rate) : null,
         minimum_usage: usageConfigInput.minimum_usage !== undefined && usageConfigInput.minimum_usage !== null ? Number(usageConfigInput.minimum_usage) : null,
       };
 
       // Use explicit insert/update with conflict handling for upsert
-      await trx('plan_service_usage_config')
+      await trxInner('plan_service_usage_config')
         .insert(usageConfigPayload)
         .onConflict(['config_id', 'tenant']) // Assumes this unique constraint exists
         .merge() // Update existing row on conflict
@@ -506,8 +492,8 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
 
       // 3. Handle Tiers
       // Always delete existing tiers first for simplicity in upsert
-      await trx('plan_service_rate_tiers')
-        .where({ config_id: configId, tenant: tenant })
+      await trxInner('plan_service_rate_tiers')
+        .where({ config_id: configId, tenant: tenant! })
         .del();
 
       if (usageConfigInput.enable_tiered_pricing && tiers && tiers.length > 0) {
@@ -515,33 +501,33 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
         const tiersToInsert = tiers.map(tier => ({
           ...tier,
           config_id: configId,
-          tenant: tenant,
+          tenant: tenant!,
           // Ensure numeric/integer types
           min_quantity: Number(tier.min_quantity),
           max_quantity: tier.max_quantity !== undefined && tier.max_quantity !== null ? Number(tier.max_quantity) : null,
           rate: Number(tier.rate),
         }));
-        await trx('plan_service_rate_tiers').insert(tiersToInsert);
+        await trxInner('plan_service_rate_tiers').insert(tiersToInsert);
       }
 
       // Fetch the final combined configuration to return
       // Re-use the logic from getPlanServiceConfiguration but with the transaction trx
-      const finalBaseConfig = await trx<IPlanServiceConfiguration>('plan_service_configuration')
-        .where({ config_id: configId, tenant: tenant })
+      const finalBaseConfig = await trxInner<IPlanServiceConfiguration>('plan_service_configuration')
+        .where({ config_id: configId, tenant: tenant! })
         .first();
 
       if (!finalBaseConfig) throw new Error("Failed to retrieve base config after upsert"); // Should not happen
 
-      const finalUsageConfig = await trx<IPlanServiceUsageConfig>('plan_service_usage_config')
-        .where({ config_id: configId, tenant: tenant })
+      const finalUsageConfig = await trxInner<IPlanServiceUsageConfig>('plan_service_usage_config')
+        .where({ config_id: configId, tenant: tenant! })
         .first();
 
       if (!finalUsageConfig) throw new Error("Failed to retrieve usage config after upsert"); // Should not happen
 
       let finalTiers: IPlanServiceRateTier[] = [];
       if (finalUsageConfig.enable_tiered_pricing) {
-        finalTiers = await trx<IPlanServiceRateTier>('plan_service_rate_tiers')
-          .where({ config_id: configId, tenant: tenant })
+        finalTiers = await trxInner<IPlanServiceRateTier>('plan_service_rate_tiers')
+          .where({ config_id: configId, tenant: tenant! })
           .orderBy('min_quantity', 'asc');
       }
 
@@ -560,10 +546,11 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
     return updatedConfig;
 
   } catch (error) {
-    console.error("Error upserting plan service configuration:", error);
-    // TODO: Improve error handling, maybe return specific validation errors
-    throw new Error("Failed to upsert plan service configuration.");
-  }
+      console.error("Error upserting plan service configuration:", error);
+      // TODO: Improve error handling, maybe return specific validation errors
+      throw new Error("Failed to upsert plan service configuration.");
+    }
+  });
 }
 
 
@@ -588,19 +575,17 @@ export interface IUpsertPlanServiceBucketConfigurationInput {
 export async function upsertPlanServiceBucketConfigurationAction(
   input: IUpsertPlanServiceBucketConfigurationInput
 ): Promise<string> {
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("tenant context not found");
-  }
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
 
   const { planId, serviceId, ...bucketConfigData } = input;
 
   // Get service details to access default_rate
-  const service = await knex('service_catalog')
+  const service = await trx('service_catalog')
     .where({
       service_id: serviceId,
-      tenant
+      tenant: tenant!
     })
     .first();
 
@@ -628,10 +613,11 @@ export async function upsertPlanServiceBucketConfigurationAction(
     console.log(`Upsert successful, configId: ${configId}`);
     return configId;
   } catch (error) {
-    console.error("Error in upsertPlanServiceBucketConfigurationAction:", error);
-    // Consider more specific error handling/logging
-    throw new Error("Failed to upsert bucket configuration.");
-  }
+      console.error("Error in upsertPlanServiceBucketConfigurationAction:", error);
+      // Consider more specific error handling/logging
+      throw new Error("Failed to upsert bucket configuration.");
+    }
+  });
 }
 
 
@@ -667,10 +653,8 @@ type UpsertPlanServiceHourlyConfigurationInput = z.infer<typeof UpsertPlanServic
 export async function upsertPlanServiceHourlyConfiguration(
   input: UpsertPlanServiceHourlyConfigurationInput
 ): Promise<string> { // Changed return type to string (config_id)
-  const { knex, tenant } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error("Tenant context not found");
-  }
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
 
   // --- Validation ---
   const validationResult = UpsertPlanServiceHourlyConfigurationInputSchema.safeParse(input);
@@ -683,7 +667,7 @@ export async function upsertPlanServiceHourlyConfiguration(
   const validatedInput = validationResult.data;
   // --- End Validation ---
 
-  const configService = new PlanServiceConfigurationService(knex, tenant);
+  const configService = new PlanServiceConfigurationService(trx, tenant!);
 
   try {
     // Prepare the hourly config data object, converting nulls to undefined
@@ -704,8 +688,9 @@ export async function upsertPlanServiceHourlyConfiguration(
     console.error("Error upserting plan service hourly configuration:", error);
     if (error instanceof Error) {
         throw new Error(`Failed to upsert plan service hourly configuration: ${error.message}`);
-    } else {
-        throw new Error("An unknown error occurred while upserting plan service hourly configuration.");
+      } else {
+          throw new Error("An unknown error occurred while upserting plan service hourly configuration.");
+      }
     }
-  }
+  });
 }

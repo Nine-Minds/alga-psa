@@ -2,6 +2,7 @@
 
 import Tag from 'server/src/lib/models/tag';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
+import { withTransaction } from '@shared/db';
 
 export async function findTagsByEntityId(entityId: string, entityType: TaggedEntityType): Promise<ITag[]> {
   try {

@@ -1,5 +1,6 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ICreditReconciliationReport, ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -224,7 +225,7 @@ export async function validateCreditBalanceWithoutCorrection(
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 
@@ -250,7 +251,7 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
     const startTime = new Date().toISOString();
 
     // Create a transaction for audit logging
-    return await knex.transaction(async (trx) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Log the start of the validation run
         await auditLog(
             trx,
@@ -479,7 +480,7 @@ export async function validateCreditTrackingEntries(
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 
@@ -645,7 +646,7 @@ export async function validateCreditTrackingRemainingAmounts(
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 
@@ -690,7 +691,7 @@ export async function validateAllCreditTracking(
     if (providedTrx) {
         return await executeWithTransaction(providedTrx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 
@@ -840,7 +841,7 @@ export async function resolveReconciliationReport(
     if (trx) {
         return await executeWithTransaction(trx);
     } else {
-        return await knex.transaction(executeWithTransaction);
+        return await withTransaction(knex, executeWithTransaction);
     }
 }
 

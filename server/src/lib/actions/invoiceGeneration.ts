@@ -1,9 +1,10 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
-import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import {
   IInvoiceItem,
@@ -154,16 +155,20 @@ async function adaptToWasmViewModel(
   let tenantCompanyInfo = null;
   if (tenant) {
     const { knex } = await createTenantKnex(); // Get knex instance again if needed
-    const tenantCompanyLink = await knex('tenant_companies')
-      .where({ tenant: tenant, is_default: true })
-      .select('company_id')
-      .first();
+    const tenantCompanyLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('tenant_companies')
+        .where({ tenant: tenant, is_default: true })
+        .select('company_id')
+        .first();
+    });
 
     if (tenantCompanyLink) {
-      const tenantCompanyDetails = await knex('companies')
-        .where({ company_id: tenantCompanyLink.company_id })
-        .select('company_name', 'address')
-        .first();
+      const tenantCompanyDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('companies')
+          .where({ company_id: tenantCompanyLink.company_id })
+          .select('company_name', 'address')
+          .first();
+      });
 
       if (tenantCompanyDetails) {
         // Assuming getCompanyLogoUrl is accessible or import it
@@ -209,12 +214,14 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
   const { knex, tenant } = await createTenantKnex();
 
   // Get billing cycle details
-  const billingCycle = await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id,
-      tenant
-    })
-    .first();
+  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id,
+        tenant
+      })
+      .first();
+  });
 
   if (!billingCycle) {
     return {
@@ -247,12 +254,14 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Create invoice view model without persisting
-    const company = await knex('companies')
-      .where({
-        company_id,
-        tenant
-      })
-      .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .where({
+          company_id,
+          tenant
+        })
+        .first();
+    });
     const due_date = await getDueDate(company_id, cycleEnd); // Uses temporary import
 
     // Group charges by bundle if they have bundle information
@@ -391,12 +400,14 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error('No tenant found');
   }
 
-  const billingCycle = await knex('company_billing_cycles')
-    .where({
-      billing_cycle_id,
-      tenant
-    })
-    .first();
+  const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_cycles')
+      .where({
+        billing_cycle_id,
+        tenant
+      })
+      .first();
+  });
 
   if (!billingCycle) {
     throw new Error('Billing cycle not found');
@@ -421,12 +432,14 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   // Check if an invoice already exists for this billing cycle
-  const existingInvoice = await knex('invoices')
-    .where({
-      billing_cycle_id,
-      tenant
-    })
-    .first();
+  const existingInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('invoices')
+      .where({
+        billing_cycle_id,
+        tenant
+      })
+      .first();
+  });
 
   if (existingInvoice) {
     throw new Error('No active billing plans for this period');
@@ -440,13 +453,17 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   // Get zero-dollar invoice settings
-  const companySettings = await knex('company_billing_settings')
-    .where({ company_id: company_id, tenant })
-    .first();
+  const companySettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_billing_settings')
+      .where({ company_id: company_id, tenant })
+      .first();
+  });
 
-  const defaultSettings = await knex('default_billing_settings')
-    .where({ tenant: tenant })
-    .first();
+  const defaultSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('default_billing_settings')
+      .where({ tenant: tenant })
+      .first();
+  });
 
   const settings = companySettings || defaultSettings;
 
@@ -594,7 +611,9 @@ export async function createInvoiceFromBillingResult(
     try {
       const invoiceNumber = await generateInvoiceNumber(); // Uses local function
       invoiceData.invoice_number = invoiceNumber;
-      const [insertedInvoice] = await knex('invoices').insert(invoiceData).returning('*');
+      const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('invoices').insert(invoiceData).returning('*');
+      });
       newInvoice = insertedInvoice;
       break;
     } catch (error: unknown) {
@@ -617,7 +636,7 @@ export async function createInvoiceFromBillingResult(
     throw new Error('Failed to create invoice');
   }
 
-  await knex.transaction(async (trx: Knex.Transaction) => {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get session within transaction context if needed by persistInvoiceItems
     const session = await getServerSession(options);
     if (!session?.user?.id) {

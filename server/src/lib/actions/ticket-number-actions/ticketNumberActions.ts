@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 
 interface UpdateNumberResponse {
   success: boolean;
@@ -10,21 +12,25 @@ interface UpdateNumberResponse {
 
 export async function getTicketNumberSettings() {
   const { knex: db, tenant } = await createTenantKnex();
-  const settings = await db('next_number')
-    .where('entity_type', 'TICKET')
-    .andWhere('tenant', tenant)
-    .first();
-  return settings;
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const settings = await trx('next_number')
+      .where('entity_type', 'TICKET')
+      .andWhere('tenant', tenant)
+      .first();
+    return settings;
+  });
 }
 
 export async function updateTicketPrefix(prefix: string) {
   const { knex: db, tenant } = await createTenantKnex();
-  await db('next_number')
-    .where('entity_type', 'TICKET')
-    .andWhere('tenant', tenant)
-    .update({
-      prefix: prefix
-    });
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    await trx('next_number')
+      .where('entity_type', 'TICKET')
+      .andWhere('tenant', tenant)
+      .update({
+        prefix: prefix
+      });
+  });
   
   return await getTicketNumberSettings();
 }
@@ -50,12 +56,14 @@ export async function updateInitialValue(value: number): Promise<UpdateNumberRes
     }
 
     // Update the initial value
-    await db('next_number')
-      .where('entity_type', 'TICKET')
-      .andWhere('tenant', tenant)
-      .update({
-        initial_value: value
-      });
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await trx('next_number')
+        .where('entity_type', 'TICKET')
+        .andWhere('tenant', tenant)
+        .update({
+          initial_value: value
+        });
+    });
 
     const updatedSettings = await getTicketNumberSettings();
     return { success: true, settings: updatedSettings };
@@ -89,12 +97,14 @@ export async function updateLastNumber(value: number): Promise<UpdateNumberRespo
     }
 
     // Update the last number
-    await db('next_number')
-      .where('entity_type', 'TICKET')
-      .andWhere('tenant', tenant)
-      .update({
-        last_number: value
-      });
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      await trx('next_number')
+        .where('entity_type', 'TICKET')
+        .andWhere('tenant', tenant)
+        .update({
+          last_number: value
+        });
+    });
 
     const updatedSettings = await getTicketNumberSettings();
     return { success: true, settings: updatedSettings };

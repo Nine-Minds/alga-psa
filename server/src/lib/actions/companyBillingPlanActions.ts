@@ -1,7 +1,8 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
 import { createTenantKnex } from '../db';
-import { Knex } from 'knex'; // Import Knex type
+import { Knex } from 'knex';
 import { getServerSession } from "next-auth/next";
 import { options } from "../../app/api/auth/[...nextauth]/options";
 import { ICompanyBillingPlan } from '../../interfaces/billing.interfaces';
@@ -111,13 +112,15 @@ export async function getCompanyBillingPlan(companyId: string): Promise<ICompany
 
   try {
     const {knex: db, tenant} = await createTenantKnex();
-    const companyBillingPlan = await db('company_billing_plans')
-      .where({ 
-        company_id: companyId, 
-        is_active: true,
-        tenant 
-      })
-      .orderBy('start_date', 'desc');
+    const companyBillingPlan = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('company_billing_plans')
+        .where({ 
+          company_id: companyId, 
+          is_active: true,
+          tenant 
+        })
+        .orderBy('start_date', 'desc');
+    });
 
     return companyBillingPlan.map((billing: ICompanyBillingPlan): ICompanyBillingPlan => ({
       ...billing,
@@ -140,12 +143,14 @@ export async function updateCompanyBillingPlan(companyBillingPlanId: string, upd
 
   try {
     const {knex: db, tenant} = await createTenantKnex();
-    const result = await db('company_billing_plans')
-      .where({ 
-        company_billing_plan_id: companyBillingPlanId,
-        tenant 
-      })
-      .update(updates);
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('company_billing_plans')
+        .where({ 
+          company_billing_plan_id: companyBillingPlanId,
+          tenant 
+        })
+        .update(updates);
+    });
 
     if (result === 0) {
       throw new Error('Billing plan not found or no changes were made');
@@ -181,30 +186,32 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
       whereClause.service_category = newBilling.service_category;
     }
 
-    const existingBilling = await db('company_billing_plans')
-      .where(whereClause)
-      .whereNull('end_date')
-      .first();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingBilling = await trx('company_billing_plans')
+        .where(whereClause)
+        .whereNull('end_date')
+        .first();
 
-    if (existingBilling) {
-      throw new Error('A billing plan with the same details already exists for this company');
-    }
+      if (existingBilling) {
+        throw new Error('A billing plan with the same details already exists for this company');
+      }
 
-    // Only include service_category in insert if it's provided
-    const insertData = {
-      ...newBilling,
-      tenant,
-      // Convert string date to Date object if it's a string
-      start_date: newBilling.start_date ? new Date(newBilling.start_date) : new Date(),
-      // Handle end_date similarly if it exists
-      end_date: newBilling.end_date ? new Date(newBilling.end_date) : null
-    };
-    
-    if (!newBilling.service_category) {
-      delete insertData.service_category;
-    }
+      // Only include service_category in insert if it's provided
+      const insertData = {
+        ...newBilling,
+        tenant,
+        // Convert string date to Date object if it's a string
+        start_date: newBilling.start_date ? new Date(newBilling.start_date) : new Date(),
+        // Handle end_date similarly if it exists
+        end_date: newBilling.end_date ? new Date(newBilling.end_date) : null
+      };
+      
+      if (!newBilling.service_category) {
+        delete insertData.service_category;
+      }
 
-    await db('company_billing_plans').insert(insertData);
+      return await trx('company_billing_plans').insert(insertData);
+    });
   } catch (error: any) {
     console.error('Error adding company billing plan:', error);
     // Provide more specific error message
@@ -249,12 +256,14 @@ export async function removeCompanyBillingPlan(companyBillingPlanId: string): Pr
     }
     // --- Validation End ---
 
-    const result = await db('company_billing_plans')
-      .where({
-        company_billing_plan_id: companyBillingPlanId,
-        tenant
-      })
-      .update({ is_active: false, end_date: now }); // Use the 'now' variable
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('company_billing_plans')
+        .where({
+          company_billing_plan_id: companyBillingPlanId,
+          tenant
+        })
+        .update({ is_active: false, end_date: now }); // Use the 'now' variable
+    });
 
     if (result === 0) {
       throw new Error('Billing plan not found or already inactive');
@@ -326,12 +335,14 @@ export async function editCompanyBillingPlan(companyBillingPlanId: string, updat
     }
     // --- Validation End ---
 
-    const result = await db('company_billing_plans')
-      .where({
-        company_billing_plan_id: companyBillingPlanId,
-        tenant
-      })
-      .update(updateData);
+    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('company_billing_plans')
+        .where({
+          company_billing_plan_id: companyBillingPlanId,
+          tenant
+        })
+        .update(updateData);
+    });
 
     if (result === 0) {
       throw new Error('Billing plan not found or no changes were made');

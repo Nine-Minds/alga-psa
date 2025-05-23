@@ -7,6 +7,8 @@ import axios from 'axios';
 import { URLSearchParams } from 'url';
 // --- Import Actual Implementations ---
 import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { ISecretProvider } from '@shared/core/ISecretProvider';
 import { getSecretProviderInstance } from '@shared/core/secretProvider'; // Corrected import path
 import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
@@ -195,9 +197,21 @@ export async function GET(request: Request) {
       };
 
       // Fetch system workflow registration IDs based on the correct names
-      const systemWorkflows = await knex('system_workflow_registrations')
-        .select('registration_id', 'name')
-        .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]); // Uses updated names
+      const { systemWorkflows, events } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const systemWorkflows = await trx('system_workflow_registrations')
+          .select('registration_id', 'name')
+          .whereIn('name', [invoiceSyncWorkflowName, customerSyncWorkflowName]); // Uses updated names
+
+        // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
+        const eventTypes = Object.keys(eventWorkflowMap);
+        // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
+        const events = await trx('system_event_catalog') // Changed table name
+          .select('event_id', 'event_type')
+          // Removed tenant filter
+          .whereIn('event_type', eventTypes);
+
+        return { systemWorkflows, events };
+      });
 
       const systemWorkflowIdMap = systemWorkflows.reduce((acc, wf) => {
         acc[wf.name] = wf.registration_id; // Map name to registration_id
@@ -212,21 +226,13 @@ export async function GET(request: Request) {
         console.warn(`QBO Callback: System workflow registration '${customerSyncWorkflowName}' not found. Skipping related attachments for tenant ${tenantId}.`);
       }
 
-      // Get event IDs (Assuming EventCatalogModel handles tenant context or we use knex directly)
-      const eventTypes = Object.keys(eventWorkflowMap);
-      // Use direct Knex query assuming event_catalog is tenant-specific as per model interactions
-      const events = await knex('system_event_catalog') // Changed table name
-        .select('event_id', 'event_type')
-        // Removed tenant filter
-        .whereIn('event_type', eventTypes);
-
       const eventIdMap = events.reduce((acc, ev) => {
         acc[ev.event_type] = ev.event_id;
         return acc;
       }, {} as Record<string, string>);
 
       // Create attachments using the action
-      for (const eventType of eventTypes) {
+      for (const eventType of eventIdMap) {
         const workflowName = eventWorkflowMap[eventType];
         const workflowId = systemWorkflowIdMap[workflowName]; // Use the map with registration_ids
         const eventId = eventIdMap[eventType];

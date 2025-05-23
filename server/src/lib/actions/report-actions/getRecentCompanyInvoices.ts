@@ -1,8 +1,10 @@
 'use server';
 
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '@shared/db';
 import { IInvoice } from '../../../interfaces/invoice.interfaces';
 import { z } from 'zod';
+import { Knex } from 'knex';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -38,22 +40,24 @@ export async function getRecentCompanyInvoices(input: { companyId: string; limit
   console.log(`Fetching recent invoices for company ${companyId} in tenant ${tenant}, limit ${limit}`);
 
   try {
-    const invoices: RecentInvoice[] = await knex('invoices')
-      .select(
-        'invoice_id',
-        'invoice_number',
-        'invoice_date',
-        'due_date',
-        'total_amount',
-        'status'
-        // 'currency_code' // Not included as it's not in IInvoice interface
-      )
-      .where({
-        company_id: companyId,
-        tenant: tenant,
-      })
-      .orderBy('invoice_date', 'desc')
-      .limit(limit);
+    const invoices: RecentInvoice[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .select(
+          'invoice_id',
+          'invoice_number',
+          'invoice_date',
+          'due_date',
+          'total_amount',
+          'status'
+          // 'currency_code' // Not included as it's not in IInvoice interface
+        )
+        .where({
+          company_id: companyId,
+          tenant: tenant,
+        })
+        .orderBy('invoice_date', 'desc')
+        .limit(limit);
+    });
 
     console.log(`Found ${invoices.length} recent invoices for company ${companyId}`);
     return invoices;

@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import Service, { serviceSchema, refinedServiceSchema } from 'server/src/lib/models/service'; // Import both schemas
 import { IService, IServiceType, IStandardServiceType } from '../../interfaces/billing.interfaces';
+import { withTransaction } from '@shared/db';
+import { createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 // Interface for paginated service response
 export interface PaginatedServicesResponse {
@@ -13,20 +16,17 @@ export interface PaginatedServicesResponse {
 }
 import { validateArray } from 'server/src/lib/utils/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
-import { createTenantKnex } from '../db'; // Import createTenantKnex for direct DB access if needed
 
 export async function getServices(page: number = 1, pageSize: number = 999): Promise<PaginatedServicesResponse> {
     try {
-        const { knex, tenant } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error('Tenant context is required for fetching services');
-        }
+        const { knex: db, tenant } = await createTenantKnex();
+        return withTransaction(db, async (trx: Knex.Transaction) => {
 
         // Calculate pagination offset
         const offset = (page - 1) * pageSize;
         
         // Get total count for pagination
-        const countResult = await knex('service_catalog as sc')
+        const countResult = await trx('service_catalog as sc')
             .where({ 'sc.tenant': tenant })
             .count('sc.service_id as count')
             .first();
@@ -34,7 +34,7 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
         const totalCount = parseInt(countResult?.count as string) || 0;
         
         // Fetch services with service type names by joining with both standard and custom service type tables
-        const servicesData = await knex('service_catalog as sc')
+        const servicesData = await trx('service_catalog as sc')
             .where({ 'sc.tenant': tenant })
             .leftJoin('standard_service_types as sst', 'sc.standard_service_type_id', 'sst.id')
             .leftJoin('service_types as st', function() {
@@ -47,13 +47,13 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
                 'sc.standard_service_type_id',
                 'sc.custom_service_type_id',
                 'sc.billing_method',
-                knex.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
+                trx.raw('CAST(sc.default_rate AS FLOAT) as default_rate'),
                 'sc.unit_of_measure',
                 'sc.category_id',
                 'sc.tenant',
                 'sc.description',
                 'sc.tax_rate_id', // Corrected: Use tax_rate_id based on schema
-                knex.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
+                trx.raw('COALESCE(sst.name, st.name) as service_type_name') // Add service type name
             )
             .limit(pageSize)
             .offset(offset);
@@ -63,13 +63,14 @@ export async function getServices(page: number = 1, pageSize: number = 999): Pro
             return serviceSchema.parse(service);
         });
 
-        // Return paginated response
-        return {
-            services: validatedServices,
-            totalCount,
-            page,
-            pageSize
-        };
+            // Return paginated response
+            return {
+                services: validatedServices,
+                totalCount,
+                page,
+                pageSize
+            };
+        });
     } catch (error) {
         console.error('Error fetching services:', error)
         throw new Error('Failed to fetch services')
@@ -108,12 +109,8 @@ export async function createService(
              throw new Error('Provide either standard_service_type_id or custom_service_type_id, not both.');
         }
 
-        const { knex, tenant } = await createTenantKnex(); // Get knex and tenant context
-
-        // Ensure tenant context exists before proceeding
-        if (!tenant) {
-          throw new Error('Tenant context could not be determined. Cannot create service.');
-        }
+        const { knex: db, tenant } = await createTenantKnex();
+        return withTransaction(db, async (trx: Knex.Transaction) => {
 
         // 1. Determine the billing method based on the provided ID
         let derivedBillingMethod: 'fixed' | 'per_unit' | undefined | null = null;
@@ -121,7 +118,7 @@ export async function createService(
 
         if (standard_service_type_id) {
             typeId = standard_service_type_id;
-            const standardServiceType = await knex<IStandardServiceType>('standard_service_types')
+            const standardServiceType = await trx<IStandardServiceType>('standard_service_types')
                 .where({ id: typeId })
                 .first();
             if (!standardServiceType) {
@@ -131,7 +128,7 @@ export async function createService(
             console.log(`[serviceActions] Billing method '${derivedBillingMethod}' derived from standard type: ${typeId}`);
         } else if (custom_service_type_id) {
             typeId = custom_service_type_id;
-            const customServiceType = await knex<IServiceType>('service_types')
+            const customServiceType = await trx<IServiceType>('service_types')
                 .where('id', typeId)
                 .andWhere('tenant', tenant) // Match tenant
                 .first();
@@ -166,12 +163,13 @@ export async function createService(
                 : serviceData.default_rate,
         };
 
-        // 4. Create the service using the model
-        // Assuming Service.create accepts the IService structure (or relevant parts)
-        const service = await Service.create(finalServiceData as Omit<IService, 'service_id' | 'tenant'>); // Cast might be needed depending on model input type
-        console.log('[serviceActions] Service created successfully:', service);
-        revalidatePath('/msp/billing'); // Revalidate the billing page
-        return service; // Assuming Service.create returns the full IService object
+            // 4. Create the service using the model
+            // Assuming Service.create accepts the IService structure (or relevant parts)
+            const service = await Service.create(finalServiceData as Omit<IService, 'service_id' | 'tenant'>); // Cast might be needed depending on model input type
+            console.log('[serviceActions] Service created successfully:', service);
+            revalidatePath('/msp/billing'); // Revalidate the billing page
+            return service; // Assuming Service.create returns the full IService object
+        });
     } catch (error) {
         console.error('[serviceActions] Error creating service:', error);
         throw error; // Re-throw the error
@@ -278,13 +276,11 @@ export async function deleteServiceType(id: string): Promise<void> {
       const { ServiceTypeModel } = await import('../models/serviceType');
       
       // First check if the service type is in use by any services
-      const { knex, tenant } = await createTenantKnex();
-      if (!tenant) {
-          throw new Error('Tenant context is required for this operation.');
-      }
+      const { knex: db, tenant } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       
       // Check if any services are using this service type
-      const servicesUsingType = await knex('service_catalog')
+      const servicesUsingType = await trx('service_catalog')
           .where({ custom_service_type_id: id, tenant })
           .count('service_id as count')
           .first();
@@ -300,8 +296,9 @@ export async function deleteServiceType(id: string): Promise<void> {
           throw new Error(`Service type with ID ${id} not found.`);
       }
       
-      // Revalidate paths for the service type management page
-      revalidatePath('/msp/settings/billing');
+          // Revalidate paths for the service type management page
+          revalidatePath('/msp/settings/billing');
+      });
   } catch (error: any) {
       console.error(`Error deleting service type ${id}:`, error);
       

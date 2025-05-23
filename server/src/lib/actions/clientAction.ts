@@ -2,6 +2,8 @@
 
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 
 export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
   try {
@@ -10,25 +12,27 @@ export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
       throw new Error('Tenant not found');
     }
 
-    const clients = await db('companies')
-      .select(
-        'companies.company_id',
-        'companies.company_name',
-        'billing_plans.plan_id',
-        'billing_plans.plan_name',
-        'billing_plans.billing_frequency',
-        'billing_plans.is_custom',
-        'billing_plans.plan_type'
-      )
-      .where('companies.tenant', tenant)
-      .leftJoin('client_billing', function() {
-        this.on('companies.company_id', '=', 'client_billing.company_id')
-            .andOn('companies.tenant', '=', 'client_billing.tenant');
-      })
-      .leftJoin('billing_plans', function() {
-        this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('client_billing.tenant', '=', 'billing_plans.tenant');
-      });
+    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('companies')
+        .select(
+          'companies.company_id',
+          'companies.company_name',
+          'billing_plans.plan_id',
+          'billing_plans.plan_name',
+          'billing_plans.billing_frequency',
+          'billing_plans.is_custom',
+          'billing_plans.plan_type'
+        )
+        .where('companies.tenant', tenant)
+        .leftJoin('client_billing', function() {
+          this.on('companies.company_id', '=', 'client_billing.company_id')
+              .andOn('companies.tenant', '=', 'client_billing.tenant');
+        })
+        .leftJoin('billing_plans', function() {
+          this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
+              .andOn('client_billing.tenant', '=', 'billing_plans.tenant');
+        });
+    });
     
     return clients.map((company): Omit<IClient, "tenant"> => ({
       id: company.company_id,

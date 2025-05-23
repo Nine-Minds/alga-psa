@@ -1,6 +1,8 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { headers } from 'next/headers';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
@@ -36,13 +38,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const { knex, tenant } = await createTenantKnex();
 
   // Get company_id from contact
-  const contact = await knex('contacts')
-    .where({
-      'contact_name_id': user.contact_id,
-      'tenant': tenant
-    })
-    .select('company_id')
-    .first();
+  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('contacts')
+      .where({
+        'contact_name_id': user.contact_id,
+        'tenant': tenant
+      })
+      .select('company_id')
+      .first();
+  });
 
   if (!contact) {
     throw new Error('Unauthorized: Company information not found');
@@ -51,41 +55,45 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const companyId = contact.company_id;
 
   try {
-    // Get open tickets count
-    const [ticketCount] = await knex('tickets')
-      .where({
-        'tickets.tenant': tenant,
-        'tickets.company_id': companyId,
-        'is_closed': false
-      })
-      .count('ticket_id as count');
-    
-    // Get active projects count
-    const [projectCount] = await knex('projects')
-      .where({
-        'projects.tenant': tenant,
-        'projects.company_id': companyId,
-        'is_inactive': false
-      })
-      .count('project_id as count');
+    const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return Promise.all([
+        // Get open tickets count
+        trx('tickets')
+          .where({
+            'tickets.tenant': tenant,
+            'tickets.company_id': companyId,
+            'is_closed': false
+          })
+          .count('ticket_id as count'),
+        
+        // Get active projects count
+        trx('projects')
+          .where({
+            'projects.tenant': tenant,
+            'projects.company_id': companyId,
+            'is_inactive': false
+          })
+          .count('project_id as count'),
 
-    // Get pending invoices count
-    const [invoiceCount] = await knex('invoices')
-      .where({
-        'invoices.tenant': tenant,
-        'invoices.company_id': companyId
-      })
-      .whereNull('finalized_at')
-      .count('* as count');
+        // Get pending invoices count
+        trx('invoices')
+          .where({
+            'invoices.tenant': tenant,
+            'invoices.company_id': companyId
+          })
+          .whereNull('finalized_at')
+          .count('* as count'),
 
-    // Get active assets count
-    const [assetCount] = await knex('assets')
-      .where({
-        'assets.tenant': tenant,
-        'assets.company_id': companyId
-      })
-      .andWhere('status', '!=', 'inactive')
-      .count('* as count');
+        // Get active assets count
+        trx('assets')
+          .where({
+            'assets.tenant': tenant,
+            'assets.company_id': companyId
+          })
+          .andWhere('status', '!=', 'inactive')
+          .count('* as count')
+      ]);
+    });
 
     return {
       openTickets: Number(ticketCount.count || 0),
@@ -117,13 +125,15 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
   const { knex, tenant } = await createTenantKnex();
 
   // Get company_id from contact
-  const contact = await knex('contacts')
-    .where({
-      'contact_name_id': user.contact_id,
-      'tenant': tenant
-    })
-    .select('company_id')
-    .first();
+  const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('contacts')
+      .where({
+        'contact_name_id': user.contact_id,
+        'tenant': tenant
+      })
+      .select('company_id')
+      .first();
+  });
 
   if (!contact) {
     throw new Error('Unauthorized: Company information not found');
@@ -132,8 +142,9 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
   const companyId = contact.company_id;
 
   try {
-    // Get recent tickets with their initial descriptions
-    const tickets = await knex('tickets')
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get recent tickets with their initial descriptions
+      const tickets = await trx('tickets')
       .select([
         'tickets.title',
         'tickets.updated_at as timestamp',
@@ -150,8 +161,8 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       .orderBy('tickets.updated_at', 'desc')
       .limit(3);
 
-    // Get recent invoices
-    const invoices = await knex('invoices')
+      // Get recent invoices
+      const invoices = await trx('invoices')
       .select([
         'invoice_number',
         'total_amount as total',
@@ -164,8 +175,8 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       .orderBy('updated_at', 'desc')
       .limit(3);
 
-    // Get recent asset maintenance activities
-    const assetActivities = await knex('asset_maintenance_history')
+      // Get recent asset maintenance activities
+      const assetActivities = await trx('asset_maintenance_history')
       .select([
         'asset_maintenance_history.description',
         'asset_maintenance_history.performed_at as timestamp',
@@ -182,21 +193,24 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       .orderBy('asset_maintenance_history.performed_at', 'desc')
       .limit(3);
 
+      return { tickets, invoices, assetActivities };
+    });
+
     // Combine and sort activities
     const activities: RecentActivity[] = [
-      ...tickets.map((t: { title: string; timestamp: string; description: string }): RecentActivity => ({
+      ...result.tickets.map((t: { title: string; timestamp: string; description: string }): RecentActivity => ({
         type: 'ticket',
         title: `New ticket: ${t.title}`,
         timestamp: t.timestamp,
         description: t.description || 'No description available'
       })),
-      ...invoices.map((i: { invoice_number: string; timestamp: string; total: number }): RecentActivity => ({
+      ...result.invoices.map((i: { invoice_number: string; timestamp: string; total: number }): RecentActivity => ({
         type: 'invoice',
         title: `Invoice ${i.invoice_number} generated`,
         timestamp: i.timestamp,
         description: `Total amount: $${i.total}`
       })),
-      ...assetActivities.map((a: { asset_name: string; timestamp: string; description: string }): RecentActivity => ({
+      ...result.assetActivities.map((a: { asset_name: string; timestamp: string; description: string }): RecentActivity => ({
         type: 'asset',
         title: `Asset maintenance: ${a.asset_name}`,
         timestamp: a.timestamp,

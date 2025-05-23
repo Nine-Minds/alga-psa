@@ -2,6 +2,8 @@
 
 import { z } from 'zod';
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 import { ITimeEntry } from '../../../interfaces/timeEntry.interfaces';
 import { IService, IServiceType } from '../../../interfaces/billing.interfaces';
 import { ITicket } from '../../../interfaces/ticket.interfaces'; // Removed .tsx extension
@@ -56,8 +58,9 @@ export async function getHoursByServiceType(
   console.log(`Fetching hours by service for company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
   try {
-    // Base query for time entries within the date range and for the tenant
-    const timeEntriesQuery = knex<ITimeEntry>('time_entries')
+    const results: HoursByServiceResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Base query for time entries within the date range and for the tenant
+      const timeEntriesQuery = trx<ITimeEntry>('time_entries')
       .where('time_entries.tenant', tenant) // Separate where clauses
       .where('time_entries.billable_duration', '>', 0) // Use billable_duration to determine billable hours
       .where('start_time', '>=', startDate)
@@ -66,13 +69,13 @@ export async function getHoursByServiceType(
     // --- Join Logic based on work_item_type ---
     // We need to join time_entries to either tickets or projects to filter by companyId
 
-    // Subquery for tickets linked to the company
-    const ticketCompanySubquery = knex<ITicket>('tickets')
-      .select('ticket_id')
-      .where({ company_id: companyId, tenant: tenant });
+      // Subquery for tickets linked to the company
+      const ticketCompanySubquery = trx<ITicket>('tickets')
+        .select('ticket_id')
+        .where({ company_id: companyId, tenant: tenant });
 
-    // Subquery for project tasks linked to the company
-    const projectTaskCompanySubquery = knex<IProjectTask>('project_tasks')
+      // Subquery for project tasks linked to the company
+      const projectTaskCompanySubquery = trx<IProjectTask>('project_tasks')
       .join<IProjectPhase>('project_phases', function() {
         this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
             .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -85,8 +88,8 @@ export async function getHoursByServiceType(
       .where('projects.company_id', '=', companyId)
       .andWhere('project_tasks.tenant', '=', tenant); // Ensure tenant filter on subquery joins
 
-    // Apply the company filter using the subqueries
-    timeEntriesQuery.where(function() {
+      // Apply the company filter using the subqueries
+      timeEntriesQuery.where(function() {
       this.where(function() {
         this.where('work_item_type', '=', 'Ticket')
             .whereIn('work_item_id', ticketCompanySubquery);
@@ -97,8 +100,8 @@ export async function getHoursByServiceType(
       // Note: Add other work_item_types if they can be linked to a company
     });
 
-    // --- Join Service Catalog and Service Types ---
-    timeEntriesQuery
+      // --- Join Service Catalog and Service Types ---
+      timeEntriesQuery
       .join<IService>('service_catalog as sc', function() {
         this.on('time_entries.service_id', '=', 'sc.service_id')
             .andOn('time_entries.tenant', '=', 'sc.tenant');
@@ -108,33 +111,34 @@ export async function getHoursByServiceType(
             .andOn('sc.tenant', '=', 'st.tenant');
       });
 
-    // --- Aggregation and Grouping ---
-    const groupByColumn = groupByServiceType ? 'st.name' : 'sc.service_name';
-    const groupBySelect = groupByServiceType ? 'st.name as service_type_name' : 'sc.service_name';
+      // --- Aggregation and Grouping ---
+      const groupByColumn = groupByServiceType ? 'st.name' : 'sc.service_name';
+      const groupBySelect = groupByServiceType ? 'st.name as service_type_name' : 'sc.service_name';
 
-    timeEntriesQuery
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id) as service_type_id'),
-        knex.raw(`${groupBySelect}`), // Select either service_name or service_type_name based on flag
-        knex.raw('SUM(time_entries.billable_duration) as total_duration') // Summing billable_duration (assuming it's in minutes)
-      )
-      .groupBy('sc.service_id', 'sc.service_name', knex.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), groupByColumn) // Group by selected columns
-      .orderBy(groupByColumn); // Order by the grouped column
+      timeEntriesQuery
+        .select(
+          'sc.service_id',
+          'sc.service_name',
+          trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id) as service_type_id'),
+          trx.raw(`${groupBySelect}`), // Select either service_name or service_type_name based on flag
+          trx.raw('SUM(time_entries.billable_duration) as total_duration') // Summing billable_duration (assuming it's in minutes)
+        )
+        .groupBy('sc.service_id', 'sc.service_name', trx.raw('COALESCE(sc.standard_service_type_id, sc.custom_service_type_id)'), groupByColumn) // Group by selected columns
+        .orderBy(groupByColumn); // Order by the grouped column
 
-    // Knex type inference might not capture the aggregated structure, so treat as 'any' initially
-    const rawResults: any[] = await timeEntriesQuery;
+      // Knex type inference might not capture the aggregated structure, so treat as 'any' initially
+      const rawResults: any[] = await timeEntriesQuery;
 
-    // Manually map and validate the structure
-    const results: HoursByServiceResult[] = rawResults.map(row => ({
-      service_id: row.service_id,
-      service_name: row.service_name,
-      service_type_id: row.service_type_id,
-      service_type_name: row.service_type_name, // This might be null depending on the join/grouping
-      // Ensure total_duration is treated as a number (SUM might return string in some DBs)
-      total_duration: typeof row.total_duration === 'string' ? parseInt(row.total_duration, 10) : row.total_duration,
-    }));
+      // Manually map and validate the structure
+      return rawResults.map(row => ({
+        service_id: row.service_id,
+        service_name: row.service_name,
+        service_type_id: row.service_type_id,
+        service_type_name: row.service_type_name, // This might be null depending on the join/grouping
+        // Ensure total_duration is treated as a number (SUM might return string in some DBs)
+        total_duration: typeof row.total_duration === 'string' ? parseInt(row.total_duration, 10) : row.total_duration,
+      }));
+    });
 
 
     console.log(`Found ${results.length} service groupings for company ${companyId}`);

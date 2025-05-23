@@ -1,10 +1,11 @@
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
-import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import {
   IInvoiceTemplate,

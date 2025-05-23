@@ -8,6 +8,7 @@
   "exports": {
     "./types": "./types/index.js",
     "./core": "./core/index.js",
+    "./db": "./db/index.js",
     "./workflow": "./workflow/index.js",
     "./workflow/core": "./workflow/core/index.js",
     "./workflow/persistence": "./workflow/persistence/index.js",

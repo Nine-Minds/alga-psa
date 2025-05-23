@@ -1,6 +1,8 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
 
@@ -18,18 +20,20 @@ export async function getStatuses(type?: ItemType) {
       throw new Error("Tenant not found");
     }
 
-    // Build query
-    const query = db<IStatus>('statuses')
-      .where({ tenant })
-      .select('*')
-      .orderBy('order_number');
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Build query
+      const query = trx<IStatus>('statuses')
+        .where({ tenant })
+        .select('*')
+        .orderBy('order_number');
 
-    // Add type filter if specified
-    if (type) {
-      query.where({ status_type: type });
-    }
+      // Add type filter if specified
+      if (type) {
+        query.where({ status_type: type });
+      }
 
-    return await query;
+      return await query;
+    });
   } catch (error) {
     console.error('Error fetching ticket statuses:', error);
     throw error;
@@ -50,16 +54,18 @@ export async function getTicketStatuses() {
       throw new Error("Tenant not found");
     }
 
-    // Fetch statuses for the current tenant
-    const statuses = await db<IStatus>('statuses')
-      .where({
-        tenant,
-        status_type: 'ticket' as ItemType
-      })
-      .select('*')
-      .orderBy('order_number');
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Fetch statuses for the current tenant
+      const statuses = await trx<IStatus>('statuses')
+        .where({
+          tenant,
+          status_type: 'ticket' as ItemType
+        })
+        .select('*')
+        .orderBy('order_number');
 
-    return statuses;
+      return statuses;
+    });
   } catch (error) {
     console.error('Error fetching ticket statuses:', error);
     throw error;
@@ -82,7 +88,7 @@ export async function createStatus(statusData: Omit<IStatus, 'status_id' | 'tena
       throw new Error("Tenant not found");
     }
 
-    const newStatus = await db.transaction(async (trx) => {
+    const newStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check if status with same name already exists
       const existingStatus = await trx('statuses')
         .where({
@@ -153,89 +159,91 @@ export async function updateStatus(statusId: string, statusData: Partial<IStatus
       throw new Error("Tenant not found");
     }
 
-    // Check if new name conflicts with existing status
-    if (statusData.name) {
-      // Get current status to know its type if no new type provided
-      const currentStatus = await db<IStatus>('statuses')
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Check if new name conflicts with existing status
+      if (statusData.name) {
+        // Get current status to know its type if no new type provided
+        const currentStatus = await trx<IStatus>('statuses')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .first();
+
+        if (!currentStatus) {
+          throw new Error('Status not found');
+        }
+
+        const existingStatus = await trx('statuses')
+          .where({
+            tenant,
+            name: statusData.name,
+            status_type: statusData.status_type || currentStatus.status_type
+          })
+          .whereNot('status_id', statusId)
+          .first();
+
+        if (existingStatus) {
+          throw new Error('A status with this name already exists');
+        }
+      }
+
+      // Extract only updatable fields, excluding tenant
+      const {
+        name,
+        status_type,
+        order_number,
+        is_closed,
+        item_type,
+        standard_status_id,
+        is_custom,
+        is_default
+      } = statusData;
+
+      // If setting as default, unset any other default status of the same type
+      if (is_default) {
+        const currentStatus = await trx<IStatus>('statuses')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .first();
+
+        if (currentStatus) {
+          await trx<IStatus>('statuses')
+            .where({
+              tenant,
+              status_type: currentStatus.status_type,
+              is_default: true
+            })
+            .whereNot('status_id', statusId)
+            .update({ is_default: false });
+        }
+      }
+
+      const [updatedStatus] = await trx<IStatus>('statuses')
         .where({
           tenant,
           status_id: statusId
         })
-        .first();
+        .update({
+          ...(name && { name: name.trim() }),
+          ...(status_type && { status_type }),
+          ...(order_number && { order_number }),
+          ...(is_closed !== undefined && { is_closed }),
+          ...(item_type && { item_type }),
+          ...(standard_status_id && { standard_status_id }),
+          ...(is_custom !== undefined && { is_custom }),
+          ...(is_default !== undefined && { is_default })
+        })
+        .returning('*');
 
-      if (!currentStatus) {
+      if (!updatedStatus) {
         throw new Error('Status not found');
       }
 
-      const existingStatus = await db('statuses')
-        .where({
-          tenant,
-          name: statusData.name,
-          status_type: statusData.status_type || currentStatus.status_type
-        })
-        .whereNot('status_id', statusId)
-        .first();
-
-      if (existingStatus) {
-        throw new Error('A status with this name already exists');
-      }
-    }
-
-    // Extract only updatable fields, excluding tenant
-    const {
-      name,
-      status_type,
-      order_number,
-      is_closed,
-      item_type,
-      standard_status_id,
-      is_custom,
-      is_default
-    } = statusData;
-
-    // If setting as default, unset any other default status of the same type
-    if (is_default) {
-      const currentStatus = await db<IStatus>('statuses')
-        .where({
-          tenant,
-          status_id: statusId
-        })
-        .first();
-
-      if (currentStatus) {
-        await db<IStatus>('statuses')
-          .where({
-            tenant,
-            status_type: currentStatus.status_type,
-            is_default: true
-          })
-          .whereNot('status_id', statusId)
-          .update({ is_default: false });
-      }
-    }
-
-    const [updatedStatus] = await db<IStatus>('statuses')
-      .where({
-        tenant,
-        status_id: statusId
-      })
-      .update({
-        ...(name && { name: name.trim() }),
-        ...(status_type && { status_type }),
-        ...(order_number && { order_number }),
-        ...(is_closed !== undefined && { is_closed }),
-        ...(item_type && { item_type }),
-        ...(standard_status_id && { standard_status_id }),
-        ...(is_custom !== undefined && { is_custom }),
-        ...(is_default !== undefined && { is_default })
-      })
-      .returning('*');
-
-    if (!updatedStatus) {
-      throw new Error('Status not found');
-    }
-
-    return updatedStatus;
+      return updatedStatus;
+    });
   } catch (error) {
     console.error('Error updating status:', error);
     if (error instanceof Error) {
@@ -255,65 +263,66 @@ export async function getWorkItemStatusOptions(itemType?: ItemType | ItemType[])
   try {
     const { knex: db, tenant } = await createTenantKnex();
 
-    const itemTypesToFetch = itemType 
-      ? (Array.isArray(itemType) ? itemType : [itemType]) 
-      : ['ticket', 'project_task'];
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const itemTypesToFetch = itemType 
+        ? (Array.isArray(itemType) ? itemType : [itemType]) 
+        : ['ticket', 'project_task'];
 
-    const customStatusesQuery = db('statuses')
-      .where({ tenant: tenant })
-      .select('status_id', 'name')
-      .orderBy('name', 'asc');
+      const customStatusesQuery = trx('statuses')
+        .where({ tenant: tenant })
+        .select('status_id', 'name')
+        .orderBy('name', 'asc');
 
-    if (itemTypesToFetch.length > 0) {
-      customStatusesQuery.whereIn('status_type', itemTypesToFetch);
-    }
-    const customStatuses = await customStatusesQuery;
-
-
-    const standardStatusesQuery = db('standard_statuses')
-      .where({ tenant: tenant })
-      .select('standard_status_id', 'name')
-      .orderBy('name', 'asc');
-      
-    if (itemTypesToFetch.length > 0) {
-      standardStatusesQuery.whereIn('item_type', itemTypesToFetch);
-    }
-    const standardStatuses = await standardStatusesQuery;
-
-    const options: StatusOption[] = [
-      { value: 'all_open', label: 'All Open' },
-      { value: 'all_closed', label: 'All Closed' },
-      ...customStatuses.map(s => ({
-        value: s.status_id,
-        label: s.name,
-        isStandard: false,
-      })),
-      ...standardStatuses.map(s => ({
-        value: s.standard_status_id,
-        label: s.name,
-        isStandard: true,
-      })),
-    ];
-
-    const uniqueOptions = options.reduce((acc, current) => {
-      const existing = acc.find(item => item.label === current.label);
-      if (!existing) {
-        acc.push(current);
-      } else if (existing.isStandard === true && current.isStandard === false) {
-        acc = acc.filter(item => item.label !== current.label);
-        acc.push(current);
+      if (itemTypesToFetch.length > 0) {
+        customStatusesQuery.whereIn('status_type', itemTypesToFetch);
       }
-      return acc;
-    }, [] as StatusOption[]);
-
-     const finalOptions = [
-        ...uniqueOptions.filter(o => o.value === 'all_open'),
-        ...uniqueOptions.filter(o => o.value === 'all_closed'),
-        ...uniqueOptions.filter(o => o.value !== 'all_open' && o.value !== 'all_closed').sort((a, b) => a.label.localeCompare(b.label))
-     ];
+      const customStatuses = await customStatusesQuery;
 
 
-    return finalOptions;
+      const standardStatusesQuery = trx('standard_statuses')
+        .where({ tenant: tenant })
+        .select('standard_status_id', 'name')
+        .orderBy('name', 'asc');
+        
+      if (itemTypesToFetch.length > 0) {
+        standardStatusesQuery.whereIn('item_type', itemTypesToFetch);
+      }
+      const standardStatuses = await standardStatusesQuery;
+
+      const options: StatusOption[] = [
+        { value: 'all_open', label: 'All Open' },
+        { value: 'all_closed', label: 'All Closed' },
+        ...customStatuses.map(s => ({
+          value: s.status_id,
+          label: s.name,
+          isStandard: false,
+        })),
+        ...standardStatuses.map(s => ({
+          value: s.standard_status_id,
+          label: s.name,
+          isStandard: true,
+        })),
+      ];
+
+      const uniqueOptions = options.reduce((acc, current) => {
+        const existing = acc.find(item => item.label === current.label);
+        if (!existing) {
+          acc.push(current);
+        } else if (existing.isStandard === true && current.isStandard === false) {
+          acc = acc.filter(item => item.label !== current.label);
+          acc.push(current);
+        }
+        return acc;
+      }, [] as StatusOption[]);
+
+       const finalOptions = [
+          ...uniqueOptions.filter(o => o.value === 'all_open'),
+          ...uniqueOptions.filter(o => o.value === 'all_closed'),
+          ...uniqueOptions.filter(o => o.value !== 'all_open' && o.value !== 'all_closed').sort((a, b) => a.label.localeCompare(b.label))
+       ];
+
+      return finalOptions;
+    });
 
   } catch (error) {
     console.error('Error fetching work item status options:', error);
@@ -337,80 +346,82 @@ export async function deleteStatus(statusId: string) {
       throw new Error("Tenant not found");
     }
 
-    // Get the status to check its type
-    const status = await db<IStatus>('statuses')
-      .where({
-        tenant,
-        status_id: statusId
-      })
-      .first();
-
-    if (!status) {
-      throw new Error('Status not found');
-    }
-
-    // Check if status is in use based on its type
-    let inUseCount = 0;
-    let errorMessage = '';
-
-    if (status.status_type === 'ticket') {
-      const ticketsCount = await db('tickets')
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get the status to check its type
+      const status = await trx<IStatus>('statuses')
         .where({
           tenant,
           status_id: statusId
         })
-        .count('status_id as count')
         .first();
-      inUseCount = Number(ticketsCount?.count || 0);
-      errorMessage = 'Cannot delete status that is in use by tickets';
-    } else if (status.status_type === 'project') {
-      const projectsCount = await db('projects')
-        .where({
-          tenant,
-          status: statusId
-        })
-        .count('status as count')
-        .first();
-      inUseCount = Number(projectsCount?.count || 0);
-      errorMessage = 'Cannot delete status that is in use by projects';
-    } else if (status.status_type === 'project_task') {
-      // Check if status is used in project_tasks
-      const tasksCount = await db('project_tasks')
+
+      if (!status) {
+        throw new Error('Status not found');
+      }
+
+      // Check if status is in use based on its type
+      let inUseCount = 0;
+      let errorMessage = '';
+
+      if (status.status_type === 'ticket') {
+        const ticketsCount = await trx('tickets')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .count('status_id as count')
+          .first();
+        inUseCount = Number(ticketsCount?.count || 0);
+        errorMessage = 'Cannot delete status that is in use by tickets';
+      } else if (status.status_type === 'project') {
+        const projectsCount = await trx('projects')
+          .where({
+            tenant,
+            status: statusId
+          })
+          .count('status as count')
+          .first();
+        inUseCount = Number(projectsCount?.count || 0);
+        errorMessage = 'Cannot delete status that is in use by projects';
+      } else if (status.status_type === 'project_task') {
+        // Check if status is used in project_tasks
+        const tasksCount = await trx('project_tasks')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .count('task_id as count')
+          .first();
+        
+        // Check if status is used in project_status_mappings
+        const mappingsCount = await trx('project_status_mappings')
+          .where({
+            tenant,
+            status_id: statusId
+          })
+          .orWhere({
+            tenant,
+            standard_status_id: statusId
+          })
+          .count('project_status_mapping_id as count')
+          .first();
+
+        inUseCount = Number(tasksCount?.count || 0) + Number(mappingsCount?.count || 0);
+        errorMessage = 'Cannot delete status that is in use by project tasks or status mappings';
+      }
+
+      if (inUseCount > 0) {
+        throw new Error(errorMessage);
+      }
+
+      await trx('statuses')
         .where({
           tenant,
           status_id: statusId
         })
-        .count('task_id as count')
-        .first();
-      
-      // Check if status is used in project_status_mappings
-      const mappingsCount = await db('project_status_mappings')
-        .where({
-          tenant,
-          status_id: statusId
-        })
-        .orWhere({
-          tenant,
-          standard_status_id: statusId
-        })
-        .count('project_status_mapping_id as count')
-        .first();
-
-      inUseCount = Number(tasksCount?.count || 0) + Number(mappingsCount?.count || 0);
-      errorMessage = 'Cannot delete status that is in use by project tasks or status mappings';
-    }
-
-    if (inUseCount > 0) {
-      throw new Error(errorMessage);
-    }
-
-    await db('statuses')
-      .where({
-        tenant,
-        status_id: statusId
-      })
-      .del();
-    return true;
+        .del();
+      return true;
+    });
   } catch (error) {
     console.error('Error deleting status:', error);
     if (error instanceof Error) {

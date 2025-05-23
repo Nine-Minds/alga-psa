@@ -5,6 +5,8 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { v4 as uuid4 } from 'uuid';
 import { ICompanyEmailSettings } from 'server/src/interfaces/company.interfaces';
 import { getAdminConnection } from 'server/src/lib/db/admin';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 
 export async function verifyEmailSuffix(email: string): Promise<boolean> {
   try {
@@ -13,12 +15,14 @@ export async function verifyEmailSuffix(email: string): Promise<boolean> {
     const domain = email.split('@')[1];
     if (!domain) return false;
 
-    const settings = await db('company_email_settings')
-      .where({ 
-        email_suffix: domain,
-        self_registration_enabled: true 
-      })
-      .first();
+    const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('company_email_settings')
+        .where({ 
+          email_suffix: domain,
+          self_registration_enabled: true 
+        })
+        .first();
+    });
 
     return !!settings;
   } catch (error) {
@@ -34,27 +38,29 @@ export async function getCompanyByEmailSuffix(email: string): Promise<{ companyI
     const domain = email.split('@')[1];
     if (!domain) return null;
 
-    const settings = await db('company_email_settings')
-      .where({ 
-        email_suffix: domain,
-        self_registration_enabled: true 
-      })
-      .first();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const settings = await trx('company_email_settings')
+        .where({ 
+          email_suffix: domain,
+          self_registration_enabled: true 
+        })
+        .first();
 
-    if (!settings?.company_id) return null;
+      if (!settings?.company_id) return null;
 
-    // Get tenant for this company
-    const company = await db('companies')
-      .where('company_id', settings.company_id)
-      .select('tenant')
-      .first();
+      // Get tenant for this company
+      const company = await trx('companies')
+        .where('company_id', settings.company_id)
+        .select('tenant')
+        .first();
 
-    if (!company?.tenant) return null;
+      if (!company?.tenant) return null;
 
-    return {
-      companyId: settings.company_id,
-      tenant: company.tenant
-    };
+      return {
+        companyId: settings.company_id,
+        tenant: company.tenant
+      };
+    });
   } catch (error) {
     console.error('Error getting company by email suffix:', error);
     throw new Error('Failed to get company by email suffix');
@@ -65,12 +71,14 @@ export async function getCompanyEmailSettings(companyId: string): Promise<ICompa
   try {
     const { knex, tenant } = await createTenantKnex();
     
-    const settings = await knex<ICompanyEmailSettings>('company_email_settings')
-      .where({ 
-        tenant: tenant!,
-        company_id: companyId 
-      })
-      .orderBy('created_at', 'desc');
+    const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx<ICompanyEmailSettings>('company_email_settings')
+        .where({ 
+          tenant: tenant!,
+          company_id: companyId 
+        })
+        .orderBy('created_at', 'desc');
+    });
 
     return settings;
   } catch (error) {
@@ -88,9 +96,7 @@ export async function addCompanyEmailSetting(
   const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
 
-  const trx = await knex.transaction();
-
-  try {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if suffix already exists
     const existing = await trx('company_email_settings')
       .where({ 
@@ -117,13 +123,8 @@ export async function addCompanyEmailSetting(
       })
       .returning('*');
 
-    await trx.commit();
     return setting;
-  } catch (error) {
-    await trx.rollback();
-    console.error('Error adding company email setting:', error);
-    throw error instanceof Error ? error : new Error('Failed to add company email setting');
-  }
+  });
 }
 
 export async function updateCompanyEmailSetting(
@@ -135,9 +136,7 @@ export async function updateCompanyEmailSetting(
   const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
 
-  const trx = await knex.transaction();
-
-  try {
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Update setting
     const [setting] = await trx<ICompanyEmailSettings>('company_email_settings')
       .where({ 
@@ -156,13 +155,8 @@ export async function updateCompanyEmailSetting(
       throw new Error('Email setting not found');
     }
 
-    await trx.commit();
     return setting;
-  } catch (error) {
-    await trx.rollback();
-    console.error('Error updating company email setting:', error);
-    throw error instanceof Error ? error : new Error('Failed to update company email setting');
-  }
+  });
 }
 
 export async function deleteCompanyEmailSetting(
@@ -173,9 +167,7 @@ export async function deleteCompanyEmailSetting(
   const user = await getCurrentUser();
   if (!user) throw new Error('Unauthorized');
 
-  const trx = await knex.transaction();
-
-  try {
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if there are any pending registrations using this suffix
     const pendingCount = await trx('pending_registrations')
       .where({ 
@@ -203,11 +195,5 @@ export async function deleteCompanyEmailSetting(
     if (!deleted) {
       throw new Error('Email setting not found');
     }
-
-    await trx.commit();
-  } catch (error) {
-    await trx.rollback();
-    console.error('Error deleting company email setting:', error);
-    throw error instanceof Error ? error : new Error('Failed to delete company email setting');
-  }
+  });
 }

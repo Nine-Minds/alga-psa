@@ -5,6 +5,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
 import { ISO8601String } from 'server/src/types/types.d';
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
+import { withTransaction } from '../../../../shared/db';
 import {
     IBillingCharge,
     IBucketCharge,
@@ -60,17 +61,19 @@ export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number
  */
 export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
     const { knex, tenant } = await createTenantKnex();
-    const taxRates = await knex('tax_rates')
-        .where({
-            region_code: taxRegion, // Changed from region
-            tenant
-        })
-        .andWhere('start_date', '<=', date)
-        .andWhere(function () {
-            this.whereNull('end_date')
-                .orWhere('end_date', '>', date);
-        })
-        .select('tax_percentage');
+    const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('tax_rates')
+            .where({
+                region_code: taxRegion, // Changed from region
+                tenant
+            })
+            .andWhere('start_date', '<=', date)
+            .andWhere(function () {
+                this.whereNull('end_date')
+                    .orWhere('end_date', '>', date);
+            })
+            .select('tax_percentage');
+    });
 
     // Parse the string percentage from DB and ensure numerical addition
     const totalTaxRate = taxRates.reduce((sum, rate) => sum + parseFloat(rate.tax_percentage), 0);
@@ -93,28 +96,30 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
     try {
         // Get all billing cycles that don't have invoices
         console.log('Querying for available billing periods');
-        const availablePeriods = await knex('company_billing_cycles as cbc')
-            .join('companies as c', function () {
-                this.on('c.company_id', '=', 'cbc.company_id')
-                    .andOn('c.tenant', '=', 'cbc.tenant');
-            })
-            .leftJoin('invoices as i', function () {
-                this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-                    .andOn('i.tenant', '=', 'cbc.tenant');
-            })
-            .where('cbc.tenant', tenant)
-            .whereNotNull('cbc.period_end_date')
-            .whereNull('i.invoice_id')
-            .select(
-                'cbc.company_id',
-                'c.company_name',
-                'cbc.billing_cycle_id',
-                'cbc.billing_cycle',
-                'cbc.period_start_date',
-                'cbc.period_end_date',
-                'cbc.effective_date',
-                'cbc.tenant'
-            );
+        const availablePeriods = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('company_billing_cycles as cbc')
+                .join('companies as c', function () {
+                    this.on('c.company_id', '=', 'cbc.company_id')
+                        .andOn('c.tenant', '=', 'cbc.tenant');
+                })
+                .leftJoin('invoices as i', function () {
+                    this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+                        .andOn('i.tenant', '=', 'cbc.tenant');
+                })
+                .where('cbc.tenant', tenant)
+                .whereNotNull('cbc.period_end_date')
+                .whereNull('i.invoice_id')
+                .select(
+                    'cbc.company_id',
+                    'c.company_name',
+                    'cbc.billing_cycle_id',
+                    'cbc.billing_cycle',
+                    'cbc.period_start_date',
+                    'cbc.period_end_date',
+                    'cbc.effective_date',
+                    'cbc.tenant'
+                );
+        });
 
         console.log(`Found ${availablePeriods.length} available billing periods`);
 
@@ -221,13 +226,15 @@ export async function getPaymentTermDays(paymentTerms: string): Promise<number> 
 
 export async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
     const { knex, tenant } = await createTenantKnex();
-    const company = await knex('companies')
-        .where({
-            company_id: companyId,
-            tenant
-        })
-        .select('payment_terms')
-        .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('companies')
+            .where({
+                company_id: companyId,
+                tenant
+            })
+            .select('payment_terms')
+            .first();
+    });
 
     const paymentTerms = company?.payment_terms || 'net_30';
     const days = await getPaymentTermDays(paymentTerms); // Await the async function
@@ -249,13 +256,15 @@ export async function getDueDate(companyId: string, billingEndDate: ISO8601Strin
  */
 export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
     const { knex, tenant } = await createTenantKnex();
-    const company = await knex('company_billing_cycles')
-        .where({
-            company_id: companyId,
-            tenant
-        })
-        .select('billing_cycle')
-        .first();
+    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('company_billing_cycles')
+            .where({
+                company_id: companyId,
+                tenant
+            })
+            .select('billing_cycle')
+            .first();
+    });
 
     const billingCycle = (company?.billing_cycle || 'monthly') as BillingCycleType;
 
@@ -366,12 +375,14 @@ export async function getPaymentTermsList(): Promise<IPaymentTermOption[]> {
     // If the table IS tenant-specific, a tenant filter would be added.
     const { knex } = await createTenantKnex();
 
-    const terms = await knex('payment_terms')
-      .select('term_code as id', 'term_name as name')
-      // Assuming an 'is_active' flag exists for filtering relevant terms
-      .where({ is_active: true })
-      // Assuming a 'sort_order' column exists for consistent ordering
-      .orderBy('sort_order', 'asc');
+    const terms = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('payment_terms')
+        .select('term_code as id', 'term_name as name')
+        // Assuming an 'is_active' flag exists for filtering relevant terms
+        .where({ is_active: true })
+        // Assuming a 'sort_order' column exists for consistent ordering
+        .orderBy('sort_order', 'asc');
+    });
 
     console.log(`[Billing Action] Found ${terms.length} active payment terms.`);
     return terms;

@@ -1,5 +1,6 @@
 'use server';
 
+import { withTransaction } from '../../../../shared/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -61,30 +62,32 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
     const { knex, tenant } = await createTenantKnex();
 
     // Get invoices with company info in a single query
-    const invoices = await knex('invoices')
-      .join('companies', function () {
-        this.on('invoices.company_id', '=', 'companies.company_id')
-          .andOn('invoices.tenant', '=', 'companies.tenant');
-      })
-      .where('invoices.tenant', tenant)
-      .select(
-        'invoices.invoice_id',
-        'invoices.company_id',
-        'invoices.invoice_number',
-        'invoices.invoice_date',
-        'invoices.due_date',
-        'invoices.status',
-        'invoices.is_manual',
-        'invoices.finalized_at',
-        'invoices.billing_cycle_id',
-        knex.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
-        knex.raw('CAST(invoices.tax AS BIGINT) as tax'),
-        knex.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
-        knex.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-        'companies.company_name',
-        'companies.address',
-        'companies.properties'
-      );
+    const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .join('companies', function () {
+          this.on('invoices.company_id', '=', 'companies.company_id')
+            .andOn('invoices.tenant', '=', 'companies.tenant');
+        })
+        .where('invoices.tenant', tenant)
+        .select(
+          'invoices.invoice_id',
+          'invoices.company_id',
+          'invoices.invoice_number',
+          'invoices.invoice_date',
+          'invoices.due_date',
+          'invoices.status',
+          'invoices.is_manual',
+          'invoices.finalized_at',
+          'invoices.billing_cycle_id',
+          trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
+          trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
+          trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
+          trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          'companies.company_name',
+          'companies.address',
+          'companies.properties'
+        );
+    });
 
     console.log(`Got ${invoices.length} invoices`);
 
@@ -114,33 +117,35 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
     const { knex, tenant } = await createTenantKnex();
     
     // Get invoices with company info in a single query, filtered by company_id
-    const invoices = await knex('invoices')
-      .join('companies', function() {
-        this.on('invoices.company_id', '=', 'companies.company_id')
-            .andOn('invoices.tenant', '=', 'companies.tenant');
-      })
-      .where({
-        'invoices.company_id': companyId,
-        'invoices.tenant': tenant
-      })
-      .select(
-        'invoices.invoice_id',
-        'invoices.company_id',
-        'invoices.invoice_number',
-        'invoices.invoice_date',
-        'invoices.due_date',
-        'invoices.status',
-        'invoices.is_manual',
-        'invoices.finalized_at',
-        'invoices.billing_cycle_id',
-        knex.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
-        knex.raw('CAST(invoices.tax AS BIGINT) as tax'),
-        knex.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
-        knex.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-        'companies.company_name',
-        'companies.address',
-        'companies.properties'
-      );
+    const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .join('companies', function() {
+          this.on('invoices.company_id', '=', 'companies.company_id')
+              .andOn('invoices.tenant', '=', 'companies.tenant');
+        })
+        .where({
+          'invoices.company_id': companyId,
+          'invoices.tenant': tenant
+        })
+        .select(
+          'invoices.invoice_id',
+          'invoices.company_id',
+          'invoices.invoice_number',
+          'invoices.invoice_date',
+          'invoices.due_date',
+          'invoices.status',
+          'invoices.is_manual',
+          'invoices.finalized_at',
+          'invoices.billing_cycle_id',
+          trx.raw('CAST(invoices.subtotal AS BIGINT) as subtotal'),
+          trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
+          trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
+          trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
+          'companies.company_name',
+          'companies.address',
+          'companies.properties'
+        );
+    });
 
     console.log(`Got ${invoices.length} invoices for company ${companyId}`);
 

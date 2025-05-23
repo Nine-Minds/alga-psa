@@ -3,6 +3,8 @@
 import Comment from 'server/src/lib/models/comment';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 
 export async function findCommentsByTicketId(ticketId: string) {
@@ -37,11 +39,13 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
     // Get user's type to set author_type
     if (comment.user_id) {
       const { knex: db, tenant } = await createTenantKnex();
-      const user = await db('users')
-        .select('user_type')
-        .where('user_id', comment.user_id)
-        .andWhere('tenant', tenant!)
-        .first();
+      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('users')
+          .select('user_type')
+          .where('user_id', comment.user_id)
+          .andWhere('tenant', tenant!)
+          .first();
+      });
 
       if (user) {
         comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
@@ -134,11 +138,13 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
     // or internal users to edit any comment
     if (comment.user_id && comment.user_id !== existingComment.user_id) {
       const { knex: db, tenant } = await createTenantKnex();
-      const user = await db('users')
-        .select('user_type')
-        .where('user_id', comment.user_id)
-        .andWhere('tenant', tenant!)
-        .first();
+      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('users')
+          .select('user_type')
+          .where('user_id', comment.user_id)
+          .andWhere('tenant', tenant!)
+          .first();
+      });
       
       // Only internal users can edit other users' comments
       if (!user || user.user_type !== 'internal') {

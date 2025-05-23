@@ -3,6 +3,8 @@
 import { getServerSession } from 'next-auth';
 import { options } from 'server/src/app/api/auth/[...nextauth]/options';
 import { getConnection } from 'server/src/lib/db/db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
   ICompanyBillingPlan,
@@ -32,27 +34,29 @@ export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null
   const knex = await getConnection(session.user.tenant);
   
   try {
-    const plan = await knex('company_billing_plans')
-      .select(
-        'company_billing_plans.*',
-        'billing_plans.plan_name',
-        'billing_plans.billing_frequency',
-        'service_categories.category_name as service_category_name'
-      )
-      .join('billing_plans', function() {
-        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-          .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant')
-      })
-      .leftJoin('service_categories', function() {
-        this.on('company_billing_plans.service_category', '=', 'service_categories.category_id')
-          .andOn('service_categories.tenant', '=', 'company_billing_plans.tenant')
-      })
-      .where({
-        'company_billing_plans.company_id': session.user.companyId,
-        'company_billing_plans.is_active': true,
-        'company_billing_plans.tenant': session.user.tenant
-      })
-      .first();
+    const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('company_billing_plans')
+        .select(
+          'company_billing_plans.*',
+          'billing_plans.plan_name',
+          'billing_plans.billing_frequency',
+          'service_categories.category_name as service_category_name'
+        )
+        .join('billing_plans', function() {
+          this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+            .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant')
+        })
+        .leftJoin('service_categories', function() {
+          this.on('company_billing_plans.service_category', '=', 'service_categories.category_id')
+            .andOn('service_categories.tenant', '=', 'company_billing_plans.tenant')
+        })
+        .where({
+          'company_billing_plans.company_id': session.user.companyId,
+          'company_billing_plans.is_active': true,
+          'company_billing_plans.tenant': session.user.tenant
+        })
+        .first();
+    });
 
     return plan || null;
   } catch (error) {
@@ -118,13 +122,15 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
   
   try {
     // Verify the invoice belongs to the client
-    const invoiceCheck = await knex('invoices')
-      .where({
-        invoice_id: invoiceId,
-        company_id: session.user.companyId,
-        tenant: session.user.tenant
-      })
-      .first();
+    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          company_id: session.user.companyId,
+          tenant: session.user.tenant
+        })
+        .first();
+    });
     
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
@@ -164,13 +170,15 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
   
   try {
     // Verify the invoice belongs to the client
-    const invoiceCheck = await knex('invoices')
-      .where({
-        invoice_id: invoiceId,
-        company_id: session.user.companyId,
-        tenant: session.user.tenant
-      })
-      .first();
+    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          company_id: session.user.companyId,
+          tenant: session.user.tenant
+        })
+        .first();
+    });
     
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
@@ -229,13 +237,15 @@ export async function downloadClientInvoicePdf(invoiceId: string) {
   
   try {
     // Verify the invoice belongs to the client
-    const invoiceCheck = await knex('invoices')
-      .where({
-        invoice_id: invoiceId,
-        company_id: session.user.companyId,
-        tenant: session.user.tenant
-      })
-      .first();
+    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          company_id: session.user.companyId,
+          tenant: session.user.tenant
+        })
+        .first();
+    });
     
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
@@ -275,13 +285,15 @@ export async function sendClientInvoiceEmail(invoiceId: string) {
   
   try {
     // Verify the invoice belongs to the client
-    const invoiceCheck = await knex('invoices')
-      .where({
-        invoice_id: invoiceId,
-        company_id: session.user.companyId,
-        tenant: session.user.tenant
-      })
-      .first();
+    const invoiceCheck = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx('invoices')
+        .where({
+          invoice_id: invoiceId,
+          company_id: session.user.companyId,
+          tenant: session.user.tenant
+        })
+        .first();
+    });
     
     if (!invoiceCheck) {
       throw new Error('Invoice not found or access denied');
@@ -308,39 +320,43 @@ export async function getCurrentUsage(): Promise<{
   const knex = await getConnection(session.user.tenant);
   
   try {
-    // Get current bucket usage if any
-    const bucketUsage = await knex('bucket_usage')
-      .select('*')
-      .where({
-        company_id: session.user.companyId,
-        tenant: session.user.tenant
-      })
-      .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
-      .first();
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Get current bucket usage if any
+      const bucketUsage = await trx('bucket_usage')
+        .select('*')
+        .where({
+          company_id: session.user.companyId,
+          tenant: session.user.tenant
+        })
+        .whereRaw('? BETWEEN period_start AND period_end', [new Date()])
+        .first();
 
-    // Get all services associated with the company's plan
-    const services = await knex('service_catalog')
-      .select('service_catalog.*')
-      .join('plan_services', function() {
-        this.on('service_catalog.service_id', '=', 'plan_services.service_id')
-          .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
-      })
-      .join('company_billing_plans', function() {
-        this.on('plan_services.plan_id', '=', 'company_billing_plans.plan_id')
-          .andOn('plan_services.tenant', '=', 'company_billing_plans.tenant')
-      })
-      .where({
-        'company_billing_plans.company_id': session.user.companyId,
-        'company_billing_plans.is_active': true,
-        'service_catalog.tenant': session.user.tenant,
-        'plan_services.tenant': session.user.tenant,
-        'company_billing_plans.tenant': session.user.tenant
-      });
+      // Get all services associated with the company's plan
+      const services = await trx('service_catalog')
+        .select('service_catalog.*')
+        .join('plan_services', function() {
+          this.on('service_catalog.service_id', '=', 'plan_services.service_id')
+            .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
+        })
+        .join('company_billing_plans', function() {
+          this.on('plan_services.plan_id', '=', 'company_billing_plans.plan_id')
+            .andOn('plan_services.tenant', '=', 'company_billing_plans.tenant')
+        })
+        .where({
+          'company_billing_plans.company_id': session.user.companyId,
+          'company_billing_plans.is_active': true,
+          'service_catalog.tenant': session.user.tenant,
+          'plan_services.tenant': session.user.tenant,
+          'company_billing_plans.tenant': session.user.tenant
+        });
 
-    return {
-      bucketUsage,
-      services
-    };
+      return {
+        bucketUsage,
+        services
+      };
+    });
+
+    return result;
   } catch (error) {
     console.error('Error fetching current usage:', error);
     throw new Error('Failed to fetch current usage');

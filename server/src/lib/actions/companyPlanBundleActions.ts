@@ -1,6 +1,8 @@
 // server/src/lib/actions/companyPlanBundleActions.ts
 'use server'
 
+import { withTransaction } from '../../../../shared/db';
+import { Knex } from 'knex';
 import CompanyPlanBundle from 'server/src/lib/models/companyPlanBundle';
 import { ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
@@ -160,19 +162,21 @@ export async function updateCompanyBundle(
 
 
       // 3. Fetch invoiced billing cycles for this company
-      const invoicedCycles = await db('company_billing_cycles as cbc')
-        .join('invoices as i', function() {
-          this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
-              .andOn('i.tenant', '=', 'cbc.tenant');
-        })
-        .where('cbc.company_id', companyId)
-        .andWhere('cbc.tenant', tenant)
-        // Add a check for invoice status if applicable, e.g., .andWhere('i.status', 'finalized')
-        // Assuming any linked invoice means it's "invoiced" for now
-        .select(
-          'cbc.period_start_date',
-          'cbc.period_end_date'
-        );
+      const invoicedCycles = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await trx('company_billing_cycles as cbc')
+          .join('invoices as i', function() {
+            this.on('i.billing_cycle_id', '=', 'cbc.billing_cycle_id')
+                .andOn('i.tenant', '=', 'cbc.tenant');
+          })
+          .where('cbc.company_id', companyId)
+          .andWhere('cbc.tenant', tenant)
+          // Add a check for invoice status if applicable, e.g., .andWhere('i.status', 'finalized')
+          // Assuming any linked invoice means it's "invoiced" for now
+          .select(
+            'cbc.period_start_date',
+            'cbc.period_end_date'
+          );
+      });
 
       // 4. Check for overlaps
       for (const cycle of invoicedCycles) {
@@ -292,7 +296,7 @@ export async function applyBundleToCompany(companyBundleId: string): Promise<voi
     }
 
     // Start a transaction to ensure all company billing plans are created
-    await db.transaction(async (trx) => {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       // For each plan in the bundle, create a company billing plan
       for (const plan of bundlePlans) {
         // Check if the company already has this plan
@@ -320,7 +324,7 @@ export async function applyBundleToCompany(companyBundleId: string): Promise<voi
         } else {
           // Create a new company billing plan
           await trx('company_billing_plans').insert({
-            company_billing_plan_id: db.raw('gen_random_uuid()'),
+            company_billing_plan_id: trx.raw('gen_random_uuid()'),
             company_id: companyBundle.company_id,
             plan_id: plan.plan_id,
             start_date: companyBundle.start_date,

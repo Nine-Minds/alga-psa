@@ -1,6 +1,8 @@
 'use server';
 
 import { createTenantKnex } from '../../db';
+import { withTransaction } from '../../../../../shared/db';
+import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { IDocumentContent, UpdateDocumentContentInput } from '../../../interfaces/document.interface';
 import { addDocument } from './documentActions';
@@ -31,15 +33,17 @@ export async function createContentDocument(
         });
 
         // Create the document content
-        await knex('document_content').insert({
-            id: uuidv4(),
-            document_id: documentResult._id,
-            content: initialContent,
-            tenant,
-            created_by_id: userId,
-            updated_by_id: userId,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('document_content').insert({
+                id: uuidv4(),
+                document_id: documentResult._id,
+                content: initialContent,
+                tenant,
+                created_by_id: userId,
+                updated_by_id: userId,
+                created_at: trx.fn.now(),
+                updated_at: trx.fn.now()
+            });
         });
 
         return { document_id: documentResult._id };
@@ -57,9 +61,11 @@ export async function getDocumentContent(documentId: string): Promise<IDocumentC
             throw new Error('No tenant found');
         }
 
-        const content = await knex('document_content')
-            .where({ document_id: documentId, tenant })
-            .first();
+        const content = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('document_content')
+                .where({ document_id: documentId, tenant })
+                .first();
+        });
 
         return content || null;
     } catch (error) {
@@ -76,30 +82,32 @@ export async function updateDocumentContent(documentId: string, data: UpdateDocu
             throw new Error('No tenant found');
         }
 
-        const existingContent = await knex('document_content')
-            .where({ document_id: documentId, tenant })
-            .first();
-
-        if (existingContent) {
-            await knex('document_content')
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const existingContent = await trx('document_content')
                 .where({ document_id: documentId, tenant })
-                .update({
+                .first();
+
+            if (existingContent) {
+                return await trx('document_content')
+                    .where({ document_id: documentId, tenant })
+                    .update({
+                        content: data.content,
+                        updated_at: trx.fn.now(),
+                        updated_by_id: data.updated_by_id
+                    });
+            } else {
+                return await trx('document_content').insert({
+                    id: uuidv4(),
+                    document_id: documentId,
                     content: data.content,
-                    updated_at: knex.fn.now(),
-                    updated_by_id: data.updated_by_id
+                    tenant,
+                    created_by_id: data.updated_by_id,
+                    updated_by_id: data.updated_by_id,
+                    created_at: trx.fn.now(),
+                    updated_at: trx.fn.now()
                 });
-        } else {
-            await knex('document_content').insert({
-                id: uuidv4(),
-                document_id: documentId,
-                content: data.content,
-                tenant,
-                created_by_id: data.updated_by_id,
-                updated_by_id: data.updated_by_id,
-                created_at: knex.fn.now(),
-                updated_at: knex.fn.now()
-            });
-        }
+            }
+        });
     } catch (error) {
         console.error('Error updating document content:', error);
         throw new Error('Failed to update document content');
@@ -114,9 +122,11 @@ export async function deleteDocumentContent(documentId: string): Promise<void> {
             throw new Error('No tenant found');
         }
 
-        await knex('document_content')
-            .where({ document_id: documentId, tenant })
-            .delete();
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+            return await trx('document_content')
+                .where({ document_id: documentId, tenant })
+                .delete();
+        });
     } catch (error) {
         console.error('Error deleting document content:', error);
         throw new Error('Failed to delete document content');

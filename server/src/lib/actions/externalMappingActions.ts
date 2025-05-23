@@ -3,6 +3,7 @@
 
 import { getActionRegistry, ActionParameterDefinition, ActionExecutionContext } from '@shared/workflow/core/actionRegistry';
 import { createTenantKnex } from 'server/src/lib/db'; // Assuming path based on coding standards
+import { withTransaction } from '@shared/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'; // For tenant context
 import { Knex } from 'knex'; // Import Knex type
 
@@ -76,34 +77,36 @@ export async function getExternalEntityMappings(params: GetMappingsParams): Prom
   console.log(`[External Mapping Action - Server] Getting mappings for tenant ${tenantId} with filters:`, params);
 
   try {
-    const query = knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-      .where({ tenant: tenantId }); // **Tenant Isolation**
+    const mappings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const query = trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({ tenant: tenantId }); // **Tenant Isolation**
 
-    if (integrationType) {
-      query.andWhere({ integration_type: integrationType });
-    }
-    if (algaEntityType) {
-      query.andWhere({ alga_entity_type: algaEntityType });
-    }
-    if (algaEntityId) {
-      query.andWhere({ alga_entity_id: algaEntityId });
-    }
-    if (externalEntityId) {
-      query.andWhere({ external_entity_id: externalEntityId });
-    }
-
-    // Handle external_realm_id filtering (including null/empty cases if needed)
-    if (externalRealmId !== undefined) {
-      if (externalRealmId === null || externalRealmId === '') {
-        query.andWhere(function() {
-          this.whereNull('external_realm_id').orWhere('external_realm_id', '');
-        });
-      } else {
-        query.andWhere({ external_realm_id: externalRealmId });
+      if (integrationType) {
+        query.andWhere({ integration_type: integrationType });
       }
-    }
+      if (algaEntityType) {
+        query.andWhere({ alga_entity_type: algaEntityType });
+      }
+      if (algaEntityId) {
+        query.andWhere({ alga_entity_id: algaEntityId });
+      }
+      if (externalEntityId) {
+        query.andWhere({ external_entity_id: externalEntityId });
+      }
 
-    const mappings = await query.select('*');
+      // Handle external_realm_id filtering (including null/empty cases if needed)
+      if (externalRealmId !== undefined) {
+        if (externalRealmId === null || externalRealmId === '') {
+          query.andWhere(function() {
+            this.whereNull('external_realm_id').orWhere('external_realm_id', '');
+          });
+        } else {
+          query.andWhere({ external_realm_id: externalRealmId });
+        }
+      }
+
+      return await query.select('*');
+    });
     console.log(`[External Mapping Action - Server] Found ${mappings.length} mappings for tenant ${tenantId}.`);
     return mappings;
 
@@ -123,21 +126,23 @@ export async function createExternalEntityMapping(mappingData: CreateMappingData
   console.log(`[External Mapping Action - Server] Creating mapping for tenant ${tenantId}:`, mappingData);
 
   try {
-    const [newMapping] = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-      .insert({
-        id: knex.raw('gen_random_uuid()'), // Use DB function for UUID generation
-        tenant: tenantId, // **Tenant Isolation**
-        integration_type,
-        alga_entity_type,
-        alga_entity_id,
-        external_entity_id,
-        external_realm_id: external_realm_id, // Handle null/undefined appropriately
-        sync_status: sync_status ?? 'pending', // Default sync status
-        metadata: metadata ?? null, // Knex handles JSONB serialization
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .returning('*'); // Return the newly created row
+    const [newMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .insert({
+          id: trx.raw('gen_random_uuid()'), // Use DB function for UUID generation
+          tenant: tenantId, // **Tenant Isolation**
+          integration_type,
+          alga_entity_type,
+          alga_entity_id,
+          external_entity_id,
+          external_realm_id: external_realm_id, // Handle null/undefined appropriately
+          sync_status: sync_status ?? 'pending', // Default sync status
+          metadata: metadata ?? null, // Knex handles JSONB serialization
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .returning('*'); // Return the newly created row
+    });
 
     if (!newMapping) {
         throw new Error('Failed to create mapping, insert operation did not return the new record.');
@@ -183,20 +188,24 @@ export async function updateExternalEntityMapping(mappingId: string, updates: Up
   updatePayload.updated_at = new Date().toISOString();
 
   try {
-    const [updatedMapping] = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-      .where({
-        id: mappingId,
-        tenant: tenantId // **Tenant Isolation**
-      })
-      .update(updatePayload)
-      .returning('*'); // Return the updated row
+    const [updatedMapping] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({
+          id: mappingId,
+          tenant: tenantId // **Tenant Isolation**
+        })
+        .update(updatePayload)
+        .returning('*'); // Return the updated row
+    });
 
     if (!updatedMapping) {
       // Attempt to find if the mapping exists at all for this tenant to give a better error
-      const exists = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-                        .select('id')
-                        .where({ id: mappingId, tenant: tenantId })
-                        .first();
+      const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .select('id')
+          .where({ id: mappingId, tenant: tenantId })
+          .first();
+      });
       if (!exists) {
           throw new Error(`Mapping with ID ${mappingId} not found for the current tenant (${tenantId}).`);
       } else {
@@ -228,19 +237,23 @@ export async function deleteExternalEntityMapping(mappingId: string): Promise<vo
   console.log(`[External Mapping Action - Server] Deleting mapping ID ${mappingId} for tenant ${tenantId}.`);
 
   try {
-    const deletedCount = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-      .where({
-        id: mappingId,
-        tenant: tenantId // **Tenant Isolation**
-      })
-      .del(); // Perform the delete operation
+    const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+        .where({
+          id: mappingId,
+          tenant: tenantId // **Tenant Isolation**
+        })
+        .del(); // Perform the delete operation
+    });
 
     if (deletedCount === 0) {
       // Check if the mapping ID exists at all to differentiate between "not found" and other errors
-       const exists = await knex<ExternalEntityMapping>('tenant_external_entity_mappings')
-                        .select('id')
-                        .where({ id: mappingId, tenant: tenantId })
-                        .first();
+       const exists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+         return await trx<ExternalEntityMapping>('tenant_external_entity_mappings')
+           .select('id')
+           .where({ id: mappingId, tenant: tenantId })
+           .first();
+       });
        if (!exists) {
            console.warn(`[External Mapping Action - Server] Mapping ID ${mappingId} not found for tenant ${tenantId}. No deletion occurred.`);
            // Depending on requirements, might throw an error or just return successfully
@@ -301,27 +314,29 @@ async function lookupExternalEntityIdAction(params: Record<string, any>, context
   try {
     const { knex } = await createTenantKnex(); // Get tenant-specific Knex instance
 
-    const query = knex('tenant_external_entity_mappings')
-      .select('external_entity_id')
-      .where({
-        tenant: tenant, // Ensure tenant isolation
-        integration_type: integration_type,
-        alga_entity_type: alga_entity_type,
-        alga_entity_id: alga_entity_id,
-      })
-      .first(); // Expecting at most one mapping
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const query = trx('tenant_external_entity_mappings')
+        .select('external_entity_id')
+        .where({
+          tenant: tenant, // Ensure tenant isolation
+          integration_type: integration_type,
+          alga_entity_type: alga_entity_type,
+          alga_entity_id: alga_entity_id,
+        })
+        .first(); // Expecting at most one mapping
 
-    // Add realm ID condition only if it's provided
-    if (external_realm_id) {
-      query.andWhere('external_realm_id', external_realm_id);
-    } else {
-      // Handle cases where realm ID might be NULL in the table if it wasn't provided
-      query.andWhere(function() {
-        this.whereNull('external_realm_id').orWhere('external_realm_id', '');
-      });
-    }
+      // Add realm ID condition only if it's provided
+      if (external_realm_id) {
+        query.andWhere('external_realm_id', external_realm_id);
+      } else {
+        // Handle cases where realm ID might be NULL in the table if it wasn't provided
+        query.andWhere(function() {
+          this.whereNull('external_realm_id').orWhere('external_realm_id', '');
+        });
+      }
 
-    const result = await query;
+      return await query;
+    });
 
     const externalId = result?.external_entity_id || null;
 
