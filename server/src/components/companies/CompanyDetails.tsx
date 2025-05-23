@@ -124,6 +124,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
   const [noteDocument, setNoteDocument] = useState<IDocument | null>(null);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
@@ -297,6 +298,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
     try {
       // Prepare data for update, handling top-level account_manager_id
       const { account_manager_full_name, ...restOfEditedCompany } = editedCompany;
@@ -310,8 +314,20 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
       setEditedCompany(updatedCompany);
       setHasUnsavedChanges(false);
+      toast({
+        title: "Success",
+        description: "Company details saved successfully.",
+        variant: "default"
+      });
     } catch (error) {
       console.error('Error saving company:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save company details. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -484,14 +500,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="save-company-changes-btn"
               onClick={handleSave}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+              disabled={isSaving}
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button
               id="add-ticket-btn"
               onClick={() => setIsQuickAddTicketOpen(true)}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
+              variant="secondary"
             >
               Add Ticket
             </Button>
@@ -625,10 +642,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="save-additional-info-btn"
               onClick={handleSave}
-              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
-              disabled={!hasUnsavedChanges}
+              disabled={isSaving}
+              className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
           </Flex>
         </div>
