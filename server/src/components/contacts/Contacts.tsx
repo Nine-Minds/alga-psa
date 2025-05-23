@@ -27,6 +27,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
+import { useRouter } from 'next/navigation';
 
 interface ContactsProps {
   initialContacts: IContact[];
@@ -48,6 +49,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   const [currentPage, setCurrentPage] = useState(1);
   const [isFiltered, setIsFiltered] = useState(false);
   const { openDrawer } = useDrawer();
+  const router = useRouter();
   const contactTagsRef = useRef<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<string[]>([]);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -152,69 +154,67 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   };
 
   const handleViewDetails = async (contact: IContact) => {
-    if (!currentUser) return; // Don't proceed if we don't have a user ID
+    // If this is being used within a company context (companyId prop exists),
+    // maintain the drawer behavior. Otherwise, navigate to the new contact details page.
+    if (companyId) {
+      // Company context - keep existing drawer behavior
+      if (!currentUser) return;
 
-    try {
-      // Set loading state for this specific contact
-      setDocumentLoading(prev => ({
-        ...prev,
-        [contact.contact_name_id]: true
-      }));
+      try {
+        setDocumentLoading(prev => ({
+          ...prev,
+          [contact.contact_name_id]: true
+        }));
 
-      // Check if we already have documents for this contact
-      const existingDocuments = documents[contact.contact_name_id];
-      
-      // Only fetch documents if we don't have them already
-      if (!existingDocuments || existingDocuments.length === 0) {
-        // Fetch documents for this contact
-        const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+        const existingDocuments = documents[contact.contact_name_id];
         
-        // Update documents state with the fetched documents
-        setDocuments(prev => {
-          const newDocuments = { ...prev };
-          // Handle both array and paginated response formats
-          newDocuments[contact.contact_name_id] = Array.isArray(response)
-            ? response
-            : response.documents || [];
-          return newDocuments;
-        });
-      }
+        if (!existingDocuments || existingDocuments.length === 0) {
+          const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+          
+          setDocuments(prev => {
+            const newDocuments = { ...prev };
+            newDocuments[contact.contact_name_id] = Array.isArray(response)
+              ? response
+              : response.documents || [];
+            return newDocuments;
+          });
+        }
 
-      openDrawer(
-        <ContactDetailsView
-          initialContact={contact}
-          companies={companies}
-          documents={documents[contact.contact_name_id] || []}
-          userId={currentUser}
-          isInDrawer={true}
-          onDocumentCreated={async () => {
-            // Refresh documents after a new one is created
-            try {
-              const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
-              
-              // Update documents state with the refreshed documents
-              setDocuments(prev => {
-                const newDocuments = { ...prev };
-                // Handle both array and paginated response formats
-                newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
-                  ? updatedResponse
-                  : updatedResponse.documents || [];
-                return newDocuments;
-              });
-            } catch (err) {
-              console.error('Error refreshing documents:', err);
-            }
-          }}
-        />
-      );
-    } catch (error) {
-      console.error('Error fetching contact documents:', error);
-    } finally {
-      // Clear loading state
-      setDocumentLoading(prev => ({
-        ...prev,
-        [contact.contact_name_id]: false
-      }));
+        openDrawer(
+          <ContactDetailsView
+            initialContact={contact}
+            companies={companies}
+            documents={documents[contact.contact_name_id] || []}
+            userId={currentUser}
+            isInDrawer={true}
+            onDocumentCreated={async () => {
+              try {
+                const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
+                
+                setDocuments(prev => {
+                  const newDocuments = { ...prev };
+                  newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
+                    ? updatedResponse
+                    : updatedResponse.documents || [];
+                  return newDocuments;
+                });
+              } catch (err) {
+                console.error('Error refreshing documents:', err);
+              }
+            }}
+          />
+        );
+      } catch (error) {
+        console.error('Error fetching contact documents:', error);
+      } finally {
+        setDocumentLoading(prev => ({
+          ...prev,
+          [contact.contact_name_id]: false
+        }));
+      }
+    } else {
+      // Main contacts list - navigate to new contact details page
+      router.push(`/msp/contacts/${contact.contact_name_id}`);
     }
   };
 
