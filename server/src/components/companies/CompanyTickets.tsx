@@ -172,6 +172,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
+          initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}

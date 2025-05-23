@@ -173,6 +173,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
+          initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}
@@ -210,72 +211,65 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       ),
     },
     {
-      title: 'Company',
-      dataIndex: 'company_name',
-      render: (value: string) => value || 'N/A',
-    },
-    {
       title: 'Status',
       dataIndex: 'status_name',
-      render: (value: string) => (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${
-          value === 'Open' ? 'bg-green-100 text-green-800' :
-          value === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-          value === 'Closed' ? 'bg-gray-100 text-gray-800' :
-          'bg-gray-100 text-gray-800'
-        }`}>
-          {value}
-        </span>
-      ),
+      render: (value: string) => value,
     },
     {
       title: 'Priority',
       dataIndex: 'priority_name',
-      render: (value: string) => (
-        <span className={`px-2 py-1 rounded text-xs font-medium ${
-          value === 'Urgent' ? 'bg-red-100 text-red-800' :
-          value === 'High' ? 'bg-orange-100 text-orange-800' :
-          value === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
-          value === 'Low' ? 'bg-gray-100 text-gray-800' :
-          'bg-gray-100 text-gray-800'
-        }`}>
-          {value}
-        </span>
-      ),
+      render: (value: string) => value,
     },
     {
       title: 'Category',
-      dataIndex: 'category_name',
+      dataIndex: 'category_id',
+      render: (value: string, record: ITicketListItem) => {
+        if (!value && !record.subcategory_id) return 'No Category';
+
+        // If there's a subcategory, use that for display
+        if (record.subcategory_id) {
+          const subcategory = categories.find(c => c.category_id === record.subcategory_id);
+          if (!subcategory) return 'Unknown Category';
+
+          const parent = categories.find(c => c.category_id === subcategory.parent_category);
+          return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
+        }
+
+        // Otherwise use the main category
+        const category = categories.find(c => c.category_id === value);
+        if (!category) return 'Unknown Category';
+        return category.category_name;
+      },
+    },
+    {
+      title: 'Channel',
+      dataIndex: 'channel_name',
       render: (value: string) => value || 'N/A',
     },
     {
-      title: 'Assigned To',
-      dataIndex: 'assigned_to_name',
-      render: (value: string) => value || 'Unassigned',
-    },
-    {
-      title: 'Created',
-      dataIndex: 'entered_at',
-      render: (value: string) => {
-        const date = new Date(value);
-        return date.toLocaleDateString();
-      },
+      title: 'Created By',
+      dataIndex: 'entered_by_name',
+      render: (value: string) => value || 'N/A',
     },
     {
       title: 'Actions',
       dataIndex: 'actions',
+      width: '5%',
       render: (value: any, record: ITicketListItem) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button id={`contact-ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem asChild>
               <Link href={`/msp/tickets/${record.ticket_id}`}>
-                View Details
+                Go to ticket
               </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleTicketClick(record.ticket_id as string)}>
+              View details
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => handleDeleteTicket(record.ticket_id as string, record.ticket_number)}
@@ -291,6 +285,14 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   ], [handleTicketClick, handleDeleteTicket]);
 
   const columns = useMemo(() => createTicketColumns(initialCategories), [createTicketColumns, initialCategories]);
+
+  const handleCategorySelect = (
+    selectedCategories: string[],
+    excludedCategories: string[]
+  ) => {
+    setSelectedCategories(selectedCategories);
+    setExcludedCategories(excludedCategories);
+  };
 
   const resetFilters = () => {
     setSelectedChannel(null);
@@ -322,75 +324,73 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-            <Input
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Channel</label>
+        <div className="flex items-center gap-4 mb-4 flex-wrap">
+          <Input
+            id="contact-tickets-search-input"
+            placeholder="Search tickets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-[38px] min-w-[200px] text-sm"
+          />
+          
+          {initialChannels.length > 0 && (
             <ChannelPicker
+              id="contact-tickets-channel-picker"
               channels={initialChannels}
               selectedChannelId={selectedChannel}
-              onChannelSelect={setSelectedChannel}
+              onSelect={(channelId) => setSelectedChannel(channelId)}
               filterState={channelFilterState}
               onFilterStateChange={setChannelFilterState}
-              allowClear={true}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          )}
+          
+          {initialStatuses.length > 0 && (
             <CustomSelect
+              id="contact-tickets-status-select"
+              options={[{ value: 'open', label: 'Open' }, { value: 'all', label: 'All Statuses' }, ...initialStatuses]}
               value={selectedStatus}
-              onValueChange={setSelectedStatus}
-              options={[{ value: 'all', label: 'All Statuses' }, ...initialStatuses]}
-              placeholder="Select status"
+              onValueChange={(value) => setSelectedStatus(value)}
+              placeholder="Select Status"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+          )}
+          
+          {initialPriorities.length > 0 && (
             <CustomSelect
+              id="contact-tickets-priority-select"
+              options={initialPriorities}
               value={selectedPriority}
-              onValueChange={setSelectedPriority}
-              options={[{ value: 'all', label: 'All Priorities' }, ...initialPriorities]}
-              placeholder="Select priority"
+              onValueChange={(value) => setSelectedPriority(value)}
+              placeholder="All Priorities"
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          )}
+          
+          {initialCategories.length > 0 && (
             <CategoryPicker
+              id="contact-tickets-category-picker"
               categories={initialCategories}
               selectedCategories={selectedCategories}
               excludedCategories={excludedCategories}
-              onCategorySelect={setSelectedCategories}
-              onCategoryExclude={setExcludedCategories}
+              onSelect={handleCategorySelect}
+              placeholder="Filter by category"
+              multiSelect={true}
+              showExclude={true}
+              showReset={true}
+              allowEmpty={true}
+              className="text-sm min-w-[200px]"
             />
-          </div>
+          )}
+          
+          <Button
+            id="contact-tickets-reset-filters-btn"
+            variant="outline"
+            onClick={resetFilters}
+            className="whitespace-nowrap flex items-center gap-2"
+          >
+            <XCircle className="h-4 w-4" />
+            Reset Filters
+          </Button>
         </div>
 
-        {isFiltered && (
-          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-md p-3">
-            <span className="text-sm text-blue-800">Filters are active</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-              className="text-blue-600 hover:text-blue-800"
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Clear filters
-            </Button>
-          </div>
-        )}
 
         {/* Tickets Table */}
         {isLoading && tickets.length === 0 ? (
@@ -404,13 +404,28 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
             <p className="text-gray-600 mb-4">No tickets found for this contact</p>
           </div>
         ) : (
-          <DataTable
-            id="contact-tickets-table"
-            data={tickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }))}
-            columns={columns}
-            pagination={true}
-            pageSize={25}
-          />
+          <>
+            <DataTable
+              id="contact-tickets-table"
+              data={tickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }))}
+              columns={columns}
+              pagination={false}
+            />
+            
+            {/* Load More Button */}
+            {nextCursor && (
+              <div className="flex justify-center mt-4">
+                <Button
+                  id="contact-tickets-load-more-btn"
+                  onClick={() => loadTickets(nextCursor)}
+                  disabled={isLoading}
+                  variant="outline"
+                >
+                  {isLoading ? 'Loading...' : 'Load More Tickets'}
+                </Button>
+              </div>
+            )}
+          </>
         )}
 
         {/* Delete Confirmation Dialog */}

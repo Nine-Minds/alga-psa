@@ -6,9 +6,9 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
-import { Pen } from 'lucide-react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -19,7 +19,6 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
-import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { updateContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
@@ -30,6 +29,13 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IChannel } from 'server/src/interfaces/channel.interface';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { TagManager } from 'server/src/components/tags';
+import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
+import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 const SwitchDetailItem: React.FC<{
   value: boolean;
@@ -82,6 +88,33 @@ const TextDetailItem: React.FC<{
   );
 };
 
+const DateDetailItem: React.FC<{
+  label: string;
+  value: string | null;
+  onEdit: (value: string) => void;
+}> = ({ label, value, onEdit }) => {
+  const [localValue, setLocalValue] = useState(value ? value.split('T')[0] : '');
+
+  const handleBlur = () => {
+    if (localValue !== (value ? value.split('T')[0] : '')) {
+      onEdit(localValue);
+    }
+  };
+  
+  return (
+    <div className="space-y-2">
+      <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
+      <Input
+        type="date"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={handleBlur}
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+      />
+    </div>
+  );
+};
+
 interface ContactDetailsProps {
   id?: string;
   contact: IContact;
@@ -102,10 +135,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   onDocumentCreated
 }) => {
   const [editedContact, setEditedContact] = useState<IContact>(contact);
+  const [originalContact, setOriginalContact] = useState<IContact>(contact);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [tags, setTags] = useState<ITag[]>([]);
+  const [allTagTexts, setAllTagTexts] = useState<string[]>([]);
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
@@ -142,6 +178,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   // Initial Load Logic
   useEffect(() => {
     setEditedContact(contact);
+    setOriginalContact(contact);
     setHasUnsavedChanges(false);
   }, [contact]);
 
@@ -180,19 +217,26 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   }, [currentUser]);
 
-  // Fetch contact avatar URL
+  // Fetch contact avatar URL and tags
   useEffect(() => {
-    const fetchAvatar = async () => {
+    const fetchAvatarAndTags = async () => {
       if (userId && contact.tenant) {
         try {
-          const contactAvatarUrl = await getContactAvatarUrl(contact.contact_name_id, contact.tenant);
+          const [contactAvatarUrl, fetchedTags, allTags] = await Promise.all([
+            getContactAvatarUrl(contact.contact_name_id, contact.tenant),
+            findTagsByEntityIds([contact.contact_name_id], 'contact'),
+            findAllTagsByType('contact')
+          ]);
+          
           setAvatarUrl(contactAvatarUrl);
+          setTags(fetchedTags);
+          setAllTagTexts(allTags);
         } catch (error) {
-          console.error('Error fetching avatar:', error);
+          console.error('Error fetching avatar and tags:', error);
         }
       }
     };
-    fetchAvatar();
+    fetchAvatarAndTags();
   }, [contact.contact_name_id, contact.tenant, userId]);
 
   const handleFieldChange = (field: string, value: string | boolean) => {
@@ -205,7 +249,13 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
   const handleSave = async () => {
     try {
-      const updatedContact = await updateContact(editedContact.contact_name_id, editedContact);
+      // Make sure contact_name_id is included in the data being sent
+      const dataToUpdate = {
+        ...editedContact,
+        contact_name_id: editedContact.contact_name_id
+      };
+      
+      const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
       setHasUnsavedChanges(false);
       toast({
@@ -222,23 +272,40 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   };
 
-  const handleEdit = () => {
-    drawer.openDrawer(
-      <ContactDetailsEdit
-        id={`${id}-edit`}
-        initialContact={editedContact}
-        companies={companies}
-        isInDrawer={true}
-        onSave={(updatedContact) => {
-          setEditedContact(updatedContact);
-          // Close the edit drawer and show updated details
-          drawer.goBack();
-        }}
-        onCancel={() => {
-          drawer.goBack();
-        }}
-      />
-    );
+  const handleTagsChange = (updatedTags: ITag[]) => {
+    setTags(updatedTags);
+  };
+
+  const handleCompanyClick = async () => {
+    if (editedContact.company_id) {
+      try {
+        const company = await getCompanyById(editedContact.company_id);
+        if (company) {
+          // Use router to temporarily set tab to details for the drawer
+          const params = new URLSearchParams(searchParams?.toString() || '');
+          params.set('tab', 'details');
+          router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+          
+          // Small delay to ensure the URL is updated before opening drawer
+          setTimeout(() => {
+            drawer.openDrawer(
+              <CompanyDetails 
+                company={company} 
+                documents={[]} 
+                contacts={[]} 
+                isInDrawer={true}
+              />
+            );
+          }, 10);
+        } else {
+          console.error('Company not found');
+        }
+      } catch (error) {
+        console.error('Error fetching company details:', error);
+      }
+    } else {
+      console.log('No company associated with this contact');
+    }
   };
 
   const handleInteractionAdded = (newInteraction: IInteraction) => {
@@ -272,62 +339,74 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       label: "Details",
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-start mb-6">
-            <div className="flex items-center">
-              {userId && (
-                <div className="mr-4">
-                  <ContactAvatar
-                    contactId={editedContact.contact_name_id}
-                    contactName={editedContact.full_name}
-                    avatarUrl={avatarUrl}
-                    size="lg"
-                  />
-                </div>
-              )}
-              <div>
-                <Heading size="6">{editedContact.full_name}</Heading>
-                <Text className="text-gray-600">{getCompanyName(editedContact.company_id!)}</Text>
-              </div>
-            </div>
-            <Button
-              onClick={handleEdit}
-              variant="soft"
-              size="sm"
-              className="flex items-center"
-            >
-              <Pen className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem
               label="Full Name"
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
             />
+            <div className="space-y-2">
+              <Text as="label" size="2" className="text-gray-700 font-medium">Company</Text>
+              {originalContact.company_id ? (
+                // Display company as clickable link if contact already has a company
+                <div className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 rounded px-2" onClick={handleCompanyClick}>
+                  <CompanyAvatar 
+                    companyId={editedContact.company_id!}
+                    companyName={getCompanyName(editedContact.company_id!)}
+                    logoUrl={companies.find(c => c.company_id === editedContact.company_id!)?.logoUrl || null}
+                    size="sm"
+                  />
+                  <span className="text-blue-500 hover:underline text-sm">{getCompanyName(editedContact.company_id!)}</span>
+                </div>
+              ) : (
+                // Allow company selection if contact has no company originally
+                <CompanyPicker
+                  id="contact-company-picker"
+                  onSelect={(companyId) => handleFieldChange('company_id', companyId || '')}
+                  selectedCompanyId={editedContact.company_id}
+                  companies={companies}
+                  filterState="active"
+                  onFilterStateChange={() => {}}
+                  clientTypeFilter="all"
+                  onClientTypeFilterChange={() => {}}
+                />
+              )}
+            </div>
             <TextDetailItem
               label="Email"
               value={editedContact.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
             />
             <TextDetailItem
-              label="Phone Number"
-              value={editedContact.phone_number || ''}
-              onEdit={(value) => handleFieldChange('phone_number', value)}
-            />
-            <TextDetailItem
               label="Role"
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
             />
-            <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Date of Birth</Text>
-              <Text className="text-sm text-gray-600">{formatDateForDisplay(editedContact.date_of_birth)}</Text>
-            </div>
+            <TextDetailItem
+              label="Phone Number"
+              value={editedContact.phone_number || ''}
+              onEdit={(value) => handleFieldChange('phone_number', value)}
+            />
+            <DateDetailItem
+              label="Date of Birth"
+              value={editedContact.date_of_birth || null}
+              onEdit={(value) => handleFieldChange('date_of_birth', value)}
+            />
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+            />
+          </div>
+
+          {/* Tags Section */}
+          <div className="space-y-2">
+            <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+            <TagManager
+              entityId={editedContact.contact_name_id}
+              entityType="contact"
+              initialTags={tags}
+              existingTags={allTagTexts}
+              onTagsChange={handleTagsChange}
             />
           </div>
 
@@ -429,6 +508,20 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         <BackNav href={!isInDrawer ? "/msp/contacts" : undefined}>
           {isInDrawer ? 'Back' : 'Back to Contacts'}
         </BackNav>
+        
+        {/* Contact Avatar Upload */}
+        <div className="mr-4">
+          <ContactAvatarUpload
+            contactId={editedContact.contact_name_id}
+            contactName={editedContact.full_name}
+            avatarUrl={avatarUrl}
+            userType="internal"
+            onAvatarChange={(newAvatarUrl) => {
+              console.log("ContactDetails: Avatar URL changed:", newAvatarUrl);
+              setAvatarUrl(newAvatarUrl);
+            }}
+          />
+        </div>
         
         <Heading size="6">{editedContact.full_name}</Heading>
       </div>
