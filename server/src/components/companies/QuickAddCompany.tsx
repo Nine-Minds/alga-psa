@@ -19,6 +19,9 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { createCompany } from 'server/src/lib/actions/companyActions';
 import toast from 'react-hot-toast';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { DialogComponent } from 'server/src/types/ui-reflection/types';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
 
@@ -59,6 +62,26 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Register with UI reflection system
+  const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
+    id: 'quick-add-company-dialog',
+    type: 'dialog',
+    label: 'Quick Add Company Dialog',
+    helperText: "",
+    title: 'Add New Client',
+  });
+
+  // Update UI reflection metadata when state changes
+  useEffect(() => {
+    if (!updateMetadata) return;
+    
+    updateMetadata({
+      helperText: error || undefined,
+      open: open,
+    });
+  }, [error, open, updateMetadata]);
 
   useEffect(() => {
     if (open) {
@@ -81,6 +104,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     } else {
       setFormData(initialFormData);
       setIsSubmitting(false);
+      setError(null);
     }
   }, [open]);
 
@@ -89,6 +113,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     if (isSubmitting) return;
 
     setIsSubmitting(true);
+    setError(null);
     try {
       const dataToSend = {
         ...formData,
@@ -102,7 +127,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       onOpenChange(false);
     } catch (error: any) { // Add type annotation for error
       console.error("Error creating company:", error);
-      toast.error("Failed to create company. Please try again.");
+      const errorMessage = "Failed to create company. Please try again.";
+      setError(errorMessage);
+      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -136,6 +163,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
   return (
     <Dialog
+      {...dialogProps}
       isOpen={open}
       onClose={() =>
       onOpenChange(false)}>
@@ -144,8 +172,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <DialogHeader>
           <DialogTitle>Add New Client</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} id="quick-add-company-form">
-          <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-4">
+        <ReflectionContainer id="quick-add-company-form" label="Quick Add Company Form">
+          <form onSubmit={handleSubmit} id="quick-add-company-form">
+            <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-4">
             <div>
               <Label htmlFor="company_name">Company Name *</Label>
               <Input
@@ -276,7 +305,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               />
             </div>
           </div>
-        </form>
+          </form>
+        </ReflectionContainer>
 
         <DialogFooter>
             <Button
