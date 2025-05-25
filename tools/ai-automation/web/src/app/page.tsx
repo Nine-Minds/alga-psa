@@ -376,13 +376,13 @@ export default function ControlPanel() {
 
       eventSource.addEventListener('tool_use', async (event) => {
         try {
-          console.log('Received tool use event:', event);
+          console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', event);
           const toolEvent = cleanAndParseJSON(event.data);
           if (!toolEvent) {
-            console.error('Invalid tool use event data');
+            console.error('%c[FRONTEND] ❌ Invalid tool use event data', 'color: #ff4757');
             return;
           }
-          console.log('Tool use requested:', toolEvent);
+          console.log('%c[FRONTEND] 📋 Tool use requested', 'color: #5f27cd; font-weight: bold', toolEvent);
 
           const toolData = cleanAndParseJSON(toolEvent.data);
           if (!toolData) {
@@ -394,6 +394,7 @@ export default function ControlPanel() {
             input: toolData.input
           };
           const toolCallId = toolData.tool_use_id;
+          console.log(`%c[FRONTEND] 🔧 Executing tool: ${toolContent.name}`, 'color: #00d2d3; font-weight: bold', toolContent.input);
 
           // Log the tool use
           setLog(prev => [...prev, {
@@ -405,7 +406,9 @@ export default function ControlPanel() {
           }]);
 
           // Execute the tool
+          console.log(`%c[FRONTEND] 🚀 Invoking tool: ${toolContent.name}`, 'color: #ff9ff3; font-weight: bold');
           const result = await invokeTool(toolContent.name, toolContent.input);
+          console.log(`%c[FRONTEND] ✅ Tool execution result`, 'color: #54a0ff; font-weight: bold', result);
           
           // Create tool result message
           const toolResult: ChatMessage = {

@@ -3,8 +3,8 @@ version: '3.8'
 services:
   ai-automation:
     build:
-      context: ./tools/ai-automation
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./tools/ai-automation/Dockerfile.test
     container_name: ${APP_NAME:-sebastian}_ai_automation
     environment:
       VERSION: ${VERSION}
@@ -15,8 +15,6 @@ services:
       DISPLAY: :99
     ports:
       - "4000:4000"
-    volumes:
-      - ./tools/ai-automation:/usr/src/app
     security_opt:
       - seccomp=unconfined
     cap_add:
