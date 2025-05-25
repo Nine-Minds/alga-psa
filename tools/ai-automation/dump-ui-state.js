@@ -104,6 +104,34 @@ async function dumpUIState() {
         console.log(`${indent}   Helper: "${component.helperText}"`);
       }
       
+      if (component.value !== undefined && component.value !== null) {
+        // Format value based on type
+        let displayValue;
+        if (typeof component.value === 'boolean') {
+          displayValue = component.value ? 'true' : 'false';
+        } else if (typeof component.value === 'string') {
+          // Truncate long strings for readability
+          displayValue = component.value.length > 50 
+            ? `"${component.value.substring(0, 47)}..."` 
+            : `"${component.value}"`;
+        } else {
+          displayValue = String(component.value);
+        }
+        console.log(`${indent}   Value: ${displayValue}`);
+      }
+      
+      if (component.fieldType) {
+        console.log(`${indent}   Field Type: ${component.fieldType}`);
+      }
+      
+      if (component.required) {
+        console.log(`${indent}   Required: true`);
+      }
+      
+      if (component.disabled) {
+        console.log(`${indent}   Disabled: true`);
+      }
+      
       console.log('');
       
       // Print children
