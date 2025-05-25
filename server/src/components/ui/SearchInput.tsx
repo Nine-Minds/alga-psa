@@ -14,7 +14,7 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps & AutomationProps>(
   ({ className, value, onChange, id, ...props }, ref) => {
     const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
-      id: `${id}-search-input`,
+      id,
       type: 'formField',
       fieldType: 'textField'
     });

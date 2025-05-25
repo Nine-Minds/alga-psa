@@ -15,15 +15,15 @@ const API_BASE = 'http://localhost:4000/api';
 export async function getUIState(jsonpath?: string): Promise<ToolExecutionResult> {
   console.log('%c[INVOKE-TOOL] 🎯 getUIState called', 'color: #ff6348; font-weight: bold', { jsonpath });
   
-  if (!jsonpath || jsonpath == '$.components') {
-    console.log('%c[INVOKE-TOOL] ⚠️ JSONPath too broad, returning warning', 'color: #ffa502');
-    return {
-      success: true,
-      result: {
-        message: 'TOO BROAD - please narrow your search with a specific JSONPath'
-      }
-    };
-  }
+  // if (!jsonpath || jsonpath == '$.components') {
+  //   console.log('%c[INVOKE-TOOL] ⚠️ JSONPath too broad, returning warning', 'color: #ffa502');
+  //   return {
+  //     success: true,
+  //     result: {
+  //       message: 'TOO BROAD - please narrow your search with a specific JSONPath'
+  //     }
+  //   };
+  // }
 
   const endpoint = `${API_BASE}/ui-state${jsonpath ? `?jsonpath=${encodeURIComponent(jsonpath)}` : ''}`;
   console.log(`%c[INVOKE-TOOL] 📡 Making API call to: ${endpoint}`, 'color: #3742fa; font-weight: bold');

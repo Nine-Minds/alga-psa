@@ -123,7 +123,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   const { automationIdProps: companyPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
-    id: `${id}-picker`,
+    id,
     value: selectedCompanyId || '',
     disabled: false,
     required: false,
@@ -196,7 +196,7 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
       <div
         className={`${fitContent ? 'inline-flex' : 'w-full'} rounded-md relative`}
         ref={dropdownRef}
-        {...withDataAutomationId({ id: `${id}-picker` })}
+        {...withDataAutomationId({ id })}
         data-automation-type={dataAutomationType}
       >
         <Button

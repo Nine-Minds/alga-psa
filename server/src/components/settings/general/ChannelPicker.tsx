@@ -47,7 +47,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   const { automationIdProps: channelPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
-    id: `${id}-picker`,
+    id,
     value: selectedChannelId || '',
     disabled: false,
     required: false,
@@ -166,7 +166,7 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             ref={dropdownRef}
             aria-expanded={isOpen}
             aria-controls={isOpen ? `${id}-content` : undefined}
-            {...withDataAutomationId({ id: `${id}-picker` })}
+            {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
             <span>{selectedChannel?.channel_name || 'Select Channel'}</span>

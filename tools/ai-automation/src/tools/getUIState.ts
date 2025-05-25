@@ -39,12 +39,13 @@ export const getUIState: Tool = {
 
     // Require JSONPath to prevent overly broad queries
     if (!args.jsonpath) {
-      return {
-        ...pageInfo,
-        result: {
-          message: "TOO BROAD - please narrow your search with a JSONPath"
-        }
-      };
+      args.jsonpath = '$..*'; // Default to all components
+      // return {
+      //   ...pageInfo,
+      //   result: {
+      //     message: "TOO BROAD - please narrow your search with a JSONPath"
+      //   }
+      // };
     }
 
     // Apply JSONPath filter with error handling
