@@ -245,7 +245,7 @@ export async function codebaseTool(toolName: string, args: ToolArgs): Promise<To
   console.log(`%c[CODEBASE-TOOL] 🗂️ Starting ${toolName} execution`, 'color: #16a085; font-weight: bold');
   
   // Log relevant parameters based on tool type
-  const logParams: Record<string, any> = {};
+  const logParams: Record<string, unknown> = {};
   if (args.filePath) logParams.filePath = args.filePath;
   if (args.directory) logParams.directory = args.directory;
   if (args.pattern) logParams.pattern = args.pattern;
@@ -285,7 +285,7 @@ export async function codebaseTool(toolName: string, args: ToolArgs): Promise<To
     const result = await response.json();
     
     // Log result summary based on tool type
-    let resultSummary: Record<string, any> = { resultType: typeof result };
+    const resultSummary: Record<string, unknown> = { resultType: typeof result };
     if (Array.isArray(result)) {
       resultSummary.itemCount = result.length;
     } else if (result && typeof result === 'object') {
