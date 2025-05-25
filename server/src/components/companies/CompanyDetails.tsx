@@ -57,6 +57,7 @@ const SwitchDetailItem: React.FC<{
   const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
     type: 'formField',
+    fieldType: 'checkbox',
     label: 'Company Status',
     value: value ? 'Active' : 'Inactive',
     helperText: 'Set company status as active or inactive'
@@ -94,6 +95,7 @@ const TextDetailItem: React.FC<{
   const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
     type: 'formField',
+    fieldType: 'textField',
     label: label,
     value: localValue,
     helperText: `Input field for ${label}`
@@ -474,6 +476,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
                 id: 'account-manager-field',
                 type: 'formField',
+                fieldType: 'select',
                 label: 'Account Manager',
                 value: editedCompany.account_manager_full_name || '',
                 helperText: 'Select the account manager for this company'
@@ -670,6 +673,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
                 id: 'timezone-field',
                 type: 'formField',
+                fieldType: 'select',
                 label: 'Timezone',
                 value: editedCompany.timezone || '',
                 helperText: 'Select the timezone for this company'
