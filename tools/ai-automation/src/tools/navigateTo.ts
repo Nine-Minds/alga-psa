@@ -1,5 +1,5 @@
 import { Page } from 'puppeteer';
-import { Tool } from './Tool';
+import { Tool } from './Tool.js';
 
 export const navigateTo: Tool = {
   name: 'navigate_to',

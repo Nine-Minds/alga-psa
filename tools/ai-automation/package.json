@@ -13,11 +13,12 @@
     "express": "^4.21.2",
     "jsondiffpatch": "^0.6.0",
     "jsonpath-plus": "^10.2.0",
+    "node-fetch": "^3.3.2",
     "puppeteer": "^23.11.1",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17", 
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
     "ts-node": "^10.9.2",

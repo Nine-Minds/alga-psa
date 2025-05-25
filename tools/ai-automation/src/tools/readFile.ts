@@ -48,7 +48,7 @@ class ReadFileTool implements Tool {
         endLine: actualEndLine,
         totalLines: lines.length,
         content: result,
-        truncated: result.length > 10000 ? result.substring(0, 10000) + '\n... [TRUNCATED]' : result
+        truncated: result
       };
     } catch (error) {
       return {

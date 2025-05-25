@@ -64,24 +64,20 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Register with UI reflection system
-  const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
-    id: 'quick-add-company-dialog',
-    type: 'dialog',
-    label: 'Quick Add Company Dialog',
-    helperText: "",
-    title: 'Add New Client',
+  // Register key form elements for UI reflection
+  const { automationIdProps: companyNameProps } = useAutomationIdAndRegister({
+    id: 'company-name-input',
+    type: 'input',
+    label: 'Company Name',
+    helperText: "Name of the company or client"
   });
 
-  // Update UI reflection metadata when state changes
-  useEffect(() => {
-    if (!updateMetadata) return;
-    
-    updateMetadata({
-      helperText: error || undefined,
-      open: open,
-    });
-  }, [error, open, updateMetadata]);
+  const { automationIdProps: submitButtonProps } = useAutomationIdAndRegister({
+    id: 'create-company-btn',
+    type: 'button',
+    label: 'Create Client',
+    helperText: "Submit the form to create the company"
+  });
 
   useEffect(() => {
     if (open) {
@@ -163,7 +159,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
   return (
     <Dialog
-      {...dialogProps}
+      id="quick-add-company-dialog"
+      title="Add New Client"
       isOpen={open}
       onClose={() =>
       onOpenChange(false)}>
@@ -178,7 +175,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             <div>
               <Label htmlFor="company_name">Company Name *</Label>
               <Input
-                id="company_name"
+                {...companyNameProps}
                 value={formData.company_name}
                 onChange={(e) => handleChange('company_name', e.target.value)}
                 required
@@ -317,7 +314,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               onClick={() => onOpenChange(false)}
             >Cancel</Button>
           <Button
-            id="create-company-btn"
+            {...submitButtonProps}
             type="submit"
             form="quick-add-company-form"
             disabled={isSubmitting || !formData.company_name}

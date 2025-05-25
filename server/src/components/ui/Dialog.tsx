@@ -33,8 +33,9 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
 
   // Update dialog metadata when props change
   useEffect(() => {
+    console.log(`🔍 [DIALOG] ${id}-dialog open state changed:`, isOpen);
     updateMetadata({ open: isOpen, title });
-  }, [ isOpen, title ]);
+  }, [ isOpen, title, updateMetadata, id ]);
 
   return (
     <ReflectionContainer {...updateDialog}>

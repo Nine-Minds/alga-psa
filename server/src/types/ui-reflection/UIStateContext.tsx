@@ -140,20 +140,46 @@ export function UIStateProvider({ children, initialPageState }: {
         const socket = socketRef.current;
 
         socket.on('connect', () => {
-          console.log('Connected to AI Backend Server');
+          console.log('🔌 [UI-STATE] Connected to AI Backend Server (Socket ID:', socket.id, ')');
           setIsConnected(true);
           reconnectAttemptsRef.current = 0;
         });
 
         socket.on('connect_error', (error) => {
-          console.error('Socket.IO connection error:', error);
+          console.error('❌ [UI-STATE] Socket.IO connection error:', error);
+          console.error('❌ [UI-STATE] Connection attempts:', reconnectAttemptsRef.current);
           reconnectAttemptsRef.current++;
           setIsConnected(false);
         });
 
-        socket.on('disconnect', () => {
-          console.log('Disconnected from AI Backend Server');
+        socket.on('disconnect', (reason) => {
+          console.log('🔌 [UI-STATE] Disconnected from AI Backend Server. Reason:', reason);
           setIsConnected(false);
+        });
+
+        // Add more detailed connection logging
+        socket.on('error', (error) => {
+          console.error('❌ [UI-STATE] Socket error:', error);
+        });
+
+        socket.io.on('error', (error) => {
+          console.error('❌ [UI-STATE] Socket.IO engine error:', error);
+        });
+
+        socket.io.on('reconnect', (attemptNumber) => {
+          console.log('🔄 [UI-STATE] Reconnected after', attemptNumber, 'attempts');
+        });
+
+        socket.io.on('reconnect_attempt', (attemptNumber) => {
+          console.log('🔄 [UI-STATE] Reconnection attempt #', attemptNumber);
+        });
+
+        socket.io.on('reconnect_error', (error) => {
+          console.error('❌ [UI-STATE] Reconnection error:', error);
+        });
+
+        socket.io.on('reconnect_failed', () => {
+          console.error('❌ [UI-STATE] Reconnection failed completely');
         });
       }
     };
@@ -172,14 +198,32 @@ export function UIStateProvider({ children, initialPageState }: {
   }, []); // Empty dependency array since we manage connection internally
 
   useEffect(() => {
-    if (!(socketRef.current?.connected)) return;
+    if (!(socketRef.current?.connected)) {
+      console.log('⚠️ [UI-STATE] Cannot send UI_STATE_UPDATE - socket not connected');
+      return;
+    }
+    console.log('📤 [UI-STATE] Sending UI_STATE_UPDATE to automation server');
+    console.log('📤 [UI-STATE] Page state:', pageState ? {
+      id: pageState.id,
+      title: pageState.title,
+      componentCount: pageState.components?.length || 0
+    } : 'null');
     socketRef.current?.emit('UI_STATE_UPDATE', pageState);
   
   }, [pageState]);
 
   // Send initial UI state update when socket connection changes
   useEffect(() => {
-    if (!isConnected) return;
+    if (!isConnected) {
+      console.log('⚠️ [UI-STATE] Cannot send initial UI_STATE_UPDATE - not connected');
+      return;
+    }
+    console.log('📤 [UI-STATE] Sending initial UI_STATE_UPDATE on connection');
+    console.log('📤 [UI-STATE] Initial page state:', pageState ? {
+      id: pageState.id,
+      title: pageState.title,
+      componentCount: pageState.components?.length || 0
+    } : 'null');
     socketRef.current?.emit('UI_STATE_UPDATE', pageState);
   }, [isConnected, pageState]);
 
@@ -202,9 +246,12 @@ export function UIStateProvider({ children, initialPageState }: {
       return;
     }
 
-    if (componentDictRef.current[component.id]) {
-      console.log(`Component with ID ${component.id} already exists. Skipping registration.`);
-      return;
+    // Don't skip registration if component already exists - instead update it
+    const isExisting = !!componentDictRef.current[component.id];
+    if (isExisting) {
+      console.log(`🔄 [UI-STATE] Component with ID ${component.id} already exists. Updating registration.`);
+    } else {
+      console.log(`➕ [UI-STATE] Registering new component: ${component.id} (${component.type})`);
     }
 
     const dict = { ...componentDictRef.current };
@@ -241,9 +288,11 @@ export function UIStateProvider({ children, initialPageState }: {
     // and only update if there are changes
     const patch = jsondiffpatch.diff(pageState, nextState);
     if (!patch) {
+      console.log(`⚪ [UI-STATE] No changes detected for ${component.id}, skipping state update`);
       return;
     }
 
+    console.log(`✅ [UI-STATE] State updated with component ${component.id}. Total components: ${nextState.components.length}`);
     setPageState(nextState);
   }, []);
 
@@ -253,9 +302,11 @@ export function UIStateProvider({ children, initialPageState }: {
    */
   const unregisterComponent = useCallback((id: string) => {
     if (!componentDictRef.current[id]) {
-      console.log(`Component with ID ${id} does not exist. Skipping unregistration.`);
+      console.log(`➖ [UI-STATE] Component with ID ${id} does not exist. Skipping unregistration.`);
       return;
     }
+    
+    console.log(`➖ [UI-STATE] Unregistering component: ${id}`);
 
     // Make a copy of the dictionary
     const dict = { ...componentDictRef.current };

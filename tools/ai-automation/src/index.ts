@@ -26,6 +26,9 @@ async function loadModules() {
   puppeteerManager = modules[0].puppeteerManager;
   toolManager = modules[1].toolManager;
   uiStateManager = modules[2].uiStateManager;
+  
+  // Make UIStateManager globally accessible to avoid module instance issues
+  (global as any).sharedUIStateManager = uiStateManager;
 }
 
 // Create server instances
@@ -98,7 +101,16 @@ function setupSocketHandlers(io: Server) {
       
       // Store the state in UIStateManager
       console.log('\x1b[105m\x1b[30m[WEBSOCKET] 💾 Storing state in UIStateManager\x1b[0m');
+      console.log('\x1b[105m\x1b[30m[WEBSOCKET] 🔍 UIStateManager instance:\x1b[0m', typeof uiStateManager, !!uiStateManager);
       uiStateManager.updateState(pageState);
+      
+      // Verify state was stored
+      const storedState = uiStateManager.getCurrentState();
+      console.log('\x1b[105m\x1b[30m[WEBSOCKET] 🔍 Verification - stored state:\x1b[0m', storedState ? {
+        id: storedState.id,
+        title: storedState.title,
+        componentCount: storedState.components?.length || 0
+      } : null);
       
       // Broadcast to other clients
       console.log('\x1b[106m\x1b[30m[WEBSOCKET] 📢 Broadcasting to other clients\x1b[0m');

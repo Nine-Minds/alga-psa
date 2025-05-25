@@ -1,5 +1,5 @@
 import { Page } from 'puppeteer';
-import { Tool } from './Tool';
+import { Tool } from './Tool.js';
 
 export const takeScreenshot: Tool = {
   name: 'take_screenshot',

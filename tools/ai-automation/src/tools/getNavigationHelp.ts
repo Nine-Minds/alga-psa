@@ -81,8 +81,8 @@ class GetNavigationHelpTool implements Tool {
       };
 
       // If specific screen requested, provide detailed info
-      if (screen && navigationGuide.commonScreens[screen.toLowerCase()]) {
-        const screenInfo = navigationGuide.commonScreens[screen.toLowerCase()];
+      if (screen && navigationGuide.commonScreens[screen.toLowerCase() as keyof typeof navigationGuide.commonScreens]) {
+        const screenInfo = navigationGuide.commonScreens[screen.toLowerCase() as keyof typeof navigationGuide.commonScreens];
         return {
           success: true,
           screen: screen.toLowerCase(),
@@ -92,8 +92,8 @@ class GetNavigationHelpTool implements Tool {
       }
 
       // If specific action requested, provide guidance
-      if (action && navigationGuide.commonActions[action.toLowerCase()]) {
-        const actionInfo = navigationGuide.commonActions[action.toLowerCase()];
+      if (action && navigationGuide.commonActions[action.toLowerCase() as keyof typeof navigationGuide.commonActions]) {
+        const actionInfo = navigationGuide.commonActions[action.toLowerCase() as keyof typeof navigationGuide.commonActions];
         return {
           success: true,
           action: action.toLowerCase(),

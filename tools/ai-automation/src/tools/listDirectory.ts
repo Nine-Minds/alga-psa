@@ -53,7 +53,7 @@ class ListDirectoryTool implements Tool {
             const itemStat = fs.statSync(itemPath);
             const relativePath = path.relative(projectRoot, itemPath);
 
-            const itemInfo = {
+            const itemInfo: any = {
               name: item,
               path: relativePath,
               type: itemStat.isDirectory() ? 'directory' : 'file',

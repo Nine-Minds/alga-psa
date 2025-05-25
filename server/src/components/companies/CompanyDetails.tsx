@@ -37,6 +37,8 @@ import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
@@ -49,9 +51,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/com
 const SwitchDetailItem: React.FC<{
   value: boolean;
   onEdit: (value: boolean) => void;
-}> = ({ value, onEdit }) => {
+  automationId?: string;
+}> = ({ value, onEdit, automationId }) => {
+  // Register for UI automation with meaningful label
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: automationId,
+    type: 'formField',
+    label: 'Company Status',
+    value: value ? 'Active' : 'Inactive',
+    helperText: 'Set company status as active or inactive'
+  });
+
   return (
-    <div className="flex items-center justify-between py-3">
+    <div className="flex items-center justify-between py-3" {...automationIdProps}>
       <div>
         <div className="text-gray-900 font-medium">Status</div>
         <div className="text-sm text-gray-500">Set company status as active or inactive</div>
@@ -74,8 +86,18 @@ const TextDetailItem: React.FC<{
   label: string;
   value: string;
   onEdit: (value: string) => void;
-}> = ({ label, value, onEdit }) => {
+  automationId?: string;
+}> = ({ label, value, onEdit, automationId }) => {
   const [localValue, setLocalValue] = useState(value);
+
+  // Register for UI automation with meaningful label
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: automationId,
+    type: 'formField',
+    label: label,
+    value: localValue,
+    helperText: `Input field for ${label}`
+  });
 
   const handleBlur = () => {
     if (localValue !== value) {
@@ -84,7 +106,7 @@ const TextDetailItem: React.FC<{
   };
   
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" {...automationIdProps}>
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
         type="text"
@@ -426,25 +448,38 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               label="Client Name"
               value={editedCompany.company_name}
               onEdit={(value) => handleFieldChange('company_name', value)}
+              automationId="client-name-field"
             />
             <TextDetailItem
               label="Phone"
               value={editedCompany.phone_no || ''}
               onEdit={(value) => handleFieldChange('phone_no', value)}
+              automationId="phone-field"
             />
             
             <TextDetailItem
               label="Industry"
               value={editedCompany.properties?.industry || ''}
               onEdit={(value) => handleFieldChange('properties.industry', value)}
+              automationId="industry-field"
             />
             <TextDetailItem
               label="Email"
               value={editedCompany.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
+              automationId="email-field"
             />
             
-            <div className="space-y-2">
+            <div className="space-y-2" {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'account-manager-field',
+                type: 'formField',
+                label: 'Account Manager',
+                value: editedCompany.account_manager_full_name || '',
+                helperText: 'Select the account manager for this company'
+              });
+              return automationIdProps;
+            })()}>
               <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
               <UserPicker
                 value={editedCompany.account_manager_id || ''}
@@ -459,12 +494,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               label="Website"
               value={editedCompany.properties?.website || ''}
               onEdit={(value) => handleFieldChange('properties.website', value)}
+              automationId="website-field"
             />
             
             <TextDetailItem
               label="Company Size"
               value={editedCompany.properties?.company_size || ''}
               onEdit={(value) => handleFieldChange('properties.company_size', value)}
+              automationId="company-size-field"
             />
             <div className="flex flex-col space-y-2">
               <div className="flex items-center justify-between">
@@ -489,10 +526,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               label="Annual Revenue"
               value={editedCompany.properties?.annual_revenue || ''}
               onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
+              automationId="annual-revenue-field"
             />
             <SwitchDetailItem
               value={!editedCompany.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+              automationId="company-status-field"
             />
           </div>
           
@@ -613,18 +652,30 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               label="Tax ID"
               value={editedCompany.properties?.tax_id ?? ""}
               onEdit={(value) => handleFieldChange('properties.tax_id', value)}
+              automationId="tax-id-field"
             />
             <TextDetailItem
               label="Payment Terms"
               value={editedCompany.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
+              automationId="payment-terms-field"
             />
             <TextDetailItem
               label="Parent Company"
               value={editedCompany.properties?.parent_company_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
+              automationId="parent-company-field"
             />
-            <div className="space-y-2">
+            <div className="space-y-2" {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'timezone-field',
+                type: 'formField',
+                label: 'Timezone',
+                value: editedCompany.timezone || '',
+                helperText: 'Select the timezone for this company'
+              });
+              return automationIdProps;
+            })()}>
               <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
@@ -635,6 +686,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               label="Last Contact Date"
               value={editedCompany.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
+              automationId="last-contact-date-field"
             />
           </div>
           
