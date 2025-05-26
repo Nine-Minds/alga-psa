@@ -197,20 +197,49 @@ export function UIStateProvider({ children, initialPageState }: {
     };
   }, []); // Empty dependency array since we manage connection internally
 
+  // Send UI state updates on changes (debounced) + periodic sync
   useEffect(() => {
     if (!(socketRef.current?.connected)) {
       console.log('⚠️ [UI-STATE] Cannot send UI_STATE_UPDATE - socket not connected');
       return;
     }
-    console.log('📤 [UI-STATE] Sending UI_STATE_UPDATE to automation server');
-    console.log('📤 [UI-STATE] Page state:', pageState ? {
-      id: pageState.id,
-      title: pageState.title,
-      componentCount: pageState.components?.length || 0
-    } : 'null');
-    socketRef.current?.emit('UI_STATE_UPDATE', pageState);
-  
+    
+    // Debounce immediate updates by 100ms to handle React StrictMode double-mounting
+    const timeoutId = setTimeout(() => {
+      console.log('📤 [UI-STATE] Sending immediate UI_STATE_UPDATE to automation server');
+      console.log('📤 [UI-STATE] Page state:', pageState ? {
+        id: pageState.id,
+        title: pageState.title,
+        componentCount: pageState.components?.length || 0
+      } : 'null');
+      socketRef.current?.emit('UI_STATE_UPDATE', pageState);
+    }, 100);
+    
+    return () => clearTimeout(timeoutId);
   }, [pageState]);
+
+  // Periodic UI state sync every 3 seconds to ensure server stays in sync
+  useEffect(() => {
+    const sendPeriodicUpdate = () => {
+      if (socketRef.current?.connected && pageState) {
+        console.log('🔄 [UI-STATE] Sending periodic UI_STATE_UPDATE (sync)');
+        console.log('🔄 [UI-STATE] Periodic state:', {
+          id: pageState.id,
+          title: pageState.title,
+          componentCount: pageState.components?.length || 0
+        });
+        socketRef.current.emit('UI_STATE_UPDATE', pageState);
+      }
+    };
+
+    // Send periodic updates every 3 seconds
+    const intervalId = setInterval(sendPeriodicUpdate, 3000);
+    
+    // Send immediate update when this effect starts
+    sendPeriodicUpdate();
+    
+    return () => clearInterval(intervalId);
+  }, [isConnected]); // Re-establish interval when connection changes
 
   // Send initial UI state update when socket connection changes
   useEffect(() => {

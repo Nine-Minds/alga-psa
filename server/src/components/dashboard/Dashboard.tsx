@@ -3,6 +3,9 @@ import React from 'react';
 import { Card } from '@radix-ui/themes';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import {
   Ticket,
   BarChart3,
@@ -36,22 +39,37 @@ const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: str
   );
 }
 
-const QuickStartCard = ({ icon: Icon, step, title, description, href }: { icon: any, step: string, title: string, description: string, href?: string }) => (
-  <Link href={href || ''} className="block rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4 hover:shadow-lg transition-shadow">
-    <div className="text-center">
-      <div className="p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4"
-           style={{ background: 'rgb(var(--color-primary-50))' }}>
-        <Icon className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
+const QuickStartCard = ({ icon: Icon, step, title, description, href }: { icon: any, step: string, title: string, description: string, href?: string }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    id: `quick-start-${step.toLowerCase()}`,
+    type: 'button',
+    label: `${step}. ${title}`,
+    variant: 'default',
+    helperText: description
+  });
+
+  return (
+    <Link 
+      {...automationIdProps}
+      href={href || ''} 
+      className="block rounded-lg border border-[rgb(var(--color-border-200))] bg-white p-4 hover:shadow-lg transition-shadow"
+    >
+      <div className="text-center">
+        <div className="p-3 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4"
+             style={{ background: 'rgb(var(--color-primary-50))' }}>
+          <Icon className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />
+        </div>
+        <h3 className="font-semibold mb-2" style={{ color: 'rgb(var(--color-text-900))' }}>{step}. {title}</h3>
+        <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>{description}</p>
       </div>
-      <h3 className="font-semibold mb-2" style={{ color: 'rgb(var(--color-text-900))' }}>{step}. {title}</h3>
-      <p className="text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>{description}</p>
-    </div>
-  </Link>
-);
+    </Link>
+  );
+};
 
 const WelcomeDashboard = () => {
   return (
-    <div className="p-6 min-h-screen" style={{ background: 'rgb(var(--background))' }}>
+    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
+      <div className="p-6 min-h-screen" style={{ background: 'rgb(var(--background))' }}>
       {/* Welcome Banner */}
       <div className="rounded-lg mb-6 p-6" 
            style={{ background: 'linear-gradient(to right, rgb(var(--color-primary-500)), rgb(var(--color-secondary-500)))' }}>
@@ -160,7 +178,8 @@ const WelcomeDashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </ReflectionContainer>
   );
 };
 

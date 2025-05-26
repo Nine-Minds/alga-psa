@@ -38,10 +38,10 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
   }, [ isOpen, title, updateMetadata, id ]);
 
   return (
-    <ReflectionContainer {...updateDialog}>
-      <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
-        <RadixDialog.Portal>
-          <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+    <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
+      <RadixDialog.Portal>
+        <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+        <ReflectionContainer {...updateDialog}>
           <RadixDialog.Content
             className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}
             onKeyDown={onKeyDown}
@@ -60,9 +60,9 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
               </RadixDialog.Close>
             )}
           </RadixDialog.Content>
-        </RadixDialog.Portal>
-      </RadixDialog.Root>
-    </ReflectionContainer>
+        </ReflectionContainer>
+      </RadixDialog.Portal>
+    </RadixDialog.Root>
   );
 };
 
