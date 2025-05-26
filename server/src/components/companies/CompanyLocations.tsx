@@ -21,6 +21,9 @@ import { Switch } from '../ui/Switch';
 import CustomSelect from '../ui/CustomSelect';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
+import { DialogComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 
 interface CompanyLocationsProps {
   companyId: string;
@@ -75,6 +78,15 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const { toast } = useToast();
+
+  // Register dialog for UI automation
+  const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
+    id: 'company-location-dialog',
+    type: 'dialog',
+    label: 'Company Location Dialog',
+    title: editingLocation ? 'Edit Location' : 'Add New Location',
+    helperText: 'Dialog for adding or editing company locations'
+  });
 
   useEffect(() => {
     loadLocations();
@@ -253,21 +265,32 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
 
   // Editing mode - show full management interface
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-medium">Locations</h3>
-        <Button 
-          id="add-company-location-button"
-          onClick={handleAddLocation} 
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Location
-        </Button>
+    <ReflectionContainer id="company-locations-manager" label="Company Locations Manager">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Locations</h3>
+          <Button 
+            {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+                id: 'add-company-location-button',
+                type: 'button',
+                label: 'Add Location',
+                variant: 'default',
+                helperText: 'Add a new location for this company'
+              });
+              return automationIdProps;
+            })()}
+            onClick={handleAddLocation} 
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Location
+          </Button>
+        </div>
       </div>
-      
       {/* Location Form Dialog */}
       <Dialog 
+        {...dialogProps}
         isOpen={isDialogOpen} 
         onClose={() => setIsDialogOpen(false)}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
@@ -280,7 +303,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           </DialogHeader>
           
           <form onSubmit={(e) => { e.preventDefault(); handleSaveLocation(); }} className="space-y-4" noValidate>
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'location-name-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Location Name',
+                value: formData.location_name,
+                helperText: 'Name for this location (e.g., Main Office, Warehouse)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="location-name-input">Location Name</Label>
               <Input
                 id="location-name-input"
@@ -290,7 +323,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'address-line1-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Address Line 1',
+                value: formData.address_line1,
+                helperText: 'Primary address line (required)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="address-line1-input">Address Line 1 *</Label>
               <Input
                 id="address-line1-input"
@@ -300,7 +343,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'address-line2-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Address Line 2',
+                value: formData.address_line2,
+                helperText: 'Additional address information (optional)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="address-line2-input">Address Line 2</Label>
               <Input
                 id="address-line2-input"
@@ -318,7 +371,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'city-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'City',
+                value: formData.city,
+                helperText: 'City name (required)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="city-input">City *</Label>
               <Input
                 id="city-input"
@@ -328,7 +391,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'state-province-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'State/Province',
+                value: formData.state_province,
+                helperText: 'State or province name'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="state-province-input">State/Province</Label>
               <Input
                 id="state-province-input"
@@ -337,7 +410,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'postal-code-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Postal Code',
+                value: formData.postal_code,
+                helperText: 'ZIP or postal code'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="postal-code-input">Postal Code</Label>
               <Input
                 id="postal-code-input"
@@ -346,7 +429,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'country-code-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Country Code',
+                value: formData.country_code,
+                helperText: 'Two-letter country code (required)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="country-code-input">Country Code *</Label>
               <Input
                 id="country-code-input"
@@ -358,7 +451,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'country-name-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Country Name',
+                value: formData.country_name,
+                helperText: 'Full country name (required)'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="country-name-input">Country Name *</Label>
               <Input
                 id="country-name-input"
@@ -368,7 +471,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'tax-region-field',
+                type: 'formField',
+                fieldType: 'select',
+                label: 'Tax Region',
+                value: formData.region_code || 'none',
+                helperText: 'Select the applicable tax region'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="tax-region-select">Tax Region</Label>
               <CustomSelect
                 id="tax-region-select"
@@ -385,7 +498,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'phone-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Phone',
+                value: formData.phone,
+                helperText: 'Phone number for this location'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="phone-input">Phone</Label>
               <Input
                 id="phone-input"
@@ -394,7 +517,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'email-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Email',
+                value: formData.email,
+                helperText: 'Email address for this location'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="email-input">Email</Label>
               <Input
                 id="email-input"
@@ -404,7 +537,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               />
             </div>
             
-            <div>
+            <div {...(() => {
+              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                id: 'notes-field',
+                type: 'formField',
+                fieldType: 'textField',
+                label: 'Notes',
+                value: formData.notes,
+                helperText: 'Additional notes about this location'
+              });
+              return automationIdProps;
+            })()}>
               <Label htmlFor="notes-input">Notes</Label>
               <TextArea
                 id="notes-input"
@@ -415,7 +558,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             </div>
             
             <div className="space-y-4">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'is-default-field',
+                  type: 'formField',
+                  fieldType: 'checkbox',
+                  label: 'Default Location',
+                  value: formData.is_default ? 'Yes' : 'No',
+                  helperText: 'Mark this as the default location for the company'
+                });
+                return automationIdProps;
+              })()}>
                 <Switch
                   id="is-default-switch"
                   checked={formData.is_default}
@@ -424,7 +577,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 <Label htmlFor="is-default-switch">Default Location</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'is-billing-address-field',
+                  type: 'formField',
+                  fieldType: 'checkbox',
+                  label: 'Billing Address',
+                  value: formData.is_billing_address ? 'Yes' : 'No',
+                  helperText: 'Use this location as the billing address'
+                });
+                return automationIdProps;
+              })()}>
                 <Switch
                   id="is-billing-address-switch"
                   checked={formData.is_billing_address}
@@ -433,7 +596,17 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 <Label htmlFor="is-billing-address-switch">Billing Address</Label>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" {...(() => {
+                const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+                  id: 'is-shipping-address-field',
+                  type: 'formField',
+                  fieldType: 'checkbox',
+                  label: 'Shipping Address',
+                  value: formData.is_shipping_address ? 'Yes' : 'No',
+                  helperText: 'Use this location as the shipping address'
+                });
+                return automationIdProps;
+              })()}>
                 <Switch
                   id="is-shipping-address-switch"
                   checked={formData.is_shipping_address}
@@ -445,7 +618,16 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <DialogFooter>
               <Button 
-                id="cancel-location-button"
+                {...(() => {
+                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+                    id: 'cancel-location-button',
+                    type: 'button',
+                    label: 'Cancel',
+                    variant: 'outline',
+                    helperText: 'Cancel location creation/editing'
+                  });
+                  return automationIdProps;
+                })()}
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isLoading}
@@ -454,7 +636,16 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 Cancel
               </Button>
               <Button 
-                id="save-location-button"
+                {...(() => {
+                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+                    id: 'save-location-button',
+                    type: 'button',
+                    label: 'Save Location',
+                    variant: 'default',
+                    helperText: 'Save the location information'
+                  });
+                  return automationIdProps;
+                })()}
                 type="submit"
                 disabled={isLoading || !formData.address_line1 || !formData.city || !formData.country_name}
               >
@@ -555,6 +746,6 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           </div>
         )}
       </div>
-    </div>
+    </ReflectionContainer>
   );
 }

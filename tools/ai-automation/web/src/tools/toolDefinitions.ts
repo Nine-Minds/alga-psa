@@ -132,5 +132,279 @@ export const tools: Tool[] = [
         }
       }
     }
+  },
+  {
+    name: 'read_file',
+    description: 'Read the contents of a file from the codebase. Useful for understanding component implementations and finding automation IDs.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filePath: {
+          type: 'string',
+          description: 'Path to the file relative to project root'
+        },
+        startLine: {
+          type: 'number',
+          description: 'Optional start line number (1-based)'
+        },
+        endLine: {
+          type: 'number',
+          description: 'Optional end line number (1-based)'
+        }
+      },
+      required: ['filePath']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        filePath: {
+          type: 'string',
+          description: 'Path to the file relative to project root'
+        },
+        startLine: {
+          type: 'number',
+          description: 'Optional start line number (1-based)'
+        },
+        endLine: {
+          type: 'number',
+          description: 'Optional end line number (1-based)'
+        }
+      },
+      required: ['filePath']
+    }
+  },
+  {
+    name: 'grep_files',
+    description: 'Search for patterns in files using grep. Useful for finding specific text, function names, or component patterns.',
+    parameters: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'Pattern to search for'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: ".")'
+        },
+        filePattern: {
+          type: 'string',
+          description: 'File pattern to include (default: "*")'
+        },
+        recursive: {
+          type: 'boolean',
+          description: 'Search recursively (default: true)'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 100)'
+        }
+      },
+      required: ['pattern']
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        pattern: {
+          type: 'string',
+          description: 'Pattern to search for'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: ".")'
+        },
+        filePattern: {
+          type: 'string',
+          description: 'File pattern to include (default: "*")'
+        },
+        recursive: {
+          type: 'boolean',
+          description: 'Search recursively (default: true)'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 100)'
+        }
+      },
+      required: ['pattern']
+    }
+  },
+  {
+    name: 'find_files',
+    description: 'Find files and directories using patterns. Useful for locating component files.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name pattern to match'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: ".")'
+        },
+        type: {
+          type: 'string',
+          description: 'Type: "f" for files, "d" for directories'
+        },
+        extension: {
+          type: 'string',
+          description: 'File extension to filter by'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 100)'
+        }
+      }
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name pattern to match'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: ".")'
+        },
+        type: {
+          type: 'string',
+          description: 'Type: "f" for files, "d" for directories'
+        },
+        extension: {
+          type: 'string',
+          description: 'File extension to filter by'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 100)'
+        }
+      }
+    }
+  },
+  {
+    name: 'list_directory',
+    description: 'List contents of a directory. Useful for exploring the codebase structure.',
+    parameters: {
+      type: 'object',
+      properties: {
+        directory: {
+          type: 'string',
+          description: 'Directory to list (default: ".")'
+        },
+        showHidden: {
+          type: 'boolean',
+          description: 'Show hidden files (default: false)'
+        },
+        recursive: {
+          type: 'boolean',
+          description: 'List recursively (default: false)'
+        },
+        maxDepth: {
+          type: 'number',
+          description: 'Maximum recursion depth (default: 2)'
+        }
+      }
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        directory: {
+          type: 'string',
+          description: 'Directory to list (default: ".")'
+        },
+        showHidden: {
+          type: 'boolean',
+          description: 'Show hidden files (default: false)'
+        },
+        recursive: {
+          type: 'boolean',
+          description: 'List recursively (default: false)'
+        },
+        maxDepth: {
+          type: 'number',
+          description: 'Maximum recursion depth (default: 2)'
+        }
+      }
+    }
+  },
+  {
+    name: 'search_automation_ids',
+    description: 'Search for automation IDs (data-automation-id) in the codebase. This is the most useful tool for finding the correct element IDs to use in automation scripts.',
+    parameters: {
+      type: 'object',
+      properties: {
+        searchTerm: {
+          type: 'string',
+          description: 'Optional search term to filter automation IDs'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: "server/src")'
+        },
+        fileTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'File types to search (default: ["tsx", "ts", "jsx", "js"])'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 50)'
+        }
+      }
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        searchTerm: {
+          type: 'string',
+          description: 'Optional search term to filter automation IDs'
+        },
+        directory: {
+          type: 'string',
+          description: 'Directory to search in (default: "server/src")'
+        },
+        fileTypes: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'File types to search (default: ["tsx", "ts", "jsx", "js"])'
+        },
+        maxResults: {
+          type: 'number',
+          description: 'Maximum number of results (default: 50)'
+        }
+      }
+    }
+  },
+  {
+    name: 'get_navigation_help',
+    description: 'Get quick navigation guidance for common screens and actions. Provides shortcuts to common navigation patterns.',
+    parameters: {
+      type: 'object',
+      properties: {
+        screen: {
+          type: 'string',
+          description: 'Specific screen to get navigation help for (e.g., "billing", "tickets", "user-activities")'
+        },
+        action: {
+          type: 'string',
+          description: 'Specific action to get guidance for (e.g., "login", "create-record", "filter-data")'
+        }
+      }
+    },
+    input_schema: {
+      type: 'object',
+      properties: {
+        screen: {
+          type: 'string',
+          description: 'Specific screen to get navigation help for (e.g., "billing", "tickets", "user-activities")'
+        },
+        action: {
+          type: 'string',
+          description: 'Specific action to get guidance for (e.g., "login", "create-record", "filter-data")'
+        }
+      }
+    }
   }
 ];

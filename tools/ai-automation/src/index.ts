@@ -26,6 +26,9 @@ async function loadModules() {
   puppeteerManager = modules[0].puppeteerManager;
   toolManager = modules[1].toolManager;
   uiStateManager = modules[2].uiStateManager;
+  
+  // Make UIStateManager globally accessible to avoid module instance issues
+  (global as any).sharedUIStateManager = uiStateManager;
 }
 
 // Create server instances
@@ -55,7 +58,7 @@ function setupSocketHandlers(io: Server) {
 
   // WebSocket connection handling
   io.on('connection', (socket) => {
-    console.log('Client connected');
+    console.log('\x1b[47m\x1b[30m[WEBSOCKET] 🔌 Client connected\x1b[0m');
 
     // Handle screenshot streaming
     const screenshotInterval = setInterval(async () => {
@@ -65,7 +68,7 @@ function setupSocketHandlers(io: Server) {
         const base64img = Buffer.from(buf).toString('base64');
         socket.emit('screenshot', base64img);
       } catch (error) {
-        console.error('Error taking screenshot', error);
+        console.error('\x1b[41m[WEBSOCKET] ❌ Error taking screenshot\x1b[0m', error);
       }
     }, 2000);
     
@@ -77,6 +80,8 @@ function setupSocketHandlers(io: Server) {
 
     // Handle UI reflection updates
     socket.on('UI_STATE_UPDATE', (pageState) => {
+      console.log('\x1b[104m[WEBSOCKET] 📡 UI_STATE_UPDATE received\x1b[0m');
+      
       const stateChanged = !previousState || 
         previousState.id !== pageState.id ||
         previousState.title !== pageState.title ||
@@ -84,18 +89,31 @@ function setupSocketHandlers(io: Server) {
         JSON.stringify(previousState.components) !== JSON.stringify(pageState.components);
 
       if (stateChanged) {
-        console.log('Received UI state update:', {
+        console.log('\x1b[102m\x1b[30m[WEBSOCKET] ✨ UI state changed - updating stored state\x1b[0m', {
           pageId: pageState.id,
           title: pageState.title,
           componentCount: pageState.components.length
         });
         previousState = JSON.parse(JSON.stringify(pageState)); // Deep copy to avoid reference issues
+      } else {
+        console.log('\x1b[103m\x1b[30m[WEBSOCKET] 🔄 UI state unchanged - skipping update\x1b[0m');
       }
       
       // Store the state in UIStateManager
+      console.log('\x1b[105m\x1b[30m[WEBSOCKET] 💾 Storing state in UIStateManager\x1b[0m');
+      console.log('\x1b[105m\x1b[30m[WEBSOCKET] 🔍 UIStateManager instance:\x1b[0m', typeof uiStateManager, !!uiStateManager);
       uiStateManager.updateState(pageState);
       
+      // Verify state was stored
+      const storedState = uiStateManager.getCurrentState();
+      console.log('\x1b[105m\x1b[30m[WEBSOCKET] 🔍 Verification - stored state:\x1b[0m', storedState ? {
+        id: storedState.id,
+        title: storedState.title,
+        componentCount: storedState.components?.length || 0
+      } : null);
+      
       // Broadcast to other clients
+      console.log('\x1b[106m\x1b[30m[WEBSOCKET] 📢 Broadcasting to other clients\x1b[0m');
       socket.broadcast.emit('UI_STATE_UPDATE', pageState);
     });
 
@@ -105,7 +123,7 @@ function setupSocketHandlers(io: Server) {
         clearInterval(screenshotInterval);
         activeIntervals.splice(index, 1);
       }
-      console.log('Client disconnected');
+      console.log('\x1b[101m[WEBSOCKET] 🔌 Client disconnected\x1b[0m');
     });
   });
 }
@@ -129,14 +147,17 @@ function setupExpress(app: express.Application) {
   }) as RequestHandler);
 
   app.get('/api/ui-state', (async (req: Request, res: Response) => {
-    console.log('\n[GET /api/ui-state], jsonpath:', req.query.jsonpath);
+    console.log('\x1b[45m[BACKEND] 🌐 GET /api/ui-state received\x1b[0m', { jsonpath: req.query.jsonpath });
     const startTime = Date.now();
     const jsonpath = req.query.jsonpath as string | undefined;
 
     try {
+      console.log('\x1b[44m[BACKEND] 🎭 Getting page info from Puppeteer\x1b[0m');
       const page = puppeteerManager.getPage();
       const pageTitle = await page.title();
       const pageUrl = page.url();
+      console.log(`\x1b[46m[BACKEND] 📄 Page info: "${pageTitle}" - ${pageUrl}\x1b[0m`);
+      
       const pageInfo = {
         page: {
           title: pageTitle,
@@ -144,18 +165,23 @@ function setupExpress(app: express.Application) {
         }
       };
 
+      console.log('\x1b[43m[BACKEND] 🔄 Getting current UI state\x1b[0m');
       const state = uiStateManager.getCurrentState();
       if (!state) {
+        console.error('\x1b[41m[BACKEND] ❌ No UI state available\x1b[0m');
         throw new Error('No UI state available');
       }
+      console.log('\x1b[42m[BACKEND] ✅ UI state retrieved\x1b[0m', { componentCount: state.components?.length });
 
       let result = state;
       if (jsonpath) {
+        console.log(`\x1b[35m[BACKEND] 🔍 Applying JSONPath filter: ${jsonpath}\x1b[0m`);
         const { JSONPath } = await import('jsonpath-plus');
         
-        console.log('state before jsonpath:', JSON.stringify(state));
+        console.log('\x1b[33m[BACKEND] 📋 State before JSONPath:', JSON.stringify(state).substring(0, 200) + '...\x1b[0m');
         
         result = JSONPath({ path: jsonpath, json: state, ignoreEvalErrors: true, wrap: false });
+        console.log(`\x1b[36m[BACKEND] 🎯 JSONPath result: ${Array.isArray(result) ? result.length + ' items' : typeof result}\x1b[0m`);
       }
       
       const response = {
@@ -163,12 +189,11 @@ function setupExpress(app: express.Application) {
         result
       };
       
-      console.log('UI state:', JSON.stringify(response));
-      console.log(`Completed in ${Date.now() - startTime}ms`);
+      console.log(`\x1b[32m[BACKEND] ✅ Sending response - completed in ${Date.now() - startTime}ms\x1b[0m`);
       res.json(JSON.parse(JSON.stringify(response, null, 0)));
     } catch (error) {
-      console.error('Error in /api/ui-state:', error);
-      console.log(`Failed in ${Date.now() - startTime}ms`);
+      console.error(`\x1b[41m[BACKEND] ❌ Error in /api/ui-state: ${error}\x1b[0m`);
+      console.log(`\x1b[91m[BACKEND] 💥 Failed in ${Date.now() - startTime}ms\x1b[0m`);
 
       // Get page info even for error responses
       try {
@@ -347,36 +372,38 @@ function setupExpress(app: express.Application) {
   }) as RequestHandler);
 
   app.post('/api/tool', (async (req: Request, res: Response) => {
-    console.log('\n[POST /api/tool]');
-    console.log('Request body:', req.body);
+    console.log('\x1b[103m\x1b[30m[BACKEND] 🛠️ POST /api/tool received\x1b[0m');
+    const { toolName, args } = req.body;
+    console.log(`\x1b[46m[BACKEND] 🔧 Tool: ${toolName}\x1b[0m`, { args });
     const startTime = Date.now();
 
-    const { toolName, args } = req.body;
-
     if (!toolName) {
-      console.log('Error: Tool name is required');
+      console.error('\x1b[41m[BACKEND] ❌ Tool name is required\x1b[0m');
       return res.status(400).json(JSON.parse(JSON.stringify({ error: 'Tool name is required' }, null, 0)));
     }
 
     try {
+      console.log('\x1b[44m[BACKEND] 🎭 Getting Puppeteer page\x1b[0m');
       const page = puppeteerManager.getPage();
       
       // Ensure tool execution is properly awaited
       let result;
       try {
+        console.log(`\x1b[45m[BACKEND] 🚀 Executing tool: ${toolName}\x1b[0m`);
         result = await toolManager.executeTool(toolName, page, args);
+        console.log('\x1b[43m\x1b[30m[BACKEND] ⏱️ Waiting for promises to settle\x1b[0m');
         // Wait for any pending promises to settle
         await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 100)));
       } catch (error) {
-        console.error('Error executing tool:', error);
+        console.error('\x1b[41m[BACKEND] ❌ Error executing tool:\x1b[0m', error);
         throw error;
       }
 
-      console.log(`Completed in ${Date.now() - startTime}ms`);
+      console.log(`\x1b[32m[BACKEND] ✅ Tool execution completed in ${Date.now() - startTime}ms\x1b[0m`);
       res.json(JSON.parse(JSON.stringify({ result }, null, 0)));
     } catch (error) {
-      console.error('Error executing tool:', error);
-      console.log(`Failed in ${Date.now() - startTime}ms`);
+      console.error('\x1b[41m[BACKEND] ❌ Tool execution failed:\x1b[0m', error);
+      console.log(`\x1b[91m[BACKEND] 💥 Failed in ${Date.now() - startTime}ms\x1b[0m`);
       res.status(500).json(JSON.parse(JSON.stringify({ 
         error: error instanceof Error ? error.message : String(error)
       }, null, 0)));

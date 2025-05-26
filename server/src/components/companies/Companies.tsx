@@ -17,10 +17,48 @@ import { getCurrentUser, getUserPreference, setUserPreference } from 'server/src
 import CompaniesImportDialog from './CompaniesImportDialog';
 import { ConfirmationDialog } from '../ui/ConfirmationDialog';
 import { Input } from 'server/src/components/ui/Input';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 const COMPANY_VIEW_MODE_SETTING = 'company_list_view_mode';
 
 const Companies: React.FC = () => {
+  // UI Reflection Integration
+  const { automationIdProps: containerProps, updateMetadata } = useAutomationIdAndRegister({
+    id: 'companies-page',
+    type: 'container',
+    label: 'Companies Page',
+    helperText: "Main companies management page with search, filters, and company grid/list view"
+  });
+
+  const { automationIdProps: searchProps } = useAutomationIdAndRegister({
+    id: 'search-companies',
+    type: 'input',
+    label: 'Search Companies',
+    helperText: "Search for companies by name"
+  });
+
+  const { automationIdProps: createButtonProps } = useAutomationIdAndRegister({
+    id: 'create-client-btn',
+    type: 'button',
+    label: 'Create Client',
+    helperText: "Opens dialog to create a new client/company"
+  });
+
+  const { automationIdProps: actionsMenuProps } = useAutomationIdAndRegister({
+    id: 'actions-menu-btn',
+    type: 'button',
+    label: 'Actions Menu',
+    helperText: "Menu for importing/exporting companies"
+  });
+
+  const { automationIdProps: deleteSelectedProps } = useAutomationIdAndRegister({
+    id: 'delete-selected-btn',
+    type: 'button',
+    label: 'Delete Selected',
+    helperText: "Delete multiple selected companies"
+  });
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -341,26 +379,28 @@ const Companies: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-full">
-      {/* Quick Add Company Dialog */}
-      <QuickAddCompany
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onCompanyAdded={handleCompanyAdded}
-      />
+    <ReflectionContainer {...containerProps}>
+      <div className="flex flex-col min-h-full">
+        {/* Quick Add Company Dialog */}
+        <QuickAddCompany
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onCompanyAdded={handleCompanyAdded}
+        />
 
-      <div className="flex justify-end mb-4 flex-wrap gap-6">
-        {/* Search */}
-        <div className="relative">
-          <Input
-            type="text"
-            placeholder="Search clients"
-            className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        </div>
+        <div className="flex justify-end mb-4 flex-wrap gap-6">
+          {/* Search */}
+          <div className="relative">
+            <Input
+              {...searchProps}
+              type="text"
+              placeholder="Search clients"
+              className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          </div>
 
         {/* Company Picker */}
         <div className="w-64 relative [&>div]:rounded-md overflow-visible">
@@ -381,7 +421,7 @@ const Companies: React.FC = () => {
         {/* Actions */}
         <div className="flex gap-2">
           <button
-            id="create-client-btn"
+            {...createButtonProps}
             onClick={() => setIsDialogOpen(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded"
           >
@@ -390,7 +430,7 @@ const Companies: React.FC = () => {
 
           <DropdownMenu.Root>
             <DropdownMenu.Trigger asChild>
-              <button id="actions-menu-btn" className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+              <button {...actionsMenuProps} className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
                 <MoreVertical size={16} />
                 Actions
               </button>
@@ -437,7 +477,7 @@ const Companies: React.FC = () => {
           </span>}
 
         <button
-          id="delete-selected-btn"
+          {...deleteSelectedProps}
           className="flex gap-1 text-sm font-medium text-gray-500"
           disabled={selectedCompanies.length === 0}
           onClick={handleMultiDelete}
@@ -512,6 +552,7 @@ const Companies: React.FC = () => {
         onImportComplete={handleImportComplete}
       />
     </div>
+    </ReflectionContainer>
   );
 };
 

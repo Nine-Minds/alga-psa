@@ -21,16 +21,33 @@ function extractFuncCall(xmlBuffer: string): {
   textBefore: string;
   remainingText: string;
 } | null {
+  console.log('\x1b[36m[AI-ROUTE] 🔍 Parsing XML buffer for function calls...\x1b[0m');
+  
+  // Try self-closing tag format first: <func-call name="tool_name"/>
+  const selfClosingMatch = xmlBuffer.match(/^([\s\S]*?)<func-call\s+name="([^"]+)"\s*\/>([\s\S]*)$/);
+  if (selfClosingMatch) {
+    const [, textBefore, funcName, remainingText] = selfClosingMatch;
+    console.log(`\x1b[32m[AI-ROUTE] ✅ Self-closing function call detected: ${funcName}\x1b[0m`);
+    return { funcName, xmlArgs: {}, textBefore, remainingText };
+  }
+  
+  // Try regular opening/closing tag format: <func-call name="tool_name">...</func-call>
   const funcCallMatch = xmlBuffer.match(/^([\s\S]*?)<func-call\s+name="([^"]+)">([\s\S]*?)<\/func-call>([\s\S]*)$/);
-  if (!funcCallMatch) return null;
+  if (!funcCallMatch) {
+    console.log('\x1b[33m[AI-ROUTE] ⚠️  No function call match found\x1b[0m');
+    return null;
+  }
 
   const [, textBefore, funcName, argsXml, remainingText] = funcCallMatch;
+  console.log(`\x1b[32m[AI-ROUTE] ✅ Function call detected: ${funcName}\x1b[0m`);
+  
   const xmlArgs: Record<string, string> = {};
 
   // Extract parameters from XML
   const paramMatches = argsXml.matchAll(/<([^>]+)>([\s\S]*?)<\/\1>/g);
   for (const match of Array.from(paramMatches)) {
     xmlArgs[match[1]] = match[2].trim();
+    console.log(`\x1b[35m[AI-ROUTE] 📋 Parameter: ${match[1]} = ${match[2].trim()}\x1b[0m`);
   }
 
   return { funcName, xmlArgs, textBefore, remainingText };
@@ -49,6 +66,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
     async start(controller) {
       // Utility for sending SSE events
       function sendEvent(type: StreamEventType, data: string) {
+        console.log(`\x1b[34m[AI-ROUTE] 📡 Sending SSE event: ${type}\x1b[0m`);
         const event: StreamEvent = { type, data };
         const payload = `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
         controller.enqueue(textEncoder.encode(payload));
@@ -78,8 +96,9 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
 
             //process.stdout.write(chunk.delta.text);
 
-            // Check for complete function call
-            if (buffer.includes('</func-call>')) {
+            // Check for complete function call (both self-closing and regular format)
+            if (buffer.includes('</func-call>') || buffer.match(/<func-call[^>]*\/>/)) {
+              console.log('\x1b[36m[AI-ROUTE] 🎯 Complete function call detected in buffer\x1b[0m');
 
               const funcCall = extractFuncCall(buffer);
               if (funcCall) {
@@ -90,8 +109,10 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
 
                 // Generate a unique ID for this tool use
                 const toolUseId = `tool_${Date.now()}_${funcCall.funcName}`;
+                console.log(`\x1b[32m[AI-ROUTE] 🆔 Generated tool use ID: ${toolUseId}\x1b[0m`);
 
                 // Send tool use event and close the stream
+                console.log(`\x1b[31m[AI-ROUTE] 🚀 Sending tool_use event for: ${funcCall.funcName}\x1b[0m`);
                 sendEvent('tool_use', JSON.stringify({
                   name: funcCall.funcName,
                   input: funcCall.xmlArgs,
@@ -144,11 +165,12 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
 
 export async function POST(req: Request) {
   try {
-    console.log('POST request received');
+    console.log('\x1b[44m[AI-ROUTE] 🌐 POST request received\x1b[0m');
     const body = await req.json();
+    console.log(`\x1b[44m[AI-ROUTE] 📨 Processing ${body.messages?.length || 0} messages\x1b[0m`);
     return handleAIRequest(body.messages);
   } catch (error) {
-    console.error('Error in AI processing:', error);
+    console.error('\x1b[41m[AI-ROUTE] ❌ Error in AI processing:\x1b[0m', error);
     return NextResponse.json(
       {
         reply: `Error processing request: ${error instanceof Error ? error.message : String(error)

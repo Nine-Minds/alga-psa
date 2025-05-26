@@ -2,4 +2,10 @@ export { navigateTo } from './navigateTo.js';
 export { takeScreenshot } from './takeScreenshot.js';
 export { executeScript } from './executeScript.js';
 export { getUIState } from './getUIState.js';
-export { executeAutomationScript } from './executeAutomationScript.js'
+export { executeAutomationScript } from './executeAutomationScript.js';
+export { readFile } from './readFile.js';
+export { grepFiles } from './grepFiles.js';
+export { findFiles } from './findFiles.js';
+export { listDirectory } from './listDirectory.js';
+export { searchAutomationIds } from './searchAutomationIds.js';
+export { getNavigationHelp } from './getNavigationHelp.js';

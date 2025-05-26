@@ -5,8 +5,18 @@ export class PuppeteerHelper {
 
   async type(elementId: string, text: string) {
     // Try data-automation-id first, then fallback to id
-    const element = await this.page.waitForSelector(`[data-automation-id="${elementId}"]`) || 
-                   await this.page.waitForSelector(`[id="${elementId}"]`);
+    let element;
+    try {
+      console.log(`[PuppeteerHelper] Trying data-automation-id="${elementId}" for typing`);
+      element = await this.page.waitForSelector(`[data-automation-id="${elementId}"]`, { timeout: 5000 });
+    } catch (error) {
+      console.log(`[PuppeteerHelper] data-automation-id not found, trying id="${elementId}" for typing`);
+      try {
+        element = await this.page.waitForSelector(`[id="${elementId}"]`, { timeout: 5000 });
+      } catch (fallbackError) {
+        throw new Error(`Could not find element with data-automation-id="${elementId}" or id="${elementId}" for typing`);
+      }
+    }
     
     if (!element) {
       throw new Error(`Could not find element with id: ${elementId}`);
@@ -26,8 +36,18 @@ export class PuppeteerHelper {
     }
 
     // Try data-automation-id first, then fallback to id
-    const element = await this.page.waitForSelector(`[data-automation-id="${elementId}"]`) ||
-                   await this.page.waitForSelector(`[id="${elementId}"]`);
+    let element;
+    try {
+      console.log(`[PuppeteerHelper] Trying data-automation-id="${elementId}"`);
+      element = await this.page.waitForSelector(`[data-automation-id="${elementId}"]`, { timeout: 5000 });
+    } catch (error) {
+      console.log(`[PuppeteerHelper] data-automation-id not found, trying id="${elementId}"`);
+      try {
+        element = await this.page.waitForSelector(`[id="${elementId}"]`, { timeout: 5000 });
+      } catch (fallbackError) {
+        throw new Error(`Could not find element with data-automation-id="${elementId}" or id="${elementId}"`);
+      }
+    }
     
     if (!element) {
       throw new Error(`Could not find element with id: ${elementId}`);
