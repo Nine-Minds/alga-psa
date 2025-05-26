@@ -384,10 +384,10 @@ jobs:
 
               // Fill in the email and password
               try {
-                await page.waitForSelector('input[id="msp-email-field-input"]', { timeout: 15000 }); // Wait for email field first
-                await page.fill('input[id="msp-email-field-input"]', email);
-                await page.waitForSelector('input[id="msp-password-field-input"]', { timeout: 5000 });
-                await page.fill('input[id="msp-password-field-input"]', password);
+                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 15000 }); // Wait for email field first
+                await page.fill('input[id="msp-email-field"]', email);
+                await page.waitForSelector('input[id="msp-password-field"]', { timeout: 5000 });
+                await page.fill('input[id="msp-password-field"]', password);
               } catch (e) {
                 console.error('Error filling form fields. Current page HTML:', await page.content());
                 throw e;
