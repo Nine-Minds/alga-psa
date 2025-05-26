@@ -409,6 +409,66 @@ function setupExpress(app: express.Application) {
       }, null, 0)));
     }
   }) as RequestHandler);
+
+  // Browser session management endpoints
+  app.post('/api/browser/pop-out', (async (req: Request, res: Response) => {
+    console.log('\x1b[105m\x1b[30m[BACKEND] 🪟 POST /api/browser/pop-out received\x1b[0m');
+    const startTime = Date.now();
+
+    try {
+      const result = await puppeteerManager.popOut();
+      console.log(`\x1b[32m[BACKEND] ✅ Browser popped out successfully in ${Date.now() - startTime}ms\x1b[0m`);
+      res.json(JSON.parse(JSON.stringify({
+        status: 'success',
+        message: 'Browser popped out to headed mode',
+        ...result
+      }, null, 0)));
+    } catch (error) {
+      console.error('\x1b[41m[BACKEND] ❌ Error popping out browser:\x1b[0m', error);
+      console.log(`\x1b[91m[BACKEND] 💥 Failed in ${Date.now() - startTime}ms\x1b[0m`);
+      res.status(500).json(JSON.parse(JSON.stringify({
+        error: error instanceof Error ? error.message : String(error)
+      }, null, 0)));
+    }
+  }) as RequestHandler);
+
+  app.post('/api/browser/pop-in', (async (req: Request, res: Response) => {
+    console.log('\x1b[105m\x1b[30m[BACKEND] 🔍 POST /api/browser/pop-in received\x1b[0m');
+    const startTime = Date.now();
+
+    try {
+      const result = await puppeteerManager.popIn();
+      console.log(`\x1b[32m[BACKEND] ✅ Browser popped in successfully in ${Date.now() - startTime}ms\x1b[0m`);
+      res.json(JSON.parse(JSON.stringify({
+        status: 'success',
+        message: 'Browser popped in to headless mode',
+        ...result
+      }, null, 0)));
+    } catch (error) {
+      console.error('\x1b[41m[BACKEND] ❌ Error popping in browser:\x1b[0m', error);
+      console.log(`\x1b[91m[BACKEND] 💥 Failed in ${Date.now() - startTime}ms\x1b[0m`);
+      res.status(500).json(JSON.parse(JSON.stringify({
+        error: error instanceof Error ? error.message : String(error)
+      }, null, 0)));
+    }
+  }) as RequestHandler);
+
+  app.get('/api/browser/status', (async (req: Request, res: Response) => {
+    console.log('\x1b[104m\x1b[30m[BACKEND] 📊 GET /api/browser/status received\x1b[0m');
+    const startTime = Date.now();
+
+    try {
+      const status = puppeteerManager.getSessionStatus();
+      console.log(`\x1b[32m[BACKEND] ✅ Browser status retrieved in ${Date.now() - startTime}ms\x1b[0m`);
+      res.json(JSON.parse(JSON.stringify(status, null, 0)));
+    } catch (error) {
+      console.error('\x1b[41m[BACKEND] ❌ Error getting browser status:\x1b[0m', error);
+      console.log(`\x1b[91m[BACKEND] 💥 Failed in ${Date.now() - startTime}ms\x1b[0m`);
+      res.status(500).json(JSON.parse(JSON.stringify({
+        error: error instanceof Error ? error.message : String(error)
+      }, null, 0)));
+    }
+  }) as RequestHandler);
 }
 
 // Start server

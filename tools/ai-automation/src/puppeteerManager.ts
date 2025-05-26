@@ -1,11 +1,13 @@
 import puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
+import { browserSessionManager } from './browserSessionManager.js';
 
 class PuppeteerManager {
   private static instance: PuppeteerManager;
   private browser: Browser | null = null;
   private page: Page | null = null;
   private isInitializing = false;
+  private sessionId: string = 'default';
 
   private constructor() {}
 
@@ -22,77 +24,25 @@ class PuppeteerManager {
       return;
     }
 
-    console.log('Starting Puppeteer initialization...');
+    console.log('Starting Puppeteer initialization using BrowserSessionManager...');
     this.isInitializing = true;
-    let attempt = 0;
 
-    while (attempt < retries) {
-      attempt++;
-      console.log(`Attempt ${attempt} of ${retries}...`);
+    try {
+      const mode = options?.headless === false ? 'headed' : 'headless';
+      const session = await browserSessionManager.createSession(this.sessionId, mode);
       
-      try {
-        console.log('Launching browser with args:', [
-          '--window-size=1900,1200'
-        ]);
-
-        this.browser = await puppeteer.launch({
-          executablePath: puppeteer.executablePath(), // Use bundled Chromium
-          headless: options?.headless ?? true,
-          args: options?.args ?? [
-            '--window-size=1900,1200'
-          ],
-          protocolTimeout: 60000, // Increase timeout to 60 seconds
-          dumpio: true, // Enable verbose logging
-          slowMo: 100 // Add slight delay between operations
-        });
-
-        console.log('Browser launched successfully. Creating new page...');
-        try {
-          this.page = await this.browser.newPage();
-          // this.page.setDefaultNavigationTimeout(30000);
-          // this.page.setDefaultTimeout(5000);
-          
-          if (!this.page) {
-            throw new Error('Page creation returned null');
-          }
-          
-          await this.page.setViewport({ width: 1900, height: 1200 });
-          console.log('Page created successfully. Setting up event listeners...');
-          this.page.on('console', (msg) => {
-            console.log(`[PAGE CONSOLE] ${msg.type()}: ${msg.text()}`);
-          });
-          this.page.on('pageerror', (err) => {
-            console.error(`[PAGE ERROR]`, err);
-          });
-          console.log('Puppeteer initialization completed successfully');
-          break; // Successfully initialized
-        } catch (pageError) {
-          console.error('Failed to create new page:', pageError);
-          throw pageError;
-        }
-      } catch (error) {
-        console.error(`Puppeteer initialization attempt ${attempt} failed:`, error);
-        
-        // Clean up any partial initialization
-        if (this.browser) {
-          console.log('Cleaning up failed initialization...');
-          await this.browser.close();
-          this.browser = null;
-          this.page = null;
-        }
-
-        if (attempt >= retries) {
-          console.error(`Failed to initialize Puppeteer after ${retries} attempts`);
-          throw new Error(`Failed to initialize Puppeteer after ${retries} attempts`);
-        }
-
-        const waitTime = 1000 * attempt;
-        console.log(`Waiting ${waitTime}ms before next attempt...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      }
+      this.browser = session.browser;
+      this.page = session.page;
+      
+      console.log(`Puppeteer initialization completed successfully in ${mode} mode`);
+    } catch (error) {
+      console.error('Puppeteer initialization failed:', error);
+      this.browser = null;
+      this.page = null;
+      throw error;
+    } finally {
+      this.isInitializing = false;
     }
-
-    this.isInitializing = false;
   }
 
   public getPage(): Page {
@@ -151,15 +101,74 @@ class PuppeteerManager {
     }
   }
 
+  public async popOut(): Promise<{ sessionId: string; mode: string; wsEndpoint?: string }> {
+    console.log('Popping out browser to headed mode...');
+    
+    try {
+      const session = await browserSessionManager.popOutSession(this.sessionId);
+      
+      // Update internal references
+      this.browser = session.browser;
+      this.page = session.page;
+      this.sessionId = session.id;
+      
+      console.log(`Browser popped out successfully to session ${session.id}`);
+      return {
+        sessionId: session.id,
+        mode: session.mode,
+        wsEndpoint: session.wsEndpoint
+      };
+    } catch (error) {
+      console.error('Error popping out browser:', error);
+      throw error;
+    }
+  }
+
+  public async popIn(): Promise<{ sessionId: string; mode: string }> {
+    console.log('Popping in browser to headless mode...');
+    
+    try {
+      const session = await browserSessionManager.popInSession(this.sessionId);
+      
+      // Update internal references
+      this.browser = session.browser;
+      this.page = session.page;
+      this.sessionId = session.id;
+      
+      console.log(`Browser popped in successfully to session ${session.id}`);
+      return {
+        sessionId: session.id,
+        mode: session.mode
+      };
+    } catch (error) {
+      console.error('Error popping in browser:', error);
+      throw error;
+    }
+  }
+
+  public getSessionStatus(): {
+    currentSessionId: string;
+    activeSessionId: string | null;
+    sessionCount: number;
+    sessions: Array<{ id: string; mode: 'headless' | 'headed'; url: string; wsEndpoint?: string }>;
+  } {
+    const status = browserSessionManager.getSessionStatus();
+    return {
+      currentSessionId: this.sessionId,
+      ...status
+    };
+  }
+
   public async close() {
-    if (this.browser) {
+    if (this.sessionId) {
       try {
-        await this.browser.close();
+        await browserSessionManager.closeSession(this.sessionId);
       } catch (error) {
-        console.error('Error closing browser:', error);
+        console.error('Error closing browser session:', error);
       } finally {
         this.browser = null;
         this.page = null;
+        this.sessionId = 'default';
       }
     }
   }
