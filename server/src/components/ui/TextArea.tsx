@@ -13,7 +13,7 @@ interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
 }
 
 export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & AutomationProps>(
-  ({ label, onChange, className, value = '', id, disabled, required, ...props }, ref) => {
+  ({ label, onChange, className, value = '', id, disabled, required, "data-automation-id": dataAutomationId, ...props }, ref) => {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
     const combinedRef = (node: HTMLTextAreaElement) => {
       textareaRef.current = node;
@@ -64,7 +64,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
       }
     }, [value]);
 
-    // Register with UI reflection system if id is provided
+    // Use provided data-automation-id or register normally
     const { automationIdProps: textAreaProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
       type: 'formField',
       fieldType: 'textField',
@@ -73,7 +73,10 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
       value: typeof value === 'string' ? value : undefined,
       disabled,
       required
-    });
+    }, true, dataAutomationId);
+
+    // Always use the generated automation props (which include our override ID if provided)
+    const finalAutomationProps = textAreaProps;
 
     // Update metadata when field props change
     useEffect(() => {
@@ -128,7 +131,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
           value={value}
           disabled={disabled}
           required={required}
-          {...textAreaProps}
+          {...finalAutomationProps}
           {...props}
         />
       </div>

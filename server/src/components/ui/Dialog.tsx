@@ -2,11 +2,9 @@
 import React, { ReactNode, useEffect } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
-import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface DialogProps {
@@ -41,14 +39,16 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
     <RadixDialog.Root open={isOpen} onOpenChange={onClose}>
       <RadixDialog.Portal>
         <RadixDialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-        <ReflectionContainer {...updateDialog}>
-          <RadixDialog.Content
-            className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}
-            onKeyDown={onKeyDown}
-            onOpenAutoFocus={onOpenAutoFocus}
-          >
+        <RadixDialog.Content
+          {...withDataAutomationId(updateDialog)}
+          className={`fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg p-6 w-full ${className || 'max-w-3xl'} z-50`}
+          onKeyDown={onKeyDown}
+          onOpenAutoFocus={onOpenAutoFocus}
+        >
               {title && <RadixDialog.Title className="text-xl font-semibold mb-4">{title}</RadixDialog.Title>}
-              {children}
+              <ReflectionParentContext.Provider value={updateDialog.id}>
+                {children}
+              </ReflectionParentContext.Provider>
             {!hideCloseButton && (
               <RadixDialog.Close asChild>
                 <button
@@ -60,7 +60,6 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({ isOpen, onClos
               </RadixDialog.Close>
             )}
           </RadixDialog.Content>
-        </ReflectionContainer>
       </RadixDialog.Portal>
     </RadixDialog.Root>
   );

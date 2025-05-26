@@ -3,8 +3,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
-import { AutomationProps } from '../../types/ui-reflection/types';
+import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
+import { Input } from './Input';
+import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 
 interface UserPickerProps {
   label?: string;
@@ -29,7 +31,8 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   className,
   labelStyle = 'bold',
   buttonWidth = 'fit',
-  placeholder = 'Not assigned'
+  placeholder = 'Not assigned',
+  'data-automation-id': dataAutomationId
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,6 +43,15 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
+  // Register with UI reflection system
+  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType: 'select',
+    label,
+    value,
+    disabled,
+  }, true, dataAutomationId);
+
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
@@ -108,6 +120,17 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     
     fetchAvatarUrls();
   }, [currentUser, isOpen, filteredUsers, users]);
+
+  // Update metadata when value changes
+  useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        value,
+        label,
+        disabled,
+      });
+    }
+  }, [updateMetadata, value, label, disabled]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -218,6 +241,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}
+        {...pickerProps}
         className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
@@ -254,8 +278,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
             {/* Search Input */}
             <div className="p-2 border-b border-gray-200">
             <div className="relative">
-              <input
+              <Input
                 ref={searchInputRef}
+                data-automation-id={dataAutomationId ? `${dataAutomationId}-search` : undefined}
                 type="text"
                 placeholder="Search users..."
                 value={searchQuery}

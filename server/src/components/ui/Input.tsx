@@ -28,6 +28,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
     disabled, 
     onChange,
     "data-automation-type": dataAutomationType = 'input',
+    "data-automation-id": dataAutomationId,
     ...props 
   }, forwardedRef) => {
     const inputRef = useRef<HTMLInputElement | null>(null);
@@ -46,11 +47,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
       [forwardedRef]
     );
 
+    // Use provided data-automation-id or register normally
     const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
       id,
       type: 'formField',
       fieldType: 'textField'
-    });
+    }, true, dataAutomationId);
+    
+    // Always use the generated automation props (which include our override ID if provided)
+    const finalAutomationProps = textProps;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!isComposing.current && preserveCursor) {
@@ -97,7 +102,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
           </label>
         )}
         <input
-          {...textProps}
+          {...finalAutomationProps}
           ref={(element) => {
             inputRef.current = element;
             handleRef(element);

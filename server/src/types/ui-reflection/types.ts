@@ -13,6 +13,8 @@
 export interface AutomationProps {
   /** Optional automation Type for testing purposes */
   'data-automation-type'?: string;
+  /** Optional automation ID for testing purposes */
+  'data-automation-id'?: string;
 }
 
 /**
