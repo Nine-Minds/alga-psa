@@ -451,6 +451,8 @@ export default function ControlPanel() {
   const sendMessagesToAI = async (messages: ChatMessage[]) => {
     setIsGenerating(true);
     setUserMessage('');
+    
+    let hasToolCalls = false;
 
     // Filter messages and add empty assistant slot
     const filteredMessages = messages.filter(msg => {
@@ -529,6 +531,7 @@ export default function ControlPanel() {
 
       eventSource.addEventListener('tool_use', async (event) => {
         try {
+          hasToolCalls = true; // Mark that we have tool calls in this session
           console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', event);
           const toolEvent = cleanAndParseJSON(event.data);
           if (!toolEvent) {
@@ -629,7 +632,14 @@ export default function ControlPanel() {
             eventSource.close();
             eventSourceRef.current = null;
           }
-          setIsGenerating(false);
+          // Only set isGenerating to false if there were no tool calls in this session
+          // If there were tool calls, they will trigger new SSE sessions
+          if (!hasToolCalls) {
+            console.log('No tool calls detected, ending generation state');
+            setIsGenerating(false);
+          } else {
+            console.log('Tool calls detected, staying in generation state');
+          }
           resolve(null);
         });
       });
