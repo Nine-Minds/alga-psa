@@ -31,6 +31,21 @@ interface CompanyLocationsProps {
   isEditing: boolean;
 }
 
+/**
+ * Sanitizes a string to be used as a valid HTML ID or data-automation-id
+ * Removes or replaces characters that are invalid in HTML IDs
+ * @param input - The input string to sanitize
+ * @returns A sanitized string safe for use as HTML ID
+ */
+const sanitizeIdString = (input: string): string => {
+  return input
+    .toLowerCase()
+    .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove all special characters except spaces and hyphens
+    .replace(/\s+/g, '-')             // Replace spaces with hyphens
+    .replace(/-+/g, '-')              // Replace multiple consecutive hyphens with single hyphen
+    .replace(/^-|-$/g, '');           // Remove leading/trailing hyphens
+};
+
 interface LocationFormData {
   location_name: string;
   address_line1: string;
@@ -83,7 +98,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
 
   return (
     <ReflectionContainer 
-      id={`location-card-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+      id={`location-card-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
       label={location.location_name || 'Unnamed Location'}
     >
       <Card className="relative">
@@ -101,7 +116,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
               {!location.is_default && (
                 <Button
                   id={`set-default-location-${location.location_id}-button`}
-                  data-automation-id={`set-default-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                  data-automation-id={`set-default-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
                   variant="ghost"
                   size="sm"
                   onClick={() => onSetDefault(location.location_id)}
@@ -113,7 +128,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
               
               <Button
                 id={`edit-location-${location.location_id}-button`}
-                data-automation-id={`edit-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                data-automation-id={`edit-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
                 variant="ghost"
                 size="sm"
                 onClick={() => onEdit(location)}
@@ -123,7 +138,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
               
               <Button
                 id={`delete-location-${location.location_id}-button`}
-                data-automation-id={`delete-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                data-automation-id={`delete-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(location.location_id)}
@@ -138,7 +153,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
         <CardContent className="pt-0">
           <div className="text-sm text-gray-600">
             <LocationDetailField
-              id={`address-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+              id={`address-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
               label="Address"
               value={formatAddress(location)}
               helperText="Full address for this location"
@@ -148,7 +163,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
             
             {location.phone && (
               <LocationDetailField
-                id={`phone-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                id={`phone-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
                 label="Phone"
                 value={location.phone}
                 helperText="Phone number for this location"
@@ -159,7 +174,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
             
             {location.email && (
               <LocationDetailField
-                id={`email-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                id={`email-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
                 label="Email"
                 value={location.email}
                 helperText="Email address for this location"
@@ -183,7 +198,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
             
             {location.notes && (
               <LocationDetailField
-                id={`notes-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                id={`notes-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
                 label="Notes"
                 value={location.notes}
                 helperText="Additional notes for this location"
