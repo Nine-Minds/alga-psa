@@ -23,7 +23,8 @@ import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { DialogComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
+import { DialogComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 
 interface CompanyLocationsProps {
   companyId: string;
@@ -49,6 +50,155 @@ interface LocationFormData {
   is_shipping_address: boolean;
   is_default: boolean;
 }
+
+interface LocationCardProps {
+  location: ICompanyLocation;
+  onEdit: (location: ICompanyLocation) => void;
+  onDelete: (locationId: string) => void;
+  onSetDefault: (locationId: string) => void;
+  formatAddress: (location: ICompanyLocation) => string;
+}
+
+// Component for individual location detail fields that registers within the proper parent context
+const LocationDetailField: React.FC<{
+  id: string;
+  label: string;
+  value: string;
+  helperText: string;
+  children: React.ReactNode;
+}> = ({ id, label, value, helperText, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id,
+    type: 'formField',
+    fieldType: 'textField',
+    label,
+    value,
+    helperText
+  });
+
+  return <div {...automationIdProps}>{children}</div>;
+};
+
+const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress }) => {
+
+  return (
+    <ReflectionContainer 
+      id={`location-card-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+      label={location.location_name || 'Unnamed Location'}
+    >
+      <Card className="relative">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              {location.location_name || 'Unnamed Location'}
+              {location.is_default && (
+                <Star className="h-4 w-4 text-yellow-500 fill-current" />
+              )}
+            </CardTitle>
+            
+            <div className="flex gap-2">
+              {!location.is_default && (
+                <Button
+                  id={`set-default-location-${location.location_id}-button`}
+                  data-automation-id={`set-default-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onSetDefault(location.location_id)}
+                  title="Set as default"
+                >
+                  <Star className="h-4 w-4" />
+                </Button>
+              )}
+              
+              <Button
+                id={`edit-location-${location.location_id}-button`}
+                data-automation-id={`edit-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onEdit(location)}
+              >
+                <Edit2 className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                id={`delete-location-${location.location_id}-button`}
+                data-automation-id={`delete-location-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}-button`}
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(location.location_id)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <div className="text-sm text-gray-600">
+            <LocationDetailField
+              id={`address-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+              label="Address"
+              value={formatAddress(location)}
+              helperText="Full address for this location"
+            >
+              {formatAddress(location)}
+            </LocationDetailField>
+            
+            {location.phone && (
+              <LocationDetailField
+                id={`phone-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                label="Phone"
+                value={location.phone}
+                helperText="Phone number for this location"
+              >
+                <div className="mt-1">Phone: {location.phone}</div>
+              </LocationDetailField>
+            )}
+            
+            {location.email && (
+              <LocationDetailField
+                id={`email-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                label="Email"
+                value={location.email}
+                helperText="Email address for this location"
+              >
+                Email: {location.email}
+              </LocationDetailField>
+            )}
+            
+            <div className="flex gap-4 mt-2">
+              {location.is_billing_address && (
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                  Billing
+                </span>
+              )}
+              {location.is_shipping_address && (
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                  Shipping
+                </span>
+              )}
+            </div>
+            
+            {location.notes && (
+              <LocationDetailField
+                id={`notes-display-${location.location_name?.toLowerCase().replace(/\s+/g, '-') || location.location_id}`}
+                label="Notes"
+                value={location.notes}
+                helperText="Additional notes for this location"
+              >
+                <div className="mt-2 text-xs text-gray-500">
+                  {location.notes}
+                </div>
+              </LocationDetailField>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </ReflectionContainer>
+  );
+};
 
 const initialFormData: LocationFormData = {
   location_name: '',
@@ -79,14 +229,6 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const { toast } = useToast();
 
-  // Register dialog for UI automation
-  const { automationIdProps: dialogProps } = useAutomationIdAndRegister<DialogComponent>({
-    id: 'company-location-dialog',
-    type: 'dialog',
-    label: 'Company Location Dialog',
-    title: editingLocation ? 'Edit Location' : 'Add New Location',
-    helperText: 'Dialog for adding or editing company locations'
-  });
 
   useEffect(() => {
     loadLocations();
@@ -270,16 +412,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium">Locations</h3>
           <Button 
-            {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                id: 'add-company-location-button',
-                type: 'button',
-                label: 'Add Location',
-                variant: 'default',
-                helperText: 'Add a new location for this company'
-              });
-              return automationIdProps;
-            })()}
+            id="add-company-location-button"
+            data-automation-id="add-company-location-button"
             onClick={handleAddLocation} 
             size="sm"
           >
@@ -290,10 +424,11 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       </div>
       {/* Location Form Dialog */}
       <Dialog 
-        {...dialogProps}
+        id="company-location-dialog"
         isOpen={isDialogOpen} 
         onClose={() => setIsDialogOpen(false)}
         className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        title={editingLocation ? 'Edit Location' : 'Add New Location'}
       >
         <DialogContent>
           <DialogHeader>
@@ -618,16 +753,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <DialogFooter>
               <Button 
-                {...(() => {
-                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                    id: 'cancel-location-button',
-                    type: 'button',
-                    label: 'Cancel',
-                    variant: 'outline',
-                    helperText: 'Cancel location creation/editing'
-                  });
-                  return automationIdProps;
-                })()}
+                id="cancel-location-button"
+                data-automation-id="cancel-location-button"
                 variant="outline" 
                 onClick={() => setIsDialogOpen(false)}
                 disabled={isLoading}
@@ -636,16 +763,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 Cancel
               </Button>
               <Button 
-                {...(() => {
-                  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
-                    id: 'save-location-button',
-                    type: 'button',
-                    label: 'Save Location',
-                    variant: 'default',
-                    helperText: 'Save the location information'
-                  });
-                  return automationIdProps;
-                })()}
+                id="save-location-button"
+                data-automation-id="save-location-button"
                 type="submit"
                 disabled={isLoading || !formData.address_line1 || !formData.city || !formData.country_name}
               >
@@ -659,83 +778,14 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       {/* Locations List */}
       <div className="space-y-3">
         {locations.map((location) => (
-          <Card key={location.location_id} className="relative">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  {location.location_name || 'Unnamed Location'}
-                  {location.is_default && (
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                  )}
-                </CardTitle>
-                
-                <div className="flex gap-2">
-                  {!location.is_default && (
-                    <Button
-                      id={`set-default-location-${location.location_id}-button`}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSetDefault(location.location_id)}
-                      title="Set as default"
-                    >
-                      <Star className="h-4 w-4" />
-                    </Button>
-                  )}
-                  
-                  <Button
-                    id={`edit-location-${location.location_id}-button`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleEditLocation(location)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  
-                  <Button
-                    id={`delete-location-${location.location_id}-button`}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleDeleteLocation(location.location_id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="pt-0">
-              <div className="text-sm text-gray-600">
-                <div>{formatAddress(location)}</div>
-                {location.phone && (
-                  <div className="mt-1">Phone: {location.phone}</div>
-                )}
-                {location.email && (
-                  <div>Email: {location.email}</div>
-                )}
-                
-                <div className="flex gap-4 mt-2">
-                  {location.is_billing_address && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                      Billing
-                    </span>
-                  )}
-                  {location.is_shipping_address && (
-                    <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                      Shipping
-                    </span>
-                  )}
-                </div>
-                
-                {location.notes && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    {location.notes}
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <LocationCard
+            key={location.location_id}
+            location={location}
+            onEdit={handleEditLocation}
+            onDelete={handleDeleteLocation}
+            onSetDefault={handleSetDefault}
+            formatAddress={formatAddress}
+          />
         ))}
         
         {locations.length === 0 && (
