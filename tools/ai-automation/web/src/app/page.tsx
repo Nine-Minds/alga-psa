@@ -35,6 +35,10 @@ interface CollapsedToolState {
   [messageIndex: number]: boolean;
 }
 
+interface ToolCallTracker {
+  [messageIndex: number]: string; // Maps message index to toolCallId
+}
+
 interface JsonViewerProps {
   data: JsonValue;
   level?: number;
@@ -129,6 +133,7 @@ export default function ControlPanel() {
   const [uiStateData, setUIStateData] = useState<UIStateResponse | null>(null);
   const [expandedState, setExpandedState] = useState<ExpandedState>({});
   const [collapsedToolState, setCollapsedToolState] = useState<CollapsedToolState>({});
+  const [toolCallTracker, setToolCallTracker] = useState<ToolCallTracker>({});
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -148,7 +153,36 @@ export default function ControlPanel() {
   const scrollToLogEntry = (toolCallId: string) => {
     const ref = logEntryRefs.current[toolCallId];
     if (ref) {
-      ref.scrollIntoView({ behavior: 'smooth' });
+      // Get the ScrollArea container
+      const scrollContainer = ref.closest('[data-radix-scroll-area-viewport]');
+      
+      if (scrollContainer) {
+        // Calculate the position to scroll to (top of the element with some offset)
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = ref.getBoundingClientRect();
+        const scrollTop = scrollContainer.scrollTop;
+        
+        // Calculate the target scroll position (element top - container top + current scroll - offset)
+        const targetScrollTop = scrollTop + (elementRect.top - containerRect.top) - 20;
+        
+        // Smooth scroll to the calculated position
+        scrollContainer.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: 'smooth'
+        });
+      } else {
+        // Fallback to original method
+        ref.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      
+      // Add visual highlight effect
+      ref.style.backgroundColor = 'var(--accent-3)';
+      ref.style.transition = 'background-color 0.3s ease';
+      
+      // Remove highlight after 2 seconds
+      setTimeout(() => {
+        ref.style.backgroundColor = '';
+      }, 2000);
     }
   };
 
@@ -542,6 +576,14 @@ export default function ControlPanel() {
           // Add tool result to messages and start new SSE session
           setMessages(prev => {
             const updatedMessages = [...prev, toolResult];
+            
+            // Track the tool call ID for the new tool result message
+            const toolResultIndex = updatedMessages.filter(msg => msg.role !== 'system').length - 1;
+            setToolCallTracker(prevTracker => ({
+              ...prevTracker,
+              [toolResultIndex]: toolCallId
+            }));
+            
             sendMessagesToAI(updatedMessages);
             return updatedMessages;
           });
@@ -828,6 +870,26 @@ export default function ControlPanel() {
                                 <Text size="2" style={{ color: 'var(--accent-9)' }}>
                                   Function: {msg.name}
                                 </Text>
+                                {msg.tool_call_id && (
+                                  <Box 
+                                    ml="2"
+                                    style={{
+                                      backgroundColor: 'var(--accent-9)',
+                                      padding: '2px 6px',
+                                      borderRadius: '3px',
+                                      fontSize: '11px',
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      scrollToLogEntry(msg.tool_call_id!);
+                                    }}
+                                  >
+                                    <Text size="1" style={{ color: 'white' }}>
+                                      📋 View in Log
+                                    </Text>
+                                  </Box>
+                                )}
                               </Flex>
                               {!collapsedToolState[idx] && (
                                 <pre style={{ ...preStyle, maxWidth: '100%', marginTop: '8px' }}>
@@ -852,6 +914,26 @@ export default function ControlPanel() {
                                 <Text size="2" style={{ color: 'var(--accent-9)' }}>
                                   Tool Result ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
                                 </Text>
+                                {toolCallTracker[idx] && (
+                                  <Box 
+                                    ml="2"
+                                    style={{
+                                      backgroundColor: 'var(--accent-9)',
+                                      padding: '2px 6px',
+                                      borderRadius: '3px',
+                                      fontSize: '11px',
+                                      cursor: 'pointer'
+                                    }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      scrollToLogEntry(toolCallTracker[idx]);
+                                    }}
+                                  >
+                                    <Text size="1" style={{ color: 'white' }}>
+                                      📋 View in Log
+                                    </Text>
+                                  </Box>
+                                )}
                               </Flex>
                               {!collapsedToolState[idx] && (
                                 <pre style={{ ...preStyle, maxWidth: '100%', marginTop: '8px' }}>
@@ -1105,6 +1187,26 @@ export default function ControlPanel() {
                               <Text size="2" style={{ color: 'var(--accent-9)' }}>
                                 Function: {msg.name}
                               </Text>
+                              {msg.tool_call_id && (
+                                <Box 
+                                  ml="2"
+                                  style={{
+                                    backgroundColor: 'var(--accent-9)',
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    scrollToLogEntry(msg.tool_call_id!);
+                                  }}
+                                >
+                                  <Text size="1" style={{ color: 'white' }}>
+                                    📋 View in Log
+                                  </Text>
+                                </Box>
+                              )}
                             </Flex>
                             {!collapsedToolState[idx] && (
                               <pre style={{ ...preStyle, marginTop: '8px' }}>
@@ -1129,6 +1231,26 @@ export default function ControlPanel() {
                               <Text size="2" style={{ color: 'var(--accent-9)' }}>
                                 Tool Result ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
                               </Text>
+                              {toolCallTracker[idx] && (
+                                <Box 
+                                  ml="2"
+                                  style={{
+                                    backgroundColor: 'var(--accent-9)',
+                                    padding: '2px 6px',
+                                    borderRadius: '3px',
+                                    fontSize: '11px',
+                                    cursor: 'pointer'
+                                  }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    scrollToLogEntry(toolCallTracker[idx]);
+                                  }}
+                                >
+                                  <Text size="1" style={{ color: 'white' }}>
+                                    📋 View in Log
+                                  </Text>
+                                </Box>
+                              )}
                             </Flex>
                             {!collapsedToolState[idx] && (
                               <pre style={{ ...preStyle, marginTop: '8px' }}>
