@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from 'react';
-import { ArrowRight, Eye, Code } from 'lucide-react';
+import { ArrowRight, Eye, Code, ExternalLink, Monitor } from 'lucide-react';
 import io from 'socket.io-client';
 import Image from 'next/image';
 import { Box, Flex, Grid, Text, TextArea, Button, Card, ScrollArea, Dialog } from '@radix-ui/themes';
@@ -127,6 +127,13 @@ export default function ControlPanel() {
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [browserStatus, setBrowserStatus] = useState<{
+    currentSessionId: string;
+    activeSessionId: string | null;
+    sessionCount: number;
+    sessions: Array<{ id: string; mode: 'headless' | 'headed'; url: string; wsEndpoint?: string }>;
+  } | null>(null);
+  const [isPopOutMode, setIsPopOutMode] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -202,6 +209,13 @@ export default function ControlPanel() {
     return () => { socket.disconnect(); };
   }, []);
 
+  // Fetch browser status on component mount and periodically
+  useEffect(() => {
+    fetchBrowserStatus();
+    const interval = setInterval(fetchBrowserStatus, 5000); // Check every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   const cancelGeneration = () => {
     console.log('Cancelling generation');
     if (eventSourceRef.current) {
@@ -244,6 +258,81 @@ export default function ControlPanel() {
     setUserMessage('');
     // Clear the log as well since we're starting fresh
     setLog([]);
+  };
+
+  const fetchBrowserStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/api/browser/status');
+      if (response.ok) {
+        const status = await response.json();
+        setBrowserStatus(status);
+        // Determine if we're in pop out mode based on current session
+        const currentSession = status.sessions.find((s: any) => s.id === status.currentSessionId);
+        setIsPopOutMode(currentSession?.mode === 'headed');
+      }
+    } catch (error) {
+      console.error('Error fetching browser status:', error);
+    }
+  };
+
+  const handlePopOut = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/api/browser/pop-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setLog(prev => [...prev, {
+          type: 'navigation',
+          title: 'Browser Popped Out',
+          content: `Browser is now running in headed mode. Session: ${result.sessionId}`,
+          timestamp: new Date().toISOString()
+        }]);
+        setIsPopOutMode(true);
+        await fetchBrowserStatus();
+      } else {
+        throw new Error('Failed to pop out browser');
+      }
+    } catch (error) {
+      setLog(prev => [...prev, {
+        type: 'error',
+        title: 'Pop Out Error',
+        content: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      }]);
+    }
+  };
+
+  const handlePopIn = async () => {
+    try {
+      const response = await fetch('http://localhost:4000/api/browser/pop-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setLog(prev => [...prev, {
+          type: 'navigation',
+          title: 'Browser Popped In',
+          content: `Browser is now running in headless mode. Session: ${result.sessionId}`,
+          timestamp: new Date().toISOString()
+        }]);
+        setIsPopOutMode(false);
+        await fetchBrowserStatus();
+      } else {
+        throw new Error('Failed to pop in browser');
+      }
+    } catch (error) {
+      setLog(prev => [...prev, {
+        type: 'error',
+        title: 'Pop In Error',
+        content: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      }]);
+    }
   };
 
   const cleanAssistantMessage = (message: string) => {
@@ -584,6 +673,54 @@ export default function ControlPanel() {
                       >
                         <ArrowRight size={16} />
                       </Button>
+                    </Flex>
+                    
+                    {/* Browser Mode Controls */}
+                    <Flex gap="2" align="center">
+                      <Text size="2" style={{ color: 'var(--gray-11)' }}>
+                        Browser Mode:
+                      </Text>
+                      <Flex gap="1" align="center">
+                        <Box 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            borderRadius: '50%', 
+                            backgroundColor: isPopOutMode ? '#00d084' : '#ff4757' 
+                          }} 
+                        />
+                        <Text size="2" style={{ color: 'var(--gray-12)', minWidth: '60px' }}>
+                          {isPopOutMode ? 'Headed' : 'Headless'}
+                        </Text>
+                      </Flex>
+                      <Button
+                        size="1"
+                        variant={isPopOutMode ? 'soft' : 'solid'}
+                        onClick={isPopOutMode ? handlePopIn : handlePopOut}
+                        style={{ 
+                          padding: '4px 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {isPopOutMode ? (
+                          <>
+                            <Monitor size={12} />
+                            Pop In
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink size={12} />
+                            Pop Out
+                          </>
+                        )}
+                      </Button>
+                      {browserStatus && (
+                        <Text size="1" style={{ color: 'var(--gray-9)' }}>
+                          {browserStatus.sessionCount} session{browserStatus.sessionCount !== 1 ? 's' : ''}
+                        </Text>
+                      )}
                     </Flex>
                     <Flex gap="4">
                       <Box style={{ flex: 1 }}>
