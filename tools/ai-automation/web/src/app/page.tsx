@@ -39,6 +39,10 @@ interface ToolCallTracker {
   [messageIndex: number]: string; // Maps message index to toolCallId
 }
 
+interface ToolNameTracker {
+  [messageIndex: number]: string; // Maps message index to tool name
+}
+
 interface JsonViewerProps {
   data: JsonValue;
   level?: number;
@@ -134,6 +138,7 @@ export default function ControlPanel() {
   const [expandedState, setExpandedState] = useState<ExpandedState>({});
   const [collapsedToolState, setCollapsedToolState] = useState<CollapsedToolState>({});
   const [toolCallTracker, setToolCallTracker] = useState<ToolCallTracker>({});
+  const [toolNameTracker, setToolNameTracker] = useState<ToolNameTracker>({});
   const [url, setUrl] = useState('http://server:3000');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -577,11 +582,15 @@ export default function ControlPanel() {
           setMessages(prev => {
             const updatedMessages = [...prev, toolResult];
             
-            // Track the tool call ID for the new tool result message
+            // Track the tool call ID and tool name for the new tool result message
             const toolResultIndex = updatedMessages.filter(msg => msg.role !== 'system').length - 1;
             setToolCallTracker(prevTracker => ({
               ...prevTracker,
               [toolResultIndex]: toolCallId
+            }));
+            setToolNameTracker(prevTracker => ({
+              ...prevTracker,
+              [toolResultIndex]: toolContent.name
             }));
             
             sendMessagesToAI(updatedMessages);
@@ -828,7 +837,7 @@ export default function ControlPanel() {
                               'gray'
                             } mb="2">
                               <strong>
-                                {isToolResult ? 'Tool Result' :
+                                {isToolResult ? `Tool Result${toolNameTracker[idx] ? ` (${toolNameTracker[idx]})` : ''}` :
                                  msg.role === 'user' ? 'User' 
                                  : msg.role === 'assistant' ? 'AI'
                                  : msg.role === 'tool' ? 'Tool Response'
@@ -912,7 +921,7 @@ export default function ControlPanel() {
                               >
                                 {collapsedToolState[idx] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                                 <Text size="2" style={{ color: 'var(--accent-9)' }}>
-                                  Tool Result ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
+                                  {toolNameTracker[idx] ? `${toolNameTracker[idx]} Result` : 'Tool Result'} ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
                                 </Text>
                                 {toolCallTracker[idx] && (
                                   <Box 
@@ -1162,7 +1171,7 @@ export default function ControlPanel() {
                             'gray'
                           } mb="2">
                             <strong>
-                              {isToolResult ? 'Tool Result' :
+                              {isToolResult ? `Tool Result${toolNameTracker[idx] ? ` (${toolNameTracker[idx]})` : ''}` :
                                msg.role === 'user' ? 'User'
                                : msg.role === 'assistant' ? 'AI'
                                : msg.role === 'tool' ? 'Tool Response'
@@ -1229,7 +1238,7 @@ export default function ControlPanel() {
                             >
                               {collapsedToolState[idx] ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
                               <Text size="2" style={{ color: 'var(--accent-9)' }}>
-                                Tool Result ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
+                                {toolNameTracker[idx] ? `${toolNameTracker[idx]} Result` : 'Tool Result'} ({collapsedToolState[idx] ? 'Click to expand' : 'Click to collapse'})
                               </Text>
                               {toolCallTracker[idx] && (
                                 <Box 
