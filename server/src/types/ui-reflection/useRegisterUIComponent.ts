@@ -53,6 +53,11 @@ export function useRegisterUIComponent<T extends UIComponent>(
 
   // Register on mount, unregister on unmount
   useEffect(() => {
+    // Skip registration for components with special prefix
+    if (component.id.startsWith('__skip_registration_')) {
+      return; // Don't register, but also don't need cleanup
+    }
+    
     const componentToRegister = parentId ? { ...component, parentId } : component;
     registerComponent(componentToRegister);
 

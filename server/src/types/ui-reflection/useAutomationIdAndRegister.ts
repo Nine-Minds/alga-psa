@@ -94,7 +94,9 @@ function formatComponentId(
  * ```
  */
 export function useAutomationIdAndRegister<T extends UIComponent>(
-  component: Omit<T, 'id'> & { id?: string }
+  component: Omit<T, 'id'> & { id?: string },
+  shouldRegister: boolean = true,
+  overrideId?: string
 ): {
   automationIdProps: { id: string; 'data-automation-id': string };
   updateMetadata: (partial: Partial<T>) => void;
@@ -111,24 +113,26 @@ export function useAutomationIdAndRegister<T extends UIComponent>(
   // Get parent ID from context
   const parentId = useContext(ReflectionParentContext);
 
-  // Generate or format component ID
-  const formattedId = formatComponentId(
+  // Use override ID if provided, otherwise format component ID
+  const finalId = overrideId || formatComponentId(
     component.id, 
     parentId, 
     component.type,
     registrationId.current
   );
 
-  // Register with reflection system
-  const updateMetadata = useRegisterChild<T>({
+  // Always register, but use the final ID (either provided or generated)
+  const componentToRegister = {
     ...component,
-    id: formattedId
-  } as T);
+    id: finalId
+  } as T;
+  
+  const updateMetadata = useRegisterChild<T>(componentToRegister);
 
   // Generate automation props
   const automationIdProps = {
-    id: formattedId,
-    'data-automation-id': formattedId,
+    id: finalId,
+    'data-automation-id': finalId,
   };
 
   return { automationIdProps, updateMetadata };

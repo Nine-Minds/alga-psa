@@ -46,8 +46,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   label,
   id,
   "data-automation-type": dataAutomationType = 'select',
+  "data-automation-id": dataAutomationId,
   required = false,
   allowClear = false, // Added default value
+  ...props
 }): JSX.Element => {
   // Register with UI reflection system if id is provided
   // Memoize the mapped options to prevent recreating on every render
@@ -57,16 +59,20 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   })), [options]);
   
   
+  // Use provided data-automation-id or register normally
   const { automationIdProps: selectProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
-    id: id,
+    id,
     label,
     value: value || '',
     disabled,
     required,
     options: mappedOptions
-  });
+  }, true, dataAutomationId);
+  
+  // Always use the generated automation props (which include our override ID if provided)
+  const finalAutomationProps = { ...selectProps, ...props };
 
   // Update metadata when field props change - intentionally omitting updateMetadata from deps
   useEffect(() => {
@@ -106,6 +112,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
         required={required}
       >
         <RadixSelect.Trigger
+          {...finalAutomationProps}
           className={`
             inline-flex items-center justify-between
             rounded-lg p-2 h-10
