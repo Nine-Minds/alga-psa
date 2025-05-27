@@ -81,7 +81,7 @@ async function handleAIRequest(rawMessages: LocalMessage[]) {
           model: process.env.CUSTOM_OPENAI_MODEL || 'gpt-4o-mini',
           systemPrompt: systemMessage,
           messages: messageHistory,
-          maxTokens: 1024,
+          maxTokens: 32768,
           temperature: 0.2,
         });
 
