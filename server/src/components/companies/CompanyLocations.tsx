@@ -391,17 +391,43 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   };
 
   const formatAddress = (location: ICompanyLocation) => {
-    const parts = [
+    const addressParts = [];
+    
+    // Combine address lines (address_line1, address_line2, address_line3)
+    const addressLines = [
       location.address_line1,
       location.address_line2,
-      location.address_line3,
-      location.city,
-      location.state_province,
-      location.postal_code,
-      location.country_name
+      location.address_line3
     ].filter(Boolean);
     
-    return parts.join(', ');
+    if (addressLines.length > 0) {
+      addressParts.push(addressLines.join(', '));
+    }
+    
+    // Add city if present
+    if (location.city) {
+      addressParts.push(location.city);
+    }
+    
+    // Add state/province and postal code together (space-separated, not comma-separated)
+    const statePostalParts = [];
+    if (location.state_province) {
+      statePostalParts.push(location.state_province);
+    }
+    if (location.postal_code) {
+      statePostalParts.push(location.postal_code);
+    }
+    if (statePostalParts.length > 0) {
+      addressParts.push(statePostalParts.join(' '));
+    }
+    
+    // Add country if present
+    if (location.country_name) {
+      addressParts.push(location.country_name);
+    }
+    
+    // Join all major address components with comma-space
+    return addressParts.join(', ');
   };
 
   // Read-only mode - show default location or "No locations"
