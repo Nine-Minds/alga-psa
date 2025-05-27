@@ -6,6 +6,9 @@ import { MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
+import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 interface CompaniesListProps {
     selectedCompanies: string[];
     filteredCompanies: ICompany[];
@@ -14,6 +17,64 @@ interface CompaniesListProps {
     handleEditCompany: (companyId: string) => void;
     handleDeleteCompany: (company: ICompany) => void;
 }
+
+// Component for company selection checkbox
+interface CompanyCheckboxProps {
+  companyId: string;
+  checked: boolean;
+  onChange: () => void;
+}
+
+const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
+  const checkboxId = `company-checkbox-${companyId}`;
+  
+  useRegisterChild<FormFieldComponent>({
+    id: checkboxId,
+    type: 'formField',
+    label: 'Select Company',
+    value: checked ? 'true' : 'false',
+    fieldType: 'checkbox'
+  });
+
+  return (
+    <input
+      type="checkbox"
+      data-automation-id={checkboxId}
+      className="form-checkbox h-4 w-4 cursor-pointer"
+      checked={checked}
+      onChange={onChange}
+    />
+  );
+};
+
+// Component for company name link
+interface CompanyLinkProps {
+  company: ICompany;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
+  const linkId = `company-link-${company.company_id}`;
+  
+  useRegisterChild<ButtonComponent>({
+    id: linkId,
+    type: 'button',
+    label: company.company_name,
+    actions: ['click']
+  });
+
+  return (
+    <a
+      data-automation-id={linkId}
+      href={`/msp/companies/${company.company_id}`}
+      onClick={onClick}
+      className="text-blue-600 hover:underline font-medium truncate"
+      title={company.company_name}
+    >
+      {company.company_name}
+    </a>
+  );
+};
 
 const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompanies, handleCheckboxChange, handleEditCompany, handleDeleteCompany }: CompaniesListProps) => {
   const router = useRouter(); // Get router instance
@@ -29,11 +90,10 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
             width: '4%',
             render: (value: string, record: ICompany) => (
                 <div onClick={(e) => e.stopPropagation()} className="flex justify-center">
-                  <input
-                      type="checkbox"
-                      className="form-checkbox h-4 w-4 cursor-pointer"
-                      checked={selectedCompanies.includes(record.company_id)}
-                      onChange={() => handleCheckboxChange(record.company_id)}
+                  <CompanyCheckbox
+                    companyId={record.company_id}
+                    checked={selectedCompanies.includes(record.company_id)}
+                    onChange={() => handleCheckboxChange(record.company_id)}
                   />
                 </div>
             ),
@@ -51,14 +111,10 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
                         size="sm"
                         className="mr-2 flex-shrink-0"
                     />
-                    <a
-                      href={`/msp/companies/${record.company_id}`}
+                    <CompanyLink
+                      company={record}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-blue-600 hover:underline font-medium truncate"
-                      title={record.company_name}
-                    >
-                        {record.company_name}
-                    </a>
+                    />
                 </div>
             ),
         },
@@ -149,6 +205,7 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
     return (
         <div className="w-full">
             <DataTable
+                id="companies"
                 data={filteredCompanies.map((company): ICompany => ({
                     ...company,
                     company_id: company.company_id
