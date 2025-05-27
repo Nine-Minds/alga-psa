@@ -1,4 +1,4 @@
-import React, { forwardRef, InputHTMLAttributes } from 'react';
+import React, { forwardRef, InputHTMLAttributes, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
@@ -13,11 +13,21 @@ interface SearchInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, '
 
 export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps & AutomationProps>(
   ({ className, value, onChange, id, ...props }, ref) => {
-    const { automationIdProps: textProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    const { automationIdProps: textProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
       id,
       type: 'formField',
-      fieldType: 'textField'
+      fieldType: 'textField',
+      value: typeof value === 'string' ? value : undefined
     });
+
+    // Update metadata when field props change
+    useEffect(() => {
+      if (updateMetadata) {
+        updateMetadata({
+          value: typeof value === 'string' ? value : undefined
+        });
+      }
+    }, [value, updateMetadata]);
 
     return (
       <div className="relative">

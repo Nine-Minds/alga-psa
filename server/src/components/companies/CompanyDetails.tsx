@@ -92,7 +92,7 @@ const TextDetailItem: React.FC<{
   const [localValue, setLocalValue] = useState(value);
 
   // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     id: automationId,
     type: 'formField',
     fieldType: 'textField',
@@ -100,6 +100,16 @@ const TextDetailItem: React.FC<{
     value: localValue,
     helperText: `Input field for ${label}`
   });
+
+  // Update metadata when localValue changes
+  useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        value: localValue,
+        label: label
+      });
+    }
+  }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
     if (localValue !== value) {
