@@ -56,7 +56,7 @@ export interface ButtonComponent extends BaseComponent {
   type: "button";
   
   /** Visual style variant of the button */
-  variant?: "primary" | "secondary" | "danger" | string;
+  variant?: string;
 }
 
 /**
@@ -258,6 +258,60 @@ export interface DateTimePickerComponent extends BaseComponent {
   actions: Array<'open' | 'select'>;
 }
 
+/**
+ * Dropdown menu component representation.
+ */
+export interface DropdownMenuComponent extends BaseComponent {
+  type: "dropdownMenu";
+  
+  /** Whether the dropdown menu is currently open */
+  open: boolean;
+  
+  /** The trigger button label */
+  triggerLabel?: string;
+  
+  /** Available actions on the dropdown */
+  actions: Array<'open' | 'close' | 'toggle'>;
+}
+
+/**
+ * Menu item component representation.
+ */
+export interface MenuItemComponent extends BaseComponent {
+  type: "menuItem";
+  
+  /** The menu item text */
+  text: string;
+  
+  /** Icon name if present */
+  icon?: string;
+  
+  /** Available actions */
+  actions: Array<'click'>;
+  
+  /** Visual variant (e.g., for destructive actions) */
+  variant?: string;
+}
+
+/**
+ * Input component representation.
+ */
+export interface InputComponent extends BaseComponent {
+  type: "input";
+  
+  /** Current input value */
+  value?: string;
+  
+  /** Input placeholder text */
+  placeholder?: string;
+  
+  /** Whether the input is required */
+  required?: boolean;
+  
+  /** Input type (text, email, password, etc.) */
+  inputType?: string;
+}
+
 export type UIComponent =
   | ButtonComponent
   | DialogComponent
@@ -270,7 +324,10 @@ export type UIComponent =
   | DrawerComponent
   | DatePickerComponent
   | TimePickerComponent
-  | DateTimePickerComponent;
+  | DateTimePickerComponent
+  | DropdownMenuComponent
+  | MenuItemComponent
+  | InputComponent;
 
 /**
  * Top-level page state representation.
