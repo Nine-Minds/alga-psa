@@ -23,7 +23,45 @@ export class PuppeteerHelper {
     }
 
     console.log('[PuppeteerHelper] Typing into element:', elementId);
-    await element.type(text);
+    
+    // Improved focus and typing strategy to prevent focus issues
+    try {
+      // 1. Click the element to ensure it receives focus
+      await element.click();
+      
+      // 2. Small delay to allow focus to settle
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 3. Clear existing content using multiple approaches for reliability
+      try {
+        // Method 1: Triple-click to select all content in the field
+        await element.click({ clickCount: 3 });
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        // Method 2: Use Puppeteer's built-in method to clear the field
+        await element.evaluate((el: any) => {
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+            el.value = '';
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      } catch (clearError) {
+        console.warn(`[PuppeteerHelper] Could not clear field ${elementId}, proceeding with typing:`, clearError);
+      }
+      
+      // 4. Small delay before typing
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // 5. Type the new text
+      await element.type(text);
+      
+      console.log(`[PuppeteerHelper] Successfully typed "${text}" into element: ${elementId}`);
+    } catch (typingError: any) {
+      console.error(`[PuppeteerHelper] Error during typing into ${elementId}:`, typingError);
+      throw new Error(`Failed to type into element ${elementId}: ${typingError.message}`);
+    }
+    
     return true;
   }
 
