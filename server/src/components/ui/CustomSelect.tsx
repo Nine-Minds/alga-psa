@@ -113,6 +113,7 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
       >
         <RadixSelect.Trigger
           {...finalAutomationProps}
+          data-automation-type={dataAutomationType}
           className={`
             inline-flex items-center justify-between
             rounded-lg p-2 h-10

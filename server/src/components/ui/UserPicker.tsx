@@ -3,10 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
-import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
+import { AutomationProps, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { Input } from './Input';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface UserPickerProps {
   label?: string;
@@ -21,6 +22,35 @@ interface UserPickerProps {
   placeholder?: string;
 }
 
+// Component for individual option buttons that registers with UI reflection
+interface OptionButtonProps {
+  id: string;
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  className?: string;
+  children: React.ReactNode;
+}
+
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id,
+    label,
+    actions: ['click']
+  });
+
+  return (
+    <div
+      {...automationIdProps}
+      data-automation-type="button"
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+};
+
 const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({ 
   label, 
   value, 
@@ -32,7 +62,8 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   labelStyle = 'bold',
   buttonWidth = 'fit',
   placeholder = 'Not assigned',
-  'data-automation-id': dataAutomationId
+  'data-automation-id': dataAutomationId,
+  'data-automation-type': dataAutomationType = 'user-picker'
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,15 +74,6 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
-  // Register with UI reflection system
-  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
-    type: 'formField',
-    fieldType: 'select',
-    label,
-    value,
-    disabled,
-  }, true, dataAutomationId);
-
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
@@ -61,6 +83,26 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim().toLowerCase();
     return fullName.includes(searchQuery.toLowerCase());
   });
+
+  // Register with UI reflection system - options will be registered individually as buttons
+  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType: 'select',
+    label,
+    value,
+    disabled
+  }, true, dataAutomationId);
+
+  // Update metadata when picker state changes
+  useEffect(() => {
+    if (updateMetadata) {
+      updateMetadata({
+        value,
+        label,
+        disabled
+      });
+    }
+  }, [value, label, disabled, updateMetadata]);
   
   // Fetch avatar URLs for visible users
   useEffect(() => {
@@ -121,16 +163,6 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     fetchAvatarUrls();
   }, [currentUser, isOpen, filteredUsers, users]);
 
-  // Update metadata when value changes
-  useEffect(() => {
-    if (updateMetadata) {
-      updateMetadata({
-        value,
-        label,
-        disabled,
-      });
-    }
-  }, [updateMetadata, value, label, disabled]);
 
   // Handle click outside to close dropdown
   useEffect(() => {
@@ -242,6 +274,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
         onClick={toggleDropdown}
         disabled={disabled}
         {...pickerProps}
+        data-automation-type={dataAutomationType}
         className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
@@ -272,9 +305,10 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div 
-            className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full"
-          >
+          <ReflectionContainer id={pickerProps.id}>
+            <div 
+              className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full"
+            >
             {/* Search Input */}
             <div className="p-2 border-b border-gray-200">
             <div className="relative">
@@ -298,42 +332,50 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
               maxHeight: dropdownPosition === 'bottom' ? '200px' : '250px' 
             }}>
               {/* Not assigned option */}
-              <div
-                className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+              <OptionButton
+                id={`${pickerProps.id}-option-unassigned`}
+                label="Not assigned"
                 onClick={(e) => handleSelectUser('unassigned', e)}
+                className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
               >
                 Not assigned
-              </div>
+              </OptionButton>
               
               {/* User options */}
-              {filteredUsers.map((user) => (
-                <div
-                  key={user.user_id}
-                  className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
-                    user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
-                  }`}
-                  onClick={(e) => handleSelectUser(user.user_id, e)}
-                >
-                  <div className="flex items-center gap-2">
-                    <UserAvatar
-                      userId={user.user_id}
-                      userName={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
-                      avatarUrl={avatarUrls[user.user_id] || null}
-                      size={size === 'sm' ? 'sm' : 'md'}
-                    />
-                    <span>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User'}</span>
-                    {user.is_inactive && (
-                      <span className="ml-1 text-xs text-gray-400">(Inactive)</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+              {filteredUsers.map((user) => {
+                const userName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unnamed User';
+                return (
+                  <OptionButton
+                    key={user.user_id}
+                    id={`${pickerProps.id}-option-${user.user_id}`}
+                    label={userName}
+                    onClick={(e) => handleSelectUser(user.user_id, e)}
+                    className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
+                      user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <UserAvatar
+                        userId={user.user_id}
+                        userName={userName}
+                        avatarUrl={avatarUrls[user.user_id] || null}
+                        size={size === 'sm' ? 'sm' : 'md'}
+                      />
+                      <span>{userName}</span>
+                      {user.is_inactive && (
+                        <span className="ml-1 text-xs text-gray-400">(Inactive)</span>
+                      )}
+                    </div>
+                  </OptionButton>
+                );
+              })}
               
               {filteredUsers.length === 0 && searchQuery && (
                 <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
               )}
             </div>
-          </div>
+            </div>
+          </ReflectionContainer>
         </div>
       )}
     </div>
