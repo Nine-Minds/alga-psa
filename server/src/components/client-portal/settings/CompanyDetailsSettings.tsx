@@ -7,7 +7,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
-import { getCompanyById, updateCompany, uploadCompanyLogo, deleteCompanyLogo } from 'server/src/lib/actions/companyActions';
+import { getCompanyById, updateCompany, uploadCompanyLogo, deleteCompanyLogo } from 'server/src/lib/actions/company-actions/companyActions';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IPermission } from 'server/src/interfaces/auth.interfaces';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';

@@ -14,7 +14,7 @@ import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/inter
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { CompanyPicker } from '../companies/CompanyPicker';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';

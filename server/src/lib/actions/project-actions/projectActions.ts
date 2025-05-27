@@ -15,7 +15,7 @@ import { withTransaction } from '../../../../../shared/db';
 import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { 
     createProjectSchema, 
     updateProjectSchema, 

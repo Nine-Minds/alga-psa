@@ -4,7 +4,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
 import QuickAddCompany from './QuickAddCompany';
-import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/companyActions';
+import { createCompany, getAllCompanies, deleteCompany, importCompaniesFromCSV, exportCompaniesToCSV } from 'server/src/lib/actions/company-actions/companyActions';
 import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 import CompaniesGrid from './CompaniesGrid';

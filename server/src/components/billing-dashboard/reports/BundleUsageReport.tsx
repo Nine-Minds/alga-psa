@@ -10,8 +10,8 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { getPlanBundles } from 'server/src/lib/actions/planBundleActions';
-import { getCompanyBundles, getDetailedCompanyBundle } from 'server/src/lib/actions/companyPlanBundleActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getCompanyBundles, getDetailedCompanyBundle } from 'server/src/lib/actions/company-actions/companyPlanBundleActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { ICompany } from 'server/src/interfaces';
 import Spinner from 'server/src/components/ui/Spinner';
 

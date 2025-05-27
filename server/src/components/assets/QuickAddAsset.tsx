@@ -11,7 +11,7 @@ import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ICompany } from 'server/src/interfaces';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 
 interface QuickAddAssetProps {
   companyId?: string;

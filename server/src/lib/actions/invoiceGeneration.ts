@@ -32,7 +32,7 @@ import { getCompanyLogoUrl } from '../utils/avatarUtils';
 import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
-import { getCompanyDefaultTaxRegionCode } from './companyTaxRateActions';
+import { getCompanyDefaultTaxRegionCode } from './company-actions/companyTaxRateActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
