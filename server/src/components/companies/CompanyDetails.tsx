@@ -165,6 +165,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
 
+
   // 1. Implement refreshCompanyData function
   const refreshCompanyData = useCallback(async () => {
     if (!company?.company_id) return; // Ensure company_id is available
@@ -472,17 +473,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               automationId="email-field"
             />
             
-            <div className="space-y-2" {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'account-manager-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Account Manager',
-                value: editedCompany.account_manager_full_name || '',
-                helperText: 'Select the account manager for this company'
-              });
-              return automationIdProps;
-            })()}>
+            <FieldContainer
+              label="Account Manager"
+              fieldType="select"
+              value={editedCompany.account_manager_full_name || ''}
+              helperText="Select the account manager for this company"
+              automationId="account-manager-field"
+            >
               <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
               <UserPicker
                 value={editedCompany.account_manager_id || ''}
@@ -492,7 +489,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                 buttonWidth="full"
               />
-            </div>
+            </FieldContainer>
             <TextDetailItem
               label="Website"
               value={editedCompany.properties?.website || ''}
@@ -669,23 +666,19 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
             />
-            <div className="space-y-2" {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'timezone-field',
-                type: 'formField',
-                fieldType: 'select',
-                label: 'Timezone',
-                value: editedCompany.timezone || '',
-                helperText: 'Select the timezone for this company'
-              });
-              return automationIdProps;
-            })()}>
+            <FieldContainer
+              label="Timezone"
+              fieldType="select"
+              value={editedCompany.timezone || ''}
+              helperText="Select the timezone for this company"
+              automationId="timezone-field"
+            >
               <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
-            </div>
+            </FieldContainer>
             <TextDetailItem
               label="Last Contact Date"
               value={editedCompany.properties?.last_contact_date ?? ""}
@@ -854,6 +847,29 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         </Dialog>
       </div>
     </ReflectionContainer>
+  );
+};
+
+const FieldContainer: React.FC<{
+  label: string;
+  fieldType: 'select' | 'textField';
+  value: string;
+  helperText: string;
+  automationId?: string;
+  children: React.ReactNode;
+}> = ({ label, fieldType, value, helperText, automationId, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    type: 'formField',
+    fieldType,
+    label,
+    value,
+    helperText
+  }, true, automationId);
+
+  return (
+    <div className="space-y-2" {...automationIdProps}>
+      {children}
+    </div>
   );
 };
 
