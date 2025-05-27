@@ -334,6 +334,65 @@ When a user asks you to NAVIGATE, use the get_ui_state to click on the menu item
 
 REMINDER: Do not click the pickers, use the select helper function instead. Do not use the toggle button manually unless instructed to do so.
 
+## Working with Dynamic Picker Components
+
+Some picker components (UserPicker, CompanyPicker, etc.) show dynamic options that only appear when the picker is opened. These require a two-step discovery process:
+
+**REQUIRED WORKFLOW for Dynamic Pickers**:
+1. **First, click the picker** to open the dropdown and load options:
+   \`\`\`javascript
+   (async () => {
+     await helper.click('account_manager_picker');
+   })();
+   \`\`\`
+
+2. **Then get UI state** to see the available options:
+   \`\`\`
+   <func-call name="get_ui_state">
+     <jsonpath>$..[?(@.id=="account_manager_picker")]</jsonpath>
+   </func-call>
+   \`\`\`
+
+3. **The UI state will now show the options array** when the picker is open:
+   \`\`\`json
+   {
+     "id": "account_manager_picker",
+     "type": "formField",
+     "fieldType": "select",
+     "options": [
+       { "value": "user-123", "label": "Dorothy Gale" },
+       { "value": "user-456", "label": "Scarecrow Brainless" },
+       { "value": "user-789", "label": "Robert Isaacs" }
+     ]
+   }
+   \`\`\`
+
+4. **Finally, select using the exact label** from the options:
+   \`\`\`javascript
+   (async () => {
+     await helper.select('account_manager_picker', 'Dorothy Gale');
+   })();
+   \`\`\`
+
+**Key Points for Dynamic Pickers**:
+- **Options only appear when picker is open** - empty/undefined when closed
+- **Always click first, then check UI state** for available options
+- **Use exact label text** from the options array, not the value
+- **Common picker types**: \`user-picker\`, \`picker\`, \`select\`
+- **If no options appear**: The picker may be empty or require other selections first
+
+**Picker Component Types**:
+- \`data-automation-type="user-picker"\` → UserPicker (searchable user dropdown)
+- \`data-automation-type="picker"\` → CompanyPicker (company dropdown) 
+- \`data-automation-type="select"\` → CustomSelect (static options dropdown)
+
+**Example Workflow - Selecting an Account Manager**:
+\`\`\`
+1. Click: await helper.click('account_manager_picker');
+2. Check: get_ui_state to see ["Dorothy Gale", "Robert Isaacs", ...]
+3. Select: await helper.select('account_manager_picker', 'Dorothy Gale');
+\`\`\`
+
 ALWAYS execute just one tool at a time. Additional tools will be IGNORED.`
 } as const;
 
