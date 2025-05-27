@@ -7,7 +7,7 @@ import { TaxRegion } from 'server/src/types/types.d';
 import { fetchCompanyTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
 import { getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 
 interface Service {
   id: string;

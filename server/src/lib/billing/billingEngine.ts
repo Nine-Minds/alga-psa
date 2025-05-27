@@ -31,14 +31,14 @@ import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
 import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getCompanyTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { ICompany } from 'server/src/interfaces';
 import { get } from 'http';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
 import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getCompanyDetails } from 'server/src/lib/services/invoiceService';
 import { v4 as uuidv4 } from 'uuid';
-import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/companyTaxRateActions'; // Import the correct lookup function
+import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/company-actions/companyTaxRateActions'; // Import the correct lookup function
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
 import { string, number } from 'zod';
 import billingPlan from '../models/billingPlan';

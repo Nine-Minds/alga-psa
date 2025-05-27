@@ -11,7 +11,7 @@ import { IBillingCharge, IFixedPriceCharge, IService } from 'server/src/interfac
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/companyTaxRateActions'; // Import the new lookup function
+import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/company-actions/companyTaxRateActions'; // Import the new lookup function
 
 // Helper interface for tax calculation
 interface ITaxableEntity {

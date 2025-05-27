@@ -19,8 +19,8 @@ import {
 } from 'server/src/components/ui/Dialog';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { createCompany } from 'server/src/lib/actions/companyActions';
-import { createCompanyLocation } from 'server/src/lib/actions/companyLocationActions';
+import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';
+import { createCompanyLocation } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import toast from 'react-hot-toast';
 

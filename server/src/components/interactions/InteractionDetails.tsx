@@ -10,7 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { ITicket } from 'server/src/interfaces';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getCompanyById, getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getCompanyById, getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { updateInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 

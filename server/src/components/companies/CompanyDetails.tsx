@@ -13,7 +13,7 @@ import CompanyContactsList from 'server/src/components/contacts/CompanyContactsL
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';

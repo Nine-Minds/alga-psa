@@ -3,7 +3,7 @@
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { unparseCSV } from 'server/src/lib/utils/csvParser';
-import { createDefaultTaxSettings } from './taxSettingsActions';
+import { createDefaultTaxSettings } from '../taxSettingsActions';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';

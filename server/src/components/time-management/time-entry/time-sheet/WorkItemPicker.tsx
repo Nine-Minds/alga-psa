@@ -16,7 +16,7 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 

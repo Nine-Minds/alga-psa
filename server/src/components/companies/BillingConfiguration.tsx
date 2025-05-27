@@ -9,14 +9,14 @@ import { Button } from 'server/src/components/ui/Button';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
 import ContactModel from 'server/src/lib/models/contact';
-import { getCompanyBillingPlan, updateCompanyBillingPlan, addCompanyBillingPlan, removeCompanyBillingPlan, editCompanyBillingPlan } from '../../lib/actions/companyBillingPlanActions';
+import { getCompanyBillingPlan, updateCompanyBillingPlan, addCompanyBillingPlan, removeCompanyBillingPlan, editCompanyBillingPlan } from '../../lib/actions/company-actions/companyBillingPlanActions';
 import { getBillingPlans } from '../../lib/actions/billingPlanAction';
 import { getServiceCategories } from '../../lib/actions/serviceCategoryActions';
 import { ICompanyBillingPlan, IBillingPlan, IServiceCategory, BillingCycleType } from '../../interfaces/billing.interfaces';
 import { getServices, createService, updateService, deleteService } from '../../lib/actions/serviceActions';
 import { IService } from '../../interfaces/billing.interfaces';
 import { getTaxRates } from '../../lib/actions/taxRateActions';
-import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate, updateDefaultCompanyTaxRate } from '../../lib/actions/companyTaxRateActions'; // Added updateDefaultCompanyTaxRate
+import { getCompanyTaxRates, addCompanyTaxRate, removeCompanyTaxRate, updateDefaultCompanyTaxRate } from '../../lib/actions/company-actions/companyTaxRateActions'; // Added updateDefaultCompanyTaxRate
 import { ITaxRate, ICompanyTaxRate } from '../../interfaces/billing.interfaces';
 import { getBillingCycle, updateBillingCycle } from '../../lib/actions/billingCycleActions';
 import { setCompanyTemplate } from '../../lib/actions/invoiceTemplates';

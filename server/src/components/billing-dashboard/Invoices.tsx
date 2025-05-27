@@ -20,7 +20,7 @@ import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
 import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 // Import both ViewModel types with aliases
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';

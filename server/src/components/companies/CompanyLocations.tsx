@@ -8,7 +8,7 @@ import {
   updateCompanyLocation, 
   deleteCompanyLocation,
   setDefaultCompanyLocation 
-} from '../../lib/actions/companyLocationActions';
+} from '../../lib/actions/company-actions/companyLocationActions';
 import { getActiveTaxRegions } from '../../lib/actions/taxSettingsActions';
 import { ITaxRegion } from '../../interfaces/tax.interfaces';
 import { Button } from '../ui/Button';
