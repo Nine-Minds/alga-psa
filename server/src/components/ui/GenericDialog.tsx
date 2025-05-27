@@ -36,7 +36,6 @@ const GenericDialog: React.FC<GenericDialogProps & AutomationProps> = ({
     id: `${id}-close`,
     type: 'button',
     label: 'Close Dialog',
-    actions: ['click']
   });
 
   return (

@@ -2,6 +2,7 @@ import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback 
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   label?: string;
@@ -56,7 +57,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
       value: typeof value === 'string' ? value : undefined,
       disabled,
       required
-    }, true, dataAutomationId);
+    }, () => [
+      CommonActions.type(label ? `Type text into ${label} field` : 'Type text into this field'),
+      CommonActions.focus('Focus this input field'),
+      CommonActions.clear('Clear the current text')
+    ], dataAutomationId);
     
     // Always use the generated automation props (which include our override ID if provided)
     const finalAutomationProps = textProps;

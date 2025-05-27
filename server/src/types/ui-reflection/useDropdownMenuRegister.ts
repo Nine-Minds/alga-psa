@@ -3,6 +3,7 @@
 import React, { useEffect, useCallback, useRef } from 'react';
 import { DropdownMenuComponent, MenuItemComponent } from './types';
 import { useAutomationIdAndRegister } from './useAutomationIdAndRegister';
+import { CommonActions } from './actionBuilders';
 
 export interface DropdownMenuItemConfig {
   id: string;
@@ -39,9 +40,17 @@ export function useDropdownMenuRegister(config: UseDropdownMenuRegisterConfig) {
       id,
       label: triggerLabel,
       open,
-      triggerLabel,
-      actions: ['open', 'close', 'toggle']
-    });
+      triggerLabel
+    }, () => [
+      CommonActions.open('Open dropdown menu'),
+      CommonActions.close('Close dropdown menu'),
+      { 
+        type: 'toggle', 
+        available: true, 
+        description: 'Toggle dropdown menu open/closed', 
+        parameters: [] 
+      }
+    ]);
 
   // Track registered menu items to update their state
   const registeredItemsRef = useRef<{ [itemId: string]: (partial: Partial<MenuItemComponent>) => void }>({});
@@ -129,9 +138,10 @@ export function useMenuItemRegister(config: {
     text: config.text,
     icon: iconString,
     variant: config.variant || 'default',
-    disabled: config.disabled,
-    actions: ['click']
-  });
+    disabled: config.disabled
+  }, () => [
+    CommonActions.click(`Click ${config.text}`)
+  ]);
 
   // Update metadata when config changes
   useEffect(() => {

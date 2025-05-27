@@ -54,8 +54,7 @@ export default function SignIn() {
     id: 'signin-2fa-close-button',
     type: 'button',
     label: 'Close 2FA Dialog',
-    parentId: 'signin-2fa',
-    actions: ['click']
+    parentId: 'signin-2fa'
   });
 
   // Register main card

@@ -8,6 +8,7 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { ButtonComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister'
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders'
 
 const buttonVariants = cva(
   'inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background relative',
@@ -75,21 +76,22 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps & AutomationProps
       id,
       label: currentLabel,
       disabled,
-      variant: variant || undefined,
-      actions: ['click']
-    });
+      variant: variant || undefined
+    }, () => [
+      CommonActions.click(currentLabel ? `Click ${currentLabel}` : 'Click this button'),
+      CommonActions.focus('Focus this button')
+    ]);
 
     // Update metadata when disabled state or label changes
-    // React.useEffect(() => {
-    //   if (updateMetadata) {
-    //     updateMetadata({
-    //       disabled,
-    //       label: currentLabel,
-    //       variant: variant || undefined,
-    //       actions: ['click']
-    //     });
-    //   }
-    // }, [disabled, currentLabel, variant, updateMetadata]);
+    React.useEffect(() => {
+      if (updateMetadata) {
+        updateMetadata({
+          disabled,
+          label: currentLabel,
+          variant: variant || undefined
+        });
+      }
+    }, [disabled, currentLabel, variant, updateMetadata]);
 
     // Tooltip position effect
     // React.useEffect(() => {

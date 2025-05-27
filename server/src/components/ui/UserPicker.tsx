@@ -36,7 +36,6 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, classNa
     type: 'button',
     id,
     label,
-    actions: ['click']
   });
 
   return (

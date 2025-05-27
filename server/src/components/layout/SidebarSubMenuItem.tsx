@@ -19,7 +19,6 @@ const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
     type: 'button',
     label: item.name,
     variant: isActive(item.href || '#') ? 'active' : 'default',
-    actions: ['click'],
     parentId
   });
 

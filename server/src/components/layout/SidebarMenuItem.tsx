@@ -25,8 +25,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
     id: id,
     type: 'button',
     label: item.name,
-    variant: isActive(item.href || '#') ? 'active' : 'default',
-    actions: ['click']
+    variant: isActive(item.href || '#') ? 'active' : 'default'
   });
 
   if (item.subItems) {

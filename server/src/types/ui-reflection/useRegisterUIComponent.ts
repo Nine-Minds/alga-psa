@@ -2,7 +2,42 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useUIState } from './UIStateContext';
-import { UIComponent } from './types';
+import { UIComponent, ComponentAction } from './types';
+import { CommonActions } from './actionBuilders';
+
+/**
+ * Generate default actions based on component type for backward compatibility.
+ */
+function getDefaultActionsForType(type: string, label?: string): ComponentAction[] {
+  switch (type) {
+    case 'button':
+      return [
+        CommonActions.click(label ? `Click ${label}` : 'Click this button'),
+        CommonActions.focus('Focus this button')
+      ];
+    case 'formField':
+      return [
+        CommonActions.type('Type text into this field'),
+        CommonActions.focus('Focus this field'),
+        CommonActions.clear('Clear the field')
+      ];
+    case 'container':
+    case 'card':
+    case 'dialog':
+      return [
+        CommonActions.focus('Focus this container')
+      ];
+    case 'navigation':
+      return [
+        CommonActions.click('Navigate using this menu'),
+        CommonActions.focus('Focus this navigation')
+      ];
+    default:
+      return [
+        CommonActions.focus('Focus this element')
+      ];
+  }
+}
 
 /**
  * Custom hook for registering UI components with the reflection system.
@@ -58,7 +93,13 @@ export function useRegisterUIComponent<T extends UIComponent>(
       return; // Don't register, but also don't need cleanup
     }
     
-    const componentToRegister = parentId ? { ...component, parentId } : component;
+    // Add default actions if none are provided (for backward compatibility)
+    const componentWithActions = {
+      ...component,
+      actions: component.actions || getDefaultActionsForType(component.type, component.label)
+    };
+    
+    const componentToRegister = parentId ? { ...componentWithActions, parentId } : componentWithActions;
     registerComponent(componentToRegister);
 
     return () => {

@@ -1,9 +1,44 @@
 'use client';
 
-import { UIComponent } from './types';
+import { UIComponent, ComponentAction } from './types';
 import { useRegisterChild } from './useRegisterChild';
-import { useContext, useRef } from 'react';
+import { useContext, useRef, useMemo } from 'react';
 import { ReflectionParentContext } from './ReflectionParentContext';
+import { CommonActions } from './actionBuilders';
+
+/**
+ * Generate default actions based on component type for backward compatibility.
+ */
+function getDefaultActionsForType(type: string, label?: string): ComponentAction[] {
+  switch (type) {
+    case 'button':
+      return [
+        CommonActions.click(label ? `Click ${label}` : 'Click this button'),
+        CommonActions.focus('Focus this button')
+      ];
+    case 'formField':
+      return [
+        CommonActions.type('Type text into this field'),
+        CommonActions.focus('Focus this field'),
+        CommonActions.clear('Clear the field')
+      ];
+    case 'container':
+    case 'card':
+    case 'dialog':
+      return [
+        CommonActions.focus('Focus this container')
+      ];
+    case 'navigation':
+      return [
+        CommonActions.click('Navigate using this menu'),
+        CommonActions.focus('Focus this navigation')
+      ];
+    default:
+      return [
+        CommonActions.focus('Focus this element')
+      ];
+  }
+}
 
 // Keep a module-level counter for auto-generated IDs and registration tracking
 let autoIdCounter = 0;
@@ -63,6 +98,11 @@ function formatComponentId(
 }
 
 /**
+ * Type for action configuration in components.
+ */
+export type ActionConfig = ComponentAction[] | (() => ComponentAction[]);
+
+/**
  * Custom hook that combines UI reflection registration and data-automation-id props.
  * This ensures a single source of truth for component IDs, preventing mismatches
  * between reflection system registration and DOM attributes.
@@ -72,34 +112,40 @@ function formatComponentId(
  * - Consistent ID formatting based on component hierarchy
  * - Parent-child relationship tracking
  * - Unified data-automation-id attributes
+ * - Dynamic action configuration
  * 
  * @template T - The specific component type (extends UIComponent)
- * @param component - The component's metadata to register
+ * @param component - The component's metadata to register (without actions)
+ * @param actions - The actions configuration (array or function returning array)
+ * @param overrideId - Optional ID override
  * @returns Object containing automation ID props and metadata update function
  * 
  * @example
  * ```tsx
- * // With explicit ID
- * const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
- *   id: `${parentId}-filters`,
- *   type: 'container',
- *   label: 'Filters Section'
- * });
+ * // With static actions
+ * const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+ *   type: 'button',
+ *   label: 'Submit'
+ * }, [CommonActions.click()]);
  * 
- * // With auto-generated ID
- * const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
- *   type: 'container',
- *   label: 'Filters Section'
- * });
+ * // With dynamic actions
+ * const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+ *   type: 'formField',
+ *   fieldType: 'select'
+ * }, () => [
+ *   CommonActions.open(),
+ *   createDynamicSelectAction(isOpen, options)
+ * ]);
  * ```
  */
 export function useAutomationIdAndRegister<T extends UIComponent>(
-  component: Omit<T, 'id'> & { id?: string },
-  shouldRegister: boolean = true,
+  component: Omit<T, 'id' | 'actions'> & { id?: string },
+  actionsOrShouldRegister: ActionConfig | boolean = [],
   overrideId?: string
 ): {
   automationIdProps: { id: string; 'data-automation-id': string };
   updateMetadata: (partial: Partial<T>) => void;
+  updateActions: (newActions: ActionConfig) => void;
 } {
   if (!component.parentId) {
     component.parentId = undefined;
@@ -121,13 +167,45 @@ export function useAutomationIdAndRegister<T extends UIComponent>(
     registrationId.current
   );
 
+  // Handle backward compatibility: if boolean is passed, treat as empty actions
+  const actions: ActionConfig = typeof actionsOrShouldRegister === 'boolean' ? [] : actionsOrShouldRegister;
+  
+  // Track current actions configuration
+  const actionsRef = useRef<ActionConfig>(actions);
+  actionsRef.current = actions;
+
+  // Compute actions dynamically
+  const computedActions = useMemo(() => {
+    let actionsList: ComponentAction[];
+    if (typeof actionsRef.current === 'function') {
+      actionsList = actionsRef.current();
+    } else {
+      actionsList = actionsRef.current || [];
+    }
+    
+    // If no actions provided, use default actions for backward compatibility
+    if (actionsList.length === 0) {
+      return getDefaultActionsForType(component.type, component.label);
+    }
+    
+    return actionsList;
+  }, [actionsRef.current, component.type, component.label]);
+
   // Always register, but use the final ID (either provided or generated)
   const componentToRegister = {
     ...component,
-    id: finalId
+    id: finalId,
+    actions: computedActions
   } as T;
   
   const updateMetadata = useRegisterChild<T>(componentToRegister);
+
+  // Function to update actions dynamically
+  const updateActions = (newActions: ActionConfig) => {
+    actionsRef.current = newActions;
+    const newComputedActions = typeof newActions === 'function' ? newActions() : newActions;
+    updateMetadata({ actions: newComputedActions } as Partial<T>);
+  };
 
   // Generate automation props
   const automationIdProps = {
@@ -135,5 +213,5 @@ export function useAutomationIdAndRegister<T extends UIComponent>(
     'data-automation-id': finalId,
   };
 
-  return { automationIdProps, updateMetadata };
+  return { automationIdProps, updateMetadata, updateActions };
 }
