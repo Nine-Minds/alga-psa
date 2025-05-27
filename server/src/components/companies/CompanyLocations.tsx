@@ -10,7 +10,9 @@ import {
   setDefaultCompanyLocation 
 } from '../../lib/actions/company-actions/companyLocationActions';
 import { getActiveTaxRegions } from '../../lib/actions/taxSettingsActions';
+import { getAllCountries, ICountry } from '../../lib/actions/company-actions/countryActions';
 import { ITaxRegion } from '../../interfaces/tax.interfaces';
+import CountryPicker from '../ui/CountryPicker';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Label } from '../ui/Label';
@@ -242,12 +244,15 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [formData, setFormData] = useState<LocationFormData>(initialFormData);
   const [isLoading, setIsLoading] = useState(false);
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const { toast } = useToast();
 
 
   useEffect(() => {
     loadLocations();
     loadTaxRegions();
+    loadCountries();
   }, [companyId]);
 
   const loadTaxRegions = async () => {
@@ -261,6 +266,24 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         description: 'Failed to load tax regions',
         variant: 'destructive',
       });
+    }
+  };
+
+  const loadCountries = async () => {
+    if (isLoadingCountries || countries.length > 0) return;
+    setIsLoadingCountries(true);
+    try {
+      const countriesData = await getAllCountries();
+      setCountries(countriesData);
+    } catch (error) {
+      console.error('Error loading countries:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load countries',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingCountries(false);
     }
   };
 
@@ -388,6 +411,14 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         variant: 'destructive',
       });
     }
+  };
+
+  const handleCountryChange = (countryCode: string, countryName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      country_code: countryCode,
+      country_name: countryName
+    }));
   };
 
   const formatAddress = (location: ICompanyLocation) => {
@@ -607,43 +638,24 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <div {...(() => {
               const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-code-field',
+                id: 'country-picker-field',
                 type: 'formField',
-                fieldType: 'textField',
-                label: 'Country Code',
+                fieldType: 'select',
+                label: 'Country',
                 value: formData.country_code,
-                helperText: 'Two-letter country code (required)'
+                helperText: 'Select country (required)'
               });
               return automationIdProps;
             })()}>
-              <Label htmlFor="country-code-input">Country Code *</Label>
-              <Input
-                id="country-code-input"
+              <Label htmlFor="country-picker">Country *</Label>
+              <CountryPicker
+                data-automation-id="country-picker"
                 value={formData.country_code}
-                onChange={(e) => setFormData(prev => ({ ...prev, country_code: e.target.value }))}
-                placeholder="US"
-                maxLength={2}
-                required
-              />
-            </div>
-            
-            <div {...(() => {
-              const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-                id: 'country-name-field',
-                type: 'formField',
-                fieldType: 'textField',
-                label: 'Country Name',
-                value: formData.country_name,
-                helperText: 'Full country name (required)'
-              });
-              return automationIdProps;
-            })()}>
-              <Label htmlFor="country-name-input">Country Name *</Label>
-              <Input
-                id="country-name-input"
-                value={formData.country_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, country_name: e.target.value }))}
-                required
+                onValueChange={handleCountryChange}
+                countries={countries}
+                disabled={isLoadingCountries || isLoading}
+                placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                buttonWidth="full"
               />
             </div>
             

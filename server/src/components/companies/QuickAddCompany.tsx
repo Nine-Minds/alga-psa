@@ -22,6 +22,8 @@ import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';
 import { createCompanyLocation } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
+import CountryPicker from 'server/src/components/ui/CountryPicker';
 import toast from 'react-hot-toast';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
@@ -98,7 +100,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
   const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  const [countries, setCountries] = useState<ICountry[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +121,23 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
           setIsLoadingUsers(false);
         }
       };
+
+      const fetchCountries = async () => {
+        if (isLoadingCountries || countries.length > 0) return;
+        setIsLoadingCountries(true);
+        try {
+          const countriesData = await getAllCountries();
+          setCountries(countriesData);
+        } catch (error: any) {
+          console.error("Error fetching countries:", error);
+          toast.error("Failed to load countries.");
+        } finally {
+          setIsLoadingCountries(false);
+        }
+      };
+
       fetchUsers();
+      fetchCountries();
     } else {
       setFormData(initialFormData);
       setLocationData(initialLocationData);
@@ -218,6 +238,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     setContactData(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleCountryChange = (countryCode: string, countryName: string) => {
+    setLocationData(prev => ({
+      ...prev,
+      country_code: countryCode,
+      country_name: countryName
     }));
   };
 
@@ -377,34 +405,19 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="country_code" className="block text-sm font-medium text-gray-700 mb-1">
-                    Country Code
-                  </Label>
-                  <Input
-                    data-automation-id="country_code"
-                    value={locationData.country_code}
-                    onChange={(e) => handleLocationChange('country_code', e.target.value.toUpperCase())}
-                    placeholder="US"
-                    maxLength={2}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="country_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Country Name
-                  </Label>
-                  <Input
-                    data-automation-id="country_name"
-                    value={locationData.country_name}
-                    onChange={(e) => handleLocationChange('country_name', e.target.value)}
-                    disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+              <div>
+                <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  Country
+                </Label>
+                <CountryPicker
+                  data-automation-id="country_picker"
+                  value={locationData.country_code}
+                  onValueChange={handleCountryChange}
+                  countries={countries}
+                  disabled={isLoadingCountries || isSubmitting}
+                  placeholder={isLoadingCountries ? "Loading countries..." : "Select Country"}
+                  buttonWidth="full"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
