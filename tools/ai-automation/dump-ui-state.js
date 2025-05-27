@@ -136,6 +136,20 @@ async function dumpUIState() {
         console.log(`${indent}   Value: ${displayValue}`);
       }
       
+      // For TextComponent, show the text content
+      if (component.text !== undefined && component.text !== null) {
+        let displayText;
+        if (typeof component.text === 'string') {
+          // Truncate long text for readability
+          displayText = component.text.length > 50 
+            ? `"${component.text.substring(0, 47)}..."` 
+            : `"${component.text}"`;
+        } else {
+          displayText = String(component.text);
+        }
+        console.log(`${indent}   Text: ${displayText}`);
+      }
+      
       if (component.fieldType) {
         console.log(`${indent}   Field Type: ${component.fieldType}`);
       }

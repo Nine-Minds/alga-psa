@@ -350,6 +350,19 @@ export interface InputComponent extends BaseComponent {
   inputType?: string;
 }
 
+/**
+ * Text component representation for displaying text content.
+ */
+export interface TextComponent extends BaseComponent {
+  type: "text";
+  
+  /** The text content being displayed */
+  text: string;
+  
+  /** Whether the text is currently visible */
+  visible?: boolean;
+}
+
 export type UIComponent =
   | ButtonComponent
   | DialogComponent
@@ -365,7 +378,8 @@ export type UIComponent =
   | DateTimePickerComponent
   | DropdownMenuComponent
   | MenuItemComponent
-  | InputComponent;
+  | InputComponent
+  | TextComponent;
 
 /**
  * Top-level page state representation.
