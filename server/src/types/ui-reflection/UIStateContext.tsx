@@ -263,6 +263,10 @@ export function UIStateProvider({ children, initialPageState }: {
 
   const setPageState = (state: PageState) => {
     pageState = state;
+    // Expose page state to window for browser automation access
+    if (typeof window !== 'undefined') {
+      (window as any).__UI_STATE__ = state;
+    }
   }
 
   /**

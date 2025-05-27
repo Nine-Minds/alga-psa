@@ -1,5 +1,5 @@
 import type { Page } from 'puppeteer';
-import { ComponentAction, ActionResult, ActionParameter } from '../../../server/src/types/ui-reflection/types';
+import { ComponentAction, ActionResult, ActionParameter } from './types/ui-reflection-types.js';
 
 /**
  * Parameters for executing an action.

@@ -60,23 +60,58 @@ class PuppeteerManager {
     }
     
     try {
-      // Dynamically import helper with cache busting
-      let PuppeteerHelper;
+      // Dynamically import helper modules with cache busting
+      let PuppeteerHelper, UnifiedAutomationHelper, LegacyHelperWrapper;
       try {
+        const timestamp = Date.now().toString();
+        
+        // Import PuppeteerHelper (for fallback)
         const helperUrl = new URL('./puppeteerHelper.ts', import.meta.url);
-        helperUrl.searchParams.set('t', Date.now().toString());
+        helperUrl.searchParams.set('t', timestamp);
         console.log('[Module Loading] Importing PuppeteerHelper from:', helperUrl.href);
-        const module = await import(helperUrl.href);
-        PuppeteerHelper = module.PuppeteerHelper;
+        const puppeteerModule = await import(helperUrl.href);
+        PuppeteerHelper = puppeteerModule.PuppeteerHelper;
+        
+        // Import UnifiedAutomationHelper
+        const unifiedUrl = new URL('./unifiedAutomationHelper.ts', import.meta.url);
+        unifiedUrl.searchParams.set('t', timestamp);
+        console.log('[Module Loading] Importing UnifiedAutomationHelper from:', unifiedUrl.href);
+        const unifiedModule = await import(unifiedUrl.href);
+        UnifiedAutomationHelper = unifiedModule.UnifiedAutomationHelper;
+        LegacyHelperWrapper = unifiedModule.LegacyHelperWrapper;
+        
         if (!PuppeteerHelper) {
           throw new Error('PuppeteerHelper not found in module');
         }
+        if (!UnifiedAutomationHelper) {
+          throw new Error('UnifiedAutomationHelper not found in module');
+        }
       } catch (importError) {
-        console.error('[Module Loading] Failed to import PuppeteerHelper:', importError);
-        throw new Error(`Failed to load PuppeteerHelper: ${importError instanceof Error ? importError.message : String(importError)}`);
+        console.error('[Module Loading] Failed to import helper modules:', importError);
+        throw new Error(`Failed to load helper modules: ${importError instanceof Error ? importError.message : String(importError)}`);
       }
 
-      const helper = new PuppeteerHelper(this.page);
+      // Create unified helper system
+      console.log('[Module Loading] Creating unified helper system...');
+      const unifiedHelper = new UnifiedAutomationHelper(this.page);
+      const legacyHelper = new LegacyHelperWrapper(unifiedHelper);
+      
+      // Create combined helper object with both new and legacy methods
+      const helper = {
+        // New unified methods
+        execute: unifiedHelper.execute.bind(unifiedHelper),
+        query: unifiedHelper.query.bind(unifiedHelper),
+        wait: unifiedHelper.wait.bind(unifiedHelper),
+        
+        // Legacy methods for backward compatibility
+        click: legacyHelper.click.bind(legacyHelper),
+        type: legacyHelper.type.bind(legacyHelper),
+        select: legacyHelper.select.bind(legacyHelper),
+        wait_for_navigation: legacyHelper.wait_for_navigation.bind(legacyHelper),
+        navigate: legacyHelper.navigate.bind(legacyHelper)
+      };
+      
+      console.log('[Module Loading] Helper system created with methods:', Object.keys(helper));
       
       // Execute the script with only helper available
       const scriptFn = new Function('helper', `

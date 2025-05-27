@@ -271,8 +271,7 @@ function setupExpress(app: express.Application) {
     }
 
     try {
-      const page = puppeteerManager.getPage();
-      const result = await page.evaluate(code);
+      const result = await puppeteerManager.execute_automation_script(code);
       
       console.log('Script result:', result);
       console.log(`Completed in ${Date.now() - startTime}ms`);
