@@ -3,10 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChevronDown, Search } from 'lucide-react';
-import { AutomationProps, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
+import { AutomationProps, FormFieldComponent, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { Input } from './Input';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
+import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
 
 interface UserPickerProps {
@@ -29,19 +30,20 @@ interface OptionButtonProps {
   onClick: (e: React.MouseEvent) => void;
   className?: string;
   children: React.ReactNode;
+  parentId: string;
 }
 
-const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children }) => {
-  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children, parentId }) => {
+  useRegisterUIComponent<ButtonComponent>({
     type: 'button',
     id,
-    label,
+    label: `${parentId} - ${label}`,
     actions: ['click']
-  });
+  }, parentId);
 
   return (
     <div
-      {...automationIdProps}
+      data-automation-id={id}
       data-automation-type="button"
       className={className}
       onClick={onClick}
@@ -74,6 +76,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
+  // Create stable automation ID for the picker
+  const pickerId = dataAutomationId || 'account-manager-picker';
+  
   // Filter for internal users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
@@ -84,14 +89,27 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     return fullName.includes(searchQuery.toLowerCase());
   });
 
-  // Register with UI reflection system - options will be registered individually as buttons
-  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
-    type: 'formField',
-    fieldType: 'select',
-    label,
-    value,
+  // Calculate selected user name for display
+  const selectedUserName = currentUser 
+    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
+    : placeholder;
+
+  // Register the main container first, then the trigger button
+  // Try to register as a child of company-details if we're in that context
+  useRegisterUIComponent<ContainerComponent>({
+    type: 'container',
+    id: pickerId,
+    label: label || 'User Picker'
+  }, 'company-details');
+
+  // Register the trigger button as a child component
+  const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id: `${pickerId}-trigger`,
+    label: `${label} - ${selectedUserName}`,
+    actions: ['click'],
     disabled
-  }, true, dataAutomationId);
+  });
 
   // Update metadata when picker state changes
   useEffect(() => {
@@ -253,10 +271,6 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     setIsOpen(false);
   };
 
-  const selectedUserName = currentUser 
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
-    : placeholder;
-
   return (
     <div className={`relative inline-block ${buttonWidth === 'full' ? 'w-full' : ''} ${className || ''}`} ref={dropdownRef} onClick={(e) => e.stopPropagation()}>
       {label && labelStyle !== 'none' && (
@@ -305,10 +319,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <ReflectionContainer id={pickerProps.id}>
-            <div 
-              className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full"
-            >
+          <div 
+            className="bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden w-full"
+          >
             {/* Search Input */}
             <div className="p-2 border-b border-gray-200">
             <div className="relative">
@@ -333,10 +346,11 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
             }}>
               {/* Not assigned option */}
               <OptionButton
-                id={`${pickerProps.id}-option-unassigned`}
+                id={`${pickerId}-option-unassigned`}
                 label="Not assigned"
                 onClick={(e) => handleSelectUser('unassigned', e)}
                 className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+                parentId={pickerId}
               >
                 Not assigned
               </OptionButton>
@@ -347,12 +361,13 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
                 return (
                   <OptionButton
                     key={user.user_id}
-                    id={`${pickerProps.id}-option-${user.user_id}`}
+                    id={`${pickerId}-option-${user.user_id}`}
                     label={userName}
                     onClick={(e) => handleSelectUser(user.user_id, e)}
                     className={`relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 ${
                       user.is_inactive ? 'text-gray-400 bg-gray-50' : 'text-gray-900'
                     }`}
+                    parentId={pickerId}
                   >
                     <div className="flex items-center gap-2">
                       <UserAvatar
@@ -374,8 +389,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
                 <div className="px-3 py-2 text-sm text-gray-500">No users found</div>
               )}
             </div>
-            </div>
-          </ReflectionContainer>
+          </div>
         </div>
       )}
     </div>
