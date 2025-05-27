@@ -4,7 +4,7 @@ import { IContact } from "server/src/interfaces/contact.interfaces";
 import { getDocumentByCompanyId } from 'server/src/lib/actions/document-actions/documentActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { notFound } from 'next/navigation';
 
 const CompanyPage = async ({ params }: { params: { id: string } }) => {

@@ -1,9 +1,9 @@
 'use server';
 
-import { createTenantKnex } from '../../lib/db';
-import { ICompanyLocation } from '../../interfaces/company.interfaces';
+import { createTenantKnex } from '../../db';
+import { ICompanyLocation } from '../../../interfaces/company.interfaces';
 import { v4 as uuidv4 } from 'uuid';
-import { getCurrentUser } from './user-actions/userActions';
+import { getCurrentUser } from '../user-actions/userActions';
 
 export async function getCompanyLocations(companyId: string): Promise<ICompanyLocation[]> {
   const { knex, tenant } = await createTenantKnex();

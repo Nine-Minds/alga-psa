@@ -13,7 +13,7 @@ import CompanyContactsList from 'server/src/components/contacts/CompanyContactsL
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
@@ -456,66 +456,72 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column - Company Info */}
-            <TextDetailItem
-              label="Client Name"
-              value={editedCompany.company_name}
-              onEdit={(value) => handleFieldChange('company_name', value)}
-              automationId="client-name-field"
-            />
-            <TextDetailItem
-              label="Phone"
-              value={editedCompany.phone_no || ''}
-              onEdit={(value) => handleFieldChange('phone_no', value)}
-              automationId="phone-field"
-            />
-            
-            <TextDetailItem
-              label="Industry"
-              value={editedCompany.properties?.industry || ''}
-              onEdit={(value) => handleFieldChange('properties.industry', value)}
-              automationId="industry-field"
-            />
-            <TextDetailItem
-              label="Email"
-              value={editedCompany.email || ''}
-              onEdit={(value) => handleFieldChange('email', value)}
-              automationId="email-field"
-            />
-            
-            <FieldContainer
-              label="Account Manager"
-              fieldType="select"
-              value={editedCompany.account_manager_full_name || ''}
-              helperText="Select the account manager for this company"
-              automationId="account-manager-field"
-            >
-              <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
-              <UserPicker
-                value={editedCompany.account_manager_id || ''}
-                onValueChange={(value) => handleFieldChange('account_manager_id', value)}
-                users={internalUsers}
-                disabled={isLoadingUsers}
-                placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
-                buttonWidth="full"
+            {/* Left Column - All Form Fields */}
+            <div className="space-y-6">
+              <TextDetailItem
+                label="Client Name"
+                value={editedCompany.company_name}
+                onEdit={(value) => handleFieldChange('company_name', value)}
+                automationId="client-name-field"
               />
-            </FieldContainer>
-            <TextDetailItem
-              label="Website"
-              value={editedCompany.properties?.website || ''}
-              onEdit={(value) => handleFieldChange('properties.website', value)}
-              automationId="website-field"
-            />
+                           
+              <FieldContainer
+                label="Account Manager"
+                fieldType="select"
+                value={editedCompany.account_manager_full_name || ''}
+                helperText="Select the account manager for this company"
+                automationId="account-manager-field"
+              >
+                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <UserPicker
+                  value={editedCompany.account_manager_id || ''}
+                  onValueChange={(value) => handleFieldChange('account_manager_id', value)}
+                  users={internalUsers}
+                  disabled={isLoadingUsers}
+                  placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
+                  buttonWidth="full"
+                />
+              </FieldContainer>
+              
+              <TextDetailItem
+                label="Website"
+                value={editedCompany.properties?.website || ''}
+                onEdit={(value) => handleFieldChange('properties.website', value)}
+                automationId="website-field"
+              />
+
+              <TextDetailItem
+                label="Industry"
+                value={editedCompany.properties?.industry || ''}
+                onEdit={(value) => handleFieldChange('properties.industry', value)}
+                automationId="industry-field"
+              />
+
+              <TextDetailItem
+                label="Company Size"
+                value={editedCompany.properties?.company_size || ''}
+                onEdit={(value) => handleFieldChange('properties.company_size', value)}
+                automationId="company-size-field"
+              />
+              
+              <TextDetailItem
+                label="Annual Revenue"
+                value={editedCompany.properties?.annual_revenue || ''}
+                onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
+                automationId="annual-revenue-field"
+              />
+              
+              <SwitchDetailItem
+                value={!editedCompany.is_inactive || false}
+                onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
+                automationId="company-status-field"
+              />
+            </div>
             
-            <TextDetailItem
-              label="Company Size"
-              value={editedCompany.properties?.company_size || ''}
-              onEdit={(value) => handleFieldChange('properties.company_size', value)}
-              automationId="company-size-field"
-            />
-            <div className="flex flex-col space-y-2">
+            {/* Right Column - Company Locations Only */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Locations</span>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -526,30 +532,20 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   Manage Locations
                 </Button>
               </div>
-              <CompanyLocations 
-                companyId={editedCompany.company_id} 
-                isEditing={false}
-              />
+              <div>
+                <CompanyLocations 
+                  companyId={editedCompany.company_id} 
+                  isEditing={false}
+                />
+              </div>
             </div>
-            
-            <TextDetailItem
-              label="Annual Revenue"
-              value={editedCompany.properties?.annual_revenue || ''}
-              onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
-              automationId="annual-revenue-field"
-            />
-            <SwitchDetailItem
-              value={!editedCompany.is_inactive || false}
-              onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
-              automationId="company-status-field"
-            />
           </div>
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
             <Button
               id="save-company-changes-btn"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -557,7 +553,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="add-ticket-btn"
               onClick={() => setIsQuickAddTicketOpen(true)}
-              variant="secondary"
+              variant="default"
             >
               Add Ticket
             </Button>
@@ -701,7 +697,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="save-additional-info-btn"
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}

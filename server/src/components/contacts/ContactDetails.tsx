@@ -34,7 +34,7 @@ import { TagManager } from 'server/src/components/tags';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 
 const SwitchDetailItem: React.FC<{

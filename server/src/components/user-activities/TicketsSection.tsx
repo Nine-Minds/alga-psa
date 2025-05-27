@@ -7,7 +7,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { TicketCard } from "server/src/components/user-activities/ActivityCard";
 import { fetchTicketActivities } from "server/src/lib/actions/activity-actions/activityServerActions";
-import { getAllCompanies } from "server/src/lib/actions/companyActions";
+import { getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
 import { getAllContacts } from "server/src/lib/actions/contact-actions/contactActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { TicketSectionFiltersDialog } from "server/src/components/user-activities/filters/TicketSectionFiltersDialog";
