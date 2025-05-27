@@ -11,20 +11,60 @@ import { getCompanyById, updateCompany, uploadCompanyLogo, deleteCompanyLogo } f
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IPermission } from 'server/src/interfaces/auth.interfaces';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
+import CompanyLocations from 'server/src/components/companies/CompanyLocations';
+import { Text, Flex } from '@radix-ui/themes';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+
+const TextDetailItem: React.FC<{
+  label: string;
+  value: string;
+  onEdit: (value: string) => void;
+  automationId?: string;
+}> = ({ label, value, onEdit, automationId }) => {
+  const [localValue, setLocalValue] = useState(value);
+
+  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: automationId,
+    type: 'formField',
+    fieldType: 'textField',
+    label: label,
+    value: localValue,
+    helperText: `Input field for ${label}`
+  });
+
+  const handleBlur = () => {
+    if (localValue !== value) {
+      onEdit(localValue);
+    }
+  };
+  
+  return (
+    <div className="space-y-2" {...automationIdProps}>
+      <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
+      <Input
+        type="text"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={handleBlur}
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+      />
+    </div>
+  );
+};
 
 export function CompanyDetailsSettings() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isEditingLogo, setIsEditingLogo] = useState(false);
-  const [isPendingUpload, startUploadTransition] = useTransition();
-  const [isPendingDelete, startDeleteTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [companyDetails, setCompanyDetails] = useState<ICompany | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
-        // Get current user and their roles with permissions
         const user = await getCurrentUser();
         if (!user) {
           router.push('/auth/signin');
@@ -33,7 +73,6 @@ export function CompanyDetailsSettings() {
 
         const rolesWithPermissions = await getUserRolesWithPermissions(user.user_id);
         
-        // Check if user has required permissions
         const hasRequiredPermissions = rolesWithPermissions.some(role => 
           role.permissions.some((permission: IPermission) => 
             `${permission.resource}.${permission.action}` === 'company_setting.read' || 
@@ -47,14 +86,12 @@ export function CompanyDetailsSettings() {
           return;
         }
 
-        // Get company ID
         const userCompanyId = await getUserCompanyId(user.user_id);
         if (!userCompanyId) {
           setError('Company not found');
           return;
         }
 
-        // Load company details
         const company = await getCompanyById(userCompanyId);
         if (!company) {
           setError('Failed to load company details');
@@ -71,10 +108,45 @@ export function CompanyDetailsSettings() {
     loadData();
   }, [router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!companyDetails?.company_id) return;
+  const handleFieldChange = (field: string, value: string) => {
+    setCompanyDetails(prevCompany => {
+      if (!prevCompany) return prevCompany;
+      
+      const updatedCompany = JSON.parse(JSON.stringify(prevCompany)) as ICompany;
+      
+      if (field.startsWith('properties.')) {
+        const propertyField = field.split('.')[1];
+        
+        if (!updatedCompany.properties) {
+          updatedCompany.properties = {};
+        }
+        
+        (updatedCompany.properties as any)[propertyField] = value;
+        
+        if (propertyField === 'website') {
+          updatedCompany.url = value;
+        }
+      } else if (field === 'url') {
+        updatedCompany.url = value;
+        
+        if (!updatedCompany.properties) {
+          updatedCompany.properties = {};
+        }
+        
+        (updatedCompany.properties as any).website = value;
+      } else {
+        (updatedCompany as any)[field] = value;
+      }
+      
+      return updatedCompany;
+    });
+    
+    setHasUnsavedChanges(true);
+  };
 
+  const handleSave = async () => {
+    if (!companyDetails?.company_id || isLoading) return;
+    
     setIsLoading(true);
     try {
       const updatedCompany = await updateCompany(companyDetails.company_id, {
@@ -85,13 +157,17 @@ export function CompanyDetailsSettings() {
         address: companyDetails.address,
         properties: {
           ...companyDetails.properties,
-          industry: companyDetails.properties?.industry
+          industry: companyDetails.properties?.industry,
+          company_size: companyDetails.properties?.company_size,
+          annual_revenue: companyDetails.properties?.annual_revenue
         }
       });
       setCompanyDetails(updatedCompany);
+      setHasUnsavedChanges(false);
+      toast.success('Company details updated successfully');
     } catch (error) {
       console.error('Failed to update company details:', error);
-      setError('Failed to update company details');
+      toast.error('Failed to update company details');
     } finally {
       setIsLoading(false);
     }
@@ -115,141 +191,110 @@ export function CompanyDetailsSettings() {
   }
 
   return (
-    <Card className="p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Logo Upload Section */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-4">Company Logo</h3>
-          <div className="flex items-center space-x-4">
-            {companyDetails && (
-              <EntityImageUpload
-                entityType="company"
-                entityId={companyDetails.company_id}
-                entityName={companyDetails.company_name}
-                imageUrl={companyDetails.logoUrl ?? null}
-                uploadAction={uploadCompanyLogo}
-                deleteAction={deleteCompanyLogo}
-                onImageChange={(newLogoUrl) => {
-                  setCompanyDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
-                }}
-                size="xl"
-              />
-            )}
-          </div>
+    <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
+      {/* Logo Upload Section */}
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-4">Company Logo</h3>
+        <div className="flex items-center space-x-4">
+          <EntityImageUpload
+            entityType="company"
+            entityId={companyDetails.company_id}
+            entityName={companyDetails.company_name}
+            imageUrl={companyDetails.logoUrl ?? null}
+            uploadAction={uploadCompanyLogo}
+            deleteAction={deleteCompanyLogo}
+            onImageChange={(newLogoUrl) => {
+              setCompanyDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
+            }}
+            size="xl"
+          />
         </div>
+      </div>
 
-        {/* Company Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company Name
-            </label>
-            <Input
-              type="text"
-              value={companyDetails.company_name}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                company_name: e.target.value
-              } : null)}
-              placeholder="Enter company name"
-            />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Left Column - All Form Fields */}
+        <div className="space-y-6">
+          <TextDetailItem
+            label="Company Name"
+            value={companyDetails.company_name}
+            onEdit={(value) => handleFieldChange('company_name', value)}
+            automationId="company-name-field"
+          />
+
+          <TextDetailItem
+            label="Website"
+            value={companyDetails.properties?.website || companyDetails.url || ''}
+            onEdit={(value) => handleFieldChange('properties.website', value)}
+            automationId="website-field"
+          />
+
+          <TextDetailItem
+            label="Industry"
+            value={companyDetails.properties?.industry || ''}
+            onEdit={(value) => handleFieldChange('properties.industry', value)}
+            automationId="industry-field"
+          />
+
+          <TextDetailItem
+            label="Company Size"
+            value={companyDetails.properties?.company_size || ''}
+            onEdit={(value) => handleFieldChange('properties.company_size', value)}
+            automationId="company-size-field"
+          />
+          
+          <TextDetailItem
+            label="Annual Revenue"
+            value={companyDetails.properties?.annual_revenue || ''}
+            onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
+            automationId="annual-revenue-field"
+          />
+        </div>
+        
+        {/* Right Column - Company Locations */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+            <Button
+              id="locations-button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsLocationsDialogOpen(true)}
+              className="text-sm"
+            >
+              Manage Locations
+            </Button>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone Number
-            </label>
-            <Input
-              type="tel"
-              value={companyDetails.phone_no}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                phone_no: e.target.value
-              } : null)}
-              placeholder="Enter phone number"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <Input
-              type="email"
-              value={companyDetails.email}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                email: e.target.value
-              } : null)}
-              placeholder="Enter email address"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Website
-            </label>
-            <Input
-              type="url"
-              value={companyDetails.url}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                url: e.target.value
-              } : null)}
-              placeholder="Enter website URL"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Industry
-            </label>
-            <Input
-              type="text"
-              value={companyDetails.properties?.industry || ''}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                properties: {
-                  ...prev.properties,
-                  industry: e.target.value
-                }
-              } : null)}
-              placeholder="Enter industry"
+            <CompanyLocations 
+              companyId={companyDetails.company_id} 
+              isEditing={false}
             />
           </div>
         </div>
+      </div>
+      
+      <Flex gap="4" justify="end" align="center" className="pt-6">
+        <Button
+          id="save-company-changes-btn"
+          onClick={handleSave}
+          disabled={isLoading || !hasUnsavedChanges}
+          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isLoading ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </Flex>
 
-        {/* Address Information */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Address Information</h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address
-            </label>
-            <Input
-              type="text"
-              value={companyDetails.address}
-              onChange={(e) => setCompanyDetails(prev => prev ? {
-                ...prev,
-                address: e.target.value
-              } : null)}
-              placeholder="Enter address"
-            />
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex justify-end">
-          <Button
-            id="save-company-details"
-            type="submit"
-            disabled={isLoading}
-            className="w-full md:w-auto"
-          >
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </form>
-    </Card>
+      <Dialog isOpen={isLocationsDialogOpen} onClose={() => setIsLocationsDialogOpen(false)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Locations - {companyDetails.company_name}</DialogTitle>
+          </DialogHeader>
+          <CompanyLocations 
+            companyId={companyDetails.company_id} 
+            isEditing={true}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
