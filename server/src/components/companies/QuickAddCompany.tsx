@@ -155,7 +155,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   return (
     <Dialog
       id="quick-add-company-dialog"
-      title="Add New Client"
       isOpen={open}
       onClose={() =>
       onOpenChange(false)}>
