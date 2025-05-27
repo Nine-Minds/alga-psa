@@ -3,7 +3,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { useRouter } from 'next/navigation';
 import { MoreVertical, Pencil, Trash2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
+import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import { Button } from 'server/src/components/ui/Button';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 interface CompaniesListProps {
@@ -106,10 +106,12 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
             render: (value: string, record: ICompany) => (
                 // Wrap DropdownMenu in a div and stop propagation on its click
                 <div onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <ReflectedDropdownMenu
+                        id={`company-list-actions-${record.company_id}`}
+                        triggerLabel="Company Actions"
+                        trigger={
                             <Button
-                                id={`company-actions-${record.company_id}`}
+                                id={`company-actions-trigger-${record.company_id}`}
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 w-8 p-0"
@@ -117,24 +119,28 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
                                 <span className="sr-only">Open menu</span>
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white z-50">
-                            <DropdownMenuItem
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                                onSelect={() => handleEditCompany(record.company_id)}
-                            >
-                                <Pencil size={14} className="mr-2" />
-                                Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-                                onSelect={() => handleDeleteCompany(record)}
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        }
+                        items={[
+                            {
+                                id: 'edit',
+                                text: 'Edit',
+                                icon: <Pencil size={14} />,
+                                variant: 'default',
+                                onSelect: () => handleEditCompany(record.company_id)
+                            },
+                            {
+                                id: 'delete',
+                                text: 'Delete',
+                                icon: <Trash2 size={14} />,
+                                variant: 'destructive',
+                                onSelect: () => handleDeleteCompany(record)
+                            }
+                        ]}
+                        contentProps={{
+                            align: "end",
+                            className: "bg-white z-50"
+                        }}
+                    />
                 </div>
             ),
         },
