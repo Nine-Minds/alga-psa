@@ -9,7 +9,7 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from 'server/src/interfaces/asset.interfaces';
 import { ICompany } from 'server/src/interfaces';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
-import { getAllCompanies } from 'server/src/lib/actions/companyActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 
 interface CreateAssetDialogProps {

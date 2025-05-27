@@ -4,7 +4,7 @@ import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCompanyById } from 'server/src/lib/actions/companyActions';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';

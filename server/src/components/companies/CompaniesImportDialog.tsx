@@ -12,7 +12,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { Upload, AlertTriangle, Check } from 'lucide-react';
 import { parseCSV } from 'server/src/lib/utils/csvParser';
-import { checkExistingCompanies, importCompaniesFromCSV } from 'server/src/lib/actions/companyActions';
+import { checkExistingCompanies, importCompaniesFromCSV } from 'server/src/lib/actions/company-actions/companyActions';
 
 interface CompaniesImportDialogProps {
   isOpen: boolean;

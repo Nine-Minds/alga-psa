@@ -32,7 +32,7 @@ import { findChannelById, getAllChannels } from "server/src/lib/actions/channel-
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
 import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
-import { getCompanyById, getAllCompanies } from "server/src/lib/actions/companyActions";
+import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { addClientTicketComment } from "server/src/lib/actions/client-portal-actions/client-tickets";

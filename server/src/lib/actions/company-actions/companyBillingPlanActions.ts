@@ -1,13 +1,13 @@
 'use server'
 
-import { withTransaction } from '../../../../shared/db';
-import { createTenantKnex } from '../db';
+import { withTransaction } from '../../../../../shared/db';
+import { createTenantKnex } from '../../db';
 import { Knex } from 'knex';
 import { getServerSession } from "next-auth/next";
-import { options } from "../../app/api/auth/[...nextauth]/options";
-import { ICompanyBillingPlan } from '../../interfaces/billing.interfaces';
+import { options } from "../../../app/api/auth/[...nextauth]/options";
+import { ICompanyBillingPlan } from '../../../interfaces/billing.interfaces';
 import { Temporal } from '@js-temporal/polyfill'; // Needed for date comparisons
-import { toPlainDate, toISODate } from '../utils/dateTimeUtils'; // Use centralized date utilities
+import { toPlainDate, toISODate } from '../../utils/dateTimeUtils'; // Use centralized date utilities
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, companyBillingPlanId: string): Promise<Date | null> {
