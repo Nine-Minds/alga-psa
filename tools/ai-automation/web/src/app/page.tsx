@@ -533,14 +533,14 @@ export default function ControlPanel() {
         try {
           hasToolCalls = true; // Mark that we have tool calls in this session
           console.log('%c[FRONTEND] 🎯 Received tool use event', 'color: #ff6b6b; font-weight: bold', event);
-          const toolEvent = cleanAndParseJSON(event.data);
+          const toolEvent = JSON.parse(event.data);
           if (!toolEvent) {
             console.error('%c[FRONTEND] ❌ Invalid tool use event data', 'color: #ff4757');
             return;
           }
           console.log('%c[FRONTEND] 📋 Tool use requested', 'color: #5f27cd; font-weight: bold', toolEvent);
 
-          const toolData = cleanAndParseJSON(toolEvent.data);
+          const toolData = JSON.parse(toolEvent.data);
           if (!toolData) {
             throw new Error('Invalid tool data');
           }
