@@ -91,6 +91,14 @@ export class PuppeteerHelper {
       throw new Error(`Could not find element with id: ${elementId}`);
     }
 
+    // Check if this is a switch/toggle field by looking for switch elements inside
+    const switchElement = await element.$('.switch-root');
+    if (switchElement) {
+      console.log(`[PuppeteerHelper] Found switch inside ${elementId}, clicking switch instead of wrapper`);
+      await switchElement.click();
+      return true;
+    }
+
     console.log('[PuppeteerHelper] Clicking element:', elementId);
     await element.click();
     return true;
