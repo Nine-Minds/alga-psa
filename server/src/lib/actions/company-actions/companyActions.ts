@@ -18,10 +18,18 @@ export async function getCompanyById(companyId: string): Promise<ICompany | null
     throw new Error('Tenant not found');
   }
   
-  // Fetch company data
+  // Fetch company data with account manager info
   const companyData = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('companies')
-      .where({ company_id: companyId, tenant })
+    return await trx('companies as c')
+      .leftJoin('users as u', function() {
+        this.on('c.account_manager_id', '=', 'u.user_id')
+            .andOn('c.tenant', '=', 'u.tenant');
+      })
+      .select(
+        'c.*',
+        trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+      )
+      .where({ 'c.company_id': companyId, 'c.tenant': tenant })
       .first();
   });
 
@@ -196,16 +204,21 @@ export async function getAllCompanies(includeInactive: boolean = true): Promise<
     const { companiesData, fileIdMap } = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Start building the query
       let baseQuery = trx('companies as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
         .where({ 'c.tenant': tenant });
 
       if (!includeInactive) {
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      // Get unique companies with document associations
+      // Get unique companies with document associations and account manager info
       const companies = await baseQuery
         .select(
           'c.*',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`),
           trx.raw(
             `(SELECT document_id 
             FROM document_associations da 

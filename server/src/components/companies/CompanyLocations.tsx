@@ -1,32 +1,32 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ICompanyLocation } from '../../interfaces/company.interfaces';
+import { ICompanyLocation } from 'server/src/interfaces/company.interfaces';
 import { 
   getCompanyLocations, 
   createCompanyLocation, 
   updateCompanyLocation, 
   deleteCompanyLocation,
   setDefaultCompanyLocation 
-} from '../../lib/actions/company-actions/companyLocationActions';
-import { getActiveTaxRegions } from '../../lib/actions/taxSettingsActions';
-import { getAllCountries, ICountry } from '../../lib/actions/company-actions/countryActions';
-import { ITaxRegion } from '../../interfaces/tax.interfaces';
-import CountryPicker from '../ui/CountryPicker';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Label } from '../ui/Label';
-import { TextArea } from '../ui/TextArea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/Dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
-import { Switch } from '../ui/Switch';
-import CustomSelect from '../ui/CustomSelect';
+} from 'server/src/lib/actions/company-actions/companyLocationActions';
+import { getActiveTaxRegions } from 'server/src/lib/actions/taxSettingsActions';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
+import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
+import CountryPicker from 'server/src/components/ui/CountryPicker';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import { Label } from 'server/src/components/ui/Label';
+import { TextArea } from 'server/src/components/ui/TextArea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Plus, Edit2, Trash2, MapPin, Star } from 'lucide-react';
-import { useToast } from '../../hooks/use-toast';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
-import { DialogComponent, FormFieldComponent } from '../../types/ui-reflection/types';
+import { useToast } from 'server/src/hooks/use-toast';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ReflectionParentContext } from 'server/src/types/ui-reflection/ReflectionParentContext';
+import { DialogComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 
 interface CompanyLocationsProps {
   companyId: string;
@@ -74,6 +74,7 @@ interface LocationCardProps {
   onDelete: (locationId: string) => void;
   onSetDefault: (locationId: string) => void;
   formatAddress: (location: ICompanyLocation) => string;
+  showActions?: boolean;
 }
 
 // Component for individual location detail fields that registers within the proper parent context
@@ -96,7 +97,7 @@ const LocationDetailField: React.FC<{
   return <div {...automationIdProps}>{children}</div>;
 };
 
-const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress }) => {
+const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
 
   return (
     <ReflectionContainer 
@@ -114,41 +115,43 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
               )}
             </CardTitle>
             
-            <div className="flex gap-2">
-              {!location.is_default && (
+            {showActions && (
+              <div className="flex gap-2">
+                {!location.is_default && (
+                  <Button
+                    id={`set-default-location-${location.location_id}-button`}
+                    data-automation-id={`set-default-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onSetDefault(location.location_id)}
+                    title="Set as default"
+                  >
+                    <Star className="h-4 w-4" />
+                  </Button>
+                )}
+                
                 <Button
-                  id={`set-default-location-${location.location_id}-button`}
-                  data-automation-id={`set-default-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                  id={`edit-location-${location.location_id}-button`}
+                  data-automation-id={`edit-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
                   variant="ghost"
                   size="sm"
-                  onClick={() => onSetDefault(location.location_id)}
-                  title="Set as default"
+                  onClick={() => onEdit(location)}
                 >
-                  <Star className="h-4 w-4" />
+                  <Edit2 className="h-4 w-4" />
                 </Button>
-              )}
-              
-              <Button
-                id={`edit-location-${location.location_id}-button`}
-                data-automation-id={`edit-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
-                variant="ghost"
-                size="sm"
-                onClick={() => onEdit(location)}
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                id={`delete-location-${location.location_id}-button`}
-                data-automation-id={`delete-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
-                variant="ghost"
-                size="sm"
-                onClick={() => onDelete(location.location_id)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                
+                <Button
+                  id={`delete-location-${location.location_id}-button`}
+                  data-automation-id={`delete-location-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}-button`}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDelete(location.location_id)}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         
@@ -461,30 +464,38 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     return addressParts.join(', ');
   };
 
-  // Read-only mode - show default location or "No locations"
+  // Read-only mode - show default location card or "No locations"
   if (!isEditing) {
     const defaultLocation = locations.find(loc => loc.is_default);
     if (defaultLocation) {
       return (
-        <div className="text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4" />
-            <span>{formatAddress(defaultLocation)}</span>
-          </div>
-        </div>
+        <LocationCard
+          location={defaultLocation}
+          onEdit={() => {}} // No-op in read-only mode
+          onDelete={() => {}} // No-op in read-only mode
+          onSetDefault={() => {}} // No-op in read-only mode
+          formatAddress={formatAddress}
+          showActions={false}
+        />
       );
     }
-    return <span className="text-gray-400 text-sm">No locations</span>;
+    return (
+      <div className="text-center py-4 text-gray-500">
+        <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+        <p className="text-sm">No locations added yet</p>
+      </div>
+    );
   }
 
   // Editing mode - show full management interface
   return (
     <ReflectionContainer id="company-locations-manager" label="Company Locations Manager">
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium">Locations</h3>
           <Button 
             id="add-company-location-button"
+            variant="default"
             data-automation-id="add-company-location-button"
             onClick={handleAddLocation} 
             size="sm"
