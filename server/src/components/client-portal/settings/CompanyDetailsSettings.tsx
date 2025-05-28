@@ -203,8 +203,21 @@ export function CompanyDetailsSettings() {
             imageUrl={companyDetails.logoUrl ?? null}
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
-            onImageChange={(newLogoUrl) => {
+            onImageChange={async (newLogoUrl) => {
               setCompanyDetails(prev => prev ? { ...prev, logoUrl: newLogoUrl } : null);
+              
+              // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
+              if (newLogoUrl === null && companyDetails?.company_id) {
+                console.log("Logo deleted, refreshing company data...");
+                try {
+                  const refreshedCompany = await getCompanyById(companyDetails.company_id);
+                  if (refreshedCompany) {
+                    setCompanyDetails(refreshedCompany);
+                  }
+                } catch (error) {
+                  console.error('Error refreshing company data after logo deletion:', error);
+                }
+              }
             }}
             size="xl"
           />

@@ -702,10 +702,13 @@ export async function uploadCompanyLogo(
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths
+    // Invalidate cache for relevant paths - be more comprehensive
     revalidatePath(`/client-portal/settings`);
     revalidatePath(`/companies/${companyId}`);
-    revalidatePath(`/settings/general`); // Also invalidate general settings where company logo might appear
+    revalidatePath(`/msp/companies/${companyId}`);
+    revalidatePath(`/msp/companies`);
+    revalidatePath(`/settings/general`);
+    revalidatePath('/'); // Main dashboard that might show company info
 
     console.log(`[uploadCompanyLogo] Upload process finished successfully for company ${companyId}. Returning URL: ${result.imageUrl}`);
     return { success: true, logoUrl: result.imageUrl };
@@ -732,21 +735,26 @@ export async function deleteCompanyLogo(
   // TODO: Add permission check here if needed
 
   try {
+    console.log(`[deleteCompanyLogo] Starting deletion process for company ${companyId}, tenant: ${tenant}`);
     const result = await deleteEntityImage(
       'company',
       companyId,
       currentUser.user_id,
       tenant
     );
+    console.log(`[deleteCompanyLogo] deleteEntityImage result:`, result);
 
     if (!result.success) {
       return { success: false, message: result.message };
     }
 
-    // Invalidate cache for relevant paths
+    // Invalidate cache for relevant paths - be more comprehensive
     revalidatePath(`/client-portal/settings`);
     revalidatePath(`/companies/${companyId}`);
-    revalidatePath(`/settings/general`); // Also invalidate general settings
+    revalidatePath(`/msp/companies/${companyId}`);
+    revalidatePath(`/msp/companies`);
+    revalidatePath(`/settings/general`);
+    revalidatePath('/'); // Main dashboard that might show company info
 
     console.log(`[deleteCompanyLogo] Deletion process finished successfully for company ${companyId}.`);
     return { success: true };

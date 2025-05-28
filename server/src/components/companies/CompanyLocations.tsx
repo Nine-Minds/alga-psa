@@ -18,6 +18,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -249,6 +250,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   const [taxRegions, setTaxRegions] = useState<Pick<ITaxRegion, 'region_code' | 'region_name'>[]>([]);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [locationToDelete, setLocationToDelete] = useState<ICompanyLocation | null>(null);
   const { toast } = useToast();
 
 
@@ -377,12 +380,18 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   };
 
   const handleDeleteLocation = async (locationId: string) => {
-    if (!confirm('Are you sure you want to delete this location?')) {
-      return;
-    }
+    const location = locations.find(loc => loc.location_id === locationId);
+    if (!location) return;
+    
+    setLocationToDelete(location);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteLocation = async () => {
+    if (!locationToDelete) return;
 
     try {
-      await deleteCompanyLocation(locationId);
+      await deleteCompanyLocation(locationToDelete.location_id);
       toast({
         title: 'Success',
         description: 'Location deleted successfully',
@@ -395,6 +404,9 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         description: 'Failed to delete location',
         variant: 'destructive',
       });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setLocationToDelete(null);
     }
   };
 
@@ -838,6 +850,21 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="delete-location-confirmation-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setLocationToDelete(null);
+        }}
+        onConfirm={confirmDeleteLocation}
+        title="Delete Location"
+        message={locationToDelete ? `Are you sure you want to delete the location "${locationToDelete.location_name || 'Unnamed Location'}"? This action cannot be undone.` : ""}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
       
       {/* Locations List */}
       <div className="space-y-3">
