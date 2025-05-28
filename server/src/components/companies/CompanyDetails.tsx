@@ -804,7 +804,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             imageUrl={editedCompany.logoUrl ?? null}
             uploadAction={uploadCompanyLogo}
             deleteAction={deleteCompanyLogo}
-            onImageChange={(newLogoUrl) => {
+            onImageChange={async (newLogoUrl) => {
               console.log("CompanyDetails: Logo URL changed:", newLogoUrl);
               setEditedCompany(prev => {
                 if (!prev) return prev;
@@ -813,6 +813,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   logoUrl: newLogoUrl
                 };
               });
+              
+              // If logo was deleted (newLogoUrl is null), refresh company data to ensure consistency
+              if (newLogoUrl === null) {
+                console.log("Logo deleted, refreshing company data...");
+                await refreshCompanyData();
+              }
             }}
             size="md"
           />

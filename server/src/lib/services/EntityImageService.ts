@@ -161,19 +161,17 @@ export async function deleteEntityImage(
         })
         .first();
     } else {
-      // If no specific document_id is provided, this might delete an unintended document.
-      // Consider if this fallback is desired or if documentIdToDelete should be mandatory.
-      // For deleting a logo specifically without knowing its ID, query for is_entity_logo: true.
-      console.warn(`[EntityImageService] deleteEntityImage called without specific documentIdToDelete for ${entityType} ${entityId}. This might be ambiguous.`);
+      // If no specific document_id is provided, look for the entity's logo/avatar
+      console.log(`[EntityImageService] deleteEntityImage called without specific documentIdToDelete for ${entityType} ${entityId}. Looking for entity logo/avatar.`);
       associationToDelete = await knex('document_associations')
         .select('association_id', 'document_id')
         .where({
           entity_id: entityId,
           entity_type: entityType,
-          tenant: tenant
-          // Add .andWhere('is_entity_logo', true) if the intent is to delete the current logo by default
+          tenant: tenant,
+          is_entity_logo: true  // Specifically look for the entity logo/avatar
         })
-        .first(); // Fallback to first found, could be non-deterministic for multiple images
+        .first();
     }
 
     if (!associationToDelete?.document_id) {

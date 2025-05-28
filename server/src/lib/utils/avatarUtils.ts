@@ -40,9 +40,11 @@ export async function getEntityImageUrl(
       
       // If no association found, return null
       if (!association?.document_id) {
-        console.log(`No document association found for ${entityType} ${entityId}`);
+        console.log(`[getEntityImageUrl] No document association found for ${entityType} ${entityId} with is_entity_logo=true`);
         return null;
       }
+      
+      console.log(`[getEntityImageUrl] Found document association for ${entityType} ${entityId}:`, association);
       
       // Get the file_id from the documents table
       const documentRecord = await trx('documents')
@@ -55,9 +57,11 @@ export async function getEntityImageUrl(
       
       // If no document record or no file_id, return null
       if (!documentRecord?.file_id) {
-        console.log(`No file_id found for document ${association.document_id}`);
+        console.log(`[getEntityImageUrl] No file_id found for document ${association.document_id} (document may have been deleted)`);
         return null;
       }
+      
+      console.log(`[getEntityImageUrl] Found file_id ${documentRecord.file_id} for document ${association.document_id}`);
       
       // Use the existing getImageUrl function to get the URL
       const imageUrl = await getImageUrl(documentRecord.file_id);

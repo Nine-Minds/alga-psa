@@ -8,6 +8,7 @@ import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
 
 interface EntityImageUploadProps {
@@ -53,6 +54,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
   const [isPendingDelete, startDeleteTransition] = useTransition();
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(imageUrl);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update local state when prop changes
@@ -171,7 +173,12 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
     });
   };
 
-  const handleDeleteImage = () => {
+  const handleDeleteImageClick = () => {
+    if (!currentImageUrl) return;
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteImage = async () => {
     if (!currentImageUrl) return;
 
     startDeleteTransition(async () => {
@@ -187,11 +194,11 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
             onImageChange(null);
           }
         } else {
-          throw new Error(result.error || `Failed to delete ${entityType} image.`);
+          throw new Error(result.error || result.message || `Failed to delete ${entityType} image.`);
         }
       } catch (err: any) {
         console.error(`[EntityImageUpload] Failed to delete ${entityType} image:`, {
-          operation: 'handleDeleteImage',
+          operation: 'confirmDeleteImage',
           entityType,
           entityId,
           entityName,
@@ -200,6 +207,8 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
           errorName: err.name
         });
         toast.error(err.message || `Failed to delete ${entityType} image.`);
+      } finally {
+        setIsDeleteDialogOpen(false);
       }
     });
   };
@@ -284,7 +293,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                   type="button"
                   variant="destructive"
                   size="sm"
-                  onClick={handleDeleteImage}
+                  onClick={handleDeleteImageClick}
                   disabled={isPendingDelete || isPendingUpload}
                   className="w-fit"
                   data-automation-id={`delete-${entityType}-image-button`}
@@ -316,6 +325,19 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id={`delete-${entityType}-image-confirmation-dialog`}
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDeleteImage}
+        title={`Delete ${entityType === 'company' ? 'Company Logo' : 'Profile Picture'}`}
+        message={`Are you sure you want to delete the ${entityType === 'company' ? 'logo' : 'profile picture'} for "${entityName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        isConfirming={isPendingDelete}
+      />
     </div>
   );
 };
