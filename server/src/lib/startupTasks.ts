@@ -36,7 +36,7 @@ export async function syncStandardTemplates(): Promise<void> {
                 const fileMtimeMs = fileStat.mtimeMs; // Use milliseconds for potentially better precision
 
                 // Query the database for this standard template
-                const record = await knex('standard_invoice_templates')
+                const record: { sha?: string; updated_at?: string; wasmBinary?: Uint8Array | null } | undefined = await knex('standard_invoice_templates')
                     .where({ standard_invoice_template_code })
                     .first();
 
@@ -55,10 +55,12 @@ export async function syncStandardTemplates(): Promise<void> {
 
                 // Check if file SHA is different AND file modification time is strictly greater than DB update time
                 // Add a small buffer (e.g., 1000ms) to fileMtimeMs comparison to avoid issues with near-simultaneous updates or timestamp precision differences.
-                const needsUpdate = fileSha !== dbSha && fileMtimeMs > (dbUpdatedAt + 1000);
+                // Also check if WASM binary is missing - if so, we need to recompile regardless of SHA match
+                const needsUpdate = (fileSha !== dbSha && fileMtimeMs > (dbUpdatedAt + 1000)) || !record.wasmBinary;
 
                 if (needsUpdate) {
-                    console.log(`[Startup Task] Update required for ${standard_invoice_template_code}. File is newer and SHA differs. Compiling...`);
+                    const reason = !record.wasmBinary ? 'WASM binary missing' : 'File is newer and SHA differs';
+                    console.log(`[Startup Task] Update required for ${standard_invoice_template_code}. Reason: ${reason}. Compiling...`);
 
                     // Call the compilation function (passing the admin knex instance)
                     const compileResult = await compileStandardTemplate(
@@ -77,7 +79,7 @@ export async function syncStandardTemplates(): Promise<void> {
                     console.log(`[Startup Task] No update needed for ${standard_invoice_template_code}.`);
                 }
 
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error(`[Startup Task] Error processing file ${fileName}:`, error);
                 // Continue to the next file even if one fails
             }
@@ -85,7 +87,7 @@ export async function syncStandardTemplates(): Promise<void> {
 
         console.log('[Startup Task] syncStandardTemplates finished.');
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Startup Task] Failed to run syncStandardTemplates:', error);
         // Decide how critical this is. Should it prevent startup?
         // For now, just log the error.
