@@ -4,6 +4,7 @@ export interface IInteraction extends TenantEntity {
   interaction_id: string;
   type_id: string;
   type_name: string;
+  icon?: string;
   contact_name_id: string | null;
   contact_name: string | null; 
   company_id: string | null;
