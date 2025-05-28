@@ -24,6 +24,7 @@ import { createCompanyLocation } from 'server/src/lib/actions/company-actions/co
 import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
 import CountryPicker from 'server/src/components/ui/CountryPicker';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at" | "address">;
@@ -160,7 +161,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         account_manager_id: formData.account_manager_id === '' ? null : formData.account_manager_id,
       };
 
-      const newCompany = await createCompany(dataToSend);
+      const result = await createCompany(dataToSend);
+
+      if (!result.success) {
+        setError(result.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newCompany = result.data;
 
       // Create location if address data is provided
       if (locationData.address_line1.trim() || locationData.city.trim()) {
@@ -193,9 +202,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error creating company:", error);
-      const errorMessage = "Failed to create company. Please try again.";
+      const errorMessage = error.message || "Failed to create company. Please try again.";
       setError(errorMessage);
-      toast.error(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -261,6 +269,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} id="quick-add-company-form">
           <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
+            
+            {/* Error Alert */}
+            {error && (
+              <Alert variant="destructive" data-automation-id="company-creation-error-alert">
+                <AlertDescription>
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
             
             {/* Company Details Section */}
             <div className="space-y-4">

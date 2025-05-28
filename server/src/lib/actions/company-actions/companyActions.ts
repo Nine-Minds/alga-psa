@@ -148,49 +148,82 @@ export async function updateCompany(companyId: string, updateData: Partial<Omit<
   }
 }
 
-export async function createCompany(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<ICompany> {
+export async function createCompany(company: Omit<ICompany, 'company_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: ICompany } | { success: false; error: string }> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
-  // Ensure website field is synchronized between properties.website and url
-  const companyData = { ...company };
-  
-  // If properties.website exists but url doesn't, sync url from properties.website
-  if (companyData.properties?.website && !companyData.url) {
-    companyData.url = companyData.properties.website;
-  }
-  
-  // If url exists but properties.website doesn't, sync properties.website from url
-  if (companyData.url && (!companyData.properties || !companyData.properties.website)) {
-    if (!companyData.properties) {
-      companyData.properties = {};
+  try {
+    // Ensure website field is synchronized between properties.website and url
+    const companyData = { ...company };
+    
+    // If properties.website exists but url doesn't, sync url from properties.website
+    if (companyData.properties?.website && !companyData.url) {
+      companyData.url = companyData.properties.website;
     }
-    companyData.properties.website = companyData.url;
+    
+    // If url exists but properties.website doesn't, sync properties.website from url
+    if (companyData.url && (!companyData.properties || !companyData.properties.website)) {
+      if (!companyData.properties) {
+        companyData.properties = {};
+      }
+      companyData.properties.website = companyData.url;
+    }
+
+    const createdCompany = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const [created] = await trx<ICompany>('companies')
+        .insert({
+          ...companyData,
+          tenant,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .returning('*');
+        
+      return created;
+    });
+
+    if (!createdCompany) {
+      throw new Error('Failed to create company');
+    }
+
+    // Create default tax settings for the new company
+    await createDefaultTaxSettings(createdCompany.company_id);
+
+    return { success: true, data: createdCompany };
+  } catch (error: any) {
+    console.error('Error creating company:', error);
+    
+    // Handle specific database constraint violations
+    if (error.code === '23505') { // PostgreSQL unique constraint violation
+      if (error.constraint && error.constraint.includes('companies_tenant_company_name_unique')) {
+        return { success: false, error: `A company with the name "${company.company_name}" already exists. Please choose a different name.` };
+      } else if (error.constraint && error.constraint.includes('companies_tenant_email_unique')) {
+        return { success: false, error: `A company with the email "${company.email}" already exists. Please use a different email address.` };
+      } else {
+        return { success: false, error: 'A company with these details already exists. Please check the company name and email address.' };
+      }
+    }
+    
+    // Handle other database errors
+    if (error.code === '23514') { // Check constraint violation
+      return { success: false, error: 'Invalid data provided. Please check all fields and try again.' };
+    }
+    
+    if (error.code === '23503') { // Foreign key constraint violation
+      return { success: false, error: 'Referenced data not found. Please check account manager selection.' };
+    }
+    
+    
+    // Re-throw system errors (these should still be 500)
+    if (error.message && !error.code) {
+      throw error;
+    }
+    
+    // Default fallback for system errors
+    throw new Error('Failed to create company. Please try again.');
   }
-
-  const createdCompany = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const [created] = await trx<ICompany>('companies')
-      .insert({
-        ...companyData,
-        tenant,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .returning('*');
-      
-    return created;
-  });
-
-  if (!createdCompany) {
-    throw new Error('Failed to create company');
-  }
-
-  // Create default tax settings for the new company
-  await createDefaultTaxSettings(createdCompany.company_id);
-
-  return createdCompany;
 }
 
 export async function getAllCompanies(includeInactive: boolean = true): Promise<ICompany[]> {
