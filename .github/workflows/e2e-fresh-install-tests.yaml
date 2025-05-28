@@ -134,7 +134,7 @@ jobs:
       - name: Start Docker Compose services
         if: steps.changed_files_check.outputs.any_changed == 'true' && steps.install_docker_compose.outcome == 'success'
         run: |
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml up--build -d
         shell: bash
 
       - name: Wait for Setup service to complete
