@@ -59,7 +59,6 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
     id: `${id}-cancel`,
     label: 'Cancel',
     variant: 'ghost',
-    actions: ['click'],
     parentId: id
   }) : undefined;
 

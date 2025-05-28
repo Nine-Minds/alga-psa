@@ -32,7 +32,6 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
       value: value?.toISOString(),
       disabled,
       required,
-      actions: ['open', 'select']
     });
 
     // Update metadata when field props change

@@ -60,7 +60,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     type: 'button',
     label: isLoading ? 'Signing in...' : 'Sign In',
     disabled: isLoading,
-    actions: ['click'],
     parentId: 'client-login-form'
   });
 
@@ -70,7 +69,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     type: 'button',
     label: 'Register',
     disabled: false,
-    actions: ['click'],
     parentId: 'client-login-form'
   });
 

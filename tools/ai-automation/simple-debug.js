@@ -1,0 +1,1 @@
+console.log('Starting debug...'); const uiState = await helper.query(); console.log('UI state exists:', !!uiState); console.log('Components count:', uiState?.components?.length || 0); const executeResult = await helper.execute('menu-clients', 'click'); console.log('Execute result:', executeResult); 'DEBUG_COMPLETE';

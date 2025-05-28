@@ -3,6 +3,7 @@ import * as RadixIcons from '@radix-ui/react-icons';
 import { MenuItem } from '../../config/menuConfig';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent } from 'server/src/types/ui-reflection/types';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 
 interface SidebarMenuItemProps {
   id: string;
@@ -26,7 +27,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
     type: 'button',
     label: item.name,
     variant: isActive(item.href || '#') ? 'active' : 'default',
-    actions: ['click']
+    actions: [CommonActions.click()]
   });
 
   if (item.subItems) {

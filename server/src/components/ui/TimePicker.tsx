@@ -96,7 +96,6 @@ export const TimePicker = React.forwardRef<HTMLDivElement, TimePickerProps>(
       value,
       disabled,
       required,
-      actions: ['open', 'select']
     });
 
     // Update metadata when field props change

@@ -20,8 +20,7 @@ const SidebarBottomMenuItem: React.FC<SidebarBottomMenuItemProps> = ({
     id: id,
     type: 'button',
     label: item.name,
-    variant: isActive(item.href || '#') ? 'active' : 'default',
-    actions: ['click']
+    variant: isActive(item.href || '#') ? 'active' : 'default'
   });
 
   return (

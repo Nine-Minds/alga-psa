@@ -94,15 +94,15 @@ You have access to the following tools that can be called using XML-style syntax
 </func-def>
 
 <func-def name="execute_automation_script">
-  <description>Execute an automation script for browser automation. The script receives a helper object with utility functions including: select(automationId: string, optionValue: string) for interacting with selectable list components, click(automationId: string) for clicking elements, and type(automationId: string, text: string) for typing text into elements by their automation ID. The response is a diff object showing what changed.</description>
+  <description>Execute an automation script for browser automation. The script receives a unified helper object with a single execute() method that can perform any UI action. Use helper.execute(elementId, actionType, params) for all interactions. Available actions are discovered dynamically from the UI state. The response is a diff object showing what changed.</description>
   <usage>
     <func-call name="execute_automation_script">
       <script>
 (async () => {
-  // Example using helper functions
-  await helper.select('status-select', 'active');
-  await helper.click('submit-button');
-  await helper.wait_for_navigation();
+  // Using the unified helper interface
+  await helper.execute('status-select', 'select', { option: 'active' });
+  await helper.execute('submit-button', 'click');
+  await helper.wait('navigation');
 })();
       </script>
     </func-call>
@@ -162,6 +162,7 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
  - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute.
  - Available component types: button, dialog, form, formField, dataTable, navigation, container, card, drawer
  - This is a hierarchy of components, and many have a children property that contains an array of child components. If you are looking for a particular type of component, use a recursive jsonPath expression to find it.
+ - Each component includes an "actions" array that lists all available actions with their descriptions and parameters. Use this to understand what actions you can perform on each element.
  INCORRECT FIELD TYPE SEARCH EXAMPLE:
  $.components[?(@.type==\"formField\")
 
@@ -254,31 +255,47 @@ If you need to navigate to billing invoices:
 4. Use component hierarchy info to understand the invoice management interface
 
 ## Filling out fields
- - Use the helper function, type, to type into the fields. Do not use the script tool to inject text into the fields.
- - When you are selecting an item from a list, ALWAYS use the "select" helper function, unless otherwise instructed! Do not be distracted by the toggle button.
+ - Use helper.execute(elementId, 'type', { text: 'your text' }) to type into fields.
+ - When selecting from lists, use helper.execute(elementId, 'select', { option: 'option value' }) - the system handles opening dropdowns automatically.
  - Create scripts to fill out ONE form field at a time. Do not create a script that fills out multiple fields at once.
+ - Check component actions with helper.query(elementId) to see what actions are available before attempting to interact.
 
-You have access to the following helper functions for browser automation:
+You have access to a unified helper interface for browser automation:
 
-- helper.type(automationId: string, text: string): Types text into an element identified by its automation ID
-- helper.click(automationId: string): Clicks an element identified by its automation ID  
-- helper.wait_for_navigation(): Waits for page navigation to complete (30 second timeout)
-- helper.select(automationId: string, optionValue: string): Selects an option in a dropdown by its value or text
+**Primary Methods:**
+- **helper.execute(elementId, actionType, params)**: Universal action executor for all UI interactions
+- **helper.query(elementId?)**: Get component state and available actions (returns UI state for element or full page)
+- **helper.wait(condition)**: Wait for conditions like 'navigation' or custom functions
 
-**IMPORTANT**: All helper functions automatically handle both modern (\`data-automation-id\`) and legacy (\`id\`) attributes. They will:
-1. First try to find the element using \`data-automation-id="your-element-id"\`
-2. If not found, fall back to \`id="your-element-id"\`  
-3. Provide clear error messages if neither attribute exists
+**Available Action Types:**
+- 'click': Click an element
+- 'type': Type text into fields (requires { text: "your text" } parameter)
+- 'select': Select from dropdowns (requires { option: "option value" } parameter)
+- 'focus': Focus an element
+- 'open': Open dropdowns, dialogs, etc.
+- 'clear': Clear input field contents
+- 'search': Search within searchable components
 
-This means you can use the same element ID regardless of whether the component uses modern or legacy patterns.
+**Key Features:**
+- **Self-Documenting**: Each component's actions array tells you exactly what actions are available
+- **Automatic Prerequisites**: System automatically executes prerequisite actions (e.g., opening a dropdown before selecting)
+- **Smart Error Messages**: Clear error messages when actions aren't available or parameters are missing
+- **Unified Interface**: One method handles all interaction types consistently
 
-When executing scripts, use a self-executing function that only uses these helper methods. For example:
-
+**Example Usage:**
 \`\`\`javascript
 (async () => {
-  await helper.type('username-field', 'myuser');
-  await helper.click('submit-button');
-  await helper.wait_for_navigation();
+  // Get component info and available actions
+  const accountPicker = await helper.query('account_manager_picker');
+  console.log(accountPicker.actions); // Shows available actions and their parameters
+
+  // Execute actions with automatic prerequisite handling
+  await helper.execute('account_manager_picker', 'select', { option: 'Dorothy Gale' });
+  // System automatically opens picker if needed, then selects the option
+  
+  await helper.execute('username-field', 'type', { text: 'myuser' });
+  await helper.execute('submit-button', 'click');
+  await helper.wait('navigation');
 })();
 \`\`\`
 
@@ -294,11 +311,12 @@ c. Plan the sequence of actions
 d. Consider potential challenges or edge cases
 
 ## Scripting guidelines
-- All elements must be accessed using their automation IDs via helper functions
+- All elements must be accessed using their automation IDs via helper.execute()
 - After taking an action, use get_ui_state again to retrieve an updated UI state
-- Use helper.wait_for_navigation() to wait for page loads after clicking buttons that trigger navigation
-- The helper.wait_for_navigation() function has a 30 second timeout
-- When interacting with "pickers", interact with the picker, not the internal buttons.
+- Use helper.wait('navigation') to wait for page loads after clicking buttons that trigger navigation
+- The navigation wait function has a 30 second timeout
+- When interacting with pickers, use helper.execute(pickerId, 'select', { option: 'value' }) - the system handles opening automatically
+- Always check available actions with helper.query(elementId) before attempting interactions
 
 INCORRECT EXAMPLE:
 \`\`\`javascript
@@ -310,8 +328,8 @@ INCORRECT EXAMPLE:
 CORRECT EXAMPLE:
 \`\`\`javascript
 (async () => {
-  await helper.click('add-ticket-button');
-  await helper.wait_for_navigation();
+  await helper.execute('add-ticket-button', 'click');
+  await helper.wait('navigation');
 })();
 
 ## Gathering Information
@@ -332,65 +350,66 @@ Responses are TRUNCATED if you see "[Response truncated, total length: ##### cha
 
 When a user asks you to NAVIGATE, use the get_ui_state to click on the menu item that the user wants to navigate to. DO NOT navigate via a URL.
 
-REMINDER: Do not click the pickers, use the select helper function instead. Do not use the toggle button manually unless instructed to do so.
+REMINDER: Use helper.execute(pickerId, 'select', { option: 'value' }) for pickers - the system handles opening automatically.
 
 ## Working with Dynamic Picker Components
 
-Some picker components (UserPicker, CompanyPicker, etc.) show dynamic options that only appear when the picker is opened. These require a two-step discovery process:
+The unified helper system now handles dynamic pickers automatically! You no longer need manual two-step workflows.
 
-**REQUIRED WORKFLOW for Dynamic Pickers**:
-1. **First, click the picker** to open the dropdown and load options:
+**SIMPLIFIED WORKFLOW for Dynamic Pickers**:
+1. **Just use select directly** - prerequisites are handled automatically:
    \`\`\`javascript
    (async () => {
-     await helper.click('account_manager_picker');
+     // System automatically opens picker if needed, then selects
+     await helper.execute('account_manager_picker', 'select', { option: 'Dorothy Gale' });
    })();
    \`\`\`
 
-2. **Then get UI state** to see the available options:
-   \`\`\`
-   <func-call name="get_ui_state">
-     <jsonpath>$..[?(@.id=="account_manager_picker")]</jsonpath>
-   </func-call>
-   \`\`\`
-
-3. **The UI state will now show the options array** when the picker is open:
-   \`\`\`json
-   {
-     "id": "account_manager_picker",
-     "type": "formField",
-     "fieldType": "select",
-     "options": [
-       { "value": "user-123", "label": "Dorothy Gale" },
-       { "value": "user-456", "label": "Scarecrow Brainless" },
-       { "value": "user-789", "label": "Robert Isaacs" }
-     ]
-   }
-   \`\`\`
-
-4. **Finally, select using the exact label** from the options:
+2. **Optional: Check available options** if you need to see what's available:
    \`\`\`javascript
    (async () => {
-     await helper.select('account_manager_picker', 'Dorothy Gale');
+     // Query the component to see available actions and current state
+     const picker = await helper.query('account_manager_picker');
+     console.log(picker.actions); // Shows select action with current options
    })();
    \`\`\`
 
-**Key Points for Dynamic Pickers**:
-- **Options only appear when picker is open** - empty/undefined when closed
-- **Always click first, then check UI state** for available options
-- **Use exact label text** from the options array, not the value
-- **Common picker types**: \`user-picker\`, \`picker\`, \`select\`
-- **If no options appear**: The picker may be empty or require other selections first
+**Key Benefits of Unified System**:
+- **Automatic Prerequisites**: No need to manually open pickers - system handles it automatically
+- **Self-Documenting**: Actions array shows available options and parameters
+- **Error Prevention**: Clear messages when actions aren't available or parameters are missing
+- **Consistent Interface**: Same execute() method works for all component types
 
-**Picker Component Types**:
-- \`data-automation-type="user-picker"\` → UserPicker (searchable user dropdown)
-- \`data-automation-type="picker"\` → CompanyPicker (company dropdown) 
-- \`data-automation-type="select"\` → CustomSelect (static options dropdown)
-
-**Example Workflow - Selecting an Account Manager**:
-\`\`\`
-1. Click: await helper.click('account_manager_picker');
-2. Check: get_ui_state to see ["Dorothy Gale", "Robert Isaacs", ...]
-3. Select: await helper.select('account_manager_picker', 'Dorothy Gale');
+**Component Action Discovery**:
+Each component now includes an "actions" array showing available actions with their parameters:
+\`\`\`json
+{
+  "id": "account_manager_picker",
+  "type": "formField",
+  "fieldType": "select", 
+  "actions": [
+    {
+      "type": "open",
+      "available": true,
+      "description": "Open picker to load available options",
+      "parameters": []
+    },
+    {
+      "type": "select", 
+      "available": true,
+      "description": "Select user from available options",
+      "parameters": [
+        {
+          "name": "option",
+          "type": "option", 
+          "required": true,
+          "options": ["Dorothy Gale", "Robert Isaacs", "Scarecrow Brainless"],
+          "description": "User to select"
+        }
+      ]
+    }
+  ]
+}
 \`\`\`
 
 ALWAYS execute just one tool at a time. Additional tools will be IGNORED.`
