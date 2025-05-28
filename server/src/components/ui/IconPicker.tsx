@@ -93,6 +93,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
         {ICON_CATEGORIES.map((category) => (
           <Button
             key={category}
+            id={`icon-category-${category.toLowerCase()}`}
             variant={selectedCategory === category ? "default" : "ghost"}
             size="sm"
             onClick={() => setSelectedCategory(category)}
@@ -123,6 +124,7 @@ export const IconPicker: React.FC<IconPickerProps> = ({
           return (
             <Button
               key={iconOption.value}
+              id={`icon-option-${iconOption.value}`}
               variant={isSelected ? "default" : "outline"}
               size="sm"
               onClick={() => onValueChange(iconOption.value)}

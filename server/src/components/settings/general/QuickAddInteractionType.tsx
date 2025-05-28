@@ -117,11 +117,6 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
               placeholder="e.g., 'Client Onboarding Call', 'Sales Demo'"
               className="w-full"
             />
-            <p className="text-xs text-gray-500">
-              This name will appear in interaction lists. Make it descriptive. 
-              <br />
-              <em>Examples: 'Sales Demo Call', 'Support Follow-up', 'Project Kickoff Meeting'</em>
-            </p>
           </div>
 
           {/* 2. Link to Standard Category */}
@@ -171,12 +166,6 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
               onValueChange={setSelectedIcon}
               disabled={isLoading}
             />
-            <p className="text-xs text-gray-500">
-              Select an icon to represent this interaction type. 
-              {linkedSystemType && linkedSystemType.icon && (
-                <span> If none is chosen, it will use the icon of the linked standard category ({linkedSystemType.type_name}).</span>
-              )}
-            </p>
           </div>
 
           {/* 4. Summary Preview */}
