@@ -9,6 +9,7 @@ import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
 import { FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 interface CompaniesListProps {
     selectedCompanies: string[];
     filteredCompanies: ICompany[];
@@ -60,7 +61,7 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
     id: linkId,
     type: 'button',
     label: company.company_name,
-    actions: ['click']
+    actions: [CommonActions.click('Click this button')]
   });
 
   return (
@@ -205,7 +206,6 @@ const CompaniesList = ({ selectedCompanies, filteredCompanies, setSelectedCompan
     return (
         <div className="w-full">
             <DataTable
-                id="companies"
                 id="companies-table"
                 data={filteredCompanies.map((company): ICompany => ({
                     ...company,

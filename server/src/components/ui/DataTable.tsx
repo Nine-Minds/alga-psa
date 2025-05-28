@@ -93,7 +93,7 @@ const ReflectedTableCell: React.FC<ReflectedTableCellProps> = ({
   style 
 }) => {
   // Register the cell content as a text component if it contains meaningful text
-  const shouldRegister = content && content.trim() !== '';
+  const shouldRegister = content !== null && content !== undefined && content.trim() !== '';
   
   // Use conditional registration - only register if content is meaningful
   const registrationId = shouldRegister ? id : `__skip_registration_${id}`;
