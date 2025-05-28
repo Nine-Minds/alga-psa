@@ -8,8 +8,9 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ChevronDown } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, ContainerComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { AutomationProps, ContainerComponent, FormFieldComponent, ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
+import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 
 interface CompanyPickerProps {
@@ -23,6 +24,34 @@ interface CompanyPickerProps {
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   fitContent?: boolean;
 }
+
+// Component for individual option buttons that registers with UI reflection
+interface OptionButtonProps {
+  id: string;
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  className?: string;
+  children: React.ReactNode;
+}
+
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children }) => {
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id,
+    label,
+  });
+
+  return (
+    <div
+      {...automationIdProps}
+      data-automation-type="button"
+      className={className}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+};
 
 export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
   id = 'company-picker',
@@ -128,7 +157,9 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
     disabled: false,
     required: false,
     options: mappedOptions
-  });
+  }, () => [
+    CommonActions.open('Open company picker dropdown')
+  ]);
 
   // Setup for storing previous metadata
   const prevMetadataRef = useRef<{
@@ -200,7 +231,6 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
         data-automation-type={dataAutomationType}
       >
         <Button
-          id={`${id}-toggle`}
           variant="outline"
           onClick={(e) => {
             e.preventDefault();
@@ -209,6 +239,9 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
           }}
           className="w-full justify-between px-2"
           label={selectedCompany ? selectedCompany.company_name : 'Select Client'}
+          {...companyPickerProps}
+          id={`${id}-toggle`}
+          data-automation-type={dataAutomationType}
         >
           {selectedCompany ? (
             <div className="flex items-center space-x-2">
@@ -238,77 +271,78 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
             }}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="p-3 space-y-3 bg-white">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="w-full">
-                  <CustomSelect
-                    value={filterState}
-                    onValueChange={handleFilterStateChange}
-                    options={opts}
-                    placeholder="Filter by status"
-                    label="Status Filter"
-                  />
+            <ReflectionContainer id={`${id}-dropdown`} label="Company Picker Dropdown">
+              <div className="p-3 space-y-3 bg-white">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="w-full">
+                    <CustomSelect
+                      value={filterState}
+                      onValueChange={handleFilterStateChange}
+                      options={opts}
+                      placeholder="Filter by status"
+                      label="Status Filter"
+                    />
+                  </div>
+                  <div className="w-full">
+                    <CustomSelect
+                      id={`${id}-type-filter`}
+                      value={clientTypeFilter}
+                      onValueChange={handleClientTypeFilterChange}
+                      options={clientTypes}
+                      placeholder="Filter by client type"
+                      label="Client Type Filter"
+                    />
+                  </div>
                 </div>
-                <div className="w-full">
-                  <CustomSelect
-                    id={`${id}-type-filter`}
-                    value={clientTypeFilter}
-                    onValueChange={handleClientTypeFilterChange}
-                    options={clientTypes}
-                    placeholder="Filter by client type"
-                    label="Client Type Filter"
+                <div className="whitespace-nowrap">
+                  <Input
+                    id={`${id}-search`}
+                    placeholder="Search clients..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      setSearchTerm(e.target.value);
+                    }}
+                    label="Search Clients"
                   />
                 </div>
               </div>
-              <div className="whitespace-nowrap">
-                <Input
-                  id={`${id}-search`}
-                  placeholder="Search clients..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    e.stopPropagation();
-                    setSearchTerm(e.target.value);
-                  }}
-                  label="Search Clients"
-                />
+              <div 
+                className="border-t bg-white max-h-[300px] overflow-y-auto"
+                role="listbox"
+                aria-label="Companies"
+              >
+                {isOpen && filteredCompanies.length === 0 ? (
+                  <div className="px-4 py-2 text-gray-500">No clients found</div>
+                ) : (
+                  filteredCompanies.map((company): JSX.Element => (
+                    <OptionButton
+                      key={company.company_id}
+                      id={`${id}-company-picker-company-${company.company_id}`}
+                      label={company.company_name}
+                      onClick={(e) => handleSelect(company.company_id, e)}
+                      className={`w-full justify-start px-4 py-2 cursor-pointer hover:bg-gray-100 ${
+                        company.company_id === selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 flex-grow">
+                        <CompanyAvatar
+                          companyId={company.company_id}
+                          companyName={company.company_name}
+                          logoUrl={company.logoUrl ?? null}
+                          size="sm"
+                        />
+                        <span>{company.company_name}</span>
+                        {company.is_inactive && <span className="ml-auto pl-2 text-xs text-gray-500">(Inactive)</span>}
+                        <span className="ml-2 text-xs text-gray-500">
+                          ({company.client_type === 'company' ? 'Company' : 'Individual'})
+                        </span>
+                      </div>
+                    </OptionButton>
+                  ))
+                )}
               </div>
-            </div>
-            <div 
-              className="border-t bg-white max-h-[300px] overflow-y-auto"
-              role="listbox"
-              aria-label="Companies"
-            >
-              {isOpen && filteredCompanies.length === 0 ? (
-                <div className="px-4 py-2 text-gray-500">No clients found</div>
-              ) : (
-                filteredCompanies.map((company): JSX.Element => (
-                  <Button
-                    key={company.company_id}
-                    id={`${id}-company-picker-company-${company.company_id}`}
-                    variant="ghost"
-                    onClick={(e) => handleSelect(company.company_id, e)}
-                    className={`w-full justify-start ${company.company_id === selectedCompanyId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
-                    label={company.company_name}
-                    role="option"
-                    aria-selected={company.company_id === selectedCompanyId}
-                  >
-                    <div className="flex items-center space-x-2 flex-grow">
-                      <CompanyAvatar
-                        companyId={company.company_id}
-                        companyName={company.company_name}
-                        logoUrl={company.logoUrl ?? null}
-                        size="sm"
-                      />
-                      <span>{company.company_name}</span>
-                    </div>
-                    {company.is_inactive && <span className="ml-auto pl-2 text-xs text-gray-500">(Inactive)</span>}
-                    <span className="ml-2 text-xs text-gray-500">
-                      ({company.client_type === 'company' ? 'Company' : 'Individual'})
-                    </span>
-                  </Button>
-                ))
-              )}
-            </div>
+            </ReflectionContainer>
           </div>
         )}
       </div>

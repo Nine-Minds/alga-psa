@@ -162,12 +162,24 @@ Always use the most direct and minimal functionality to accomplish your task. Fo
  - The id attributes returned by the get_ui_state function refer to the element's data-automation-id attribute.
  - Available component types: button, dialog, form, formField, dataTable, navigation, container, card, drawer
  - This is a hierarchy of components, and many have a children property that contains an array of child components. If you are looking for a particular type of component, use a recursive jsonPath expression to find it.
- - Each component includes an "actions" array that lists all available actions with their descriptions and parameters. Use this to understand what actions you can perform on each element.
+ - CRITICAL: Each component includes an "actions" array that shows EXACTLY what actions are available. ONLY use actions that appear in this array - never assume other actions exist.
+ - NEVER assume actions based on fieldType or component type - always use the actions array as the definitive source of truth.
  INCORRECT FIELD TYPE SEARCH EXAMPLE:
  $.components[?(@.type==\"formField\")
 
  CORRECT FIELD TYPE SEARCH EXAMPLE:
  $..[?(@.type=="formField")]
+
+## CRITICAL: Use Only Actions from UI State
+Even if a component has \`fieldType: "select"\`, it may only have an "open" action, not a "select" action. Example:
+\`\`\`json
+{
+  "type": "formField", 
+  "fieldType": "select",
+  "actions": [{"type": "open"}]  // Only "open" available, NOT "select"
+}
+\`\`\`
+In this case, you MUST use "open", not "select".
 
 ## Codebase Navigation Strategy:
 When you need to find specific UI elements or understand how to interact with the application:
@@ -256,9 +268,10 @@ If you need to navigate to billing invoices:
 
 ## Filling out fields
  - Use helper.execute(elementId, 'type', { text: 'your text' }) to type into fields.
- - When selecting from lists, use helper.execute(elementId, 'select', { option: 'option value' }) - the system handles opening dropdowns automatically.
+ - For dropdowns/pickers: ALWAYS check available actions first with helper.query(elementId). Most pickers expose an 'open' action, then individual option buttons with 'click' actions.
  - Create scripts to fill out ONE form field at a time. Do not create a script that fills out multiple fields at once.
- - Check component actions with helper.query(elementId) to see what actions are available before attempting to interact.
+ - CRITICAL: Check component actions with helper.query(elementId) to see what actions are available before attempting to interact.
+ - IMPORTANT: When checking actions, RETURN the data (e.g., return { actions: component.actions }) instead of console.log to actually see the results.
 
 You have access to a unified helper interface for browser automation:
 
@@ -268,34 +281,37 @@ You have access to a unified helper interface for browser automation:
 - **helper.wait(condition)**: Wait for conditions like 'navigation' or custom functions
 
 **Available Action Types:**
-- 'click': Click an element
+- 'click': Click an element (most common for buttons and options)
 - 'type': Type text into fields (requires { text: "your text" } parameter)
-- 'select': Select from dropdowns (requires { option: "option value" } parameter)
+- 'open': Open dropdowns, dialogs, etc. (most pickers use this)
 - 'focus': Focus an element
-- 'open': Open dropdowns, dialogs, etc.
 - 'clear': Clear input field contents
 - 'search': Search within searchable components
+- 'select': Select from native HTML selects (rare - most components use 'open' + 'click' pattern)
 
 **Key Features:**
 - **Self-Documenting**: Each component's actions array tells you exactly what actions are available
-- **Automatic Prerequisites**: System automatically executes prerequisite actions (e.g., opening a dropdown before selecting)
+- **No Assumptions**: NEVER assume what actions are available based on component type - always query first
 - **Smart Error Messages**: Clear error messages when actions aren't available or parameters are missing
 - **Unified Interface**: One method handles all interaction types consistently
 
 **Example Usage:**
 \`\`\`javascript
 (async () => {
-  // Get component info and available actions
+  // ALWAYS check available actions first - RETURN the data to see it
   const accountPicker = await helper.query('account_manager_picker');
-  console.log(accountPicker.actions); // Shows available actions and their parameters
+  return { actions: accountPicker.actions, component: accountPicker }; // Return data to see it
+})();
 
-  // Execute actions with automatic prerequisite handling
-  await helper.execute('account_manager_picker', 'select', { option: 'Dorothy Gale' });
-  // System automatically opens picker if needed, then selects the option
+// Then use the actual available actions:
+(async () => {
+  // Most pickers use 'open' then 'click' pattern
+  await helper.execute('account_manager_picker', 'open'); // Opens the dropdown
   
-  await helper.execute('username-field', 'type', { text: 'myuser' });
-  await helper.execute('submit-button', 'click');
-  await helper.wait('navigation');
+  // Wait for UI to update, then find and click the specific option
+  const uiState = await helper.query(); // Get updated UI state
+  // Look for button with label 'Dorothy Gale' in the UI state
+  await helper.execute('option-button-id', 'click'); // Click the specific option
 })();
 \`\`\`
 
@@ -315,8 +331,22 @@ d. Consider potential challenges or edge cases
 - After taking an action, use get_ui_state again to retrieve an updated UI state
 - Use helper.wait('navigation') to wait for page loads after clicking buttons that trigger navigation
 - The navigation wait function has a 30 second timeout
-- When interacting with pickers, use helper.execute(pickerId, 'select', { option: 'value' }) - the system handles opening automatically
 - Always check available actions with helper.query(elementId) before attempting interactions
+
+## Iterative "Observe-Act-Observe" Workflow
+Follow this pattern for all automation tasks:
+
+**Example: Selecting from a Company Picker**
+1. **Observe:** \`get_ui_state\` - See that \`quick-add-contact-company\` has actions: \`["open"]\`
+2. **Act:** \`execute_automation_script\` - \`helper.execute('quick-add-contact-company', 'open')\`
+3. **Observe:** \`get_ui_state\` - See new company option buttons like \`company-option-emerald-city\` with actions: \`["click"]\`
+4. **Act:** \`execute_automation_script\` - \`helper.execute('company-option-emerald-city', 'click')\`
+
+**Avoid Over-Scripting:**
+- NEVER write multi-step scripts that assume UI changes
+- Execute ONE logical action at a time (e.g., 'open picker'), then re-evaluate the UI state
+- ALWAYS check what new elements/actions are available after each step
+- Don't assume what options will appear until you actually see them in the UI state
 
 INCORRECT EXAMPLE:
 \`\`\`javascript
@@ -350,32 +380,9 @@ Responses are TRUNCATED if you see "[Response truncated, total length: ##### cha
 
 When a user asks you to NAVIGATE, use the get_ui_state to click on the menu item that the user wants to navigate to. DO NOT navigate via a URL.
 
-REMINDER: Use helper.execute(pickerId, 'select', { option: 'value' }) for pickers - the system handles opening automatically.
-
 ## Working with Dynamic Picker Components
 
-The unified helper system now handles dynamic pickers automatically! You no longer need manual two-step workflows.
-
-**SIMPLIFIED WORKFLOW for Dynamic Pickers**:
-1. **Just use select directly** - prerequisites are handled automatically:
-   \`\`\`javascript
-   (async () => {
-     // System automatically opens picker if needed, then selects
-     await helper.execute('account_manager_picker', 'select', { option: 'Dorothy Gale' });
-   })();
-   \`\`\`
-
-2. **Optional: Check available options** if you need to see what's available:
-   \`\`\`javascript
-   (async () => {
-     // Query the component to see available actions and current state
-     const picker = await helper.query('account_manager_picker');
-     console.log(picker.actions); // Shows select action with current options
-   })();
-   \`\`\`
-
 **Key Benefits of Unified System**:
-- **Automatic Prerequisites**: No need to manually open pickers - system handles it automatically
 - **Self-Documenting**: Actions array shows available options and parameters
 - **Error Prevention**: Clear messages when actions aren't available or parameters are missing
 - **Consistent Interface**: Same execute() method works for all component types
