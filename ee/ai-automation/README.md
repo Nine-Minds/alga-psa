@@ -579,7 +579,7 @@ class AutomationOrchestrator {
 ### Local Development
 ```bash
 # Start automation server
-cd tools/ai-automation
+cd ee/ai-automation
 npm run dev
 
 # Start control panel

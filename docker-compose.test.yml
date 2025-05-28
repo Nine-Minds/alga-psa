@@ -4,7 +4,7 @@ services:
   ai-automation:
     build:
       context: .
-      dockerfile: ./tools/ai-automation/Dockerfile.test
+      dockerfile: ./ee/ai-automation/Dockerfile.test
     container_name: ${APP_NAME:-sebastian}_ai_automation
     environment:
       VERSION: ${VERSION}

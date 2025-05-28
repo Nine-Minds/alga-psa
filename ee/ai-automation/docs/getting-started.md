@@ -95,7 +95,7 @@ docker run --rm -p 4000:4000 \
 
 ```bash
 # Install dependencies
-cd tools/ai-automation
+cd ee/ai-automation
 npm install
 
 # Start the automation server
@@ -114,7 +114,7 @@ npm run dev
 Navigate to the control panel directory:
 
 ```bash
-cd tools/ai-automation/web
+cd ee/ai-automation/web
 npm install
 npm run dev
 ```
@@ -370,7 +370,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Run AI Automation Tests
         run: |
-          cd tools/ai-automation
+          cd ee/ai-automation
           npm install
           npm run test:e2e
 ```

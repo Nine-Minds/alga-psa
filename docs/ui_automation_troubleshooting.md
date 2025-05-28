@@ -11,8 +11,8 @@ This guide helps troubleshoot common issues with the UI Automation and Reflectio
 Use the built-in UI state dump tool to inspect current component registration:
 
 ```bash
-# From the ai-automation directory
-cd tools/ai-automation
+# From the ai-automation directory (Enterprise Edition only)
+cd ee/ai-automation
 node ./dump-ui-state.js
 
 # Options:
