@@ -11,19 +11,8 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 **Tasks:**
 - [ ] Analyze existing database structure to determine optimal extension table placement
 - [ ] Document extension-related data requirements and relationships
-- [ ] Design normalization approach for extension tables
-- [ ] Create entity-relationship diagrams for extension system tables
-- [ ] Review schema design with database team
 - [ ] Finalize schema naming conventions and constraints
 
-**Deliverables:**
-- Schema design document with table definitions
-- ER diagram for extension system
-- SQL naming conventions document
-
-**Dependencies:**
-- Access to existing database schema
-- Knowledge of multi-tenant data architecture
 
 #### 1.1 Extension Tables Migration
 
@@ -239,6 +228,48 @@ This document outlines the focused implementation plan for the Alga PSA Client E
 - UI components library
 - Server actions framework
 - File upload handling
+
+#### 1.8 RBAC Integration
+
+**Tasks:**
+- [ ] Create extension permission mapping strategy document
+- [ ] Update permission table to track extension-owned permissions:
+  - Add `extension_id` column to `permissions` table
+  - Create `extension_permissions` view for easier querying
+  - Add appropriate indexes for permission lookups
+- [ ] Implement permission registration during extension installation:
+  - Extract permissions from extension manifest
+  - Create permission records with extension_id reference
+  - Assign permissions to default roles if specified
+- [ ] Add permission checks to extension components:
+  - Create permission-aware extension slot component
+  - Implement useExtensionPermission hook
+  - Add permission checking to extension loader
+- [ ] Create permission middleware for extension API endpoints:
+  - Implement extensionPermissionMiddleware
+  - Add required permission extraction from manifest
+  - Integrate with existing RBAC permission checking
+- [ ] Enhance admin UI for extension permissions:
+  - Add extension permissions to role management UI
+  - Create UI for granting/revoking extension permissions
+  - Display permissions required by each extension
+- [ ] Implement automatic permission cleanup during extension uninstallation
+- [ ] Add permission migration for extension updates
+
+**Files to Create/Modify:**
+- `/server/migrations/TIMESTAMP_update_permissions_for_extensions.cjs`
+- `/server/src/lib/extensions/permissions.ts`
+- `/server/src/lib/extensions/ui/PermissionAwareSlot.tsx`
+- `/server/src/lib/extensions/hooks/useExtensionPermission.ts`
+- `/server/src/middleware/extensionPermissionMiddleware.ts`
+- `/server/src/components/settings/roles/ExtensionPermissions.tsx`
+- `/server/src/lib/actions/role-actions/extensionPermissionActions.ts`
+
+**Dependencies:**
+- Extension registry
+- Existing RBAC system
+- User role system
+- Permission database tables
 
 ### Phase 2: Core UI Extensions
 

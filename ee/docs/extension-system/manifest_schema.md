@@ -88,6 +88,41 @@ interface AlgaExtensionManifest {
        */
       dashboards?: ('main')[];
     };
+    
+    /**
+     * Role-based access control integration
+     */
+    rbac?: {
+      /**
+       * Custom permissions defined by this extension
+       */
+      permissions?: {
+        /**
+         * Unique identifier for this permission within the extension
+         */
+        id: string;
+        
+        /**
+         * Optional sub-resource name (extension ID is used as the main resource)
+         */
+        resource?: string;
+        
+        /**
+         * Permission action (e.g., "view", "manage", "edit")
+         */
+        action: string;
+        
+        /**
+         * Human-readable description of this permission
+         */
+        description: string;
+        
+        /**
+         * Optional list of role names that should be granted this permission by default
+         */
+        defaultRoles?: string[];
+      }[];
+    };
   };
   
   /**
@@ -188,6 +223,29 @@ interface AlgaExtensionManifest {
     "ui": {
       "navigation": ["main"],
       "dashboards": ["main"]
+    },
+    "rbac": {
+      "permissions": [
+        {
+          "id": "view-dashboard",
+          "action": "view",
+          "description": "View the ticket summary dashboard",
+          "defaultRoles": ["admin", "manager", "technician"]
+        },
+        {
+          "id": "manage-settings",
+          "action": "manage",
+          "description": "Configure the extension settings",
+          "defaultRoles": ["admin"]
+        },
+        {
+          "id": "export-data",
+          "resource": "reports",
+          "action": "export",
+          "description": "Export ticket data from the extension",
+          "defaultRoles": ["admin", "manager"]
+        }
+      ]
     }
   },
   "extensionPoints": {
