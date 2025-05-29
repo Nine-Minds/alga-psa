@@ -29,5 +29,4 @@ export interface IInteractionType extends TenantEntity {
   type_id: string;
   type_name: string;
   icon?: string;
-  system_type_id?: string;
 }

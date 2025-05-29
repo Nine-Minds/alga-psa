@@ -250,7 +250,7 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         <Button
           id="add-ticket-button"
           onClick={() => setIsQuickAddTicketOpen(true)}
-          className="bg-purple-600 hover:bg-purple-700 text-white"
+          variant="default"
         >
           <Plus className="mr-2 h-4 w-4" />
           Add Ticket

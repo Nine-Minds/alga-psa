@@ -3,17 +3,18 @@
 
 import React, { useState, useEffect } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
-import { Button } from '../ui/Button';
-import CustomSelect from '../ui/CustomSelect';
-import { Input } from '../ui/Input';
-import { addInteraction, getInteractionById } from '../../lib/actions/interactionActions';
-import { getAllInteractionTypes } from '../../lib/actions/interactionTypeActions';
-import { IInteraction, IInteractionType, ISystemInteractionType } from '../../interfaces/interaction.interfaces';
-import { useTenant } from '../TenantProvider';
+import { Button } from 'server/src/components/ui/Button';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Input } from 'server/src/components/ui/Input';
+import InteractionIcon from 'server/src/components/ui/InteractionIcon';
+import { addInteraction, getInteractionById } from 'server/src/lib/actions/interactionActions';
+import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeActions';
+import { IInteraction, IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
+import { useTenant } from 'server/src/components/TenantProvider';
 import { useSession } from 'next-auth/react';
-import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContainer';
-import { ButtonComponent, FormFieldComponent, ContainerComponent } from '../../types/ui-reflection/types';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -107,15 +108,15 @@ export function QuickAddInteraction({
   };
 
   const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    if ('created_at' in type) {
-      // It's a system type
-      return `${type.type_name} (System)`;
-    }
-    if (type.system_type_id) {
-      // It's a tenant type that inherits from a system type
-      return `${type.type_name} (Custom)`;
-    }
-    return type.type_name;
+    const isSystemType = 'created_at' in type;
+    const suffix = isSystemType ? ' (System)' : ' (Custom)';
+    
+    return (
+      <div className="flex items-center gap-2">
+        <InteractionIcon icon={type.icon} typeName={type.type_name} />
+        <span>{type.type_name}{suffix}</span>
+      </div>
+    );
   };
 
   return (
@@ -129,7 +130,7 @@ export function QuickAddInteraction({
             </Dialog.Title>
             <form onSubmit={handleSubmit} className="space-y-4">
               <CustomSelect
-                options={interactionTypes.map((type): { value: string; label: string } => ({ 
+                options={interactionTypes.map((type) => ({ 
                   value: type.type_id, 
                   label: getTypeLabel(type)
                 }))}

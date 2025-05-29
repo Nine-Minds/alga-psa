@@ -12,6 +12,7 @@ import { getAllInteractionTypes } from 'server/src/lib/actions/interactionTypeAc
 import { useDrawer } from "server/src/context/DrawerContext";
 import InteractionDetails from './InteractionDetails';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { Input } from 'server/src/components/ui/Input';
@@ -23,7 +24,7 @@ interface OverallInteractionsFeedProps {
   contacts: IContact[];
 }
 
-const InteractionIcon = ({ type }: { type: string }) => {
+const LocalInteractionIcon = ({ type }: { type: string }) => {
   const lowerType = type.toLowerCase();
   switch (lowerType) {
     case 'call': return <Phone className="text-gray-500" />;
@@ -80,15 +81,15 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
   }, []);
 
   const getTypeLabel = (type: IInteractionType | ISystemInteractionType) => {
-    if ('created_at' in type) {
-      // It's a system type
-      return `${type.type_name} (System)`;
-    }
-    if (type.system_type_id) {
-      // It's a tenant type that inherits from a system type
-      return `${type.type_name} (Custom)`;
-    }
-    return type.type_name;
+    const isSystemType = 'created_at' in type;
+    const suffix = isSystemType ? ' (System)' : ' (Custom)';
+    
+    return (
+      <div className="flex items-center gap-2">
+        <InteractionIcon icon={type.icon} typeName={type.type_name} />
+        <span>{type.type_name}{suffix}</span>
+      </div>
+    );
   };
 
   const filteredInteractions = useMemo(() => {
@@ -191,7 +192,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
             <CustomSelect
               options={[
                 { value: 'all', label: 'All Types' },
-                ...interactionTypes.map((type): { value: string; label: string } => ({
+                ...interactionTypes.map((type) => ({
                   value: type.type_id,
                   label: getTypeLabel(type)
                 }))
@@ -252,7 +253,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ users
       <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
         {filteredInteractions.map((interaction: IInteraction): JSX.Element => (
           <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>
-            <InteractionIcon type={interaction.type_name} />
+            <LocalInteractionIcon type={interaction.type_name} />
             <div>
               <p className="font-semibold">{interaction.description}</p>
               <p className="text-sm text-gray-500">
